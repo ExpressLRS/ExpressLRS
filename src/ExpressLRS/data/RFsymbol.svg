@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:svg="http://www.w3.org/2000/svg" id="svg2" viewBox="0 0 76.595 95.095" version="1.0">
+  <g id="layer1" transform="translate(14.751 23.304)">
+    <g id="g3228">
+      <g id="g5114" transform="matrix(.75030 0 0 .75030 -239.06 -309.21)">
+        <path id="path5112" stroke-linejoin="round" d="m335.97 451.57c-9.22-4.99-15.48-14.75-15.48-25.96 0-10.86 5.87-20.35 14.61-25.47" stroke-dashoffset="5" stroke="#000" stroke-linecap="round" stroke-width="2.9322" fill="none"/>
+        <path id="path5107" stroke-linejoin="round" d="m365.47 400.48c8.42 5.2 14.04 14.51 14.04 25.13v0c0 10.97-6 20.56-14.9 25.64" stroke-dashoffset="5" stroke="#000" stroke-linecap="round" stroke-width="2.9322" fill="none"/>
+      </g>
+      <use id="use5733" xlink:href="#g5114" transform="matrix(1.32 0 0 1.32 -7.5349 -3.2974)" height="1052.3622" width="744.09448" y="0" x="0"/>
+      <use id="use5735" xlink:href="#g5114" transform="matrix(1.6479 0 0 1.6479 -15.256 -6.6764)" height="1052.3622" width="744.09448" y="0" x="0"/>
+      <path id="path5737" d="m23.916 9.7675v60.024" stroke="#000" stroke-linecap="round" stroke-width="4" fill="none"/>
+      <path id="path5739" d="m380 429.86a7.5 7.5 0 1 1 -15 0 7.5 7.5 0 1 1 15 0z" transform="matrix(.75030 0 0 .75030 -255.57 -312.76)" fill-rule="evenodd"/>
+    </g>
+  </g>
+  <metadata>
+    <rdf:RDF>
+      <cc:Work>
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+        <cc:license rdf:resource="http://creativecommons.org/licenses/publicdomain/"/>
+        <dc:publisher>
+          <cc:Agent rdf:about="http://openclipart.org/">
+            <dc:title>Openclipart</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:title>Wireless/WiFi symbol</dc:title>
+        <dc:date>2008-03-08T19:15:09</dc:date>
+        <dc:description>Wireless symobol for creating network schmatic</dc:description>
+        <dc:source>http://openclipart.org/detail/17423/wireless/wifi-symbol-by-ispyisail-17423</dc:source>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>ispyisail</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>access point</rdf:li>
+            <rdf:li>clip art</rdf:li>
+            <rdf:li>clipart</rdf:li>
+            <rdf:li>icon</rdf:li>
+            <rdf:li>image</rdf:li>
+            <rdf:li>media</rdf:li>
+            <rdf:li>network</rdf:li>
+            <rdf:li>png</rdf:li>
+            <rdf:li>public domain</rdf:li>
+            <rdf:li>router</rdf:li>
+            <rdf:li>svg</rdf:li>
+            <rdf:li>wifi</rdf:li>
+            <rdf:li>wireless</rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+      </cc:Work>
+      <cc:License rdf:about="http://creativecommons.org/licenses/publicdomain/">
+        <cc:permits rdf:resource="http://creativecommons.org/ns#Reproduction"/>
+        <cc:permits rdf:resource="http://creativecommons.org/ns#Distribution"/>
+        <cc:permits rdf:resource="http://creativecommons.org/ns#DerivativeWorks"/>
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+</svg>
