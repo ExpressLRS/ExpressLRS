@@ -1,21 +1,7 @@
-#include "SX1278.h"
 #include "SX127x.h"
-#include "Module.h"
-
-uint8_t SX1278begin() {
-  // initialize low-level drivers
-  //initModule(nss, dio0, dio1);
-  initModule();
-
-  // execute common part
-  uint8_t status = SX127xBegin();
-  if (status != ERR_NONE) {
-    return (status);
-  }
-
-  // start configuration
-  return (SX1278config(_bw, _sf, _cr, _freq, _syncWord));
-}
+#include "SX1278.h"
+#include "RadioAPI.h"
+#include "RadioAPI_lowlevel.h"
 
 //uint8_t SX1278rxISRprocess(char* data, uint8_t* length) {  //ADDED CHANGED
 //  // get header mode
@@ -50,45 +36,45 @@ uint8_t SX1278rxSingle(char* data, uint8_t* length) {
   return SX127xrxSingle(data, length, headerExplMode);
 }
 
-uint8_t SX1278setBandwidth(Bandwidth bw) {
-  uint8_t state = config(bw, _sf, _cr, _freq, _syncWord);
-  if (state == ERR_NONE) {
-    _bw = bw;
-  }
-  return (state);
-}
+// uint8_t SX1278setBandwidth(Bandwidth bw) {  //moved renamed
+// uint8_t state = config(bw, _sf, _cr, _freq, _syncWord);
+// if (state == ERR_NONE) {
+// _bw = bw;
+// }
+// return (state);
+// }
 
-uint8_t SX1278setSpreadingFactor(SpreadingFactor sf) {
-  uint8_t state = config(_bw, sf, _cr, _freq, _syncWord);
-  if (state == ERR_NONE) {
-    _sf = sf;
-  }
-  return (state);
-}
+// uint8_t SX1278setSpreadingFactor(SpreadingFactor sf) {  //moved renamed
+// uint8_t state = config(_bw, sf, _cr, _freq, _syncWord);
+// if (state == ERR_NONE) {
+// _sf = sf;
+// }
+// return (state);
+// }
 
-uint8_t SX1278setCodingRate(CodingRate cr) {
-  uint8_t state = config(_bw, _sf, cr, _freq, _syncWord);
-  if (state == ERR_NONE) {
-    _cr = cr;
-  }
-  return (state);
-}
+// uint8_t SX1278setCodingRate(CodingRate cr) { //moved renamed
+// uint8_t state = config(_bw, _sf, cr, _freq, _syncWord);
+// if (state == ERR_NONE) {
+// _cr = cr;
+// }
+// return (state);
+// }
 
-uint8_t SX1278setFrequency(float freq) {
-  uint8_t state = config(_bw, _sf, _cr, freq, _syncWord);
-  if (state == ERR_NONE) {
-    _freq = freq;
-  }
-  return (state);
-}
+// uint8_t SX1278setFrequency(float freq) {
+// uint8_t state = config(_bw, _sf, _cr, freq, _syncWord);
+// if (state == ERR_NONE) {
+// _freq = freq;
+// }
+// return (state);
+// }
 
-uint8_t SX1278setSyncWord(uint8_t syncWord) {
-  uint8_t state = config(_bw, _sf, _cr, _freq, syncWord);
-  if (state == ERR_NONE) {
-    _syncWord = syncWord;
-  }
-  return (state);
-}
+// uint8_t SX1278setSyncWord(uint8_t syncWord) {
+// uint8_t state = config(_bw, _sf, _cr, _freq, syncWord);
+// if (state == ERR_NONE) {
+// _syncWord = syncWord;
+// }
+// return (state);
+// }
 
 uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord) {
   uint8_t status = ERR_NONE;
@@ -194,7 +180,7 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq
 
 uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord) {
   // configure common registers
-  uint8_t status = SX127xconfig(bw, sf, cr, freq, syncWord);
+  uint8_t status = SX127xConfig(bw, sf, cr, freq, syncWord);
   if (status != ERR_NONE) {
     return (status);
   }
@@ -230,3 +216,20 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8
   return (status);
 }
 
+
+
+uint8_t SX1278begin() {
+  // initialize low-level drivers
+  //initModule(nss, dio0, dio1);
+  Serial.println("Init module SX1278");
+  initModule();
+
+  // execute common part
+  uint8_t status = SX127xBegin();
+  if (status != ERR_NONE) {
+    return (status);
+  }
+
+  // start configuration
+  return (SX1278config(_bw, _sf, _cr, _freq, _syncWord));
+}

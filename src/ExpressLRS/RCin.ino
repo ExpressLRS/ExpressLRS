@@ -1,19 +1,16 @@
 //Functions related to processing of RC input data
 
-enum BaudRates {SER_2400, SER_4800, SER_9600, SER_57600, SER_115200};
-enum SerialRXmode {PROTO_RX_NONE, PROTO_RX_SBUS, PROTO_RX_PXX, PROTO_RX_CRSF};
-enum TrainerMode {TRN_None, PROTO_TRN_PPM, PROTO_TRN_SBUS};
-enum SerialTXmode {TX_None, PROTO_TX_SBUS, PROTO_TX_PXX, PROTO_TX_CRSF};
-enum SerialTelmMode {TLM_None, PROTO_TLM_SPORT, PROTO_TLM_CRSF};
+extern SerialRXmode SerRXmode;
+extern TrainerMode TrainTXmode;
+extern SerialTXmode SerTXmode;
+extern SerialTelmMode SerTelmMode;
 
+void ProcessRC() {
+  ProcessRCin();
+  ProcessRCout();
+  ProccessTLM();
 
-SerialRXmode SerRXmode = PROTO_RX_SBUS;
-TrainerMode TrainTXmode = PROTO_TRN_SBUS;
-SerialTXmode SerTXmode = PROTO_TX_SBUS;
-SerialTelmMode SerTelmMode = PROTO_TLM_SPORT;
-
-
-
+}
 
 void ProccessTLM() {
   switch (SerTelmMode) {
@@ -45,7 +42,21 @@ void ProcessRCout() {
   }
 }
 
+void ProcessRCin() {
 
+  switch (SerRXmode) {
+    case PROTO_RX_SBUS:
+      SBUSprocess();
+    case PROTO_RX_PXX:
+      break;
+    case PROTO_RX_CRSF:
+      break;
+    case PROTO_RX_NONE:
+      break;
+    default:
+      return;
+  }
+}
 
 void InitRC() {
   switch (SerRXmode) {
@@ -62,19 +73,16 @@ void InitRC() {
   }
 }
 
-void ProcessRCin() {
+void RFbufftoChannels() {  //recombine values into 10 bits from RF data
 
-  switch (SerRXmode) {
-    case PROTO_RX_SBUS:
-      SBUSprocess();
-    case PROTO_RX_PXX:
-      break;
-    case PROTO_RX_CRSF:
-      break;
-    case PROTO_RX_NONE:
-      break;
-    default:
-      return;
-  }
+  ChannelData[0] = RXbuff[0] + ((RXbuff[4] & 0b11000000) << 2);
+  ChannelData[1] = RXbuff[1] + ((RXbuff[4] & 0b00110000) << 4);
+  ChannelData[2] = RXbuff[2] + ((RXbuff[4] & 0b00001100) << 6);
+  ChannelData[3] = RXbuff[3] + ((RXbuff[4] & 0b00000011) << 8);
+  ChannelData[4] = ((RXbuff[5] & 0b11000000) << 3);
+  ChannelData[5] = ((RXbuff[5] & 0b00110000) << 5);
+  ChannelData[6] = ((RXbuff[5] & 0b00001100) << 7);
+  ChannelData[7] = ((RXbuff[5] & 0b00000011) << 9);
+
 }
 

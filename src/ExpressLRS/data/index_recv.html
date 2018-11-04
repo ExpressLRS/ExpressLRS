@@ -6,7 +6,6 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
 		<link rel="stylesheet" href="assets/css/main.css" />
-		<link rel="stylesheet" href="assets/css/slider.css" />
 		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
 		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
 	</head>
@@ -21,7 +20,10 @@
 					<p>From here you can change any settings on your module<br/>
 					<p>
 					<br>
-					<b>Firmware Rev.  </b><var id="FirmVersion">0.1 ALPHA</var><br><p>
+					<b>Firmware Rev.</b> var_FirmwareVersion<br><p>
+					<b>Platform: </b> var_Platform <p>
+					<b>Mode: </b> var_TXRXmode <p>
+					I am the receiver!
 					<!--
 					<b>Platform:</b> var_currPlatform<br><p>
 					<b>RF Module:</b> var_currRadioModule<br><p>
@@ -38,8 +40,8 @@
 			<legend><h3><b>RF and Power:</b></h3></legend>
 				<table style="width:100%">
 				  <tr>
-					<th><b>Vbat: </b><var id="Var_VBAT", class="StatusText">5.05V</var></th>
-					<th><b>Output Power: </b><var id="Var_OUTPWR", class="StatusText">25 mW</var></th> 
+					<th><b>Vbat:</b> 5.05 V</th>
+					<th><b>Output Power: </b>25 mW</th> 
 					<th><b>Update Rate: </b>100 Hz</th>
 				  </tr>
 				  <tr>
@@ -53,37 +55,7 @@
 					<td><b>Packet Loss: </b>0.00%</td>
 				  </tr>
 				</table>
-			
-			<br>
-			
-						
-			<label class="collapse" for="_1"><h2><b>RC Data: ⬇</b></h2></label>
-			<input id="_1" type="checkbox"> 
-			<div>
-
-				<div class="slidecontainer" style="text-align:center">
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH1">
-				<var id="RCvalCH1", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH2">
-				<var id="RCvalCH2", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH3">
-				<var id="RCvalCH3", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH4">
-				<var id="RCvalCH4", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH5">
-				<var id="RCvalCH5", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH6">
-				<var id="RCvalCH6", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH7">
-				<var id="RCvalCH7", class="RCdata">1000</var>
-				<input type="range" min="1000" max="2000" value="50" class="slider" id="SliderCH8">
-				<var id="RCvalCH8", class="RCdata">1000</var>		
-				</div>	
-			
-			
-			</div>
 			</section>
-			
 			<!--
 			<section id="Status Wifi" class="main style1">
 			<div class="container">
@@ -117,7 +89,7 @@
 					<form action="/updateIO.html">
 					  <fieldset>
 						<legend><h2><b>IO Configuration</b></h2></legend>
-						RC data Input:<br>
+						RC data Output:<br>
 						    <select name="SerialRXMode">
 
 								<option value="PPM">PPM</option>
@@ -126,7 +98,7 @@
 								<option value="CRSF">CRSF</option>
 							</select>
 						<br>
-						Telemetry Output:<br>
+						Telemetry Input:<br>
 							<select name="Telm_Output">
 								<option value="NONE">NONE</option>
 								<option value="SPORT">S.PORT</option>
@@ -135,7 +107,7 @@
 								
 							</select>
 						<br>
-						Bluetooth Mode:<br>
+						<!--Wifi Mode:<br>
 							<select name="Ble_Mode">
 								<option value="OFF">OFF</option>
 								<option value="Mirror Telemetry">Mirror Telemetry</option>
@@ -144,6 +116,7 @@
 						<br>
 						<input type="submit" value="&nbsp;Update&nbsp;">
 					  </fieldset>
+					  -->
 					</form>
 					
 					
@@ -154,8 +127,8 @@
 						<legend><h2><b>RF Configuration</b></h2></legend>
 						Radio Mode:<br>
 							<select name="RF_Mode">
+								<option value="AUTO">AUTO (Slave from TX)</option>
 								<option value="ExpressLRS">ExpressLRS Mode</option>
-								<option value="Transparent Serial Bluetooth Bridge">ExpressLRS Mode</option>
 								<option value="R9M">FrSky R9M Compatibility</option>
 								<option value="CRSF">Crossfire Compatibility</option>
 								
@@ -163,6 +136,7 @@
 						<br>
 						Regulatory Domain:<br>
 							<select name="RF_Reg_Domain">
+								<option value="AUTO">AUTO (Slave from TX)</option>
 								<option value="915">915 MHz</option>
 								<option value="868">868 MHz</option>
 								<option value="433">433 MHz</option>

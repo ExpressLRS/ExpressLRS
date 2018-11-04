@@ -1,9 +1,10 @@
-//#ifndef _LORALIB_SX127X_H
-//#define _LORALIB_SX127X_H
+#ifndef SX127x
+#define SX127x
 
-#include "TypeDef.h"
-#include "Module.h"
+//#include "TypeDef.h"
+//#include "Module.h"
 //#include "Packet.h"
+
 
 // SX127x series common registers
 #define SX127X_REG_FIFO                               0x00
@@ -169,6 +170,51 @@
 //  public:
 //    SX127x(Chip ch, int dio0, int dio1);
 
+
+///Added by Sandro
+#define SX127x_TXCONTINUOUSMODE_MASK     0xF7
+#define SX127x_TXCONTINUOUSMODE_ON       0x08
+#define SX127x_TXCONTINUOUSMODE_OFF      0x00
+
+
+enum Chip {CH_SX1272, CH_SX1273, CH_SX1276, CH_SX1277, CH_SX1278, CH_SX1279};
+enum Bandwidth {BW_7_80_KHZ, BW_10_40_KHZ, BW_15_60_KHZ, BW_20_80_KHZ, BW_31_25_KHZ, BW_41_70_KHZ, BW_62_50_KHZ, BW_125_00_KHZ, BW_250_00_KHZ, BW_500_00_KHZ};
+enum SpreadingFactor {SF_6, SF_7, SF_8, SF_9, SF_10, SF_11, SF_12};
+enum CodingRate {CR_4_5, CR_4_6, CR_4_7, CR_4_8};
+
+//enum RadioOPmodes {CURR_OPMODE_FSK_OOK = 0b00000000, CURR_OPMODE_LORA = 0b10000000, CURR_OPMODE_ACCESS_SHARED_REG_OFF = 0b00000000, CURR_OPMODE_ACCESS_SHARED_REG_ON = 0b01000000,
+//                  CURR_OPMODE_SLEEP = 0b00000000, CURR_OPMODE_STANDBY = 0b00000001, CURR_OPMODE_FSTX = 0b00000010, CURR_OPMODE_TX = 0b00000011, CURR_OPMODE_FSRX = 0b00000100,
+//                  CURR_OPMODE_RXCONTINUOUS = 0b00000101, CURR_OPMODE_RXSINGLE = 0b00000110, CURR_OPMODE_CAD = 0b00000111
+//                 };
+
+enum RadioOPmodes {CURR_OPMODE_FSK_OOK = 0b00000000, CURR_OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
+                  CURR_OPMODE_SLEEP = 0b00000000, CURR_OPMODE_STANDBY = 0b00000001, CURR_OPMODE_FSTX = 0b00000010, CURR_OPMODE_TX = 0b00000011, CURR_OPMODE_FSRX = 0b00000100,
+                  CURR_OPMODE_RXCONTINUOUS = 0b00000101, CURR_OPMODE_RXSINGLE = 0b00000110, CURR_OPMODE_CAD = 0b00000111
+                 };
+
+
+//#define SX127X_ACCESS_SHARED_REG_ON                   0b01000000  //  6     6     access FSK registers (0x0D:0x3F) in LoRa mode
+//#define SX127X_SLEEP                                    //  2     0     sleep
+//#define SX127X_STANDBY                                  //  2     0     standby
+//#define SX127X_FSTX                                     //  2     0     frequency synthesis TX
+//#define SX127X_TX                                       //  2     0     transmit
+//#define SX127X_FSRX                                     //  2     0     frequency synthesis RX
+//#define SX127X_RXCONTINUOUS                             //  2     0     receive continuous
+//#define SX127X_RXSINGLE                                 //  2     0     receive single
+//#define SX127X_CAD                                      //  2     0     channel activity detection
+
+
+Bandwidth _bw;
+SpreadingFactor _sf;
+CodingRate _cr;
+RadioOPmodes _opmode;
+
+float _freq;
+uint8_t _syncWord;
+
+
+
+
 uint8_t SX127xbegin();
 
 uint8_t SX127xTX(char* data, uint8_t length);
@@ -188,6 +234,7 @@ int8_t SX127xgetLastPacketRSSI();
 float SX127xgetLastPacketSNR();
 
 
+uint8_t SX127xconfigCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord);
 
 void clearIRQFlags();
 
@@ -200,8 +247,31 @@ void clearIRQFlags();
 //
 
 
+void timer0_ISRtx(void);
+void timer0_ISRrx(void);
+
 const char* getChipName();
+
+
+uint8_t begin();
+uint8_t rxSingle(char* data, uint8_t* length);
+uint8_t rxContinuous(char* data, uint8_t* length);
+uint8_t rxISRprocess(char* data, uint8_t* length);
+
+uint8_t setBandwidth(Bandwidth bw);
+uint8_t setSpreadingFactor(SpreadingFactor sf);
+uint8_t setCodingRate(CodingRate cr);
+uint8_t setFrequency(float freq);
+uint8_t setSyncWord(uint8_t syncWord);
+void SX127xclearIRQFlags();
+void CalcOnAirTime();
+
+
+
+
+//  protected:
+
 //};
 //
-//#endif
+#endif
 

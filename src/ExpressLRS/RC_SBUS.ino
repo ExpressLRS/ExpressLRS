@@ -1,13 +1,11 @@
-#include "Platform.h"
-
 #include <SBUS.h>
 
-char RCdataIN[6] = {0, 0, 0, 0, 0, 0};
-char RCdataOUT[6] = {0, 0, 0, 0, 0, 0};
+extern char RCdataIN[numRCchannels];
+extern char RCdataOUT[numRCchannels];
 extern char RXbuff[256];
+extern RFdataMode_ RFdataMode;
 
-
-int ChannelData[8];
+int ChannelData[16];
 #define RCinPin 16
 #define RCoutPin 17
 
@@ -15,7 +13,12 @@ int ChannelData[8];
 // https://github.com/zendes/SBUS/blob/master/SBUS.cpp
 
 
+#if defined(ARDUINO_ESP32_DEV)
 SBUS sbus(Serial2);
+#else
+SBUS sbus(Serial);
+#endif
+
 
 
 
@@ -24,29 +27,12 @@ uint16_t SBUSchannels[16];
 
 void beginSBUS() {
 
-//#if PLATFORM == ESP
+  //#if PLATFORM == ESP
   //sbus.begin(100000, SERIAL_8N2, RCinPin, RCoutPin, true);
-//#else
+  //#else
   sbus.begin();
-//#endif
+  //#endif
 
-}
-
-void prntBits(byte b)
-{
-  for (int i = 7; i >= 0; i--)
-    Serial.print(bitRead(b, i));
-}
-
-void RFbufftoChannels() {  //recombine values into 10 bits
-  ChannelData[0] = RXbuff[0] + ((RXbuff[4] & 0b11000000) << 2);
-  ChannelData[1] = RXbuff[1] + ((RXbuff[4] & 0b00110000) << 4);
-  ChannelData[2] = RXbuff[2] + ((RXbuff[4] & 0b00001100) << 6);
-  ChannelData[3] = RXbuff[3] + ((RXbuff[4] & 0b00000011) << 8);
-  ChannelData[4] = ((RXbuff[5] & 0b11000000) << 3);
-  ChannelData[5] = ((RXbuff[5] & 0b00110000) << 5);
-  ChannelData[6] = ((RXbuff[5] & 0b00001100) << 7);
-  ChannelData[7] = ((RXbuff[5] & 0b00000011) << 9);
 }
 
 void SBUSprocess() {
@@ -58,8 +44,8 @@ void SBUSprocess() {
   }
 }
 
-void RCdatatoSBUS(){
-  
+void RCdatatoSBUS() {
+
 }
 
 void SBUStoRCdata10Bit() {
@@ -67,9 +53,7 @@ void SBUStoRCdata10Bit() {
   for (int i = 0; i < 4; i ++) {
     RCdataIN[i] = sbus.mapCh10Bit(i + 1);
   }
-
   RCdataIN[4] = (sbus.mapCh10Bit(4) >> 8) + ((sbus.mapCh10Bit(3) >> 6) & 0b00001100) + ((sbus.mapCh10Bit(2) >> 4) & 0b00110000) + ((sbus.mapCh10Bit(1) >> 2) & 0b11000000);
-
   RCdataIN[5] = (sbus.mapCh2Bit(5) << 6) + ((sbus.mapCh2Bit(6) << 4) & 0b00110000) + ((sbus.mapCh2Bit(7) << 2) & 0b00001100) + (sbus.mapCh2Bit(8) & 0b00000011);
 }
 

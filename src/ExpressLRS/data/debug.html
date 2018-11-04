@@ -1,0 +1,178 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>ExpressLRS Long Range RC System</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+		<!-- Header -->
+			<section id="header">
+
+					<h1>Debug and Advanced Settings</h1>
+
+			</section>
+			
+			<section id="Status RFPWR" class="main style1">
+			<div class="container">
+					<br>				
+					<div align="left">	
+			<legend><h2><b>Status:</b></h2></legend>
+			<legend><h3><b>RF and Power:</b></h3></legend>
+				<table style="width:100%">
+				  <tr>
+					<th><b>Vbat:</b> 5.05 V</th>
+					<th><b>Output Power: </b>25 mW</th> 
+					<th><b>Update Rate: </b>100 Hz</th>
+				  </tr>
+				  <tr>
+					<td><b>Temp: </b>39°C</td>
+					<td><b>High Power Mode: </b>Allowed</td> 
+					<td><b>CRC Errors: </b> 0</td>
+				  </tr>
+				  <tr>
+					<td><b>Fan: </b>Off</td>
+					<td><b>RSSI: </b>-79 dBm</td> 
+					<td><b>Packet Loss: </b>0.00%</td>
+				  </tr>
+				</table>
+			</section>
+			<!--
+			<section id="Status Wifi" class="main style1">
+			<div class="container">
+					<br>				
+					<div align="left">	
+			<legend><h3><b>Wifi Status:</b></h3></legend>
+				<table style="width:100%">
+				  <tr>
+					<th><b>Clients:</b> 1</th>
+					<th><b>Output Power: </b>25 mW</th> 
+					<th><b>Update Rate: </b>100 Hz</th>
+				  </tr>
+				  <tr>
+					<td><b>Temp: </b>39°C</td>
+					<td><b>High Power Mode: </b>Allowed</td> 
+					<td><b>CRC Errors: </b> 0</td>
+				  </tr>
+				  <tr>
+					<td><b>Fan: </b>Off</td>
+					<td><b>RSSI: </b>-79 dBm</td> 
+					<td><b>Packet Loss: </b>0.00%</td>
+				  </tr>
+				</table>
+			</section>
+			-->
+		<!-- One -->
+			<section id="ContTX" class="main style1">
+				<div class="container">
+					<br>				
+					<div align="left">		
+					
+					<legend><h2><b>Set Continuous Transmission</b></h2></legend>
+					<h4>Radio will output continously with no modulation, useful for testing, be careful!</h4>		
+						
+					<form action="/ContTX.html">
+					  <fieldset>
+
+							Frequency (MHz):<br>
+							<input type="text" name="ContTXfreq" value="915.000">
+							
+							Output Power (dBm):
+							
+							<input type="text" name="ContTXpower" value="20">
+							
+							Transmit for (Seconds):
+							
+							<input type="text" name="ContTXtime" value="3">
+							<br>
+							
+							<input type="submit" value="&nbsp;Submit&nbsp;">
+						</fieldset>
+					</form>	
+					
+					<br>
+					<legend><h2><b>Send Data Packet</b></h2></l
+					<h4>Sends a data packet via the LoRa module with specified parameters</h4>
+					<br><br>
+					<form method="get" action="/SendPacket.html">
+					  <fieldset>
+
+							Frequency (MHz):<br>
+							<input type="text" name="PacketTXfreq" value="915.000">
+							
+							Output Power (dBm) [0-20]:
+							
+							<input type="text" name="PacketTXpower" value="20">
+							
+							
+							
+							Bandwidth:
+							<select name="PacketTXbw">							
+								<option value="125 KHz">125 KHz</option>
+								<option value="250 KHz">250 KHz</option>
+								<option value="500 KHz">500 KHz</option>						
+							</select>
+							
+							Spreading Factor:
+							<select name="PacketTXsf">							
+								<option value="SF_6">SF_6</option>
+								<option value="SF_7">SF_7</option>
+								<option value="SF_8">SF_8</option>
+								<option value="SF_9">SF_9</option>
+								<option value="SF_10">SF_10</option>
+								<option value="SF_11">SF_11</option>
+								<option value="SF_12">SF_12</option>							
+							</select>	
+							
+							
+							Coding Rate:
+							<select name="PacketTXbw">							
+								<option value="CR 4_5">CR 4_5</option>
+								<option value="CR 4_6">CR 4_6</option>
+								<option value="CR 4_7">CR 4_7</option>
+								<option value="CR 4_8">CR 4_8</option>									
+							</select>
+							
+							
+							Explicit Header:
+							<select name="PacketTXheader">							
+								<option value="False">False</option>
+								<option value="True">True</option>									
+							</select>
+							
+							CRC mode:
+							<select name="PacketTXheader">		
+								<option value="CRC_ON">CRC on CPU</option>							
+								<option value="CRC_MOD">CRC on LoRa Module</option>								
+								<option value="CRC_OFF">CRC OFF</option>	
+							</select>
+
+
+							Packet Repeats:<br>
+							<input type="text" name="PacketTXrepeat" value="1">		
+
+							Data (csv):<br>
+							<input type="text" name="PacketTXdata" value="00,01,02,03,04">								
+								
+							<br>
+						
+						<input type="submit" value="&nbsp;Send&nbsp;">
+						
+					  </fieldset>
+					</form>				
+											
+						
+						
+</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+	</body>
+</html>

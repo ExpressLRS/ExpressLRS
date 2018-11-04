@@ -1,6 +1,6 @@
 
-#include "TypeDef.h"
-#include "Module.h"
+//#include "TypeDef.h"
+#include "RadioAPI_lowlevel.h"
 //#include "SX127x.h"
 
 //SX1278 specific register map
@@ -26,6 +26,7 @@
 
 //SX1278_REG_PA_CONFIG
 #define SX1278_MAX_POWER                              0b01110000  //  6     4     max power: P_max = 10.8 + 0.6*MAX_POWER [dBm]; P_max(MAX_POWER = 0b111) = 15 dBm
+//#define SX1278_MAX_POWER                              0b00010000  //  6     4     changed
 
 //SX1278_REG_LNA
 #define SX1278_LNA_BOOST_LF_OFF                       0b00000000  //  4     3     default LNA current
@@ -62,26 +63,6 @@
 //  public:
 //SX1278(int nss, float freq, Bandwidth bw, SpreadingFactor sf, CodingRate cr, int dio0, int dio1, uint8_t syncWord);
 
-uint8_t begin();
-uint8_t rxSingle(char* data, uint8_t* length);
-uint8_t rxContinuous(char* data, uint8_t* length);
-uint8_t rxISRprocess(char* data, uint8_t* length);
-
-uint8_t config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord);
-
-uint8_t setBandwidth(Bandwidth bw);
-uint8_t setSpreadingFactor(SpreadingFactor sf);
-uint8_t setCodingRate(CodingRate cr);
-uint8_t setFrequency(float freq);
-uint8_t setSyncWord(uint8_t syncWord);
-
-//  protected:
-Bandwidth _bw;
-SpreadingFactor _sf;
-CodingRate _cr;
-float _freq;
-uint8_t _syncWord;
-
 //uint8_t configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord);
 //
 //  private:
@@ -91,4 +72,6 @@ uint8_t _syncWord;
 //};
 //
 //#endif
+
+uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord);
 
