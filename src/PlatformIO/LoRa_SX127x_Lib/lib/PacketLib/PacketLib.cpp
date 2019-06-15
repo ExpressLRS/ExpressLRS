@@ -38,10 +38,10 @@ void PacketLib::BeginBindingSlave(){
     
 }
 
-uint8_t PacketLib:: crc8(const uint8_t * ptr, uint8_t len){
-    uint8_t crc = 0;
-    for (uint8_t i=0; i<len; i++) {
-    crc = crc8tab[crc ^ *ptr++];
-    }
-    return crc;
-}
+// uint8_t PacketLib::crc8(const uint8_t * ptr, uint8_t len){
+//     uint8_t crc = 0;
+//     for (uint8_t i=0; i<len; i++) {
+//     crc = crc8tab[crc ^ *ptr++];
+//     }
+//     return crc;
+// }

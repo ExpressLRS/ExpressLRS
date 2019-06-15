@@ -75,6 +75,8 @@ uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq
   }
 
   if ((freq < 137000000) || (freq > 1020000000)) {
+    Serial.print("Invalid Frequnecy!: ");
+    Serial.println(freq);
     return (ERR_INVALID_FREQUENCY);
   }
 

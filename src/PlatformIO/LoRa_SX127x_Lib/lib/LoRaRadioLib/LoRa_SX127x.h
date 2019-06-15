@@ -3,12 +3,24 @@
 
 #include <Arduino.h>
 
-#include <cstdint>
+
 
 #include "LoRa_SX127x_Regs.h"
 
+#ifdef PLATFORM_ESP32
 #include "FreeRTOS.h"
 #include "esp32-hal-timer.h"
+#endif
+
+#ifdef PLATFORM_8266
+//#include <freertos/FreeRTOS.h>
+//#include <freertos/task.h>
+#include <cstdint>
+#endif
+
+#ifndef ICACHE_RAM_ATTR
+#define ICACHE_RAM_ATTR IRAM_ATTR
+#endif
 
 typedef enum {CURR_OPMODE_FSK_OOK = 0b00000000, CURR_OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
 CURR_OPMODE_SLEEP = 0b00000000, CURR_OPMODE_STANDBY = 0b00000001, CURR_OPMODE_FSTX = 0b00000010, CURR_OPMODE_TX = 0b00000011, CURR_OPMODE_FSRX = 0b00000100,
@@ -36,8 +48,10 @@ class SX127xDriver{
 
         static void (*TXtimeout)(); //function pointer for callback
         static void (*RXtimeout)(); //function pointer for callback
-
+        
+#ifdef PLATFORM_ESP32
         static TaskHandle_t TimertaskTX_handle;  //Task Handle for ContTX mode
+#endif
 
         //static void (*TXcallback)();
 
@@ -91,6 +105,7 @@ class SX127xDriver{
         static uint32_t TimeOnAir;
         static uint32_t TXstartMicros;
         static uint32_t TXspiTime;
+        static uint32_t HeadRoom;
         static uint32_t LastTXdoneMicros;
         //////////////////////////////////
 
@@ -126,42 +141,40 @@ class SX127xDriver{
         //////////////RX related Functions/////////////////
 
         
-        static uint8_t RXsingle(uint8_t* data, uint8_t* length);
-
         static uint8_t RunCAD();
 
        
         static void SX127xclearIRQFlags();
 
 
-        static int8_t IRAM_ATTR GetLastPacketRSSI();
-        static float IRAM_ATTR GetLastPacketSNR();
-        static void IRAM_ATTR CalcOnAirTime();
-        static void IRAM_ATTR GetPacketRSSI_SNR();
+        static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
+        static float ICACHE_RAM_ATTR GetLastPacketSNR();
+        static void ICACHE_RAM_ATTR CalcOnAirTime();
+        static void ICACHE_RAM_ATTR GetPacketRSSI_SNR();
 
        
 
        
        ////////////Non-blocking TX related Functions/////////////////
 
-        static void IRAM_ATTR StartContTX(); //Start Cont TX mode, sends data continuiously 
-        static void IRAM_ATTR StopContTX();
-        static uint8_t IRAM_ATTR TXnb(const volatile uint8_t * data, uint8_t length);
+        static void ICACHE_RAM_ATTR StartContTX(); //Start Cont TX mode, sends data continuiously 
+        static void ICACHE_RAM_ATTR StopContTX();
+        static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t * data, uint8_t length);
         
 
-        static void IRAM_ATTR TXnbISR();  //ISR for non-blocking TX routine
-        static void IRAM_ATTR TimerTaskTX_ISRhandler();
-        static void IRAM_ATTR TimerTaskTX(void *param);
+        static void ICACHE_RAM_ATTR TXnbISR();  //ISR for non-blocking TX routine
+        static void ICACHE_RAM_ATTR TimerTaskTX_ISRhandler();
+        static void ICACHE_RAM_ATTR TimerTaskTX(void *param);
 
         /////////////Non-blocking RX related Functions///////////////
         
-        static void IRAM_ATTR StartContRX();
-        static void IRAM_ATTR StopContRX();
+        static void ICACHE_RAM_ATTR StartContRX();
+        static void ICACHE_RAM_ATTR StopContRX();
         static uint8_t RXnb();
 
-        static void IRAM_ATTR RXnbISR();  //ISR for non-blocking RC routine
+        static void ICACHE_RAM_ATTR RXnbISR();  //ISR for non-blocking RC routine
 
-        //static uint8_t rxSingle(char* data, uint8_t* length);
+        static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t* data, uint8_t length);
         static uint8_t rxContinuous(char* data, uint8_t* length);
         static uint8_t rxISRprocess(char* data, uint8_t* length);
 
