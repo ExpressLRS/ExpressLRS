@@ -208,7 +208,7 @@ static uint16_t ICACHE_RAM_ATTR fmap(float x, float in_min, float in_max, float 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT11_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
 
-static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795));};
+static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT11(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
@@ -287,12 +287,15 @@ public:
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
+    void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
 
     //static void BuildRCPacket(crsf_addr_e addr = CRSF_ADDRESS_FLIGHT_CONTROLLER); //build packet to send to the FC
 
     static void ICACHE_RAM_ATTR SerialISR();
     static void ICACHE_RAM_ATTR ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
+
+    static void inline nullCallback(void);
 
     //static uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Datain) { return (0.62477120195241f * Datain) + 881; };
 
@@ -303,7 +306,7 @@ private:
     static volatile uint8_t SerialInPacketPtr;   // index where we are reading/writing
     static volatile uint8_t SerialInBuffer[100]; // max 64 bytes for CRSF packet serial buffer
 
-    //static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN+1]; //index 0 hold the length of the datapacket
+    static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
     static volatile bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it

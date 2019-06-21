@@ -25,13 +25,13 @@ TaskHandle_t TimerTaskTX_handle = NULL;
 
 uint32_t volatile SX127xDriver::PacketCount = 0;
 
-extern uint32_t TXdoneMicros;
+void inline SX127xDriver::nullCallback(void){};
 
-void (*SX127xDriver::RXdoneCallback)() = NULL;
-void (*SX127xDriver::TXdoneCallback)() = NULL;
+void (*SX127xDriver::RXdoneCallback)() = &nullCallback;
+void (*SX127xDriver::TXdoneCallback)() = &nullCallback;
 
-void (*SX127xDriver::TXtimeout)() = NULL;
-void (*SX127xDriver::RXtimeout)() = NULL;
+void (*SX127xDriver::TXtimeout)() = &nullCallback;
+void (*SX127xDriver::RXtimeout)() = &nullCallback;
 
 /////setup some default variables//////////////
 
@@ -40,6 +40,11 @@ volatile bool SX127xDriver::headerExplMode = false;
 volatile uint32_t SX127xDriver::TXContInterval = 20000;
 volatile uint8_t SX127xDriver::TXbuffLen = 8;
 volatile uint8_t SX127xDriver::RXbuffLen = 8;
+
+uint8_t SX127xDriver::NonceTX = 0;
+uint8_t SX127xDriver::NonceRX = 0;
+
+uint8_t SX127xDriver::ResponseInterval = 50; // how often the slave will reply max 255.
 
 //////////////////Hardware Pin Variable defaults////////////////
 
@@ -59,15 +64,16 @@ uint8_t SX127xDriver::SX127x_RST = 18;
 
 uint32_t SX127xDriver::TimeOnAir = 0;
 uint32_t SX127xDriver::LastTXdoneMicros = 0;
+uint32_t SX127xDriver::TXdoneMicros = 0;
 uint32_t SX127xDriver::TXstartMicros = 0;
 int8_t SX127xDriver::LastPacketRSSI = 0;
 float SX127xDriver::LastPacketSNR = 0;
 uint32_t SX127xDriver::TXspiTime = 0;
 uint32_t SX127xDriver::HeadRoom = 0;
 
-Bandwidth SX127xDriver::_bw = BW_500_00_KHZ;
+Bandwidth SX127xDriver::_bw = BW_250_00_KHZ;
 SpreadingFactor SX127xDriver::_sf = SF_6;
-CodingRate SX127xDriver::_cr = CR_4_5;
+CodingRate SX127xDriver::_cr = CR_4_7;
 uint8_t SX127xDriver::_syncWord = SX127X_SYNC_WORD;
 
 float SX127xDriver::_freq = 123456789;
@@ -79,6 +85,14 @@ ContinousMode SX127xDriver::ContMode = CONT_OFF;
 RFmodule_ SX127xDriver::RFmodule = RFMOD_SX1276;
 RadioState_ SX127xDriver::RadioState = RADIO_IDLE;
 
+enum InterruptAssignment_
+{
+  NONE,
+  RX_DONE,
+  TX_DONE
+};
+
+InterruptAssignment_ InterruptAssignment = NONE;
 //////////////////////////////////////////////
 
 uint8_t SX127xDriver::Begin()
@@ -288,7 +302,7 @@ uint8_t SX127xDriver::SX127xBegin()
 {
   uint8_t i = 0;
   bool flagFound = false;
-  while ((i < 100) && !flagFound)
+  while ((i < 10) && !flagFound)
   {
     uint8_t version = readRegister(SX127X_REG_VERSION);
     Serial.println(version, HEX);
@@ -362,7 +376,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
   unsigned long start = millis();
   while (!digitalRead(SX127xDriver::SX127x_dio0))
   {
-    yield();
+    //yield();
     //delay(1);
     //TODO: calculate timeout dynamically based on modem settings
     if (millis() - start > (length * 100))
@@ -372,7 +386,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
       return (ERR_TX_TIMEOUT);
     }
   }
-
+  NonceTX++;
   ClearIRQFlags();
 
   return (ERR_NONE);
@@ -454,32 +468,42 @@ void SX127xDriver::StartContTX()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-  //Serial.println("done ISR");
+  
+
+  //Serial.println("TX done ISR");
 #if defined(PLATFORM_ESP32)
 
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
   //detachInterrupt(dio0);
 #endif
-  TXdoneMicros = micros();
-  CalcOnAirTime();
+  //TXdoneMicros = micros();
+  //CalcOnAirTime();
   RadioState = RADIO_IDLE;
+  (TXdoneCallback)();
+  ClearIRQFlags();
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t length)
 {
 
   //SX127xDriver::HeadRoom = micros() - TXdoneMicros; //previous done time minus when new packet was rq.
+  if (InterruptAssignment != TX_DONE)
+  {
+    attachInterrupt(digitalPinToInterrupt(SX127x_dio0), TXnbISR, RISING);
+    InterruptAssignment = TX_DONE;
+  }
+
+  ClearIRQFlags();
 
   SetMode(SX127X_STANDBY);
 
-  ClearIRQFlags();
+  setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
 
   setRegValue(SX127X_REG_PAYLOAD_LENGTH, length);
   setRegValue(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
 
   writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, length);
-  //writeRegisterFIFO((uint8_t)SX127X_REG_FIFO, data, length);
 
 #if defined(PLATFORM_ESP32)
 
@@ -488,7 +512,8 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
   //
 
 #endif
-  //attachInterrupt(digitalPinToInterrupt(SX127x_dio0), TXnbISR, RISING);
+
+  NonceTX++;
   SetMode(SX127X_TX);
   PacketCount = PacketCount + 1;
 
@@ -509,11 +534,10 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   // if (headerExplMode) {
   //   RXbuffLen = getRegValue(SX127X_REG_RX_NB_BYTES);
   // }
-
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, RXdataBuffer);
   //Serial.println("Done Read");
   //CalcCRC16();
-
+  NonceRX++;
   (RXdoneCallback)();
   //Serial.println("Done Callback");
 
@@ -531,7 +555,7 @@ void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
   SX127xDriver::SetMode(SX127X_SLEEP);
 }
 
-uint8_t SX127xDriver::RXnb()
+void SX127xDriver::RXnb()
 { //ADDED CHANGED
 
   // attach interrupt to DIO0
@@ -543,6 +567,12 @@ uint8_t SX127xDriver::RXnb()
 #endif
 
   SetMode(SX127X_STANDBY);
+
+  if (InterruptAssignment != RX_DONE)
+  {
+    attachInterrupt(digitalPinToInterrupt(SX127x_dio0), RXnbISR, RISING);
+    InterruptAssignment = RX_DONE;
+  }
 
   ClearIRQFlags();
 
@@ -559,9 +589,8 @@ uint8_t SX127xDriver::RXnb()
 
   SetMode(SX127X_RXCONTINUOUS);
 
-  attachInterrupt(digitalPinToInterrupt(SX127x_dio0), RXnbISR, RISING);
 
-  return (ERR_NONE);
+  //return (ERR_NONE);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -602,6 +631,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, length, data);
 
   ClearIRQFlags();
+  NonceRX++;
 
   return (ERR_NONE);
 }
@@ -649,10 +679,10 @@ uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, fl
 
   if (RFmodule == RFMOD_SX1276)
   {
-    SX1278config(bw, sf, cr, freq, syncWord);
+    SX1276config(bw, sf, cr, freq, syncWord);
   }
 
-  if (RFmodule == RFmodule)
+  if (RFmodule == RFMOD_SX1278)
   {
     SX1278config(bw, sf, cr, freq, syncWord);
   }

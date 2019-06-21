@@ -2,63 +2,203 @@
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
-
 #include "ESP8266_WebUpdate.h"
+#include "FHSS.h"
 
-//#define PLATFORM_ESP8266
-//#undef PLATFORM_ESP32
+///forward defs///
+void InitOStimer();
+void OStimerSetCallback(void (*CallbackFunc)(void));
+void OStimerReset();
+void OStimerUpdateInterval(uint32_t Interval);
 
-uint8_t testdata[6] = {1, 2, 3, 4, 5, 6};
-// uint32_t TXdoneMicros = 0;
+void InitHarwareTimer();
+void StopHWtimer();
+void HWtimerSetCallback(void (*CallbackFunc)(void));
+void HWtimerSetCallback90(void (*CallbackFunc)(void));
+void HWtimerUpdateInterval(uint32_t Interval);
+uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
+uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
+void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
+uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
-extern uint16_t UStoCRSF(uint16_t DataIn);
+//uint32_t HWtimerLastcallback;
+uint32_t MeasuredHWtimerInterval;
+int32_t HWtimerError;
+int32_t HWtimerError90;
+int16_t Offset;
+int16_t Offset90;
+
+uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
 bool LED = false;
 
-SX127xDriver Radio;
-CRSF crsf(Serial);
+uint8_t DeviceAddr = 0b101010;
 
+volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
+
+SX127xDriver Radio;
+CRSF crsf(Serial); //pass a serial port object to the class.
+
+/////////////////Variables for FHSS///////////////////////////
+uint8_t FHSShopInterval = 16; ///hop freqs after this many packets
+
+//////////////////////////////////////////////////////////////
+
+///////Variables for Telemetry and Link Quality///////////////
 int packetCounter = 0;
 uint32_t PacketRateLastChecked = 0;
-uint32_t PacketRateInterval = 250;
+uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
 float linkQuality = 0.0;
-uint16_t targetFrameRate = 200;
+float targetFrameRate = 93.75;
 
-void PrintTest()
+uint32_t LostConnectionDelay = 2000; //after 1500ms we consider that we lost connection to the TX
+bool LostConnection = true;
+uint32_t LastValidPacket = 0; //Time the last valid packet was recv
+///////////////////////////////////////////////////////////////
+
+void ICACHE_RAM_ATTR HandleFHSS()
 {
-    Serial.println("callbacktest");
-    for (int i; i < Radio.RXbuffLen; i++)
+    //uint8_t modresult = NonceRXlocal % FHSShopInterval;
+    //uint8_t modresult = 1;
+
+    // if (modresult == 0)
+    //{
+    if (LostConnection == false) // don't hop if we lost
     {
-        char byteIN = Radio.RXdataBuffer[i];
-        Serial.print(byteIN);
+        digitalWrite(16, LED);
+        LED = !LED;
+        Radio.SetFrequency(FHSSgetNextFreq());
+        Radio.RXnb();
+    }
+    else
+    {
+        Radio.RXnb();
+    }
+    //}
+}
+
+void ICACHE_RAM_ATTR getRFlinkInfo()
+{
+    int8_t LastRSSI = Radio.GetLastPacketRSSI();
+
+    crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
+
+    crsf.LinkStatistics.uplink_RSSI_1 = LastRSSI;
+    crsf.LinkStatistics.uplink_RSSI_2 = LastRSSI;
+    crsf.LinkStatistics.uplink_SNR = int(Radio.GetLastPacketSNR() * 10);
+    crsf.LinkStatistics.uplink_Link_quality = int(linkQuality);
+
+    crsf.sendLinkStatisticsToFC();
+}
+
+void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
+{
+    uint8_t modresult = NonceRXlocal % Radio.ResponseInterval;
+    //uint8_t modresult = 1;
+
+    if (modresult == 0)
+    {
+        getRFlinkInfo();
+
+        Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+        Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
+        Radio.TXdataBuffer[2] = 120 + crsf.LinkStatistics.uplink_RSSI_1;
+        Radio.TXdataBuffer[3] = 0;
+        Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+        Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+
+        uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+        Radio.TXdataBuffer[6] = crc;
+        //delayMicroseconds(5000);
+        Radio.TXnb(Radio.TXdataBuffer, 7);
+        //radio hops after transmission of telemetry Packet
+        //Radio.TXdoneCallback = &Radio.StartContRX;
+        //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
     }
 }
 
-void getRFlinkInfo()
+//expresslrs packet header types
+// 00 -> standard 4 channel data packet
+// 01 -> switch data packet
+// 11 -> tlm packet
+// 10 -> sync packet with hop data
+
+void ICACHE_RAM_ATTR Test90()
 {
-    crsf.LinkStatistics.uplink_RSSI_1 = Radio.GetLastPacketRSSI();
-    crsf.LinkStatistics.uplink_RSSI_2 = Radio.GetLastPacketRSSI();
-    crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR();
-    crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-
-    crsf.sendLinkStatisticsToFC();
-
-    digitalWrite(16, LED);
-    LED = !LED;
+    //HandleFHSS();
+    HandleSendTelemetryResponse();
 }
 
-void SendRCframe()
+void ICACHE_RAM_ATTR Test()
 {
+    NonceRXlocal++;
+    MeasuredHWtimerInterval = micros() - HWtimerGetlastCallbackMicros();
 
+    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    // {
+    //     PacketRateLastChecked = millis();
+    //     Serial.println(MeasuredOStimerInterval);
+    //     Serial.println(HWtimerError);
+    // }
+}
+
+///////////Super Simple Lowpass for 'PLL' (not really a PLL)/////////
+int RawData;
+int32_t SmoothDataINT;
+int32_t SmoothDataFP;
+int Beta = 3;     // Length = 16
+int FP_Shift = 3; //Number of fractional bits
+
+int16_t SimpleLowPass(int16_t Indata)
+{
+    RawData = Indata;
+    RawData <<= FP_Shift; // Shift to fixed point
+    SmoothDataFP = (SmoothDataFP << Beta) - SmoothDataFP;
+    SmoothDataFP += RawData;
+    SmoothDataFP >>= Beta;
+    // Don't do the following shift if you want to do further
+    // calculations in fixed-point using SmoothData
+    SmoothDataINT = SmoothDataFP >> FP_Shift;
+    return SmoothDataINT;
+}
+//////////////////////////////////////////////////////////////////////
+
+void ICACHE_RAM_ATTR SendCRSFframe()
+{
+}
+
+void ICACHE_RAM_ATTR ProcessRFPacket()
+{
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 6);
     uint8_t inCRC = Radio.RXdataBuffer[6];
-    uint8_t header = Radio.RXdataBuffer[0];
-    if (header == 0b10101001 || header == 0b10101000)
+    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
+
+    if (packetAddr == DeviceAddr)
     {
         if ((inCRC == calculatedCRC))
         {
-            if (header == 0b10101000)
+            packetCounter++;
+
+            LastValidPacket = millis();
+
+            if (LostConnection) //we got a packet, therefore no lost connection
+            {
+                InitHarwareTimer();
+                LostConnection = false;
+            }
+
+            HWtimerError = micros() - HWtimerGetlastCallbackMicros();
+
+            HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+
+            uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+            Offset = SimpleLowPass(HWtimerError - (5000)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well
+            HWtimerPhaseShift(Offset / 2);
+
+            if (type == 0b00) //std 4 channel switch data
             {
                 crsf.PackedRCdataOut.ch0 = UINT11_to_CRSF((Radio.RXdataBuffer[1] << 2) + (Radio.RXdataBuffer[5] & 0b11000000 >> 6));
                 crsf.PackedRCdataOut.ch1 = UINT11_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
@@ -66,39 +206,63 @@ void SendRCframe()
                 crsf.PackedRCdataOut.ch3 = UINT11_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
             }
 
-            if (header == 0b10101001)
+            if (type == 0b01)
             {
-                digitalWrite(16, LED);
-                LED = !LED;
                 //return;
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
-
-                    // crsf.PackedRCdataOut.ch4 = UINT11_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) << 2); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
-                    // crsf.PackedRCdataOut.ch5 = UINT11_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) << (3 + 2));
-                    // crsf.PackedRCdataOut.ch6 = UINT11_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << (6 + 2)) + (Radio.RXdataBuffer[2] & 0b10000000));
-                    // crsf.PackedRCdataOut.ch7 = UINT11_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) << 3));
-
                     crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
                     crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
                     crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
                     crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
+                    //Serial.print(NonceRXlocal);
+                    //Serial.print("-");
+                    //Serial.println(Radio.RXdataBuffer[5]);
+                    NonceRXlocal = Radio.RXdataBuffer[5]; //reset nonce with master value
+                    //InitHarwareTimer();
+                    //OStimerReset();
                 }
             }
+
+            if (type == 0b11)
+            { //telemetry packet from master
+            }
+
+            if (type == 0b10)
+            { //sync packet from master
+                Serial.println("Sync Packet");
+
+                FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+
+                //Radio.SetFrequency(FHSSgetCurrFreq());
+                //Serial.println("freq");
+
+                //char str[30];
+                //sprintf(str, "%.2f", FHSSgetCurrFreq());
+                //Serial.println(str);
+                //Serial.println(Radio.RXdataBuffer[1]);
+
+                //Serial.println();
+
+                NonceRXlocal = Radio.RXdataBuffer[2];
+            }
             crsf.sendRCFrameToFC();
-            packetCounter++;
         }
         else
         {
+            Serial.println("crc failed");
         }
+    }
+    else
+    {
+        Serial.println("wrong address");
     }
 }
 
 void setup()
 {
-    delay(500);
     pinMode(16, OUTPUT);
-    BeginWebUpdate();
+    //BeginWebUpdate();
 
     delay(200);
     digitalWrite(16, HIGH);
@@ -110,7 +274,6 @@ void setup()
     digitalWrite(16, LOW);
 
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
-    Radio.TXContInterval = 10000;
     Radio.TXbuffLen = 7;
     Radio.RXbuffLen = 7;
 
@@ -125,68 +288,73 @@ void setup()
 
     Serial.begin(420000);
     Serial.println("Module Booted...");
-    crsf.InitSerial();
+    //crsf.InitSerial();
 
     Radio.SetPreambleLength(2);
+    Radio.ResponseInterval = 32;
     Radio.SetFrequency(433920000);
     Radio.Begin();
 
-    Radio.RXdoneCallback = &SendRCframe;
+    Radio.RXdoneCallback = &ProcessRFPacket;
+    Radio.TXdoneCallback = &HandleFHSS;
     Radio.StartContRX();
-    crsf.Begin();
 
+    // crsf.Begin();
+    //Radio.SetOutputPower(0x00);
+    Radio.SetOutputPower(0b1111);
     //Radio.StartContTX();
+
+    InitHarwareTimer();
+    HWtimerUpdateInterval(10000);
+    HWtimerSetCallback(&Test);
+    HWtimerSetCallback90(&Test90);
 }
 
 void loop()
 {
 
-    //  for (int i = 0; i<255; i++){
-    //    Serial.println(i);
-    //delay(100);
-    //Serial.println("sending..");
-    //Serial.println(Radio.TX(testdata, 6));
-    //}
-    //Serial.print("SPItime: ");
-    //Serial.println(Radio.TXspiTime);
-    // Serial.print("TotalTime: ");
-    // Serial.println(Radio.TimeOnAir);
-    // Serial.print("PacketCount(HZ): ");
-    // Serial.println(Radio.PacketCount);
-    // Radio.PacketCount = 0;
-    // Radio.StartContTX();
-    // Serial.println("StartCont");
-    //uint8_t inData[6] = {0};
-
-    //Radio.RXsingle(inData, 6);
-
-    //delay(500);
-    //Serial.println(packetCounter*2);
-    //packetCounter = 0;
-
-    //digitalWrite(16, LED);
-    //LED = !LED;
-
-    HandleWebUpdate();
-    // Radio.StopContTX();
-    // Serial.println("StopContTX");
-    // Radio.StartContRX();
-    // delay(50);
-    //PrintRC();
     if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
     {
         PacketRateLastChecked = millis();
         PacketRate = (float)packetCounter / (float)(PacketRateInterval);
         linkQuality = (((float)PacketRate / (float)targetFrameRate) * 100000.0);
+
+        if (linkQuality > 100)
+        {
+            linkQuality = 100;
+        }
+
         packetCounter = 0;
-        //getRFlinkInfo();
-
-        crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(Radio.GetLastPacketRSSI(), -100, -50, 0, 1023));
-        crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
-        crsf.LinkStatistics.uplink_RSSI_1 = map(Radio.GetLastPacketRSSI(), -100, 0, 0, 255);
-        //crsf.sendRCFrameToFC();
-
-        //crsf.sendRCFrameToFC();
-        //crsf.sendLinkStatisticsToFC();
+        Serial.println(linkQuality);
     }
+
+    if (millis() > (LastValidPacket + LostConnectionDelay))
+    {
+        LostConnection = true;
+        StopHWtimer();
+    }
+
+
+    // Serial.print(MeasuredHWtimerInterval);
+    // Serial.print(" ");
+    // Serial.print(Offset);
+    // Serial.print(" ");
+    // Serial.print(HWtimerError);
+
+    // Serial.print("----");
+
+    // //Serial.print(Offset90);
+    // //Serial.print(" ");
+    // Serial.print(HWtimerError90);
+    // Serial.print("----");
+    // Serial.println(packetCounter);
+    // delay(200);
+
+    //HandleWebUpdate();
+    // Radio.StopContTX();
+    // Serial.println("StopContTX");
+    // Radio.StartContRX();
+    // delay(50);
+    //PrintRC();
+    //if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
 }

@@ -16,8 +16,6 @@ Verbosity_ DebugVerbosity = DEBUG_1;
 void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 {
 
-
-
 #ifdef PLATFORM_ESP32
   pinMode(SX127xDriver::SX127x_nss, OUTPUT);
   pinMode(SX127xDriver::SX127x_dio0, INPUT);
@@ -39,12 +37,12 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   //Set data mode
   SPI.setDataMode(SPI_MODE0);
 #else
-//  pinMode(SX127xDriver::SX127x_nss, OUTPUT);
- // pinMode(SX127xDriver::SX127x_dio0, INPUT);
- // pinMode(SX127xDriver::SX127x_dio1, INPUT);
- // pinMode(SX127xDriver::SX127x_RST, OUTPUT);
- // digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-  
+  //  pinMode(SX127xDriver::SX127x_nss, OUTPUT);
+  // pinMode(SX127xDriver::SX127x_dio0, INPUT);
+  // pinMode(SX127xDriver::SX127x_dio1, INPUT);
+  // pinMode(SX127xDriver::SX127x_RST, OUTPUT);
+  // digitalWrite(SX127xDriver::SX127x_nss, HIGH);
+
   SPI.pins(SX127xDriver::SX127x_SCK, SX127xDriver::SX127x_MISO, SX127xDriver::SX127x_MOSI, -1);
   pinMode(SX127xDriver::SX127x_nss, OUTPUT);
   pinMode(SX127xDriver::SX127x_dio0, INPUT);
@@ -425,21 +423,10 @@ void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
   ////iSPI.beginTransaction(SPISettings(9000000, MSBFIRST, SPI_MODE0));
-#ifdef PLATFORM_ESP32
-  //iSPI.transferByte(reg | SPI_WRITE);
+
   SPI.write(reg | SPI_WRITE);
-#else
-  SPI.write(reg | SPI_WRITE);
-#endif
-  for (uint8_t i = 0; i < numBytes; i++)
-  {
-#ifdef PLATFORM_ESP32
-    //iSPI.transferByte(data[i]);
-    SPI.write(data[i]);
-#else
-    SPI.write(data[i]);
-#endif
-  }
+  SPI.writeBytes((uint8_t *)data, numBytes);
+
   //////iSPI.endTransaction();
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 }

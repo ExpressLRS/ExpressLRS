@@ -210,19 +210,19 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8
   }
 
   // enable LNA gain setting by register and set low datarate optimizations for SF11/SF12 with 125 kHz bandwidth
-  status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_OFF, 2, 2);
-  if ((bw == SX1278_BW_125_00_KHZ) && ((sf == SX127X_SF_11) || (sf == SX127X_SF_12)))
-  {
-    status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_ON, 0, 0);
-  }
-  else
-  {
-    status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_OFF, 0, 0);
-  }
-  if (status != ERR_NONE)
-  {
-    return (status);
-  }
+  // status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_OFF, 2, 2);
+  // if ((bw == SX1278_BW_125_00_KHZ) && ((sf == SX127X_SF_11) || (sf == SX127X_SF_12)))
+  // {
+  //   status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_ON, 0, 0);
+  // }
+  // else
+  // {
+  //   status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_OFF, 0, 0);
+  // }
+  // if (status != ERR_NONE)
+  // {
+  //   return (status);
+  // }
 
   // set SF6 optimizations
   if (sf == SX127X_SF_6)
