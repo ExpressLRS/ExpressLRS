@@ -106,6 +106,9 @@ uint8_t SX127xDriver::Begin()
   digitalWrite(SX127x_RST, 1);
   delay(500);
 
+  pinMode(_TXenablePin, OUTPUT);
+  pinMode(_RXenablePin, OUTPUT);
+
   //static uint8_t SX127x_SCK;
 
   if (RFmodule == RFMOD_SX1278)
@@ -366,7 +369,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
 
   writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, (uint8_t)length);
 
-#if defined(ARDUINO_ESP32_DEV)
+#if defined(PLATFORM_ESP32)
   digitalWrite(_RXenablePin, LOW);
   digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 #endif
@@ -391,7 +394,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
 
   return (ERR_NONE);
 
-#if defined(ARDUINO_ESP32_DEV)
+#if defined(PLATFORM_ESP32)
   digitalWrite(_RXenablePin, LOW);
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 #endif
