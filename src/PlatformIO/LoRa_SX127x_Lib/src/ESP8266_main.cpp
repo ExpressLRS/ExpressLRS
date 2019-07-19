@@ -32,6 +32,17 @@ uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
 bool LED = false;
 
+bool buttonPrevValue = true; //default pullup
+bool buttonDown = false;     //is the button current pressed down?
+uint32_t buttonSampleInterval = 150;
+uint32_t buttonLastSampled = 0;
+uint32_t buttonLastPressed = 0;
+uint32_t webUpdatePressInterval = 3000; //hold button for 3 sec to enable webupdate mode
+bool webUpdateMode = false;
+
+uint32_t webUpdateLedFlashInterval = 50;
+uint32_t webUpdateLedFlashIntervalLast;
+
 uint8_t DeviceAddr = 0b101010;
 
 volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
@@ -90,7 +101,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_SNR = int(Radio.GetLastPacketSNR() * 10);
     crsf.LinkStatistics.uplink_Link_quality = int(linkQuality);
 
-    crsf.sendLinkStatisticsToFC();
+    //crsf.sendLinkStatisticsToFC();
 }
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
@@ -151,7 +162,7 @@ int32_t SmoothDataFP;
 int Beta = 3;     // Length = 16
 int FP_Shift = 3; //Number of fractional bits
 
-int16_t SimpleLowPass(int16_t Indata)
+int16_t ICACHE_RAM_ATTR SimpleLowPass(int16_t Indata)
 {
     RawData = Indata;
     RawData <<= FP_Shift; // Shift to fixed point
@@ -204,6 +215,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 crsf.PackedRCdataOut.ch1 = UINT11_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
                 crsf.PackedRCdataOut.ch2 = UINT11_to_CRSF((Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
                 crsf.PackedRCdataOut.ch3 = UINT11_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
+                crsf.sendRCFrameToFC();
             }
 
             if (type == 0b01)
@@ -221,6 +233,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     NonceRXlocal = Radio.RXdataBuffer[5]; //reset nonce with master value
                     //InitHarwareTimer();
                     //OStimerReset();
+                    crsf.sendRCFrameToFC();
                 }
             }
 
@@ -230,7 +243,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (type == 0b10)
             { //sync packet from master
-                Serial.println("Sync Packet");
+                //Serial.println("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
 
@@ -246,23 +259,59 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 NonceRXlocal = Radio.RXdataBuffer[2];
             }
-            crsf.sendRCFrameToFC();
-        }
+                }
         else
         {
-            Serial.println("crc failed");
+            //Serial.println("crc failed");
         }
     }
     else
     {
-        Serial.println("wrong address");
+        //Serial.println("wrong address");
     }
+}
+
+void beginWebsever()
+{
+    Radio.StopContRX();
+    StopHWtimer();
+
+    BeginWebUpdate();
+    webUpdateMode = true;
+}
+
+void ICACHE_RAM_ATTR sampleButton()
+{
+
+    bool buttonValue = digitalRead(0);
+
+    if (buttonValue == false && buttonPrevValue == true)
+    { //falling edge
+        buttonLastPressed = millis();
+        buttonDown = true;
+        Radio.StartContRX();
+    }
+
+    if (buttonValue == true && buttonPrevValue == false) //rising edge
+    {
+        buttonDown = false;
+    }
+
+    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
+    {
+        if (!webUpdateMode)
+        {
+            beginWebsever();
+        }
+    }
+
+    buttonPrevValue = buttonValue;
 }
 
 void setup()
 {
     pinMode(16, OUTPUT);
-    //BeginWebUpdate();
+    //
 
     delay(200);
     digitalWrite(16, HIGH);
@@ -291,23 +340,31 @@ void setup()
     //crsf.InitSerial();
 
     Radio.SetPreambleLength(2);
-    Radio.ResponseInterval = 32;
+    Radio.ResponseInterval = 16;
     Radio.SetFrequency(433920000);
-    Radio.Begin();
+    Radio.SetOutputPower(0b1111);
+    
 
     Radio.RXdoneCallback = &ProcessRFPacket;
     Radio.TXdoneCallback = &HandleFHSS;
-    Radio.StartContRX();
+
+    Radio.Begin();
+    
 
     // crsf.Begin();
     //Radio.SetOutputPower(0x00);
-    Radio.SetOutputPower(0b1111);
+    //Radio.SetOutputPower(0b0000);
+    
     //Radio.StartContTX();
 
     InitHarwareTimer();
     HWtimerUpdateInterval(10000);
     HWtimerSetCallback(&Test);
     HWtimerSetCallback90(&Test90);
+
+    pinMode(2, INPUT);
+
+    Radio.StartContRX();
 }
 
 void loop()
@@ -325,15 +382,20 @@ void loop()
         }
 
         packetCounter = 0;
-        Serial.println(linkQuality);
+        //Serial.println(linkQuality);
     }
 
-    if (millis() > (LastValidPacket + LostConnectionDelay))
+    // if (millis() > (LastValidPacket + LostConnectionDelay))
+    // {
+    //     LostConnection = true;
+    //     StopHWtimer();
+    // }
+
+    if (millis() > (buttonLastSampled + buttonSampleInterval))
     {
-        LostConnection = true;
-        StopHWtimer();
+        sampleButton();
+        buttonLastSampled = millis();
     }
-
 
     // Serial.print(MeasuredHWtimerInterval);
     // Serial.print(" ");
@@ -350,7 +412,20 @@ void loop()
     // Serial.println(packetCounter);
     // delay(200);
 
-    //HandleWebUpdate();
+    yield();
+
+    if (webUpdateMode)
+    {
+        HandleWebUpdate();
+        if (millis() > webUpdateLedFlashInterval + webUpdateLedFlashIntervalLast)
+        {
+            digitalWrite(16, LED);
+            LED = !LED;
+            webUpdateLedFlashIntervalLast = millis();
+        }
+    }
+
+    //
     // Radio.StopContTX();
     // Serial.println("StopContTX");
     // Radio.StartContRX();

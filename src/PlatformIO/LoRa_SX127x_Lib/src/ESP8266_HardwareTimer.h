@@ -27,7 +27,7 @@ void ICACHE_RAM_ATTR HWtimerUpdateInterval(uint32_t _TimerInterval);
 void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
 void ICACHE_RAM_ATTR Timer0Callback();
 void InitHarwareTimer();
-void  StopHWtimer();
+void StopHWtimer();
 void HWtimerSetCallback(void (*CallbackFunc)(void));
 void HWtimerSetCallback90(void (*CallbackFunc)(void));
 ////////////////////////////////////////////////////////////////////////

@@ -184,10 +184,10 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq
   }
 
   // configuration successful, save the new settings
-  SX127xDriver::_bw = bw;
-  SX127xDriver::_sf = sf;
-  SX127xDriver::_cr = cr;
-  SX127xDriver::_freq = freq;
+  SX127xDriver::currBW = bw;
+  SX127xDriver::currSF = sf;
+  SX127xDriver::currCR = cr;
+  SX127xDriver::currFreq = freq;
 
   return (ERR_NONE);
 }
@@ -256,5 +256,5 @@ uint8_t SX1278begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
   }
 
   // start configuration
-  return (SX1278config(SX127xDriver::_bw, SX127xDriver::_sf, SX127xDriver::_cr, SX127xDriver::_freq, SX127xDriver::_syncWord));
+  return (SX1278config(SX127xDriver::currBW, SX127xDriver::currSF, SX127xDriver::currCR, SX127xDriver::currFreq, SX127xDriver::_syncWord));
 }

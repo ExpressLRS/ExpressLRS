@@ -58,7 +58,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, LinkStatisticsFrameLength + 4);
     CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
-    Serial.println(CRSFoutBuffer[0]);
+    //Serial.println(CRSFoutBuffer[0]);
 }
 #else
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()

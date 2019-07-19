@@ -3,6 +3,7 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
+#include "utils.h"
 
 uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 uint32_t TXdoneMicros = 0;
@@ -20,6 +21,15 @@ uint32_t SyncPacketInterval = 200;
 #define TLMpacketRatio 16
 #define HopInterval 8
 
+uint32_t LinkSpeedIncreaseDelayFactor = 2000; // wait for the connection to be 'good' for this long before increasing the speed.
+uint32_t LinkSpeedDecreaseDelayFactor = 100;
+
+uint32_t LinkSpeedDecreaseFirstMetCondition = 0;
+uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
+
+uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
+uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
+
 uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t RXconnectionLostTimeout = 1500; //After 1.5 seconds of no TLM response consider that slave has lost connection
 bool isRXconnectionLost = true;
@@ -28,7 +38,7 @@ uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 1000;
 float PacketRate = 0.0;
 float linkQuality = 0.0;
-float targetFrameRate = 6.25;
+float targetFrameRate = 3.125;
 ///////////////////////////////////////
 
 bool WaitRXresponse = false;
@@ -63,8 +73,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
           crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
-          crsf.LinkStatistics.downlink_SNR = int(Radio.GetLastPacketSNR() * 10);
-          crsf.LinkStatistics.downlink_RSSI = 120 + Radio.GetLastPacketRSSI();
+          crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
+          crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = int(linkQuality);
 
           crsf.sendLinkStatisticsToTX();
@@ -72,25 +82,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       }
     }
   }
-}
-
-void ICACHE_RAM_ATTR PrintRC()
-{
-  Serial.print(crsf.ChannelDataIn[0]);
-  Serial.print(",");
-  Serial.print(crsf.ChannelDataIn[1]);
-  Serial.print(",");
-  Serial.print(crsf.ChannelDataIn[2]);
-  Serial.print(",");
-  Serial.print(crsf.ChannelDataIn[3]);
-  Serial.print(",");
-  Serial.println(crsf.ChannelDataIn[4]);
-  Serial.print(",");
-  Serial.print(crsf.ChannelDataIn[5]);
-  Serial.print(",");
-  Serial.println(crsf.ChannelDataIn[6]);
-  Serial.print(",");
-  Serial.println(crsf.ChannelDataIn[7]);
 }
 
 bool ICACHE_RAM_ATTR CheckChannels5to8Change()
@@ -107,20 +98,20 @@ bool ICACHE_RAM_ATTR CheckChannels5to8Change()
   return result;
 }
 
-void ICACHE_RAM_ATTR SetupSyncPacketData()
+void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = 0b10101010;
+  PacketHeaderAddr = (DeviceAddr << 2) + 0b10; 
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   //Radio.TXdataBuffer[3] = crsf.frameInterval;
 }
 
-void ICACHE_RAM_ATTR Setup4ChannelData()
+void ICACHE_RAM_ATTR Generate4ChannelData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = 0b10101000;
+  PacketHeaderAddr = (DeviceAddr << 2) + 0b00; 
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = ((CRSF_to_UINT11(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
   Radio.TXdataBuffer[2] = ((CRSF_to_UINT11(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
@@ -130,10 +121,10 @@ void ICACHE_RAM_ATTR Setup4ChannelData()
                           ((CRSF_to_UINT11(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) + ((CRSF_to_UINT11(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
 }
 
-void ICACHE_RAM_ATTR SetupSwitchChannelData()
+void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 {
   uint8_t PacketHeaderAddr;
-  Radio.TXdataBuffer[0] = 0b10101001;
+  Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b01; 
   Radio.TXdataBuffer[1] = ((CRSF_to_UINT11(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT11(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
   Radio.TXdataBuffer[2] = (CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT11(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
   Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
@@ -148,19 +139,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
     if ((millis() > (SyncPacketLastSent + SyncPacketInterval)) && isRXconnectionLost)
     {
-      SetupSyncPacketData();
+      GenerateSyncPacketData();
       SyncPacketLastSent = millis();
     }
     else
     {
       if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || CheckChannels5to8Change())
       {
-        SetupSwitchChannelData();
+        GenerateSwitchChannelData();
         SwitchPacketLastSent = millis();
       }
       else // else we just have regular channel data which we send as 8 + 2 bits
       {
-        Setup4ChannelData();
+        Generate4ChannelData();
       }
     }
   }
@@ -185,8 +176,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       WaitRXresponse = false;
       Radio.TXdoneCallback = &Radio.nullCallback;
       Radio.NonceTX++;
-      //delayMicroseconds(500);
-      //erial.println(".");
       return; // here we are expecting the RX packet so we do nothing and just return, if we got it the callback will fire
     }
     else if (modresult == 2) // the last result, we expect that we either got the response packet or didn't, either way we clear the callback and send a packet normally
@@ -201,6 +190,25 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
+void SetAirMode(uint8_t mode)
+{
+  if (mode == 0) //this is the fastest mode, 250hz, no telemetry
+  {
+    // this is a special mode where we send a packet in time with the CRSF update packets running at 250hz
+    // in the other modes we use a hardware time to 'buffer' the data and send the packets at a different interval
+    Radio.StopTimerTask();
+    crsf.RCdataCallback = &SendRCdataToRF;
+  }
+  else
+  {
+    crsf.RCdataCallback = crsf.nullCallback;
+    Radio.StopTimerTask();
+    Radio.TimerInterval = ExpressLRS_AirRateConfig[mode].INTERVAL;
+    Radio.Config(ExpressLRS_AirRateConfig[mode].BW, ExpressLRS_AirRateConfig[mode].SF, ExpressLRS_AirRateConfig[mode].CR, Radio.currFreq, SX127X_SYNC_WORD);
+    Radio.StartTimerTask();
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -209,7 +217,7 @@ void setup()
 
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
 
-  Radio.TXContInterval = 10000; //in microseconds
+  Radio.TimerInterval = 5000; //in microseconds
   Radio.TXbuffLen = 7;
   Radio.RXbuffLen = 7;
 
@@ -224,18 +232,21 @@ void setup()
 
   Radio.SetPreambleLength(2);
   Radio.SetFrequency(433920000); //set frequency first or an error will occur!!!
-  Radio.ResponseInterval = 32;
+  Radio.ResponseInterval = 16;
   Radio.RXdoneCallback = &ProcessTLMpacket;
 
   //Radio.TXdoneCallback = &PrintTest;
   Radio.Begin();
 
-  crsf.RCdataCallback = &SendRCdataToRF;
+  //crsf.RCdataCallback = &SendRCdataToRF;
 
   crsf.Begin();
 
+  Radio.TimerDoneCallback = &SendRCdataToRF;
+  Radio.StartTimerTask();
   //Radio.StartContTX();
   //Radio.SetOutputPower(0x00);
+  //Radio.SetOutputPower(0b0000);
   Radio.SetOutputPower(0b1111);
   memset((uint16_t *)crsf.ChannelDataIn, 0, 16);
   memset((uint8_t *)Radio.TXdataBuffer, 0, 7);
@@ -270,7 +281,7 @@ void loop()
   //delay(4);
   //PrintRC();
 
-  delay(10);
+  //delay(10);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {

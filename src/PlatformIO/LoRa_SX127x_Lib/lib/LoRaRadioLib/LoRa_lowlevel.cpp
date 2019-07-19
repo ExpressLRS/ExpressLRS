@@ -57,7 +57,7 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.setFrequency(10000000);
+  SPI.setFrequency(5000000);
 #endif
 }
 

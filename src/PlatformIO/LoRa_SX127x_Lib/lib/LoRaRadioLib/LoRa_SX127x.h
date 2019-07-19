@@ -102,8 +102,10 @@ public:
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
 
+    static void (*TimerDoneCallback)(); //function pointer for callback
+
 #ifdef PLATFORM_ESP32
-    static TaskHandle_t TimertaskTX_handle; //Task Handle for ContTX mode
+    static TaskHandle_t Timertask_handle; //Task Handle for ContTX mode
 #endif
 
     //static void (*TXcallback)();
@@ -121,6 +123,8 @@ public:
     static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
 
+    static bool HighPowerModule;
+
     /////////////////////////////
 
     ///////////Radio Variables////////
@@ -134,16 +138,16 @@ public:
 
     static volatile bool headerExplMode;
 
-    static volatile uint32_t TXContInterval; //20ms default for now.
+    static volatile uint32_t TimerInterval; //20ms default for now.
 
-    static float _freq;
+    static float currFreq;
     static uint8_t _syncWord;
 
     static ContinousMode ContMode;
     static RFmodule_ RFmodule;
-    static Bandwidth _bw;
-    static SpreadingFactor _sf;
-    static CodingRate _cr;
+    static Bandwidth currBW;
+    static SpreadingFactor currSF;
+    static CodingRate currCR;
     static RadioOPmodes _opmode;
     static RadioState_ RadioState;
     ///////////////////////////////////
@@ -166,8 +170,8 @@ public:
     //////////////////////////////////
 
     //////////Functions//////////////
-    void timer0_ISRtx(void);
-    void timer0_ISRrx(void);
+    //void timer0_ISRtx(void);
+    //void timer0_ISRrx(void);
 
     //const char* getChipName();
 
@@ -199,19 +203,17 @@ public:
 
     static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     static float ICACHE_RAM_ATTR GetLastPacketSNR();
-    static void ICACHE_RAM_ATTR CalcOnAirTime();
-    static void ICACHE_RAM_ATTR GetPacketRSSI_SNR();
 
     ////////////Non-blocking TX related Functions/////////////////
     static void nullCallback(void);
 
-    static void ICACHE_RAM_ATTR StartContTX(); //Start Cont TX mode, sends data continuiously
-    static void ICACHE_RAM_ATTR StopContTX();
+    static void ICACHE_RAM_ATTR StartTimerTask(); //Start Cont TX mode, sends data continuiously
+    static void ICACHE_RAM_ATTR StopTimerTask();
     static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
 
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
-    static void ICACHE_RAM_ATTR TimerTaskTX_ISRhandler();
-    static void ICACHE_RAM_ATTR TimerTaskTX(void *param);
+    static void ICACHE_RAM_ATTR TimerTask_ISRhandler();
+    static void ICACHE_RAM_ATTR TimerTask(void *param);
 
     /////////////Non-blocking RX related Functions///////////////
 
@@ -226,9 +228,6 @@ public:
     static uint8_t rxISRprocess(char *data, uint8_t *length);
 
 private:
-    // static void timer_isr_handler();
-    // static void IRAM_ATTR TimerTask(void *param);
-    //static hw_timer_t * timer;
 };
 
 //enum RadioOPmodes {CURR_OPMODE_FSK_OOK = 0b00000000, CURR_OPMODE_LORA = 0b10000000, CURR_OPMODE_ACCESS_SHARED_REG_OFF = 0b00000000, CURR_OPMODE_ACCESS_SHARED_REG_ON = 0b01000000,
