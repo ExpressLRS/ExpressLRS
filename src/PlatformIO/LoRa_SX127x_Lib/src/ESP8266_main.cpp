@@ -61,7 +61,7 @@ uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
 float linkQuality = 0.0;
-float targetFrameRate = 93.75;
+float targetFrameRate = 96.875;
 
 uint32_t LostConnectionDelay = 2000; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
@@ -93,8 +93,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.GetLastPacketRSSI();
 
-    crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
+    // crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
+    // crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
 
     crsf.LinkStatistics.uplink_RSSI_1 = LastRSSI;
     crsf.LinkStatistics.uplink_RSSI_2 = LastRSSI;
@@ -195,19 +195,25 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             LastValidPacket = millis();
 
-            if (LostConnection) //we got a packet, therefore no lost connection
-            {
-                InitHarwareTimer();
-                LostConnection = false;
-            }
+            // if (LostConnection) //we got a packet, therefore no lost connection
+            // {
+            //     InitHarwareTimer();
+            //     LostConnection = false;
+            // }
 
-            HWtimerError = micros() - HWtimerGetlastCallbackMicros();
+            //digitalWrite(16, LED);
+           // LED = !LED;
 
-            HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+            // HWtimerError = micros() - HWtimerGetlastCallbackMicros();
 
-            uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            Offset = SimpleLowPass(HWtimerError - (5000)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well
-            HWtimerPhaseShift(Offset / 2);
+            // HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+
+            // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+            // Offset = SimpleLowPass(HWtimerError - (5000)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well
+            // HWtimerPhaseShift(Offset / 2);
+            int8_t LastRSSI = Radio.GetLastPacketRSSI();
+
+            crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -30, 0, 1023));
 
             if (type == 0b00) //std 4 channel switch data
             {
@@ -322,7 +328,7 @@ void setup()
     delay(200);
     digitalWrite(16, LOW);
 
-    Radio.RFmodule = RFMOD_SX1278; //define radio module here
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
     Radio.TXbuffLen = 7;
     Radio.RXbuffLen = 7;
 
@@ -339,7 +345,7 @@ void setup()
     Serial.println("Module Booted...");
     //crsf.InitSerial();
 
-    Radio.SetPreambleLength(2);
+    Radio.SetPreambleLength(6);
     Radio.ResponseInterval = 16;
     Radio.SetFrequency(433920000);
     Radio.SetOutputPower(0b1111);
@@ -357,10 +363,10 @@ void setup()
     
     //Radio.StartContTX();
 
-    InitHarwareTimer();
-    HWtimerUpdateInterval(10000);
-    HWtimerSetCallback(&Test);
-    HWtimerSetCallback90(&Test90);
+    //InitHarwareTimer();
+    //HWtimerUpdateInterval(10000);
+    //HWtimerSetCallback(&Test);
+    //HWtimerSetCallback90(&Test90);
 
     pinMode(2, INPUT);
 
@@ -385,11 +391,11 @@ void loop()
         //Serial.println(linkQuality);
     }
 
-    // if (millis() > (LastValidPacket + LostConnectionDelay))
-    // {
-    //     LostConnection = true;
-    //     StopHWtimer();
-    // }
+    if (millis() > (LastValidPacket + LostConnectionDelay))
+    {
+        LostConnection = true;
+        //StopHWtimer();
+    }
 
     if (millis() > (buttonLastSampled + buttonSampleInterval))
     {

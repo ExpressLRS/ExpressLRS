@@ -160,34 +160,34 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[6] = crc;
   //Radio.TXnb(Radio.TXdataBuffer, 7);
 
-  uint8_t modresult = Radio.NonceTX % Radio.ResponseInterval;
+  // uint8_t modresult = Radio.NonceTX % Radio.ResponseInterval;
 
-  if ((modresult == 0) || (modresult == 1) || (modresult == 2))
-  {
-    if (modresult == 0)
-    {                                     //after the next TX packet we switch to RX mode
-      Radio.TXnb(Radio.TXdataBuffer, 7);  //every n packets we tie the txdone callback to the RXnb function to recv a telemetry response
-      Radio.TXdoneCallback = &Radio.RXnb; //map the TXdoneCallback to switch to RXnb mode
-      //Serial.println("Wait Resp");
-      WaitRXresponse = true;
-    }
-    else if (WaitRXresponse && (modresult == 1)) //need to wait one frame for the response
-    {
-      WaitRXresponse = false;
-      Radio.TXdoneCallback = &Radio.nullCallback;
-      Radio.NonceTX++;
-      return; // here we are expecting the RX packet so we do nothing and just return, if we got it the callback will fire
-    }
-    else if (modresult == 2) // the last result, we expect that we either got the response packet or didn't, either way we clear the callback and send a packet normally
-    {
-      Radio.SetFrequency(FHSSgetNextFreq()); // freq hop before sending the next packet
-      Radio.TXnb(Radio.TXdataBuffer, 7);
-    }
-  }
-  else
-  {
+  // if ((modresult == 0) || (modresult == 1) || (modresult == 2))
+  // {
+  //   if (modresult == 0)
+  //   {                                     //after the next TX packet we switch to RX mode
+  //     Radio.TXnb(Radio.TXdataBuffer, 7);  //every n packets we tie the txdone callback to the RXnb function to recv a telemetry response
+  //     Radio.TXdoneCallback = &Radio.RXnb; //map the TXdoneCallback to switch to RXnb mode
+  //     //Serial.println("Wait Resp");
+  //     WaitRXresponse = true;
+  //   }
+  //   else if (WaitRXresponse && (modresult == 1)) //need to wait one frame for the response
+  //   {
+  //     WaitRXresponse = false;
+  //     Radio.TXdoneCallback = &Radio.nullCallback;
+  //     Radio.NonceTX++;
+  //     return; // here we are expecting the RX packet so we do nothing and just return, if we got it the callback will fire
+  //   }
+  //   else if (modresult == 2) // the last result, we expect that we either got the response packet or didn't, either way we clear the callback and send a packet normally
+  //   {
+  //     Radio.SetFrequency(FHSSgetNextFreq()); // freq hop before sending the next packet
+  //     Radio.TXnb(Radio.TXdataBuffer, 7);
+  //   }
+  // }
+  // else
+  // {
     Radio.TXnb(Radio.TXdataBuffer, 7); // otherwise the default case is that we just send the TX packet.
-  }
+  //}
 }
 
 void SetAirMode(uint8_t mode)
@@ -215,9 +215,9 @@ void setup()
   Serial.println("Module Booted...");
   delay(500);
 
-  Radio.RFmodule = RFMOD_SX1278; //define radio module here
+  Radio.RFmodule = RFMOD_SX1276; //define radio module here
 
-  Radio.TimerInterval = 5000; //in microseconds
+  Radio.TimerInterval = 10000; //in microseconds
   Radio.TXbuffLen = 7;
   Radio.RXbuffLen = 7;
 
@@ -230,7 +230,7 @@ void setup()
   Radio.SX127x_RST = 14;
   /////////////////////////
 
-  Radio.SetPreambleLength(2);
+  Radio.SetPreambleLength(6);
   Radio.SetFrequency(433920000); //set frequency first or an error will occur!!!
   Radio.ResponseInterval = 16;
   Radio.RXdoneCallback = &ProcessTLMpacket;

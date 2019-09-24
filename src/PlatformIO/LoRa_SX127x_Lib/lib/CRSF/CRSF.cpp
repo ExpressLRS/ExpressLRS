@@ -110,7 +110,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     const TickType_t xDelay3 = 3 / portTICK_PERIOD_MS;
     const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
     const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
-    CRSF::Port.begin(CRSF_OPENTX_SLOW_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
+    CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
     Serial.println("ESP32 UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
