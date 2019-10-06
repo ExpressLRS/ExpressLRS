@@ -5,6 +5,9 @@
 #include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
 
+SX127xDriver Radio;
+CRSF crsf(Serial); //pass a serial port object to the class.
+
 ///forward defs///
 void InitOStimer();
 void OStimerSetCallback(void (*CallbackFunc)(void));
@@ -40,15 +43,12 @@ uint32_t buttonLastPressed = 0;
 uint32_t webUpdatePressInterval = 3000; //hold button for 3 sec to enable webupdate mode
 bool webUpdateMode = false;
 
-uint32_t webUpdateLedFlashInterval = 50;
+uint32_t webUpdateLedFlashInterval = 25;
 uint32_t webUpdateLedFlashIntervalLast;
 
 uint8_t DeviceAddr = 0b101010;
 
 volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
-
-SX127xDriver Radio;
-CRSF crsf(Serial); //pass a serial port object to the class.
 
 /////////////////Variables for FHSS///////////////////////////
 uint8_t FHSShopInterval = 16; ///hop freqs after this many packets
@@ -60,11 +60,12 @@ int packetCounter = 0;
 uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
-float linkQuality = 0.0;
-float targetFrameRate = 96.875;
+uint8_t linkQuality = 0;
+///float targetFrameRate = 96.875;
 
-uint32_t LostConnectionDelay = 2000; //after 1500ms we consider that we lost connection to the TX
+uint32_t LostConnectionDelay = 1000; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
+bool gotFHSSsync = false;
 uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 ///////////////////////////////////////////////////////////////
 
@@ -98,10 +99,10 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     crsf.LinkStatistics.uplink_RSSI_1 = LastRSSI;
     crsf.LinkStatistics.uplink_RSSI_2 = LastRSSI;
-    crsf.LinkStatistics.uplink_SNR = int(Radio.GetLastPacketSNR() * 10);
-    crsf.LinkStatistics.uplink_Link_quality = int(linkQuality);
+    crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
+    crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
-    //crsf.sendLinkStatisticsToFC();
+    crsf.sendLinkStatisticsToFC();
 }
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
@@ -109,7 +110,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t modresult = NonceRXlocal % Radio.ResponseInterval;
     //uint8_t modresult = 1;
 
-    if (modresult == 0)
+    if (modresult == 0 && gotFHSSsync)
     {
         getRFlinkInfo();
 
@@ -195,22 +196,24 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             LastValidPacket = millis();
 
-            // if (LostConnection) //we got a packet, therefore no lost connection
-            // {
-            //     InitHarwareTimer();
-            //     LostConnection = false;
-            // }
+            if (LostConnection)
+            {
+                InitHarwareTimer();
+                LostConnection = false; //we got a packet, therefore no lost connection
+                Serial.println("got conn");
+            }
 
             //digitalWrite(16, LED);
-           // LED = !LED;
+            //LED = !LED;
 
-            // HWtimerError = micros() - HWtimerGetlastCallbackMicros();
+            HWtimerError = micros() - HWtimerGetlastCallbackMicros();
 
-            // HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+            HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
-            // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            // Offset = SimpleLowPass(HWtimerError - (5000)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well
-            // HWtimerPhaseShift(Offset / 2);
+            uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            HWtimerPhaseShift(Offset / 2);
+
             int8_t LastRSSI = Radio.GetLastPacketRSSI();
 
             crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -30, 0, 1023));
@@ -252,6 +255,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+                gotFHSSsync = true;
 
                 //Radio.SetFrequency(FHSSgetCurrFreq());
                 //Serial.println("freq");
@@ -265,7 +269,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 NonceRXlocal = Radio.RXdataBuffer[2];
             }
-                }
+        }
         else
         {
             //Serial.println("crc failed");
@@ -314,6 +318,17 @@ void ICACHE_RAM_ATTR sampleButton()
     buttonPrevValue = buttonValue;
 }
 
+void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
+{
+    Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
+    ExpressLRS_currAirRate = mode;
+    HWtimerUpdateInterval(mode.interval);
+}
+
+void runDetection()
+{
+}
+
 void setup()
 {
     pinMode(16, OUTPUT);
@@ -328,18 +343,9 @@ void setup()
     delay(200);
     digitalWrite(16, LOW);
 
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+    Radio.RFmodule = RFMOD_SX1278; //define radio module here
     Radio.TXbuffLen = 7;
     Radio.RXbuffLen = 7;
-
-    //////Custom Module/////// ExpressLRS 20x20mm V2
-    Radio.SX127x_MISO = 12;
-    Radio.SX127x_MOSI = 13;
-    Radio.SX127x_SCK = 14;
-    Radio.SX127x_dio0 = 4;
-    Radio.SX127x_nss = 15;
-    Radio.SX127x_RST = 2;
-    /////////////////////////
 
     Serial.begin(420000);
     Serial.println("Module Booted...");
@@ -349,59 +355,111 @@ void setup()
     Radio.ResponseInterval = 16;
     Radio.SetFrequency(433920000);
     Radio.SetOutputPower(0b1111);
-    
 
     Radio.RXdoneCallback = &ProcessRFPacket;
     Radio.TXdoneCallback = &HandleFHSS;
 
     Radio.Begin();
-    
 
-    // crsf.Begin();
-    //Radio.SetOutputPower(0x00);
-    //Radio.SetOutputPower(0b0000);
-    
+    crsf.Begin();
+
+    //Radio.SetOutputPower(0b0100);
+
     //Radio.StartContTX();
 
+    HWtimerUpdateInterval(10000);
+    HWtimerSetCallback(&Test);
+    HWtimerSetCallback90(&Test90);
     //InitHarwareTimer();
-    //HWtimerUpdateInterval(10000);
-    //HWtimerSetCallback(&Test);
-    //HWtimerSetCallback90(&Test90);
 
     pinMode(2, INPUT);
 
+    SetRFLinkRate(RF_RATE_25HZ);
     Radio.StartContRX();
 }
 
 void loop()
 {
 
-    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    {
-        PacketRateLastChecked = millis();
-        PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-        linkQuality = (((float)PacketRate / (float)targetFrameRate) * 100000.0);
-
-        if (linkQuality > 100)
-        {
-            linkQuality = 100;
-        }
-
-        packetCounter = 0;
-        //Serial.println(linkQuality);
-    }
-
     if (millis() > (LastValidPacket + LostConnectionDelay))
     {
-        LostConnection = true;
-        //StopHWtimer();
+        if (!LostConnection)
+        {
+            Serial.println("lost conn");
+            LostConnection = true;
+            gotFHSSsync = false;
+            StopHWtimer();
+            //Radio.StopContRX();
+        }
     }
 
-    if (millis() > (buttonLastSampled + buttonSampleInterval))
-    {
-        sampleButton();
-        buttonLastSampled = millis();
-    }
+    // if (LostConnection && !webUpdateMode)
+    // {
+    //     //Serial.println("start preamble detect");
+    //     uint8_t result = Radio.RunCAD(); // run cad to quickly detect the start of a packet
+    //     //Serial.println("done preamble detect");
+
+    //     if (result == PREAMBLE_DETECTED)
+    //     {
+    //         Serial.println("detect preamble");
+    //         //LostConnection = false;
+    //         uint8_t datain[7];
+    //         Radio.RXsingle(datain, 7);
+
+    //         uint8_t calculatedCRC = CalcCRC(datain, 6);
+    //         uint8_t inCRC = datain[6];
+    //         uint8_t type = datain[0] & 0b11;
+    //         uint8_t packetAddr = (datain[0] & 0b11111100) >> 2;
+
+    //         if ((inCRC == calculatedCRC))
+    //         {
+    //             if (type == 0b10) //sync packet
+    //             {
+    //                 Radio.StartContRX();
+    //                 //LostConnection = false;
+    //             }
+    //         }
+
+    //         // if ((inCRC == calculatedCRC))
+    //         // {
+    //         //     Serial.println("got crc");
+    //         //     LastValidPacket = millis();
+    //         //     if (type == 0b10) //sync packet
+    //         //     {
+    //         //         Radio.StartContRX();
+    //         //         //FHSSsetCurrIndex(datain[1]);
+    //         //         //NonceRXlocal = datain[2];
+    //         //         Serial.println("got good sync from CAD");
+    //         //         LostConnection = false;
+    //         //         return;
+    //         //     }
+    //         // }
+    //     }
+    //     else
+    //     {
+    //         //Serial.println("f");
+    //         delay(20);
+    //         Radio.SetFrequency(FHSSgetNextFreq());
+    //     }
+    // }
+    //else // we have connection, calculate the stats below.
+    //{
+        if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+        {
+            float targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / Radio.ResponseInterval));
+            PacketRateLastChecked = millis();
+            PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+            linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+
+            if (linkQuality > 100)
+            {
+                linkQuality = 100;
+            }
+
+            packetCounter = 0;
+            //Serial.println(linkQuality);
+        }
+    //}
 
     // Serial.print(MeasuredHWtimerInterval);
     // Serial.print(" ");
@@ -411,14 +469,20 @@ void loop()
 
     // Serial.print("----");
 
-    // //Serial.print(Offset90);
-    // //Serial.print(" ");
+    // Serial.print(Offset90);
+    // Serial.print(" ");
     // Serial.print(HWtimerError90);
     // Serial.print("----");
     // Serial.println(packetCounter);
     // delay(200);
 
-    yield();
+    if (millis() > (buttonLastSampled + buttonSampleInterval))
+    {
+        sampleButton();
+        buttonLastSampled = millis();
+    }
+
+    //yield();
 
     if (webUpdateMode)
     {

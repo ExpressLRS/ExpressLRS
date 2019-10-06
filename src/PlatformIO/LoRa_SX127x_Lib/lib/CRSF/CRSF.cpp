@@ -111,7 +111,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
     const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
-    Serial.println("ESP32 UART LISTEN TASK STARTED");
+    Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
     uint32_t YieldInterval = 100;
@@ -165,7 +165,6 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                 }
                 else
                 {
-
                     Serial.println("CRC failure");
                     Serial.println(SerialInPacketPtr, HEX);
                     Serial.print("Expected: ");
@@ -198,6 +197,8 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         GetChannelDataIn();
         (RCdataCallback)(); // run new RC data callback
     }
+
+    
 }
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel

@@ -32,15 +32,47 @@ volatile uint32_t SX127xDriver::TimerInterval = 20000;
 volatile uint8_t SX127xDriver::TXbuffLen = 8;
 volatile uint8_t SX127xDriver::RXbuffLen = 8;
 
+uint8_t SX127xDriver::ResponseInterval = 0;
+
 uint8_t SX127xDriver::NonceTX = 0;
 uint8_t SX127xDriver::NonceRX = 0;
 
-uint8_t SX127xDriver::ResponseInterval = 50; // how often the slave will reply max 255.
-
 //////////////////Hardware Pin Variable defaults////////////////
+
+#if defined(PLATFORM_ESP32)
+//////Custom Module Pinouts///////
+uint8_t SX127xDriver::SX127x_nss = 5;
+uint8_t SX127xDriver::SX127x_dio0 = 26;
+uint8_t SX127xDriver::SX127x_dio1 = 25;
+
+uint8_t SX127xDriver::SX127x_MOSI = 23;
+uint8_t SX127xDriver::SX127x_MISO = 19;
+uint8_t SX127xDriver::SX127x_SCK = 18;
+uint8_t SX127xDriver::SX127x_RST = 14;
 
 uint8_t SX127xDriver::_RXenablePin = 13;
 uint8_t SX127xDriver::_TXenablePin = 12;
+
+bool SX127xDriver::HighPowerModule = true;
+/////////////////////////
+
+#elif (PLATFORM_ESP8266)
+//////Custom Module/////// ExpressLRS 20x20mm V2
+uint8_t SX127xDriver::SX127x_nss = 15;
+uint8_t SX127xDriver::SX127x_dio0 = 4;
+uint8_t SX127xDriver::SX127x_dio1 = 5;
+
+uint8_t SX127xDriver::SX127x_MOSI = 13;
+uint8_t SX127xDriver::SX127x_MISO = 12;
+uint8_t SX127xDriver::SX127x_SCK = 14;
+uint8_t SX127xDriver::SX127x_RST = 2;
+
+bool SX127xDriver::HighPowerModule = false;
+uint8_t SX127xDriver::_RXenablePin = -1;
+uint8_t SX127xDriver::_TXenablePin = -1;
+/////////////////////////
+
+#else
 
 uint8_t SX127xDriver::SX127x_nss = 5;
 uint8_t SX127xDriver::SX127x_dio0 = 26;
@@ -52,6 +84,9 @@ uint8_t SX127xDriver::SX127x_SCK = 18;
 uint8_t SX127xDriver::SX127x_RST = 18;
 
 bool SX127xDriver::HighPowerModule = false;
+uint8_t SX127xDriver::_RXenablePin = -1;
+uint8_t SX127xDriver::_TXenablePin = -1;
+#endif
 
 /////////////////////////////////////////////////////////////////
 
@@ -60,7 +95,7 @@ uint32_t SX127xDriver::LastTXdoneMicros = 0;
 uint32_t SX127xDriver::TXdoneMicros = 0;
 uint32_t SX127xDriver::TXstartMicros = 0;
 int8_t SX127xDriver::LastPacketRSSI = 0;
-float SX127xDriver::LastPacketSNR = 0;
+int8_t SX127xDriver::LastPacketSNR = 0;
 uint32_t SX127xDriver::TXspiTime = 0;
 uint32_t SX127xDriver::HeadRoom = 0;
 
@@ -68,7 +103,6 @@ Bandwidth SX127xDriver::currBW = BW_250_00_KHZ;
 SpreadingFactor SX127xDriver::currSF = SF_6;
 CodingRate SX127xDriver::currCR = CR_4_7;
 uint8_t SX127xDriver::_syncWord = SX127X_SYNC_WORD;
-
 float SX127xDriver::currFreq = 123456789;
 
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
@@ -99,12 +133,14 @@ uint8_t SX127xDriver::Begin()
   digitalWrite(SX127x_RST, 1);
   delay(500);
 
+#if defined(PLATFORM_ESP32)
   if (HighPowerModule)
   {
 
-    pinMode(_TXenablePin, OUTPUT);
-    pinMode(_RXenablePin, OUTPUT);
+    pinMode(SX127xDriver::_TXenablePin, OUTPUT);
+    pinMode(SX127xDriver::_RXenablePin, OUTPUT);
   }
+#endif
 
   //static uint8_t SX127x_SCK;
 
@@ -122,7 +158,7 @@ uint8_t SX127xDriver::Begin()
   return (status);
 }
 
-uint8_t SX127xDriver::setBandwidth(Bandwidth bw)
+uint8_t SX127xDriver::SetBandwidth(Bandwidth bw)
 {
   uint8_t state = SX127xConfig(bw, currSF, currCR, currFreq, _syncWord);
   if (state == ERR_NONE)
@@ -132,7 +168,7 @@ uint8_t SX127xDriver::setBandwidth(Bandwidth bw)
   return (state);
 }
 
-uint8_t SX127xDriver::setSyncWord(uint8_t syncWord)
+uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
 
   uint8_t status = setRegValue(SX127X_REG_SYNC_WORD, syncWord);
@@ -429,11 +465,9 @@ void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
 void ICACHE_RAM_ATTR SX127xDriver::TimerTask(void *param)
 {
   timer_sem = xSemaphoreCreateBinary();
-
   while (1)
   {
     xSemaphoreTake(timer_sem, portMAX_DELAY);
-
     TimerDoneCallback(); // run the callback
   }
 }
@@ -464,7 +498,6 @@ void SX127xDriver::StartTimerTask()
   timerAlarmWrite(timer, TimerInterval, true);
   timerAlarmEnable(timer);
 }
-
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -558,13 +591,14 @@ void ICACHE_RAM_ATTR SX127xDriver::StartContRX()
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
+  InterruptAssignment = NONE;
+  detachInterrupt(SX127xDriver::SX127x_dio0);
   SX127xDriver::SetMode(SX127X_SLEEP);
 }
 
 void SX127xDriver::RXnb()
-{ //ADDED CHANGED
-
-  // attach interrupt to DIO0
+{
+  //attach interrupt to DIO0
   //RX continuous mode
 
 #if defined(PLATFORM_ESP32)
@@ -584,7 +618,6 @@ void SX127xDriver::RXnb()
 
   if (headerExplMode == false)
   {
-
     setRegValue(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
   }
 
@@ -615,7 +648,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
 
   while (!digitalRead(SX127x_dio0))
   {
-    yield();
+    //yield();
     if (digitalRead(SX127x_dio1))
     {
       ClearIRQFlags();
@@ -648,16 +681,26 @@ uint8_t SX127xDriver::RunCAD()
   SetMode(SX127X_STANDBY);
 
   setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_CAD_DONE | SX127X_DIO1_CAD_DETECTED, 7, 4);
-  ClearIRQFlags();
 
   SetMode(SX127X_CAD);
+  ClearIRQFlags();
+
+  uint32_t startTime = millis();
 
   while (!digitalRead(SX127x_dio0))
   {
-    if (digitalRead(SX127x_dio1))
+    if (millis() > (startTime + 500))
     {
-      ClearIRQFlags();
-      return (PREAMBLE_DETECTED);
+      return (CHANNEL_FREE);
+    }
+    else
+    {
+      //yield();
+      if (digitalRead(SX127x_dio1))
+      {
+        ClearIRQFlags();
+        return (PREAMBLE_DETECTED);
+      }
     }
   }
 
@@ -776,7 +819,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
   return (-157 + getRegValue(SX127X_REG_PKT_RSSI_VALUE));
 }
 
-float ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 {
   int8_t rawSNR = (int8_t)getRegValue(SX127X_REG_PKT_SNR_VALUE);
   return (rawSNR / 4.0);
@@ -786,9 +829,3 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 {
   writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
 }
-
-// const char* SX127xgetChipName() {
-//   const char* names[] = {"SX1272", "SX1273", "SX1276", "SX1277", "SX1278", "SX1279"};
-//   //return(names[_ch]);
-//   return 0;
-// }

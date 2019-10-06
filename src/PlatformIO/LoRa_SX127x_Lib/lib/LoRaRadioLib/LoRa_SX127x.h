@@ -1,5 +1,4 @@
-#ifndef LoRa_SX127x
-#define LoRa_SX127x
+#pragma once
 
 #include <Arduino.h>
 
@@ -11,8 +10,6 @@
 #endif
 
 #ifdef PLATFORM_8266
-//#include <freertos/FreeRTOS.h>
-//#include <freertos/task.h>
 #include <cstdint>
 #endif
 
@@ -154,39 +151,32 @@ public:
 
     /////////////Packet Stats//////////
     static int8_t LastPacketRSSI;
-    static float LastPacketSNR;
+    static int8_t LastPacketSNR;
     static float PacketLossRate;
     static uint8_t NonceTX;
     static uint8_t NonceRX;
-
     static uint8_t ResponseInterval; // how often the slave will reply
-
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;
     static uint32_t TXspiTime;
     static uint32_t HeadRoom;
     static uint32_t LastTXdoneMicros;
     static uint32_t TXdoneMicros;
-    //////////////////////////////////
-
-    //////////Functions//////////////
-    //void timer0_ISRtx(void);
-    //void timer0_ISRrx(void);
-
-    //const char* getChipName();
+    /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
     static uint8_t Begin();
     static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord);
     static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord);
-    static uint8_t setBandwidth(Bandwidth bw);
-    static uint8_t setSpreadingFactor(SpreadingFactor sf);
-    static uint8_t setSyncWord(uint8_t syncWord);
+
+    static uint8_t SetBandwidth(Bandwidth bw);
+    static uint8_t SetSyncWord(uint8_t syncWord);
     static uint8_t SetOutputPower(uint8_t Power);
     static uint8_t SetPreambleLength(uint8_t PreambleLen);
     static uint8_t SetSpreadingFactor(SpreadingFactor sf);
     static uint8_t SetCodingRate(CodingRate cr);
     static uint8_t SetFrequency(float freq);
+
     static uint8_t SX127xBegin();
     static uint8_t SetMode(uint8_t mode);
     static uint8_t TX(uint8_t *data, uint8_t length);
@@ -202,7 +192,7 @@ public:
     static void SX127xclearIRQFlags();
 
     static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
-    static float ICACHE_RAM_ATTR GetLastPacketSNR();
+    static int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
 
     ////////////Non-blocking TX related Functions/////////////////
     static void nullCallback(void);
@@ -270,5 +260,3 @@ private:
 //int _dio0;
 //int _dio1;
 //
-
-#endif
