@@ -52,6 +52,7 @@ uint8_t linkQuality = 0;
 
 bool Channels5to8Changed = false;
 bool ChangeAirRate = false;
+bool SentAirRateInfo = false; 
 
 bool WaitRXresponse = false;
 
@@ -151,6 +152,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       GenerateSyncPacketData();
       SyncPacketLastSent = millis();
+      SentAirRateInfo = true;
     }
     else
     {
@@ -318,7 +320,7 @@ void loop()
     packetCounteRX_TX = 0;
   }
 
-  if (ChangeAirRate)
+  if (ChangeAirRate && SentAirRateInfo) //airrate change has been changed and we also informed the slave
   {
     //Serial.println("changing RF rate");
 
@@ -340,5 +342,6 @@ void loop()
       SetRFLinkRate(RF_RATE_50HZ);
     }
     ChangeAirRate = false;
+    SentAirRateInfo = false;
   }
 }

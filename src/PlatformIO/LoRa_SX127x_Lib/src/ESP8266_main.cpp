@@ -9,6 +9,7 @@ SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class.
 
 ///forward defs///
+void SetRFLinkRate(expresslrs_mod_settings_s mode);
 void InitOStimer();
 void OStimerSetCallback(void (*CallbackFunc)(void));
 void OStimerReset();
@@ -25,6 +26,9 @@ void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
 uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
 uint8_t scanIndex = 1;
+
+uint8_t prevAirRate = 0;
+uint8_t currAirRate = 0;
 
 //uint32_t HWtimerLastcallback;
 uint32_t MeasuredHWtimerInterval;
@@ -267,8 +271,27 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println(str);
                 //Serial.println(Radio.RXdataBuffer[1]);
 
-                //Serial.println();
+                if (currAirRate == !Radio.RXdataBuffer[3])
+                {
 
+                    switch (Radio.RXdataBuffer[3])
+                    {
+                    case 1:
+                        SetRFLinkRate(RF_RATE_200HZ);
+                        break;
+                    case 2:
+                        SetRFLinkRate(RF_RATE_100HZ);
+                        break;
+                    case 3:
+                        SetRFLinkRate(RF_RATE_50HZ);
+                        break;
+                    default:
+                        break;
+                    }
+                    currAirRate = Radio.RXdataBuffer[3];
+                }
+
+                //Serial.println()
                 NonceRXlocal = Radio.RXdataBuffer[2];
             }
         }
@@ -325,6 +348,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
     HWtimerUpdateInterval(mode.interval);
+    Radio.StartContRX();
 }
 
 void runDetection()
