@@ -8,12 +8,12 @@ typedef enum
 
 typedef enum
 {
-    RATE_250HZ,
-    RATE_200HZ,
-    RATE_100HZ,
-    RATE_50HZ,
-    RATE_25HZ,
-    RATE_4HZ
+    RATE_250HZ = 0,
+    RATE_200HZ = 1,
+    RATE_100HZ = 2,
+    RATE_50HZ = 3,
+    RATE_25HZ = 4,
+    RATE_4HZ = 5
 
 } expresslrs_RFrates_e;
 

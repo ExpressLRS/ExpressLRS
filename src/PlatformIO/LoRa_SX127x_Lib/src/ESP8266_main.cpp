@@ -24,6 +24,8 @@ uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
 void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
 uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
+uint8_t scanIndex = 1;
+
 //uint32_t HWtimerLastcallback;
 uint32_t MeasuredHWtimerInterval;
 int32_t HWtimerError;
@@ -63,7 +65,7 @@ float PacketRate = 0.0;
 uint8_t linkQuality = 0;
 ///float targetFrameRate = 96.875;
 
-uint32_t LostConnectionDelay = 1000; //after 1500ms we consider that we lost connection to the TX
+uint32_t LostConnectionDelay = 1500; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
 bool gotFHSSsync = false;
 uint32_t LastValidPacket = 0; //Time the last valid packet was recv
@@ -97,8 +99,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     // crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = LastRSSI;
-    crsf.LinkStatistics.uplink_RSSI_2 = LastRSSI;
+    crsf.LinkStatistics.uplink_RSSI_1 = (-Radio.GetLastPacketRSSI());
+    crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
@@ -200,7 +202,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             {
                 InitHarwareTimer();
                 LostConnection = false; //we got a packet, therefore no lost connection
-                Serial.println("got conn");
+                //Serial.println("got conn");
             }
 
             //digitalWrite(16, LED);
@@ -374,18 +376,53 @@ void setup()
 
     pinMode(2, INPUT);
 
-    SetRFLinkRate(RF_RATE_25HZ);
+    SetRFLinkRate(RF_RATE_200HZ);
     Radio.StartContRX();
 }
 
 void loop()
 {
 
+    if (LostConnection && !webUpdateMode)
+    {
+
+        switch (scanIndex)
+        {
+        case 1:
+            SetRFLinkRate(RF_RATE_200HZ);
+            Radio.StartContRX();
+            break;
+        case 2:
+            SetRFLinkRate(RF_RATE_100HZ);
+            Radio.StartContRX();
+            break;
+        case 3:
+            SetRFLinkRate(RF_RATE_50HZ);
+            Radio.StartContRX();
+            break;
+
+        default:
+            break;
+        }
+
+        if (scanIndex == 3)
+        {
+            scanIndex = 1;
+        }
+        else
+        {
+
+            scanIndex++;
+        }
+
+        delay(1500);
+    }
+
     if (millis() > (LastValidPacket + LostConnectionDelay))
     {
         if (!LostConnection)
         {
-            Serial.println("lost conn");
+            //Serial.prSerial.println("lost conn");
             LostConnection = true;
             gotFHSSsync = false;
             StopHWtimer();
@@ -444,21 +481,21 @@ void loop()
     // }
     //else // we have connection, calculate the stats below.
     //{
-        if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    {
+        float targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / Radio.ResponseInterval));
+        PacketRateLastChecked = millis();
+        PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+        linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+
+        if (linkQuality > 100)
         {
-            float targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / Radio.ResponseInterval));
-            PacketRateLastChecked = millis();
-            PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-            linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-
-            if (linkQuality > 100)
-            {
-                linkQuality = 100;
-            }
-
-            packetCounter = 0;
-            //Serial.println(linkQuality);
+            linkQuality = 100;
         }
+
+        packetCounter = 0;
+        //Serial.println(linkQuality);
+    }
     //}
 
     // Serial.print(MeasuredHWtimerInterval);

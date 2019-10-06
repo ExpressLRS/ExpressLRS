@@ -814,6 +814,11 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, float fre
   return (status);
 }
 
+uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
+{
+  return (getRegValue(SX127X_REG_PKT_RSSI_VALUE));
+}
+
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
   return (-157 + getRegValue(SX127X_REG_PKT_RSSI_VALUE));

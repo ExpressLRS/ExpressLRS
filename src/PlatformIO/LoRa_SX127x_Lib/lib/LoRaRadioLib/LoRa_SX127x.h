@@ -191,6 +191,8 @@ public:
 
     static void SX127xclearIRQFlags();
 
+    static uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
+
     static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     static int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
 

@@ -7,6 +7,10 @@
 
 //#define RFmodule_Size FULL
 
+//forward defs/
+
+void SetRFLinkRate(expresslrs_mod_settings_s mode);
+
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
@@ -40,11 +44,14 @@ uint32_t RXconnectionLostTimeout = 1500; //After 1.5 seconds of no TLM response 
 bool isRXconnectionLost = true;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
-uint32_t PacketRateInterval = 1000;
+uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
 uint8_t linkQuality = 0;
-float targetFrameRate = 3.125;
+//float targetFrameRate = 3.125;
 ///////////////////////////////////////
+
+bool Channels5to8Changed = false;
+bool ChangeAirRate = false;
 
 bool WaitRXresponse = false;
 
@@ -70,8 +77,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
         if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
         {
-          crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-          crsf.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
+          crsf.LinkStatistics.uplink_RSSI_1 = -Radio.RXdataBuffer[2];
+          crsf.LinkStatistics.uplink_RSSI_2 = 0;
           crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
           crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
@@ -86,18 +93,20 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   }
 }
 
-bool ICACHE_RAM_ATTR CheckChannels5to8Change()
+void ICACHE_RAM_ATTR CheckChannels5to8Change()
 { //check if channels 5 to 8 have new data (switch channels)
-  bool result = false;
   for (int i = 4; i < 8; i++)
   {
     if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
     {
-      result = true;
-      break;
+      Channels5to8Changed = true;
+
+      if (i == 7)
+      {
+        ChangeAirRate = true;
+      }
     }
   }
-  return result;
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -107,7 +116,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
-  //Radio.TXdataBuffer[3] = crsf.frameInterval;
+  Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData()
@@ -138,7 +147,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   if (!WaitRXresponse) // only do this logic if we are NOT waiting for the RX to respond
   {
-
     if ((millis() > (SyncPacketLastSent + SyncPacketInterval)) && isRXconnectionLost)
     {
       GenerateSyncPacketData();
@@ -146,8 +154,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || CheckChannels5to8Change())
+      if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
       {
+        Channels5to8Changed = false;
         GenerateSwitchChannelData();
         SwitchPacketLastSent = millis();
       }
@@ -192,7 +201,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
-void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
 {
   if (mode.enum_rate == RATE_250HZ) //this is the fastest mode, 250hz, no telemetry
   {
@@ -208,12 +217,11 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   }
   else
   {
-    crsf.RCdataCallback = crsf.nullCallback;
     Radio.StopTimerTask();
-
+    Radio.StopContRX();
+    crsf.RCdataCallback = crsf.nullCallback;
     Radio.TimerInterval = mode.interval;
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
-
     Radio.StartTimerTask();
   }
 
@@ -240,6 +248,7 @@ void setup()
   //Radio.TXdoneCallback = &PrintTest;
 
   //crsf.RCdataCallback = &SendRCdataToRF;
+  crsf.RCdataCallback_2 = &CheckChannels5to8Change;
 
   crsf.Begin();
 
@@ -248,13 +257,13 @@ void setup()
   //Radio.StartContTX();
   //Radio.SetOutputPower(0x00);
   //Radio.SetOutputPower(0b0000);
-  Radio.SetOutputPower(0b0011);
+  Radio.SetOutputPower(0b1111);
   memset((uint16_t *)crsf.ChannelDataIn, 0, 16);
   memset((uint8_t *)Radio.TXdataBuffer, 0, 7);
 
   uint32_t startTimecfg = micros();
 
-  SetRFLinkRate(RF_RATE_25HZ);
+  SetRFLinkRate(RF_RATE_200HZ);
   uint32_t stopTimecfg = micros();
   Serial.println(stopTimecfg - startTimecfg);
 }
@@ -274,8 +283,8 @@ void loop()
   // Serial.println(Radio.TimeOnAir);
   // Serial.print("HeadRoom: ");
   // Serial.println(Radio.HeadRoom);
-  Serial.print("PacketCount(HZ): ");
-  Serial.println(Radio.PacketCount);
+  //Serial.print("PacketCount(HZ): ");
+  //Serial.println(Radio.PacketCount);
   // Radio.PacketCount = 0;
   //SendRCdataToRF();
   //PrintRC();
@@ -288,7 +297,7 @@ void loop()
   //delay(4);
   //PrintRC();
 
-  delay(250);
+  //delay(250);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
@@ -297,6 +306,7 @@ void loop()
 
   if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
   {
+    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / Radio.ResponseInterval));
     PacketRateLastChecked = millis();
     PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
     linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
@@ -306,5 +316,29 @@ void loop()
       linkQuality = 99;
     }
     packetCounteRX_TX = 0;
+  }
+
+  if (ChangeAirRate)
+  {
+    //Serial.println("changing RF rate");
+
+    int data = map(crsf.ChannelDataIn[7], 173, 1811, 0, 100);
+    Serial.println(data);
+
+    if (data >= 0 && data < 25)
+    {
+      SetRFLinkRate(RF_RATE_200HZ);
+    }
+
+    if (data >= 25 && data < 75)
+    {
+      SetRFLinkRate(RF_RATE_100HZ);
+    }
+
+    if (data >= 75 && data <= 100)
+    {
+      SetRFLinkRate(RF_RATE_50HZ);
+    }
+    ChangeAirRate = false;
   }
 }

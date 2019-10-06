@@ -259,6 +259,7 @@ public:
     static volatile uint16_t ChannelDataOut[16];
 
     static void (*RCdataCallback)(); //function pointer for new RC data callback
+    static void (*RCdataCallback_2)(); //function pointer for new RC data callback
 
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
