@@ -1,5 +1,8 @@
 #include "LoRa_SX127x.h"
 
+#define FREQ_915
+// #define FREQ_433
+
 typedef enum
 {
     RF_DOWNLINK_INFO,

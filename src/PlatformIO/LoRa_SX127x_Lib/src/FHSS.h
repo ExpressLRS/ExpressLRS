@@ -8,7 +8,7 @@ typedef enum
     RF_433
 } RFfreqs_;
 
-RFfreqs_ RFfreq = RF_433;
+RFfreqs_ RFfreq;
 
 void FHSSsetCurrIndex(uint8_t value)
 { // get the current index of the FHSS pointer
