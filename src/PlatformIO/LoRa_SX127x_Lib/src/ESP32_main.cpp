@@ -267,12 +267,12 @@ void setup()
   //Radio.StartContTX();
 
 #ifdef FREQ_915
-  // Radio.SetOutputPower(0b0000); // 12dbm = 16mW
-  // Radio.SetOutputPower(0b0001); // 13dbm = 20mW
-  // Radio.SetOutputPower(0b0101); // 17dbm = 50mW
-  Radio.SetOutputPower(0b1000); // 20dbm = 100mW
-  // Radio.SetOutputPower(0b1100); // 24dbm = 250mW
-  // Radio.SetOutputPower(0b1111); // 27dbm = 500mW
+  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
+  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
+  Radio.SetOutputPower(0b0101); // 20dbm = 100mW
+  //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif FREQ_433
   //Radio.SetOutputPower(0x00);
   //Radio.SetOutputPower(0b0000);
