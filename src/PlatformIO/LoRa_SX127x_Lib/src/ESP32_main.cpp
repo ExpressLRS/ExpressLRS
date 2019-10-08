@@ -235,14 +235,22 @@ void setup()
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
 
-  Radio.HighPowerModule = true;
+#ifdef FREQ_915
+  FHSSsetFreqMode(RF_915);
+  Radio.RFmodule = RFMOD_SX1276; //define radio module here
+  Radio.SetFrequency(FHSSfreqs915[0]); //set frequency first or an error will occur!!!
+#elif FREQ_433
+  FHSSsetFreqMode(RF_433);
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
+  Radio.SetFrequency(FHSSfreqs433[0]); //set frequency first or an error will occur!!!
+#endif
+
+  Radio.HighPowerModule = true;
   Radio.TimerInterval = 10000;   //in microseconds
   Radio.TXbuffLen = 7;
   Radio.RXbuffLen = 7;
 
   Radio.SetPreambleLength(6);
-  Radio.SetFrequency(433920000); //set frequency first or an error will occur!!!
   Radio.ResponseInterval = 16;
   Radio.RXdoneCallback = &ProcessTLMpacket;
   Radio.Begin();
@@ -257,9 +265,20 @@ void setup()
   Radio.TimerDoneCallback = &SendRCdataToRF;
   Radio.StartTimerTask();
   //Radio.StartContTX();
+
+#ifdef FREQ_915
+  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
+  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
+  Radio.SetOutputPower(0b0101); // 20dbm = 100mW
+  //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+#elif FREQ_433
   //Radio.SetOutputPower(0x00);
   //Radio.SetOutputPower(0b0000);
   Radio.SetOutputPower(0b1111);
+#endif
+
   memset((uint16_t *)crsf.ChannelDataIn, 0, 16);
   memset((uint8_t *)Radio.TXdataBuffer, 0, 7);
 

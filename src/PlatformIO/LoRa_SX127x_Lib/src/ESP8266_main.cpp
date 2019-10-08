@@ -369,7 +369,16 @@ void setup()
     delay(200);
     digitalWrite(16, LOW);
 
-    Radio.RFmodule = RFMOD_SX1278; //define radio module here
+#ifdef FREQ_915
+  FHSSsetFreqMode(RF_915);
+  Radio.RFmodule = RFMOD_SX1276; //define radio module here
+  Radio.SetFrequency(FHSSfreqs915[0]); //set frequency first or an error will occur!!!
+#elif FREQ_433
+  FHSSsetFreqMode(RF_433);
+  Radio.RFmodule = RFMOD_SX1278; //define radio module here
+  Radio.SetFrequency(FHSSfreqs433[0]); //set frequency first or an error will occur!!!
+#endif
+
     Radio.TXbuffLen = 7;
     Radio.RXbuffLen = 7;
 
@@ -379,7 +388,6 @@ void setup()
 
     Radio.SetPreambleLength(6);
     Radio.ResponseInterval = 16;
-    Radio.SetFrequency(433920000);
     Radio.SetOutputPower(0b1111);
 
     Radio.RXdoneCallback = &ProcessRFPacket;
