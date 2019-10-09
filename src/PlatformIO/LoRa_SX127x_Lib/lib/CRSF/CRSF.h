@@ -203,7 +203,8 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
 /////inline and utility functions//////
 
-static uint16_t ICACHE_RAM_ATTR fmap(float x, float in_min, float in_max, float out_min, float out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
+//static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
+static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT11_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
@@ -258,7 +259,7 @@ public:
     static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
     static volatile uint16_t ChannelDataOut[16];
 
-    static void (*RCdataCallback)(); //function pointer for new RC data callback
+    static void (*RCdataCallback)();   //function pointer for new RC data callback
     static void (*RCdataCallback_2)(); //function pointer for new RC data callback
 
     static uint8_t CSFR_TXpin_Module;

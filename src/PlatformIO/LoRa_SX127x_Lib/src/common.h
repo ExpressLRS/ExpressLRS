@@ -27,6 +27,7 @@ typedef struct expresslrs_mod_settings_s
     CodingRate cr;
     uint32_t interval; //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;
+    uint8_t responseInterval;
     expresslrs_RFrates_e enum_rate;
 
 } expresslrs_mod_settings_t;
@@ -41,12 +42,12 @@ typedef struct expresslrs_mod_settings_s
 //         {BW_250_00_KHZ, SF_11, CR_4_5, 250000}, //4hz
 // };
 
-expresslrs_mod_settings_s RF_RATE_250HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000000, 250, RATE_250HZ};
-expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_7, 5000, 200, RATE_200HZ};
-expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_7, 10000, 100, RATE_100HZ};
-expresslrs_mod_settings_s RF_RATE_50HZ = {BW_250_00_KHZ, SF_7, CR_4_7, 20000, 40, RATE_50HZ};
-expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, RATE_25HZ};
-expresslrs_mod_settings_s RF_RATE_4HZ = {BW_250_00_KHZ, SF_11, CR_4_5, 250000, 4, RATE_4HZ};
+expresslrs_mod_settings_s RF_RATE_250HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 4000, 250, 128, RATE_250HZ};
+expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_7, 5000, 200, 16, RATE_200HZ};
+expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_7, 10000, 100, 16, RATE_100HZ};
+expresslrs_mod_settings_s RF_RATE_50HZ = {BW_250_00_KHZ, SF_7, CR_4_7, 20000, 50, 16, RATE_50HZ};
+expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, 16, RATE_25HZ};
+expresslrs_mod_settings_s RF_RATE_4HZ = {BW_250_00_KHZ, SF_11, CR_4_5, 250000, 4, 16, RATE_4HZ};
 
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[6] = {RF_RATE_250HZ, RF_RATE_200HZ, RF_RATE_100HZ, RF_RATE_50HZ, RF_RATE_25HZ, RF_RATE_4HZ};
 

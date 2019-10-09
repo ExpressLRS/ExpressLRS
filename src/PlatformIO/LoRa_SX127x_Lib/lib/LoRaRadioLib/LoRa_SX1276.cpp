@@ -7,7 +7,7 @@
 //
 //}
 
-uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord)
+uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
   uint8_t status = ERR_NONE;
   uint8_t newBandwidth, newSpreadingFactor, newCodingRate;
@@ -112,7 +112,7 @@ uint8_t SX1276setPower()
   }
 }
 
-uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord)
+uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {
   // configure common registers
   uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq, syncWord);
@@ -143,7 +143,8 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8
   }
 
   // enable LNA gain setting by register and set low datarate optimizations for SF11/SF12 with 125 kHz bandwidth
-  status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_OFF, 2, 2);
+  status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON, 2, 2);
+
   if ((bw == SX1278_BW_125_00_KHZ) && ((sf == SX127X_SF_11) || (sf == SX127X_SF_12)))
   {
     status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_ON, 0, 0);

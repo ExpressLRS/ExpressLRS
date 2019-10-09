@@ -93,8 +93,11 @@ class SX127xDriver
 public:
     ///////Callback Function Pointers/////
 
-    static void (*RXdoneCallback)(); //function pointer for callback
-    static void (*TXdoneCallback)(); //function pointer for callback
+    static void (*RXdoneCallback1)(); //function pointer for callback
+    static void (*RXdoneCallback2)(); //function pointer for callback
+    static void (*TXdoneCallback1)(); //function pointer for callback
+    static void (*TXdoneCallback2)(); //function pointer for callback
+    static void (*TXdoneCallback3)(); //function pointer for callback
 
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
@@ -137,7 +140,7 @@ public:
 
     static volatile uint32_t TimerInterval; //20ms default for now.
 
-    static float currFreq;
+    static uint32_t currFreq;
     static uint8_t _syncWord;
 
     static ContinousMode ContMode;
@@ -166,8 +169,8 @@ public:
 
     ////////////////Configuration Functions/////////////
     static uint8_t Begin();
-    static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord);
-    static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord);
+    static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
+    static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
     static uint8_t SetBandwidth(Bandwidth bw);
     static uint8_t SetSyncWord(uint8_t syncWord);
@@ -175,7 +178,7 @@ public:
     static uint8_t SetPreambleLength(uint8_t PreambleLen);
     static uint8_t SetSpreadingFactor(SpreadingFactor sf);
     static uint8_t SetCodingRate(CodingRate cr);
-    static uint8_t SetFrequency(float freq);
+    static uint8_t SetFrequency(uint32_t freq);
 
     static uint8_t SX127xBegin();
     static uint8_t SetMode(uint8_t mode);
@@ -201,6 +204,7 @@ public:
 
     static void ICACHE_RAM_ATTR StartTimerTask(); //Start Cont TX mode, sends data continuiously
     static void ICACHE_RAM_ATTR StopTimerTask();
+    static void ICACHE_RAM_ATTR UpdateTimerInterval();
     static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
 
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
@@ -211,7 +215,7 @@ public:
 
     static void ICACHE_RAM_ATTR StartContRX();
     static void ICACHE_RAM_ATTR StopContRX();
-    static void RXnb();
+    static void ICACHE_RAM_ATTR RXnb();
 
     static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 

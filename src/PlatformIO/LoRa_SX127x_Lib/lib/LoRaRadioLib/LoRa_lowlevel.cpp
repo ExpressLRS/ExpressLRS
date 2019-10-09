@@ -203,12 +203,12 @@ void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 
-  if (DebugVerbosity >= DEBUG_4)
-  {
-    Serial.print("SPI: Write ");
-    Serial.print("REG: ");
-    Serial.print(reg, HEX);
-    Serial.print(" VAL: ");
-    Serial.println(data, HEX);
-  }
+  // if (DebugVerbosity >= DEBUG_4)
+  // {
+  //   Serial.print("SPI: Write ");
+  //   Serial.print("REG: ");
+  //   Serial.print(reg, HEX);
+  //   Serial.print(" VAL: ");
+  //   Serial.println(data, HEX);
+  // }
 }

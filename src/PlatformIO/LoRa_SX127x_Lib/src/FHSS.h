@@ -98,7 +98,7 @@ void FHSSsetFreqMode(int freq)
     }
 }
 
-float FHSSgetNextFreq()
+uint32_t FHSSgetNextFreq()
 {
     FHSSptr++;
 
@@ -111,10 +111,10 @@ float FHSSgetNextFreq()
         return FHSSfreqs433[FHSSsequence433[FHSSptr]];
     }
 
-    //return 0;
+    return 0;
 }
 
-float FHSSgetCurrFreq()
+uint32_t FHSSgetCurrFreq()
 {
     if (RFfreq == RF_915)
     {
@@ -124,5 +124,5 @@ float FHSSgetCurrFreq()
     {
         return FHSSfreqs433[FHSSsequence433[FHSSptr]];
     }
-    //return 0;
+    return 0;
 }

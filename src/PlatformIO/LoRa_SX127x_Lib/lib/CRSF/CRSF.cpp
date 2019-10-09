@@ -16,7 +16,7 @@ volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial
 
 void inline CRSF::nullCallback(void){};
 
-void (*CRSF::RCdataCallback)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback)() = &nullCallback;   // function is called whenever there is new RC data.
 void (*CRSF::RCdataCallback_2)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint8_t CRSF::SerialInPacketLen = 0;                        // length of the CRSF packet as measured
@@ -36,7 +36,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 10, NULL);
+    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL, 0);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -115,7 +115,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
-    uint32_t YieldInterval = 100;
+    uint32_t YieldInterval = 500;
 
     for (;;)
     {
@@ -156,13 +156,13 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     ProcessPacket();
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
-                    vTaskDelay(xDelay2);
+                    //taskYIELD();
                     if (CRSFoutBuffer[0] > 0)
                     {
                         CRSF::Port.write((uint8_t *)CRSFoutBuffer + 1, CRSFoutBuffer[0]);
                         memset((uint8_t *)CRSFoutBuffer, 0, CRSFoutBuffer[0] + 1);
                     }
-                    FlushSerial();
+                    //FlushSerial();
                 }
                 else
                 {
@@ -190,17 +190,25 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 }
 #endif
 
+#ifdef PLATFORM_ESP32
+
 void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
+    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    taskENTER_CRITICAL(&myMutex);
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         GetChannelDataIn();
-        (RCdataCallback)(); // run new RC data callback
+        (RCdataCallback)();   // run new RC data callback
         (RCdataCallback_2)(); // run new RC data callback
     }
 
+    taskEXIT_CRITICAL(&myMutex);
+    vTaskDelay(2);
 }
+
+#endif
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {

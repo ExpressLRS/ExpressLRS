@@ -82,7 +82,7 @@ uint8_t SX1278rxSingle(uint8_t *data, uint8_t length)
 // return (state);
 // }
 
-uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq, uint8_t syncWord)
+uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
   uint8_t status = ERR_NONE;
   uint8_t newBandwidth, newSpreadingFactor, newCodingRate;
@@ -192,7 +192,7 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, float freq
   return (ERR_NONE);
 }
 
-uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord)
+uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {
   // configure common registers
   uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq, syncWord);
@@ -202,27 +202,31 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8
   }
 
   // output power configuration
-  status = setRegValue(SX127X_REG_PA_CONFIG, SX1278_MAX_POWER, 6, 4);
-  status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_ON, 2, 0);
+  //status = setRegValue(SX127X_REG_PA_CONFIG, SX1278_MAX_POWER, 6, 4); // changed
+
+  status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_OFF, 2, 0);
   if (status != ERR_NONE)
   {
     return (status);
   }
 
+  status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON, 2, 2);
+
   // enable LNA gain setting by register and set low datarate optimizations for SF11/SF12 with 125 kHz bandwidth
-  // status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_OFF, 2, 2);
-  // if ((bw == SX1278_BW_125_00_KHZ) && ((sf == SX127X_SF_11) || (sf == SX127X_SF_12)))
-  // {
-  //   status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_ON, 0, 0);
-  // }
-  // else
-  // {
-  //   status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_OFF, 0, 0);
-  // }
-  // if (status != ERR_NONE)
-  // {
-  //   return (status);
-  // }
+  //status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_OFF, 2, 2);
+
+  if ((bw == SX1278_BW_125_00_KHZ) && ((sf == SX127X_SF_11) || (sf == SX127X_SF_12)))
+  {
+    status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_ON, 0, 0);
+  }
+  else
+  {
+    status = setRegValue(SX1278_REG_MODEM_CONFIG_3, SX1278_LOW_DATA_RATE_OPT_OFF, 0, 0);
+  }
+  if (status != ERR_NONE)
+  {
+    return (status);
+  }
 
   // set SF6 optimizations
   if (sf == SX127X_SF_6)
@@ -235,7 +239,8 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8
   {
     //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, 2, 2);
     status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
-    status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
+    //status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
+    status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
   }
 
   return (status);
