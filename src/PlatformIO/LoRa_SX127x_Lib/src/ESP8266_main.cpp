@@ -604,20 +604,20 @@ void loop()
     }
     //}
 
-    Serial.print(MeasuredHWtimerInterval);
-    Serial.print(" ");
-    Serial.print(Offset);
-    Serial.print(" ");
-    Serial.print(HWtimerError);
+    // Serial.print(MeasuredHWtimerInterval);
+    // Serial.print(" ");
+    // Serial.print(Offset);
+    // Serial.print(" ");
+    // Serial.print(HWtimerError);
 
-    Serial.print("----");
+    // Serial.print("----");
 
-    Serial.print(Offset90);
-    Serial.print(" ");
-    Serial.print(HWtimerError90);
-    Serial.print("----");
-    Serial.println(packetCounter);
-    delay(200);
+    // Serial.print(Offset90);
+    // Serial.print(" ");
+    // Serial.print(HWtimerError90);
+    // Serial.print("----");
+    // Serial.println(packetCounter);
+    // delay(200);
 
     if (millis() > (buttonLastSampled + buttonSampleInterval))
     {
