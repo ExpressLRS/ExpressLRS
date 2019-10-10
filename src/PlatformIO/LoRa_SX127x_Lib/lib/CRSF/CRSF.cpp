@@ -16,8 +16,8 @@ volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial
 
 void inline CRSF::nullCallback(void){};
 
-void (*CRSF::RCdataCallback)() = &nullCallback;   // function is called whenever there is new RC data.
-void (*CRSF::RCdataCallback_2)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback1)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback2)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint8_t CRSF::SerialInPacketLen = 0;                        // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0;                        // index where we are reading/writing
@@ -200,8 +200,8 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         GetChannelDataIn();
-        (RCdataCallback)();   // run new RC data callback
-        (RCdataCallback_2)(); // run new RC data callback
+        (RCdataCallback1)(); // run new RC data callback
+        (RCdataCallback2)(); // run new RC data callback
     }
 
     taskEXIT_CRITICAL(&myMutex);

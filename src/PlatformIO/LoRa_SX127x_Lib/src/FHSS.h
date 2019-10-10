@@ -10,12 +10,12 @@ typedef enum
 
 RFfreqs_ RFfreq;
 
-void FHSSsetCurrIndex(uint8_t value)
+void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // get the current index of the FHSS pointer
     FHSSptr = value;
 }
 
-uint8_t FHSSgetCurrIndex()
+uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 { // get the current index of the FHSS pointer
     return FHSSptr;
 }
@@ -86,6 +86,18 @@ uint8_t FHSSsequence433[255] = {4, 2, 1, 0, 3, 1, 4, 0, 2, 0, 3, 0, 4, 3, 2, 4, 
                                 4, 1, 3, 2, 4, 1, 3, 4, 1, 2, 4, 1, 3, 0, 1, 3, 1, 2, 1, 2, 4, 0, 1, 2, 3, 4, 1, 2, 3, 1, 0, 4, 0, 2, 4, 2,
                                 4, 0, 2};
 
+uint32_t ICACHE_RAM_ATTR GetInitialFreq()
+{
+    if (RFfreq == RF_915)
+    {
+        return FHSSfreqs915[0];
+    }
+    if (RFfreq == RF_433)
+    {
+        return FHSSfreqs433[0];
+    }
+}
+
 void FHSSsetFreqMode(int freq)
 {
     if (freq == 915)
@@ -98,7 +110,7 @@ void FHSSsetFreqMode(int freq)
     }
 }
 
-uint32_t FHSSgetNextFreq()
+uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 {
     FHSSptr++;
 
@@ -114,7 +126,7 @@ uint32_t FHSSgetNextFreq()
     return 0;
 }
 
-uint32_t FHSSgetCurrFreq()
+uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 {
     if (RFfreq == RF_915)
     {

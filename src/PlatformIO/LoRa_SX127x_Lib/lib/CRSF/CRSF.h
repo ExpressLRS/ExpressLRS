@@ -259,8 +259,8 @@ public:
     static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
     static volatile uint16_t ChannelDataOut[16];
 
-    static void (*RCdataCallback)();   //function pointer for new RC data callback
-    static void (*RCdataCallback_2)(); //function pointer for new RC data callback
+    static void (*RCdataCallback1)(); //function pointer for new RC data callback
+    static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;

@@ -135,7 +135,7 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
   //    return (status);
   //  }
 
-  status = setRegValue(SX127X_REG_PA_CONFIG, 0b00000000, 3, 0);
+  //status = setRegValue(SX127X_REG_PA_CONFIG, 0b00000000, 3, 0);
   status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_OFF, 2, 0);
   if (status != ERR_NONE)
   {
@@ -169,7 +169,8 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
   {
     status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
     //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, 2, 2); //Changed to CRC off
-    status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
+    //status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
+    status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
   }
 
   return (status);

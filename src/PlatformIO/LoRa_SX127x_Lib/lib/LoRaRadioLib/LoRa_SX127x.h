@@ -156,8 +156,8 @@ public:
     static int8_t LastPacketRSSI;
     static int8_t LastPacketSNR;
     static float PacketLossRate;
-    static uint8_t NonceTX;
-    static uint8_t NonceRX;
+    static volatile uint8_t NonceTX;
+    static volatile uint8_t NonceRX;
     static uint8_t ResponseInterval; // how often the slave will reply
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;

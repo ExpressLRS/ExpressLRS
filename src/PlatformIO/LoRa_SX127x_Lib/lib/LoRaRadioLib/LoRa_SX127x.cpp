@@ -38,8 +38,8 @@ volatile uint8_t SX127xDriver::RXbuffLen = 7;
 
 uint8_t SX127xDriver::ResponseInterval = 0;
 
-uint8_t SX127xDriver::NonceTX = 0;
-uint8_t SX127xDriver::NonceRX = 0;
+volatile uint8_t SX127xDriver::NonceTX = 0;
+volatile uint8_t SX127xDriver::NonceRX = 0;
 
 //////////////////Hardware Pin Variable defaults////////////////
 
@@ -539,6 +539,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   //CalcOnAirTime();
 
   RadioState = RADIO_IDLE;
+  NonceTX++;
   TXdoneCallback1();
   TXdoneCallback2();
 }
@@ -571,8 +572,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
   digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
 #endif
-
-  NonceTX++;
 
   SetMode(SX127X_TX);
   PacketCount = PacketCount + 1;
@@ -787,9 +786,9 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   SetFrequency(freq);
 
   // output power configuration
-  status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_OUTPUT_POWER);
+  //status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_OUTPUT_POWER);
   status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_TRIM, 5, 0);
-  status = setRegValue(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);
+  //status = setRegValue(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);
 
   if (status != ERR_NONE)
   {

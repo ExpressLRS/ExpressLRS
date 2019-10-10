@@ -12,13 +12,17 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode);
 
 void ICACHE_RAM_ATTR nullTask(){};
 
+String DebugOutput;
+
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
 
-uint8_t SwitchPacketsCounter = 0;        //not used for the moment
-uint32_t SwitchPacketSendInterval = 250; //how often to send the switch data packet (ms)
-uint32_t SwitchPacketLastSent = 0;       //time in ms when the last switch data packet was sent
+uint8_t SwitchPacketsCounter = 0;              //not used for the moment
+uint32_t SwitchPacketSendInterval = 200;       //not used, delete when able to
+uint32_t SwitchPacketSendIntervalRXlost = 200; //how often to send the switch data packet (ms) when there is no response from RX
+uint32_t SwitchPacketSendIntervalRXconn = 200; //how often to send the switch data packet (ms) when there we have a connection
+uint32_t SwitchPacketLastSent = 0;             //time in ms when the last switch data packet was sent
 
 ////////////FHSS SYNC PACKET/////////
 //only send sync packet when we don't have a slave response for > 1.5sec?
@@ -42,7 +46,7 @@ uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this w
 
 uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t RXconnectionLostTimeout = 1500; //After 1.5 seconds of no TLM response consider that slave has lost connection
-bool isRXconnectionLost = true;
+bool isRXconnected = false;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
@@ -75,7 +79,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       packetCounteRX_TX++;
       if (type == 0b11) //tlmpacket
       {
-        isRXconnectionLost = false;
+        isRXconnected = true;
         LastTLMpacketRecvMillis = millis();
 
         if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
@@ -138,7 +142,8 @@ void ICACHE_RAM_ATTR Generate4ChannelData()
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 {
   uint8_t PacketHeaderAddr;
-  Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b01;
+  PacketHeaderAddr = (DeviceAddr << 2) + 0b01;
+  Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = ((CRSF_to_UINT11(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT11(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
   Radio.TXdataBuffer[2] = (CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT11(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
   Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
@@ -146,130 +151,81 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
   Radio.TXdataBuffer[5] = Radio.NonceTX; //we use this free byte in switch packet to send the current nonce and sync the RX to the TX
 }
 
-void ICACHE_RAM_ATTR SendRCdataToRF()
+void ICACHE_RAM_ATTR HandleFHSS()
 {
-  blockUpdate = true;
-  if (!WaitRXresponse) // only do this logic if we are NOT waiting for the RX to respond
+  uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.FHSShopInterval;
+
+  if (modresult == 1) // if it time to hop, do so.
   {
-    //if ((millis() > (SyncPacketLastSent + SyncPacketInterval)) && isRXconnectionLost)
-    if ((millis() > (SyncPacketLastSent + SyncPacketInterval)))
-    {
-      GenerateSyncPacketData();
-      SyncPacketLastSent = millis();
-      SentAirRateInfo = true;
-    }
-    else
-    {
-      if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
-      {
-        Channels5to8Changed = false;
-        GenerateSwitchChannelData();
-        SwitchPacketLastSent = millis();
-      }
-      else // else we just have regular channel data which we send as 8 + 2 bits
-      {
-        Generate4ChannelData();
-      }
-    }
+    Radio.SetFrequency(FHSSgetNextFreq());
   }
-  //
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
-  Radio.TXdataBuffer[6] = crc;
-  //Radio.TXnb(Radio.TXdataBuffer, 7);
+}
 
-  uint8_t modresult = Radio.NonceTX % ExpressLRS_currAirRate.responseInterval;
+void ICACHE_RAM_ATTR SendRCdataToRF_NoTLM()
+{
 
-  if (ExpressLRS_currAirRate.enum_rate != RATE_250HZ)
+  uint32_t SyncInterval;
+
+  if (isRXconnected)
   {
-
-    if ((modresult == 0) || (modresult == 1) || (modresult == 2))
-    {
-      if (modresult == 0)
-      {                                      //after the next TX packet we switch to RX mode
-        Radio.TXnb(Radio.TXdataBuffer, 7);   //every n packets we tie the txdone callback to the RXnb function to recv a telemetry response
-        Radio.TXdoneCallback2 = &Radio.RXnb; //map the TXdoneCallback to switch to RXnb mode
-        //Serial.println("Wait Resp");
-        WaitRXresponse = true;
-      }
-      else if (WaitRXresponse && (modresult == 1)) //need to wait one frame for the response
-      {
-        WaitRXresponse = false;
-        Radio.TXdoneCallback2 = &Radio.nullCallback;
-        Radio.NonceTX++;
-        return; // here we are expecting the RX packet so we do nothing and just return, if we got it the callback will fire
-      }
-      else if (modresult == 2) // the last result, we expect that we either got the response packet or didn't, either way we clear the callback and send a packet normally
-      {
-        Radio.SetFrequency(FHSSgetNextFreq()); // freq hop before sending the next packet
-        Radio.TXnb(Radio.TXdataBuffer, 7);
-      }
-    }
-    else
-    {
-      Radio.TXnb(Radio.TXdataBuffer, 7); // otherwise the default case is that we just send the TX packet.
-    }
+    SyncInterval = SwitchPacketSendIntervalRXconn;
   }
   else
   {
-    if (modresult == 1) // 250
+    SyncInterval = SwitchPacketSendIntervalRXlost;
+  }
+
+  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) //only send sync when its time and only on channel 0;
+  //if ((millis() > (SyncPacketLastSent + SyncInterval)))
+  //if(FHSSgetCurrFreq() == GetInitialFreq())
+  {
+
+    GenerateSyncPacketData();
+    SyncPacketLastSent = millis();
+    SentAirRateInfo = true;
+  }
+  else
+  {
+    if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
     {
-      Radio.TXnb(Radio.TXdataBuffer, 7);
-      Radio.SetFrequency(FHSSgetNextFreq()); // freq hop before sending the next packet
+      Channels5to8Changed = false;
+      GenerateSwitchChannelData();
+      SwitchPacketLastSent = millis();
     }
-    else
+    else // else we just have regular channel data which we send as 8 + 2 bits
     {
-      Radio.TXnb(Radio.TXdataBuffer, 7); // send call for when running at 250Hz
+      Generate4ChannelData();
     }
   }
-  blockUpdate = false;
+
+  ///// Next, Calculate the CRC and put it into the buffer /////
+  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+  Radio.TXdataBuffer[6] = crc;
+  ////////////////////////////////////////////////////////////
+  Radio.TXnb(Radio.TXdataBuffer, 7);
 }
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
 {
-  String DebugOutput;
 
-  if (mode.enum_rate == RATE_250HZ) //this is the fastest mode, 250hz, no telemetry
-  {
-    // this is a special mode where we send a packet in time with the CRSF update packets running at 250hz
-    // in the other modes we use a hardware time to 'buffer' the data and send the packets at a different interval
-    //Radio.StopTimerTask();
-    Radio.TimerDoneCallback = &Radio.nullCallback;
+  Radio.TimerInterval = mode.interval;
+  Radio.UpdateTimerInterval();
+  Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
 
-    DebugOutput = "250Hz";
+  DebugOutput += String(mode.rate) + "Hz";
 
-    Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
-    crsf.RCdataCallback = &SendRCdataToRF;
-  }
-  else
-  {
-    crsf.RCdataCallback = &crsf.nullCallback;
-    Radio.StopTimerTask();
+  Radio.StartTimerTask();
 
-    Radio.TimerInterval = mode.interval;
-    Radio.UpdateTimerInterval();
-    Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
-
-    DebugOutput = String(mode.rate) + "Hz";
-
-    Radio.TimerDoneCallback = &SendRCdataToRF;
-    Radio.StartTimerTask();
-  }
   ExpressLRS_currAirRate = mode;
 }
 
 void UpdateAirRate()
 {
-  //const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
-  // while (1)
-  //{
-  if (Radio.RadioState == RADIO_IDLE && digitalRead(Radio.SX127x_dio0 == 0))
+  if (Radio.RadioState == RADIO_IDLE)
   {
 
     if (ChangeAirRate && !blockUpdate) //airrate change has been changed and we also informed the slave
     {
-      Radio.StopContRX(); //figure out a way to not need this later
-      crsf.RCdataCallback = crsf.nullCallback;
-      Radio.TimerDoneCallback = &Radio.nullCallback;
       uint32_t startTime = micros();
       //Serial.println("changing RF rate");
       blockUpdate = true;
@@ -277,12 +233,12 @@ void UpdateAirRate()
 
       if (data >= 0 && data < 743)
       {
-        SetRFLinkRate(RF_RATE_250HZ);
+        SetRFLinkRate(RF_RATE_200HZ);
       }
 
       if (data >= 743 && data < 1313)
       {
-        SetRFLinkRate(RF_RATE_100HZ);
+        SetRFLinkRate(RF_RATE_125HZ);
       }
 
       if (data >= 1313 && data <= 1811)
@@ -292,13 +248,9 @@ void UpdateAirRate()
       ChangeAirRate = false;
       SentAirRateInfo = false;
       blockUpdate = false;
-      Radio.SetOutputPower(0b0000);
       Serial.println(micros() - startTime);
     }
-    //vTaskDelay(xDelay);
-    //
   }
-  //}
 }
 
 void setup()
@@ -306,16 +258,18 @@ void setup()
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
 
+  delay(3000);
+
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
   FHSSsetFreqMode(915);
-  Radio.RFmodule = RFMOD_SX1276;       //define radio module here
-  Radio.SetFrequency(FHSSfreqs915[0]); //set frequency first or an error will occur!!!
+  Radio.RFmodule = RFMOD_SX1276;        //define radio module here
+  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
   FHSSsetFreqMode(433);
-  Radio.RFmodule = RFMOD_SX1278;       //define radio module here
-  Radio.SetFrequency(FHSSfreqs433[0]); //set frequency first or an error will occur!!!
+  Radio.RFmodule = RFMOD_SX1278;        //define radio module here
+  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #endif
 
   Radio.HighPowerModule = true;
@@ -323,15 +277,16 @@ void setup()
   Radio.TXbuffLen = 7;
   Radio.RXbuffLen = 7;
 
-  Radio.SetPreambleLength(2);
+  Radio.SetPreambleLength(6);
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
 
-  //Radio.TXdoneCallback1 = &UpdateAirRate;
+  crsf.RCdataCallback1 = &CheckChannels5to8Change;
 
-  crsf.RCdataCallback_2 = &CheckChannels5to8Change;
+  Radio.TimerDoneCallback = &SendRCdataToRF_NoTLM;
 
-  //Radio.TimerDoneCallback = &SendRCdataToRF;
+  Radio.TXdoneCallback1 = &HandleFHSS;
+  Radio.TXdoneCallback2 = &UpdateAirRate;
 
 #ifdef Regulatory_Domain_AU_915
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
@@ -353,27 +308,16 @@ void setup()
   uint32_t stopTimecfg = micros();
   Serial.println(stopTimecfg - startTimecfg);
 
-  Radio.StartTimerTask();
   crsf.Begin();
   Radio.Begin();
-  delay(500);
-  SetRFLinkRate(RF_RATE_100HZ);
-
-  //   TaskHandle_t hUpdateAirRate = NULL;
-
-  //   xTaskCreate(
-  //       UpdateAirRate,    /* Task function. */
-  //       "UpdateAirRate",  /* String with name of task. */
-  //       2048,             /* Stack size in words. */
-  //       NULL,             /* Parameter passed as input of the task */
-  //       10,               /* Priority of the task. */
-  //       &hUpdateAirRate); /* Task handle. */
+  Radio.StartTimerTask();
+  SetRFLinkRate(RF_RATE_200HZ);
 }
 
 void loop()
 {
   //vTaskDelay(5);
-  UpdateAirRate();
+  //UpdateAirRate();
 
   //  for (int i = 0; i<255; i++){
   //    Serial.println(i);
@@ -405,12 +349,12 @@ void loop()
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
-    isRXconnectionLost = true;
+    isRXconnected = false;
   }
 
   if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
   {
-    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.responseInterval));
+    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
     PacketRateLastChecked = millis();
     PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
     linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
