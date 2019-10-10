@@ -98,19 +98,19 @@ uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
   return (ERR_NONE);
 }
 
-uint8_t SX1276setPower()
-{
-  uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, 0b00000000, 3, 0);
-  status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_OFF, 2, 0);
-  if (status != ERR_NONE)
-  {
-    return (status);
-  }
-  else
-  {
-    return (ERR_NONE);
-  }
-}
+// uint8_t SX1276setPower()
+// {
+//   uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, 0b00000000, 3, 0);
+//   status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_OFF, 2, 0);
+//   if (status != ERR_NONE)
+//   {
+//     return (status);
+//   }
+//   else
+//   {
+//     return (ERR_NONE);
+//   }
+// }
 
 uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {

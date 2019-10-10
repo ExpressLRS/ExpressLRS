@@ -194,6 +194,8 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
   //todo make function turn on PA_BOOST ect
   uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, Power, 3, 0);
 
+  currPWR = Power;
+
   if (status != ERR_NONE)
   {
     return (status);
@@ -202,7 +204,6 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
   {
     return (ERR_NONE);
   }
-  currPWR = Power;
 }
 
 uint8_t SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
