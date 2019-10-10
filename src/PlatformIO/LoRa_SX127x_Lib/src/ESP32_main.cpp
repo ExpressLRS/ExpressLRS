@@ -6,7 +6,7 @@
 #include "utils.h"
 
 //#define RFmodule_Size FULL
-#define Regulatory_Domain_AU_433 // define frequnecy band of operation
+#define Regulatory_Domain_AU_915 // define frequnecy band of operation
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
 
@@ -345,7 +345,8 @@ void loop()
   //delay(4);
   //PrintRC();
 
-  //delay(250);
+  delay(250);
+  Serial.println(Radio.currPWR);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {

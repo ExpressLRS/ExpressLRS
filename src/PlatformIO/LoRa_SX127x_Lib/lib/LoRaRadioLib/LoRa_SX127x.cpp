@@ -108,6 +108,7 @@ SpreadingFactor SX127xDriver::currSF = SF_6;
 CodingRate SX127xDriver::currCR = CR_4_7;
 uint8_t SX127xDriver::_syncWord = SX127X_SYNC_WORD;
 uint32_t SX127xDriver::currFreq = 123456789;
+uint8_t SX127xDriver::currPWR = 0010;
 
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
@@ -156,7 +157,9 @@ uint8_t SX127xDriver::Begin()
   }
   else
   {
+    Serial.println("Init SX1276");
     status = SX1276begin(SX127x_nss, SX127x_dio0, SX127x_dio1);
+    Serial.println("SX1276 Done");
   }
 
   return (status);
@@ -199,6 +202,7 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
   {
     return (ERR_NONE);
   }
+  currPWR = Power;
 }
 
 uint8_t SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
@@ -753,13 +757,16 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
   //ClearIRQFlags();
+  Serial.println("initing");
   if (RFmodule == RFMOD_SX1276)
   {
+    Serial.println("mod1");
     SX1276config(bw, sf, cr, freq, syncWord);
   }
 
   if (RFmodule == RFMOD_SX1278)
   {
+    Serial.println("mod2");
     SX1278config(bw, sf, cr, freq, syncWord);
   }
 }
@@ -786,6 +793,8 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   SetFrequency(freq);
 
   // output power configuration
+
+  status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | currPWR);
   //status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_OUTPUT_POWER);
   status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_TRIM, 5, 0);
   //status = setRegValue(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);

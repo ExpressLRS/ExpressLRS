@@ -148,6 +148,7 @@ public:
     static Bandwidth currBW;
     static SpreadingFactor currSF;
     static CodingRate currCR;
+    static uint8_t currPWR;
     static RadioOPmodes _opmode;
     static RadioState_ RadioState;
     ///////////////////////////////////

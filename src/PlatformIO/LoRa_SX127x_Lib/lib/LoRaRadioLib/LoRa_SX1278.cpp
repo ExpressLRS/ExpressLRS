@@ -228,6 +228,7 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     return (status);
   }
 
+
   // set SF6 optimizations
   if (sf == SX127X_SF_6)
   {
