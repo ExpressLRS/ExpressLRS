@@ -495,15 +495,24 @@ void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
 void ICACHE_RAM_ATTR SX127xDriver::StopTimerTask()
 {
   //vTaskSuspend(TimerTask_handle);
-  timerEnd(timer);
+  if (timer)
+  {
+    timerEnd(timer);
+    timer = NULL;
+  }
+
+  //timerEnd(timer);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::UpdateTimerInterval()
 {
-  timerAlarmWrite(timer, TimerInterval, true);
+  if (timer)
+  {
+    timerAlarmWrite(timer, TimerInterval, true);
+  }
 }
 
-void SX127xDriver::StartTimerTask()
+void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 {
 
   //attachInterrupt(digitalPinToInterrupt(SX127x_dio0), TXnbISR, RISING);
@@ -519,11 +528,13 @@ void SX127xDriver::StartTimerTask()
   //     100,               /* Priority of the task. */
   //     &TimerTask_handle, /* Task handle. */
   //     1);
-
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
-  timerAlarmWrite(timer, TimerInterval, true);
-  timerAlarmEnable(timer);
+  if (!timer)
+  {
+    timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
+    timerAlarmWrite(timer, TimerInterval, true);
+    timerAlarmEnable(timer);
+  }
 }
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -173,12 +173,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR Test90()
 {
+    NonceRXlocal++;
     HandleFHSS();
 }
 
 void ICACHE_RAM_ATTR Test()
 {
-    NonceRXlocal++;
+
     MeasuredHWtimerInterval = micros() - HWtimerGetlastCallbackMicros();
 
     digitalWrite(16, LED);
@@ -248,7 +249,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
             uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 350); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 300); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset / 2);
 
             int8_t LastRSSI = Radio.GetLastPacketRSSI();
@@ -261,7 +262,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 crsf.PackedRCdataOut.ch1 = UINT11_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
                 crsf.PackedRCdataOut.ch2 = UINT11_to_CRSF((Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
                 crsf.PackedRCdataOut.ch3 = UINT11_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
-                crsf.sendRCFrameToFC();
+                //crsf.sendRCFrameToFC();
             }
 
             if (type == 0b01)
@@ -279,7 +280,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     //NonceRXlocal = Radio.RXdataBuffer[5]; //reset nonce with master value
                     //InitHarwareTimer();
                     //OStimerReset();
-                    crsf.sendRCFrameToFC();
+                    //crsf.sendRCFrameToFC();
                 }
             }
 
@@ -318,27 +319,27 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println(str);
                 //Serial.println(Radio.RXdataBuffer[1]);
 
-                // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)Radio.RXdataBuffer[3])
-                // {
-
-                //     switch (Radio.RXdataBuffer[3])
-                //     {
-                //     case 0:
-                //         SetRFLinkRate(RF_RATE_250HZ);
-                //         ExpressLRS_currAirRate = RF_RATE_250HZ;
-                //         break;
-                //     case 2:
-                //         SetRFLinkRate(RF_RATE_100HZ);
-                //         ExpressLRS_currAirRate = RF_RATE_100HZ;
-                //         break;
-                //     case 3:
-                //         SetRFLinkRate(RF_RATE_50HZ);
-                //         ExpressLRS_currAirRate = RF_RATE_50HZ;
-                //         break;
-                //     default:
-                //         break;
-                //     }
-                // }
+                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)Radio.RXdataBuffer[3])
+                {
+                    Serial.println("update rate");
+                    switch (Radio.RXdataBuffer[3])
+                    {
+                    case 0:
+                        SetRFLinkRate(RF_RATE_200HZ);
+                        ExpressLRS_currAirRate = RF_RATE_200HZ;
+                        break;
+                    case 1:
+                        SetRFLinkRate(RF_RATE_125HZ);
+                        ExpressLRS_currAirRate = RF_RATE_125HZ;
+                        break;
+                    case 2:
+                        SetRFLinkRate(RF_RATE_50HZ);
+                        ExpressLRS_currAirRate = RF_RATE_50HZ;
+                        break;
+                    default:
+                        break;
+                    }
+                }
 
                 //Serial.println()
             }
@@ -442,8 +443,6 @@ void setup()
     Radio.Begin();
 
     //crsf.InitSerial();
-
-    Radio.SetPreambleLength(6);
     Radio.SetOutputPower(0b0000);
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
@@ -469,6 +468,7 @@ void setup()
 
     //writeRegister(0x36, 0x02);
     //writeRegister(0x3a, 0x7F);
+    //setRegValue(0x44, 1, 7, 7); // fast on hop
 }
 
 void loop()
@@ -519,6 +519,7 @@ void loop()
         }
 
         //Serial.println(Radio.currFreq);
+        Radio.SetPreambleLength(6);
 
         digitalWrite(16, LED);
         LED = !LED;

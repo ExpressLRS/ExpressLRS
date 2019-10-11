@@ -262,6 +262,13 @@ public:
     static void (*RCdataCallback1)(); //function pointer for new RC data callback
     static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
+    static void (*disconnected)();
+    static void (*connected)(); 
+    static bool firstboot; 
+
+    static bool CRSFstate;
+    static bool CRSFstatePrev; 
+
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
 
