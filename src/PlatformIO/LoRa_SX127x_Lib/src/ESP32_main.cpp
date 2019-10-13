@@ -9,6 +9,7 @@
 #define Regulatory_Domain_AU_433 // define frequnecy band of operation
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
+void BeginFastSync();
 
 void ICACHE_RAM_ATTR nullTask(){};
 
@@ -45,7 +46,7 @@ uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we
 uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
 
 uint32_t LastTLMpacketRecvMillis = 0;
-uint32_t RXconnectionLostTimeout = 1500; //After 1.5 seconds of no TLM response consider that slave has lost connection
+uint32_t RXconnectionLostTimeout = 1000; //After 1.5 seconds of no TLM response consider that slave has lost connection
 bool isRXconnected = false;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
@@ -59,6 +60,8 @@ bool Channels5to8Changed = false;
 bool blockUpdate = false;
 bool ChangeAirRate = false;
 bool SentAirRateInfo = false;
+
+bool resync = false;
 
 bool WaitRXresponse = false;
 
@@ -107,7 +110,6 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
     if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
     {
       Channels5to8Changed = true;
-
       if (i == 7)
       {
         ChangeAirRate = true;
@@ -125,6 +127,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
+  Radio.TXdataBuffer[4] = 0;
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData()
@@ -164,9 +167,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR SendRCdataToRF_NoTLM()
 {
-
   uint32_t SyncInterval;
-
   if (isRXconnected)
   {
     SyncInterval = SwitchPacketSendIntervalRXconn;
@@ -213,22 +214,79 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   Radio.TimerInterval = mode.interval;
   Radio.UpdateTimerInterval();
   Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
-
-  DebugOutput += String(mode.rate) + "Hz";
-
-  //Radio.StartTimerTask();
+  Radio.SetPreambleLength(mode.PreambleLen);
+  ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
+  DebugOutput += String(mode.rate) + "Hz";
+}
+
+void BeginFastSync()
+{ //sync and get lock to reciever
+  Serial.println("Begin fastsync");
+  uint8_t RXdata[7];
+  Radio.StopTimerTask();
+  SetRFLinkRate(RF_RATE_50HZ);
+  Radio.SetFrequency(GetInitialFreq());
+
+  GenerateSyncPacketData();
+  Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
+  Radio.TXdataBuffer[4] = 1;
+  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+  Radio.TXdataBuffer[6] = crc;
+
+  while (1)
+  {
+    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
+    //vTaskDelay(1);
+    if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
+    {
+      Serial.println("got fastsync resp 1");
+      break;
+    }
+  }
+
+  uint8_t calculatedCRC = CalcCRC(RXdata, 6);
+  uint8_t inCRC = RXdata[6];
+  uint8_t type = RXdata[0] & 0b11;
+  uint8_t packetAddr = (RXdata[0] & 0b11111100) >> 2;
+
+  if (packetAddr == DeviceAddr)
+  {
+    if ((inCRC == calculatedCRC))
+    {
+      if (type == 0b10) //sync packet
+      {
+        if (RXdata[4] == 2)
+        {
+          Serial.println("got SYNACK"); // got SYNACK
+          LastTLMpacketRecvMillis = millis();
+          GenerateSyncPacketData();
+
+          Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
+          Radio.TXdataBuffer[4] = 3;
+          uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+          Radio.TXdataBuffer[6] = crc;
+          Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
+          SetRFLinkRate(ExpressLRS_prevAirRate);
+          Radio.StartTimerTask();
+          Serial.println("fastsync done!");
+        }
+      }
+    }
+  }
+  else
+  {
+    BeginFastSync();
+  }
 }
 
 void UpdateAirRate()
 {
-  // if (Radio.RadioState == RADIO_IDLE)
-  // {
-
   if (ChangeAirRate && !blockUpdate) //airrate change has been changed and we also informed the slave
   {
     uint32_t startTime = micros();
-    //Serial.println("changing RF rate");
+    Serial.println("changing RF rate");
     int data = crsf.ChannelDataIn[7];
 
     if (data >= 0 && data < 743)
@@ -238,7 +296,7 @@ void UpdateAirRate()
 
     if (data >= 743 && data < 1313)
     {
-      SetRFLinkRate(RF_RATE_125HZ);
+      SetRFLinkRate(RF_RATE_100HZ);
     }
 
     if (data >= 1313 && data <= 1811)
@@ -248,10 +306,9 @@ void UpdateAirRate()
     ChangeAirRate = false;
     SentAirRateInfo = false;
     blockUpdate = false;
+    resync = true;
     Serial.println(micros() - startTime);
-    //}
   }
-  //Radio.SetPreambleLength(6);
 }
 
 void setup()
@@ -265,12 +322,20 @@ void setup()
   FHSSsetFreqMode(915);
   Radio.RFmodule = RFMOD_SX1276;        //define radio module here
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
+
+  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
+  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
+  Radio.SetOutputPower(0b0000); // 20dbm = 100mW
+                                //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
   FHSSsetFreqMode(433);
   Radio.RFmodule = RFMOD_SX1278;        //define radio module here
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
   Serial.println(FHSSgetNextFreq());
+  Radio.SetOutputPower(0b1111);
 #endif
 
   Radio.HighPowerModule = true;
@@ -288,27 +353,30 @@ void setup()
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
 
-#ifdef Regulatory_Domain_AU_915
-  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
-  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  Radio.SetOutputPower(0b0000); // 20dbm = 100mW
-                                //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
-#elif defined Regulatory_Domain_AU_433
-  Radio.SetOutputPower(0b0000);
-#endif
-
   Radio.Begin();
   SetRFLinkRate(RF_RATE_200HZ);
   //Radio.StartTimerTask(); // not needed if triggered by CRSF uart detection
-
+  //BeginFastSync();
   crsf.Begin();
 }
 
 void loop()
 {
-  vTaskDelay(500);
+  // int min = 9999;
+
+  // if (Radio.HeadRoom < min)
+  // {
+  //   min = Radio.HeadRoom
+  // }
+  vTaskDelay(100);
+
+  if (resync && SentAirRateInfo)
+  {
+    resync = false;
+    //BeginFastSync();
+  }
+
+  //Serial.println(Radio.HeadRoom);
   //UpdateAirRate();
 
   // if (crsf.CRSFstate == false)
@@ -349,10 +417,10 @@ void loop()
   //delay(250);
   //Serial.println(Radio.currPWR);
 
-  // if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
-  // {
-  //   isRXconnected = false;
-  // }
+  if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
+  {
+    isRXconnected = false;
+  }
 
   // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
   // {

@@ -12,7 +12,7 @@ typedef enum
 typedef enum
 {
     RATE_200HZ = 0,
-    RATE_125HZ = 1,
+    RATE_100HZ = 1,
     RATE_50HZ = 2,
     RATE_25HZ = 3,
     RATE_4HZ = 4
@@ -28,6 +28,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t rate;            // rate in hz
     uint8_t TLMinterval;     // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy
+    uint8_t PreambleLen;
     expresslrs_RFrates_e enum_rate;
 
 } expresslrs_mod_settings_t;
@@ -42,13 +43,13 @@ typedef struct expresslrs_mod_settings_s
 //         {BW_250_00_KHZ, SF_11, CR_4_5, 250000}, //4hz
 // };
 
-expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000, 200, 16, 4, RATE_200HZ};
-expresslrs_mod_settings_s RF_RATE_125HZ = {BW_500_00_KHZ, SF_7, CR_4_5, 8000, 125, 8, 4, RATE_125HZ};
-expresslrs_mod_settings_s RF_RATE_50HZ = {BW_250_00_KHZ, SF_7, CR_4_7, 20000, 50, 4, 2, RATE_50HZ};
-expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, 2, 2, RATE_25HZ};
-expresslrs_mod_settings_s RF_RATE_4HZ = {BW_250_00_KHZ, SF_11, CR_4_5, 250000, 4, 4, 2, RATE_4HZ};
+expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000, 200, 16, 8, 12, RATE_200HZ};
+expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_5, 10000, 100, 8, 4, 12, RATE_100HZ};
+expresslrs_mod_settings_s RF_RATE_50HZ = {BW_500_00_KHZ, SF_8, CR_4_7, 20000, 50, 4, 2, 12, RATE_50HZ};
+expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, 2, 2, 8, RATE_25HZ};
+expresslrs_mod_settings_s RF_RATE_4HZ = {BW_250_00_KHZ, SF_11, CR_4_5, 250000, 4, 4, 2, 8, RATE_4HZ};
 
-const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[5] = {RF_RATE_200HZ, RF_RATE_125HZ, RF_RATE_50HZ, RF_RATE_25HZ, RF_RATE_4HZ};
+const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[5] = {RF_RATE_200HZ, RF_RATE_100HZ, RF_RATE_50HZ, RF_RATE_25HZ, RF_RATE_4HZ};
 
 expresslrs_mod_settings_s ExpressLRS_currAirRate;
 expresslrs_mod_settings_s ExpressLRS_prevAirRate;

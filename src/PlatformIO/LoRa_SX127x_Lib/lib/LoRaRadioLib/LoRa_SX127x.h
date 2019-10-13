@@ -221,6 +221,7 @@ public:
     static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
     static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
+    static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
     static uint8_t rxContinuous(char *data, uint8_t *length);
     static uint8_t rxISRprocess(char *data, uint8_t *length);
 
