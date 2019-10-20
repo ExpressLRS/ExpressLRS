@@ -4,7 +4,11 @@
 #include "CRSF.h"
 #include "FHSS.h"
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include "utils.h"
+=======
+//#include "ESP32_WS2812B.h"
+>>>>>>> 9cb0671... seems to work + led
 =======
 //#include "ESP32_WS2812B.h"
 >>>>>>> 9cb0671... seems to work + led
@@ -255,7 +259,10 @@ void BeginFastSync()
   Radio.SetFrequency(GetInitialFreq());
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 9cb0671... seems to work + led
   // Radio.TXdataBuffer[0] = PacketHeaderAddr;
   // Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   // Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
@@ -360,7 +367,10 @@ void setup()
   Serial.println("ExpressLRS TX Module Booted...");
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 9cb0671... seems to work + led
   strip.Begin();
   for (int i = 0; i < 10; i++)
   { //do a little led dance at the start
