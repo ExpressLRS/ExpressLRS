@@ -3,21 +3,14 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-<<<<<<< HEAD
 #include "utils.h"
-=======
-//#include "ESP32_WS2812B.h"
->>>>>>> 9cb0671... seems to work + led
 
-//#define RFmodule_Size FULL
-#define Regulatory_Domain_AU_433 // define frequnecy band of operation
+#define Regulatory_Domain_AU_915 // define frequnecy band of operation
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
 void BeginFastSync();
 
 void ICACHE_RAM_ATTR nullTask(){};
-
-void ws2812_control_init();
 
 String DebugOutput;
 
@@ -95,11 +88,14 @@ uint8_t DeviceAddr = 0b101010;
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 6);
-  uint8_t inCRC = Radio.RXdataBuffer[6];
+
+  uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7);
+  uint8_t inCRC = Radio.RXdataBuffer[7];
   uint8_t type = Radio.RXdataBuffer[0] & 0b11;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
+
+  Serial.println("TLMpacket");
 
   if (packetAddr == DeviceAddr)
   {
@@ -121,11 +117,20 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
-
+          //Serial.println("send TLMpacket");
+          //Serial.println(Radio.RXdataBuffer[5]);
           crsf.sendLinkStatisticsToTX();
         }
       }
     }
+    else
+    {
+      Serial.println("TLM crc error");
+    }
+  }
+  else
+  {
+    Serial.println("TLM dev addr");
   }
 }
 
@@ -178,7 +183,8 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
   Radio.TXdataBuffer[2] = (CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT11(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
   Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
   Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
-  Radio.TXdataBuffer[5] = Radio.NonceTX; //we use this free byte in switch packet to send the current nonce and sync the RX to the TX
+  Radio.TXdataBuffer[5] = Radio.NonceTX;
+  Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -191,8 +197,43 @@ void ICACHE_RAM_ATTR HandleFHSS()
   }
 }
 
+void ICACHE_RAM_ATTR HandleTLM()
+{
+  if (ExpressLRS_currAirRate.TLMinterval > 0)
+  {
+    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
+
+    if (modresult == 0) // wait for tlm response
+    {
+      //Serial.println("RX");
+      Radio.StartContRX();
+      WaitRXresponse = true;
+    }
+  }
+}
+
 void ICACHE_RAM_ATTR SendRCdataToRF_NoTLM()
 {
+
+  if (ExpressLRS_currAirRate.TLMinterval > 0)
+  {
+    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
+
+    if (modresult == 0)
+    { // wait for tlm response
+      if (WaitRXresponse == true)
+      {
+        WaitRXresponse = false;
+        return;
+      }
+      else
+      {
+        Radio.NonceTX++;
+        //Radio.NonceTX++;
+      }
+    }
+  }
+
   uint32_t SyncInterval;
   if (isRXconnected)
   {
@@ -228,10 +269,52 @@ void ICACHE_RAM_ATTR SendRCdataToRF_NoTLM()
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
-  Radio.TXdataBuffer[6] = crc;
+  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
+  Radio.TXdataBuffer[7] = crc;
   ////////////////////////////////////////////////////////////
-  Radio.TXnb(Radio.TXdataBuffer, 7);
+  Radio.TXnb(Radio.TXdataBuffer, 8);
+  blockUpdate = false;
+}
+
+void ICACHE_RAM_ATTR SendRCdataToRF_TLM()
+{
+  uint32_t SyncInterval;
+  if (isRXconnected)
+  {
+    SyncInterval = SwitchPacketSendIntervalRXconn;
+  }
+  else
+  {
+    SyncInterval = SwitchPacketSendIntervalRXlost;
+  }
+
+  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRate) //only send sync when its time and only on channel 0;
+  {
+
+    GenerateSyncPacketData();
+    SyncPacketLastSent = millis();
+    SentAirRateInfo = true;
+    Serial.println("sync");
+  }
+  else
+  {
+    if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
+    {
+      Channels5to8Changed = false;
+      GenerateSwitchChannelData();
+      SwitchPacketLastSent = millis();
+    }
+    else // else we just have regular channel data which we send as 8 + 2 bits
+    {
+      Generate4ChannelData();
+    }
+  }
+
+  ///// Next, Calculate the CRC and put it into the buffer /////
+  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
+  Radio.TXdataBuffer[7] = crc;
+  ////////////////////////////////////////////////////////////
+  Radio.TXnb(Radio.TXdataBuffer, 8);
   blockUpdate = false;
 }
 
@@ -244,77 +327,6 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
   DebugOutput += String(mode.rate) + "Hz";
-}
-
-void BeginFastSync()
-{ //sync and get lock to reciever
-  Serial.println("Begin fastsync");
-  uint8_t RXdata[7];
-  Radio.StopTimerTask();
-  SetRFLinkRate(RF_RATE_50HZ);
-  Radio.SetFrequency(GetInitialFreq());
-
-<<<<<<< HEAD
-=======
-  // Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  // Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  // Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
-  // Radio.TXdataBuffer[3] = TxBaseMac[3];
-  // Radio.TXdataBuffer[4] = TxBaseMac[4];
-  // Radio.TXdataBuffer[5] = TxBaseMac[5];
-
->>>>>>> 9cb0671... seems to work + led
-  GenerateSyncPacketData();
-  Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
-  Radio.TXdataBuffer[4] = 1;
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
-  Radio.TXdataBuffer[6] = crc;
-
-  while (1)
-  {
-    Radio.SetFrequency(FHSSgetNextFreq());
-    Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
-    //vTaskDelay(1);
-    if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
-    {
-      Serial.println("got fastsync resp 1");
-      break;
-    }
-  }
-
-  uint8_t calculatedCRC = CalcCRC(RXdata, 6);
-  uint8_t inCRC = RXdata[6];
-  uint8_t type = RXdata[0] & 0b11;
-  uint8_t packetAddr = (RXdata[0] & 0b11111100) >> 2;
-
-  if (packetAddr == DeviceAddr)
-  {
-    if ((inCRC == calculatedCRC))
-    {
-      if (type == 0b10) //sync packet
-      {
-        if (RXdata[4] == 2)
-        {
-          Serial.println("got SYNACK"); // got SYNACK
-          LastTLMpacketRecvMillis = millis();
-          GenerateSyncPacketData();
-
-          Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
-          Radio.TXdataBuffer[4] = 3;
-          uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
-          Radio.TXdataBuffer[6] = crc;
-          Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
-          SetRFLinkRate(ExpressLRS_prevAirRate);
-          Radio.StartTimerTask();
-          Serial.println("fastsync done!");
-        }
-      }
-    }
-  }
-  else
-  {
-    BeginFastSync();
-  }
 }
 
 void UpdateAirRate()
@@ -359,8 +371,6 @@ void setup()
   delay(2000);
   Serial.println("ExpressLRS TX Module Booted...");
 
-<<<<<<< HEAD
-=======
   strip.Begin();
   for (int i = 0; i < 10; i++)
   { //do a little led dance at the start
@@ -396,9 +406,6 @@ void setup()
   Serial.println("};");
   Serial.println("");
 
-  FHSSrandomiseFHSSsequence();
-
->>>>>>> 9cb0671... seems to work + led
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
   FHSSsetFreqMode(915);
@@ -422,12 +429,14 @@ void setup()
 
   Radio.HighPowerModule = true;
   Radio.TimerInterval = 10000; //in microseconds
-  Radio.TXbuffLen = 7;
-  Radio.RXbuffLen = 7;
+  Radio.TXbuffLen = 8;
+  Radio.RXbuffLen = 8;
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
+
   Radio.TXdoneCallback1 = &HandleFHSS;
-  Radio.TXdoneCallback2 = &UpdateAirRate;
+  Radio.TXdoneCallback2 = &HandleTLM;
+  Radio.TXdoneCallback3 = &UpdateAirRate;
 
   Radio.TimerDoneCallback = &SendRCdataToRF_NoTLM;
 
@@ -444,12 +453,6 @@ void setup()
 
 void loop()
 {
-  // int min = 9999;
-
-  // if (Radio.HeadRoom < min)
-  // {
-  //   min = Radio.HeadRoom
-  // }
 
   vTaskDelay(100);
 
@@ -482,7 +485,7 @@ void loop()
   // Serial.print("TotalTime: ");
   // Serial.println(Radio.TimeOnAir);
   // Serial.print("HeadRoom: ");
-  // Serial.println(Radio.HeadRoom);
+  //Serial.println(Radio.HeadRoom);
   //Serial.print("PacketCount(HZ): ");
   //Serial.println(Radio.PacketCount);
   // Radio.PacketCount = 0;
@@ -498,7 +501,7 @@ void loop()
   //PrintRC();
 
   //delay(250);
-  //Serial.println(Radio.currPWR);
+  //Serial.println(Radio.currPWR);FRE
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
@@ -519,3 +522,71 @@ void loop()
   //   packetCounteRX_TX = 0;
   // }
 }
+
+// void BeginFastSync()
+// { //sync and get lock to reciever
+//   Serial.println("Begin fastsync");
+//   uint8_t RXdata[7];
+//   Radio.StopTimerTask();
+//   SetRFLinkRate(RF_RATE_50HZ);
+//   Radio.SetFrequency(GetInitialFreq());
+
+//   // Radio.TXdataBuffer[0] = PacketHeaderAddr;
+//   // Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
+//   // Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+//   // Radio.TXdataBuffer[3] = TxBaseMac[3];
+//   // Radio.TXdataBuffer[4] = TxBaseMac[4];
+//   // Radio.TXdataBuffer[5] = TxBaseMac[5];
+
+//   GenerateSyncPacketData();
+//   Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
+//   Radio.TXdataBuffer[4] = 1;
+//   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+//   Radio.TXdataBuffer[6] = crc;
+
+//   while (1)
+//   {
+//     Radio.SetFrequency(FHSSgetNextFreq());
+//     Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
+//     //vTaskDelay(1);
+//     if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
+//     {
+//       Serial.println("got fastsync resp 1");
+//       break;
+//     }
+//   }
+
+//   uint8_t calculatedCRC = CalcCRC(RXdata, 6);
+//   uint8_t inCRC = RXdata[6];
+//   uint8_t type = RXdata[0] & 0b11;
+//   uint8_t packetAddr = (RXdata[0] & 0b11111100) >> 2;
+
+//   if (packetAddr == DeviceAddr)
+//   {
+//     if ((inCRC == calculatedCRC))
+//     {
+//       if (type == 0b10) //sync packet
+//       {
+//         if (RXdata[4] == 2)
+//         {
+//           Serial.println("got SYNACK"); // got SYNACK
+//           LastTLMpacketRecvMillis = millis();
+//           GenerateSyncPacketData();
+
+//           Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
+//           Radio.TXdataBuffer[4] = 3;
+//           uint8_t crc = CalcCRC(Radio.TXdataBuffer, 6);
+//           Radio.TXdataBuffer[6] = crc;
+//           Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
+//           SetRFLinkRate(ExpressLRS_prevAirRate);
+//           Radio.StartTimerTask();
+//           Serial.println("fastsync done!");
+//         }
+//       }
+//     }
+//   }
+//   else
+//   {
+//     BeginFastSync();
+//   }
+// }

@@ -42,7 +42,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL, 0);
+    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -119,6 +119,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
     const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
+    gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
@@ -170,13 +171,18 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     ProcessPacket();
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
-                    //taskYIELD();
+                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
+                    vTaskDelay(xDelay1);
+                    taskYIELD();
+
                     if (CRSFoutBuffer[0] > 0)
                     {
                         CRSF::Port.write((uint8_t *)CRSFoutBuffer + 1, CRSFoutBuffer[0]);
                         memset((uint8_t *)CRSFoutBuffer, 0, CRSFoutBuffer[0] + 1);
                     }
                     //FlushSerial();
+                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
+                    //vTaskDelay(xDelay1);
                 }
                 else
                 {
@@ -215,7 +221,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         connected();
     }
 
-    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
     //taskENTER_CRITICAL(&myMutex);
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -226,7 +232,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
 
     //taskEXIT_CRITICAL(&myMutex);
-    vTaskDelay(2);
+    //vTaskDelay(2);
 }
 
 #endif

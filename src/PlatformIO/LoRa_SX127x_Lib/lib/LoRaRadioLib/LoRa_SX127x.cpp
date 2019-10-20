@@ -562,6 +562,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   NonceTX++;
   TXdoneCallback1();
   TXdoneCallback2();
+  TXdoneCallback3();
   TXdoneMicros = micros();
 }
 
