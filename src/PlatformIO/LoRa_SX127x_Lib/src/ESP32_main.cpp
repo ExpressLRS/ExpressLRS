@@ -3,7 +3,11 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
+<<<<<<< HEAD
 #include "utils.h"
+=======
+//#include "ESP32_WS2812B.h"
+>>>>>>> 9cb0671... seems to work + led
 
 //#define RFmodule_Size FULL
 #define Regulatory_Domain_AU_433 // define frequnecy band of operation
@@ -13,11 +17,33 @@ void BeginFastSync();
 
 void ICACHE_RAM_ATTR nullTask(){};
 
+void ws2812_control_init();
+
 String DebugOutput;
 
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
+
+/// LED SUPPORT ///////
+#include <NeoPixelBus.h>
+const uint16_t PixelCount = 4; // this example assumes 4 pixels, making it smaller will cause a failure
+const uint8_t PixelPin = 27;   // make sure to set this to the correct pin, ignored for Esp8266
+#define colorSaturation 50
+NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
+
+RgbColor red(colorSaturation, 0, 0);
+RgbColor green(0, colorSaturation, 0);
+RgbColor blue(0, 0, colorSaturation);
+RgbColor white(colorSaturation);
+RgbColor black(0);
+
+HslColor hslRed(red);
+HslColor hslGreen(green);
+HslColor hslBlue(blue);
+HslColor hslWhite(white);
+HslColor hslBlack(black);
+//////////////////////////////////
 
 uint8_t SwitchPacketsCounter = 0;              //not used for the moment
 uint32_t SwitchPacketSendInterval = 200;       //not used, delete when able to
@@ -228,6 +254,16 @@ void BeginFastSync()
   SetRFLinkRate(RF_RATE_50HZ);
   Radio.SetFrequency(GetInitialFreq());
 
+<<<<<<< HEAD
+=======
+  // Radio.TXdataBuffer[0] = PacketHeaderAddr;
+  // Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
+  // Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+  // Radio.TXdataBuffer[3] = TxBaseMac[3];
+  // Radio.TXdataBuffer[4] = TxBaseMac[4];
+  // Radio.TXdataBuffer[5] = TxBaseMac[5];
+
+>>>>>>> 9cb0671... seems to work + led
   GenerateSyncPacketData();
   Radio.TXdataBuffer[3] = ExpressLRS_prevAirRate.enum_rate;
   Radio.TXdataBuffer[4] = 1;
@@ -292,16 +328,22 @@ void UpdateAirRate()
     if (data >= 0 && data < 743)
     {
       SetRFLinkRate(RF_RATE_200HZ);
+      strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
+      strip.Show();
     }
 
     if (data >= 743 && data < 1313)
     {
       SetRFLinkRate(RF_RATE_100HZ);
+      strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
+      strip.Show();
     }
 
     if (data >= 1313 && data <= 1811)
     {
       SetRFLinkRate(RF_RATE_50HZ);
+      strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
+      strip.Show();
     }
     ChangeAirRate = false;
     SentAirRateInfo = false;
@@ -314,9 +356,49 @@ void UpdateAirRate()
 void setup()
 {
   Serial.begin(115200);
-  delay(3000);
+  delay(2000);
   Serial.println("ExpressLRS TX Module Booted...");
 
+<<<<<<< HEAD
+=======
+  strip.Begin();
+  for (int i = 0; i < 10; i++)
+  { //do a little led dance at the start
+    strip.SetPixelColor(0, RgbColor(255, 255, 255));
+    strip.Show();
+    delay(10);
+    strip.SetPixelColor(0, RgbColor(0, 0, 0));
+    strip.Show();
+    delay(90);
+  }
+
+  // Get base mac address
+  uint8_t baseMac[6];
+  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+
+  // Print base mac address
+  // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
+  // TxBaseMac[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
+  Serial.println("");
+  Serial.println("Copy the below line into common.h.");
+  Serial.print("uint8_t TxBaseMac[6] = {");
+  Serial.print(baseMac[0]);
+  Serial.print(", ");
+  Serial.print(baseMac[1]);
+  Serial.print(", ");
+  Serial.print(baseMac[2]);
+  Serial.print(", ");
+  Serial.print(baseMac[3]);
+  Serial.print(", ");
+  Serial.print(baseMac[4]);
+  Serial.print(", ");
+  Serial.print(baseMac[5]);
+  Serial.println("};");
+  Serial.println("");
+
+  FHSSrandomiseFHSSsequence();
+
+>>>>>>> 9cb0671... seems to work + led
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
   FHSSsetFreqMode(915);
@@ -368,6 +450,7 @@ void loop()
   // {
   //   min = Radio.HeadRoom
   // }
+
   vTaskDelay(100);
 
   if (resync && SentAirRateInfo)

@@ -192,7 +192,7 @@ uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
 {
   //todo make function turn on PA_BOOST ect
-  uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, Power, 3, 0);
+  uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST |Power, 3, 0);
 
   currPWR = Power;
 
