@@ -94,7 +94,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     // crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = (-Radio.GetLastPacketRSSI());
+    crsf.LinkStatistics.uplink_RSSI_1 = (Radio.GetLastPacketRSSI());
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
@@ -128,8 +128,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
         if (modresult == 0)
         {
-            getRFlinkInfo();
-
             Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
             Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
             Radio.TXdataBuffer[2] = 120 + crsf.LinkStatistics.uplink_RSSI_1;
@@ -139,11 +137,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
             Radio.TXdataBuffer[7] = crc;
-            //delayMicroseconds(5000);
             Radio.TXnb(Radio.TXdataBuffer, 8);
-            //radio hops after transmission of telemetry Packet
-            //Radio.TXdoneCallback = &Radio.StartContRX;
-            //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
         }
     }
 }
@@ -248,6 +242,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
                     crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
 
+                    if (LostConnection)
+                    {
+                        InitHarwareTimer();
+                        LostConnection = false; //we got a packet, therefore no lost connection
+                        Serial.println("got conn");
+                    }
+
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
                     getRFlinkInfo();
@@ -264,16 +265,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-
-                //if (NonceRXlocal == Radio.RXdataBuffer[2])
-                //{
-                //Serial.println("yay!");
-                // }
-                // else
-                //{
-                //   Serial.println(NonceRXlocal - Radio.RXdataBuffer[2]);
-
-                // }
 
                 NonceRXlocal = Radio.RXdataBuffer[2];
 
@@ -307,8 +298,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 }
 
                 //Serial.println()
-                getRFlinkInfo();
             }
+            getRFlinkInfo();
         }
         else
         {
@@ -441,12 +432,15 @@ void loop()
         {
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
+            delay(200);
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
+            delay(400);
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
+            delay(600);
             break;
 
         default:
@@ -465,8 +459,6 @@ void loop()
 
             scanIndex++;
         }
-
-        delay(500);
     }
 
     if (millis() > (LastValidPacket + LostConnectionDelay))

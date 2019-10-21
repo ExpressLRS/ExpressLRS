@@ -109,7 +109,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
         if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
         {
-          crsf.LinkStatistics.uplink_RSSI_1 = -Radio.RXdataBuffer[2];
+          crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
           crsf.LinkStatistics.uplink_RSSI_2 = 0;
           crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
           crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
@@ -414,8 +414,8 @@ void setup()
 
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  Radio.SetOutputPower(0b0000); // 20dbm = 100mW
-                                //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+  //Radio.SetOutputPower(0b0000); // 20dbm = 100mW
+  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
                                 // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
                                 // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
@@ -508,19 +508,19 @@ void loop()
     isRXconnected = false;
   }
 
-  // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-  // {
-  //   float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-  //   PacketRateLastChecked = millis();
-  //   PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
-  //   linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+  if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+  {
+    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+    PacketRateLastChecked = millis();
+    PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
+    linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
 
-  //   if (linkQuality > 99)
-  //   {
-  //     linkQuality = 99;
-  //   }
-  //   packetCounteRX_TX = 0;
-  // }
+    if (linkQuality > 99)
+    {
+      linkQuality = 99;
+    }
+    packetCounteRX_TX = 0;
+  }
 }
 
 // void BeginFastSync()
