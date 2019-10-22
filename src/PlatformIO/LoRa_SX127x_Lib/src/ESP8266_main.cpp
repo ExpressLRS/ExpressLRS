@@ -100,7 +100,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
-    //crsf.sendLinkStatisticsToFC();
+    crsf.sendLinkStatisticsToFC();
 }
 
 int offset = 0;
@@ -218,7 +218,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 crsf.PackedRCdataOut.ch1 = UINT11_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
                 crsf.PackedRCdataOut.ch2 = UINT11_to_CRSF((Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
                 crsf.PackedRCdataOut.ch3 = UINT11_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
-                //crsf.sendRCFrameToFC();
+                crsf.sendRCFrameToFC();
             }
 
             if (type == 0b01)
@@ -241,7 +241,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
                     getRFlinkInfo();
-                    // crsf.sendRCFrameToFC();
+                    crsf.sendRCFrameToFC();
                 }
             }
 
@@ -387,6 +387,9 @@ void setup()
 #endif
 
     Radio.Begin();
+
+
+    crsf.InitSerial();
 
     Radio.SetOutputPower(0b1111);
 
