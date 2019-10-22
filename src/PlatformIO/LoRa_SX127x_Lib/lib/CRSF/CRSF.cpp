@@ -1,5 +1,4 @@
 #include "CRSF.h"
-#include "PacketLib.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
 

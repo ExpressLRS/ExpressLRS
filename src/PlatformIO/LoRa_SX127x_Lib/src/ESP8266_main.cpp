@@ -4,9 +4,10 @@
 #include "CRSF.h"
 #include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
+#include "Debug.h"
 
 SX127xDriver Radio;
-CRSF crsf(Serial); //pass a serial port object to the class.
+CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 #define Regulatory_Domain_AU_915
 
@@ -106,7 +107,6 @@ int offset = 0;
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-    //uint32_t startTime = micros();
     uint8_t modresult = (NonceRXlocal - offset) % ExpressLRS_currAirRate.FHSShopInterval;
 
     if (modresult == 0)
@@ -116,7 +116,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
         }
-        //Serial.println(micros() - startTime);
     }
 }
 
@@ -157,14 +156,7 @@ void ICACHE_RAM_ATTR Test90()
 
 void ICACHE_RAM_ATTR Test()
 {
-
     MeasuredHWtimerInterval = micros() - HWtimerGetlastCallbackMicros();
-    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    // {
-    //     PacketRateLastChecked = millis();
-    //     Serial.println(MeasuredOStimerInterval);
-    //     Serial.println(HWtimerError);
-    // }
 }
 
 ///////////Super Simple Lowpass for 'PLL' (not really a PLL)/////////
@@ -207,9 +199,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             packetCounter++;
 
             LastValidPacket = millis();
-
-            //digitalWrite(16, LED);
-            //LED = !LED;
 
             HWtimerError = micros() - HWtimerGetlastCallbackMicros();
 
@@ -397,19 +386,14 @@ void setup()
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #endif
 
-    Radio.TXbuffLen = 8;
-    Radio.RXbuffLen = 8;
-
     Radio.Begin();
 
+
     crsf.InitSerial();
+
     Radio.SetOutputPower(0b1111);
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
-
-    //Radio.RXdoneCallback2 = &HandleFHSS_RX;
-
-    //Radio.TXdoneCallback1 = &HandleFHSS_TX;
 
     Radio.TXdoneCallback1 = &Radio.StartContRX;
 
@@ -474,57 +458,6 @@ void loop()
         digitalWrite(16, 1);
     }
 
-    // if (LostConnection && !webUpdateMode)
-    // {
-    //     //Serial.println("start preamble detect");
-    //     uint8_t result = Radio.RunCAD(); // run cad to quickly detect the start of a packet
-    //     //Serial.println("done preamble detect");
-
-    //     if (result == PREAMBLE_DETECTED)
-    //     {
-    //         Serial.println("detect preamble");
-    //         //LostConnection = false;
-    //         uint8_t datain[7];
-    //         Radio.RXsingle(datain, 7);
-
-    //         uint8_t calculatedCRC = CalcCRC(datain, 6);
-    //         uint8_t inCRC = datain[6];
-    //         uint8_t type = datain[0] & 0b11;
-    //         uint8_t packetAddr = (datain[0] & 0b11111100) >> 2;
-
-    //         if ((inCRC == calculatedCRC))
-    //         {
-    //             if (type == 0b10) //sync packet
-    //             {
-    //                 Radio.StartContRX();
-    //                 //LostConnection = false;
-    //             }
-    //         }
-
-    //         // if ((inCRC == calculatedCRC))
-    //         // {
-    //         //     Serial.println("got crc");
-    //         //     LastValidPacket = millis();
-    //         //     if (type == 0b10) //sync packet
-    //         //     {
-    //         //         Radio.StartContRX();
-    //         //         //FHSSsetCurrIndex(datain[1]);
-    //         //         //NonceRXlocal = datain[2];
-    //         //         Serial.println("got good sync from CAD");
-    //         //         LostConnection = false;
-    //         //         return;
-    //         //     }
-    //         // }
-    //     }
-    //     else
-    //     {
-    //         //Serial.println("f");
-    //         delay(20);
-    //         Radio.SetFrequency(FHSSgetNextFreq());
-    //     }
-    // }
-    //else // we have connection, calculate the stats below.
-    //{
     if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
     {
         float targetFrameRate;
@@ -586,141 +519,3 @@ void loop()
         }
     }
 }
-
-// if (millis() > (LastValidPacket + LostConnectionDelay))
-// {
-//     if (LostConnection)
-//     {
-//         Serial.println("begin fastsync");
-//         gotFHSSsync = false;
-//         StopHWtimer();
-//         Radio.SetFrequency(GetInitialFreq());
-
-//         switch (scanIndex)
-//         {
-//         case 1:
-//             SetRFLinkRate(RF_RATE_200HZ);
-//             break;
-//         case 2:
-//             SetRFLinkRate(RF_RATE_100HZ);
-//             break;
-//         case 3:
-//             SetRFLinkRate(RF_RATE_50HZ);
-//             break;
-
-//         default:
-//             break;
-//         }
-
-//         if (Radio.RXsingle((uint8_t *)Radio.RXdataBuffer, 7, 1000) == !ERR_NONE)
-//         {
-//             return;
-//         }
-
-//         digitalWrite(16, LED);
-//         LED = !LED;
-
-//         if (scanIndex == 3)
-//         {
-//             scanIndex = 1;
-//         }
-//         else
-//         {
-
-//             scanIndex++;
-//         }
-
-//         uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 6);
-//         uint8_t inCRC = Radio.RXdataBuffer[6];
-//         uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-//         uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-
-//         if (packetAddr == DeviceAddr)
-//         {
-//             if ((inCRC == calculatedCRC))
-//             {
-//                 if (type == 0b10) //sync packet
-//                 {
-//                     switch (Radio.RXdataBuffer[4])
-//                     {
-//                     case 0: // normal sync packet
-//                         Serial.println("Regular sync packet");
-//                         ProcessRFPacket();
-//                         break;
-
-//                     case 1: // fastsync packet
-//                         Serial.println("Fastsync packet");
-
-//                         FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-//                         NonceRXlocal = Radio.RXdataBuffer[2];
-
-//                         Serial.println("Sending Resp. stage 2");
-//                         GenerateSyncPacketData();
-//                         Radio.TXdataBuffer[4] = 2;
-//                         Radio.TXdataBuffer[6] = CalcCRC(Radio.TXdataBuffer, 6);
-//                         Radio.TX((uint8_t *)Radio.TXdataBuffer, 7);
-//                         InitHarwareTimer();
-
-//                         if (Radio.RXsingle((uint8_t *)Radio.RXdataBuffer, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == !ERR_RX_TIMEOUT)
-//                         {
-//                             Serial.println("Got Resp. Stage 3");
-//                             uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 6);
-//                             uint8_t inCRC = Radio.RXdataBuffer[6];
-//                             uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-//                             uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-
-//                             if (Radio.RXdataBuffer[4] == 3)
-//                             {
-//                                 Serial.println("fastsync done!");
-//                                 LastValidPacket = millis();
-//                                 LostConnection = false;
-//                             }
-//                             break;
-//                         }
-//                         else
-//                         {
-//                             return;
-//                         }
-
-//                     default:
-//                         break;
-//                     }
-//                     //Serial.println("update rate");
-//                     switch (Radio.RXdataBuffer[3])
-//                     {
-//                     case 0:
-//                         SetRFLinkRate(RF_RATE_200HZ);
-//                         ExpressLRS_currAirRate = RF_RATE_200HZ;
-//                         Serial.println("update rate 200hz");
-//                         break;
-//                     case 1:
-//                         SetRFLinkRate(RF_RATE_100HZ);
-//                         ExpressLRS_currAirRate = RF_RATE_100HZ;
-//                         Serial.println("update rate 100hz");
-//                         break;
-//                     case 2:
-//                         SetRFLinkRate(RF_RATE_50HZ);
-//                         ExpressLRS_currAirRate = RF_RATE_50HZ;
-//                         Serial.println("update rate 50hz");
-//                         break;
-//                     default:
-//                         break;
-//                     }
-//                     digitalWrite(16, 1);
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// if (offset == 3)
-// {
-//     offset = -3;
-// }
-// else
-// {
-
-//     offset++;
-// }
-// Serial.println(offset);
-// delay(10000);
