@@ -38,9 +38,10 @@ uint8_t linkQuality = 0;
 ///////////////////////////////////////
 
 bool Channels5to8Changed = false;
-bool blockUpdate = false;
-bool ChangeAirRate = false;
-bool SentAirRateInfo = false;
+
+bool ChangeAirRateRequested = false;
+bool ChangeAirRateSentUpdate = false;
+
 bool WaitRXresponse = false;
 
 ///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -89,8 +90,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
-          //Serial.println("send TLMpacket");
-          //Serial.println(Radio.RXdataBuffer[5]);
+
           crsf.sendLinkStatisticsToTX();
         }
       }
@@ -115,8 +115,8 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
       Channels5to8Changed = true;
       if (i == 7)
       {
-        ChangeAirRate = true;
-        blockUpdate = true;
+        ChangeAirRateRequested = true;
+        //blockUpdate = true;
       }
     }
   }
@@ -135,17 +135,30 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[6] = baseMac[5];
 }
 
-void ICACHE_RAM_ATTR Generate4ChannelData()
+void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT11(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[2] = ((CRSF_to_UINT11(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[3] = ((CRSF_to_UINT11(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[4] = ((CRSF_to_UINT11(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[5] = ((CRSF_to_UINT11(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) + ((CRSF_to_UINT11(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
-                          ((CRSF_to_UINT11(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) + ((CRSF_to_UINT11(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
+  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) + ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) + ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
+}
+
+void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
+{
+  uint8_t PacketHeaderAddr;
+  PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
+  Radio.TXdataBuffer[0] = PacketHeaderAddr;
+  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0] & 0b11111111000) >> 3);
+  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1] & 0b11111111000) >> 3);
+  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2] & 0b11111111000) >> 3);
+  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3] & 0b11111111000) >> 3);
+  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
+  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 }
 
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
@@ -153,8 +166,8 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + 0b01;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT11(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT11(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
-  Radio.TXdataBuffer[2] = (CRSF_to_UINT11(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT11(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
+  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
+  Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
   Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
   Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
   Radio.TXdataBuffer[5] = Radio.NonceTX;
@@ -188,9 +201,8 @@ void ICACHE_RAM_ATTR HandleTLM()
   {
     uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
 
-    if (modresult == 0) // wait for tlm response
+    if (modresult == 0) // wait for tlm response because it's time
     {
-      //Serial.println("RX");
       Radio.StartContRX();
       WaitRXresponse = true;
     }
@@ -229,12 +241,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = SwitchPacketSendIntervalRXlost;
   }
 
-  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRate) //only send sync when its time and only on channel 0;
+  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
   {
 
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
-    SentAirRateInfo = true;
+    ChangeAirRateSentUpdate = true;
     Serial.println("sync");
   }
   else
@@ -247,7 +259,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
     {
-      Generate4ChannelData();
+      Generate4ChannelData_11bit();
     }
   }
 
@@ -255,12 +267,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
   Radio.TXdataBuffer[7] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 8);
-  blockUpdate = false;
+
+  if (ChangeAirRateRequested)
+  {
+    ChangeAirRateSentUpdate = true;
+  }
 }
 
 void UpdateAirRate()
 {
-  if (ChangeAirRate && !blockUpdate) //airrate change has been changed and we also informed the slave
+  if (ChangeAirRateRequested && ChangeAirRateSentUpdate == true) //airrate change has been changed and we also informed the slave
   {
     uint32_t startTime = micros();
     Serial.println("changing RF rate");
@@ -286,17 +302,24 @@ void UpdateAirRate()
       strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
       strip.Show();
     }
-    ChangeAirRate = false;
-    SentAirRateInfo = false;
-    blockUpdate = false;
+    ChangeAirRateRequested = false;
     Serial.println(micros() - startTime);
   }
+}
+
+void DetectOtherRadios()
+{
+
+  // if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
+  // {
+  //   Serial.println("got fastsync resp 1");
+  //   break;
+  // }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  delay(2000);
   Serial.println("ExpressLRS TX Module Booted...");
 
   strip.Begin();
@@ -311,7 +334,7 @@ void setup()
   }
 
   // Get base mac address
-    esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
 
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.

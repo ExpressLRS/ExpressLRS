@@ -92,8 +92,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.GetLastPacketRSSI();
 
-    // crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
-    // crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
     crsf.LinkStatistics.uplink_RSSI_1 = (Radio.GetLastPacketRSSI());
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
@@ -180,13 +180,43 @@ int16_t ICACHE_RAM_ATTR SimpleLowPass(int16_t Indata)
 }
 //////////////////////////////////////////////////////////////////////
 
-void ICACHE_RAM_ATTR SendCRSFframe()
+void ICACHE_RAM_ATTR GotConnection()
 {
+    if (LostConnection)
+    {
+        InitHarwareTimer();
+        LostConnection = false; //we got a packet, therefore no lost connection
+        Serial.println("got conn");
+    }
+}
+
+void ICACHE_RAM_ATTR UnpackChannelData_11bit()
+{
+    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 2) + (Radio.RXdataBuffer[5] & 0b11100000 >> 5);
+    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00011100 >> 2);
+    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
+    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[6] & 0b01110000 >> 4);
+}
+
+void ICACHE_RAM_ATTR UnpackChannelData_10bit()
+{
+    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 3) + (Radio.RXdataBuffer[5] & 0b11000000 >> 6));
+    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 3) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
+    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 3) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
+    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 3) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
+}
+
+void ICACHE_RAM_ATTR UnpackSwitchData()
+{
+
+    crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
+    crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
+    crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
+    crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //Serial.println(".");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7);
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -197,6 +227,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if ((inCRC == calculatedCRC))
         {
             packetCounter++;
+            getRFlinkInfo(); // run if CRC is valid
 
             LastValidPacket = millis();
 
@@ -208,45 +239,28 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 300); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset / 2);
 
-            int8_t LastRSSI = Radio.GetLastPacketRSSI();
-
-            crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -30, 0, 1023));
-
             if (type == 0b00) //std 4 channel switch data
             {
-                crsf.PackedRCdataOut.ch0 = UINT11_to_CRSF((Radio.RXdataBuffer[1] << 2) + (Radio.RXdataBuffer[5] & 0b11000000 >> 6));
-                crsf.PackedRCdataOut.ch1 = UINT11_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
-                crsf.PackedRCdataOut.ch2 = UINT11_to_CRSF((Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
-                crsf.PackedRCdataOut.ch3 = UINT11_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
-                //crsf.sendRCFrameToFC();
+                UnpackChannelData_11bit();
+                crsf.sendRCFrameToFC();
             }
 
             if (type == 0b01)
             {
-                //return;
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]) // extra layer of protection incase the crc and addr headers fail us.
                 {
-                    crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
-                    crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
-                    crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
-                    crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
-
-                    if (LostConnection)
-                    {
-                        InitHarwareTimer();
-                        LostConnection = false; //we got a packet, therefore no lost connection
-                        Serial.println("got conn");
-                    }
+                    UnpackSwitchData();
 
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    getRFlinkInfo();
-                    // crsf.sendRCFrameToFC();
+                    GotConnection();
+                    crsf.sendRCFrameToFC();
                 }
             }
 
             if (type == 0b11)
             { //telemetry packet from master
+                // not implimented yet
             }
 
             if (type == 0b10)
@@ -254,15 +268,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-
                 NonceRXlocal = Radio.RXdataBuffer[2];
 
-                if (LostConnection)
-                {
-                    InitHarwareTimer();
-                    LostConnection = false; //we got a packet, therefore no lost connection
-                    Serial.println("got conn");
-                }
+                GotConnection();
 
                 if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)Radio.RXdataBuffer[3])
                 {
@@ -288,7 +296,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 //Serial.println()
             }
-            getRFlinkInfo();
         }
         else
         {
