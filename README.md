@@ -16,7 +16,5 @@ TX and RX modules communicate via the standard CRSF serial protocol for easy use
 
 ![Hardware Image 1](img/IMG_20181025_210516.jpg)
 
-![Hardware Image 1](img/IMG_20181025_210516.jpg)
-
 ![Hardware Image 1](img/IMG_20181025_210535.jpg)
 
