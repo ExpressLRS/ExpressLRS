@@ -33,8 +33,8 @@ void (*SX127xDriver::TimerDoneCallback)() = &nullCallback;
 volatile bool SX127xDriver::headerExplMode = false;
 
 volatile uint32_t SX127xDriver::TimerInterval = 20000;
-volatile uint8_t SX127xDriver::TXbuffLen = 7;
-volatile uint8_t SX127xDriver::RXbuffLen = 7;
+volatile uint8_t SX127xDriver::TXbuffLen = 8;
+volatile uint8_t SX127xDriver::RXbuffLen = 8;
 
 uint8_t SX127xDriver::ResponseInterval = 0;
 
