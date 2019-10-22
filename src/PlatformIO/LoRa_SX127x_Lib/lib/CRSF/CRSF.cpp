@@ -1,5 +1,4 @@
 #include "CRSF.h"
-#include "PacketLib.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
 
@@ -16,8 +15,14 @@ volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial
 
 void inline CRSF::nullCallback(void){};
 
-void (*CRSF::RCdataCallback)() = &nullCallback; // function is called whenever there is new RC data.
-void (*CRSF::RCdataCallback_2)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback1)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback2)() = &nullCallback; // function is called whenever there is new RC data.
+
+void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
+void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
+bool CRSF::firstboot = true;
+
+bool CRSF::CRSFstate = false;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0;                        // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0;                        // index where we are reading/writing
@@ -36,7 +41,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 10, NULL);
+    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -106,22 +111,30 @@ void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()
 #ifdef PLATFORM_ESP32
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
 {
+
     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
     const TickType_t xDelay2 = 2 / portTICK_PERIOD_MS;
     const TickType_t xDelay3 = 3 / portTICK_PERIOD_MS;
     const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
     const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
+    gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
-    uint32_t YieldInterval = 100;
+    uint32_t YieldInterval = 200;
 
     for (;;)
     {
         if (millis() > (LastDataTime + YieldInterval))
         { //prevents WDT reset by yielding when there is no CRSF data to proces
             vTaskDelay(YieldInterval / portTICK_PERIOD_MS);
+            if (CRSFstate == true)
+            {
+                CRSFstate = false;
+                Serial.println("CRSF UART Lost");
+                disconnected();
+            }
         }
 
         if (CRSF::Port.available())
@@ -151,18 +164,24 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
             if (SerialInPacketPtr == SerialInPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
                 char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+
                 if (CalculatedCRC == inChar)
                 {
                     ProcessPacket();
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
-                    vTaskDelay(xDelay2);
+                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
+                    vTaskDelay(xDelay1);
+                    taskYIELD();
+
                     if (CRSFoutBuffer[0] > 0)
                     {
                         CRSF::Port.write((uint8_t *)CRSFoutBuffer + 1, CRSFoutBuffer[0]);
                         memset((uint8_t *)CRSFoutBuffer, 0, CRSFoutBuffer[0] + 1);
                     }
-                    FlushSerial();
+                    //FlushSerial();
+                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
+                    //vTaskDelay(xDelay1);
                 }
                 else
                 {
@@ -190,17 +209,32 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 }
 #endif
 
+#ifdef PLATFORM_ESP32
+
 void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
+    if (CRSFstate == false)
+    {
+        CRSFstate = true;
+        Serial.println("CRSF UART Connected");
+        connected();
+    }
+
+    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    //taskENTER_CRITICAL(&myMutex);
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         GetChannelDataIn();
-        (RCdataCallback)(); // run new RC data callback
-        (RCdataCallback_2)(); // run new RC data callback
+        (RCdataCallback1)(); // run new RC data callback
+        (RCdataCallback2)(); // run new RC data callback
     }
 
+    //taskEXIT_CRITICAL(&myMutex);
+    //vTaskDelay(2);
 }
+
+#endif
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
