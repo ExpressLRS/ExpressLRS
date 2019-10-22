@@ -5,10 +5,11 @@ It can be built with various hardware or customized to suit. The standard build 
 
 It can run at 200 Hz, 100 Hz or 50 Hz depending on if you prefer range or low latency. At 200 Hz it is the fastest 900/433 MHz RC link on the market with a Stick -> OpenTX > RF -> RX -> Serial Packet Latency of ~10ms. 
 
-Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported.
+Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported. This system does FHSS over 20 channels combined with LoRa modulaiton.
 
-TX and RX modules communicate via the standard CRSF serial protocol for easy use with betaflight and openTX. 
+TX and RX modules communicate via the standard CRSF serial protocol for easy use with Betaflight and openTX. 
 
+Compared to commerical R9M or XF systems ExpressLRS is also very affordable, a TX module can be built for $30 and recievers for $15-20.
 
 ![Hardware Image](img/R9M_and_ExpressLRS_modules.jpg)
 
