@@ -7,8 +7,6 @@
 #include "LED.h"
 #include "Debug.h"
 
-#define Regulatory_Domain_AU_915 // define frequnecy band of operation
-
 uint8_t DeviceAddr = 0b101010; // for now, must be unique for each user in the area
 
 String DebugOutput;
@@ -335,10 +333,7 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
-  FHSSsetFreqMode(915);
   Radio.RFmodule = RFMOD_SX1276;        //define radio module here
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
-
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   //Radio.SetOutputPower(0b0000); // 20dbm = 100mW
@@ -347,11 +342,11 @@ void setup()
   // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
-  FHSSsetFreqMode(433);
   Radio.RFmodule = RFMOD_SX1278;        //define radio module here
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
   Radio.SetOutputPower(0b1111);
 #endif
+
+  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
   Radio.HighPowerModule = true; //IMPORTANT! DEFINE IF 1W module or 100mW module
 

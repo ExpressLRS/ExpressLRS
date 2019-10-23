@@ -9,8 +9,6 @@
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
-#define Regulatory_Domain_AU_915
-
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
 void InitOStimer();
@@ -376,15 +374,13 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
-    FHSSsetFreqMode(915);
     Radio.RFmodule = RFMOD_SX1276;        //define radio module here
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #elif defined Regulatory_Domain_AU_433
     Serial.println("Setting 433MHz Mode");
-    FHSSsetFreqMode(433);
     Radio.RFmodule = RFMOD_SX1278;        //define radio module here
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #endif
+
+    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     Radio.Begin();
 

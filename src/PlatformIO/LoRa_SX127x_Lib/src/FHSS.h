@@ -2,14 +2,6 @@
 
 volatile uint8_t FHSSptr = 0;
 
-typedef enum
-{
-    RF_915,
-    RF_433
-} RFfreqs_;
-
-RFfreqs_ RFfreq;
-
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // get the current index of the FHSS pointer
     FHSSptr = value;
@@ -74,54 +66,35 @@ const uint8_t FHSSsequence433[255] = {0, 2, 0, 2, 2, 1, 2, 0, 1, 1, 0, 2, 1, 0, 
 uint32_t ICACHE_RAM_ATTR
 GetInitialFreq()
 {
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[0];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[0];
-    }
-}
+#ifdef Regulatory_Domain_AU_915
 
-void FHSSsetFreqMode(int freq)
-{
-    if (freq == 915)
-    {
-        RFfreq = RF_915;
-    }
-    if (freq == 433)
-    {
-        RFfreq = RF_433;
-    }
-}
+    return FHSSfreqs915[0];
 
-uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
-{
+#elif defined Regulatory_Domain_AU_433
 
-    FHSSptr++;
+    return FHSSfreqs433[0];
 
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[FHSSsequence915[FHSSptr]];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[FHSSsequence433[FHSSptr]];
-    }
-
-    return 1;
+#endif
 }
 
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 {
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[FHSSsequence915[FHSSptr]];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[FHSSsequence433[FHSSptr]];
-    }
+#ifdef Regulatory_Domain_AU_915
+ 
+    return FHSSfreqs915[FHSSsequence915[FHSSptr]];
+
+#elif defined Regulatory_Domain_AU_433
+
+    return FHSSfreqs433[FHSSsequence433[FHSSptr]];
+
+#endif
+
     return 0;
+}
+
+uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
+{
+    FHSSptr++;
+
+    return FHSSgetCurrFreq();
 }
