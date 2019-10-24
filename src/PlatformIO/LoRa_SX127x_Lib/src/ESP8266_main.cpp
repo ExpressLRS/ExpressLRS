@@ -474,6 +474,7 @@ void loop()
         PacketRateLastChecked = millis();
         PacketRate = (float)packetCounter / (float)(PacketRateInterval);
         linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+        if(linkQuality > 99) linkQuality = 99;
 
         CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 
