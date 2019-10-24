@@ -7,8 +7,6 @@
 #include "LED.h"
 #include "Debug.h"
 
-uint8_t DeviceAddr = 0b101010; // for now, must be unique for each user in the area
-
 String DebugOutput;
 
 /// define some libs to use ///

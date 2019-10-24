@@ -54,8 +54,6 @@ bool webUpdateMode = false;
 uint32_t webUpdateLedFlashInterval = 25;
 uint32_t webUpdateLedFlashIntervalLast;
 
-uint8_t DeviceAddr = 0b101010;
-
 volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 
 //////////////////////////////////////////////////////////////
