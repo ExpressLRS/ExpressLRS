@@ -128,8 +128,8 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  Radio.TXdataBuffer[2] = Radio.NonceTX;
-  Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
+  Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+  Radio.TXdataBuffer[3] = 0;
   Radio.TXdataBuffer[4] = baseMac[3];
   Radio.TXdataBuffer[5] = baseMac[4];
   Radio.TXdataBuffer[6] = baseMac[5];

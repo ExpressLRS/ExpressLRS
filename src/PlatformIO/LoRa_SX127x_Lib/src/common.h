@@ -17,7 +17,7 @@ typedef enum
     RATE_25HZ = 3,
     RATE_4HZ = 4
 
-} expresslrs_RFrates_e;
+} expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 typedef struct expresslrs_mod_settings_s
 {
@@ -27,9 +27,9 @@ typedef struct expresslrs_mod_settings_s
     uint32_t interval;       //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;            // rate in hz
     uint8_t TLMinterval;     // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy
+    uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
-    expresslrs_RFrates_e enum_rate;
+    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 } expresslrs_mod_settings_t;
 

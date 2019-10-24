@@ -255,7 +255,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
 
-                NonceRXlocal = Radio.RXdataBuffer[2];
+                NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
 
                 if (LostConnection)
                 {
@@ -264,7 +264,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     Serial.println("got conn");
                 }
 
-                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)Radio.RXdataBuffer[3])
+                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
                 {
                     Serial.println("update rate");
                     switch (Radio.RXdataBuffer[3])
