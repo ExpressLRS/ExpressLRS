@@ -95,7 +95,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // crsf.PackedRCdataOut.ch8 = UINT11_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     // crsf.PackedRCdataOut.ch9 = UINT11_to_CRSF(fmap(linkQuality, 0, targetFrameRate, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = (Radio.GetLastPacketRSSI());
+    crsf.LinkStatistics.uplink_RSSI_1 = 120 + Radio.GetLastPacketRSSI();
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
@@ -129,7 +129,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         {
             Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
             Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
-            Radio.TXdataBuffer[2] = 120 + crsf.LinkStatistics.uplink_RSSI_1;
+            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
             Radio.TXdataBuffer[3] = 0;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
