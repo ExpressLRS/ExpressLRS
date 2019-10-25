@@ -6,6 +6,8 @@
 
 uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
 
+uint8_t DeviceAddr = TxBaseMac[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
+
 typedef enum
 {
     RF_DOWNLINK_INFO,
