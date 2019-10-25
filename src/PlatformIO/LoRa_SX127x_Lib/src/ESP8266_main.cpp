@@ -267,7 +267,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
 
-                NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4
+                NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
 
                 GotConnection();
 
