@@ -98,6 +98,7 @@ public:
     static void (*TXdoneCallback1)(); //function pointer for callback
     static void (*TXdoneCallback2)(); //function pointer for callback
     static void (*TXdoneCallback3)(); //function pointer for callback
+    static void (*TXdoneCallback4)(); //function pointer for callback
 
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
@@ -149,6 +150,7 @@ public:
     static SpreadingFactor currSF;
     static CodingRate currCR;
     static uint8_t currPWR;
+    static uint8_t maxPWR;
     static RadioOPmodes _opmode;
     static RadioState_ RadioState;
     ///////////////////////////////////

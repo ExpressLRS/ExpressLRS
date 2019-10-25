@@ -11,6 +11,8 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 #define Regulatory_Domain_AU_915
 
+uint8_t DeviceAddr = 0b101010;
+
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
 void InitOStimer();
@@ -55,8 +57,6 @@ bool webUpdateMode = false;
 
 uint32_t webUpdateLedFlashInterval = 25;
 uint32_t webUpdateLedFlashIntervalLast;
-
-uint8_t DeviceAddr = 0b101010;
 
 volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 
@@ -192,18 +192,18 @@ void ICACHE_RAM_ATTR GotConnection()
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
 {
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 2) + (Radio.RXdataBuffer[5] & 0b11100000 >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00011100 >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[6] & 0b01110000 >> 4);
+    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + (Radio.RXdataBuffer[5] & 0b11100000 >> 5);
+    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + (Radio.RXdataBuffer[5] & 0b00011100 >> 2);
+    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + (Radio.RXdataBuffer[5] & 0b00000011 << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
+    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + (Radio.RXdataBuffer[6] & 0b01110000 >> 4);
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
 {
-    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 3) + (Radio.RXdataBuffer[5] & 0b11000000 >> 6));
-    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 3) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
-    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 3) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
-    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 3) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
+    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + (Radio.RXdataBuffer[5] & 0b11000000 >> 6));
+    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 2) + (Radio.RXdataBuffer[5] & 0b00110000 >> 4));
+    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + (Radio.RXdataBuffer[5] & 0b00001100 >> 2));
+    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + (Radio.RXdataBuffer[5] & 0b00000011 >> 0));
 }
 
 void ICACHE_RAM_ATTR UnpackSwitchData()
@@ -217,6 +217,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    //Serial.println("got pkt");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7);
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -299,7 +300,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else
         {
-            //Serial.println("crc failed");
+            Serial.println("crc failed");
             //Serial.print(calculatedCRC);
             //Serial.print("-");
             //Serial.println(inCRC);
@@ -308,7 +309,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     else
     {
-        //Serial.println("wrong address");
+        Serial.println("wrong address");
     }
 }
 
@@ -420,15 +421,18 @@ void loop()
         {
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
-            delay(200);
+            delay(1000);
+            Serial.println("200 Hz");
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
-            delay(400);
+            delay(1000);
+            Serial.println("100 Hz");
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
-            delay(600);
+            Serial.println("50 Hz");
+            delay(1000);
             break;
 
         default:

@@ -37,6 +37,8 @@ float PacketRate = 0.0;
 uint8_t linkQuality = 0;
 ///////////////////////////////////////
 
+bool UpdateParamReq = false;
+
 bool Channels5to8Changed = false;
 
 bool ChangeAirRateRequested = false;
@@ -56,6 +58,9 @@ uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
 uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
 uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ICACHE_RAM_ATTR IncreasePower();
+void ICACHE_RAM_ATTR DecreasePower();
 
 uint8_t baseMac[6];
 
@@ -89,8 +94,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
           crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-          crsf.LinkStatistics.downlink_Link_quality = linkQuality;
-
+          //crsf.LinkStatistics.downlink_Link_quality = linkQuality;
+          crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
           crsf.sendLinkStatisticsToTX();
         }
       }
@@ -247,7 +252,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    Serial.println("sync");
+    //Serial.println("sync");
   }
   else
   {
@@ -273,6 +278,121 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     ChangeAirRateSentUpdate = true;
   }
 }
+
+void ICACHE_RAM_ATTR ParamUpdateReq()
+{
+  UpdateParamReq = true;
+}
+
+void ICACHE_RAM_ATTR HandleUpdateParameter()
+{
+  
+
+  if (UpdateParamReq == true)
+  {
+    switch (crsf.ParameterUpdateData[0])
+    {
+    case 1:
+      if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
+      {
+        switch (crsf.ParameterUpdateData[1])
+        {
+        case 0:
+          SetRFLinkRate(RF_RATE_200HZ);
+          strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
+          strip.Show();
+          break;
+        case 1:
+          SetRFLinkRate(RF_RATE_100HZ);
+          strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
+          strip.Show();
+          break;
+        case 2:
+          SetRFLinkRate(RF_RATE_50HZ);
+          strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
+          strip.Show();
+          break;
+        default:
+          break;
+        }
+      }
+      break;
+
+    case 2:
+
+      break;
+    case 3:
+
+      switch (crsf.ParameterUpdateData[1])
+      {
+      case 0:
+        Radio.maxPWR = 0b1111;
+        //Radio.SetOutputPower(0b1111); // 500 mW
+        Serial.println("Setpower 500 mW");
+        break;
+
+      case 1:
+        //Radio.maxPWR = 0b1000;
+        Radio.SetOutputPower(0b1111);
+        Serial.println("Setpower 200 mW");
+        break;
+
+      case 2:
+        //Radio.maxPWR = 0b1000;
+        Radio.SetOutputPower(0b1000);
+        Serial.println("Setpower 100 mW");
+        break;
+
+      case 3:
+        //Radio.maxPWR = 0b0101;
+        Radio.SetOutputPower(0b0101);
+        Serial.println("Setpower 50 mW");
+        break;
+
+      case 4:
+        //Radio.maxPWR = 0b0010;
+        Radio.SetOutputPower(0b0010);
+        Serial.println("Setpower 25 mW");
+        break;
+
+      case 5:
+        Radio.maxPWR = 0b0000;
+        Radio.SetOutputPower(0b0000);
+        Serial.println("Setpower Pit");
+        break;
+
+      default:
+        break;
+      }
+
+      break;
+    case 4:
+
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  UpdateParamReq = false;
+}
+
+// void ICACHE_RAM_ATTR IncreasePower()
+// {
+//   if (Radio.currPWR < Radio.maxPWR)
+//   {
+//     Radio.SetOutputPower(Radio.currPWR + 1);
+//   }
+// }
+
+// void ICACHE_RAM_ATTR DecreasePower()
+// {
+//   if (Radio.currPWR > 0)
+//   {
+//     Radio.SetOutputPower(Radio.currPWR - 1);
+//   }
+// }
 
 void UpdateAirRate()
 {
@@ -362,12 +482,12 @@ void setup()
   Radio.RFmodule = RFMOD_SX1276;        //define radio module here
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
-  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
+  //Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   //Radio.SetOutputPower(0b0000); // 20dbm = 100mW
-  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+  //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
   // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+  Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
   FHSSsetFreqMode(433);
@@ -383,17 +503,17 @@ void setup()
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
   Radio.TXdoneCallback3 = &UpdateAirRate;
+  Radio.TXdoneCallback4 = &HandleUpdateParameter;
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
+  crsf.RecvParameterUpdate = &ParamUpdateReq;
 
   Radio.Begin();
   SetRFLinkRate(RF_RATE_200HZ);
-  //Radio.StartTimerTask(); // not needed if triggered by CRSF uart detection
-  //BeginFastSync();
   crsf.Begin();
 }
 
@@ -407,6 +527,20 @@ void loop()
 
   if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
   {
+
+    // if (isRXconnected)
+    // {
+    //   if ((Radio.RXdataBuffer[2] < 30 || Radio.RXdataBuffer[4] < 10))
+    //   {
+    //     IncreasePower();
+    //   }
+    //   if (Radio.RXdataBuffer[2] > 60 || Radio.RXdataBuffer[4] > 40)
+    //   {
+    //     DecreasePower();
+    //   }
+    //   crsf.sendLinkStatisticsToTX();
+    // }
+
     float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
     PacketRateLastChecked = millis();
     PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);

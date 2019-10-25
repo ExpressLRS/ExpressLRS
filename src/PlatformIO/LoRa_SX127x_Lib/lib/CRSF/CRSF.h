@@ -264,6 +264,11 @@ public:
 
     static void (*disconnected)();
     static void (*connected)();
+
+    static void (*RecvParameterUpdate)();
+
+    static volatile uint8_t ParameterUpdateData[2];
+
     static bool firstboot;
 
     static bool CRSFstate;

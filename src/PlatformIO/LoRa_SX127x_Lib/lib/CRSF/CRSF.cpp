@@ -20,6 +20,9 @@ void (*CRSF::RCdataCallback2)() = &nullCallback; // function is called whenever 
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
+
+void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
+
 bool CRSF::firstboot = true;
 
 bool CRSF::CRSFstate = false;
@@ -30,6 +33,8 @@ volatile uint8_t CRSF::SerialInBuffer[100] = {0};                    // max 64 b
 volatile uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1] = {0}; // max 64 bytes for CRSF packet
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
+
+volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
 
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
@@ -222,6 +227,16 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
     //taskENTER_CRITICAL(&myMutex);
+    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    {
+        //Serial.println("Got Other Packet");
+        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        {
+            ParameterUpdateData[0] = SerialInBuffer[5];
+            ParameterUpdateData[1] = SerialInBuffer[6];
+            RecvParameterUpdate();
+        }
+    }
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
