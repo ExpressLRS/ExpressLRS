@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
@@ -371,6 +372,8 @@ void setup()
     digitalWrite(16, HIGH);
     delay(200);
     digitalWrite(16, LOW);
+
+    FHSSrandomiseFHSSsequence();
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
