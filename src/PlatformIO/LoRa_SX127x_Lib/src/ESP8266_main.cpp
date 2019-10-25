@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
@@ -8,10 +9,6 @@
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
-
-#define Regulatory_Domain_AU_915
-
-uint8_t DeviceAddr = 0b101010;
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
@@ -95,12 +92,12 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = (Radio.GetLastPacketRSSI());
+    crsf.LinkStatistics.uplink_RSSI_1 = 120 + Radio.GetLastPacketRSSI();
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
-    //crsf.sendLinkStatisticsToFC();
+    crsf.sendLinkStatisticsToFC();
 }
 
 int offset = 0;
@@ -129,7 +126,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         {
             Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
             Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
-            Radio.TXdataBuffer[2] = 120 + crsf.LinkStatistics.uplink_RSSI_1;
+            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
             Radio.TXdataBuffer[3] = 0;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
@@ -269,11 +266,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-                NonceRXlocal = Radio.RXdataBuffer[2];
+
+                NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4
 
                 GotConnection();
 
-                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)Radio.RXdataBuffer[3])
+                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
                 {
                     Serial.println("update rate");
                     switch (Radio.RXdataBuffer[3])
@@ -382,19 +380,22 @@ void setup()
     delay(200);
     digitalWrite(16, LOW);
 
+    FHSSrandomiseFHSSsequence();
+
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
-    FHSSsetFreqMode(915);
     Radio.RFmodule = RFMOD_SX1276;        //define radio module here
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #elif defined Regulatory_Domain_AU_433
     Serial.println("Setting 433MHz Mode");
-    FHSSsetFreqMode(433);
     Radio.RFmodule = RFMOD_SX1278;        //define radio module here
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 #endif
 
+    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
+
     Radio.Begin();
+
+
+    crsf.InitSerial();
 
     Radio.SetOutputPower(0b1111);
 
@@ -482,6 +483,7 @@ void loop()
         PacketRateLastChecked = millis();
         PacketRate = (float)packetCounter / (float)(PacketRateInterval);
         linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+        if(linkQuality > 99) linkQuality = 99;
 
         CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 

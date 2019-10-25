@@ -2,14 +2,6 @@
 
 volatile uint8_t FHSSptr = 0;
 
-typedef enum
-{
-    RF_915,
-    RF_433
-} RFfreqs_;
-
-RFfreqs_ RFfreq;
-
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // get the current index of the FHSS pointer
     FHSSptr = value;
@@ -58,70 +50,114 @@ const uint32_t FHSSfreqs915[20] = {
     926300000,
     926900000};
 
-const uint8_t FHSSsequence915[256] = {19, 5, 18, 17, 6, 4, 3, 16, 17, 9, 6, 18, 11, 13, 16, 14, 18, 6, 8, 0, 1, 6, 13, 12, 16, 13, 5, 17, 2, 4, 14, 1, 17, 11, 4, 11, 2, 5, 0, 17, 18, 13, 1, 9, 18, 17, 1, 10, 4, 5, 7, 9, 5, 14, 10, 2, 10, 0, 8, 6, 2, 11, 14, 1, 17, 1, 16, 9, 18, 16, 17, 5, 9, 12, 1, 8, 0, 19, 4, 17, 16, 11, 16, 4, 17, 12, 5, 7, 19, 17, 4, 2, 5, 3, 1, 0, 9, 8, 9, 4, 16, 19, 3, 12, 3, 11, 15, 19, 17, 8, 15, 5, 12, 16, 0, 3, 9, 1, 8, 6, 18, 5, 19, 2, 5, 17, 15, 6, 10, 16, 13, 8, 3, 0, 1, 3, 9, 15, 18, 11, 16, 6, 3, 12, 13, 15, 13, 6, 12, 15, 2, 15, 0, 18, 2, 6, 15, 13, 4, 10, 7, 15, 3, 11, 12, 4, 1, 8, 11, 19, 15, 0, 11, 9, 12, 1, 6, 1, 15, 18, 11, 16, 7, 6, 9, 14, 4, 3, 15, 5, 0, 19, 13, 7, 12, 8, 10, 5, 4, 6, 3, 15, 16, 8, 14, 2, 7, 11, 12, 0, 4, 9, 10, 9, 7, 8, 2, 14, 19, 11, 3, 8, 2, 3, 7, 8, 2, 19, 0, 18, 13, 18, 10, 2, 14, 10, 18, 12, 14, 13, 19, 7, 13, 12, 13, 19, 14, 0, 19, 14, 7, 14, 7, 10, 7, 10};
+uint8_t FHSSsequence[256] = {0};
 
-//const uint8_t FHSSsequence433[255] = {4, 2, 1, 0, 3, 1, 4, 0, 2, 0, 3, 0, 4, 3, 2, 4, 2, 1, 0, 3, 4, 2, 3, 0, 3, 2, 1, 3, 2, 4, 3, 2, 1, 3, 0, 1,
-//                                      0, 4, 3, 1, 4, 0, 4, 1, 2, 1, 0, 4, 1, 4, 2, 3, 0, 2, 0, 2, 1, 0, 2, 4, 2, 1, 4, 2, 4, 1, 4, 3, 1, 2, 0, 2,
-//                                      4, 0, 4, 1, 2, 4, 1, 4, 2, 4, 1, 4, 2, 1, 4, 1, 0, 1, 2, 3, 4, 1, 3, 4, 2, 3, 4, 2, 1, 0, 3, 2, 0, 3, 0, 2,
-//                                      4, 0, 4, 0, 2, 1, 3, 1, 0, 4, 3, 4, 1, 0, 3, 1, 4, 3, 1, 2, 4, 1, 0, 3, 1, 4, 1, 4, 2, 3, 1, 4, 1, 0, 3, 0,
-//                                      2, 4, 3, 1, 3, 1, 0, 4, 2, 3, 0, 3, 0, 1, 2, 1, 2, 1, 2, 0, 3, 4, 2, 3, 1, 4, 0, 1, 2, 3, 0, 4, 2, 0, 4, 0,
-//                                      4, 0, 3, 4, 2, 3, 2, 1, 0, 4, 2, 4, 0, 3, 1, 0, 1, 4, 2, 3, 2, 0, 2, 1, 4, 1, 0, 3, 1, 4, 1, 2, 0, 4, 1, 2,
-//                                      4, 1, 3, 2, 4, 1, 3, 4, 1, 2, 4, 1, 3, 0, 1, 3, 1, 2, 1, 2, 4, 0, 1, 2, 3, 4, 1, 2, 3, 1, 0, 4, 0, 2, 4, 2,
-//                                      4, 0, 2};
-
-const uint8_t FHSSsequence433[255] = {0, 2, 0, 2, 2, 1, 2, 0, 1, 1, 0, 2, 1, 0, 1, 1, 0, 1, 1, 0, 2, 0, 2, 0, 2, 2, 2, 2, 1, 2, 2, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 2, 2, 1, 1, 2, 2, 2, 1, 1, 0, 1, 2, 2, 1, 1, 1, 2, 2, 0, 1, 2, 1, 2, 1, 2, 0, 2, 1, 0, 1, 2, 1, 0, 0, 0, 1, 2, 1, 0, 1, 0, 1, 2, 1, 1, 1, 2, 1, 0, 2, 1, 1, 0, 1, 2, 2, 0, 1, 2, 1, 2, 0, 0, 1, 2, 2, 1, 1, 1, 1, 1, 2, 0, 2, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 1, 1, 2, 0, 1, 0, 2, 0, 0, 0, 0, 2, 0, 0, 1, 2, 1, 0, 2, 0, 2, 0, 0, 0, 0, 1, 2, 0, 2, 2, 0, 2, 2, 0, 1, 2, 0, 2, 1, 1, 2, 1, 2, 0, 0, 2, 0, 0, 2, 1, 1, 1, 1, 0, 0, 2, 2, 0, 2, 1, 1, 1, 2, 1, 1, 2, 1, 0, 0, 0, 1, 2, 0, 1, 0, 2, 2, 0, 2, 1, 2, 0, 2, 2, 0, 2, 1, 2, 0, 2, 1, 2, 1, 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 0, 2, 2, 0, 0, 2, 2, 2, 1, 2, 0, 2, 0, 2, 2, 2, 1, 1, 0, 1, 2, 2, 1, 0, 1, 2};
-
-uint32_t ICACHE_RAM_ATTR
-GetInitialFreq()
+uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 {
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[0];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[0];
-    }
-}
+#ifdef Regulatory_Domain_AU_915
 
-void FHSSsetFreqMode(int freq)
-{
-    if (freq == 915)
-    {
-        RFfreq = RF_915;
-    }
-    if (freq == 433)
-    {
-        RFfreq = RF_433;
-    }
-}
+    return FHSSfreqs915[FHSSsequence[0]];
 
-uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
-{
+#elif defined Regulatory_Domain_AU_433
 
-    FHSSptr++;
+    return FHSSfreqs433[FHSSsequence[0]];
 
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[FHSSsequence915[FHSSptr]];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[FHSSsequence433[FHSSptr]];
-    }
-
-    return 1;
+#endif
 }
 
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 {
-    if (RFfreq == RF_915)
-    {
-        return FHSSfreqs915[FHSSsequence915[FHSSptr]];
-    }
-    if (RFfreq == RF_433)
-    {
-        return FHSSfreqs433[FHSSsequence433[FHSSptr]];
-    }
+#ifdef Regulatory_Domain_AU_915
+ 
+    return FHSSfreqs915[FHSSsequence[FHSSptr]];
+
+#elif defined Regulatory_Domain_AU_433
+
+    return FHSSfreqs433[FHSSsequence[FHSSptr]];
+
+#endif
+
     return 0;
 }
+
+uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
+{
+    FHSSptr++;
+
+    return FHSSgetCurrFreq();
+}
+
+void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
+{
+    
+    Serial.print("FHSSsequence[] = ");
+
+    long macSeed = ((long)TxBaseMac[2] << 24) + ((long)TxBaseMac[3] << 16) + ((long)TxBaseMac[4] << 8) + TxBaseMac[5];
+    rngSeed(macSeed);
+
+#ifdef Regulatory_Domain_AU_915
+
+    int hopSeqLength = 256;
+    int numOfFreqs = 20; 
+    int limit = floor(hopSeqLength/numOfFreqs);
+
+    int prev_val = 0;
+    int rand = 0;
+
+    int last_InitialFreq = 0;
+    int last_InitialFreq_interval = numOfFreqs;
+
+    int tracker[20] = {0};
+
+    for(int i = 0; i < hopSeqLength; i++)
+    {
+
+        if(i >= last_InitialFreq + last_InitialFreq_interval)
+        {
+            rand = FHSSsequence[0];
+            last_InitialFreq = i;
+        }
+        else
+        {
+            while(rand > numOfFreqs-1 || prev_val == rand || tracker[rand] > limit)
+            {
+                rand = rng5Bit();
+            }
+
+            if(rand == FHSSsequence[0])
+            {
+                last_InitialFreq = i;
+            }
+        }
+        
+        FHSSsequence[i] = rand;
+        tracker[rand] = tracker[rand] + 1;
+        prev_val = rand;
+
+        Serial.print(FHSSsequence[i]);
+        Serial.print(", ");
+    }
+
+#elif defined Regulatory_Domain_AU_433
+
+    int prev_val = rng0to2(); // Randomised so that FHSSsequence[0] can also be 0.
+    int rand = 0;
+
+    for(int i = 0; i < 256; i++)
+    {
+        while(prev_val == rand)
+        {
+            rand = rng0to2();
+        }
+
+        prev_val = rand;
+        FHSSsequence[i] = rand;
+
+        Serial.print(FHSSsequence[i]);
+        Serial.print(", ");
+    }
+
+#endif
+    
+    Serial.println("");
+} 

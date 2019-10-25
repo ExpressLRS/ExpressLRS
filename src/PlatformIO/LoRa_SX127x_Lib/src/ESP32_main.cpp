@@ -1,15 +1,11 @@
 #include <Arduino.h>
+#include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-#include "utils.h"
 #include "LED.h"
 #include "Debug.h"
-
-#define Regulatory_Domain_AU_915 // define frequnecy band of operation
-
-uint8_t DeviceAddr = 0b101010; // for now, must be unique for each user in the area
 
 String DebugOutput;
 
@@ -133,8 +129,8 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  Radio.TXdataBuffer[2] = Radio.NonceTX;
-  Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
+  Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+  Radio.TXdataBuffer[3] = 0;
   Radio.TXdataBuffer[4] = baseMac[3];
   Radio.TXdataBuffer[5] = baseMac[4];
   Radio.TXdataBuffer[6] = baseMac[5];
@@ -476,25 +472,24 @@ void setup()
   Serial.println("};");
   Serial.println("");
 
+  FHSSrandomiseFHSSsequence();
+
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
-  FHSSsetFreqMode(915);
   Radio.RFmodule = RFMOD_SX1276;        //define radio module here
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
-
-  //Radio.SetOutputPower(0b0000); // 15dbm = 32mW
+  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  //Radio.SetOutputPower(0b0000); // 20dbm = 100mW
-  //Radio.SetOutputPower(0b1000); // 23dbm = 200mW
+  // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
+  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
   // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
-  FHSSsetFreqMode(433);
   Radio.RFmodule = RFMOD_SX1278;        //define radio module here
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
   Radio.SetOutputPower(0b1111);
 #endif
+
+  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
   Radio.HighPowerModule = true; //IMPORTANT! DEFINE IF 1W module or 100mW module
 
