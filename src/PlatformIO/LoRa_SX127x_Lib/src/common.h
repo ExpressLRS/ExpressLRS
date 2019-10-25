@@ -1,7 +1,8 @@
 #include "LoRa_SX127x.h"
 
-#define FREQ_915
-// #define FREQ_433
+// define frequnecy band of operation
+#define Regulatory_Domain_AU_915
+// #define Regulatory_Domain_AU_433
 
 typedef enum
 {
