@@ -22,6 +22,7 @@ void (*SX127xDriver::RXdoneCallback2)() = &nullCallback;
 void (*SX127xDriver::TXdoneCallback1)() = &nullCallback;
 void (*SX127xDriver::TXdoneCallback2)() = &nullCallback;
 void (*SX127xDriver::TXdoneCallback3)() = &nullCallback;
+void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
 
 void (*SX127xDriver::TXtimeout)() = &nullCallback;
 void (*SX127xDriver::RXtimeout)() = &nullCallback;
@@ -108,7 +109,8 @@ SpreadingFactor SX127xDriver::currSF = SF_6;
 CodingRate SX127xDriver::currCR = CR_4_7;
 uint8_t SX127xDriver::_syncWord = SX127X_SYNC_WORD;
 uint32_t SX127xDriver::currFreq = 123456789;
-uint8_t SX127xDriver::currPWR = 0010;
+uint8_t SX127xDriver::currPWR = 0b0000;
+uint8_t SX127xDriver::maxPWR = 0b1111;
 
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
@@ -192,7 +194,7 @@ uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
 {
   //todo make function turn on PA_BOOST ect
-  uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST |Power, 3, 0);
+  uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | Power, 3, 0);
 
   currPWR = Power;
 
@@ -563,6 +565,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback1();
   TXdoneCallback2();
   TXdoneCallback3();
+  TXdoneCallback4();
   TXdoneMicros = micros();
 }
 

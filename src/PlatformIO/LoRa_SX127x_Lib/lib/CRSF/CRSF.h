@@ -207,11 +207,11 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
-static inline uint16_t ICACHE_RAM_ATTR UINT11_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
+static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
 
 static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT11(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length);
@@ -263,11 +263,16 @@ public:
     static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
     static void (*disconnected)();
-    static void (*connected)(); 
-    static bool firstboot; 
+    static void (*connected)();
+
+    static void (*RecvParameterUpdate)();
+
+    static volatile uint8_t ParameterUpdateData[2];
+
+    static bool firstboot;
 
     static bool CRSFstate;
-    static bool CRSFstatePrev; 
+    static bool CRSFstatePrev;
 
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
