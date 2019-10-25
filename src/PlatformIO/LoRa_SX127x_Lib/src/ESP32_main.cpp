@@ -1,9 +1,9 @@
 #include <Arduino.h>
+#include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-#include "utils.h"
 #include "LED.h"
 #include "Debug.h"
 
@@ -329,12 +329,14 @@ void setup()
   Serial.println("};");
   Serial.println("");
 
+  FHSSrandomiseFHSSsequence();
+
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
   Radio.RFmodule = RFMOD_SX1276;        //define radio module here
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  //Radio.SetOutputPower(0b0000); // 20dbm = 100mW
+  // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
   Radio.SetOutputPower(0b1000); // 23dbm = 200mW
   // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
   // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
