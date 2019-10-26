@@ -184,6 +184,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
   DebugOutput += String(mode.rate) + "Hz";
+  isRXconnected = false;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -295,18 +296,18 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         {
         case 0:
           SetRFLinkRate(RF_RATE_200HZ);
-          strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
-          strip.Show();
+          // strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
+          // strip.Show();
           break;
         case 1:
           SetRFLinkRate(RF_RATE_100HZ);
-          strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
-          strip.Show();
+          // strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
+          // strip.Show();
           break;
         case 2:
           SetRFLinkRate(RF_RATE_50HZ);
-          strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
-          strip.Show();
+          // strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
+          // strip.Show();
           break;
         default:
           break;
@@ -401,22 +402,22 @@ void UpdateAirRate()
     if (data >= 0 && data < 743)
     {
       SetRFLinkRate(RF_RATE_200HZ);
-      strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
-      strip.Show();
+      // for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(0, 0, colorSaturation));
+      // strip.Show();
     }
 
     if (data >= 743 && data < 1313)
     {
       SetRFLinkRate(RF_RATE_100HZ);
-      strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
-      strip.Show();
+      // for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(0, colorSaturation, 0));
+      // strip.Show();
     }
 
     if (data >= 1313 && data <= 1811)
     {
       SetRFLinkRate(RF_RATE_50HZ);
-      strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
-      strip.Show();
+      // for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(colorSaturation, 0, 0));
+      // strip.Show();
     }
     ChangeAirRateRequested = false;
     Serial.println(micros() - startTime);
@@ -439,15 +440,15 @@ void setup()
   Serial.println("ExpressLRS TX Module Booted...");
 
   strip.Begin();
-  for (int i = 0; i < 10; i++)
-  { //do a little led dance at the start
-    strip.SetPixelColor(0, RgbColor(255, 255, 255));
-    strip.Show();
-    delay(10);
-    strip.SetPixelColor(0, RgbColor(0, 0, 0));
-    strip.Show();
-    delay(90);
-  }
+  // for (int i = 0; i < 10; i++)
+  // { //do a little led dance at the start
+  //   for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(255, 255, 255));
+  //   strip.Show();
+  //   delay(10);
+  //   for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(0, 0, 0));
+  //   strip.Show();
+  //   delay(90);
+  // }
 
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
@@ -514,6 +515,37 @@ void setup()
 
 void loop()
 {
+
+  // LEDs glow
+  LEDGlowIndex = millis() % 5000;
+
+  if(LEDGlowIndex < 2500)
+  {
+    LEDGlowIndex = LEDGlowIndex / 10;
+  } else
+  {
+    LEDGlowIndex = 250 - (LEDGlowIndex - 2500) / 10;
+  }
+
+  for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(LEDGlowIndex, LEDGlowIndex, LEDGlowIndex));
+
+  if(isRXconnected || ExpressLRS_currAirRate.TLMinterval == 0)
+  {
+    if(ExpressLRS_currAirRate.enum_rate == RATE_200HZ)
+    {
+      for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(0, 0, LEDGlowIndex));
+    }
+    if(ExpressLRS_currAirRate.enum_rate == RATE_100HZ)
+    {
+      for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(0, LEDGlowIndex, 0));
+    }
+    if(ExpressLRS_currAirRate.enum_rate == RATE_50HZ)
+    {
+      for(int n = 0; n < numberOfLEDs; n++) strip.SetPixelColor(n, RgbColor(LEDGlowIndex, 0, 0));
+    }
+  }
+  strip.Show();
+  // LEDs glow
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
