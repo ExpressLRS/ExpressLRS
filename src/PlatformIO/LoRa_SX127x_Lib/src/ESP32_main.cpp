@@ -114,11 +114,6 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
     if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
     {
       Channels5to8Changed = true;
-      if (i == 7)
-      {
-        ChangeAirRateRequested = true;
-        //blockUpdate = true;
-      }
     }
   }
 }
@@ -390,39 +385,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 //   }
 // }
 
-void UpdateAirRate()
-{
-  if (ChangeAirRateRequested && ChangeAirRateSentUpdate == true) //airrate change has been changed and we also informed the slave
-  {
-    uint32_t startTime = micros();
-    Serial.println("changing RF rate");
-    int data = crsf.ChannelDataIn[7];
-
-    if (data >= 0 && data < 743)
-    {
-      SetRFLinkRate(RF_RATE_200HZ);
-      strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
-      strip.Show();
-    }
-
-    if (data >= 743 && data < 1313)
-    {
-      SetRFLinkRate(RF_RATE_100HZ);
-      strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
-      strip.Show();
-    }
-
-    if (data >= 1313 && data <= 1811)
-    {
-      SetRFLinkRate(RF_RATE_50HZ);
-      strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
-      strip.Show();
-    }
-    ChangeAirRateRequested = false;
-    Serial.println(micros() - startTime);
-  }
-}
-
 void DetectOtherRadios()
 {
 
@@ -497,8 +459,7 @@ void setup()
 
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
-  Radio.TXdoneCallback3 = &UpdateAirRate;
-  Radio.TXdoneCallback4 = &HandleUpdateParameter;
+  Radio.TXdoneCallback3 = &HandleUpdateParameter;
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
