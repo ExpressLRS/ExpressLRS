@@ -413,6 +413,13 @@ void setup()
 void loop()
 {
 
+#ifdef Auto_WiFi_On_Boot
+    if(LostConnection && !webUpdateMode && millis() > 10000 && millis() < 11000)
+    {
+        beginWebsever();    
+    }
+#endif
+
     if (LostConnection && !webUpdateMode)
 
     {

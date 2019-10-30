@@ -4,6 +4,9 @@
 #define Regulatory_Domain_AU_915
 // #define Regulatory_Domain_AU_433
 
+// Wifi starts if no connection is found between 10 and 11 seconds after boot
+#define Auto_WiFi_On_Boot
+
 uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
 
 uint8_t DeviceAddr = TxBaseMac[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
