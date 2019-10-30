@@ -131,7 +131,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
 
-            uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
+            uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
         }
@@ -215,7 +215,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     //Serial.println("got pkt");
-    uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7);
+    uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
