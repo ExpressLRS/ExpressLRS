@@ -211,9 +211,6 @@ static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return rou
 
 static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
 
-static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val) { if(Val > 1000) return 1; else return 0; } ;
-static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val) { if(Val) return 1795; else return 188; };
-
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
