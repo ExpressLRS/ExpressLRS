@@ -63,7 +63,7 @@ uint8_t baseMac[6];
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
 
-  uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7);
+  uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
   uint8_t inCRC = Radio.RXdataBuffer[7];
   uint8_t type = Radio.RXdataBuffer[0] & 0b11;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
@@ -114,11 +114,6 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
     if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
     {
       Channels5to8Changed = true;
-      if (i == 7)
-      {
-        ChangeAirRateRequested = true;
-        //blockUpdate = true;
-      }
     }
   }
 }
@@ -184,6 +179,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
   DebugOutput += String(mode.rate) + "Hz";
+  isRXconnected = false;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -265,7 +261,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7);
+  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 8);
 
@@ -295,18 +291,12 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         {
         case 0:
           SetRFLinkRate(RF_RATE_200HZ);
-          strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
-          strip.Show();
           break;
         case 1:
           SetRFLinkRate(RF_RATE_100HZ);
-          strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
-          strip.Show();
           break;
         case 2:
           SetRFLinkRate(RF_RATE_50HZ);
-          strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
-          strip.Show();
           break;
         default:
           break;
@@ -390,39 +380,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 //   }
 // }
 
-void UpdateAirRate()
-{
-  if (ChangeAirRateRequested && ChangeAirRateSentUpdate == true) //airrate change has been changed and we also informed the slave
-  {
-    uint32_t startTime = micros();
-    Serial.println("changing RF rate");
-    int data = crsf.ChannelDataIn[7];
-
-    if (data >= 0 && data < 743)
-    {
-      SetRFLinkRate(RF_RATE_200HZ);
-      strip.SetPixelColor(0, RgbColor(0, 0, colorSaturation));
-      strip.Show();
-    }
-
-    if (data >= 743 && data < 1313)
-    {
-      SetRFLinkRate(RF_RATE_100HZ);
-      strip.SetPixelColor(0, RgbColor(0, colorSaturation, 0));
-      strip.Show();
-    }
-
-    if (data >= 1313 && data <= 1811)
-    {
-      SetRFLinkRate(RF_RATE_50HZ);
-      strip.SetPixelColor(0, RgbColor(colorSaturation, 0, 0));
-      strip.Show();
-    }
-    ChangeAirRateRequested = false;
-    Serial.println(micros() - startTime);
-  }
-}
-
 void DetectOtherRadios()
 {
 
@@ -439,15 +396,6 @@ void setup()
   Serial.println("ExpressLRS TX Module Booted...");
 
   strip.Begin();
-  for (int i = 0; i < 10; i++)
-  { //do a little led dance at the start
-    strip.SetPixelColor(0, RgbColor(255, 255, 255));
-    strip.Show();
-    delay(10);
-    strip.SetPixelColor(0, RgbColor(0, 0, 0));
-    strip.Show();
-    delay(90);
-  }
 
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
@@ -497,8 +445,7 @@ void setup()
 
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
-  Radio.TXdoneCallback3 = &UpdateAirRate;
-  Radio.TXdoneCallback4 = &HandleUpdateParameter;
+  Radio.TXdoneCallback3 = &HandleUpdateParameter;
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
@@ -514,6 +461,8 @@ void setup()
 
 void loop()
 {
+
+  updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
