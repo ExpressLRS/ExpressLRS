@@ -256,13 +256,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
     {
-#ifdef One_Bit_Switches
-      Generate4ChannelData_11bit();
-#else
       Channels5to8Changed = false;
       GenerateSwitchChannelData();
       SwitchPacketLastSent = millis();
-#endif
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
     {
@@ -459,7 +455,9 @@ void setup()
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
+#ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
+#endif
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
