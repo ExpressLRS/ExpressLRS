@@ -155,6 +155,12 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3] & 0b11111111000) >> 3);
   Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
   Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
+#ifdef One_Bit_Switches
+  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
+  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
+  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
+  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
+#endif
 }
 
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
@@ -250,9 +256,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
     {
+#ifdef One_Bit_Switches
+      Generate4ChannelData_11bit();
+#else
       Channels5to8Changed = false;
       GenerateSwitchChannelData();
       SwitchPacketLastSent = millis();
+#endif
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
     {

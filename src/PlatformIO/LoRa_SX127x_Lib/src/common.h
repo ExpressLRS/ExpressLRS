@@ -7,6 +7,8 @@
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
 #define Auto_WiFi_On_Boot
 
+#define One_Bit_Switches
+
 uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
 
 uint8_t CRCCaesarCipher = TxBaseMac[4];
