@@ -8,8 +8,8 @@ HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
 #endif
 
-uint8_t CRSF::CSFR_TXpin_Module = 2;
-uint8_t CRSF::CSFR_RXpin_Module = 4; // Same pin for RX/TX
+uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
+uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
 volatile bool CRSF::ignoreSerialData = false;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it

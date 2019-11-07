@@ -14,6 +14,8 @@
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA 4
 #define GPIO_PIN_OLED_SCK 15
+#define GPIO_PIN_RCSIGNAL_RX 13
+#define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
 #ifdef TARGET_TTGO_LORA_V1_AS_RX
@@ -31,6 +33,8 @@
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA 21
 #define GPIO_PIN_OLED_SCK 22
+#define GPIO_PIN_RCSIGNAL_RX 13
+#define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
 #ifdef TARGET_TTGO_LORA_V2_AS_RX
@@ -48,6 +52,8 @@
 #define GPIO_PIN_TX_ENABLE 12
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
+#define GPIO_PIN_RCSIGNAL_RX 2
+#define GPIO_PIN_RCSIGNAL_TX 4
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
@@ -62,16 +68,6 @@
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
+#define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266=esp8285
+#define GPIO_PIN_RCSIGNAL_TX -1
 #endif
-
-// Radio.SX127x_nss = GPIO_PIN_NSS;
-// Radio.SX127x_dio0 = GPIO_PIN_DIO0;
-// Radio.X127x_dio1 = GPIO_PIN_DIO1;
-
-// Radio.SX127x_MOSI = GPIO_PIN_MOSI;
-// Radio.SX127x_MISO = GPIO_PIN_MISO;
-// Radio.SX127x_SCK = GPIO_PIN_SCK;
-// Radio.SX127x_RST = GPIO_PIN_RST;
-
-// Radio._RXenablePin = GPIO_PIN_RX_ENABLE;
-// Radio._TXenablePin = GPIO_PIN_TX_ENABLE;
