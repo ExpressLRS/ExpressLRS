@@ -1,0 +1,77 @@
+#pragma once
+
+//extern SX127xDriver Radio;
+
+#ifdef TARGET_TTGO_LORA_V1_AS_TX
+#define GPIO_PIN_NSS 18
+#define GPIO_PIN_DIO0 26
+#define GPIO_PIN_DIO1 -1
+#define GPIO_PIN_MOSI 27
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 5
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_PIN_OLED_SDA 4
+#define GPIO_PIN_OLED_SCK 15
+#endif
+
+#ifdef TARGET_TTGO_LORA_V1_AS_RX
+#endif
+
+#ifdef TARGET_TTGO_LORA_V2_AS_TX
+#define GPIO_PIN_NSS 18
+#define GPIO_PIN_DIO0 26
+#define GPIO_PIN_DIO1 -1
+#define GPIO_PIN_MOSI 27
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 5
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_PIN_OLED_SDA 21
+#define GPIO_PIN_OLED_SCK 22
+#endif
+
+#ifdef TARGET_TTGO_LORA_V2_AS_RX
+#endif
+
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+#define GPIO_PIN_NSS 5
+#define GPIO_PIN_DIO0 26
+#define GPIO_PIN_DIO1 25
+#define GPIO_PIN_MOSI 23
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 18
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RX_ENABLE 13
+#define GPIO_PIN_TX_ENABLE 12
+#define GPIO_PIN_OLED_SDA -1
+#define GPIO_PIN_OLED_SCK -1
+#endif
+
+#ifdef TARGET_EXPRESSLRS_PCB_RX_V3
+#define GPIO_PIN_NSS 15
+#define GPIO_PIN_DIO0 4
+#define GPIO_PIN_DIO1 5
+#define GPIO_PIN_MOSI 13
+#define GPIO_PIN_MISO 12
+#define GPIO_PIN_SCK 14
+#define GPIO_PIN_RST 2
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_PIN_OLED_SDA -1
+#define GPIO_PIN_OLED_SCK -1
+#endif
+
+// Radio.SX127x_nss = GPIO_PIN_NSS;
+// Radio.SX127x_dio0 = GPIO_PIN_DIO0;
+// Radio.X127x_dio1 = GPIO_PIN_DIO1;
+
+// Radio.SX127x_MOSI = GPIO_PIN_MOSI;
+// Radio.SX127x_MISO = GPIO_PIN_MISO;
+// Radio.SX127x_SCK = GPIO_PIN_SCK;
+// Radio.SX127x_RST = GPIO_PIN_RST;
+
+// Radio._RXenablePin = GPIO_PIN_RX_ENABLE;
+// Radio._TXenablePin = GPIO_PIN_TX_ENABLE;

@@ -7,6 +7,8 @@
 #include "LoRa_SX1276.h"
 #include "LoRa_SX1278.h"
 
+#include "..\..\src\targets.h"
+
 //#include "FreeRTOS.h"
 //#include "esp32-hal-timer.h"
 
@@ -43,56 +45,25 @@ volatile uint8_t SX127xDriver::NonceTX = 0;
 volatile uint8_t SX127xDriver::NonceRX = 0;
 
 //////////////////Hardware Pin Variable defaults////////////////
+uint8_t SX127xDriver::SX127x_nss = GPIO_PIN_NSS;
+uint8_t SX127xDriver::SX127x_dio0 = GPIO_PIN_DIO0;
+uint8_t SX127xDriver::SX127x_dio1 = GPIO_PIN_DIO1;
 
-#if defined(PLATFORM_ESP32)
-//////Custom Module Pinouts///////
-uint8_t SX127xDriver::SX127x_nss = 5;
-uint8_t SX127xDriver::SX127x_dio0 = 26;
-uint8_t SX127xDriver::SX127x_dio1 = 25;
+uint8_t SX127xDriver::SX127x_MOSI = GPIO_PIN_MOSI;
+uint8_t SX127xDriver::SX127x_MISO = GPIO_PIN_MISO;
+uint8_t SX127xDriver::SX127x_SCK = GPIO_PIN_SCK;
+uint8_t SX127xDriver::SX127x_RST = GPIO_PIN_RST;
 
-uint8_t SX127xDriver::SX127x_MOSI = 23;
-uint8_t SX127xDriver::SX127x_MISO = 19;
-uint8_t SX127xDriver::SX127x_SCK = 18;
-uint8_t SX127xDriver::SX127x_RST = 14;
+uint8_t SX127xDriver::_RXenablePin = GPIO_PIN_RX_ENABLE;
+uint8_t SX127xDriver::_TXenablePin = GPIO_PIN_TX_ENABLE;
 
-uint8_t SX127xDriver::_RXenablePin = 13;
-uint8_t SX127xDriver::_TXenablePin = 12;
-
-bool SX127xDriver::HighPowerModule = true;
-/////////////////////////
-
-#elif (PLATFORM_ESP8266)
-//////Custom Module/////// ExpressLRS 20x20mm V2
-uint8_t SX127xDriver::SX127x_nss = 15;
-uint8_t SX127xDriver::SX127x_dio0 = 4;
-uint8_t SX127xDriver::SX127x_dio1 = 5;
-
-uint8_t SX127xDriver::SX127x_MOSI = 13;
-uint8_t SX127xDriver::SX127x_MISO = 12;
-uint8_t SX127xDriver::SX127x_SCK = 14;
-uint8_t SX127xDriver::SX127x_RST = 2;
-
+#ifdef TARGET_100mW_MODULE
 bool SX127xDriver::HighPowerModule = false;
-uint8_t SX127xDriver::_RXenablePin = -1;
-uint8_t SX127xDriver::_TXenablePin = -1;
-/////////////////////////
-
-#else
-
-uint8_t SX127xDriver::SX127x_nss = 5;
-uint8_t SX127xDriver::SX127x_dio0 = 26;
-uint8_t SX127xDriver::SX127x_dio1 = 25;
-
-uint8_t SX127xDriver::SX127x_MOSI = 23;
-uint8_t SX127xDriver::SX127x_MISO = 19;
-uint8_t SX127xDriver::SX127x_SCK = 18;
-uint8_t SX127xDriver::SX127x_RST = 18;
-
-bool SX127xDriver::HighPowerModule = false;
-uint8_t SX127xDriver::_RXenablePin = -1;
-uint8_t SX127xDriver::_TXenablePin = -1;
 #endif
 
+#ifdef TARGET_1000mW_MODULE
+bool SX127xDriver::HighPowerModule = true;
+#endif
 /////////////////////////////////////////////////////////////////
 
 uint32_t SX127xDriver::TimeOnAir = 0;
@@ -143,7 +114,6 @@ uint8_t SX127xDriver::Begin()
 #if defined(PLATFORM_ESP32)
   if (HighPowerModule)
   {
-
     pinMode(SX127xDriver::_TXenablePin, OUTPUT);
     pinMode(SX127xDriver::_RXenablePin, OUTPUT);
   }

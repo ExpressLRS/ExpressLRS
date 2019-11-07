@@ -1,3 +1,4 @@
+#include "..\..\src\targets.h"
 #include "CRSF.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
@@ -71,7 +72,9 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
     //Serial.println(CRSFoutBuffer[0]);
 }
-#else
+#endif
+
+#ifdef PLATFORM_ESP8266
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -88,7 +91,6 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
     this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 }
-#endif
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
@@ -107,7 +109,6 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     this->_dev->write(outBuffer, RCframeLength + 4);
 }
 
-#ifdef PLATFORM_ESP8266
 void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()
 {
 }
