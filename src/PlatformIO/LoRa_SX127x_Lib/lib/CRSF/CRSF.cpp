@@ -11,6 +11,9 @@ HardwareSerial CRSF::Port = SerialPort;
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
 uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
+//U1RXD_IN_IDX
+//U1TXD_OUT_IDX
+
 volatile bool CRSF::ignoreSerialData = false;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
@@ -123,12 +126,14 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     const TickType_t xDelay3 = 3 / portTICK_PERIOD_MS;
     const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
     const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
-    CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, true);
-    gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
+    CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false);
+    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
 
     uint32_t LastDataTime = millis();
     uint32_t YieldInterval = 200;
+
+    CRSF::duplex_set_RX();
 
     for (;;)
     {
@@ -182,10 +187,14 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 
                     if (CRSFoutBuffer[0] > 0)
                     {
+                        CRSF::duplex_set_TX();
                         CRSF::Port.write((uint8_t *)CRSFoutBuffer + 1, CRSFoutBuffer[0]);
                         memset((uint8_t *)CRSFoutBuffer, 0, CRSFoutBuffer[0] + 1);
+                        vTaskDelay(xDelay1);
+                        CRSF::duplex_set_RX();
                     }
-                    //FlushSerial();
+
+                    FlushSerial();
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                     //vTaskDelay(xDelay1);
                 }
@@ -283,8 +292,32 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
 void ICACHE_RAM_ATTR CRSF::FlushSerial()
 {
-    while (CRSF::Port.available())
-    {
-        CRSF::Port.read();
-    }
+    //while (CRSF::Port.available())
+    //{
+        //CRSF::Port.read();
+   // }
+
+   CRSF::Port.flush();
+}
+
+void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
+{
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
+    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+
+    //CRSF::FlushSerial();
+}
+void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
+{
+    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
+    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
+    //ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+}
+
+void ICACHE_RAM_ATTR duplex_set_HIGHZ()
+{
 }
