@@ -6,6 +6,7 @@
 #include "FHSS.h"
 #include "LED.h"
 #include "Debug.h"
+#include "targets.h"
 
 String DebugOutput;
 
@@ -284,7 +285,6 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void ICACHE_RAM_ATTR HandleUpdateParameter()
 {
-  
 
   if (UpdateParamReq == true)
   {
@@ -430,7 +430,7 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
-  Radio.RFmodule = RFMOD_SX1276;        //define radio module here
+  Radio.RFmodule = RFMOD_SX1276; //define radio module here
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
@@ -439,13 +439,11 @@ void setup()
   // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
-  Radio.RFmodule = RFMOD_SX1278;        //define radio module here
+  Radio.RFmodule = RFMOD_SX1278; //define radio module here
   Radio.SetOutputPower(0b1111);
 #endif
 
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
-
-  Radio.HighPowerModule = true; //IMPORTANT! DEFINE IF 1W module or 100mW module
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
 
@@ -470,7 +468,10 @@ void setup()
 void loop()
 {
 
-  updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
+  delay(100);
+  crsf.sendLinkStatisticsToTX();
+
+  //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
