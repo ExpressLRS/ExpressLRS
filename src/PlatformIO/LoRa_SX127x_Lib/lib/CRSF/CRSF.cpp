@@ -118,6 +118,30 @@ void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()
 #endif
 
 #ifdef PLATFORM_ESP32
+
+void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
+{
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
+    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+
+    //CRSF::FlushSerial();
+}
+void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
+{
+    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+}
+
+void ICACHE_RAM_ATTR duplex_set_HIGHZ()
+{
+}
+
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
 {
 
@@ -294,30 +318,8 @@ void ICACHE_RAM_ATTR CRSF::FlushSerial()
 {
     //while (CRSF::Port.available())
     //{
-        //CRSF::Port.read();
-   // }
+    //CRSF::Port.read();
+    // }
 
-   CRSF::Port.flush();
-}
-
-void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
-{
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-    //ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
-
-    //CRSF::FlushSerial();
-}
-void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
-{
-    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
-    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
-    //ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
-}
-
-void ICACHE_RAM_ATTR duplex_set_HIGHZ()
-{
+    CRSF::Port.flush();
 }
