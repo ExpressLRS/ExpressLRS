@@ -37,6 +37,24 @@
 #define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
+
+#ifdef TARGET_JYE_TTGO_LORA_V2_AS_TX
+#define GPIO_PIN_NSS 18
+#define GPIO_PIN_DIO0 26
+#define GPIO_PIN_DIO1 -1
+#define GPIO_PIN_MOSI 27
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 5
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_PIN_OLED_SDA -1
+#define GPIO_PIN_OLED_SCK -1
+#define GPIO_PIN_RCSIGNAL_RX 4
+#define GPIO_PIN_RCSIGNAL_TX 2
+#endif
+
+
 #ifdef TARGET_TTGO_LORA_V2_AS_RX
 #endif
 
