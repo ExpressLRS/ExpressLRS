@@ -11,8 +11,12 @@ TX and RX modules communicate via the standard CRSF serial protocol for easy use
 
 Compared to commerical R9M or XF systems ExpressLRS is also very affordable, a TX module can be built for $30 and recievers for $15-20.
 
-UPDATE:
+## UPDATE:
 Now supports using easily available TTGO LoRa boards as TX modules for much easier assembly!
+
+https://www.aliexpress.com/item/4000059700341.html
+https://www.aliexpress.com/item/32840238513.html
+
 
 ![TTGO LoRa](img/TTGO_BOARD.jpg)
 
