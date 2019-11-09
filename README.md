@@ -14,7 +14,7 @@ Compared to commerical R9M or XF systems ExpressLRS is also very affordable, a T
 UPDATE:
 Now supports using easily available TTGO LoRa boards as TX modules for much easier assembly!
 
-![TTGO LoRa](img/TTGO_LORA.jpg)
+![TTGO LoRa](img/TTGO_BOARD.jpg)
 
 ![Hardware Image](img/R9M_and_ExpressLRS_modules.jpg)
 
