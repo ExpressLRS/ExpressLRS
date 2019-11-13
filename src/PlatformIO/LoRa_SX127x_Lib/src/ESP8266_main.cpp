@@ -68,6 +68,9 @@ uint32_t PacketRateInterval = 500;
 
 float PacketRate = 0.0;
 uint8_t linkQuality = 0;
+uint8_t linkQualityArray[100] = {0};
+uint32_t linkQualityArrayCounter = 0;
+uint8_t linkQualityArrayIndex = 0;
 
 uint32_t LostConnectionDelay = 1000; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
@@ -85,9 +88,22 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
 }
 
+int ICACHE_RAM_ATTR getRFlinkQuality()
+{
+    int LQ = 0;
+
+    for(int i = 0; i < 100; i++)
+    {
+        LQ += linkQualityArray[i];
+    }   
+
+    return LQ;
+}
+
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.GetLastPacketRSSI();
+    linkQuality = getRFlinkQuality();
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
@@ -149,6 +165,10 @@ void ICACHE_RAM_ATTR Test90()
     NonceRXlocal++;
     HandleFHSS();
     HandleSendTelemetryResponse();
+
+    linkQualityArrayCounter++;
+    linkQualityArrayIndex = linkQualityArrayCounter % 100; 
+    linkQualityArray[linkQualityArrayIndex] = 0;
 }
 
 void ICACHE_RAM_ATTR Test()
@@ -231,6 +251,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if ((inCRC == calculatedCRC))
         {
             packetCounter++;
+            linkQualityArray[linkQualityArrayIndex] = 1;
+
             getRFlinkInfo(); // run if CRC is valid
 
             LastValidPacket = millis();
@@ -480,32 +502,32 @@ void loop()
         digitalWrite(16, 1);
     }
 
-    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    {
-        float targetFrameRate;
+    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    // {
+    //     float targetFrameRate;
 
-        if (ExpressLRS_currAirRate.TLMinterval != 0)
-        {
-            targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-        }
-        else
-        {
-            targetFrameRate = ExpressLRS_currAirRate.rate;
-        }
+    //     if (ExpressLRS_currAirRate.TLMinterval != 0)
+    //     {
+    //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+    //     }
+    //     else
+    //     {
+    //         targetFrameRate = ExpressLRS_currAirRate.rate;
+    //     }
 
-        PacketRateLastChecked = millis();
-        PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-        linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-        if(linkQuality > 99) linkQuality = 99;
+    //     PacketRateLastChecked = millis();
+    //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+    //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+    //     if(linkQuality > 99) linkQuality = 99;
 
-        CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
+    //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 
-        CRCerrorCounter = 0;
-        packetCounter = 0;
+    //     CRCerrorCounter = 0;
+    //     packetCounter = 0;
 
-        //Serial.println(linkQuality);
-        //Serial.println(CRCerrorRate);
-    }
+    //     //Serial.println(linkQuality);
+    //     //Serial.println(CRCerrorRate);
+    // }
     //}
 
     // Serial.print(MeasuredHWtimerInterval);
