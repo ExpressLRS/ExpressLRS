@@ -6,6 +6,7 @@
 #include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
 #include "Debug.h"
+#include "ESP8266_LinkQuality.h"
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
@@ -67,10 +68,6 @@ uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
 
 float PacketRate = 0.0;
-uint8_t linkQuality = 0;
-uint8_t linkQualityArray[100] = {0};
-uint32_t linkQualityArrayCounter = 0;
-uint8_t linkQualityArrayIndex = 0;
 
 uint32_t LostConnectionDelay = 1000; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
@@ -86,18 +83,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
     Radio.TXdataBuffer[2] = NonceRXlocal;
     Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
-}
-
-int ICACHE_RAM_ATTR getRFlinkQuality()
-{
-    int LQ = 0;
-
-    for(int i = 0; i < 100; i++)
-    {
-        LQ += linkQualityArray[i];
-    }   
-
-    return LQ;
 }
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -150,6 +135,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
+
+            addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
     }
 }
@@ -162,13 +149,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR Test90()
 {
+    incrementLQArray();
     NonceRXlocal++;
     HandleFHSS();
     HandleSendTelemetryResponse();
-
-    linkQualityArrayCounter++;
-    linkQualityArrayIndex = linkQualityArrayCounter % 100; 
-    linkQualityArray[linkQualityArrayIndex] = 0;
 }
 
 void ICACHE_RAM_ATTR Test()
@@ -251,7 +235,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if ((inCRC == calculatedCRC))
         {
             packetCounter++;
-            linkQualityArray[linkQualityArrayIndex] = 1;
+            addPacketToLQ();
 
             getRFlinkInfo(); // run if CRC is valid
 
