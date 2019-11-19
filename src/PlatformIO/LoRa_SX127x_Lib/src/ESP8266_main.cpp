@@ -237,8 +237,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             packetCounter++;
             addPacketToLQ();
 
-            getRFlinkInfo(); // run if CRC is valid
-
             LastValidPacket = millis();
 
             HWtimerError = micros() - HWtimerGetlastCallbackMicros();
@@ -316,6 +314,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             //Serial.println(inCRC);
             CRCerrorCounter++;
         }
+        
+        getRFlinkInfo(); // run if CRC is valid
     }
     else
     {

@@ -473,7 +473,6 @@ void loop()
 {
 
   delay(100);
-  crsf.sendLinkStatisticsToTX();
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
