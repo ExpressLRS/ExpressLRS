@@ -231,7 +231,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if ((inCRC == calculatedCRC))
         {
             packetCounter++;
-            getRFlinkInfo(); // run if CRC is valid
 
             LastValidPacket = millis();
 
@@ -310,6 +309,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             //Serial.println(inCRC);
             CRCerrorCounter++;
         }
+        
+        getRFlinkInfo(); // run if CRC is valid
     }
     else
     {
