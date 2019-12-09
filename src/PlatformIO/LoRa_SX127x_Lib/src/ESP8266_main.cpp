@@ -6,6 +6,7 @@
 #include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
 #include "Debug.h"
+#include "ESP8266_LinkQuality.h"
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
@@ -67,7 +68,6 @@ uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
 
 float PacketRate = 0.0;
-uint8_t linkQuality = 0;
 
 uint32_t LostConnectionDelay = 1000; //after 1500ms we consider that we lost connection to the TX
 bool LostConnection = true;
@@ -88,6 +88,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.GetLastPacketRSSI();
+    linkQuality = getRFlinkQuality();
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
@@ -134,6 +135,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
+
+            addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
     }
 }
@@ -146,6 +149,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR Test90()
 {
+    incrementLQArray();
     NonceRXlocal++;
     HandleFHSS();
     HandleSendTelemetryResponse();
@@ -231,6 +235,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if ((inCRC == calculatedCRC))
         {
             packetCounter++;
+            addPacketToLQ();
 
             LastValidPacket = millis();
 
@@ -481,32 +486,32 @@ void loop()
         digitalWrite(16, 1);
     }
 
-    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    {
-        float targetFrameRate;
+    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    // {
+    //     float targetFrameRate;
 
-        if (ExpressLRS_currAirRate.TLMinterval != 0)
-        {
-            targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-        }
-        else
-        {
-            targetFrameRate = ExpressLRS_currAirRate.rate;
-        }
+    //     if (ExpressLRS_currAirRate.TLMinterval != 0)
+    //     {
+    //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+    //     }
+    //     else
+    //     {
+    //         targetFrameRate = ExpressLRS_currAirRate.rate;
+    //     }
 
-        PacketRateLastChecked = millis();
-        PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-        linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-        if(linkQuality > 99) linkQuality = 99;
+    //     PacketRateLastChecked = millis();
+    //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+    //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+    //     if(linkQuality > 99) linkQuality = 99;
 
-        CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
+    //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 
-        CRCerrorCounter = 0;
-        packetCounter = 0;
+    //     CRCerrorCounter = 0;
+    //     packetCounter = 0;
 
-        //Serial.println(linkQuality);
-        //Serial.println(CRCerrorRate);
-    }
+    //     //Serial.println(linkQuality);
+    //     //Serial.println(CRCerrorRate);
+    // }
     //}
 
     // Serial.print(MeasuredHWtimerInterval);
