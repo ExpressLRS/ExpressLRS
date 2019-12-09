@@ -1,5 +1,7 @@
 # Mini Rx v0.1
 
+https://easyeda.com/jyesmith/expresslrs-rx
+
 <img src="img/pcb.jpg" width="25%"> <img src="img/antenna.jpg" width="25%"> <img src="img/front.jpg" width="25%"> <img src="img/back.jpg" width="25%">
 
 ### PCB manufacture
