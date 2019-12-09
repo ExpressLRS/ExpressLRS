@@ -1,3 +1,7 @@
+RCGroups Discussion https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system
+
+Discord Chat: https://discord.gg/dS6ReFY
+
 # ExpressLRS
 ExpressLRS is an open source RC link for RC aircraft. It is based on SX127x hardware combined with an ESP8285 and ESP32 for RX and TX respectively.
 
