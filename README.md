@@ -34,3 +34,7 @@ Note - The board I bought came with a female SMA pigtail.  Check your antenna is
 STLs for printing your own enclosure are available in the [STL folder](https://github.com/AlessandroAU/ExpressLRS/tree/master/STL).
 
 <img src="img/ttgo_lora_wiring_diagram.png" width="50%"><img src="img/TTGO_BOARD_2.png" width="50%">
+
+## Building a RX:
+
+- https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/Mini_Rx_v0.1
