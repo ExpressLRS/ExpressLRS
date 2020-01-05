@@ -1,5 +1,15 @@
 #include "Arduino.h"
-#include "ESP8266_HardwareTimer.h"
+#include "rx_HardwareTimer.h"
+
+#ifdef PLATFORM_STM32
+    #if defined(TIM1)
+    TIM_TypeDef *Instance = TIM1;
+    #else
+    TIM_TypeDef *Instance = TIM2;
+    #endif
+    
+    HardwareTimer *MyTim = new HardwareTimer(Instance);
+#endif
 
 uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros()
 {
@@ -18,29 +28,50 @@ uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros()
 
 void ICACHE_RAM_ATTR HWtimerUpdateInterval(uint32_t _TimerInterval)
 {
+    #ifdef PLATFORM_STM32
+    HWtimerInterval = _TimerInterval;
+    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT);
+    #else
     HWtimerInterval = _TimerInterval * 5;
     timer1_write(HWtimerInterval / 2);
+    #endif
 }
 
 void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset)
 {
+    #ifdef PLATFORM_STM32
+    PhaseShift = Offset;
+    #else
     PhaseShift = Offset * 5;
+    #endif
 }
 
+#ifdef PLATFORM_STM32
+void ICACHE_RAM_ATTR Timer0Callback(HardwareTimer*)
+#else
 void ICACHE_RAM_ATTR Timer0Callback()
+#endif
 {
     if (TickTock)
     {
 
         if (ResetNextLoop)
         {
+            #ifdef PLATFORM_STM32
+            MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT);
+            #else
             timer1_write(HWtimerInterval / 2);
+            #endif
             ResetNextLoop = false;
         }
 
         if (PhaseShift > 0 || PhaseShift < 0)
         {
+            #ifdef PLATFORM_STM32
+            MyTim->setOverflow((HWtimerInterval + PhaseShift) / 2, MICROSEC_FORMAT);
+            #else
             timer1_write((HWtimerInterval + PhaseShift) / 2);
+            #endif
             ResetNextLoop = true;
             PhaseShift = 0;
         }
@@ -48,6 +79,7 @@ void ICACHE_RAM_ATTR Timer0Callback()
         //uint32_t next = ESP.getCycleCount() + HWtimerInterval * 5;
         //timer1_write(next + PhaseShift); // apply phase shift to next cycle
         //PhaseShift = 0; //then reset the phase shift variable
+
         HWtimerCallBack();
         HWtimerLastCallbackMicros = micros();
     }
@@ -62,15 +94,26 @@ void ICACHE_RAM_ATTR Timer0Callback()
 void ICACHE_RAM_ATTR InitHarwareTimer()
 {
     noInterrupts();
+    #ifdef PLATFORM_STM32
+    MyTim->setMode(2, TIMER_OUTPUT_COMPARE);                     // In our case, channekFalling is configured but not really used. Nevertheless it would be possible to attach a callback to channel compare match.
+    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT); // 10 Hz
+    MyTim->attachInterrupt(Timer0Callback);
+    MyTim->resume();
+    #else
     timer1_attachInterrupt(Timer0Callback);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
     timer1_write(HWtimerInterval);                //120000 us
+    #endif
     interrupts();
 }
 
 void StopHWtimer()
 {
+    #ifdef PLATFORM_STM32
+    MyTim->detachInterrupt();
+    #else
     timer1_detachInterrupt();
+    #endif
 }
 
 void HWtimerSetCallback(void (*CallbackFunc)(void))

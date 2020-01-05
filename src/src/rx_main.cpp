@@ -1,12 +1,16 @@
 #include <Arduino.h>
+#include "targets.h"
 #include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
-#include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
-#include "Debug.h"
-#include "ESP8266_LinkQuality.h"
+// #include "Debug.h"
+#include "rx_LinkQuality.h"
+#ifdef PLATFORM_ESP8266
+#include "ESP8266_WebUpdate.h"
+#endif
+
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
@@ -229,10 +233,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-
-    if (packetAddr == DeviceAddr)
+Serial.print(NonceRXlocal);
+Serial.print(" ");
+    if (inCRC == calculatedCRC)
     {
-        if ((inCRC == calculatedCRC))
+        if (packetAddr == DeviceAddr)
         {
             packetCounter++;
             addPacketToLQ();
@@ -241,11 +246,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             HWtimerError = micros() - HWtimerGetlastCallbackMicros();
 
-            HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+            // HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
-            uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+            // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
             Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 300); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset / 2);
+Serial.println(Offset);
 
             if (type == 0b00) //std 4 channel switch data
             {
@@ -308,63 +314,66 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else
         {
-            Serial.println("crc failed");
-            //Serial.print(calculatedCRC);
-            //Serial.print("-");
-            //Serial.println(inCRC);
-            CRCerrorCounter++;
+            Serial.println("wrong address");
         }
         
         getRFlinkInfo(); // run if CRC is valid
     }
     else
-    {
-        Serial.println("wrong address");
+    {        
+        Serial.println("crc failed");
+        //Serial.print(calculatedCRC);
+        //Serial.print("-");
+        //Serial.println(inCRC);
+        CRCerrorCounter++;
     }
 }
 
 void beginWebsever()
 {
+#ifdef PLATFORM_STM32
+#else
     Radio.StopContRX();
     StopHWtimer();
 
     BeginWebUpdate();
     webUpdateMode = true;
+#endif
 }
 
 void ICACHE_RAM_ATTR sampleButton()
 {
 
-    bool buttonValue = digitalRead(0);
+    // bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
-    if (buttonValue == false && buttonPrevValue == true)
-    { //falling edge
-        buttonLastPressed = millis();
-        buttonDown = true;
-        Serial.println("Manual Start");
-        Radio.SetFrequency(GetInitialFreq());
-        Radio.StartContRX();
-    }
+    // if (buttonValue == false && buttonPrevValue == true)
+    // { //falling edge
+    //     buttonLastPressed = millis();
+    //     buttonDown = true;
+    //     Serial.println("Manual Start");
+    //     Radio.SetFrequency(GetInitialFreq());
+    //     Radio.StartContRX();
+    // }
 
-    if (buttonValue == true && buttonPrevValue == false) //rising edge
-    {
-        buttonDown = false;
-    }
+    // if (buttonValue == true && buttonPrevValue == false) //rising edge
+    // {
+    //     buttonDown = false;
+    // }
 
-    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
-    {
-        if (!webUpdateMode)
-        {
-            beginWebsever();
-        }
-    }
+    // if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
+    // {
+    //     if (!webUpdateMode)
+    //     {
+    //         beginWebsever();
+    //     }
+    // }
 
-    if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
-    {
-        ESP.restart();
-    }
+    // if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
+    // {
+    //     ESP.restart();
+    // }
 
-    buttonPrevValue = buttonValue;
+    // buttonPrevValue = buttonValue;
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
@@ -378,19 +387,20 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
 
 void setup()
 {
-    Serial.begin(420000);
+    // Serial.begin(420000);
+    Serial.begin(115200);
     Serial.println("Module Booting...");
-    pinMode(16, OUTPUT);
-    pinMode(2, INPUT);
+    pinMode(GPIO_PIN_LED, OUTPUT);
+    pinMode(GPIO_PIN_BUTTON, INPUT);
 
-    delay(200);
-    digitalWrite(16, HIGH);
-    delay(200);
-    digitalWrite(16, LOW);
-    delay(200);
-    digitalWrite(16, HIGH);
-    delay(200);
-    digitalWrite(16, LOW);
+    // delay(200);
+    // digitalWrite(GPIO_PIN_LED, HIGH);
+    // delay(200);
+    // digitalWrite(GPIO_PIN_LED, LOW);
+    // delay(200);
+    // digitalWrite(GPIO_PIN_LED, HIGH);
+    // delay(200);
+    // digitalWrite(GPIO_PIN_LED, LOW);
 
     FHSSrandomiseFHSSsequence();
 
@@ -459,7 +469,7 @@ void loop()
             break;
         }
 
-        digitalWrite(16, LED);
+        digitalWrite(GPIO_PIN_LED, LED);
         LED = !LED;
 
         if (scanIndex == 3)
@@ -478,12 +488,12 @@ void loop()
         if (!LostConnection)
         {
             LostConnection = true;
-            digitalWrite(16, 0);
+            digitalWrite(GPIO_PIN_LED, 0);
         }
     }
     else
     {
-        digitalWrite(16, 1);
+        digitalWrite(GPIO_PIN_LED, 1);
     }
 
     // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
@@ -536,15 +546,18 @@ void loop()
     }
 
     //yield();
-
+#ifdef PLATFORM_STM32
+#else    
     if (webUpdateMode)
     {
         HandleWebUpdate();
         if (millis() > webUpdateLedFlashInterval + webUpdateLedFlashIntervalLast)
         {
-            digitalWrite(16, LED);
+            digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
     }
+#endif
+
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "..\..\src\targets.h"
 
 #include "LoRa_SX127x_Regs.h"
 
@@ -13,9 +14,9 @@
 #include <cstdint>
 #endif
 
-#ifndef ICACHE_RAM_ATTR
-#define ICACHE_RAM_ATTR IRAM_ATTR
-#endif
+// #ifndef ICACHE_RAM_ATTR
+// #define ICACHE_RAM_ATTR IRAM_ATTR
+// #endif
 
 typedef enum
 {

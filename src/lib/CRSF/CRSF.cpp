@@ -77,7 +77,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 }
 #endif
 
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_STM32)
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -92,7 +92,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-    this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+    // this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
@@ -109,7 +109,7 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
     outBuffer[RCframeLength + 3] = crc;
 
-    this->_dev->write(outBuffer, RCframeLength + 4);
+    // this->_dev->write(outBuffer, RCframeLength + 4);
 }
 
 void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()

@@ -256,7 +256,7 @@ class CRSF
 {
 
 public:
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_STM32)
     //CRSF(HardwareSerial& serial);
     CRSF(Stream *dev) : _dev(dev) {}
     CRSF(Stream &dev) : _dev(&dev) {}
