@@ -139,7 +139,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
-
+// Serial.println("TLM");
             addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
     }
@@ -235,12 +235,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 Serial.print(NonceRXlocal);
 Serial.print(" ");
+// Serial.print(inCRC);
+// Serial.print(" = ");
+// Serial.println(calculatedCRC);
     if (inCRC == calculatedCRC)
     {
         if (packetAddr == DeviceAddr)
         {
             packetCounter++;
             addPacketToLQ();
+Serial.println(linkQuality);
 
             LastValidPacket = millis();
 
@@ -251,7 +255,7 @@ Serial.print(" ");
             // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
             Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 300); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset / 2);
-Serial.println(Offset);
+// Serial.println(Offset);
 
             if (type == 0b00) //std 4 channel switch data
             {
@@ -391,7 +395,12 @@ void setup()
     Serial.begin(115200);
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
+#ifdef PLATFORM_STM32
+    pinMode(GPIO_PIN_LED_GEEN, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GEEN, HIGH); // Turn on extra LED... because we can.
+#endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
+    
 
     // delay(200);
     // digitalWrite(GPIO_PIN_LED, HIGH);

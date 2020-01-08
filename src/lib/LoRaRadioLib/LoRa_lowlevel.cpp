@@ -33,13 +33,8 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
+  SPI.setClockDivider(SPI_CLOCK_DIV8); // 72 / 8 = 9 MHz
   SPI.begin();
-
-  //SPIClass SPITwo(LoRa_MOSI, LoRa_MISO, LoRa_CLK);
-  //SPI((uint8_t)GPIO_PIN_MOSI, (uint8_t)GPIO_PIN_MISO, (uint8_t)GPIO_PIN_SCK); // sck, miso, mosi, ss (ss can be any GPIO)
-  //SPI.setBitOrder(MSBFIRST);
-  //SPI.setDataMode(SPI_MODE0);
-  //SPI.setFrequency(10000000);
 #endif
 }
 

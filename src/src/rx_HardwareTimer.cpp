@@ -95,9 +95,9 @@ void ICACHE_RAM_ATTR InitHarwareTimer()
 {
     noInterrupts();
     #ifdef PLATFORM_STM32
-    MyTim->setMode(2, TIMER_OUTPUT_COMPARE);                     // In our case, channekFalling is configured but not really used. Nevertheless it would be possible to attach a callback to channel compare match.
-    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT); // 10 Hz
     MyTim->attachInterrupt(Timer0Callback);
+    MyTim->setMode(2, TIMER_OUTPUT_COMPARE); 
+    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT); 
     MyTim->resume();
     #else
     timer1_attachInterrupt(Timer0Callback);
