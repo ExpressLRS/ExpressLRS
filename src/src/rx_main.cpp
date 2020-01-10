@@ -101,7 +101,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
-    crsf.sendLinkStatisticsToFC();
+    //crsf.sendLinkStatisticsToFC();
 }
 
 int offset = 0;
@@ -138,6 +138,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
+            crsf.sendLinkStatisticsToFC();
             // Serial.println("TLM");
             addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
@@ -167,7 +168,7 @@ void ICACHE_RAM_ATTR Test()
 int RawData;
 int32_t SmoothDataINT;
 int32_t SmoothDataFP;
-int Beta = 3;     // Length = 16
+int Beta = 4;     // Length = 16
 int FP_Shift = 3; //Number of fractional bits
 
 int16_t ICACHE_RAM_ATTR SimpleLowPass(int16_t Indata)
@@ -254,7 +255,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             if (!LostConnection)
             {
                 // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-                Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 250); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+                Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
                 HWtimerPhaseShift(Offset / 2);
                 // Serial.println(Offset);
             }
@@ -270,9 +271,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     UnpackSwitchData();
-
                     NonceRXlocal = Radio.RXdataBuffer[5];
-                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);+
+                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
                     GotConnection();
                     crsf.sendRCFrameToFC();
                 }
@@ -394,15 +394,16 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
 void setup()
 {
 #ifdef PLATFORM_STM32
-    Serial.setTx(PA9);
-    Serial.setRx(PA10);
-    // Serial.begin(420000);
-    Serial.begin(115200);
+    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+    Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
+    Serial.begin(420000);
+    //Serial.begin(115200);
+    crsf.InitSerial();
 #endif
 
 #ifdef PLATFORM_ESP8266
-    // Serial.begin(420000);
-    Serial.begin(115200);
+    Serial.begin(420000);
+    //Serial.begin(115200);
 #endif
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
@@ -434,8 +435,6 @@ void setup()
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     Radio.Begin();
-
-    crsf.InitSerial();
 
     Radio.SetOutputPower(0b1111);
 
@@ -517,46 +516,47 @@ void loop()
         digitalWrite(GPIO_PIN_LED, 1);
     }
 
-    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    {
-        //     float targetFrameRate;
+    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    // {
+    //     //     float targetFrameRate;
 
-        //     if (ExpressLRS_currAirRate.TLMinterval != 0)
-        //     {
-        //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-        //     }
-        //     else
-        //     {
-        //         targetFrameRate = ExpressLRS_currAirRate.rate;
-        //     }
+    //     //     if (ExpressLRS_currAirRate.TLMinterval != 0)
+    //     //     {
+    //     //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+    //     //     }
+    //     //     else
+    //     //     {
+    //     //         targetFrameRate = ExpressLRS_currAirRate.rate;
+    //     //     }
 
-        PacketRateLastChecked = millis();
-        //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-        //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-        //     if(linkQuality > 99) linkQuality = 99;
+    //     PacketRateLastChecked = millis();
+    //     //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+    //     //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+    //     //     if(linkQuality > 99) linkQuality = 99;
 
-        //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
+    //     //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 
-        //     CRCerrorCounter = 0;
-        //     packetCounter = 0;
+    //     //     CRCerrorCounter = 0;
+    //     //     packetCounter = 0;
 
-        Serial.println(linkQuality);
-        //     //Serial.println(CRCerrorRate);
-        // }
-        Serial.print(MeasuredHWtimerInterval);
-        Serial.print(" ");
-        Serial.print(Offset);
-        Serial.print(" ");
-        Serial.print(HWtimerError);
+    //     //     //Serial.println(CRCerrorRate);
+    //     // }
+    //     Serial.print(MeasuredHWtimerInterval);
+    //     Serial.print(" ");
+    //     Serial.print(Offset);
+    //     Serial.print(" ");
+    //     Serial.print(HWtimerError);
 
-        Serial.print("----");
+    //     Serial.print("----");
 
-        Serial.print(Offset90);
-        Serial.print(" ");
-        Serial.print(HWtimerError90);
-        Serial.print("----");
-        //Serial.println(packetCounter);
-    }
+    //     Serial.print(Offset90);
+    //     Serial.print(" ");
+    //     Serial.print(HWtimerError90);
+    //     Serial.print("----");
+
+    //     Serial.println(linkQuality);
+    //     //Serial.println(packetCounter);
+    // }
 
     // Serial.print(MeasuredHWtimerInterval);
     // Serial.print(" ");
