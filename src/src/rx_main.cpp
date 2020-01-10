@@ -11,7 +11,6 @@
 #include "ESP8266_WebUpdate.h"
 #endif
 
-
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
@@ -139,7 +138,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
-// Serial.println("TLM");
+            // Serial.println("TLM");
             addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
     }
@@ -233,29 +232,32 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-Serial.print(NonceRXlocal);
-Serial.print(" ");
-// Serial.print(inCRC);
-// Serial.print(" = ");
-// Serial.println(calculatedCRC);
+    //Serial.print(NonceRXlocal);
+    //Serial.print(" ");
+    // Serial.print(inCRC);
+    // Serial.print(" = ");
+    // Serial.println(calculatedCRC);
     if (inCRC == calculatedCRC)
     {
         if (packetAddr == DeviceAddr)
         {
             packetCounter++;
             addPacketToLQ();
-Serial.println(linkQuality);
+            //Serial.println(linkQuality);
 
             LastValidPacket = millis();
 
             HWtimerError = micros() - HWtimerGetlastCallbackMicros();
 
-            // HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
+            HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
-            // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 300); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift(Offset / 2);
-// Serial.println(Offset);
+            if (!LostConnection)
+            {
+                // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+                Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 250); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+                HWtimerPhaseShift(Offset / 2);
+                // Serial.println(Offset);
+            }
 
             if (type == 0b00) //std 4 channel switch data
             {
@@ -270,7 +272,7 @@ Serial.println(linkQuality);
                     UnpackSwitchData();
 
                     NonceRXlocal = Radio.RXdataBuffer[5];
-                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
+                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);+
                     GotConnection();
                     crsf.sendRCFrameToFC();
                 }
@@ -320,11 +322,11 @@ Serial.println(linkQuality);
         {
             Serial.println("wrong address");
         }
-        
+
         getRFlinkInfo(); // run if CRC is valid
     }
     else
-    {        
+    {
         Serial.println("crc failed");
         //Serial.print(calculatedCRC);
         //Serial.print("-");
@@ -391,8 +393,17 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
 
 void setup()
 {
+#ifdef PLATFORM_STM32
+    Serial.setTx(PA9);
+    Serial.setRx(PA10);
     // Serial.begin(420000);
     Serial.begin(115200);
+#endif
+
+#ifdef PLATFORM_ESP8266
+    // Serial.begin(420000);
+    Serial.begin(115200);
+#endif
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
 #ifdef PLATFORM_STM32
@@ -400,7 +411,6 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GEEN, HIGH); // Turn on extra LED... because we can.
 #endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
-    
 
     // delay(200);
     // digitalWrite(GPIO_PIN_LED, HIGH);
@@ -415,16 +425,15 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276;        //define radio module here
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_AU_433
     Serial.println("Setting 433MHz Mode");
-    Radio.RFmodule = RFMOD_SX1278;        //define radio module here
+    Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     Radio.Begin();
-
 
     crsf.InitSerial();
 
@@ -445,9 +454,9 @@ void loop()
 {
 
 #ifdef Auto_WiFi_On_Boot
-    if(LostConnection && !webUpdateMode && millis() > 10000 && millis() < 11000)
+    if (LostConnection && !webUpdateMode && millis() > 10000 && millis() < 11000)
     {
-        beginWebsever();    
+        beginWebsever();
     }
 #endif
 
@@ -460,17 +469,20 @@ void loop()
         {
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
-            delay(1000);
+            HWtimerUpdateInterval(RF_RATE_200HZ.interval);
             Serial.println("200 Hz");
+            delay(1000);
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
-            delay(1000);
             Serial.println("100 Hz");
+            HWtimerUpdateInterval(RF_RATE_100HZ.interval);
+            delay(1000);
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
             Serial.println("50 Hz");
+            HWtimerUpdateInterval(RF_RATE_50HZ.interval);
             delay(1000);
             break;
 
@@ -505,33 +517,46 @@ void loop()
         digitalWrite(GPIO_PIN_LED, 1);
     }
 
-    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    // {
-    //     float targetFrameRate;
+    if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+    {
+        //     float targetFrameRate;
 
-    //     if (ExpressLRS_currAirRate.TLMinterval != 0)
-    //     {
-    //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-    //     }
-    //     else
-    //     {
-    //         targetFrameRate = ExpressLRS_currAirRate.rate;
-    //     }
+        //     if (ExpressLRS_currAirRate.TLMinterval != 0)
+        //     {
+        //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+        //     }
+        //     else
+        //     {
+        //         targetFrameRate = ExpressLRS_currAirRate.rate;
+        //     }
 
-    //     PacketRateLastChecked = millis();
-    //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-    //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-    //     if(linkQuality > 99) linkQuality = 99;
+        PacketRateLastChecked = millis();
+        //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
+        //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
+        //     if(linkQuality > 99) linkQuality = 99;
 
-    //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
+        //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
 
-    //     CRCerrorCounter = 0;
-    //     packetCounter = 0;
+        //     CRCerrorCounter = 0;
+        //     packetCounter = 0;
 
-    //     //Serial.println(linkQuality);
-    //     //Serial.println(CRCerrorRate);
-    // }
-    //}
+        Serial.println(linkQuality);
+        //     //Serial.println(CRCerrorRate);
+        // }
+        Serial.print(MeasuredHWtimerInterval);
+        Serial.print(" ");
+        Serial.print(Offset);
+        Serial.print(" ");
+        Serial.print(HWtimerError);
+
+        Serial.print("----");
+
+        Serial.print(Offset90);
+        Serial.print(" ");
+        Serial.print(HWtimerError90);
+        Serial.print("----");
+        //Serial.println(packetCounter);
+    }
 
     // Serial.print(MeasuredHWtimerInterval);
     // Serial.print(" ");
@@ -556,7 +581,7 @@ void loop()
 
     //yield();
 #ifdef PLATFORM_STM32
-#else    
+#else
     if (webUpdateMode)
     {
         HandleWebUpdate();
@@ -568,5 +593,4 @@ void loop()
         }
     }
 #endif
-
 }

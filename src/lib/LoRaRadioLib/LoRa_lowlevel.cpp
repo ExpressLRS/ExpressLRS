@@ -1,6 +1,8 @@
 #include "LoRa_lowlevel.h"
 #include <SPI.h>
 
+#define SPI_SPEED_CLOCK_DEFAULT     8000000
+
 Verbosity_ DebugVerbosity = DEBUG_1;
 
 void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
@@ -28,13 +30,15 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 #endif
 
 #ifdef PLATFORM_STM32
+  //SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
   SPI.setMOSI(GPIO_PIN_MOSI);
   SPI.setMISO(GPIO_PIN_MISO);
   SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(SPI_CLOCK_DIV8); // 72 / 8 = 9 MHz
+  SPI.setClockDivider(((uint32_t)4)); // 72 / 8 = 9 MHz // we use SPI 2 and for SPI 2 the clkspi is ALREADY prescaled by 2 -- this seems to work now (sandro 11th Jan 2020)
   SPI.begin();
+  
 #endif
 }
 
