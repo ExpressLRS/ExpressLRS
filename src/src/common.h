@@ -48,8 +48,8 @@ typedef struct expresslrs_mod_settings_s
 
 } expresslrs_mod_settings_t;
 
-expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000, 200, 64, 8, 8, RATE_200HZ};
-expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_7, 10000, 100, 32, 4, 10, RATE_100HZ};
+expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_7, 6666, 150, 64, 8, 8, RATE_200HZ};
+expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_7, 10000, 120, 32, 4, 8, RATE_100HZ};
 expresslrs_mod_settings_s RF_RATE_50HZ = {BW_500_00_KHZ, SF_8, CR_4_7, 20000, 50, 16, 2, 10, RATE_50HZ};
 expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, 0, 2, 8, RATE_25HZ};
 expresslrs_mod_settings_s RF_RATE_4HZ = {BW_250_00_KHZ, SF_11, CR_4_5, 250000, 4, 0, 2, 8, RATE_4HZ};

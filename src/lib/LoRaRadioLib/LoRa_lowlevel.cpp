@@ -1,8 +1,6 @@
 #include "LoRa_lowlevel.h"
 #include <SPI.h>
 
-#define SPI_SPEED_CLOCK_DEFAULT 8000000
-
 Verbosity_ DebugVerbosity = DEBUG_1;
 
 void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
@@ -36,8 +34,8 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(((uint32_t)4)); // 72 / 8 = 9 MHz // we use SPI 2 and for SPI 2 the clkspi is ALREADY prescaled by 2 -- this seems to work now (sandro 11th Jan 2020)
   SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
 
 #endif
 }
@@ -151,7 +149,7 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *i
   //   inBytes[i] = SPI.transfer(reg);
   // }
 
-  SPI.transfer((uint8_t*)inBytes, numBytes);
+  SPI.transfer((uint8_t *)inBytes, numBytes);
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 

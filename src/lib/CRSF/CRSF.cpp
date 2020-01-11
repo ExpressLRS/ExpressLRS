@@ -92,7 +92,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-    //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+    this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()

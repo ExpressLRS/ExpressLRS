@@ -260,7 +260,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
             // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 150); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset / 2);
             // Serial.println(Offset);
 
