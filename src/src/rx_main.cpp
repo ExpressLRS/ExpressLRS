@@ -265,7 +265,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             {
                 UnpackChannelData_11bit();
                 crsf.sendRCFrameToFC();
-                GotConnection();
+                //GotConnection();
             }
 
             if (type == 0b01)
@@ -273,6 +273,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Switch Packet");
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
+                    GotConnection();
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
@@ -476,17 +477,17 @@ void loop()
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
             Serial.println("200 Hz");
-            delay(500);
+            delay(1000);
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
             Serial.println("100 Hz");
-            delay(500);
+            delay(1000);
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
             Serial.println("50 Hz");
-            delay(500);
+            delay(1000);
             break;
         default:
             break;
@@ -503,6 +504,15 @@ void loop()
         {
 
             scanIndex++;
+        }
+    }
+
+    if (linkQuality < 5)
+    {
+        if (!LostConnection)
+        {
+            LostConnection = true;
+            digitalWrite(GPIO_PIN_LED, 0);
         }
     }
 
@@ -523,6 +533,14 @@ void loop()
     { // add stuff here for debug print
         LastSerialDebugPrint = millis();
         Serial.println(linkQuality);
+        if (LostConnection)
+        {
+            Serial.println("-");
+        }
+        else
+        {
+            Serial.println("+");
+        }
     }
 
     // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data

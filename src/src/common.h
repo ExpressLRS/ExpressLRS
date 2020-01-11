@@ -9,7 +9,10 @@
 
 #define One_Bit_Switches
 
-uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
+//uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
+
+// uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
+uint8_t TxBaseMac[6] = {36, 111, 40, 158, 122, 220};
 
 uint8_t CRCCaesarCipher = TxBaseMac[4];
 
