@@ -110,7 +110,9 @@ void ICACHE_RAM_ATTR InitHarwareTimer()
 void StopHWtimer()
 {
     #ifdef PLATFORM_STM32
-    MyTim->detachInterrupt();
+    //MyTim->detachInterrupt();
+    MyTim->timerHandleDeinit();
+    //MyTim->pause();
     #else
     timer1_detachInterrupt();
     #endif

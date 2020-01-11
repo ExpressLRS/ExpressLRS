@@ -42,6 +42,8 @@ int32_t HWtimerError;
 int32_t HWtimerError90;
 int16_t Offset;
 int16_t Offset90;
+uint32_t SerialDebugPrintInterval = 250;
+uint32_t LastSerialDebugPrint = 0;
 
 uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
@@ -168,7 +170,7 @@ void ICACHE_RAM_ATTR Test()
 int RawData;
 int32_t SmoothDataINT;
 int32_t SmoothDataFP;
-int Beta = 4;     // Length = 16
+int Beta = 3;     // Length = 16
 int FP_Shift = 3; //Number of fractional bits
 
 int16_t ICACHE_RAM_ATTR SimpleLowPass(int16_t Indata)
@@ -190,8 +192,10 @@ void ICACHE_RAM_ATTR GotConnection()
     if (LostConnection)
     {
         InitHarwareTimer();
+        HWtimerUpdateInterval(ExpressLRS_currAirRate.interval);
         LostConnection = false; //we got a packet, therefore no lost connection
         Serial.println("got conn");
+        Beta = 3;
     }
 }
 
@@ -252,28 +256,26 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
-            if (!LostConnection)
-            {
-                // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-                Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-                HWtimerPhaseShift(Offset / 2);
-                // Serial.println(Offset);
-            }
+            // uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
+            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            HWtimerPhaseShift(Offset / 2);
+            // Serial.println(Offset);
 
             if (type == 0b00) //std 4 channel switch data
             {
                 UnpackChannelData_11bit();
                 crsf.sendRCFrameToFC();
+                GotConnection();
             }
 
             if (type == 0b01)
             {
-                if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]) // extra layer of protection incase the crc and addr headers fail us.
+                //Serial.println("Switch Packet");
+                if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    GotConnection();
                     crsf.sendRCFrameToFC();
                 }
             }
@@ -283,40 +285,44 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 // not implimented yet
             }
 
-            if (type == 0b10 && Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
-            { //sync packet from master
-                //Serial.println("Sync Packet");
-
-                FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-
-                NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
-
-                GotConnection();
-
-                if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
+            if (type == 0b10)
+                if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
-                    Serial.println("update rate");
-                    switch (Radio.RXdataBuffer[3])
-                    {
-                    case 0:
-                        SetRFLinkRate(RF_RATE_200HZ);
-                        ExpressLRS_currAirRate = RF_RATE_200HZ;
-                        break;
-                    case 1:
-                        SetRFLinkRate(RF_RATE_100HZ);
-                        ExpressLRS_currAirRate = RF_RATE_100HZ;
-                        break;
-                    case 2:
-                        SetRFLinkRate(RF_RATE_50HZ);
-                        ExpressLRS_currAirRate = RF_RATE_50HZ;
-                        break;
-                    default:
-                        break;
+                    { //sync packet from master
+                        Serial.println("Sync Packet");
+
+                        FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+
+                        //NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
+                        NonceRXlocal = Radio.RXdataBuffer[3];
+
+                        GotConnection();
+
+                        if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
+                        {
+                            Serial.println("update rate");
+                            switch (Radio.RXdataBuffer[3])
+                            {
+                            case 0:
+                                SetRFLinkRate(RF_RATE_200HZ);
+                                ExpressLRS_currAirRate = RF_RATE_200HZ;
+                                break;
+                            case 1:
+                                SetRFLinkRate(RF_RATE_100HZ);
+                                ExpressLRS_currAirRate = RF_RATE_100HZ;
+                                break;
+                            case 2:
+                                SetRFLinkRate(RF_RATE_50HZ);
+                                ExpressLRS_currAirRate = RF_RATE_50HZ;
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+
+                        //Serial.println()
                     }
                 }
-
-                //Serial.println()
-            }
         }
         else
         {
@@ -463,28 +469,25 @@ void loop()
 
     {
         StopHWtimer();
+        Beta = 1;
         Radio.SetFrequency(GetInitialFreq());
         switch (scanIndex)
         {
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
-            HWtimerUpdateInterval(RF_RATE_200HZ.interval);
             Serial.println("200 Hz");
-            delay(1000);
+            delay(500);
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
             Serial.println("100 Hz");
-            HWtimerUpdateInterval(RF_RATE_100HZ.interval);
-            delay(1000);
+            delay(500);
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
             Serial.println("50 Hz");
-            HWtimerUpdateInterval(RF_RATE_50HZ.interval);
-            delay(1000);
+            delay(500);
             break;
-
         default:
             break;
         }
@@ -492,7 +495,7 @@ void loop()
         digitalWrite(GPIO_PIN_LED, LED);
         LED = !LED;
 
-        if (scanIndex == 3)
+        if (scanIndex > 3)
         {
             scanIndex = 1;
         }
@@ -514,6 +517,12 @@ void loop()
     else
     {
         digitalWrite(GPIO_PIN_LED, 1);
+    }
+
+    if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)
+    { // add stuff here for debug print
+        LastSerialDebugPrint = millis();
+        Serial.println(linkQuality);
     }
 
     // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
@@ -554,7 +563,7 @@ void loop()
     //     Serial.print(HWtimerError90);
     //     Serial.print("----");
 
-    //     Serial.println(linkQuality);
+    //Serial.println(linkQuality);
     //     //Serial.println(packetCounter);
     // }
 

@@ -17,7 +17,7 @@ CRSF crsf;
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;               //not used for the moment
 uint32_t SwitchPacketSendInterval = 200;        //not used, delete when able to
-uint32_t SwitchPacketSendIntervalRXlost = 200;  //how often to send the switch data packet (ms) when there is no response from RX
+uint32_t SwitchPacketSendIntervalRXlost = 100;  //how often to send the switch data packet (ms) when there is no response from RX
 uint32_t SwitchPacketSendIntervalRXconn = 1000; //how often to send the switch data packet (ms) when there we have a connection
 uint32_t SwitchPacketLastSent = 0;              //time in ms when the last switch data packet was sent
 
@@ -126,7 +126,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
-  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[3] = Radio.NonceTX;
   Radio.TXdataBuffer[4] = baseMac[3];
   Radio.TXdataBuffer[5] = baseMac[4];
   Radio.TXdataBuffer[6] = baseMac[5];
@@ -245,7 +245,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = SwitchPacketSendIntervalRXlost;
   }
 
-  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
+  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;+
+  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))
   {
 
     GenerateSyncPacketData();
@@ -433,13 +434,13 @@ void setup()
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else // Below output power settings are for 1W modules
+#else                           // Below output power settings are for 1W modules
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
   Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #endif
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
@@ -472,13 +473,17 @@ void setup()
 void loop()
 {
 
-  delay(100);
+  //delay(100);
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
     isRXconnected = false;
+  }
+  else
+  {
+    isRXconnected = true;
   }
 
   if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data

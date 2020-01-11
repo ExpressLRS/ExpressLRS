@@ -151,7 +151,7 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *i
   //   inBytes[i] = SPI.transfer(reg);
   // }
 
-  SPI.transfer(inBytes, numBytes);
+  SPI.transfer((uint8_t*)inBytes, numBytes);
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 

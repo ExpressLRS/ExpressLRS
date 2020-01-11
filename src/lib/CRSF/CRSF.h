@@ -256,23 +256,14 @@ class CRSF
 {
 
 public:
-
-
     //CRSF(HardwareSerial& serial);
-    CRSF(Stream *dev) : _dev(dev) {}
-    CRSF(Stream &dev) : _dev(&dev) {}
-
 
 #if defined(PLATFORM_ESP8266)
 
-    void InitSerial()
+    CRSF(Stream *dev) : _dev(dev)
     {
-        _dev->println("CRSF Lib Ready!");
     }
-
-#endif    
-
-#ifdef PLATFORM_STM32
+    CRSF(Stream &dev) : _dev(&dev) {}
 
     void InitSerial()
     {
@@ -281,6 +272,19 @@ public:
 
 #endif
 
+#ifdef PLATFORM_STM32
+
+    CRSF(Stream *dev) : _dev(dev)
+    {
+    }
+    CRSF(Stream &dev) : _dev(&dev) {}
+
+    void InitSerial()
+    {
+        _dev->println("CRSF Lib Ready!");
+    }
+
+#endif
 
     static HardwareSerial Port;
     //static Stream *Port;
