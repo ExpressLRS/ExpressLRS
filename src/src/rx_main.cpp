@@ -45,6 +45,9 @@ int16_t Offset90;
 uint32_t SerialDebugPrintInterval = 250;
 uint32_t LastSerialDebugPrint = 0;
 
+uint32_t RFmodeLastCycled = 0;
+uint32_t RFmodeCycleInterval = 500;
+
 uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
 bool LED = false;
@@ -70,7 +73,7 @@ int packetCounter = 0;
 int CRCerrorCounter = 0;
 float CRCerrorRate = 0;
 uint32_t PacketRateLastChecked = 0;
-uint32_t PacketRateInterval = 500;
+uint32_t PacketRateInterval = 1000;
 
 float PacketRate = 0.0;
 
@@ -191,11 +194,11 @@ void ICACHE_RAM_ATTR GotConnection()
 {
     if (LostConnection)
     {
-        InitHarwareTimer();
         HWtimerUpdateInterval(ExpressLRS_currAirRate.interval);
+        InitHarwareTimer();
         LostConnection = false; //we got a packet, therefore no lost connection
         Serial.println("got conn");
-        Beta = 3;
+        Beta = 4;
     }
 }
 
@@ -265,7 +268,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             {
                 UnpackChannelData_11bit();
                 crsf.sendRCFrameToFC();
-                //GotConnection();
             }
 
             if (type == 0b01)
@@ -287,6 +289,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             }
 
             if (type == 0b10)
+            {
                 if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
                     { //sync packet from master
@@ -324,6 +327,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                         //Serial.println()
                     }
                 }
+            }
         }
         else
         {
@@ -453,7 +457,9 @@ void setup()
 
     HWtimerSetCallback(&Test);
     HWtimerSetCallback90(&Test90);
+    InitHarwareTimer();
     SetRFLinkRate(RF_RATE_200HZ);
+    Serial.println(GetInitialFreq());
 }
 
 void loop()
@@ -466,54 +472,61 @@ void loop()
     }
 #endif
 
-    if (LostConnection && !webUpdateMode)
-
+    if (millis() > (RFmodeLastCycled + RFmodeCycleInterval))
     {
-        StopHWtimer();
-        Beta = 1;
-        Radio.SetFrequency(GetInitialFreq());
-        switch (scanIndex)
+        if (LostConnection && !webUpdateMode)
+
         {
-        case 1:
-            SetRFLinkRate(RF_RATE_200HZ);
-            Serial.println("200 Hz");
-            delay(1000);
-            break;
-        case 2:
-            SetRFLinkRate(RF_RATE_100HZ);
-            Serial.println("100 Hz");
-            delay(1000);
-            break;
-        case 3:
-            SetRFLinkRate(RF_RATE_50HZ);
-            Serial.println("50 Hz");
-            delay(1000);
-            break;
-        default:
-            break;
+            //StopHWtimer();
+            Beta = 1;
+            switch (scanIndex)
+            {
+            case 1:
+                SetRFLinkRate(RF_RATE_200HZ);
+                Radio.SetFrequency(GetInitialFreq());
+                Serial.println("200 Hz");
+                //delay(1000);
+                break;
+            case 2:
+                SetRFLinkRate(RF_RATE_100HZ);
+                Radio.SetFrequency(GetInitialFreq());
+                Serial.println("100 Hz");
+                //delay(1000);
+                break;
+            case 3:
+                SetRFLinkRate(RF_RATE_50HZ);
+                Radio.SetFrequency(GetInitialFreq());
+                Serial.println("50 Hz");
+                //delay(1000);
+                break;
+            default:
+                break;
+            }
+
+            digitalWrite(GPIO_PIN_LED, LED);
+            LED = !LED;
+
+            if (scanIndex > 3)
+            {
+                scanIndex = 1;
+            }
+            else
+            {
+
+                scanIndex++;
+            }
         }
 
-        digitalWrite(GPIO_PIN_LED, LED);
-        LED = !LED;
-
-        if (scanIndex > 3)
+        if (linkQuality < 10)
         {
-            scanIndex = 1;
+            if (!LostConnection)
+            {
+                LostConnection = true;
+                digitalWrite(GPIO_PIN_LED, 0);
+            }
         }
-        else
-        {
 
-            scanIndex++;
-        }
-    }
-
-    if (linkQuality < 5)
-    {
-        if (!LostConnection)
-        {
-            LostConnection = true;
-            digitalWrite(GPIO_PIN_LED, 0);
-        }
+        RFmodeLastCycled = millis();
     }
 
     if (millis() > (LastValidPacket + LostConnectionDelay))
@@ -529,19 +542,33 @@ void loop()
         digitalWrite(GPIO_PIN_LED, 1);
     }
 
-    if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)
-    { // add stuff here for debug print
-        LastSerialDebugPrint = millis();
-        Serial.println(linkQuality);
-        if (LostConnection)
-        {
-            Serial.println("-");
-        }
-        else
-        {
-            Serial.println("+");
-        }
-    }
+    // if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)
+    // { // add stuff here for debug print
+    //     LastSerialDebugPrint = millis();
+    //     Serial.println(linkQuality);
+    //     if (LostConnection)
+    //     {
+    //         Serial.println("-");
+    //     }
+    //     else
+    //     {
+    //         Serial.println("+");
+    //     }
+
+    //     Serial.print(MeasuredHWtimerInterval);
+    //     Serial.print(" ");
+    //     Serial.print(Offset);
+    //     Serial.print(" ");
+    //     Serial.print(HWtimerError);
+
+    //     Serial.print("----");
+
+    //     Serial.print(Offset90);
+    //     Serial.print(" ");
+    //     Serial.print(HWtimerError90);
+    //     Serial.print("----");
+    //     Serial.println(packetCounter);
+    // }
 
     // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
     // {

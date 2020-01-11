@@ -50,7 +50,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
+    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 0, NULL);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -109,8 +109,8 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
     outBuffer[RCframeLength + 3] = crc;
 
-    //this->_dev->write(outBuffer, RCframeLength + 4);
-    this->_dev->print(".");
+    this->_dev->write(outBuffer, RCframeLength + 4);
+    //this->_dev->print(".");
 }
 
 void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()
@@ -260,11 +260,11 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         connected();
     }
 
-    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-    //taskENTER_CRITICAL(&myMutex);
+    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    taskENTER_CRITICAL(&myMutex);
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        //Serial.println("Got Other Packet");
+        Serial.println("Got Other Packet");
         if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
             ParameterUpdateData[0] = SerialInBuffer[5];
@@ -280,7 +280,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         (RCdataCallback2)(); // run new RC data callback
     }
 
-    //taskEXIT_CRITICAL(&myMutex);
+    taskEXIT_CRITICAL(&myMutex);
     //vTaskDelay(2);
 }
 
