@@ -73,7 +73,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, LinkStatisticsFrameLength + 4);
     CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
-    //Serial.println(CRSFoutBuffer[0]);
+    Serial.println(CRSFoutBuffer[0]);
 }
 #endif
 
@@ -207,8 +207,9 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
-                    vTaskDelay(xDelay1);
                     taskYIELD();
+                    vTaskDelay(xDelay1);
+                    
 
                     if (CRSFoutBuffer[0] > 0)
                     {

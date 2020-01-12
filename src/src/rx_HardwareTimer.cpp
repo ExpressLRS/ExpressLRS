@@ -43,7 +43,7 @@ void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t NewOffset)
 {
 
     //HWtimer::PhaseShift = Offset_ * 5;
-    int16_t MaxPhaseShift = HWtimerInterval;
+    int16_t MaxPhaseShift = HWtimerInterval >> 2;
     //int16_t MaxPhaseShift = 2500;
     //#define MaxPhaseShift 2500
 
@@ -91,7 +91,7 @@ void ICACHE_RAM_ATTR Timer0Callback()
             ResetNextLoop = false;
         }
 
-        if (PhaseShift > 1 || PhaseShift < 1)
+        if (PhaseShift > 10 || PhaseShift < 10)
         {
 #ifdef PLATFORM_STM32
             MyTim->setOverflow((HWtimerInterval + PhaseShift) / 2, MICROSEC_FORMAT);
@@ -137,8 +137,8 @@ void StopHWtimer()
 {
 #ifdef PLATFORM_STM32
     //MyTim->detachInterrupt();
-    MyTim->timerHandleDeinit();
-//MyTim->pause();
+    //MyTim->timerHandleDeinit();
+    MyTim->pause();
 #else
     timer1_detachInterrupt();
 #endif

@@ -18,7 +18,7 @@ CRSF crsf;
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
 uint32_t SwitchPacketSendInterval = 200;      //not used, delete when able to
 uint32_t SyncPacketSendIntervalRXlost = 250;  //how often to send the switch data packet (ms) when there is no response from RX
-uint32_t SyncPacketSendIntervalRXconn = 2000; //how often to send the switch data packet (ms) when there we have a connection
+uint32_t SyncPacketSendIntervalRXconn = 1500; //how often to send the switch data packet (ms) when there we have a connection
 uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
 
 ////////////SYNC PACKET/////////
@@ -70,7 +70,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
-  Serial.println("TLMpacket");
+  Serial.println("TLMpacket0");
 
   if (packetAddr == DeviceAddr)
   {
@@ -79,6 +79,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       packetCounteRX_TX++;
       if (type == 0b11) //tlmpacket
       {
+        Serial.println("TLMpacket1");
+        Serial.println(type);
         isRXconnected = true;
         LastTLMpacketRecvMillis = millis();
 
@@ -95,6 +97,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
           crsf.sendLinkStatisticsToTX();
         }
+      }
+      else
+      {
+        Serial.println("TLM type error");
+        Serial.println(type);
       }
     }
     else
@@ -207,7 +214,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 
     if (modresult == 0) // wait for tlm response because it's time
     {
-      Radio.StartContRX();
+      Radio.RXnb();
       WaitRXresponse = true;
     }
   }
