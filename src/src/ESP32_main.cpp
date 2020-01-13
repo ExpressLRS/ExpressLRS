@@ -185,6 +185,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   Radio.SetPreambleLength(mode.PreambleLen);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
+  crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
   DebugOutput += String(mode.rate) + "Hz";
   isRXconnected = false;
 }
@@ -433,13 +434,13 @@ void setup()
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else // Below output power settings are for 1W modules
+#else                           // Below output power settings are for 1W modules
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
   Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #endif
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");

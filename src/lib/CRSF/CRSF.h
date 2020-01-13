@@ -27,7 +27,8 @@
 #define CRSF_SYNC_BYTE 0xC8
 
 #define RCframeLength 22             // length of the RC data packed bytes frame. 16 channels in 11 bits each.
-#define LinkStatisticsFrameLength 10 // length of the RC data packed bytes frame. 16 channels in 11 bits each.
+#define LinkStatisticsFrameLength 10 //
+#define OpenTXsyncFrameLength 11     //
 
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
@@ -72,6 +73,8 @@ typedef enum
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
+    CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
+    CRSF_FRAMETYPE_RADIO_ID = 0x3A,
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
     CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
@@ -201,6 +204,22 @@ typedef struct crsfPayloadLinkstatistics_s
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
+// typedef struct crsfOpenTXsyncFrame_s
+// {
+//     uint32_t adjustedRefreshRate;
+//     uint32_t lastUpdate;
+//     uint16_t refreshRate;
+//     int8_t refreshRate;
+//     uint16_t inputLag;
+//     uint8_t interval;
+//     uint8_t target;
+//     uint8_t downlink_RSSI;
+//     uint8_t downlink_Link_quality;
+//     int8_t downlink_SNR;
+// } crsfOpenTXsyncFrame_t;
+
+// typedef struct crsfOpenTXsyncFrame_s crsfOpenTXsyncFrame_t;
+
 /////inline and utility functions//////
 
 //static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
@@ -317,6 +336,15 @@ public:
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+
+    ///// Variables for OpenTX Syncing //////////////////////////
+    #define OpenTXsyncPakcetInterval 100 // in ms
+    static volatile uint32_t RequestedRCpacketInterval;
+    static volatile uint32_t RCdataLastRecv;
+    static volatile int32_t OpenTXsyncOffset;
+    static void ICACHE_RAM_ATTR JustSentRFpacket();
+    static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
+    /////////////////////////////////////////////////////////////
 
     //static void BuildRCPacket(crsf_addr_e addr = CRSF_ADDRESS_FLIGHT_CONTROLLER); //build packet to send to the FC
 
