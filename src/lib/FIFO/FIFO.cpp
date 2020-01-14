@@ -27,7 +27,6 @@
  * 
  * Modified/Ammended by Alessandro Carcione 2020
  */
-
 #include "FIFO.h"
 
 FIFO::FIFO()
@@ -45,7 +44,7 @@ void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
 {
     if (numElements == FIFO_SIZE)
     {
-        //    Serial.println(F("Buffer full"));
+        Serial.println(("CRITICAL ERROR: Buffer full"));
         return;
     }
     else
@@ -65,6 +64,14 @@ void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
 
         //Store data into array
         buffer[tail] = data;
+    }
+}
+
+void ICACHE_RAM_ATTR FIFO::pushBytes(uint8_t *data, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        FIFO::push(data[i]);
     }
 }
 
@@ -95,6 +102,14 @@ uint8_t ICACHE_RAM_ATTR FIFO::pop()
     }
 }
 
+void ICACHE_RAM_ATTR FIFO::popBytes(uint8_t *data, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        data[i] = FIFO::pop();
+    }
+}
+
 uint8_t ICACHE_RAM_ATTR FIFO::peek()
 {
     if (numElements == 0)
@@ -112,4 +127,12 @@ uint8_t ICACHE_RAM_ATTR FIFO::peek()
 int ICACHE_RAM_ATTR FIFO::size()
 {
     return numElements;
+}
+
+void ICACHE_RAM_ATTR FIFO::flush()
+{
+    memset(buffer, 0x00, FIFO_SIZE);
+    head = 0;
+    tail = 0;
+    numElements = 0;
 }

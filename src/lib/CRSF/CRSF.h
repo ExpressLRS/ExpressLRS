@@ -190,16 +190,16 @@ typedef struct crsf_channels_s crsf_channels_t;
 
 typedef struct crsfPayloadLinkstatistics_s
 {
-    uint8_t uplink_RSSI_1;
-    uint8_t uplink_RSSI_2;
-    uint8_t uplink_Link_quality;
-    int8_t uplink_SNR;
-    uint8_t active_antenna;
-    uint8_t rf_Mode;
-    uint8_t uplink_TX_Power;
-    uint8_t downlink_RSSI;
-    uint8_t downlink_Link_quality;
-    int8_t downlink_SNR;
+    uint8_t uplink_RSSI_1 = 50;
+    uint8_t uplink_RSSI_2 =50;
+    uint8_t uplink_Link_quality =50;
+    int8_t uplink_SNR =34;
+    uint8_t active_antenna =23;
+    uint8_t rf_Mode =2;
+    uint8_t uplink_TX_Power =1;
+    uint8_t downlink_RSSI =50;
+    uint8_t downlink_Link_quality = 50;
+    int8_t downlink_SNR = 50;
 } crsfLinkStatistics_t;
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
