@@ -1,5 +1,6 @@
 #include "..\..\src\targets.h"
 #include "CRSF.h"
+#include "..\..\lib\FIFO\FIFO.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
 
@@ -10,6 +11,10 @@ HardwareSerial CRSF::Port = SerialPort;
 
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
 uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
+
+///Out FIFO to buffer messages///
+FIFO SerialOutFIFO;
+
 
 //U1RXD_IN_IDX
 //U1TXD_OUT_IDX
