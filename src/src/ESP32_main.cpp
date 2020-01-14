@@ -216,6 +216,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
@@ -234,6 +235,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
     }
   }
+
+#ifdef FEATURE_OPENTX_SYNC
+  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+#endif
 
   uint32_t SyncInterval;
 
@@ -455,6 +460,7 @@ void setup()
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
   Radio.TXdoneCallback3 = &HandleUpdateParameter;
+  //Radio.TXdoneCallback4 = &NULL;
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
@@ -474,6 +480,10 @@ void loop()
 {
 
   delay(100);
+
+#ifdef FEATURE_OPENTX_SYNC
+  Serial.println(crsf.OpenTXsyncOffset);
+#endif
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 

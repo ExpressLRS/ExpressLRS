@@ -55,7 +55,9 @@ void CRSF::Begin()
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
     xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
+#ifdef FEATURE_OPENTX_SYNC
     xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, NULL);
+#endif
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -84,6 +86,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
+    //Serial.println(CRSF::OpenTXsyncOffset);
 }
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
@@ -91,8 +94,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
     for (;;)
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        int32_t offset = CRSF::OpenTXsyncOffset * 10;
-
+        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 4000;        // + offset that seems to be needed
         uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
