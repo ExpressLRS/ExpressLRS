@@ -1,11 +1,12 @@
 #include <Arduino.h>
+#include "FIFO.h"
 #include "utils.h"
+#include "debug.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "ESP8266_WebUpdate.h"
 #include "FHSS.h"
-#include "Debug.h"
 #include "ESP8266_LinkQuality.h"
 
 SX127xDriver Radio;
@@ -187,7 +188,7 @@ void ICACHE_RAM_ATTR GotConnection()
     {
         InitHarwareTimer();
         LostConnection = false; //we got a packet, therefore no lost connection
-        Serial.println("got conn");
+        DEBUG_PRINTLN("got conn");
     }
 }
 
@@ -224,7 +225,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //Serial.println("got pkt");
+    //DEBUG_PRINTLN("got pkt");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -273,7 +274,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (type == 0b10 && Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
             { //sync packet from master
-                //Serial.println("Sync Packet");
+                //DEBUG_PRINTLN("Sync Packet");
 
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
 
@@ -283,7 +284,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
                 {
-                    Serial.println("update rate");
+                    DEBUG_PRINTLN("update rate");
                     switch (Radio.RXdataBuffer[3])
                     {
                     case 0:
@@ -303,15 +304,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     }
                 }
 
-                //Serial.println()
+                //DEBUG_PRINTLN()
             }
         }
         else
         {
-            Serial.println("crc failed");
-            //Serial.print(calculatedCRC);
-            //Serial.print("-");
-            //Serial.println(inCRC);
+            DEBUG_PRINTLN("crc failed");
+            //DEBUG_PRINT(calculatedCRC);
+            //DEBUG_PRINT("-");
+            //DEBUG_PRINTLN(inCRC);
             CRCerrorCounter++;
         }
         
@@ -319,7 +320,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     else
     {
-        Serial.println("wrong address");
+        DEBUG_PRINTLN("wrong address");
     }
 }
 
@@ -341,7 +342,7 @@ void ICACHE_RAM_ATTR sampleButton()
     { //falling edge
         buttonLastPressed = millis();
         buttonDown = true;
-        Serial.println("Manual Start");
+        DEBUG_PRINTLN("Manual Start");
         Radio.SetFrequency(GetInitialFreq());
         Radio.StartContRX();
     }
@@ -379,7 +380,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
 void setup()
 {
     Serial.begin(420000);
-    Serial.println("Module Booting...");
+    DEBUG_PRINTLN("Module Booting...");
     pinMode(16, OUTPUT);
     pinMode(2, INPUT);
 
@@ -395,10 +396,10 @@ void setup()
     FHSSrandomiseFHSSsequence();
 
 #ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
+    DEBUG_PRINTLN("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276;        //define radio module here
 #elif defined Regulatory_Domain_AU_433
-    Serial.println("Setting 433MHz Mode");
+    DEBUG_PRINTLN("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278;        //define radio module here
 #endif
 
@@ -442,16 +443,16 @@ void loop()
         case 1:
             SetRFLinkRate(RF_RATE_200HZ);
             delay(1000);
-            Serial.println("200 Hz");
+            DEBUG_PRINTLN("200 Hz");
             break;
         case 2:
             SetRFLinkRate(RF_RATE_100HZ);
             delay(1000);
-            Serial.println("100 Hz");
+            DEBUG_PRINTLN("100 Hz");
             break;
         case 3:
             SetRFLinkRate(RF_RATE_50HZ);
-            Serial.println("50 Hz");
+            DEBUG_PRINTLN("50 Hz");
             delay(1000);
             break;
 
@@ -509,24 +510,24 @@ void loop()
     //     CRCerrorCounter = 0;
     //     packetCounter = 0;
 
-    //     //Serial.println(linkQuality);
-    //     //Serial.println(CRCerrorRate);
+    //     //DEBUG_PRINTLN(linkQuality);
+    //     //DEBUG_PRINTLN(CRCerrorRate);
     // }
     //}
 
-    // Serial.print(MeasuredHWtimerInterval);
-    // Serial.print(" ");
-    // Serial.print(Offset);
-    // Serial.print(" ");
-    // Serial.print(HWtimerError);
+    // DEBUG_PRINT(MeasuredHWtimerInterval);
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(Offset);
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(HWtimerError);
 
-    // Serial.print("----");
+    // DEBUG_PRINT("----");
 
-    // Serial.print(Offset90);
-    // Serial.print(" ");
-    // Serial.print(HWtimerError90);
-    // Serial.print("----");
-    // Serial.println(packetCounter);
+    // DEBUG_PRINT(Offset90);
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(HWtimerError90);
+    // DEBUG_PRINT("----");
+    // DEBUG_PRINTLN(packetCounter);
     // delay(200);
 
     if (millis() > (buttonLastSampled + buttonSampleInterval))

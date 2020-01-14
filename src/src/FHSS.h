@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "debug.h"
 
 volatile uint8_t FHSSptr = 0;
 
@@ -90,7 +91,7 @@ uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
     
-    Serial.print("FHSSsequence[] = ");
+    DEBUG_PRINT("FHSSsequence[] = ");
 
     long macSeed = ((long)TxBaseMac[2] << 24) + ((long)TxBaseMac[3] << 16) + ((long)TxBaseMac[4] << 8) + TxBaseMac[5];
     rngSeed(macSeed);
@@ -134,8 +135,8 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
         tracker[rand] = tracker[rand] + 1;
         prev_val = rand;
 
-        Serial.print(FHSSsequence[i]);
-        Serial.print(", ");
+        DEBUG_PRINT(FHSSsequence[i]);
+        DEBUG_PRINT(", ");
     }
 
 #elif defined Regulatory_Domain_AU_433
@@ -153,11 +154,11 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
         prev_val = rand;
         FHSSsequence[i] = rand;
 
-        Serial.print(FHSSsequence[i]);
-        Serial.print(", ");
+        DEBUG_PRINT(FHSSsequence[i]);
+        DEBUG_PRINT(", ");
     }
 
 #endif
     
-    Serial.println("");
+    DEBUG_PRINTLN("");
 } 
