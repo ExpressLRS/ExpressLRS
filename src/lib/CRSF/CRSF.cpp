@@ -48,6 +48,10 @@ volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
+volatile uint32_t CRSF::RCdataLastRecv = 0;
+volatile int32_t CRSF::OpenTXsyncOffset = 0;
+volatile uint32_t CRSF::RequestedRCpacketInterval = 4000; // default to 250hz as per 'normal'
+
 //CRSF::CRSF(HardwareSerial &serial) : CRSF_SERIAL(serial){};
 
 void CRSF::Begin()
@@ -56,6 +60,9 @@ void CRSF::Begin()
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
     xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
+#ifdef FEATURE_OPENTX_SYNC
+    xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, NULL);
+#endif
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -80,6 +87,49 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
     //Serial.println(CRSFoutBuffer[0]);
 }
+
+void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
+{
+    CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
+    //Serial.println(CRSF::OpenTXsyncOffset);
+}
+
+void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
+{
+    for (;;)
+    {
+        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 4000;        // + offset that seems to be needed
+        uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
+
+        outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
+        outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 14?
+        outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;        // 0x3A
+
+        outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
+        outBuffer[4] = 0x00;                           //??? not sure doesn't seem to matter
+        outBuffer[5] = CRSF_FRAMETYPE_OPENTX_SYNC;     //0X10
+
+        outBuffer[6] = (packetRate & 0xFF000000) >> 24;
+        outBuffer[7] = (packetRate & 0x00FF0000) >> 16;
+        outBuffer[8] = (packetRate & 0x0000FF00) >> 8;
+        outBuffer[9] = (packetRate & 0x000000FF) >> 0;
+
+        outBuffer[10] = (offset & 0xFF000000) >> 24;
+        outBuffer[11] = (offset & 0x00FF0000) >> 16;
+        outBuffer[12] = (offset & 0x0000FF00) >> 8;
+        outBuffer[13] = (offset & 0x000000FF) >> 0;
+
+        uint8_t crc = CalcCRC(&outBuffer[2], OpenTXsyncFrameLength + 1);
+
+        outBuffer[OpenTXsyncFrameLength + 3] = crc;
+
+        memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, OpenTXsyncFrameLength + 4);
+        CRSFoutBuffer[0] = OpenTXsyncFrameLength + 4;
+        vTaskDelay(OpenTXsyncPakcetInterval);
+    }
+}
+
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -280,6 +330,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         GetChannelDataIn();
+        CRSF::RCdataLastRecv = micros();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
     }
