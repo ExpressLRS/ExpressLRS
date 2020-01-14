@@ -38,10 +38,10 @@ bool CRSF::firstboot = true;
 
 bool CRSF::CRSFstate = false;
 
-volatile uint8_t CRSF::SerialInPacketLen = 0;                        // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0;                        // index where we are reading/writing
-volatile uint8_t CRSF::SerialInBuffer[100] = {0};                    // max 64 bytes for CRSF packet
-volatile uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1] = {0}; // max 64 bytes for CRSF packet
+volatile uint8_t CRSF::SerialInPacketLen = 0;     // length of the CRSF packet as measured
+volatile uint8_t CRSF::SerialInPacketPtr = 0;     // index where we are reading/writing
+volatile uint8_t CRSF::SerialInBuffer[100] = {0}; // max 64 bytes for CRSF packet
+//volatile uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1] = {0}; // max 64 bytes for CRSF packet
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 
@@ -98,10 +98,11 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
 {
+    vTaskDelay(2000);
     for (;;)
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 4000;        // + offset that seems to be needed
+        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 8000;        // + offset that seems to be needed
         uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
@@ -273,9 +274,8 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
                     taskYIELD();
                     vTaskDelay(xDelay1);
-                    
 
-                    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written 
+                    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                     if (peekVal > 0)
                     {
                         if (SerialOutFIFO.size() >= peekVal)
@@ -335,8 +335,8 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         connected();
     }
 
-    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-    taskENTER_CRITICAL(&myMutex);
+    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    //askENTER_CRITICAL(&myMutex);
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
         Serial.println("Got Other Packet");
@@ -350,12 +350,12 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
-        GetChannelDataIn();
         CRSF::RCdataLastRecv = micros();
+        GetChannelDataIn();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
     }
-    taskEXIT_CRITICAL(&myMutex);
+    //taskEXIT_CRITICAL(&myMutex);
     //vTaskDelay(2);
 }
 
@@ -392,10 +392,5 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
 void ICACHE_RAM_ATTR CRSF::FlushSerial()
 {
-    //while (CRSF::Port.available())
-    //{
-    //CRSF::Port.read();
-    // }
-
     CRSF::Port.flush();
 }

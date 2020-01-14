@@ -489,7 +489,7 @@ void setup()
 void loop()
 {
 
-  //delay(100);
+  delay(100);
 
 #ifdef FEATURE_OPENTX_SYNC
   Serial.println(crsf.OpenTXsyncOffset);
