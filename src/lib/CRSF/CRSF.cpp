@@ -7,6 +7,8 @@
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
+
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 #endif
 
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
@@ -14,7 +16,7 @@ uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
-
+TaskHandle_t xHandleSerialOutFIFO = NULL;
 
 //U1RXD_IN_IDX
 //U1TXD_OUT_IDX
@@ -60,9 +62,6 @@ void CRSF::Begin()
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
     xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
-#ifdef FEATURE_OPENTX_SYNC
-    xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, NULL);
-#endif
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -83,8 +82,11 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-    memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, LinkStatisticsFrameLength + 4);
-    CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
+    //memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, LinkStatisticsFrameLength + 4);
+    //CRSFoutBuffer[0] = LinkStatisticsFrameLength + 4;
+
+    SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
     //Serial.println(CRSFoutBuffer[0]);
 }
 
@@ -124,8 +126,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
         outBuffer[OpenTXsyncFrameLength + 3] = crc;
 
-        memcpy((uint8_t *)CRSFoutBuffer + 1, outBuffer, OpenTXsyncFrameLength + 4);
-        CRSFoutBuffer[0] = OpenTXsyncFrameLength + 4;
+        SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
+        SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
+
         vTaskDelay(OpenTXsyncPakcetInterval);
     }
 }
@@ -213,6 +216,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
     uint32_t YieldInterval = 200;
 
     CRSF::duplex_set_RX();
+    FlushSerial();
 
     for (;;)
     {
@@ -223,6 +227,11 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
             {
                 CRSFstate = false;
                 Serial.println("CRSF UART Lost");
+                if (xHandleSerialOutFIFO != NULL)
+                {
+                    vTaskDelete(xHandleSerialOutFIFO);
+                }
+                SerialOutFIFO.flush();
                 disconnected();
             }
         }
@@ -264,18 +273,25 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     vTaskDelay(xDelay1);
                     taskYIELD();
 
-                    if (CRSFoutBuffer[0] > 0)
+                    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written 
+                    if (peekVal > 0)
                     {
-                        CRSF::duplex_set_TX();
-                        CRSF::Port.write((uint8_t *)CRSFoutBuffer + 1, CRSFoutBuffer[0]);
-                        memset((uint8_t *)CRSFoutBuffer, 0, CRSFoutBuffer[0] + 1);
-                        vTaskDelay(xDelay1);
-                        CRSF::duplex_set_RX();
-                    }
+                        if (SerialOutFIFO.size() >= peekVal)
+                        {
+                            CRSF::duplex_set_TX();
 
-                    FlushSerial();
+                            uint8_t OutPktLen = SerialOutFIFO.pop();
+                            uint8_t OutData[OutPktLen];
+
+                            SerialOutFIFO.popBytes(OutData, OutPktLen);
+                            CRSF::Port.write(OutData, OutPktLen); // write the packet out
+
+                            vTaskDelay(xDelay1);
+                            CRSF::duplex_set_RX();
+                            FlushSerial(); // we don't need to read back the byte we just wrote
+                        }
+                    }
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
-                    //vTaskDelay(xDelay1);
                 }
                 else
                 {
@@ -311,11 +327,14 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
+#ifdef FEATURE_OPENTX_SYNC
+        xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleSerialOutFIFO);
+#endif
         connected();
     }
 
-    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-    //taskENTER_CRITICAL(&myMutex);
+    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    taskENTER_CRITICAL(&myMutex);
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
         //Serial.println("Got Other Packet");
@@ -334,8 +353,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
     }
-
-    //taskEXIT_CRITICAL(&myMutex);
+    taskEXIT_CRITICAL(&myMutex);
     //vTaskDelay(2);
 }
 
