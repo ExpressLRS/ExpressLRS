@@ -1,6 +1,8 @@
 #pragma once
 
-//extern SX127xDriver Radio;
+/// General Features ///
+//#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (OpenTX 2.4 onwards) - this reduces latency
+/////////////////////////
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18

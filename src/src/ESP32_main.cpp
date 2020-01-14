@@ -185,6 +185,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   Radio.SetPreambleLength(mode.PreambleLen);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
+  crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
   DebugOutput += String(mode.rate) + "Hz";
   isRXconnected = false;
 }
@@ -215,6 +216,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
@@ -233,6 +235,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
     }
   }
+
+#ifdef FEATURE_OPENTX_SYNC
+  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+#endif
 
   uint32_t SyncInterval;
 
@@ -433,13 +439,13 @@ void setup()
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else // Below output power settings are for 1W modules
+#else                           // Below output power settings are for 1W modules
   // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
   Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #endif
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
@@ -454,6 +460,7 @@ void setup()
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
   Radio.TXdoneCallback3 = &HandleUpdateParameter;
+  //Radio.TXdoneCallback4 = &NULL;
 
   Radio.TimerDoneCallback = &SendRCdataToRF;
 
@@ -473,6 +480,10 @@ void loop()
 {
 
   delay(100);
+
+#ifdef FEATURE_OPENTX_SYNC
+  Serial.println(crsf.OpenTXsyncOffset);
+#endif
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
