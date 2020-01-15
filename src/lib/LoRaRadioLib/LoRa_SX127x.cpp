@@ -7,7 +7,7 @@
 #include "LoRa_SX1276.h"
 #include "LoRa_SX1278.h"
 
-#include "..\..\src\targets.h"
+#include "../../src/targets.h"
 
 //#include "FreeRTOS.h"
 //#include "esp32-hal-timer.h"
