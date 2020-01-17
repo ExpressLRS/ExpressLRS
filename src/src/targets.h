@@ -55,7 +55,7 @@
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 2
-#define GPIO_PIN_RCSIGNAL_TX 4
+#define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux 
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
