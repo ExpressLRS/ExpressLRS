@@ -288,7 +288,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 
                             vTaskDelay(xDelay1);
                             CRSF::duplex_set_RX();
-                            FlushSerial(); // we don't need to read back the byte we just wrote
+                            FlushSerial(); // we don't need to read back the data we just wrote
                         }
                     }
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);

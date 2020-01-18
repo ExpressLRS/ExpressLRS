@@ -1,7 +1,7 @@
 #pragma once
 
 /// General Features ///
-#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (OpenTX 2.4 onwards) - this reduces latency
+#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 /////////////////////////
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
@@ -66,10 +66,11 @@
 #define GPIO_PIN_MISO 12
 #define GPIO_PIN_SCK 14
 #define GPIO_PIN_RST 2
+#define GPIO_PIN_LED 16
 #define GPIO_PIN_RX_ENABLE -1
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
-#define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266=esp8285
+#define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
 #endif
