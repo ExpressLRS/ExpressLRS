@@ -122,6 +122,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
         }
+        crsf.sendLinkStatisticsToFC();
     }
 }
 
@@ -286,7 +287,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             if (type == 0b00) //std 4 channel switch data
             {
                 UnpackChannelData_11bit();
-                //crsf.sendRCFrameToFC();
+                crsf.sendRCFrameToFC();
             }
 
             if (type == 0b01)
@@ -298,7 +299,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
 
-                    //crsf.sendRCFrameToFC();
+                    crsf.sendRCFrameToFC();
                     //Serial.println("Switch Pkt");
                 }
             }
