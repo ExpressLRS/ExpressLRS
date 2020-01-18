@@ -9,14 +9,14 @@ HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-#endif
-
-uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
-uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 TaskHandle_t xHandleSerialOutFIFO = NULL;
+#endif
+
+uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
+uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
 //U1RXD_IN_IDX
 //U1TXD_OUT_IDX
@@ -273,7 +273,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     vTaskDelay(xDelay1);
                     taskYIELD();
 
-                    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written 
+                    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                     if (peekVal > 0)
                     {
                         if (SerialOutFIFO.size() >= peekVal)
