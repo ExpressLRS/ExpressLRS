@@ -81,7 +81,7 @@ uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
 const uint32_t RFmodeCycleAddtionalTime[3] = {1000, 2000, 5000}; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
-const uint32_t RFmodeCycleInterval[3] = {500, 1000, 2500};
+const uint32_t RFmodeCycleInterval[3] = {1000, 1500, 3500};
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
