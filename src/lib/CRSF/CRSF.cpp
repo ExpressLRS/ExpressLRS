@@ -1,6 +1,6 @@
-#include "..\..\src\targets.h"
+#include "../../src/targets.h"
 #include "CRSF.h"
-#include "..\..\lib\FIFO\FIFO.h"
+#include "../../lib/FIFO/FIFO.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
 
