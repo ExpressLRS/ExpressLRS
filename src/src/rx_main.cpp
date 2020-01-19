@@ -7,6 +7,7 @@
 #include "FHSS.h"
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
+
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
 #endif
@@ -45,9 +46,6 @@ int16_t Offset90;
 uint32_t SerialDebugPrintInterval = 250;
 uint32_t LastSerialDebugPrint = 0;
 
-uint32_t RFmodeLastCycled = 0;
-uint32_t RFmodeCycleInterval = 1000;
-
 uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
 bool LED = false;
@@ -82,9 +80,6 @@ uint32_t PacketRateInterval = 1000;
 
 float PacketRate = 0.0;
 
-//const uint32_t LostConnectionDelay[3] = {1000, 1500, 2000}; //after 1500ms we consider that we lost connection to the TX
-//bool isLostConnection = true;
-bool gotFHSSsync = false;
 uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 ///////////////////////////////////////////////////////////////
 
@@ -152,7 +147,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
-            crsf.sendLinkStatisticsToFC();
+            //crsf.sendLinkStatisticsToFC();
             // Serial.println("TLM");
             addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
@@ -223,7 +218,7 @@ void ICACHE_RAM_ATTR LostConnection()
     if (connectionState != disconnected)
     {
         //StopHWtimer();
-        connectionStatePrev == connectionState;
+        connectionStatePrev = connectionState;
         connectionState = disconnected; //set lost connection
 
         digitalWrite(GPIO_PIN_LED, 0);        // turn off led
@@ -234,7 +229,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    connectionStatePrev == connectionState;
+    connectionStatePrev = connectionState;
     connectionState = tentative;
     Serial.println("tentative conn");
 }
@@ -243,7 +238,7 @@ void ICACHE_RAM_ATTR GotConnection()
 {
     if (connectionState != connected)
     {
-        connectionStatePrev == connectionState;
+        connectionStatePrev = connectionState;
         connectionState = connected; //we got a packet, therefore no lost connection
 
         RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
@@ -284,7 +279,6 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //Serial.println("got pkt");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -300,7 +294,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             packetCounter++;
             addPacketToLQ();
-            getRFlinkInfo(); // run if CRC and addr is valid
+            //getRFlinkInfo(); // run if CRC and addr is valid
 
             //Serial.println(linkQuality);
 
@@ -311,11 +305,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             HWtimerError90 = micros() - HWtimerGetlastCallbackMicros90();
 
             uint32_t HWtimerInterval = HWtimerGetIntervalMicros();
-            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            Offset = SimpleLowPass(HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 250); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             //Offset = (HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0);
             //Serial.println(Offset);
             HWtimerPhaseShift(Offset / 2);
             // Serial.println(Offset);
+
+            getRFlinkInfo();
 
             if (type == 0b00) //std 4 channel switch data
             {
@@ -368,30 +364,31 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
                     // }
 
-                    FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+                    
                     //NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
+                    FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                     NonceRXlocal = Radio.RXdataBuffer[2];
 
                     //Serial.println()
                 }
             }
-            if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
-            {
-                HandleFHSS();
-                alreadyFHSS = true;
-            }
+            //if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+           // {
+            //    HandleFHSS();
+            //    alreadyFHSS = true;
+           // }
+
             // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.TLMinterval) == 0)
             // {
             //     HandleSendTelemetryResponse();
             //     alreadyTLMresp = true;
             // }
+            //getRFlinkInfo(); // run if CRC is valid and the packet is for us
         }
         else
         {
             Serial.println("wrong address");
         }
-
-        getRFlinkInfo(); // run if CRC is valid
     }
     else
     {
@@ -490,8 +487,6 @@ void setup()
     // delay(200);
     // digitalWrite(GPIO_PIN_LED, LOW);
 
-    FHSSrandomiseFHSSsequence();
-
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
@@ -500,7 +495,8 @@ void setup()
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
-    Serial.println("1");
+    FHSSrandomiseFHSSsequence();
+    Radio.SetFrequency(GetInitialFreq());
 
     Radio.Begin();
 
@@ -514,7 +510,6 @@ void setup()
 
     HWtimerSetCallback(&Test);
     HWtimerSetCallback90(&Test90);
-    InitHarwareTimer();
     SetRFLinkRate(RF_RATE_200HZ);
     InitHarwareTimer();
 }
@@ -637,7 +632,6 @@ void loop()
     }
 
     //yield();
-
 
 #ifdef Auto_WiFi_On_Boot
     if ((connectionState == disconnected) && !webUpdateMode && millis() > 10000 && millis() < 11000)
