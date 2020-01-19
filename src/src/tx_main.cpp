@@ -500,31 +500,29 @@ void loop()
     isRXconnected = true;
   }
 
-  if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+  //if (millis() > (PacketRateLastChecked + PacketRateInterval)//just some debug data
+  //{
+  // if (isRXconnected)
+  // {
+  //   if ((Radio.RXdataBuffer[2] < 30 || Radio.RXdataBuffer[4] < 10))
+  //   {
+  //     IncreasePower();
+  //   }
+  //   if (Radio.RXdataBuffer[2] > 60 || Radio.RXdataBuffer[4] > 40)
+  //   {
+  //     DecreasePower();
+  //   }
+  //   crsf.sendLinkStatisticsToTX();
+  // }
+
+  float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
+  PacketRateLastChecked = millis();
+  PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
+  linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+
+  if (linkQuality > 99)
   {
-
-    // if (isRXconnected)
-    // {
-    //   if ((Radio.RXdataBuffer[2] < 30 || Radio.RXdataBuffer[4] < 10))
-    //   {
-    //     IncreasePower();
-    //   }
-    //   if (Radio.RXdataBuffer[2] > 60 || Radio.RXdataBuffer[4] > 40)
-    //   {
-    //     DecreasePower();
-    //   }
-    //   crsf.sendLinkStatisticsToTX();
-    // }
-
-    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-    PacketRateLastChecked = millis();
-    PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
-    linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
-
-    if (linkQuality > 99)
-    {
-      linkQuality = 99;
-    }
-    packetCounteRX_TX = 0;
+    linkQuality = 99;
   }
+  packetCounteRX_TX = 0;
 }

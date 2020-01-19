@@ -19,6 +19,7 @@ void (*HWtimerCallBack90)(void) = NULL;
 #define HardwareTimerBaseInterval 1000;
 #define TimerIntervalUSDefault 16000
 volatile uint32_t HWtimerInterval = TimerIntervalUSDefault;
+volatile uint32_t HWtimerIntervalUS;
 volatile bool TickTock = false;
 volatile uint32_t HWtimerLastCallbackMicros;
 volatile uint32_t HWtimerLastCallbackMicros90;

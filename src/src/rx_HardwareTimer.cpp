@@ -25,25 +25,26 @@ uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90()
 
 uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros()
 {
-    return HWtimerInterval;
+    return HWtimerIntervalUS;
 }
 
 void ICACHE_RAM_ATTR HWtimerUpdateInterval(uint32_t _TimerInterval)
 {
 #ifdef PLATFORM_STM32
     HWtimerInterval = _TimerInterval;
-    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT);
+    MyTim->setOverflow(HWtimerInterval >> 1, MICROSEC_FORMAT);
 #else
     HWtimerInterval = _TimerInterval * 5;
-    timer1_write(HWtimerInterval / 2);
+    timer1_write(HWtimerInterval >> 1);
 #endif
+    HWtimerIntervalUS = _TimerInterval;
 }
 
 void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t NewOffset)
 {
 
     //HWtimer::PhaseShift = Offset_ * 5;
-    int16_t MaxPhaseShift = HWtimerInterval >> 2;
+    int16_t MaxPhaseShift = HWtimerInterval >> 1;
     //int16_t MaxPhaseShift = 2500;
     //#define MaxPhaseShift 2500
 
@@ -84,19 +85,19 @@ void ICACHE_RAM_ATTR Timer0Callback()
         if (ResetNextLoop)
         {
 #ifdef PLATFORM_STM32
-            MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT);
+            MyTim->setOverflow(HWtimerInterval >> 1, MICROSEC_FORMAT);
 #else
-            timer1_write(HWtimerInterval / 2);
+            timer1_write(HWtimerInterval >> 1);
 #endif
             ResetNextLoop = false;
         }
 
-        if (PhaseShift > 10 || PhaseShift < 10)
+        if (PhaseShift > 0 || PhaseShift < 0)
         {
 #ifdef PLATFORM_STM32
-            MyTim->setOverflow((HWtimerInterval + PhaseShift) / 2, MICROSEC_FORMAT);
+            MyTim->setOverflow((HWtimerInterval + PhaseShift) >> 1, MICROSEC_FORMAT);
 #else
-            timer1_write((HWtimerInterval + PhaseShift) / 2);
+            timer1_write((HWtimerInterval + PhaseShift) >> 1);
 #endif
             ResetNextLoop = true;
             PhaseShift = 0;
@@ -123,7 +124,7 @@ void ICACHE_RAM_ATTR InitHarwareTimer()
 #ifdef PLATFORM_STM32
     MyTim->attachInterrupt(Timer0Callback);
     MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
-    MyTim->setOverflow(HWtimerInterval / 2, MICROSEC_FORMAT);
+    MyTim->setOverflow(HWtimerInterval >> 1, MICROSEC_FORMAT);
     MyTim->resume();
 #else
     timer1_attachInterrupt(Timer0Callback);
