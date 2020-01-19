@@ -61,7 +61,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 0, NULL);
+    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 20000, NULL, 255, NULL, 0);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -98,7 +98,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
 {
-    vTaskDelay(2000);
+    vTaskDelay(500);
     for (;;)
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
@@ -206,10 +206,6 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 {
 
     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
-    const TickType_t xDelay2 = 2 / portTICK_PERIOD_MS;
-    const TickType_t xDelay3 = 3 / portTICK_PERIOD_MS;
-    const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
-    const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false);
     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
@@ -272,7 +268,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
-                    taskYIELD();
+                    //taskYIELD();
                     vTaskDelay(xDelay1);
 
                     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
@@ -293,6 +289,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                             FlushSerial(); // we don't need to read back the data we just wrote
                         }
                     }
+                    vTaskDelay(xDelay1);
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                 }
                 else
@@ -313,7 +310,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     CRSFframeActive = false;
                     SerialInPacketPtr = 0;
                     FlushSerial();
-                    //vTaskDelay(xDelay);
+                    vTaskDelay(xDelay1);
                 }
             }
         }
@@ -330,7 +327,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
 #ifdef FEATURE_OPENTX_SYNC
-        xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleSerialOutFIFO);
+        xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 254, &xHandleSerialOutFIFO, 1);
 #endif
         connected();
     }

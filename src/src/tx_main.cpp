@@ -76,7 +76,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
-  Serial.println("TLMpacket0");
+  //Serial.println("TLMpacket0");
 
   if (packetAddr == DeviceAddr)
   {
@@ -85,8 +85,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       packetCounteRX_TX++;
       if (type == 0b11) //tlmpacket
       {
-        Serial.println("TLMpacket1");
-        Serial.println(type);
+        //Serial.println("TLMpacket1");
+        //Serial.println(type);
         isRXconnected = true;
         LastTLMpacketRecvMillis = millis();
 
@@ -141,9 +141,9 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   //Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = baseMac[3];
-  Radio.TXdataBuffer[5] = baseMac[4];
-  Radio.TXdataBuffer[6] = baseMac[5];
+  Radio.TXdataBuffer[4] = TxBaseMac[3];
+  Radio.TXdataBuffer[5] = TxBaseMac[4];
+  Radio.TXdataBuffer[6] = TxBaseMac[5];
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
@@ -231,6 +231,10 @@ void ICACHE_RAM_ATTR HandleTLM()
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
 
+#ifdef FEATURE_OPENTX_SYNC
+  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+#endif
+
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
@@ -249,10 +253,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
     }
   }
-
-#ifdef FEATURE_OPENTX_SYNC
-  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
-#endif
 
   uint32_t SyncInterval;
 
