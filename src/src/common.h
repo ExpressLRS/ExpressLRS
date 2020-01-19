@@ -12,7 +12,8 @@
 
 ///uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
 
-uint8_t TxBaseMac[6] = {180, 230, 45, 152, 126, 65}; //sandro mac
+//uint8_t TxBaseMac[6] = {180, 230, 45, 152, 126, 65}; //sandro mac
+uint8_t TxBaseMac[6] = {180, 230, 45, 152, 125, 173}; // Wez's MAC
 
 uint8_t CRCCaesarCipher = TxBaseMac[4];
 
@@ -58,7 +59,7 @@ typedef struct expresslrs_mod_settings_s
 
 } expresslrs_mod_settings_t;
 
-expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000, 200, 64, 8, 8, RATE_200HZ};
+expresslrs_mod_settings_s RF_RATE_200HZ = {BW_500_00_KHZ, SF_6, CR_4_5, 5000, 200, 64, 4, 8, RATE_200HZ};
 expresslrs_mod_settings_s RF_RATE_100HZ = {BW_500_00_KHZ, SF_7, CR_4_7, 10000, 100, 32, 4, 10, RATE_100HZ};
 expresslrs_mod_settings_s RF_RATE_50HZ = {BW_500_00_KHZ, SF_8, CR_4_7, 20000, 50, 16, 2, 10, RATE_50HZ};
 expresslrs_mod_settings_s RF_RATE_25HZ = {BW_250_00_KHZ, SF_8, CR_4_7, 40000, 25, 0, 2, 8, RATE_25HZ};
