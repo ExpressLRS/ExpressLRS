@@ -1,6 +1,6 @@
-#include "..\..\src\targets.h"
+#include "../../src/targets.h"
 #include "CRSF.h"
-#include "..\..\lib\FIFO\FIFO.h"
+#include "../../lib/FIFO/FIFO.h"
 #include <Arduino.h>
 #include "HardwareSerial.h"
 
@@ -13,13 +13,10 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 TaskHandle_t xHandleSerialOutFIFO = NULL;
-
 #endif
 
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
 uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
-
-
 
 //U1RXD_IN_IDX
 //U1TXD_OUT_IDX
@@ -293,7 +290,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 
                             vTaskDelay(xDelay1);
                             CRSF::duplex_set_RX();
-                            FlushSerial(); // we don't need to read back the byte we just wrote
+                            FlushSerial(); // we don't need to read back the data we just wrote
                         }
                     }
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
