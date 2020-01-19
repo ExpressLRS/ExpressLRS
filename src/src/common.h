@@ -12,7 +12,9 @@
 //uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
 
 // uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
-uint8_t TxBaseMac[6] = {36, 111, 40, 158, 122, 220};
+// uint8_t TxBaseMac[6] = {36, 111, 40, 158, 122, 220};
+
+uint8_t TxBaseMac[6] = {180, 230, 45, 152, 125, 173}; // Wez's MAC
 
 uint8_t CRCCaesarCipher = TxBaseMac[4];
 

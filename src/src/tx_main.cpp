@@ -475,6 +475,7 @@ void setup()
 
   Radio.Begin();
   SetRFLinkRate(RF_RATE_200HZ);
+  // SetRFLinkRate(RF_RATE_100HZ);
   crsf.Begin();
 }
 
