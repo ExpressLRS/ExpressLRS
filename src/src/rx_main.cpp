@@ -20,7 +20,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 //Filters//
 LPF LPF_PacketInterval(3);
-LPF LPF_Offset(2);
+LPF LPF_Offset(3);
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
@@ -385,12 +385,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             {
                 PacketInterval = Interval;
                 PacketIntervalError = ExpressLRS_currAirRate.interval - PacketInterval;
+
+#ifdef PLATFORM_STM32
                 uint32_t Flt_Val = LPF_PacketInterval.update(Interval);
 
                 if (HWtimerGetIntervalMicros() != Flt_Val)
                 {
                     HWtimerUpdateInterval(Flt_Val);
                 }
+#endif
             }
             Serial.print(Offset);
             Serial.print(":");
