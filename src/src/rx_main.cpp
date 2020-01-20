@@ -13,6 +13,8 @@
 #include "ESP8266_WebUpdate.h"
 #endif
 
+#include "errata.h"
+
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
@@ -94,6 +96,7 @@ uint32_t SendLinkStatstoFCintervalLastSent = 0;
 ///////////////////////////////////////////////////////////////
 
 uint32_t PacketIntervalError;
+uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
@@ -208,7 +211,6 @@ void ICACHE_RAM_ATTR LostConnection()
 {
     if (connectionState != disconnected)
     {
-        StopHWtimer();
         connectionStatePrev = connectionState;
         connectionState = disconnected; //set lost connection
 
@@ -220,7 +222,6 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    InitHarwareTimer();
     connectionStatePrev = connectionState;
     connectionState = tentative;
     Serial.println("tentative conn");
@@ -382,19 +383,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if ((Interval < (ExpressLRS_currAirRate.interval + 250)) && (Interval > (ExpressLRS_currAirRate.interval - 250)))
             {
-                PacketIntervalError = ExpressLRS_currAirRate.interval - Interval;
+                PacketInterval = Interval;
+                PacketIntervalError = ExpressLRS_currAirRate.interval - PacketInterval;
                 uint32_t Flt_Val = LPF_PacketInterval.update(Interval);
+
                 if (HWtimerGetIntervalMicros() != Flt_Val)
                 {
-                    // HWtimerUpdateInterval(Flt_Val);
+                    HWtimerUpdateInterval(Flt_Val);
                 }
             }
-
             Serial.print(Offset);
-            Serial.print("___");
-            Serial.print(Interval);
-            Serial.print("___");
-            Serial.println(HWtimerGetIntervalMicros());
+            Serial.print(":");
+            Serial.println(PacketInterval);
         }
         else
         {
@@ -426,36 +426,40 @@ void beginWebsever()
 void ICACHE_RAM_ATTR sampleButton()
 {
 
-    // bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
+    bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
-    // if (buttonValue == false && buttonPrevValue == true)
-    // { //falling edge
-    //     buttonLastPressed = millis();
-    //     buttonDown = true;
-    //     Serial.println("Manual Start");
-    //     Radio.SetFrequency(GetInitialFreq());
-    //     Radio.StartContRX();
-    // }
+    if (buttonValue == false && buttonPrevValue == true)
+    { //falling edge
+        buttonLastPressed = millis();
+        buttonDown = true;
+        Serial.println("Manual Start");
+        Radio.SetFrequency(GetInitialFreq());
+        Radio.StartContRX();
+    }
 
-    // if (buttonValue == true && buttonPrevValue == false) //rising edge
-    // {
-    //     buttonDown = false;
-    // }
+    if (buttonValue == true && buttonPrevValue == false) //rising edge
+    {
+        buttonDown = false;
+    }
 
-    // if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
-    // {
-    //     if (!webUpdateMode)
-    //     {
-    //         beginWebsever();
-    //     }
-    // }
+    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
+    {
+        if (!webUpdateMode)
+        {
+            beginWebsever();
+        }
+    }
 
-    // if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
-    // {
-    //     ESP.restart();
-    // }
+    if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
+    {
+        //ESP.restart();
+        void (*SysMemBootJump)(void);
+        const uint32_t addr = 0x08000000;
+        SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
+        SysMemBootJump();
+    }
 
-    // buttonPrevValue = buttonValue;
+    buttonPrevValue = buttonValue;
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
@@ -524,6 +528,8 @@ void setup()
     HWtimerSetCallback90(&Test90);
     InitHarwareTimer();
     SetRFLinkRate(RF_RATE_200HZ);
+    //errata(); -- testing things don't use for now.
+    //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
 }
 
 void loop()
