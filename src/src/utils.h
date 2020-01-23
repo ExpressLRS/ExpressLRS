@@ -17,6 +17,9 @@
 //   Serial.println(crsf.ChannelDataIn[7]);
 // }
 
+#include "STM32F1xx.h"
+#include "stm32f1xx_hal.h"
+
 unsigned long seed = 0;
 
 long rng(void)
@@ -50,15 +53,10 @@ long rng0to2(void)
 {
     int randomNumber = rng() & 0b11;
 
-    while(randomNumber == 3) {
+    while (randomNumber == 3)
+    {
         randomNumber = rng() & 0b11;
     }
     return randomNumber;
-} 
-
-
-__asm void __set_MSP(unsigned int mainStackPointer)
-{
-	msr msp, r0
-	bx lr
 }
+

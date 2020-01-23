@@ -460,13 +460,6 @@ void ICACHE_RAM_ATTR sampleButton()
     {
         //ESP.restart();
         //Serial.println("Setting Bootloader Bit..");
-        //volatile char BLrequested = *(bool*)0x20004FF4;
-        //BLrequested = 0x80;
-        void (*SysMemBootJump)(void);
-        const uint32_t addr = 0x08000000;
-        SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
-        //Serial.println("Jumping to Bootloader..");
-        SysMemBootJump();
 
         // typedef void (*pFunction)(void);
         // pFunction JumpToApplication;
@@ -481,9 +474,8 @@ void ICACHE_RAM_ATTR sampleButton()
         // __DSB();
         // __ISB();
         // JumpToApplication = (void (*)(void))(*((uint32_t *)(0x1FFF0000 + 4))); /* Initialize user application's Stack Pointer */
-         //__set_MSP(*(__IO uint32_t *)0x1FFF0000);
+        //__set_MSP(*(__IO uint32_t *)0x1FFF0000);
         // JumpToApplication();
-        ‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍
     }
 
     buttonPrevValue = buttonValue;
@@ -563,6 +555,18 @@ void setup()
     //const uint32_t addr = 0x0800000;
     //SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
     //SysMemBootJump();
+
+    Serial.println("yay!! new firmware!!");
+
+    // volatile char BLrequested = *(bool *)0x20004FF4;
+    // BLrequested = 0x80;
+
+    // void (*SysMemBootJump)(void);
+    // const uint32_t addr = 0x08000000;
+    // SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
+    // //Serial.println("Jumping to Bootloader..");
+    // __set_MSP(*(__IO uint32_t *)addr);
+    // SysMemBootJump();
 }
 
 void loop()
