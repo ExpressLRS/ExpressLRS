@@ -361,12 +361,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
             }
 
-            // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
-            // {
-            //     HandleFHSS();
-            //     alreadyFHSS = true;
-            // }
-
             // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.TLMinterval) == 0)
             // {
             //     HandleSendTelemetryResponse();
@@ -376,28 +370,37 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacket = millis();
             addPacketToLQ();
 
-            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1) + 250); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)) + 250; //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift(Offset >> 1);
 
-            uint32_t Interval = LastValidPacketMicros - LastValidPacketPrevMicros;
+            // uint32_t Interval = LastValidPacketMicros - LastValidPacketPrevMicros;
 
-            if ((Interval < (ExpressLRS_currAirRate.interval + 250)) && (Interval > (ExpressLRS_currAirRate.interval - 250)))
-            {
-                PacketInterval = Interval;
-                PacketIntervalError = ExpressLRS_currAirRate.interval - PacketInterval;
+            //  if ((Interval < (ExpressLRS_currAirRate.interval + 250)) && (Interval > (ExpressLRS_currAirRate.interval - 250)))
+            //    {
+            //       PacketInterval = Interval;
+            //       PacketIntervalError = ExpressLRS_currAirRate.interval - PacketInterval;
 
-#ifdef PLATFORM_STM32
-                uint32_t Flt_Val = LPF_PacketInterval.update(Interval);
+            // #ifdef PLATFORM_STM32
+            //                 uint32_t Flt_Val = LPF_PacketInterval.update(Interval);
 
-                if (HWtimerGetIntervalMicros() != Flt_Val)
-                {
-                    HWtimerUpdateInterval(Flt_Val);
-                }
-#endif
-            }
+            //                 if (HWtimerGetIntervalMicros() != Flt_Val)
+            //                 {
+            //                     HWtimerUpdateInterval(Flt_Val);
+            //                 }
+            // #endif
+            //  }
+            Serial.print("Offset: ");
             Serial.print(Offset);
-            Serial.print(":");
-            Serial.println(PacketInterval);
+            Serial.print(" LQ: ");
+            Serial.println(linkQuality);
+            //Serial.print(":");
+            //Serial.println(PacketInterval);
+
+            if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+            {
+                HandleFHSS();
+                alreadyFHSS = true;
+            }
         }
         else
         {
@@ -445,7 +448,7 @@ void ICACHE_RAM_ATTR sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown)
+    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown) // button held down
     {
         if (!webUpdateMode)
         {
@@ -456,10 +459,31 @@ void ICACHE_RAM_ATTR sampleButton()
     if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
     {
         //ESP.restart();
+        //Serial.println("Setting Bootloader Bit..");
+        //volatile char BLrequested = *(bool*)0x20004FF4;
+        //BLrequested = 0x80;
         void (*SysMemBootJump)(void);
         const uint32_t addr = 0x08000000;
         SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
+        //Serial.println("Jumping to Bootloader..");
         SysMemBootJump();
+
+        // typedef void (*pFunction)(void);
+        // pFunction JumpToApplication;
+        // uint32_t JumpAddress;
+        // HAL_RCC_DeInit();
+        // SysTick->CTRL = 0;
+        // SysTick->LOAD = 0;
+        // SysTick->VAL = 0; /** * Step: Disable all interrupts */
+        // __disable_irq();  /* ARM Cortex-M Programming Guide to Memory Barrier Instructions.*/
+        // __DSB();
+        // __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH(); /* Remap is bot visible at once. Execute some unrelated command! */
+        // __DSB();
+        // __ISB();
+        // JumpToApplication = (void (*)(void))(*((uint32_t *)(0x1FFF0000 + 4))); /* Initialize user application's Stack Pointer */
+         //__set_MSP(*(__IO uint32_t *)0x1FFF0000);
+        // JumpToApplication();
+        ‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍
     }
 
     buttonPrevValue = buttonValue;
@@ -472,6 +496,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     ExpressLRS_currAirRate = mode;
     HWtimerUpdateInterval(mode.interval);
     LPF_PacketInterval.init(mode.interval);
+    LPF_Offset.init(0);
     InitHarwareTimer();
     Radio.RXnb();
 }
@@ -531,8 +556,13 @@ void setup()
     HWtimerSetCallback90(&Test90);
     InitHarwareTimer();
     SetRFLinkRate(RF_RATE_200HZ);
-    //errata(); -- testing things don't use for now.
+    //errata(); //-- testing things don't use for now.
     //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
+
+    //void (*SysMemBootJump)(void);
+    //const uint32_t addr = 0x0800000;
+    //SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
+    //SysMemBootJump();
 }
 
 void loop()

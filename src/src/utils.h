@@ -55,3 +55,10 @@ long rng0to2(void)
     }
     return randomNumber;
 } 
+
+
+__asm void __set_MSP(unsigned int mainStackPointer)
+{
+	msr msp, r0
+	bx lr
+}

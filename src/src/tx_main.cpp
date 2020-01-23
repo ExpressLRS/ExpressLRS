@@ -415,6 +415,9 @@ void setup()
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
 
+  pinMode(4, INPUT_PULLUP);
+  pinMode(36, INPUT_PULLUP);
+
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // TxBaseMac[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
@@ -484,6 +487,16 @@ void loop()
 {
 
   delay(100);
+
+  if (digitalRead(4) == 0)
+  {
+    Serial.println("Switch Pressed!");
+  }
+
+  if (digitalRead(36) == 0)
+  {
+    Serial.println("Switch Pressed!");
+  }
 
 #ifdef FEATURE_OPENTX_SYNC
   Serial.println(crsf.OpenTXsyncOffset);
