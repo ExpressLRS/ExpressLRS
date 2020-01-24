@@ -13,6 +13,10 @@
 #include "ESP8266_WebUpdate.h"
 #endif
 
+#ifdef PLATFORM_STM32
+#include "STM32_UARTinHandler.h"
+#endif
+
 #include "errata.h"
 
 SX127xDriver Radio;
@@ -217,6 +221,10 @@ void ICACHE_RAM_ATTR LostConnection()
         digitalWrite(GPIO_PIN_LED, 0);        // turn off led
         Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Serial.println("lost conn");
+
+#ifdef PLATFORM_STM32
+        digitalWrite(GPIO_PIN_LED_GEEN, LOW);
+#endif
     }
 }
 
@@ -237,6 +245,10 @@ void ICACHE_RAM_ATTR GotConnection()
         RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
         digitalWrite(GPIO_PIN_LED, 1); // turn on led
         Serial.println("got conn");
+
+#ifdef PLATFORM_STM32
+        digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
+#endif
     }
 }
 
@@ -461,21 +473,7 @@ void ICACHE_RAM_ATTR sampleButton()
         //ESP.restart();
         //Serial.println("Setting Bootloader Bit..");
 
-        // typedef void (*pFunction)(void);
-        // pFunction JumpToApplication;
-        // uint32_t JumpAddress;
-        // HAL_RCC_DeInit();
-        // SysTick->CTRL = 0;
-        // SysTick->LOAD = 0;
-        // SysTick->VAL = 0; /** * Step: Disable all interrupts */
-        // __disable_irq();  /* ARM Cortex-M Programming Guide to Memory Barrier Instructions.*/
-        // __DSB();
-        // __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH(); /* Remap is bot visible at once. Execute some unrelated command! */
-        // __DSB();
-        // __ISB();
-        // JumpToApplication = (void (*)(void))(*((uint32_t *)(0x1FFF0000 + 4))); /* Initialize user application's Stack Pointer */
-        //__set_MSP(*(__IO uint32_t *)0x1FFF0000);
-        // JumpToApplication();
+
     }
 
     buttonPrevValue = buttonValue;
@@ -509,19 +507,11 @@ void setup()
 #endif
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
+
 #ifdef PLATFORM_STM32
     pinMode(GPIO_PIN_LED_GEEN, OUTPUT);
 #endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
-
-    // delay(200);
-    // digitalWrite(GPIO_PIN_LED, HIGH);
-    // delay(200);
-    // digitalWrite(GPIO_PIN_LED, LOW);
-    // delay(200);
-    // digitalWrite(GPIO_PIN_LED, HIGH);
-    // delay(200);
-    // digitalWrite(GPIO_PIN_LED, LOW);
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
@@ -561,12 +551,7 @@ void setup()
     // volatile char BLrequested = *(bool *)0x20004FF4;
     // BLrequested = 0x80;
 
-    // void (*SysMemBootJump)(void);
-    // const uint32_t addr = 0x08000000;
-    // SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
-    // //Serial.println("Jumping to Bootloader..");
-    // __set_MSP(*(__IO uint32_t *)addr);
-    // SysMemBootJump();
+
 }
 
 void loop()
@@ -698,6 +683,10 @@ void loop()
     {
         beginWebsever();
     }
+#endif
+
+#ifdef PLATFORM_STM32
+    STM32_RX_HandleUARTin();
 #endif
 
 #ifdef PLATFORM_ESP8266

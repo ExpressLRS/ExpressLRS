@@ -17,8 +17,8 @@
 //   Serial.println(crsf.ChannelDataIn[7]);
 // }
 
-#include "STM32F1xx.h"
-#include "stm32f1xx_hal.h"
+//#include "STM32F1xx.h"
+//#include "stm32f1xx_hal.h"
 
 unsigned long seed = 0;
 
