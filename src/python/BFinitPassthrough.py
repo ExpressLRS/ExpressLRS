@@ -5,6 +5,12 @@ import sys
 
 result = []
 
+
+try:
+    requestedBaudrate = int(sys.argv[1])
+except:
+    requestedBaudrate = 420000
+
 def serial_ports():
     """ Lists serial port names
 
@@ -32,8 +38,14 @@ def serial_ports():
             pass
     return result
 
-if __name__ == '__main__':
-    print(serial_ports())
+sys.stdout.write('\n')
+sys.stdout.write('Begin')
+sys.stdout.write('\n')
+sys.stdout.flush()	
+print(serial_ports())
+	
+if(len(result) == 0):
+    raise EnvironmentError('No valid serial port detected or port already open')
 
 print("Going to try using "+ result[0])
 
@@ -58,7 +70,8 @@ while s.in_waiting:
     reading = s.readline().decode('utf-8')
     if "serial" in reading:
         lines.append(reading)
-        print(reading)
+        sys.stdout.write(reading[0:len(reading)-1])
+        sys.stdout.flush()
 
 for line in lines:
     if line[0:6] == "serial":
@@ -74,22 +87,28 @@ for i in range(0,len(serialInfo)):
         uartNumber = data
         SerialRXindex = i
 
+sys.stdout.write('\n')	
+	
 if uartNumber != -1:
     print("Detected Betaflight Serial RX config: " +str(serialInfo[SerialRXindex]))
 else:
-    print("Failed to detect correct serial RX config, possibly already configured?")
-    print("If next step fails please reboot FC")
-    print()
-    print()
+    sys.stdout.write("Failed to make contract with Betaflight, possibly already in passthrough mode?\n")
+    sys.stdout.write("If the next step fails please reboot FC\n")
+    sys.stdout.write('\n')
+    sys.stdout.flush()	
     sys.exit()
 
-print("Setting serial passthrough...")    
-s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" 420000\n").encode())
+sys.stdout.write("Setting serial passthrough...\n")    
+s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n').encode())
+sys.stdout.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n'))
 time.sleep(0.2)
 
 while s.in_waiting:
     reading = s.readline().decode('utf-8')
     lines.append(reading)
+    #sys.stdout.write(reading)
+    #sys.stdout.flush()
 
+s.flush()
 print()
 print()

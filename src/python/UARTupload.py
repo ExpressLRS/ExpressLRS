@@ -11,8 +11,18 @@ BootloaderInitSeq1 = bytes([0xEC,0x04,0x32,0x62,0x6c,0x0A])
 BootloaderInitSeq2 = bytes([0x62,0x62,0x62,0x62,0x62,0x62])
 
 def StatusCallback(total_packets, success_count, error_count):
+    sys.stdout.write(".")
+    sys.stdout.flush()
+    
     if(total_packets % 10 == 0):
-        print("Pkts: " + str(total_packets) + " err: " +str(error_count))
+        sys.stdout.write('\n')
+        
+        if(error_count > 0):
+            sys.stdout.write("Pkts: " + str(total_packets) + " err: " + str(error_count) + "\n")
+        else:
+            sys.stdout.write("Pkts: " + str(total_packets) + "\n")
+            
+        sys.stdout.flush()
 
 def getc(size, timeout=1):
     return s.read(size)
@@ -52,12 +62,37 @@ if __name__ == '__main__':
 
 print("Going to use "+ result[0])
 
-s = serial.Serial(port=result[0], baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=None, xonxoff=0, rtscts=0)
+s = serial.Serial(port=result[0], baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=10, xonxoff=0, rtscts=0)
 
-s.write(BootloaderInitSeq1)
+alreadyInBootloader = False
+reading =[]
+
+while s.in_waiting:
+    reading = s.readline().decode('utf-8')
+    if "serial" in reading:
+        lines.append(reading)
+        print(reading)
+		
+for x in reading:
+    if('C' in x):
+        alreadyInBootloader = True
+		
+if(alreadyInBootloader == False):
+    sys.stdout.write("Enabling Bootloader...\n")
+    sys.stdout.flush()
+    s.write(BootloaderInitSeq1)
+    time.sleep(0.1)
+    s.write(BootloaderInitSeq1)
+    time.sleep(0.1)
+    s.write(BootloaderInitSeq1)
+    time.sleep(0.1)
+    s.write(BootloaderInitSeq2)
+else:
+    sys.stdout.write("We were already in bootloader")
+    sys.stdout.flush()
+    
+
 time.sleep(1)
-s.write(BootloaderInitSeq2)
-
 s.close()
 time.sleep(1)
 s.open()

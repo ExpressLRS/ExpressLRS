@@ -24,7 +24,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 //Filters//
 LPF LPF_PacketInterval(3);
-LPF LPF_Offset(3);
+LPF LPF_Offset(2);
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
@@ -297,15 +297,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
         if (packetAddr == DeviceAddr)
         {
-
             LastValidPacketPrevMicros = LastValidPacketMicros;
             LastValidPacketMicros = micros();
             HWtimerError = micros() - HWtimerGetlastCallbackMicros();
             packetCounter++;
-
-            //Offset = (HWtimerError - (ExpressLRS_currAirRate.interval / 2) + 0);
-
-            // Serial.println(Offset);
 
             getRFlinkInfo();
 
@@ -382,8 +377,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacket = millis();
             addPacketToLQ();
 
-            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)) + 250; //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift(Offset >> 1);
+            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)) + 0; //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            HWtimerPhaseShift((Offset >> 1));
 
             // uint32_t Interval = LastValidPacketMicros - LastValidPacketPrevMicros;
 
@@ -408,11 +403,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             //Serial.print(":");
             //Serial.println(PacketInterval);
 
-            if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
-            {
-                HandleFHSS();
-                alreadyFHSS = true;
-            }
+            // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+            // {
+            //     HandleFHSS();
+            //     alreadyFHSS = true;
+            // }
         }
         else
         {
