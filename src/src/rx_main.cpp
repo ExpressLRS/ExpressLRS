@@ -143,7 +143,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         {
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
-            //crsf.sendLinkStatisticsToFC();
+            crsf.sendLinkStatisticsToFC();
         }
     }
 }
@@ -166,8 +166,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
             Radio.TXdataBuffer[7] = crc;
             Radio.TXnb(Radio.TXdataBuffer, 8);
-            //crsf.sendLinkStatisticsToFC();
-            // Serial.println("TLM");
             addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
         }
     }
@@ -193,15 +191,7 @@ void ICACHE_RAM_ATTR Test90()
         HandleFHSS();
     }
 
-    if (alreadyTLMresp == true)
-    {
-
-        alreadyTLMresp = false;
-    }
-    else
-    {
-        HandleSendTelemetryResponse();
-    }
+    HandleSendTelemetryResponse();
 
     NonceRXlocal++;
 }
@@ -309,7 +299,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             case 0b00: //Standard RC Data Packet
                 UnpackChannelData_11bit();
-                //crsf.sendRCFrameToFC();
+                crsf.sendRCFrameToFC();
                 break;
 
             case 0b01: // Switch Data Packet
@@ -320,7 +310,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    //crsf.sendRCFrameToFC();
+                    crsf.sendRCFrameToFC();
                     //Serial.println("Switch Pkt");
                 }
                 break;
@@ -334,11 +324,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 //Serial.println("Sync Packet0");
                 if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
-
-                    // Serial.print(NonceRXlocal);
-                    // Serial.print("--");
-                    // Serial.println(Radio.RXdataBuffer[2]);
-
                     if (connectionState == disconnected)
                     {
                         TentativeConnection();
@@ -359,8 +344,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     //NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
                     FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                     NonceRXlocal = Radio.RXdataBuffer[2];
-
-                    //Serial.println()
                 }
                 break;
 
@@ -368,46 +351,24 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
             }
 
-            // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.TLMinterval) == 0)
-            // {
-            //     HandleSendTelemetryResponse();
-            //     alreadyTLMresp = true;
-            // }
-
             LastValidPacket = millis();
             addPacketToLQ();
 
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)) + 0; //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift((Offset >> 1));
+            HWtimerPhaseShift((Offset >> 1) + timerOffset);
 
-            // uint32_t Interval = LastValidPacketMicros - LastValidPacketPrevMicros;
 
-            //  if ((Interval < (ExpressLRS_currAirRate.interval + 250)) && (Interval > (ExpressLRS_currAirRate.interval - 250)))
-            //    {
-            //       PacketInterval = Interval;
-            //       PacketIntervalError = ExpressLRS_currAirRate.interval - PacketInterval;
-
-            // #ifdef PLATFORM_STM32
-            //                 uint32_t Flt_Val = LPF_PacketInterval.update(Interval);
-
-            //                 if (HWtimerGetIntervalMicros() != Flt_Val)
-            //                 {
-            //                     HWtimerUpdateInterval(Flt_Val);
-            //                 }
-            // #endif
-            //  }
-            Serial.print("Offset: ");
-            Serial.print(Offset);
-            Serial.print(" LQ: ");
-            Serial.println(linkQuality);
+            if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+            {
+                HandleFHSS();
+                alreadyFHSS = true;
+            }
+            // Serial.print("Offset: ");
+            // Serial.print(Offset);
+            // Serial.print(" LQ: ");
+            // Serial.println(linkQuality);
             //Serial.print(":");
             //Serial.println(PacketInterval);
-
-            // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
-            // {
-            //     HandleFHSS();
-            //     alreadyFHSS = true;
-            // }
         }
         else
         {
@@ -417,9 +378,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     else
     {
         //Serial.println("crc failed");
-        //Serial.print(calculatedCRC);
+        //Serial.print(calculatedCRC, HEX);
         //Serial.print("-");
-        //Serial.println(inCRC);
+        //Serial.println(inCRC, HEX);
         CRCerrorCounter++;
     }
 }
@@ -438,7 +399,6 @@ void beginWebsever()
 
 void ICACHE_RAM_ATTR sampleButton()
 {
-
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
     if (buttonValue == false && buttonPrevValue == true)
@@ -467,8 +427,6 @@ void ICACHE_RAM_ATTR sampleButton()
     {
         //ESP.restart();
         //Serial.println("Setting Bootloader Bit..");
-
-
     }
 
     buttonPrevValue = buttonValue;
@@ -535,18 +493,6 @@ void setup()
     SetRFLinkRate(RF_RATE_200HZ);
     //errata(); //-- testing things don't use for now.
     //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
-
-    //void (*SysMemBootJump)(void);
-    //const uint32_t addr = 0x0800000;
-    //SysMemBootJump = (void (*)(void))(*((uint32_t *)(addr + 4)));
-    //SysMemBootJump();
-
-    Serial.println("yay!! new firmware!!");
-
-    // volatile char BLrequested = *(bool *)0x20004FF4;
-    // BLrequested = 0x80;
-
-
 }
 
 void loop()
