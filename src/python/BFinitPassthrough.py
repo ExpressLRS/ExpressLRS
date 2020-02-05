@@ -38,25 +38,25 @@ def serial_ports():
             pass
     return result
 
-sys.stdout.write('\n')
-sys.stdout.write('Begin')
-sys.stdout.write('\n')
-sys.stdout.flush()	
 print(serial_ports())
+sys.stdout.write("Dected the following serial ports on this system: \n")
+sys.stdout.write(str(serial_ports())[1:-1])
+sys.stdout.write("\n")
 	
 if(len(result) == 0):
     raise EnvironmentError('No valid serial port detected or port already open')
 
 print("Going to try using "+ result[0])
 
-s = serial.Serial(port=result[0], baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=2, xonxoff=0, rtscts=0)
+s = serial.Serial(port=result[0], baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
 s.write(chr(0x23).encode())
-time.sleep(0.2)
+time.sleep(1)
 s.write(("serial\n").encode())
-time.sleep(0.2)
+time.sleep(1)
 
 lines = []
+inChars = ""
 serialInfo = []
 SerialInfoSplit = []
 
@@ -64,14 +64,20 @@ SerialRXindex = -1
 uartNumber = -1
 print()
 print()
-print("Attempting to detect Betaflight RX configuration...")
+print("Attempting to detect Betaflight UART configuration...")
 
 while s.in_waiting:
-    reading = s.readline().decode('utf-8')
-    if "serial" in reading:
-        lines.append(reading)
-        sys.stdout.write(reading[0:len(reading)-1])
-        sys.stdout.flush()
+    inChars += s.read().decode('utf-8')
+
+
+for line in inChars.split('\n'):
+    if "serial" in line:
+        lines.append(line)
+        sys.stdout.write(line[0:len(line)-1])
+        sys.stdout.write("\n")
+
+sys.stdout.flush()
+
 
 for line in lines:
     if line[0:6] == "serial":
@@ -92,7 +98,7 @@ sys.stdout.write('\n')
 if uartNumber != -1:
     print("Detected Betaflight Serial RX config: " +str(serialInfo[SerialRXindex]))
 else:
-    sys.stdout.write("Failed to make contract with Betaflight, possibly already in passthrough mode?\n")
+    sys.stdout.write("Failed to make contact with Betaflight, possibly already in passthrough mode?\n")
     sys.stdout.write("If the next step fails please reboot FC\n")
     sys.stdout.write('\n')
     sys.stdout.flush()	
@@ -101,14 +107,11 @@ else:
 sys.stdout.write("Setting serial passthrough...\n")    
 s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n').encode())
 sys.stdout.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n'))
-time.sleep(0.2)
+time.sleep(1)
 
-while s.in_waiting:
-    reading = s.readline().decode('utf-8')
-    lines.append(reading)
-    #sys.stdout.write(reading)
-    #sys.stdout.flush()
 
+sys.stdout.flush()
 s.flush()
+
 print()
 print()
