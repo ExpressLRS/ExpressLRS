@@ -1,1 +1,1 @@
-ST-LINK_CLI.exe -c SWD SWCLK=9 -P Bootloader.hex -RST
+ST-LINK_CLI.exe -c -ME SWD SWCLK=8 -P Bootloader.hex -RST
