@@ -115,6 +115,7 @@ if(alreadyInBootloader == False):
             
         if(currAttempt == 20):
             sys.stdout.write("Failed to get to BL in reasonable time\n")
+            raise SystemExit
             break
         
         currAttempt = currAttempt + 1

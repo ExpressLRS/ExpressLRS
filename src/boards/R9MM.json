@@ -4,7 +4,7 @@
     "cpu": "cortex-m3",
     "extra_flags": "-DSTM32F103xB",
     "f_cpu": "72000000L",
-    "ldscript": "R9MM_linker.ld",
+    "ldscript": "",
     "mcu": "stm32f103rbt6",
     "variants_dir": "variants",
     "variant": "R9MM"
