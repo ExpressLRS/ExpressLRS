@@ -4,7 +4,7 @@
     "cpu": "cortex-m3",
     "extra_flags": "-DSTM32F103xB",
     "f_cpu": "72000000L",
-    "ldscript": "stm32f103xb.ld",
+    "ldscript": "R9MM_linker.ld",
     "mcu": "stm32f103rbt6",
     "variants_dir": "variants",
     "variant": "R9MM"
@@ -27,11 +27,11 @@
     "stm32cube",
     "zephyr"
   ],
-  "name": "ST Nucleo F103RB",
+  "name": "R9MM receiver",
   "upload": {
     "maximum_ram_size": 20480,
-    "maximum_size": 131072,
-    "protocol": "stlink",
+    "maximum_size": 98304,
+    "protocol": "custom",
     "protocols": [
       "jlink",
       "stlink",

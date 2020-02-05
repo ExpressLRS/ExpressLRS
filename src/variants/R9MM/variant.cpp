@@ -157,10 +157,7 @@ extern "C" {
 // }
 
 
-
-
-
-//72 MHz with 24Mhz ext. clock input///
+//72 MHz with 24Mhz ext. clock input/// (R9MM RX configuration)
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
