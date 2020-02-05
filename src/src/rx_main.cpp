@@ -289,7 +289,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             LastValidPacketPrevMicros = LastValidPacketMicros;
             LastValidPacketMicros = micros();
-            HWtimerError = micros() - HWtimerGetlastCallbackMicros();
+            HWtimerError = ((micros() - HWtimerGetlastCallbackMicros()) % ExpressLRS_currAirRate.interval);
             packetCounter++;
 
             getRFlinkInfo();
@@ -356,7 +356,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift((Offset >> 1) + timerOffset);
-
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
