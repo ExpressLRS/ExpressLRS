@@ -179,7 +179,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR Test90()
 {
-    incrementLQArray();
 
     if (alreadyFHSS == true)
     {
@@ -191,6 +190,7 @@ void ICACHE_RAM_ATTR Test90()
         HandleFHSS();
     }
 
+    incrementLQArray();
     HandleSendTelemetryResponse();
 
     NonceRXlocal++;
