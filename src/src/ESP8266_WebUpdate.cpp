@@ -5,6 +5,8 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include "debug.h"
+
 extern float PacketRate;
 
 #define STASSID "ExpressLRS RX"
@@ -20,7 +22,7 @@ ESP8266HTTPUpdateServer httpUpdater;
 void BeginWebUpdate(void)
 {
 
-  Serial.println("Begin Webupdater");
+  DEBUG_PRINTLN("Begin Webupdater");
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
 
