@@ -41,15 +41,16 @@ private:
     int head;
     int tail;
     int numElements;
-    uint8_t buffer[FIFO_SIZE];
+    uint8_t buffer[FIFO_SIZE] = {0};
 
 public:
     FIFO();
     ~FIFO();
     void ICACHE_RAM_ATTR push(uint8_t data);
-    void ICACHE_RAM_ATTR pushBytes(uint8_t data);
+    void ICACHE_RAM_ATTR pushBytes(uint8_t* data, int len);
     uint8_t ICACHE_RAM_ATTR pop();
-    uint8_t ICACHE_RAM_ATTR popBytes();
+    void ICACHE_RAM_ATTR popBytes(uint8_t *data, int len);
     uint8_t ICACHE_RAM_ATTR peek();
     int ICACHE_RAM_ATTR size();
+    void ICACHE_RAM_ATTR flush();
 };

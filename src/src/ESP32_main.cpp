@@ -26,13 +26,18 @@ uint32_t SwitchPacketLastSent = 0;              //time in ms when the last switc
 uint32_t SyncPacketLastSent = 0;
 
 uint32_t LastTLMpacketRecvMillis = 0;
-uint32_t RXconnectionLostTimeout = 1000; //After 1.0 seconds of no TLM response consider that slave has lost connection
+uint32_t RXconnectionLostTimeout = 1500; //After 1500ms of no TLM response consider that slave has lost connection
 bool isRXconnected = false;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
 uint8_t linkQuality = 0;
+
+/// Variables for Sync Behaviour ////
+uint32_t RFmodeLastCycled = 0;
+uint32_t RFmodeCycleInterval = 1000;
+uint32_t SyncPacketAddtionalTime = 1500; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
 ///////////////////////////////////////
 
 bool UpdateParamReq = false;
@@ -92,8 +97,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
           crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-          //crsf.LinkStatistics.downlink_Link_quality = linkQuality;
-          crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
+          crsf.LinkStatistics.downlink_Link_quality = linkQuality;
+          //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
           crsf.sendLinkStatisticsToTX();
         }
       }
@@ -126,7 +131,8 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+  //Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
+  Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = 0;
   Radio.TXdataBuffer[4] = baseMac[3];
   Radio.TXdataBuffer[5] = baseMac[4];
@@ -252,13 +258,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = SwitchPacketSendIntervalRXlost;
   }
 
-  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
+  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
+  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))
   {
 
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    // DEBUG_PRINTLN("sync");
+    DEBUG_PRINTLN("sync");
   }
   else
   {
@@ -300,20 +307,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     case 1:
       if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
       {
-        switch (crsf.ParameterUpdateData[1])
-        {
-        case 0:
-          SetRFLinkRate(RF_RATE_200HZ);
-          break;
-        case 1:
-          SetRFLinkRate(RF_RATE_100HZ);
-          break;
-        case 2:
-          SetRFLinkRate(RF_RATE_50HZ);
-          break;
-        default:
-          break;
-        }
+        SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
       }
       break;
 
