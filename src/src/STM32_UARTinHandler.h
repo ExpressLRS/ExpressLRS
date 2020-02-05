@@ -68,19 +68,19 @@ void STM32_RX_HandleUARTin()
             }
             else
             {
-                Serial.println("CRC failure");
-                Serial.println(UARTinPacketPtr, HEX);
-                Serial.print("Expected: ");
-                Serial.println(CalculatedCRC, HEX);
-                Serial.print("Got: ");
-                Serial.println(inChar, HEX);
-                for (int i = 0; i < UARTinPacketPtr + 2; i++)
-                {
-                    Serial.print(UARTinBuffer[i], HEX);
-                    Serial.print(" ");
-                }
-                Serial.println();
-                Serial.println();
+                //Serial.println("UART CRC failure");
+                //Serial.println(UARTinPacketPtr, HEX);
+                //Serial.print("Expected: ");
+                //Serial.println(CalculatedCRC, HEX);
+                //Serial.print("Got: ");
+                //Serial.println(inChar, HEX);
+                //for (int i = 0; i < UARTinPacketPtr + 2; i++)
+                // {
+                //Serial.print(UARTinBuffer[i], HEX);
+                //    Serial.print(" ");
+                //}
+                //Serial.println();
+                //Serial.println();
                 UARTframeActive = false;
                 UARTinPacketPtr = 0;
                 Serial.flush();
@@ -88,55 +88,3 @@ void STM32_RX_HandleUARTin()
         }
     }
 }
-
-//
-//             SerialInPacketPtr = 0;
-//             CRSFframeActive = false;
-//             //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
-//             //taskYIELD();
-//             vTaskDelay(xDelay1);
-
-//             uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-//             if (peekVal > 0)
-//             {
-//                 if (SerialOutFIFO.size() >= peekVal)
-//                 {
-//                     CRSF::duplex_set_TX();
-
-//                     uint8_t OutPktLen = SerialOutFIFO.pop();
-//                     uint8_t OutData[OutPktLen];
-
-//                     SerialOutFIFO.popBytes(OutData, OutPktLen);
-//                     CRSF::Port.write(OutData, OutPktLen); // write the packet out
-
-//                     vTaskDelay(xDelay1);
-//                     CRSF::duplex_set_RX();
-//                     FlushSerial(); // we don't need to read back the data we just wrote
-//                 }
-//             }
-//             vTaskDelay(xDelay1);
-//             //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
-//         }
-//         else
-//         {
-//             Serial.println("CRC failure");
-//             Serial.println(SerialInPacketPtr, HEX);
-//             Serial.print("Expected: ");
-//             Serial.println(CalculatedCRC, HEX);
-//             Serial.print("Got: ");
-//             Serial.println(inChar, HEX);
-//             for (int i = 0; i < SerialInPacketLen + 2; i++)
-//             {
-//                 Serial.print(SerialInBuffer[i], HEX);
-//                 Serial.print(" ");
-//             }
-//             Serial.println();
-//             Serial.println();
-//             CRSFframeActive = false;
-//             SerialInPacketPtr = 0;
-//             FlushSerial();
-//             vTaskDelay(xDelay1);
-//         }
-//     }
-// }
-//}

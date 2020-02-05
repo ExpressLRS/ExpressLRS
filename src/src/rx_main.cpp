@@ -104,8 +104,8 @@ uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
-const uint32_t RFmodeCycleAddtionalTime[3] = {1000, 2000, 4000}; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
-const uint32_t RFmodeCycleInterval[3] = {1000, 1500, 2000};
+const uint32_t RFmodeCycleAddtionalTime[3] = {1000, 2000, 6000}; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
+const uint32_t RFmodeCycleInterval[3] = {1500, 2000, 2500};
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -354,7 +354,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacket = millis();
             addPacketToLQ();
 
-            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)) + 0; //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
             HWtimerPhaseShift((Offset >> 1) + timerOffset);
 
 
