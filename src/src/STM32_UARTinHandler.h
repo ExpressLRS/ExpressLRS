@@ -12,11 +12,11 @@ void STM32_RX_UARTprocessPacket()
 {
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_COMMAND)
     {
-        Serial.println("Got CMD Packet");
+        DEBUG_PRINTLN("Got CMD Packet");
         if (UARTinBuffer[3] == 0x62 && UARTinBuffer[4] == 0x6c)
         {
             delay(100);
-            Serial.println("Jumping to Bootloader...");
+            DEBUG_PRINTLN("Jumping to Bootloader...");
             delay(100);
             HAL_NVIC_SystemReset();
         }
@@ -68,19 +68,19 @@ void STM32_RX_HandleUARTin()
             }
             else
             {
-                //Serial.println("UART CRC failure");
-                //Serial.println(UARTinPacketPtr, HEX);
-                //Serial.print("Expected: ");
-                //Serial.println(CalculatedCRC, HEX);
-                //Serial.print("Got: ");
-                //Serial.println(inChar, HEX);
+                //DEBUG_PRINTLN("UART CRC failure");
+                //DEBUG_PRINTLN(UARTinPacketPtr, HEX);
+                //DEBUG_PRINT("Expected: ");
+                //DEBUG_PRINTLN(CalculatedCRC, HEX);
+                //DEBUG_PRINT("Got: ");
+                //DEBUG_PRINTLN(inChar, HEX);
                 //for (int i = 0; i < UARTinPacketPtr + 2; i++)
                 // {
-                //Serial.print(UARTinBuffer[i], HEX);
-                //    Serial.print(" ");
+                //DEBUG_PRINT(UARTinBuffer[i], HEX);
+                //    DEBUG_PRINT(" ");
                 //}
-                //Serial.println();
-                //Serial.println();
+                //DEBUG_PRINTLN();
+                //DEBUG_PRINTLN();
                 UARTframeActive = false;
                 UARTinPacketPtr = 0;
                 Serial.flush();

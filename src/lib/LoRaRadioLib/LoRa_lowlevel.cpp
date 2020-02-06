@@ -74,19 +74,19 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t
 
   if (DebugVerbosity >= DEBUG_4)
   {
-    Serial.print("SPI: Read Burst ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
+    DEBUG_PRINT("SPI: Read Burst ");
+    DEBUG_PRINT("REG: ");
+    DEBUG_PRINT(reg);
+    DEBUG_PRINT(" LEN: ");
+    DEBUG_PRINT(numBytes);
+    DEBUG_PRINT(" DATA: ");
 
     for (int i = 0; i < numBytes; i++)
     {
-      Serial.print(inBytes[i]);
+      DEBUG_PRINT(inBytes[i]);
     }
 
-    Serial.println();
+    DEBUG_PRINTLN();
   }
 
   return (ERR_NONE);
@@ -116,19 +116,19 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, volatil
 
   if (DebugVerbosity >= DEBUG_4)
   {
-    Serial.print("SPI: Read Burst ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
+    DEBUG_PRINT("SPI: Read Burst ");
+    DEBUG_PRINT("REG: ");
+    DEBUG_PRINT(reg);
+    DEBUG_PRINT(" LEN: ");
+    DEBUG_PRINT(numBytes);
+    DEBUG_PRINT(" DATA: ");
 
     for (int i = 0; i < numBytes; i++)
     {
-      Serial.print(inBytes[i]);
+      DEBUG_PRINT(inBytes[i]);
     }
 
-    Serial.println();
+    DEBUG_PRINTLN();
   }
 
   return (ERR_NONE);
@@ -155,19 +155,19 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *i
 
   if (DebugVerbosity >= DEBUG_4)
   {
-    Serial.print("SPI: Read BurstStr ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
+    DEBUG_PRINT("SPI: Read BurstStr ");
+    DEBUG_PRINT("REG: ");
+    DEBUG_PRINT(reg);
+    DEBUG_PRINT(" LEN: ");
+    DEBUG_PRINT(numBytes);
+    DEBUG_PRINT(" DATA: ");
 
     for (int i = 0; i < numBytes; i++)
     {
-      Serial.print(inBytes[i]);
+      DEBUG_PRINT(inBytes[i]);
     }
 
-    Serial.println();
+    DEBUG_PRINTLN();
   }
 
   return (ERR_NONE);
@@ -254,10 +254,10 @@ void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 
   // if (DebugVerbosity >= DEBUG_4)
   // {
-  //   Serial.print("SPI: Write ");
-  //   Serial.print("REG: ");
-  //   Serial.print(reg, HEX);
-  //   Serial.print(" VAL: ");
-  //   Serial.println(data, HEX);
+  //   DEBUG_PRINT("SPI: Write ");
+  //   DEBUG_PRINT("REG: ");
+  //   DEBUG_PRINT(reg, HEX);
+  //   DEBUG_PRINT(" VAL: ");
+  //   DEBUG_PRINTLN(data, HEX);
   // }
 }

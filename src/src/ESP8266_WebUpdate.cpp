@@ -20,7 +20,7 @@ ESP8266HTTPUpdateServer httpUpdater;
 void BeginWebUpdate(void)
 {
 
-  Serial.println("Begin Webupdater");
+  DEBUG_PRINTLN("Begin Webupdater");
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
 

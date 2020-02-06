@@ -1,20 +1,20 @@
 // void ICACHE_RAM_ATTR PrintRC()
 // {
-//   Serial.print(crsf.ChannelDataIn[0]);
-//   Serial.print(",");
-//   Serial.print(crsf.ChannelDataIn[1]);
-//   Serial.print(",");
-//   Serial.print(crsf.ChannelDataIn[2]);
-//   Serial.print(",");
-//   Serial.print(crsf.ChannelDataIn[3]);
-//   Serial.print(",");
-//   Serial.println(crsf.ChannelDataIn[4]);
-//   Serial.print(",");
-//   Serial.print(crsf.ChannelDataIn[5]);
-//   Serial.print(",");
-//   Serial.println(crsf.ChannelDataIn[6]);
-//   Serial.print(",");
-//   Serial.println(crsf.ChannelDataIn[7]);
+//   DEBUG_PRINT(crsf.ChannelDataIn[0]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINT(crsf.ChannelDataIn[1]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINT(crsf.ChannelDataIn[2]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINT(crsf.ChannelDataIn[3]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINTLN(crsf.ChannelDataIn[4]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINT(crsf.ChannelDataIn[5]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINTLN(crsf.ChannelDataIn[6]);
+//   DEBUG_PRINT(",");
+//   DEBUG_PRINTLN(crsf.ChannelDataIn[7]);
 // }
 
 //#include "STM32F1xx.h"

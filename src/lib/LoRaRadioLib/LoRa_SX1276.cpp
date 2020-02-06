@@ -78,8 +78,8 @@ uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
 
   if ((freq < 137000000) || (freq > 1020000000))
   {
-    Serial.print("Invalid Frequnecy!: ");
-    Serial.println(freq);
+    DEBUG_PRINT("Invalid Frequnecy!: ");
+    DEBUG_PRINTLN(freq);
     return (ERR_INVALID_FREQUENCY);
   }
 
@@ -183,7 +183,7 @@ uint8_t SX1276begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
 {
   // initialize low-level drivers
   //initModule(nss, dio0, dio1);
-  Serial.println("Init module SX1276");
+  DEBUG_PRINTLN("Init module SX1276");
   initModule(nss, dio1, dio0);
 
   // execute common part

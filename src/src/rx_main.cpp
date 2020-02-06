@@ -6,7 +6,7 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-// #include "Debug.h"
+#include "debug.h"
 #include "rx_LinkQuality.h"
 
 #ifdef PLATFORM_ESP8266
@@ -130,7 +130,9 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
+    #ifndef DEBUG
     //crsf.sendLinkStatisticsToFC();
+    #endif
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -144,7 +146,10 @@ void ICACHE_RAM_ATTR HandleFHSS()
         {
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
-            //crsf.sendLinkStatisticsToFC();
+
+            #ifndef DEBUG
+            crsf.sendLinkStatisticsToFC();
+            #endif
         }
     }
 }
@@ -212,7 +217,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
         digitalWrite(GPIO_PIN_LED, 0);        // turn off led
         Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
-        Serial.println("lost conn");
+        DEBUG_PRINTLN("lost conn");
 
 #ifdef PLATFORM_STM32
         digitalWrite(GPIO_PIN_LED_GEEN, LOW);
@@ -224,7 +229,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
 {
     connectionStatePrev = connectionState;
     connectionState = tentative;
-    Serial.println("tentative conn");
+    DEBUG_PRINTLN("tentative conn");
 }
 
 void ICACHE_RAM_ATTR GotConnection()
@@ -236,7 +241,7 @@ void ICACHE_RAM_ATTR GotConnection()
 
         RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
         digitalWrite(GPIO_PIN_LED, 1); // turn on led
-        Serial.println("got conn");
+        DEBUG_PRINTLN("got conn");
 
 #ifdef PLATFORM_STM32
         digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
@@ -280,11 +285,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-    //Serial.print(NonceRXlocal);
-    //Serial.print(" ");
-    // Serial.print(inCRC);
-    // Serial.print(" = ");
-    // Serial.println(calculatedCRC);
+    //DEBUG_PRINT(NonceRXlocal);
+    //DEBUG_PRINT(" ");
+    // DEBUG_PRINT(inCRC);
+    // DEBUG_PRINT(" = ");
+    // DEBUG_PRINTLN(calculatedCRC);
     if (inCRC == calculatedCRC)
     {
         if (packetAddr == DeviceAddr)
@@ -301,19 +306,25 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             case 0b00: //Standard RC Data Packet
                 UnpackChannelData_11bit();
-                //crsf.sendRCFrameToFC();
+
+                #ifndef DEBUG
+                crsf.sendRCFrameToFC();
+                #endif
                 break;
 
             case 0b01: // Switch Data Packet
-                //Serial.println("Switch Packet");
+                //DEBUG_PRINTLN("Switch Packet");
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     //GotConnection();
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    //crsf.sendRCFrameToFC();
-                    //Serial.println("Switch Pkt");
+
+                    #ifndef DEBUG
+                    crsf.sendRCFrameToFC();
+                    #endif
+                    //DEBUG_PRINTLN("Switch Pkt");
                 }
                 break;
 
@@ -323,7 +334,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
 
             case 0b10: //sync packet from master
-                //Serial.println("Sync Packet0");
+                //DEBUG_PRINTLN("Sync Packet0");
                 if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
                     if (connectionState == disconnected)
@@ -338,7 +349,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                     // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
                     // {
-                    //     Serial.println("update air rate");
+                    //     DEBUG_PRINTLN("update air rate");
                     //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
                     //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
                     // }
@@ -362,8 +373,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
                 int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
-                Serial.print(freqerror);
-                Serial.print(" : ");
+                DEBUG_PRINT(freqerror);
+                DEBUG_PRINT(" : ");
 
                 if (freqerror > 0)
                 {
@@ -374,7 +385,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     else
                     {
                         FreqCorrection = FreqCorrectionMax;
-                        Serial.println("Max pos reasontable freq offset correction limit reached!");
+                        DEBUG_PRINTLN("Max pos reasontable freq offset correction limit reached!");
                     }
                 }
                 else
@@ -386,33 +397,33 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     else
                     {
                         FreqCorrection = FreqCorrectionMin;
-                        Serial.println("Max neg reasontable freq offset correction limit reached!");
+                        DEBUG_PRINTLN("Max neg reasontable freq offset correction limit reached!");
                     }
                 }
 
-                Serial.println(FreqCorrection);
+                DEBUG_PRINTLN(FreqCorrection);
 
                 HandleFHSS();
                 alreadyFHSS = true;
             }
-            // Serial.print("Offset: ");
-            // Serial.print(Offset);
-            // Serial.print(" LQ: ");
-            // Serial.println(linkQuality);
-            //Serial.print(":");
-            //Serial.println(PacketInterval);
+            // DEBUG_PRINT("Offset: ");
+            // DEBUG_PRINT(Offset);
+            // DEBUG_PRINT(" LQ: ");
+            // DEBUG_PRINTLN(linkQuality);
+            //DEBUG_PRINT(":");
+            //DEBUG_PRINTLN(PacketInterval);
         }
         else
         {
-            Serial.println("wrong address");
+            DEBUG_PRINTLN("wrong address");
         }
     }
     else
     {
-        //Serial.println("crc failed");
-        //Serial.print(calculatedCRC, HEX);
-        //Serial.print("-");
-        //Serial.println(inCRC, HEX);
+        //DEBUG_PRINTLN("crc failed");
+        //DEBUG_PRINT(calculatedCRC, HEX);
+        //DEBUG_PRINT("-");
+        //DEBUG_PRINTLN(inCRC, HEX);
         CRCerrorCounter++;
     }
 }
@@ -437,7 +448,7 @@ void ICACHE_RAM_ATTR sampleButton()
     { //falling edge
         buttonLastPressed = millis();
         buttonDown = true;
-        Serial.println("Manual Start");
+        DEBUG_PRINTLN("Manual Start");
         Radio.SetFrequency(GetInitialFreq());
         Radio.StartContRX();
     }
@@ -458,7 +469,7 @@ void ICACHE_RAM_ATTR sampleButton()
     if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
     {
         //ESP.restart();
-        //Serial.println("Setting Bootloader Bit..");
+        //DEBUG_PRINTLN("Setting Bootloader Bit..");
     }
 
     buttonPrevValue = buttonValue;
@@ -481,16 +492,19 @@ void setup()
 #ifdef PLATFORM_STM32
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
+#endif
+
+#ifdef DEBUG
+    Serial.begin(115200);
+#else
     Serial.begin(420000);
-    //Serial.begin(115200);
+#endif
+
+#ifdef PLATFORM_STM32
     crsf.InitSerial();
 #endif
 
-#ifdef PLATFORM_ESP8266
-    Serial.begin(420000);
-    //Serial.begin(115200);
-#endif
-    Serial.println("Module Booting...");
+    DEBUG_PRINTLN("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
 
 #ifdef PLATFORM_STM32
@@ -499,10 +513,10 @@ void setup()
     pinMode(GPIO_PIN_BUTTON, INPUT);
 
 #ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
+    DEBUG_PRINTLN("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_AU_433
-    Serial.println("Setting 433MHz Mode");
+    DEBUG_PRINTLN("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
@@ -539,7 +553,7 @@ void loop()
             LQreset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
-            Serial.println(ExpressLRS_currAirRate.interval);
+            DEBUG_PRINTLN(ExpressLRS_currAirRate.interval);
             scanIndex++;
         }
         RFmodeLastCycled = millis();
@@ -552,35 +566,38 @@ void loop()
 
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SendLinkStatstoFCinterval)) && connectionState != disconnected)
     {
+        #ifndef DEBUG
         //crsf.sendLinkStatisticsToFC();
+        #endif
+
         SendLinkStatstoFCintervalLastSent = millis();
     }
     // if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)
     // { // add stuff here for debug print
     //     LastSerialDebugPrint = millis();
-    //     Serial.println(linkQuality);
+    //     DEBUG_PRINTLN(linkQuality);
     //     if (LostConnection)
     //     {
-    //         Serial.println("-");
+    //         DEBUG_PRINTLN("-");
     //     }
     //     else
     //     {
-    //         Serial.println("+");
+    //         DEBUG_PRINTLN("+");
     //     }
 
-    //     Serial.print(MeasuredHWtimerInterval);
-    //     Serial.print(" ");
-    //     Serial.print(Offset);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError);
+    //     DEBUG_PRINT(MeasuredHWtimerInterval);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(Offset);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(HWtimerError);
 
-    //     Serial.print("----");
+    //     DEBUG_PRINT("----");
 
-    //     Serial.print(Offset90);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError90);
-    //     Serial.print("----");
-    //     Serial.println(packetCounter);
+    //     DEBUG_PRINT(Offset90);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(HWtimerError90);
+    //     DEBUG_PRINT("----");
+    //     DEBUG_PRINTLN(packetCounter);
     // }
 
     // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
@@ -606,42 +623,42 @@ void loop()
     //     //     CRCerrorCounter = 0;
     //     //     packetCounter = 0;
 
-    //     //     //Serial.println(CRCerrorRate);
+    //     //     //DEBUG_PRINTLN(CRCerrorRate);
     //     // }
-    //     Serial.print(MeasuredHWtimerInterval);
-    //     Serial.print(" ");
-    //     Serial.print(Offset);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError);
+    //     DEBUG_PRINT(MeasuredHWtimerInterval);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(Offset);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(HWtimerError);
 
-    //     Serial.print("----");
+    //     DEBUG_PRINT("----");
 
-    //     Serial.print(Offset90);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError90);
-    //     Serial.print("----");
+    //     DEBUG_PRINT(Offset90);
+    //     DEBUG_PRINT(" ");
+    //     DEBUG_PRINT(HWtimerError90);
+    //     DEBUG_PRINT("----");
 
-    //Serial.println(linkQuality);
-    //     //Serial.println(packetCounter);
+    //DEBUG_PRINTLN(linkQuality);
+    //     //DEBUG_PRINTLN(packetCounter);
     // }
 
-    // Serial.print(MeasuredHWtimerInterval);
-    // Serial.print(" ");
-    // Serial.print(" ");
-    // Serial.print(HWtimerError);
+    // DEBUG_PRINT(MeasuredHWtimerInterval);
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(HWtimerError);
 
-    // Serial.print("----");
+    // DEBUG_PRINT("----");
 
-    // Serial.print(Offset90);
-    // Serial.print(" ");
-    // Serial.print(HWtimerError90);
-    // Serial.print("----");
-    // Serial.println(packetCounter);
+    // DEBUG_PRINT(Offset90);
+    // DEBUG_PRINT(" ");
+    // DEBUG_PRINT(HWtimerError90);
+    // DEBUG_PRINT("----");
+    // DEBUG_PRINTLN(packetCounter);
     // delay(200);
-    // Serial.print("LQ: ");
-    // Serial.print(linkQuality);
-    // Serial.print(" Connstate:");
-    // Serial.println(connectionState);
+    // DEBUG_PRINT("LQ: ");
+    // DEBUG_PRINT(linkQuality);
+    // DEBUG_PRINT(" Connstate:");
+    // DEBUG_PRINTLN(connectionState);
 
     if (millis() > (buttonLastSampled + buttonSampleInterval))
     {

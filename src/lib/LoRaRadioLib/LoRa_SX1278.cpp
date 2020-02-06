@@ -171,8 +171,8 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
 
   if ((freq < 137000000) || (freq > 525000000))
   {
-    Serial.print("Invalid Frequnecy!: ");
-    Serial.println(freq);
+    DEBUG_PRINT("Invalid Frequnecy!: ");
+    DEBUG_PRINTLN(freq);
     return (ERR_INVALID_FREQUENCY);
   }
 
@@ -251,7 +251,7 @@ uint8_t SX1278begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
 {
   // initialize low-level drivers
   //initModule(nss, dio0, dio1);
-  Serial.println("Init module SX1278");
+  DEBUG_PRINTLN("Init module SX1278");
   initModule(nss, dio0, dio1);
 
   // execute common part

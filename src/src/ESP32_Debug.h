@@ -6,12 +6,12 @@ extern SX127xDriver Radio;
 
 void DEBUG_PrintRadioPacketStats()
 {
-    Serial.print("SPItime: ");
-    Serial.println(Radio.TXspiTime);
-    Serial.print("TotalTime: ");
-    Serial.println(Radio.TimeOnAir);
-    Serial.print("HeadRoom: ");
-    Serial.println(Radio.HeadRoom);
-    Serial.print("PacketCount(HZ): ");
-    Serial.println(Radio.PacketCount);
+    DEBUG_PRINT("SPItime: ");
+    DEBUG_PRINTLN(Radio.TXspiTime);
+    DEBUG_PRINT("TotalTime: ");
+    DEBUG_PRINTLN(Radio.TimeOnAir);
+    DEBUG_PRINT("HeadRoom: ");
+    DEBUG_PRINTLN(Radio.HeadRoom);
+    DEBUG_PRINT("PacketCount(HZ): ");
+    DEBUG_PRINTLN(Radio.PacketCount);
 }
