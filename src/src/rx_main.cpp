@@ -25,6 +25,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 //Filters//
 LPF LPF_PacketInterval(3);
 LPF LPF_Offset(2);
+LPF LPF_FreqError(3);
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
@@ -143,7 +144,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         {
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
-            crsf.sendLinkStatisticsToFC();
+            //crsf.sendLinkStatisticsToFC();
         }
     }
 }
@@ -207,6 +208,7 @@ void ICACHE_RAM_ATTR LostConnection()
     {
         connectionStatePrev = connectionState;
         connectionState = disconnected; //set lost connection
+        LPF_FreqError.init(0);
 
         digitalWrite(GPIO_PIN_LED, 0);        // turn off led
         Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
@@ -299,7 +301,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             case 0b00: //Standard RC Data Packet
                 UnpackChannelData_11bit();
-                crsf.sendRCFrameToFC();
+                //crsf.sendRCFrameToFC();
                 break;
 
             case 0b01: // Switch Data Packet
@@ -310,7 +312,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    crsf.sendRCFrameToFC();
+                    //crsf.sendRCFrameToFC();
                     //Serial.println("Switch Pkt");
                 }
                 break;
@@ -359,6 +361,37 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
+                int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
+                Serial.print(freqerror);
+                Serial.print(" : ");
+
+                if (freqerror > 0)
+                {
+                    if (FreqCorrection < FreqCorrectionMax)
+                    {
+                        FreqCorrection += 61; //min freq step is ~ 61hz
+                    }
+                    else
+                    {
+                        FreqCorrection = FreqCorrectionMax;
+                        Serial.println("Max pos reasontable freq offset correction limit reached!");
+                    }
+                }
+                else
+                {
+                    if (FreqCorrection > FreqCorrectionMin)
+                    {
+                        FreqCorrection -= 61; //min freq step is ~ 61hz
+                    }
+                    else
+                    {
+                        FreqCorrection = FreqCorrectionMin;
+                        Serial.println("Max neg reasontable freq offset correction limit reached!");
+                    }
+                }
+
+                Serial.println(FreqCorrection);
+
                 HandleFHSS();
                 alreadyFHSS = true;
             }

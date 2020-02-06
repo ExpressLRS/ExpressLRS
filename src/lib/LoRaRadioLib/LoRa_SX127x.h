@@ -43,16 +43,16 @@ typedef enum
 } Chip;
 typedef enum
 {
-    BW_7_80_KHZ,
-    BW_10_40_KHZ,
-    BW_15_60_KHZ,
-    BW_20_80_KHZ,
-    BW_31_25_KHZ,
-    BW_41_70_KHZ,
-    BW_62_50_KHZ,
-    BW_125_00_KHZ,
-    BW_250_00_KHZ,
-    BW_500_00_KHZ
+    BW_7_80_KHZ = 0,
+    BW_10_40_KHZ = 1,
+    BW_15_60_KHZ = 2,
+    BW_20_80_KHZ = 3,
+    BW_31_25_KHZ = 4,
+    BW_41_70_KHZ = 5,
+    BW_62_50_KHZ = 6,
+    BW_125_00_KHZ = 7,
+    BW_250_00_KHZ = 8,
+    BW_500_00_KHZ = 9
 } Bandwidth;
 typedef enum
 {
@@ -159,6 +159,8 @@ public:
     /////////////Packet Stats//////////
     static int8_t LastPacketRSSI;
     static int8_t LastPacketSNR;
+    static volatile uint32_t FreqError2S; 
+    static volatile int32_t FreqErrorHZ; 
     static float PacketLossRate;
     static volatile uint8_t NonceTX;
     static volatile uint8_t NonceRX;
@@ -177,12 +179,15 @@ public:
     static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
     static uint8_t SetBandwidth(Bandwidth bw);
+    static uint32_t getCurrBandwidth();
+    static uint32_t getCurrBandwidthNormalisedShifted();
     static uint8_t SetSyncWord(uint8_t syncWord);
     static uint8_t SetOutputPower(uint8_t Power);
     static uint8_t SetPreambleLength(uint8_t PreambleLen);
     static uint8_t SetSpreadingFactor(SpreadingFactor sf);
     static uint8_t SetCodingRate(CodingRate cr);
     static uint8_t SetFrequency(uint32_t freq);
+    static int32_t GetFrequencyError();
 
     static uint8_t SX127xBegin();
     static uint8_t SetMode(uint8_t mode);

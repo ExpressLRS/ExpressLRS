@@ -19,6 +19,10 @@ uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 //    434170000,
 //    434420000};
 
+int32_t FreqCorrection = 0;
+#define FreqCorrectionMax 50000
+#define FreqCorrectionMin -50000
+
 const uint32_t FHSSfreqs433[5] = {
     433420000,
     433920000,
@@ -56,11 +60,11 @@ uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 {
 #ifdef Regulatory_Domain_AU_915
 
-    return FHSSfreqs915[FHSSsequence[0]];
+    return FHSSfreqs915[FHSSsequence[0]] - FreqCorrection;
 
 #elif defined Regulatory_Domain_AU_433
 
-    return FHSSfreqs433[FHSSsequence[0]];
+    return FHSSfreqs433[FHSSsequence[0]] - FreqCorrection;
 
 #endif
 }
@@ -68,12 +72,12 @@ uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 {
 #ifdef Regulatory_Domain_AU_915
- 
-    return FHSSfreqs915[FHSSsequence[FHSSptr]];
+
+    return FHSSfreqs915[FHSSsequence[FHSSptr]] - FreqCorrection;
 
 #elif defined Regulatory_Domain_AU_433
 
-    return FHSSfreqs433[FHSSsequence[FHSSptr]];
+    return FHSSfreqs433[FHSSsequence[FHSSptr]] - FreqCorrection;
 
 #endif
 
@@ -89,7 +93,7 @@ uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
-    
+
     Serial.print("FHSSsequence[] = ");
 
     long macSeed = ((long)TxBaseMac[2] << 24) + ((long)TxBaseMac[3] << 16) + ((long)TxBaseMac[4] << 8) + TxBaseMac[5];
@@ -98,8 +102,8 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 #ifdef Regulatory_Domain_AU_915
 
     int hopSeqLength = 256;
-    int numOfFreqs = 20; 
-    int limit = floor(hopSeqLength/numOfFreqs);
+    int numOfFreqs = 20;
+    int limit = floor(hopSeqLength / numOfFreqs);
 
     int prev_val = 0;
     int rand = 0;
@@ -109,27 +113,27 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 
     int tracker[20] = {0};
 
-    for(int i = 0; i < hopSeqLength; i++)
+    for (int i = 0; i < hopSeqLength; i++)
     {
 
-        if(i >= last_InitialFreq + last_InitialFreq_interval)
+        if (i >= last_InitialFreq + last_InitialFreq_interval)
         {
             rand = FHSSsequence[0];
             last_InitialFreq = i;
         }
         else
         {
-            while(rand > numOfFreqs-1 || prev_val == rand || tracker[rand] > limit)
+            while (rand > numOfFreqs - 1 || prev_val == rand || tracker[rand] > limit)
             {
                 rand = rng5Bit();
             }
 
-            if(rand == FHSSsequence[0])
+            if (rand == FHSSsequence[0])
             {
                 last_InitialFreq = i;
             }
         }
-        
+
         FHSSsequence[i] = rand;
         tracker[rand] = tracker[rand] + 1;
         prev_val = rand;
@@ -143,9 +147,9 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     int prev_val = rng0to2(); // Randomised so that FHSSsequence[0] can also be 0.
     int rand = 0;
 
-    for(int i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++)
     {
-        while(prev_val == rand)
+        while (prev_val == rand)
         {
             rand = rng0to2();
         }
@@ -158,6 +162,6 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     }
 
 #endif
-    
+
     Serial.println("");
-} 
+}

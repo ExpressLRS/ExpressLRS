@@ -83,6 +83,9 @@ uint32_t SX127xDriver::currFreq = 123456789;
 uint8_t SX127xDriver::currPWR = 0b0000;
 uint8_t SX127xDriver::maxPWR = 0b1111;
 
+volatile uint32_t SX127xDriver::FreqError2S;
+volatile int32_t SX127xDriver::FreqErrorHZ;
+
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
 
@@ -238,7 +241,8 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 
 #define FREQ_STEP 61.03515625
 
-  uint32_t FRQ = (uint32_t)((double)freq / (double)FREQ_STEP);
+  uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+
   status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
@@ -885,6 +889,90 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   // set mode to STANDBY
   status = SetMode(SX127X_STANDBY);
   return (status);
+}
+
+uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
+{
+
+  switch (SX127xDriver::currBW)
+  {
+  case 0:
+    return 7.8E3;
+  case 1:
+    return 10.4E3;
+  case 2:
+    return 15.6E3;
+  case 3:
+    return 20.8E3;
+  case 4:
+    return 31.25E3;
+  case 5:
+    return 41.7E3;
+  case 6:
+    return 62.5E3;
+  case 7:
+    return 125E3;
+  case 8:
+    return 250E3;
+  case 9:
+    return 500E3;
+  }
+
+  return -1;
+}
+
+uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // this is basically just used for speedier calc of the freq offset, pre compiled for 32mhz xtal
+{
+
+  switch (SX127xDriver::currBW)
+  {
+  case 0:
+    return 1026;
+  case 1:
+    return 769;
+  case 2:
+    return 513;
+  case 3:
+    return 385;
+  case 4:
+    return 256;
+  case 5:
+    return 192;
+  case 6:
+    return 128;
+  case 7:
+    return 64;
+  case 8:
+    return 32;
+  case 9:
+    return 16;
+  }
+
+  return -1;
+}
+
+int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
+{
+
+  uint8_t MSB_reg = readRegister(SX127X_REG_FEI_MSB) & 0b1111;
+
+  uint32_t RegFei = 0;
+  RegFei = ((MSB_reg) << 16) + (readRegister(SX127X_REG_FEI_MID) << 8) + (readRegister(SX127X_REG_FEI_LSB));
+
+  SX127xDriver::FreqError2S = RegFei;
+  int32_t intFreqError = RegFei & 0b01111111111111111111;
+
+  if (MSB_reg & 0b1000)
+  {
+    intFreqError -= 524288; // Sign bit is on
+  }
+
+  const uint32_t XtalConst = 134; //((2^24/Fxtal) << 8) = 134.218
+
+  int32_t fErrorHZ = ((intFreqError << 4) * XtalConst * (SX127xDriver::getCurrBandwidthNormalisedShifted())); // bit shift hackery so we don't have to use floaty bois
+  fErrorHZ >>= 16;
+
+  return fErrorHZ;
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
