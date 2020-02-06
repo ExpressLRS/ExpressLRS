@@ -83,9 +83,6 @@ uint32_t SX127xDriver::currFreq = 123456789;
 uint8_t SX127xDriver::currPWR = 0b0000;
 uint8_t SX127xDriver::maxPWR = 0b1111;
 
-volatile uint32_t SX127xDriver::FreqError2S;
-volatile int32_t SX127xDriver::FreqErrorHZ;
-
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
 
@@ -959,7 +956,6 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
   uint32_t RegFei = 0;
   RegFei = ((MSB_reg) << 16) + (readRegister(SX127X_REG_FEI_MID) << 8) + (readRegister(SX127X_REG_FEI_LSB));
 
-  SX127xDriver::FreqError2S = RegFei;
   int32_t intFreqError = RegFei & 0b01111111111111111111;
 
   if (MSB_reg & 0b1000)

@@ -159,8 +159,6 @@ public:
     /////////////Packet Stats//////////
     static int8_t LastPacketRSSI;
     static int8_t LastPacketSNR;
-    static volatile uint32_t FreqError2S; 
-    static volatile int32_t FreqErrorHZ; 
     static float PacketLossRate;
     static volatile uint8_t NonceTX;
     static volatile uint8_t NonceRX;
