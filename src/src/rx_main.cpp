@@ -26,6 +26,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 LPF LPF_PacketInterval(3);
 LPF LPF_Offset(2);
 LPF LPF_FreqError(3);
+LPF LPF_UplinkRSSI(5);
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
@@ -96,7 +97,7 @@ uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t SendLinkStatstoFCinterval = 100;
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
-int16_t RFnoiseFloor; //measurement of the current RF noise floor 
+int16_t RFnoiseFloor; //measurement of the current RF noise floor
 ///////////////////////////////////////////////////////////////
 
 uint32_t PacketIntervalError;
@@ -124,12 +125,13 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = 120 + Radio.GetLastPacketRSSI();
+    crsf.LinkStatistics.uplink_RSSI_1 = LPF_UplinkRSSI.update(-(RFnoiseFloor - Radio.GetLastPacketRSSI()));
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
 
     //crsf.sendLinkStatisticsToFC();
+    Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()

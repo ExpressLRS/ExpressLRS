@@ -63,7 +63,7 @@ typedef struct expresslrs_mod_settings_s
     Bandwidth bw;
     SpreadingFactor sf;
     CodingRate cr;
-    //uint32_t sensitivity;               //expected RF sensitivity based on 
+    int32_t sensitivity;               //expected RF sensitivity based on 
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;                       // rate in hz
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
