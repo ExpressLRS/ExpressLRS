@@ -407,6 +407,11 @@ void DetectOtherRadios()
 
 void setup()
 {
+#ifdef LEGACY_HARDWARE
+  pinMode(4, INPUT_PULLDOWN);
+#endif
+  pinMode(36, INPUT_PULLUP);
+
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
 
@@ -414,9 +419,6 @@ void setup()
 
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-
-  pinMode(4, INPUT_PULLUP);
-  pinMode(36, INPUT_PULLUP);
 
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
