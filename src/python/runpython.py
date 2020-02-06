@@ -8,12 +8,15 @@ platform_name = ""
 platform_name = platform.system().lower()
 
 print("\n")
+print("Going to use this python: " +str(sys.argv[1]))
+
+
 
 if "windows" in platform_name:
     sys.stdout.write("Windows based operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system("py -3 " + (sys.argv[1]))
+        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
@@ -24,7 +27,7 @@ elif "linux" in platform_name:
     sys.stdout.write("Linux operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system("python3 " + (sys.argv[1]))
+        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
@@ -35,7 +38,7 @@ elif "os x" in platform_name:
     sys.stdout.write("Mac operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system("python3 " + (sys.argv[1]))
+        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
