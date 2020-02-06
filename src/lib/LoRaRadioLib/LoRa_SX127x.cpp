@@ -948,7 +948,22 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // th
   return -1;
 }
 
-int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
+void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
+{
+  int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)SX127xDriver::currFreq / 1000000)) << 8);
+  offsetValue >>= 8;
+
+  uint8_t regValue = offsetValue & 0b01111111;
+
+  if (offsetValue < 0)
+  {
+    regValue = regValue | 0b10000000; //set neg bit for 2s complement
+  }
+
+  writeRegister(SX127x_PPMOFFSET, regValue);
+}
+
+int32_t SX127xDriver::GetFrequencyError()
 {
 
   uint8_t MSB_reg = readRegister(SX127X_REG_FEI_MSB) & 0b1111;
@@ -963,10 +978,8 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
     intFreqError -= 524288; // Sign bit is on
   }
 
-  const uint32_t XtalConst = 134; //((2^24/Fxtal) << 8) = 134.218
-
-  int32_t fErrorHZ = ((intFreqError << 4) * XtalConst * (SX127xDriver::getCurrBandwidthNormalisedShifted())); // bit shift hackery so we don't have to use floaty bois
-  fErrorHZ >>= 16;
+  int32_t fErrorHZ = (intFreqError >> 3) * (SX127xDriver::getCurrBandwidthNormalisedShifted()); // bit shift hackery so we don't have to use floaty bois; the >> 3 is intentional and is a simplification of the formula on page 114
+  fErrorHZ >>= 4;
 
   return fErrorHZ;
 }
@@ -979,6 +992,11 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
   return (-157 + getRegValue(SX127X_REG_PKT_RSSI_VALUE));
+}
+
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
+{
+  return (-157 + getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()

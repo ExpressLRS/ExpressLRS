@@ -186,6 +186,7 @@ public:
     static uint8_t SetCodingRate(CodingRate cr);
     static uint8_t SetFrequency(uint32_t freq);
     static int32_t GetFrequencyError();
+    static void setPPMoffsetReg(int32_t offset);
 
     static uint8_t SX127xBegin();
     static uint8_t SetMode(uint8_t mode);
@@ -205,6 +206,7 @@ public:
 
     static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     static int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
+    static int8_t ICACHE_RAM_ATTR GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
     static void nullCallback(void);

@@ -218,7 +218,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 {
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
+    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
     if (modresult == 0) // wait for tlm response because it's time
     {
@@ -488,15 +488,15 @@ void loop()
 
   delay(100);
 
-  if (digitalRead(4) == 0)
-  {
-    Serial.println("Switch Pressed!");
-  }
+  // if (digitalRead(4) == 0)
+  // {
+  //   Serial.println("Switch Pressed!");
+  // }
 
-  if (digitalRead(36) == 0)
-  {
-    Serial.println("Switch Pressed!");
-  }
+  // if (digitalRead(36) == 0)
+  // {
+  //   Serial.println("Switch Pressed!");
+  // }
 
 #ifdef FEATURE_OPENTX_SYNC
   Serial.println(crsf.OpenTXsyncOffset);

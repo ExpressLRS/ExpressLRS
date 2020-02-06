@@ -46,9 +46,6 @@ uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
 uint8_t scanIndex = 0;
 
-uint8_t prevAirRate = 0;
-uint8_t currAirRate = 0;
-
 //uint32_t HWtimerLastcallback;
 uint32_t MeasuredHWtimerInterval;
 int32_t HWtimerError;
@@ -98,6 +95,8 @@ uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 
 uint32_t SendLinkStatstoFCinterval = 100;
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
+
+int16_t RFnoiseFloor; //measurement of the current RF noise floor 
 ///////////////////////////////////////////////////////////////
 
 uint32_t PacketIntervalError;
@@ -153,7 +152,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     if (connectionState == connected) // don't bother sending tlm if disconnected
     {
-        uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate.TLMinterval;
+        uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
         if (modresult == 0)
         {
@@ -390,6 +389,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     }
                 }
 
+                Radio.setPPMoffsetReg(FreqCorrection);
+
                 Serial.println(FreqCorrection);
 
                 HandleFHSS();
@@ -512,6 +513,11 @@ void setup()
     Radio.Begin();
 
     Radio.SetOutputPower(0b1111);
+
+    RFnoiseFloor = MeasureNoiseFloor();
+    Serial.print("RF noise floor: ");
+    Serial.print(RFnoiseFloor);
+    Serial.println("dBm");
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
 

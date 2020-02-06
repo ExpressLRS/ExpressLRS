@@ -163,11 +163,7 @@
 #define SX127x_TXCONTINUOUSMODE_MASK     0xF7
 #define SX127x_TXCONTINUOUSMODE_ON       0x08
 #define SX127x_TXCONTINUOUSMODE_OFF      0x00
-
-
-
-
-
+#define SX127x_PPMOFFSET                 0x27
 
 
 
