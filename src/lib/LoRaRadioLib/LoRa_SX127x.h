@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "..\..\src\targets.h"
+#include "../../src/targets.h"
 
 #include "LoRa_SX127x_Regs.h"
 

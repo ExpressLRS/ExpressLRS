@@ -50,12 +50,11 @@ typedef enum
 
 typedef enum
 {
-    RATE_200HZ = 0,
-    RATE_100HZ = 1,
+    RATE_4HZ = 0,
+    RATE_25HZ = 1,
     RATE_50HZ = 2,
-    RATE_25HZ = 3,
-    RATE_4HZ = 4
-
+    RATE_100HZ = 3,
+    RATE_200HZ = 4,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 typedef struct expresslrs_mod_settings_s
