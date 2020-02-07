@@ -9,6 +9,9 @@
 #include "Debug.h"
 #include "targets.h"
 
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
 String DebugOutput;
 
 /// define some libs to use ///
@@ -164,11 +167,12 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
+  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
+  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
+  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
+  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
+  //Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5);
+  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
   Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
@@ -414,6 +418,7 @@ void setup()
 
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
   strip.Begin();
 
