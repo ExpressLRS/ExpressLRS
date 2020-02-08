@@ -71,7 +71,7 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 #ifdef Regulatory_Domain_AU_915
 
     int hopSeqLength = 256;
-    int numOfFreqs = 20;
+    int numOfFreqs = 19;
     int limit = floor(hopSeqLength / numOfFreqs);
 
     int prev_val = 0;
@@ -85,26 +85,21 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     for (int i = 0; i < hopSeqLength; i++)
     {
 
-        if (i >= last_InitialFreq + last_InitialFreq_interval)
+        if (i >= (last_InitialFreq + last_InitialFreq_interval))
         {
-            rand = FHSSsequence[0];
+            rand = 0;
             last_InitialFreq = i;
         }
         else
         {
-            while (rand > numOfFreqs - 1 || prev_val == rand || tracker[rand] > limit)
+            while (prev_val == rand || tracker[rand] >= limit || rand == 0 || rand > numOfFreqs)
             {
                 rand = rng5Bit();
-            }
-
-            if (rand == FHSSsequence[0])
-            {
-                last_InitialFreq = i;
             }
         }
 
         FHSSsequence[i] = rand;
-        tracker[rand] = tracker[rand] + 1;
+        tracker[rand]++;
         prev_val = rand;
 
         Serial.print(FHSSsequence[i]);
