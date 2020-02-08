@@ -104,6 +104,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
+          crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+
           crsf.sendLinkStatisticsToTX();
         }
       }
