@@ -105,8 +105,6 @@ uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
-const uint32_t RFmodeCycleAddtionalTime[3] = {1000, 2000, 6000}; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
-const uint32_t RFmodeCycleInterval[3] = {1500, 2000, 2500};
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -538,7 +536,7 @@ void setup()
 void loop()
 {
 
-    if (millis() > (RFmodeLastCycled + RFmodeCycleInterval[scanIndex % 3] + ((connectionState == tentative) ? RFmodeCycleAddtionalTime[scanIndex % 3] : 0))) // connection = tentative we add alittle delay
+    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate.RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate.RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
@@ -553,7 +551,7 @@ void loop()
         RFmodeLastCycled = millis();
     }
 
-    if (millis() > (LastValidPacket + RFmodeCycleAddtionalTime[(uint8_t)ExpressLRS_currAirRate.enum_rate])) // check if we lost conn.
+    if (millis() > (LastValidPacket + ExpressLRS_currAirRate.RFmodeCycleAddtionalTime)) // check if we lost conn.
     {
         LostConnection();
     }
