@@ -12,6 +12,8 @@
 /// General Features ///
 #define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 // #define LEGACY_HARDWARE // Uncomment for old TX modules with resistors on half duplex serial UART
+#define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness 
+
 /////////////////////////
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX

@@ -11,8 +11,6 @@ TIM_TypeDef *Instance = TIM2;
 HardwareTimer *MyTim = new HardwareTimer(Instance);
 #endif
 
-//#define MaxPhaseShift 2500
-
 uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros()
 {
     return HWtimerLastCallbackMicros;
@@ -42,11 +40,7 @@ void ICACHE_RAM_ATTR HWtimerUpdateInterval(uint32_t _TimerInterval)
 
 void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t NewOffset)
 {
-
-    //HWtimer::PhaseShift = Offset_ * 5;
     int16_t MaxPhaseShift = HWtimerInterval >> 1;
-    //int16_t MaxPhaseShift = 2500;
-    //#define MaxPhaseShift 2500
 
     if (NewOffset > MaxPhaseShift)
     {

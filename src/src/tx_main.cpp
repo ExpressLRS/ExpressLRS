@@ -399,6 +399,8 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
 void DetectOtherRadios()
 {
+  Radio.SetFrequency(GetInitialFreq());
+  //Radio.RXsingle();
 
   // if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
   // {
@@ -507,7 +509,7 @@ void loop()
   Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
-  //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
+  updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
