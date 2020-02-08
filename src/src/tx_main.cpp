@@ -88,8 +88,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       packetCounteRX_TX++;
       if (type == 0b11) //tlmpacket
       {
-        //Serial.println("TLMpacket1");
-        //Serial.println(type);
         isRXconnected = true;
         LastTLMpacketRecvMillis = millis();
 
@@ -143,7 +141,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  //Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = 0;
   Radio.TXdataBuffer[4] = TxBaseMac[3];
@@ -173,7 +170,6 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
   Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
   Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  //Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5);
   Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
   Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
@@ -334,37 +330,37 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
       {
       case 0:
         Radio.maxPWR = 0b1111;
-        //Radio.SetOutputPower(0b1111); // 500 mW
+        Radio.SetOutputPower(0b1111); // 500 mW
         Serial.println("Setpower 500 mW");
         break;
 
       case 1:
-        //Radio.maxPWR = 0b1000;
-        //Radio.SetOutputPower(0b1111);
+        Radio.maxPWR = 0b1000;
+        Radio.SetOutputPower(0b1111);
         Serial.println("Setpower 200 mW");
         break;
 
       case 2:
-        //Radio.maxPWR = 0b1000;
-        //Radio.SetOutputPower(0b1000);
+        Radio.maxPWR = 0b1000;
+        Radio.SetOutputPower(0b1000);
         Serial.println("Setpower 100 mW");
         break;
 
       case 3:
-        //Radio.maxPWR = 0b0101;
-        //Radio.SetOutputPower(0b0101);
+        Radio.maxPWR = 0b0101;
+        Radio.SetOutputPower(0b0101);
         Serial.println("Setpower 50 mW");
         break;
 
       case 4:
-        //Radio.maxPWR = 0b0010;
-        //Radio.SetOutputPower(0b0010);
+        Radio.maxPWR = 0b0010;
+        Radio.SetOutputPower(0b0010);
         Serial.println("Setpower 25 mW");
         break;
 
       case 5:
         Radio.maxPWR = 0b0000;
-        //Radio.SetOutputPower(0b0000);
+        Radio.SetOutputPower(0b0000);
         Serial.println("Setpower Pit");
         break;
 

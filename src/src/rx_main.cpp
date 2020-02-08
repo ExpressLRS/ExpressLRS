@@ -304,7 +304,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
 
             case 0b01: // Switch Data Packet
-                //Serial.println("Switch Packet");
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     //GotConnection();
@@ -322,7 +321,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
 
             case 0b10: //sync packet from master
-                //Serial.println("Sync Packet0");
                 if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
                     if (connectionState == disconnected)
@@ -440,7 +438,7 @@ void ICACHE_RAM_ATTR sampleButton()
         buttonDown = true;
         Serial.println("Manual Start");
         Radio.SetFrequency(GetInitialFreq());
-        Radio.StartContRX();
+        Radio.RXnb();
     }
 
     if (buttonValue == true && buttonPrevValue == false) //rising edge
@@ -483,13 +481,11 @@ void setup()
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
     Serial.begin(420000);
-    //Serial.begin(115200);
     crsf.InitSerial();
 #endif
 
 #ifdef PLATFORM_ESP8266
     Serial.begin(420000);
-    //Serial.begin(115200);
 #endif
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);

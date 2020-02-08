@@ -14,10 +14,6 @@
 #include <cstdint>
 #endif
 
-// #ifndef ICACHE_RAM_ATTR
-// #define ICACHE_RAM_ATTR IRAM_ATTR
-// #endif
-
 typedef enum
 {
     CURR_OPMODE_FSK_OOK = 0b00000000,
@@ -93,7 +89,6 @@ class SX127xDriver
 
 public:
     ///////Callback Function Pointers/////
-
     static void (*RXdoneCallback1)(); //function pointer for callback
     static void (*RXdoneCallback2)(); //function pointer for callback
     static void (*TXdoneCallback1)(); //function pointer for callback
@@ -162,7 +157,6 @@ public:
     static float PacketLossRate;
     static volatile uint8_t NonceTX;
     static volatile uint8_t NonceRX;
-    static uint8_t ResponseInterval; // how often the slave will reply
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;
     static uint32_t TXspiTime;
@@ -200,8 +194,6 @@ public:
 
     static uint8_t RunCAD();
 
-    static void SX127xclearIRQFlags();
-
     static uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
 
     static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
@@ -221,8 +213,6 @@ public:
     static void ICACHE_RAM_ATTR TimerTask(void *param);
 
     /////////////Non-blocking RX related Functions///////////////
-
-    static void ICACHE_RAM_ATTR StartContRX();
     static void ICACHE_RAM_ATTR StopContRX();
     static void ICACHE_RAM_ATTR RXnb();
 
@@ -230,49 +220,6 @@ public:
 
     static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
     static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
-    static uint8_t rxContinuous(char *data, uint8_t *length);
-    static uint8_t rxISRprocess(char *data, uint8_t *length);
 
 private:
 };
-
-//enum RadioOPmodes {CURR_OPMODE_FSK_OOK = 0b00000000, CURR_OPMODE_LORA = 0b10000000, CURR_OPMODE_ACCESS_SHARED_REG_OFF = 0b00000000, CURR_OPMODE_ACCESS_SHARED_REG_ON = 0b01000000,
-//                  CURR_OPMODE_SLEEP = 0b00000000, CURR_OPMODE_STANDBY = 0b00000001, CURR_OPMODE_FSTX = 0b00000010, CURR_OPMODE_TX = 0b00000011, CURR_OPMODE_FSRX = 0b00000100,
-//                  CURR_OPMODE_RXCONTINUOUS = 0b00000101, CURR_OPMODE_RXSINGLE = 0b00000110, CURR_OPMODE_CAD = 0b00000111
-//                 };
-
-//#define SX127X_ACCESS_SHARED_REG_ON                   0b01000000  //  6     6     access FSK registers (0x0D:0x3F) in LoRa mode
-//#define SX127X_SLEEP                                    //  2     0     sleep
-//#define SX127X_STANDBY                                  //  2     0     standby
-//#define SX127X_FSTX                                     //  2     0     frequency synthesis TX
-//#define SX127X_TX                                       //  2     0     transmit
-//#define SX127X_FSRX                                     //  2     0     frequency synthesis RX
-//#define SX127X_RXCONTINUOUS                             //  2     0     receive continuous
-//#define SX127X_RXSINGLE                                 //  2     0     receive single
-//#define SX127X_CAD                                      //  2     0     channel activity detection
-
-// uint8_t SX127xBegin();
-
-// uint8_t SX127xTX(char* data, uint8_t length);
-// uint8_t SX127xrxSingle(char* data, uint8_t* length, bool headerExplMode);
-// uint8_t SX127xrxContinuous(char* data, uint8_t* length, bool headerExplMode); //ADDED CHANGED
-// uint8_t SX127xrxISRprocess(char* data, uint8_t* length, bool headerExplMode); //ADDED CHANGED
-
-// void SX127xrxISR(); //ADDED CHANGED
-
-// void SX127xTXnbISR();
-// uint8_t SX127xTXnb(char* data, uint8_t length);
-// uint8_t SX127xrunCAD();
-
-// uint8_t SX127xsetMode(uint8_t mode);
-// uint8_t SX127xconfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord); //CHANGED TO uint32_t freq instead of float freq
-// int8_t SX127xgetLastPacketRSSI();
-// float SX127xgetLastPacketSNR();
-
-// uint8_t SX127xconfigCommon(uint8_t bw, uint8_t sf, uint8_t cr, float freq, uint8_t syncWord);
-
-////  private:
-//Chip _ch;
-//int _dio0;
-//int _dio1;
-//
