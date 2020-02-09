@@ -29,11 +29,11 @@ uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 {
 #ifdef Regulatory_Domain_AU_915
 
-    return FHSSfreqs915[FHSSsequence[0]] - FreqCorrection;
+    return FHSSfreqs915[0] - FreqCorrection;
 
 #elif defined Regulatory_Domain_AU_433
 
-    return FHSSfreqs433[FHSSsequence[0]] - FreqCorrection;
+    return FHSSfreqs433[0] - FreqCorrection;
 
 #endif
 }

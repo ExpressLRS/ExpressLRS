@@ -30,11 +30,6 @@ LPF LPF_UplinkRSSI(5);
 
 ///forward defs///
 void SetRFLinkRate(expresslrs_mod_settings_s mode);
-void InitOStimer();
-void OStimerSetCallback(void (*CallbackFunc)(void));
-void OStimerReset();
-void OStimerUpdateInterval(uint32_t Interval);
-
 void InitHarwareTimer();
 void StopHWtimer();
 void HWtimerSetCallback(void (*CallbackFunc)(void));
@@ -106,16 +101,6 @@ uint32_t PacketInterval;
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
-
-void ICACHE_RAM_ATTR GenerateSyncPacketData()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-    Radio.TXdataBuffer[2] = NonceRXlocal;
-    Radio.TXdataBuffer[3] = ExpressLRS_currAirRate.enum_rate;
-}
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -279,11 +264,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-    //Serial.print(NonceRXlocal);
-    //Serial.print(" ");
-    // Serial.print(inCRC);
-    // Serial.print(" = ");
-    // Serial.println(calculatedCRC);
+
     if (inCRC == calculatedCRC)
     {
         if (packetAddr == DeviceAddr)
@@ -306,12 +287,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             case 0b01: // Switch Data Packet
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
-                    //GotConnection();
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
                     crsf.sendRCFrameToFC();
-                    //Serial.println("Switch Pkt");
                 }
                 break;
 
@@ -340,7 +319,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
                     // }
 
-                    //NonceRXlocal = (Radio.RXdataBuffer[2] & 0b11110000) >> 4;
                     FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                     NonceRXlocal = Radio.RXdataBuffer[2];
                 }
@@ -389,7 +367,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
                 Radio.setPPMoffsetReg(FreqCorrection);
 
-                Serial.println(FreqCorrection);
+                //Serial.println(FreqCorrection);
 
                 HandleFHSS();
                 alreadyFHSS = true;
@@ -650,8 +628,6 @@ void loop()
         sampleButton();
         buttonLastSampled = millis();
     }
-
-    //yield();
 
 #ifdef Auto_WiFi_On_Boot
     if ((connectionState == disconnected) && !webUpdateMode && millis() > 10000 && millis() < 11000)
