@@ -40,7 +40,7 @@ bool CRSF::CRSFstate = false;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0;     // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0;     // index where we are reading/writing
-volatile uint8_t CRSF::SerialInBuffer[100] = {0}; // max 64 bytes for CRSF packet
+volatile uint8_t CRSF::SerialInBuffer[CRSF_MAX_PACKET_LEN] = {0}; // max 64 bytes for CRSF packet
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 
@@ -236,6 +236,12 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
         if (CRSF::Port.available())
         {
             LastDataTime = millis();
+
+            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN-1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+            {
+                SerialInPacketPtr = 0;
+            }
+
             char inChar = CRSF::Port.read();
 
             if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
@@ -247,11 +253,6 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
             if (SerialInPacketPtr == 1 && CRSFframeActive == true) // we read the packet length and save it
             {
                 SerialInPacketLen = inChar;
-            }
-
-            if (SerialInPacketPtr == 64) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-            {
-                SerialInPacketPtr = 0;
             }
 
             SerialInBuffer[SerialInPacketPtr] = inChar;
@@ -330,9 +331,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif
         connected();
     }
-
-    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-    //askENTER_CRITICAL(&myMutex);
+    //portENTER_CRITICAL(&mux);
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
         Serial.println("Got Other Packet");
@@ -351,7 +350,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
     }
-    //taskEXIT_CRITICAL(&myMutex);
+    //portEXIT_CRITICAL(&mux);
     //vTaskDelay(2);
 }
 

@@ -375,7 +375,7 @@ private:
 
     static volatile uint8_t SerialInPacketLen;   // length of the CRSF packet as measured
     static volatile uint8_t SerialInPacketPtr;   // index where we are reading/writing
-    static volatile uint8_t SerialInBuffer[100]; // max 64 bytes for CRSF packet serial buffer
+    static volatile uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 
     static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
