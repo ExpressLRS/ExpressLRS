@@ -137,5 +137,41 @@ https://github.com/jaxxzer
 #include <stdio.h>
 #include "STM32F1xx.h"
 #include "stm32f1xx_hal.h"
+#endif
 
+#ifdef TARGET_R9M_TX
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PA15
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      -1
+#define GPIO_PIN_TX_ENABLE      -1
+#define GPIO_PIN_OLED_SDA       -1
+#define GPIO_PIN_OLED_SCK       -1
+#define GPIO_PIN_RCSIGNAL_RX    PA10 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_TX    PA9 // not yet confirmed
+#define GPIO_PIN_LED_RED        PA11 // Red LED
+#define GPIO_PIN_LED_GREEN      PA12 // Green LED
+#define GPIO_PIN_BUTTON         PA8 // pullup e.g. LOW when pressed
+#define GPIO_PIN_BUZZER         PB1
+#define GPIO_PIN_DIP1           PA12 // dip switch 1
+#define GPIO_PIN_DIP2           PA11 // dip switch 2
+
+#define BUFFER_OE               PA5  //CONFIRMED
+#define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
+#define GPIO_PIN_DIO1           PA1  //Not Needed
+
+#define PWR_AMP                 PA6  //CONFIRMED
+#define RF_CONTROL              PB3  //CONFIRMED
+// PwrAmp, RFControl, dodgy measurement with SDR, descending
+// high low  -5 
+// low  low  -30
+// low  high -40
+// high high -40
+
+#include <stdio.h>
+#include "STM32F1xx.h"
+#include "stm32f1xx_hal.h"
 #endif
