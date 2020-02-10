@@ -114,7 +114,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
     crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
 
-    crsf.sendLinkStatisticsToFC();
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
@@ -129,6 +128,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         {
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
+            crsf.sendLinkStatisticsToFC();
         }
     }
 }
