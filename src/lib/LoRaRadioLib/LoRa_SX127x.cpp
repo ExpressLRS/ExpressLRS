@@ -9,9 +9,6 @@
 
 #include "../../src/targets.h"
 
-//#include "FreeRTOS.h"
-//#include "esp32-hal-timer.h"
-
 #define DEBUG
 
 uint32_t volatile SX127xDriver::PacketCount = 0;
@@ -35,11 +32,9 @@ void (*SX127xDriver::TimerDoneCallback)() = &nullCallback;
 
 volatile bool SX127xDriver::headerExplMode = false;
 
-volatile uint32_t SX127xDriver::TimerInterval = 20000;
+volatile uint32_t SX127xDriver::TimerInterval = 5000;
 volatile uint8_t SX127xDriver::TXbuffLen = 8;
 volatile uint8_t SX127xDriver::RXbuffLen = 8;
-
-uint8_t SX127xDriver::ResponseInterval = 0;
 
 volatile uint8_t SX127xDriver::NonceTX = 0;
 volatile uint8_t SX127xDriver::NonceRX = 0;
@@ -66,6 +61,7 @@ bool SX127xDriver::HighPowerModule = true;
 #endif
 /////////////////////////////////////////////////////////////////
 
+//// Debug Variables ////
 uint32_t SX127xDriver::TimeOnAir = 0;
 uint32_t SX127xDriver::LastTXdoneMicros = 0;
 uint32_t SX127xDriver::TXdoneMicros = 0;
@@ -74,6 +70,7 @@ int8_t SX127xDriver::LastPacketRSSI = 0;
 int8_t SX127xDriver::LastPacketSNR = 0;
 uint32_t SX127xDriver::TXspiTime = 0;
 uint32_t SX127xDriver::HeadRoom = 0;
+/////////////////////////////////////////////////////////////////
 
 Bandwidth SX127xDriver::currBW = BW_500_00_KHZ;
 SpreadingFactor SX127xDriver::currSF = SF_6;
@@ -238,7 +235,8 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 
 #define FREQ_STEP 61.03515625
 
-  uint32_t FRQ = (uint32_t)((double)freq / (double)FREQ_STEP);
+  uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+
   status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
@@ -330,7 +328,6 @@ uint8_t SX127xDriver::SX127xBegin()
     else
     {
 #ifdef DEBUG
-      //Serial.print(SX127xgetChipName());
       Serial.print(" not found! (");
       Serial.print(i + 1);
       Serial.print(" of 10 tries) REG_VERSION == ");
@@ -348,7 +345,6 @@ uint8_t SX127xDriver::SX127xBegin()
   if (!flagFound)
   {
 #ifdef DEBUG
-    //Serial.print(SX127xgetChipName());
     Serial.println(" not found!");
 #endif
     //SPI.end();
@@ -357,7 +353,6 @@ uint8_t SX127xDriver::SX127xBegin()
 #ifdef DEBUG
   else
   {
-    //Serial.print(SX127xgetChipName());
     Serial.println(" found! (match by REG_VERSION == 0x12)");
   }
 #endif
@@ -438,31 +433,9 @@ void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
   portENTER_CRITICAL(&myMutex);
   TimerDoneCallback();
   portEXIT_CRITICAL(&myMutex);
-  // static BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  // if (RadioState == RADIO_IDLE)
-  // {
-  //   xSemaphoreGiveFromISR(timer_sem, &xHigherPriorityTaskWoken);
-  //   if (xHigherPriorityTaskWoken)
-  //   {
-  //     //SX127xDriver::TXstartMicros = micros();
-  //     //SX127xDriver::HeadRoom = TXdoneMicros - TXstartMicros; //previous done time minus when new packet was rq.
-  //     portYIELD_FROM_ISR(); // this wakes up sample_timer_task immediately
-  //   }
-  // }
 }
 
-// void ICACHE_RAM_ATTR SX127xDriver::TimerTask(void *param)
-// {
-//   timer_sem = xSemaphoreCreateBinary();
-//   const TickType_t xDelay = 2 / portTICK_PERIOD_MS;
-//   while (1)
-//   {
-//     xSemaphoreTake(timer_sem, portMAX_DELAY);
-//     //TimerDoneCallback(); // run the callback
-//     vTaskDelay(2);
-//     //taskYIELD();
-//   }
-// }
+
 
 void ICACHE_RAM_ATTR SX127xDriver::StopTimerTask()
 {
@@ -490,20 +463,6 @@ void ICACHE_RAM_ATTR SX127xDriver::UpdateTimerInterval()
 
 void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 {
-
-  //attachInterrupt(digitalPinToInterrupt(SX127x_dio0), TXnbISR, RISING);
-
-  //SetMode(SX127X_STANDBY);
-  //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
-
-  // xTaskCreatePinnedToCore(
-  //     TimerTask,         /* Task function. */
-  //     "TimerTask",       /* String with name of task. */
-  //     4096,              /* Stack size in words. */
-  //     NULL,              /* Parameter passed as input of the task */
-  //     100,               /* Priority of the task. */
-  //     &TimerTask_handle, /* Task handle. */
-  //     1);
   if (!timer)
   {
     timer = timerBegin(0, 80, true);
@@ -578,33 +537,13 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-  //Serial.println("rxISRprocess begin");
-
-  //    if(getRegValue(SX127X_REG_IRQ_FLAGS, 5, 5) == SX127X_CLEAR_IRQ_FLAG_PAYLOADcurrCRC_ERROR) {
-  //    Serial.println("CRC MISMTACH");
-  //        return(ERRcurrCRC_MISMATCH);
-  //    }
-  //
-  // if (headerExplMode) {
-  //   RXbuffLen = getRegValue(SX127X_REG_RX_NB_BYTES);
-  // }
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, RXdataBuffer);
   SX127xDriver::LastPacketRSSI = SX127xDriver::GetLastPacketRSSI();
   SX127xDriver::LastPacketSNR = SX127xDriver::GetLastPacketSNR();
-  //Serial.println("Done Read");
-  //CalcCRC16();
   NonceRX++;
   ClearIRQFlags();
-  (RXdoneCallback1)();
-  (RXdoneCallback2)();
-  //Serial.println("Done Callback");
-
-  //Serial.println(".");
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::StartContRX()
-{
-  SX127xDriver::RXnb();
+  RXdoneCallback1();
+  RXdoneCallback2();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
@@ -617,8 +556,7 @@ void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-  //attach interrupt to DIO0
-  //RX continuous mode
+  //attach interrupt to DIO0, RX continuous mode
 
 #if defined(PLATFORM_ESP32)
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
@@ -646,10 +584,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
 
   SetMode(SX127X_RXCONTINUOUS);
-
-  //Serial.println("Started cont RX");
-
-  //return (ERR_NONE);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -789,8 +723,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 
 uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
-  //ClearIRQFlags();
-  //Serial.println("initing");
   if (RFmodule == RFMOD_SX1276)
   {
     SX1276config(bw, sf, cr, freq, syncWord);
@@ -887,6 +819,102 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   return (status);
 }
 
+uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
+{
+
+  switch (SX127xDriver::currBW)
+  {
+  case 0:
+    return 7.8E3;
+  case 1:
+    return 10.4E3;
+  case 2:
+    return 15.6E3;
+  case 3:
+    return 20.8E3;
+  case 4:
+    return 31.25E3;
+  case 5:
+    return 41.7E3;
+  case 6:
+    return 62.5E3;
+  case 7:
+    return 125E3;
+  case 8:
+    return 250E3;
+  case 9:
+    return 500E3;
+  }
+
+  return -1;
+}
+
+uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // this is basically just used for speedier calc of the freq offset, pre compiled for 32mhz xtal
+{
+
+  switch (SX127xDriver::currBW)
+  {
+  case 0:
+    return 1026;
+  case 1:
+    return 769;
+  case 2:
+    return 513;
+  case 3:
+    return 385;
+  case 4:
+    return 256;
+  case 5:
+    return 192;
+  case 6:
+    return 128;
+  case 7:
+    return 64;
+  case 8:
+    return 32;
+  case 9:
+    return 16;
+  }
+
+  return -1;
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
+{
+  int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)SX127xDriver::currFreq / 1000000)) << 8);
+  offsetValue >>= 8;
+
+  uint8_t regValue = offsetValue & 0b01111111;
+
+  if (offsetValue < 0)
+  {
+    regValue = regValue | 0b10000000; //set neg bit for 2s complement
+  }
+
+  writeRegister(SX127x_PPMOFFSET, regValue);
+}
+
+int32_t SX127xDriver::GetFrequencyError()
+{
+
+  uint8_t MSB_reg = readRegister(SX127X_REG_FEI_MSB) & 0b1111;
+
+  uint32_t RegFei = 0;
+  RegFei = ((MSB_reg) << 16) + (readRegister(SX127X_REG_FEI_MID) << 8) + (readRegister(SX127X_REG_FEI_LSB));
+
+  int32_t intFreqError = RegFei & 0b01111111111111111111;
+
+  if (MSB_reg & 0b1000)
+  {
+    intFreqError -= 524288; // Sign bit is on
+  }
+
+  int32_t fErrorHZ = (intFreqError >> 3) * (SX127xDriver::getCurrBandwidthNormalisedShifted()); // bit shift hackery so we don't have to use floaty bois; the >> 3 is intentional and is a simplification of the formula on page 114 of sx1276 datasheet
+  fErrorHZ >>= 4;
+
+  return fErrorHZ;
+}
+
 uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
 {
   return (getRegValue(SX127X_REG_PKT_RSSI_VALUE));
@@ -895,6 +923,11 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
   return (-157 + getRegValue(SX127X_REG_PKT_RSSI_VALUE));
+}
+
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
+{
+  return (-157 + getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()

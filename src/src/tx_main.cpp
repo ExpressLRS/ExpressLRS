@@ -1,13 +1,16 @@
 #include <Arduino.h>
 #include "FIFO.h"
 #include "utils.h"
-#include "debug.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
+#include "Debug.h"
 #include "targets.h"
+
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 String DebugOutput;
 
@@ -16,11 +19,11 @@ SX127xDriver Radio;
 CRSF crsf;
 
 //// Switch Data Handling ///////
-uint8_t SwitchPacketsCounter = 0;               //not used for the moment
-uint32_t SwitchPacketSendInterval = 200;        //not used, delete when able to
-uint32_t SwitchPacketSendIntervalRXlost = 200;  //how often to send the switch data packet (ms) when there is no response from RX
-uint32_t SwitchPacketSendIntervalRXconn = 1000; //how often to send the switch data packet (ms) when there we have a connection
-uint32_t SwitchPacketLastSent = 0;              //time in ms when the last switch data packet was sent
+uint8_t SwitchPacketsCounter = 0;             //not used for the moment
+uint32_t SwitchPacketSendInterval = 200;      //not used, delete when able to
+uint32_t SyncPacketSendIntervalRXlost = 250;  //how often to send the switch data packet (ms) when there is no response from RX
+uint32_t SyncPacketSendIntervalRXconn = 1500; //how often to send the switch data packet (ms) when there we have a connection
+uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -76,7 +79,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
-  DEBUG_PRINTLN("TLMpacket");
+  //Serial.println("TLMpacket0");
 
   if (packetAddr == DeviceAddr)
   {
@@ -99,18 +102,25 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
+          crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+
           crsf.sendLinkStatisticsToTX();
         }
+      }
+      else
+      {
+        Serial.println("TLM type error");
+        Serial.println(type);
       }
     }
     else
     {
-      DEBUG_PRINTLN("TLM crc error");
+      Serial.println("TLM crc error");
     }
   }
   else
   {
-    DEBUG_PRINTLN("TLM dev addr");
+    Serial.println("TLM dev addr");
   }
 }
 
@@ -131,12 +141,11 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  //Radio.TXdataBuffer[2] = (Radio.NonceTX << 4) + (ExpressLRS_currAirRate.enum_rate & 0b1111);
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = baseMac[3];
-  Radio.TXdataBuffer[5] = baseMac[4];
-  Radio.TXdataBuffer[6] = baseMac[5];
+  Radio.TXdataBuffer[4] = TxBaseMac[3];
+  Radio.TXdataBuffer[5] = TxBaseMac[4];
+  Radio.TXdataBuffer[6] = TxBaseMac[5];
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
@@ -157,11 +166,11 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3] & 0b11111111000) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
+  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
+  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
+  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
+  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
+  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
   Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
@@ -211,11 +220,11 @@ void ICACHE_RAM_ATTR HandleTLM()
 {
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
+    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
     if (modresult == 0) // wait for tlm response because it's time
     {
-      Radio.StartContRX();
+      Radio.RXnb();
       WaitRXresponse = true;
     }
   }
@@ -224,10 +233,14 @@ void ICACHE_RAM_ATTR HandleTLM()
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
 
+#ifdef FEATURE_OPENTX_SYNC
+  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+#endif
+
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.TLMinterval;
+    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
     if (modresult == 0)
     { // wait for tlm response
@@ -243,19 +256,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-#ifdef FEATURE_OPENTX_SYNC
-  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
-#endif
-
   uint32_t SyncInterval;
 
   if (isRXconnected)
   {
-    SyncInterval = SwitchPacketSendIntervalRXconn;
+    SyncInterval = SyncPacketSendIntervalRXconn;
   }
   else
   {
-    SyncInterval = SwitchPacketSendIntervalRXlost;
+    SyncInterval = SyncPacketSendIntervalRXlost;
   }
 
   //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
@@ -265,7 +274,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    DEBUG_PRINTLN("sync");
+    //Serial.println("sync");
+    //Serial.println(Radio.currFreq);
   }
   else
   {
@@ -320,38 +330,38 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
       {
       case 0:
         Radio.maxPWR = 0b1111;
-        //Radio.SetOutputPower(0b1111); // 500 mW
-        DEBUG_PRINTLN("Setpower 500 mW");
+        Radio.SetOutputPower(0b1111); // 500 mW
+        Serial.println("Setpower 500 mW");
         break;
 
       case 1:
-        //Radio.maxPWR = 0b1000;
+        Radio.maxPWR = 0b1000;
         Radio.SetOutputPower(0b1111);
-        DEBUG_PRINTLN("Setpower 200 mW");
+        Serial.println("Setpower 200 mW");
         break;
 
       case 2:
-        //Radio.maxPWR = 0b1000;
+        Radio.maxPWR = 0b1000;
         Radio.SetOutputPower(0b1000);
-        DEBUG_PRINTLN("Setpower 100 mW");
+        Serial.println("Setpower 100 mW");
         break;
 
       case 3:
-        //Radio.maxPWR = 0b0101;
+        Radio.maxPWR = 0b0101;
         Radio.SetOutputPower(0b0101);
-        DEBUG_PRINTLN("Setpower 50 mW");
+        Serial.println("Setpower 50 mW");
         break;
 
       case 4:
-        //Radio.maxPWR = 0b0010;
+        Radio.maxPWR = 0b0010;
         Radio.SetOutputPower(0b0010);
-        DEBUG_PRINTLN("Setpower 25 mW");
+        Serial.println("Setpower 25 mW");
         break;
 
       case 5:
         Radio.maxPWR = 0b0000;
         Radio.SetOutputPower(0b0000);
-        DEBUG_PRINTLN("Setpower Pit");
+        Serial.println("Setpower Pit");
         break;
 
       default:
@@ -389,18 +399,26 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
 void DetectOtherRadios()
 {
+  Radio.SetFrequency(GetInitialFreq());
+  //Radio.RXsingle();
 
   // if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
   // {
-  //   DEBUG_PRINTLN("got fastsync resp 1");
+  //   Serial.println("got fastsync resp 1");
   //   break;
   // }
 }
 
 void setup()
 {
+#ifdef LEGACY_HARDWARE
+  pinMode(4, INPUT_PULLDOWN);
+#endif
+  pinMode(36, INPUT_PULLUP);
+
   Serial.begin(115200);
-  DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
+  Serial.println("ExpressLRS TX Module Booted...");
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
   strip.Begin();
 
@@ -410,27 +428,27 @@ void setup()
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // TxBaseMac[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-  DEBUG_PRINTLN("");
-  DEBUG_PRINTLN("Copy the below line into common.h.");
-  DEBUG_PRINT("uint8_t TxBaseMac[6] = {");
-  DEBUG_PRINT(baseMac[0]);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINT(baseMac[1]);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINT(baseMac[2]);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINT(baseMac[3]);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINT(baseMac[4]);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINT(baseMac[5]);
-  DEBUG_PRINTLN("};");
-  DEBUG_PRINTLN("");
+  Serial.println("");
+  Serial.println("Copy the below line into common.h.");
+  Serial.print("uint8_t TxBaseMac[6] = {");
+  Serial.print(baseMac[0]);
+  Serial.print(", ");
+  Serial.print(baseMac[1]);
+  Serial.print(", ");
+  Serial.print(baseMac[2]);
+  Serial.print(", ");
+  Serial.print(baseMac[3]);
+  Serial.print(", ");
+  Serial.print(baseMac[4]);
+  Serial.print(", ");
+  Serial.print(baseMac[5]);
+  Serial.println("};");
+  Serial.println("");
 
   FHSSrandomiseFHSSsequence();
 
 #ifdef Regulatory_Domain_AU_915
-  DEBUG_PRINTLN("Setting 915MHz Mode");
+  Serial.println("Setting 915MHz Mode");
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
@@ -439,11 +457,11 @@ void setup()
   // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
   // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
   Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-  // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-  // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
+                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #endif
 #elif defined Regulatory_Domain_AU_433
-  DEBUG_PRINTLN("Setting 433MHz Mode");
+  Serial.println("Setting 433MHz Mode");
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
   Radio.SetOutputPower(0b1111);
 #endif
@@ -468,6 +486,7 @@ void setup()
 
   Radio.Begin();
   SetRFLinkRate(RF_RATE_200HZ);
+  // SetRFLinkRate(RF_RATE_100HZ);
   crsf.Begin();
 }
 
@@ -476,42 +495,54 @@ void loop()
 
   delay(100);
 
+  // if (digitalRead(4) == 0)
+  // {
+  //   Serial.println("Switch Pressed!");
+  // }
+
+  // if (digitalRead(36) == 0)
+  // {
+  //   Serial.println("Switch Pressed!");
+  // }
+
 #ifdef FEATURE_OPENTX_SYNC
   Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
-  //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
+  updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
     isRXconnected = false;
   }
-
-  if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
+  else
   {
-
-    // if (isRXconnected)
-    // {
-    //   if ((Radio.RXdataBuffer[2] < 30 || Radio.RXdataBuffer[4] < 10))
-    //   {
-    //     IncreasePower();
-    //   }
-    //   if (Radio.RXdataBuffer[2] > 60 || Radio.RXdataBuffer[4] > 40)
-    //   {
-    //     DecreasePower();
-    //   }
-    //   crsf.sendLinkStatisticsToTX();
-    // }
-
-    float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-    PacketRateLastChecked = millis();
-    PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
-    linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
-
-    if (linkQuality > 99)
-    {
-      linkQuality = 99;
-    }
-    packetCounteRX_TX = 0;
+    isRXconnected = true;
   }
+
+  //if (millis() > (PacketRateLastChecked + PacketRateInterval)//just some debug data
+  //{
+  // if (isRXconnected)
+  // {
+  //   if ((Radio.RXdataBuffer[2] < 30 || Radio.RXdataBuffer[4] < 10))
+  //   {
+  //     IncreasePower();
+  //   }
+  //   if (Radio.RXdataBuffer[2] > 60 || Radio.RXdataBuffer[4] > 40)
+  //   {
+  //     DecreasePower();
+  //   }
+  //   crsf.sendLinkStatisticsToTX();
+  // }
+
+  float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
+  PacketRateLastChecked = millis();
+  PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
+  linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+
+  if (linkQuality > 99)
+  {
+    linkQuality = 99;
+  }
+  packetCounteRX_TX = 0;
 }

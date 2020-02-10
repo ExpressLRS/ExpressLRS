@@ -2,11 +2,16 @@
 #define ESP8266_HARDWARE_TIMERS_H
 
 #include "Arduino.h"
+#include "targets.h"
 
-extern "C"
-{
-#include "user_interface.h"
-}
+#ifdef PLATFORM_STM32
+    //
+#else
+    extern "C"
+    {
+    #include "user_interface.h"
+    }
+#endif
 
 //////////Hardware Timer Functions//////////////////////////////////////
 void (*HWtimerCallBack)(void) = NULL;
@@ -14,13 +19,14 @@ void (*HWtimerCallBack90)(void) = NULL;
 #define HardwareTimerBaseInterval 1000;
 #define TimerIntervalUSDefault 16000
 volatile uint32_t HWtimerInterval = TimerIntervalUSDefault;
+volatile uint32_t HWtimerIntervalUS;
 volatile bool TickTock = false;
-uint32_t HWtimerLastCallbackMicros;
-uint32_t HWtimerLastCallbackMicros90;
+volatile uint32_t HWtimerLastCallbackMicros;
+volatile uint32_t HWtimerLastCallbackMicros90;
 uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
 uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
 uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
-int16_t PhaseShift = 0;
+volatile int16_t PhaseShift = 0;
 bool ResetNextLoop = false;
 
 void ICACHE_RAM_ATTR HWtimerUpdateInterval(uint32_t _TimerInterval);

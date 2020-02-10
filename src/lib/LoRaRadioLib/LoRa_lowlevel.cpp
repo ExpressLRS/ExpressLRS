@@ -18,13 +18,26 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 
 #ifdef PLATFORM_ESP32
   SPI.begin(SX127xDriver::SX127x_SCK, SX127xDriver::SX127x_MISO, SX127xDriver::SX127x_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
-#else
-  SPI.begin();
 #endif
 
+#ifdef PLATFORM_ESP8266
+  SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setFrequency(10000000);
+#endif
+
+#ifdef PLATFORM_STM32
+  //SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
+  SPI.setMOSI(GPIO_PIN_MOSI);
+  SPI.setMISO(GPIO_PIN_MISO);
+  SPI.setSCLK(GPIO_PIN_SCK);
+  SPI.setBitOrder(MSBFIRST);
+  SPI.setDataMode(SPI_MODE0);
+  SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
+
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
@@ -44,12 +57,19 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
   OutByte = (reg | SPI_READ);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(OutByte);
+#else
   SPI.write(OutByte);
+#endif
 
-  for (uint8_t i = 0; i < numBytes; i++)
-  {
-    inBytes[i] = SPI.transfer(reg);
-  }
+  // for (uint8_t i = 0; i < numBytes; i++)
+  // {
+  //   inBytes[i] = SPI.transfer(reg);
+  // }
+
+  SPI.transfer(inBytes, numBytes);
+
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 
   if (DebugVerbosity >= DEBUG_4)
@@ -80,12 +100,17 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, volatil
 
   OutByte = (reg | SPI_READ);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(OutByte);
+#else
   SPI.write(OutByte);
+#endif
 
-  for (uint8_t i = 0; i < numBytes; i++)
-  {
-    inBytes[i] = SPI.transfer(reg);
-  }
+  // for (uint8_t i = 0; i < numBytes; i++)
+  // {
+  //    inBytes[i] = SPI.transfer(reg);
+  // }
+  SPI.transfer((uint8_t *)inBytes, numBytes);
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 
@@ -113,12 +138,18 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *i
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(reg | SPI_READ);
+#else
   SPI.write(reg | SPI_READ);
+#endif
 
-  for (uint8_t i = 0; i < numBytes; i++)
-  {
-    inBytes[i] = SPI.transfer(reg);
-  }
+  // for (uint8_t i = 0; i < numBytes; i++)
+  // {
+  //   inBytes[i] = SPI.transfer(reg);
+  // }
+
+  SPI.transfer((uint8_t *)inBytes, numBytes);
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 
@@ -150,7 +181,11 @@ uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg)
 
   OutByte = (reg | SPI_READ);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(OutByte);
+#else
   SPI.write(OutByte);
+#endif
 
   InByte = SPI.transfer(0x00);
 
@@ -177,8 +212,13 @@ void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t n
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(reg | SPI_WRITE);
+  SPI.transfer(data, numBytes);
+#else
   SPI.write(reg | SPI_WRITE);
   SPI.writeBytes(data, numBytes);
+#endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 }
@@ -187,8 +227,13 @@ void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(reg | SPI_WRITE);
+  SPI.transfer((uint8_t *)data, numBytes);
+#else
   SPI.write(reg | SPI_WRITE);
   SPI.writeBytes((uint8_t *)data, numBytes);
+#endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 }
@@ -197,9 +242,13 @@ void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
+#ifdef PLATFORM_STM32
+  SPI.transfer(reg | SPI_WRITE);
+  SPI.transfer(data);
+#else
   SPI.write(reg | SPI_WRITE);
-
   SPI.write(data);
+#endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 

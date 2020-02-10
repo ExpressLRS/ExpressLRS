@@ -38,10 +38,9 @@ bool CRSF::firstboot = true;
 
 bool CRSF::CRSFstate = false;
 
-volatile uint8_t CRSF::SerialInPacketLen = 0;                        // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0;                        // index where we are reading/writing
-volatile uint8_t CRSF::SerialInBuffer[100] = {0};                    // max 64 bytes for CRSF packet
-volatile uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1] = {0}; // max 64 bytes for CRSF packet
+volatile uint8_t CRSF::SerialInPacketLen = 0;     // length of the CRSF packet as measured
+volatile uint8_t CRSF::SerialInPacketPtr = 0;     // index where we are reading/writing
+volatile uint8_t CRSF::SerialInBuffer[100] = {0}; // max 64 bytes for CRSF packet
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 
@@ -61,7 +60,7 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     //xTaskHandle UartTaskHandle = NULL;
-    xTaskCreate(ESP32uartTask, "ESP32uartTask", 20000, NULL, 100, NULL);
+    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 20000, NULL, 255, NULL, 0);
 #endif
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
@@ -98,10 +97,11 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
 {
+    vTaskDelay(500);
     for (;;)
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 4000;        // + offset that seems to be needed
+        int32_t offset = CRSF::OpenTXsyncOffset * 10 - 8000;        // + offset that seems to be needed
         uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
@@ -135,7 +135,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_STM32)
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -168,6 +168,7 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     outBuffer[RCframeLength + 3] = crc;
 
     this->_dev->write(outBuffer, RCframeLength + 4);
+    //this->_dev->print(".");
 }
 
 void ICACHE_RAM_ATTR CRSF::ESP8266ReadUart()
@@ -204,10 +205,6 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
 {
 
     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
-    const TickType_t xDelay2 = 2 / portTICK_PERIOD_MS;
-    const TickType_t xDelay3 = 3 / portTICK_PERIOD_MS;
-    const TickType_t xDelay4 = 4 / portTICK_PERIOD_MS;
-    const TickType_t xDelay5 = 5 / portTICK_PERIOD_MS;
     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false);
     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
@@ -270,8 +267,8 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     SerialInPacketPtr = 0;
                     CRSFframeActive = false;
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
+                    //taskYIELD();
                     vTaskDelay(xDelay1);
-                    taskYIELD();
 
                     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                     if (peekVal > 0)
@@ -291,6 +288,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                             FlushSerial(); // we don't need to read back the data we just wrote
                         }
                     }
+                    vTaskDelay(xDelay1);
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                 }
                 else
@@ -311,7 +309,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
                     CRSFframeActive = false;
                     SerialInPacketPtr = 0;
                     FlushSerial();
-                    //vTaskDelay(xDelay);
+                    vTaskDelay(xDelay1);
                 }
             }
         }
@@ -328,16 +326,16 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
 #ifdef FEATURE_OPENTX_SYNC
-        xTaskCreate(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleSerialOutFIFO);
+        xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 254, &xHandleSerialOutFIFO, 1);
 #endif
         connected();
     }
 
-    portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-    taskENTER_CRITICAL(&myMutex);
+    //portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+    //askENTER_CRITICAL(&myMutex);
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        //Serial.println("Got Other Packet");
+        Serial.println("Got Other Packet");
         if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
             ParameterUpdateData[0] = SerialInBuffer[5];
@@ -348,12 +346,12 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
-        GetChannelDataIn();
         CRSF::RCdataLastRecv = micros();
+        GetChannelDataIn();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
     }
-    taskEXIT_CRITICAL(&myMutex);
+    //taskEXIT_CRITICAL(&myMutex);
     //vTaskDelay(2);
 }
 
@@ -363,11 +361,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 {
 #define SERIAL_PACKET_OFFSET 3
 
-    // for (int i = 0; i < 16; i++)
-    //{
     memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
-    //this is used in other code to detect when the channel data has changed
-    // }
 
     const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
     ChannelDataIn[0] = (rcChannels->ch0);
@@ -390,10 +384,5 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
 void ICACHE_RAM_ATTR CRSF::FlushSerial()
 {
-    //while (CRSF::Port.available())
-    //{
-    //CRSF::Port.read();
-    // }
-
     CRSF::Port.flush();
 }

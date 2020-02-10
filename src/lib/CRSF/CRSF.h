@@ -275,17 +275,36 @@ class CRSF
 {
 
 public:
-#ifdef PLATFORM_ESP8266
     //CRSF(HardwareSerial& serial);
-    CRSF(Stream *dev) : _dev(dev) {}
+
+#if defined(PLATFORM_ESP8266)
+
+    CRSF(Stream *dev) : _dev(dev)
+    {
+    }
     CRSF(Stream &dev) : _dev(&dev) {}
 
     void InitSerial()
     {
-        _dev->println("I am ready");
+        _dev->println("CRSF Lib Ready!");
     }
 
 #endif
+
+#ifdef PLATFORM_STM32
+
+    CRSF(Stream *dev) : _dev(dev)
+    {
+    }
+    CRSF(Stream &dev) : _dev(&dev) {}
+
+    void InitSerial()
+    {
+        _dev->println("CRSF Lib Ready!");
+    }
+
+#endif
+
     static HardwareSerial Port;
     //static Stream *Port;
 
@@ -325,7 +344,6 @@ public:
     static void ICACHE_RAM_ATTR duplex_set_TX();
     static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
     static void ICACHE_RAM_ATTR FlushSerial();
-    static void GetSYNC(); //SYNC to incomming data
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
@@ -346,15 +364,11 @@ public:
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
     /////////////////////////////////////////////////////////////
 
-    //static void BuildRCPacket(crsf_addr_e addr = CRSF_ADDRESS_FLIGHT_CONTROLLER); //build packet to send to the FC
-
-    static void ICACHE_RAM_ATTR SerialISR();
     static void ICACHE_RAM_ATTR ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
 
     static void inline nullCallback(void);
 
-    //static uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Datain) { return (0.62477120195241f * Datain) + 881; };
 
 private:
     Stream *_dev;
@@ -368,7 +382,5 @@ private:
     static volatile bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
 };
-
-//float fmap(float x, float in_min, float in_max, float out_min, float out_max);
 
 #endif

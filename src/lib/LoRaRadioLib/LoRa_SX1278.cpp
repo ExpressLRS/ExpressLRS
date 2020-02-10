@@ -3,17 +3,6 @@
 #include "LoRa_SX1278.h"
 #include "LoRa_lowlevel.h"
 
-//uint8_t SX1278rxISRprocess(char* data, uint8_t* length) {  //ADDED CHANGED
-//  // get header mode
-//  bool headerExplMode = false;
-//  if (getRegValue(SX127X_REG_MODEM_CONFIG_1, 0, 0) == SX1278_HEADER_EXPL_MODE) {
-//    headerExplMode = true;
-//  }
-//
-//  // execute common part
-//  return SX127xrxISRprocess(data, length, headerExplMode);
-//}
-
 uint8_t SX1278rxCont()
 { //ADDED CHANGED
   // get header mode
