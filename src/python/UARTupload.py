@@ -96,7 +96,8 @@ if(alreadyInBootloader == False):
         
         s.flush()
         s.write(BootloaderInitSeq1)
-        time.sleep(0.5)
+        time.sleep(1)
+        s.write(BootloaderInitSeq2)
 
         lines = []
         inChars = ""
@@ -110,6 +111,10 @@ if(alreadyInBootloader == False):
                 sys.stdout.write(str(currAttempt+1))
                 sys.stdout.write(" attempts\n")
                 sys.stdout.flush()
+                gotBootloader = True
+                break
+				
+            if('C' in line):	
                 gotBootloader = True
                 break
             

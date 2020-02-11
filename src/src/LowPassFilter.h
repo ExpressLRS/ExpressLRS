@@ -5,12 +5,12 @@
 
 class LPF
 {
-private:
+public:
     int32_t SmoothDataINT;
     int32_t SmoothDataFP;
     int Beta = 3;     // Length = 16
     int FP_Shift = 3; //Number of fractional bits
-public:
+
     LPF(int Beta_, int FP_Shift_)
     {
         Beta = Beta_;
@@ -48,6 +48,5 @@ public:
         {
             this->update(Indata);
         }
-
     }
 };

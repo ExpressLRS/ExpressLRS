@@ -176,6 +176,17 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
   }
 
+  if (bw == SX1276_BW_500_00_KHZ)
+  {
+    //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+    status = setRegValue(0x36, 0x02);
+    status = setRegValue(0x3a, 0x64);
+  }
+  else
+  {
+    status = setRegValue(0x36, 0x03);
+  }
+
   return (status);
 }
 

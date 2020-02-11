@@ -197,6 +197,7 @@ uint8_t SX127xDriver::SetSpreadingFactor(SpreadingFactor sf)
     status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
     status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
     status = setRegValue(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
+
   }
   else
   {
@@ -434,8 +435,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
   TimerDoneCallback();
   portEXIT_CRITICAL(&myMutex);
 }
-
-
 
 void ICACHE_RAM_ATTR SX127xDriver::StopTimerTask()
 {

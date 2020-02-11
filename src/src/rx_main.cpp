@@ -24,7 +24,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 //Filters//
 LPF LPF_PacketInterval(3);
-LPF LPF_Offset(2);
+LPF LPF_Offset(3);
 LPF LPF_FreqError(3);
 LPF LPF_UplinkRSSI(5);
 
@@ -46,8 +46,8 @@ uint8_t scanIndex = 0;
 uint32_t MeasuredHWtimerInterval;
 int32_t HWtimerError;
 int32_t HWtimerError90;
-int16_t Offset;
-int16_t Offset90;
+int32_t Offset;
+int32_t Offset90;
 uint32_t SerialDebugPrintInterval = 250;
 uint32_t LastSerialDebugPrint = 0;
 
@@ -108,7 +108,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = LPF_UplinkRSSI.update(-(RFnoiseFloor - Radio.GetLastPacketRSSI()));
+    crsf.LinkStatistics.uplink_RSSI_1 = (LPF_UplinkRSSI.update(Radio.GetLastPacketRSSI()) + 130);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
@@ -128,7 +128,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         {
             Radio.SetFrequency(FHSSgetNextFreq());
             Radio.RXnb();
-            crsf.sendLinkStatisticsToFC();
+            //crsf.sendLinkStatisticsToFC();
         }
     }
 }
@@ -271,7 +271,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             LastValidPacketPrevMicros = LastValidPacketMicros;
             LastValidPacketMicros = micros();
-            HWtimerError = ((micros() - HWtimerGetlastCallbackMicros()) % ExpressLRS_currAirRate.interval);
+            LastValidPacket = millis();
             packetCounter++;
 
             getRFlinkInfo();
@@ -284,7 +284,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 crsf.sendRCFrameToFC();
                 break;
 
-            case 0b01: // Switch Data Packet
+            case 0b01:                                                                                                    // Switch Data Packet
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     UnpackSwitchData();
@@ -328,11 +328,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
             }
 
-            LastValidPacket = millis();
             addPacketToLQ();
 
+            HWtimerError = ((micros() - HWtimerGetlastCallbackMicros()) % ExpressLRS_currAirRate.interval);
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift((Offset >> 1) + timerOffset);
+            HWtimerPhaseShift((Offset >> 4) + timerOffset);
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
@@ -372,8 +372,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 HandleFHSS();
                 alreadyFHSS = true;
             }
-            // Serial.print("Offset: ");
-            // Serial.print(Offset);
+            //Serial.println("");
+            //Serial.print("Offset: ");
+            //Serial.println(Offset);
             // Serial.print(" LQ: ");
             // Serial.println(linkQuality);
             //Serial.print(":");
@@ -532,7 +533,7 @@ void loop()
 
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SendLinkStatstoFCinterval)) && connectionState != disconnected)
     {
-        //crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
     // if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)

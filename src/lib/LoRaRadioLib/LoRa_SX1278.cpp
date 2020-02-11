@@ -217,7 +217,6 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     return (status);
   }
 
-
   // set SF6 optimizations
   if (sf == SX127X_SF_6)
   {
@@ -231,6 +230,17 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
     //status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
     status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
+  }
+
+  if (bw == SX1278_BW_500_00_KHZ)
+  {
+    //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+    status = setRegValue(0x36, 0x02);
+    status = setRegValue(0x3a, 0x64);
+  }
+  else
+  {
+    status = setRegValue(0x36, 0x03);
   }
 
   return (status);
