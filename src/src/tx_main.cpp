@@ -220,7 +220,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 {
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult = Radio.NonceTX % ExpressLRS_currAirRate.TLMinterval;
 
     if (modresult == 0) // wait for tlm response because it's time
     {
@@ -240,7 +240,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult = Radio.NonceTX % ExpressLRS_currAirRate.TLMinterval;
 
     if (modresult == 0)
     { // wait for tlm response
@@ -535,7 +535,7 @@ void loop()
   //   crsf.sendLinkStatisticsToTX();
   // }
 
-  float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
+  float targetFrameRate = ExpressLRS_currAirRate.rate * (1.0 / ExpressLRS_currAirRate.TLMinterval);
   PacketRateLastChecked = millis();
   PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
   linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));

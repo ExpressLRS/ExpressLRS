@@ -22,13 +22,13 @@ extern uint8_t DeviceAddr;
 typedef enum
 {
     TLM_RATIO_NO_TLM = 0,
-    TLM_RATIO_1_2 = 1,
-    TLM_RATIO_1_4 = 2,
-    TLM_RATIO_1_8 = 3,
-    TLM_RATIO_1_16 = 4,
-    TLM_RATIO_1_32 = 5,
-    TLM_RATIO_1_64 = 6,
-    TLM_RATIO_1_128 = 7
+    TLM_RATIO_1_2 = 2,
+    TLM_RATIO_1_4 = 4,
+    TLM_RATIO_1_8 = 8,
+    TLM_RATIO_1_16 = 16,
+    TLM_RATIO_1_32 = 32,
+    TLM_RATIO_1_64 = 64,
+    TLM_RATIO_1_128 = 128
 } expresslrs_tlm_ratio_e;
 
 typedef enum
@@ -94,4 +94,3 @@ extern int8_t ExpressLRS_prevPower;
 
 int16_t MeasureNoiseFloor();
 int16_t MeasureRSSI(int FHSSindex);
-uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);

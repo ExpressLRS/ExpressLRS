@@ -137,7 +137,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     if (connectionState == connected) // don't bother sending tlm if disconnected
     {
-        uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+        uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate.TLMinterval;
 
         if (modresult == 0)
         {
