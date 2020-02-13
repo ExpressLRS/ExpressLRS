@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "rx_HardwareTimer.h"
+#include "HardwareTimer.h"
 
 #ifdef PLATFORM_STM32
 #if defined(TIM1)

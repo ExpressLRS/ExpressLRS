@@ -6,17 +6,32 @@
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
-#include "Debug.h"
+// #include "debug.h"
 #include "targets.h"
 
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+  #include "soc/soc.h"
+  #include "soc/rtc_cntl_reg.h"
+#endif
 
 String DebugOutput;
 
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
+
+// Hardware timer func defs
+void InitHarwareTimer();
+void StopHWtimer();
+void HWtimerSetCallback(void (*CallbackFunc)(void));
+void HWtimerSetCallback90(void (*CallbackFunc)(void));
+void HWtimerUpdateInterval(uint32_t Interval);
+uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
+uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
+void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
+uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
+
+void TimerExpired();
 
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
@@ -195,8 +210,10 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
 {
-  Radio.TimerInterval = mode.interval;
-  Radio.UpdateTimerInterval();
+  // Radio.TimerInterval = mode.interval;
+  // Radio.UpdateTimerInterval();
+  HWtimerUpdateInterval(mode.interval); // TODO: Make sure this is equiv to above commented lines
+
   Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
   Radio.SetPreambleLength(mode.PreambleLen);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
@@ -418,6 +435,8 @@ void setup()
 
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
+
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
   strip.Begin();
@@ -444,6 +463,7 @@ void setup()
   Serial.print(baseMac[5]);
   Serial.println("};");
   Serial.println("");
+#endif
 
   FHSSrandomiseFHSSsequence();
 
@@ -480,9 +500,14 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
-  crsf.connected = &Radio.StartTimerTask;
-  crsf.disconnected = &Radio.StopTimerTask;
+  
+  HWtimerSetCallback(&TimerExpired);
+
+  crsf.connected = &InitHarwareTimer;
+  crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
+
+  InitHarwareTimer();
 
   Radio.Begin();
   SetRFLinkRate(RF_RATE_200HZ);
@@ -545,4 +570,9 @@ void loop()
     linkQuality = 99;
   }
   packetCounteRX_TX = 0;
+}
+
+void ICACHE_RAM_ATTR TimerExpired()
+{
+    SendRCdataToRF();
 }

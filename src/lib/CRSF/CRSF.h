@@ -13,6 +13,10 @@
 #include "driver/gpio.h"
 #endif
 
+#ifdef TARGET_R9M_TX
+#include <STM32FreeRTOS.h>
+#endif
+
 #define PACKED __attribute__((packed))
 
 #define CRSF_RX_BAUDRATE 420000
@@ -291,7 +295,7 @@ public:
 
 #endif
 
-#ifdef PLATFORM_STM32
+#ifdef TARGET_R9M_RX
 
     CRSF(Stream *dev) : _dev(dev)
     {
@@ -302,7 +306,6 @@ public:
     {
         _dev->println("CRSF Lib Ready!");
     }
-
 #endif
 
     static HardwareSerial Port;
@@ -347,9 +350,14 @@ public:
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
-#else
+#endif
+#ifdef PLATFORM_ESP8266
     static void ICACHE_RAM_ATTR ESP8266ReadUart();
 #endif
+#ifdef TARGET_R9M_TX
+    static void ICACHE_RAM_ATTR STM32uartTask(void *pvParameters);
+#endif
+
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
