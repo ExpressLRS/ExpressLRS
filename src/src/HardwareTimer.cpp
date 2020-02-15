@@ -133,8 +133,6 @@ void ICACHE_RAM_ATTR InitHarwareTimer()
     timer1_write(HWtimerInterval);                //120000 us
     interrupts();
 #endif
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, 1);
 }
 
 void StopHWtimer()

@@ -122,7 +122,10 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
           crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
 
+          crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
+
           crsf.sendLinkStatisticsToTX();
+          crsf.sendLinkBattSensorToTX();
         }
       }
       else
@@ -446,6 +449,14 @@ void setup()
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
   Serial.begin(115200);
+  pinMode(GPIO_PIN_BUZZER, OUTPUT);
+  for (int i = 0; i < 500; i++)
+  {
+    digitalWrite(GPIO_PIN_BUZZER, HIGH);
+    delayMicroseconds(200);
+    digitalWrite(GPIO_PIN_BUZZER, LOW);
+    delayMicroseconds(200);
+  }
 #endif
 
   Serial.println("ExpressLRS TX Module Booted...");
@@ -515,16 +526,14 @@ void setup()
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
 
-  
-
-  //crsf.connected = &InitHarwareTimer;
-  //crsf.disconnected = &StopHWtimer;
+  crsf.connected = &InitHarwareTimer;
+  crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
 
   InitHarwareTimer();
 
   Radio.Begin();
-  
+
   crsf.Begin();
   HWtimerSetCallback(TimerExpired);
   SetRFLinkRate(RF_RATE_100HZ);
@@ -588,7 +597,9 @@ void loop()
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
+  //CRSF::STM32handleUARTout();
   crsf.sendSyncPacketToTX();
+  crsf.STM32wdtUART();
 #endif
 }
 

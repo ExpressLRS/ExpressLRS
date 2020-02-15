@@ -1,6 +1,8 @@
 #include "CRSF.h"
 #include "targets.h"
 
+extern CRSF crsf;
+
 uint8_t UARTinPacketPtr;
 uint8_t UARTinPacketLen;
 uint32_t UARTLastDataTime;
@@ -21,6 +23,14 @@ void STM32_RX_UARTprocessPacket()
             HAL_NVIC_SystemReset();
         }
     }
+
+    if (UARTinBuffer[2] == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        crsf.TLMbattSensor.voltage = (UARTinBuffer[3] << 8) + UARTinBuffer[4];
+        crsf.TLMbattSensor.current = (UARTinBuffer[5] << 8) + UARTinBuffer[6];
+        crsf.TLMbattSensor.capacity = (UARTinBuffer[7] << 16) + (UARTinBuffer[8] << 8) + UARTinBuffer[9];
+        crsf.TLMbattSensor.remaining = UARTinBuffer[9];
+    }
 }
 
 void STM32_RX_HandleUARTin()
@@ -30,7 +40,7 @@ void STM32_RX_HandleUARTin()
         UARTLastDataTime = millis();
         char inChar = Serial.read();
 
-        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER) && UARTframeActive == false) // we got sync, reset write pointer
+        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || CRSF_SYNC_BYTE) && UARTframeActive == false) // we got sync, reset write pointer
         {
             UARTinPacketPtr = 0;
             UARTframeActive = true;
@@ -50,6 +60,11 @@ void STM32_RX_HandleUARTin()
                 UARTframeActive = false;
                 Serial.flush();
             }
+        }
+
+        if (UARTinPacketPtr == 64) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+        {
+            UARTinPacketPtr = 0;
         }
 
         UARTinBuffer[UARTinPacketPtr] = inChar;
@@ -83,7 +98,11 @@ void STM32_RX_HandleUARTin()
                 //Serial.println();
                 UARTframeActive = false;
                 UARTinPacketPtr = 0;
-                Serial.flush();
+                //Serial.flush();
+                while (Serial.available())
+                {
+                    Serial.read(); // dunno why but the flush() method wasn't working
+                }
             }
         }
     }

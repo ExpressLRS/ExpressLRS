@@ -164,6 +164,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
+#define GPIO_PIN_BUZZER      PB1 // confirmed
+
 #define BUFFER_OE               PA5  //CONFIRMED
 #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #define GPIO_PIN_DIO1           PA1  //Not Needed
