@@ -19,6 +19,8 @@
 
 #include "errata.h"
 
+#include "ESP8266_hwTimer.h"
+
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 

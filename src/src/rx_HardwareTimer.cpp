@@ -1,6 +1,8 @@
 #include "Arduino.h"
 #include "rx_HardwareTimer.h"
 
+#ifndef PLATFORM_ESP32
+
 #ifdef PLATFORM_STM32
 #if defined(TIM1)
 TIM_TypeDef *Instance = TIM1;
@@ -148,3 +150,5 @@ void HWtimerSetCallback90(void (*CallbackFunc)(void))
 {
     HWtimerCallBack90 = CallbackFunc;
 }
+
+#endif

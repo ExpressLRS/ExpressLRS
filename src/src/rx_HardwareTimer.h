@@ -4,6 +4,8 @@
 #include "Arduino.h"
 #include "targets.h"
 
+#ifndef PLATFORM_ESP32
+
 #ifdef PLATFORM_STM32
     //
 #else
@@ -37,4 +39,5 @@ void StopHWtimer();
 void HWtimerSetCallback(void (*CallbackFunc)(void));
 void HWtimerSetCallback90(void (*CallbackFunc)(void));
 ////////////////////////////////////////////////////////////////////////
+
 #endif
