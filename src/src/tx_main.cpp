@@ -23,6 +23,7 @@ String DebugOutput;
 SX127xDriver Radio;
 CRSF crsf;
 
+#ifndef PLATFORM_ESP32
 // Hardware timer func defs
 void InitHarwareTimer();
 void StopHWtimer();
@@ -35,6 +36,7 @@ void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
 uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
 void TimerExpired();
+#endif
 
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
@@ -216,10 +218,12 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 
 void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
 {
-  // Radio.TimerInterval = mode.interval;
-  // Radio.UpdateTimerInterval();
+#ifdef PLATFORM_ESP32
+  Radio.TimerInterval = mode.interval;
+  Radio.UpdateTimerInterval();
+#else
   HWtimerUpdateInterval(mode.interval); // TODO: Make sure this is equiv to above commented lines
-
+#endif
   Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
   Radio.SetPreambleLength(mode.PreambleLen);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
@@ -526,16 +530,17 @@ void setup()
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
 
+#ifdef PLATFORM_STM32
   crsf.connected = &InitHarwareTimer;
   crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
-
+  HWtimerSetCallback(TimerExpired);
   InitHarwareTimer();
+#endif
 
   Radio.Begin();
-
   crsf.Begin();
-  HWtimerSetCallback(TimerExpired);
+
   SetRFLinkRate(RF_RATE_100HZ);
 }
 
@@ -597,7 +602,6 @@ void loop()
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
-  //CRSF::STM32handleUARTout();
   crsf.sendSyncPacketToTX();
   crsf.STM32wdtUART();
 #endif
@@ -605,6 +609,5 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerExpired()
 {
-  //Serial.println("d");
   SendRCdataToRF();
 }
