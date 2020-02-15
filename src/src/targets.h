@@ -95,6 +95,8 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 #ifdef TARGET_R9M_RX
+#undef FEATURE_OPENTX_SYNC
+
 #define GPIO_PIN_NSS PB12
 #define GPIO_PIN_DIO0 PA15
 #define GPIO_PIN_DIO1 PA1 // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
@@ -150,14 +152,17 @@ https://github.com/jaxxzer
 #define GPIO_PIN_TX_ENABLE      -1
 #define GPIO_PIN_OLED_SDA       -1
 #define GPIO_PIN_OLED_SCK       -1
-#define GPIO_PIN_RCSIGNAL_RX    PA10 // not yet confirmed
-#define GPIO_PIN_RCSIGNAL_TX    PA9 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
 #define GPIO_PIN_LED_RED        PA11 // Red LED
 #define GPIO_PIN_LED_GREEN      PA12 // Green LED
 #define GPIO_PIN_BUTTON         PA8 // pullup e.g. LOW when pressed
 #define GPIO_PIN_BUZZER         PB1
 #define GPIO_PIN_DIP1           PA12 // dip switch 1
 #define GPIO_PIN_DIP2           PA11 // dip switch 2
+
+#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
+#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
 #define BUFFER_OE               PA5  //CONFIRMED
 #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted

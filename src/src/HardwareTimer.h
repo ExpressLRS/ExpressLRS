@@ -1,5 +1,4 @@
-#ifndef ESP8266_HARDWARE_TIMERS_H
-#define ESP8266_HARDWARE_TIMERS_H
+#pragma once 
 
 #include "Arduino.h"
 #include "targets.h"
@@ -37,4 +36,3 @@ void StopHWtimer();
 void HWtimerSetCallback(void (*CallbackFunc)(void));
 void HWtimerSetCallback90(void (*CallbackFunc)(void));
 ////////////////////////////////////////////////////////////////////////
-#endif

@@ -13,10 +13,6 @@
 #include "driver/gpio.h"
 #endif
 
-#ifdef TARGET_R9M_TX
-#include <STM32FreeRTOS.h>
-#endif
-
 #define PACKED __attribute__((packed))
 
 #define CRSF_RX_BAUDRATE 420000
@@ -352,10 +348,12 @@ public:
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
 #endif
 #ifdef PLATFORM_ESP8266
-    static void ICACHE_RAM_ATTR ESP8266ReadUart();
+   // static void ICACHE_RAM_ATTR ESP8266ReadUart();
 #endif
 #ifdef TARGET_R9M_TX
-    static void ICACHE_RAM_ATTR STM32uartTask(void *pvParameters);
+    static void ICACHE_RAM_ATTR STM32initUART();
+    static void ICACHE_RAM_ATTR STM32handleUARTin();
+    static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
 
@@ -372,7 +370,8 @@ public:
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
     /////////////////////////////////////////////////////////////
 
-    static void ICACHE_RAM_ATTR ProcessPacket();
+    static void ICACHE_RAM_ATTR ESP32ProcessPacket();
+    static void ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
 
     static void inline nullCallback(void);

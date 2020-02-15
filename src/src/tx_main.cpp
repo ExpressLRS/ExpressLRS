@@ -10,9 +10,12 @@
 #include "targets.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
-  #include "soc/soc.h"
-  #include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #endif
+
+//#include "HardwareSerial.h"
+//#include "HardwareTimer.h"
 
 String DebugOutput;
 
@@ -433,7 +436,18 @@ void setup()
 #endif
   pinMode(36, INPUT_PULLUP);
 
+#ifdef PLATFORM_ESP32
   Serial.begin(115200);
+
+#endif
+
+#ifdef TARGET_R9M_TX
+  HardwareSerial(USART2);
+  //Serial.setTx(GPIO_PIN_DEBUG_TX);
+  //Serial.setRx(GPIO_PIN_DEBUG_RX);
+  Serial.begin(115200);
+#endif
+
   Serial.println("ExpressLRS TX Module Booted...");
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
@@ -500,25 +514,27 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
-  
-  HWtimerSetCallback(&TimerExpired);
 
-  crsf.connected = &InitHarwareTimer;
-  crsf.disconnected = &StopHWtimer;
+  
+
+  //crsf.connected = &InitHarwareTimer;
+  //crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
 
   InitHarwareTimer();
 
-  Radio.Begin();
-  SetRFLinkRate(RF_RATE_200HZ);
+  //Radio.Begin();
+  
   // SetRFLinkRate(RF_RATE_100HZ);
-  crsf.Begin();
+  //crsf.Begin();
+  HWtimerSetCallback(&TimerExpired);
+  SetRFLinkRate(RF_RATE_200HZ);
 }
 
 void loop()
 {
 
-  delay(100);
+  delay(10);
 
   // if (digitalRead(4) == 0)
   // {
@@ -531,7 +547,7 @@ void loop()
   // }
 
 #ifdef FEATURE_OPENTX_SYNC
-  Serial.println(crsf.OpenTXsyncOffset);
+  //Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
   updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
@@ -570,9 +586,14 @@ void loop()
     linkQuality = 99;
   }
   packetCounteRX_TX = 0;
+
+#ifdef TARGET_R9M_TX
+  crsf.STM32handleUARTin();
+#endif
 }
 
 void ICACHE_RAM_ATTR TimerExpired()
 {
-    SendRCdataToRF();
+  Serial.println("a");
+  SendRCdataToRF();
 }
