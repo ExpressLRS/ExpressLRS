@@ -348,7 +348,7 @@ public:
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
 #endif
 #ifdef PLATFORM_ESP8266
-   // static void ICACHE_RAM_ATTR ESP8266ReadUart();
+    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
 #endif
 #ifdef TARGET_R9M_TX
     static void ICACHE_RAM_ATTR STM32initUART();
@@ -356,18 +356,19 @@ public:
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
-
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
 
-    ///// Variables for OpenTX Syncing //////////////////////////
-    #define OpenTXsyncPakcetInterval 100 // in ms
+///// Variables for OpenTX Syncing //////////////////////////
+#define OpenTXsyncPakcetInterval 100 // in ms
+    static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
+    static void ICACHE_RAM_ATTR sendSyncPacketToTX();
     /////////////////////////////////////////////////////////////
 
     static void ICACHE_RAM_ATTR ESP32ProcessPacket();
@@ -376,12 +377,11 @@ public:
 
     static void inline nullCallback(void);
 
-
 private:
     Stream *_dev;
 
-    static volatile uint8_t SerialInPacketLen;   // length of the CRSF packet as measured
-    static volatile uint8_t SerialInPacketPtr;   // index where we are reading/writing
+    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
+    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
     static volatile uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 
     static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket

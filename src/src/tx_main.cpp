@@ -443,8 +443,8 @@ void setup()
 
 #ifdef TARGET_R9M_TX
   HardwareSerial(USART2);
-  //Serial.setTx(GPIO_PIN_DEBUG_TX);
-  //Serial.setRx(GPIO_PIN_DEBUG_RX);
+  Serial.setTx(GPIO_PIN_DEBUG_TX);
+  Serial.setRx(GPIO_PIN_DEBUG_RX);
   Serial.begin(115200);
 #endif
 
@@ -523,18 +523,17 @@ void setup()
 
   InitHarwareTimer();
 
-  //Radio.Begin();
+  Radio.Begin();
   
-  // SetRFLinkRate(RF_RATE_100HZ);
-  //crsf.Begin();
-  HWtimerSetCallback(&TimerExpired);
-  SetRFLinkRate(RF_RATE_200HZ);
+  crsf.Begin();
+  HWtimerSetCallback(TimerExpired);
+  SetRFLinkRate(RF_RATE_100HZ);
 }
 
 void loop()
 {
 
-  delay(10);
+  //delay(10);
 
   // if (digitalRead(4) == 0)
   // {
@@ -589,11 +588,12 @@ void loop()
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
+  crsf.sendSyncPacketToTX();
 #endif
 }
 
 void ICACHE_RAM_ATTR TimerExpired()
 {
-  Serial.println("a");
+  //Serial.println("d");
   SendRCdataToRF();
 }

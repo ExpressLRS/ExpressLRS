@@ -44,7 +44,8 @@ void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
 {
     if (numElements == FIFO_SIZE)
     {
-        Serial.println(("CRITICAL ERROR: Buffer full"));
+        Serial.println(("CRITICAL ERROR: Buffer full, will flush"));
+        this->flush();
         return;
     }
     else

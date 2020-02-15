@@ -1,20 +1,21 @@
-#pragma once 
+#pragma once
 
 #include "Arduino.h"
 #include "targets.h"
 
 #ifdef PLATFORM_STM32
-    //
+//
 #else
-    extern "C"
-    {
-    #include "user_interface.h"
-    }
+extern "C"
+{
+#include "user_interface.h"
+}
 #endif
 
 //////////Hardware Timer Functions//////////////////////////////////////
-void (*HWtimerCallBack)(void) = NULL;
-void (*HWtimerCallBack90)(void) = NULL;
+void inline nullCallback(void){};
+void (*HWtimerCallBack)(void) = nullCallback;
+void (*HWtimerCallBack90)(void) = nullCallback;
 #define HardwareTimerBaseInterval 1000;
 #define TimerIntervalUSDefault 16000
 volatile uint32_t HWtimerInterval = TimerIntervalUSDefault;

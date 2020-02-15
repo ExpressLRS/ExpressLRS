@@ -199,7 +199,7 @@ void ICACHE_RAM_ATTR LostConnection()
         Serial.println("lost conn");
 
 #ifdef PLATFORM_STM32
-        digitalWrite(GPIO_PIN_LED_GEEN, LOW);
+        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
 #endif
     }
 }
@@ -223,7 +223,7 @@ void ICACHE_RAM_ATTR GotConnection()
         Serial.println("got conn");
 
 #ifdef PLATFORM_STM32
-        digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 #endif
     }
 }
@@ -470,7 +470,7 @@ void setup()
     pinMode(GPIO_PIN_LED, OUTPUT);
 
 #ifdef PLATFORM_STM32
-    pinMode(GPIO_PIN_LED_GEEN, OUTPUT);
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
 #endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
 

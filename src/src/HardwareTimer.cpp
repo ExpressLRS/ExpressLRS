@@ -7,7 +7,7 @@ TIM_TypeDef *Instance = TIM1;
 #else
 TIM_TypeDef *Instance = TIM2;
 #endif
-HardwareTimer *MyTim = NULL;
+HardwareTimer *MyTim = new HardwareTimer(Instance);
 #endif
 
 void Update_IT_callback(HardwareTimer *)
@@ -78,10 +78,9 @@ void ICACHE_RAM_ATTR Timer0Callback(HardwareTimer *)
 void ICACHE_RAM_ATTR Timer0Callback()
 #endif
 {
-    Serial.println("CB");
+
     if (TickTock)
     {
-
         if (ResetNextLoop)
         {
 #ifdef PLATFORM_STM32
@@ -121,20 +120,18 @@ void ICACHE_RAM_ATTR Timer0Callback()
 void ICACHE_RAM_ATTR InitHarwareTimer()
 {
     Serial.println("HWinit");
-    //noInterrupts();
+    noInterrupts();
 #ifdef PLATFORM_STM32
-    HardwareTimer *MyTim = new HardwareTimer(Instance);
-    //MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
-    MyTim->setOverflow(1, HERTZ_FORMAT);
-    MyTim->attachInterrupt(Update_IT_callback);
+    //MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
+    MyTim->setOverflow(HWtimerInterval >> 1, MICROSEC_FORMAT);
+    MyTim->attachInterrupt(Timer0Callback);
     MyTim->resume();
-    //interrupts();
-    Serial.println("HWinit2");
+    interrupts();
 #else
     timer1_attachInterrupt(Timer0Callback);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
     timer1_write(HWtimerInterval);                //120000 us
-    //interrupts();
+    interrupts();
 #endif
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, 1);
