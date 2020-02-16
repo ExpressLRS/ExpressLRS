@@ -170,8 +170,8 @@ https://github.com/jaxxzer
 #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #define GPIO_PIN_DIO1           PA1  //Not Needed
 
-#define PWR_AMP                 PA6  //CONFIRMED
-#define RF_CONTROL              PB3  //CONFIRMED
+#define GPIO_PIN_RFamp_APC1              PA6  //CONFIRMED SANDRO
+#define GPIO_PIN_RFswitch_CONTROL              PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
 // PwrAmp, RFControl, dodgy measurement with SDR, descending
 // high low  -5 
 // low  low  -30

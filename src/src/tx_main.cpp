@@ -251,6 +251,10 @@ void ICACHE_RAM_ATTR HandleTLM()
 
     if (modresult == 0) // wait for tlm response because it's time
     {
+#ifdef TARGET_R9M_TX
+      digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
+      digitalWrite(GPIO_PIN_RFamp_APC1, 0);
+#endif
       Radio.RXnb();
       WaitRXresponse = true;
     }
@@ -321,6 +325,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
+#ifdef TARGET_R9M_TX
+  digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
+  digitalWrite(GPIO_PIN_RFamp_APC1, 1);
+#endif
   Radio.TXnb(Radio.TXdataBuffer, 8);
 
   if (ChangeAirRateRequested)
@@ -461,6 +469,9 @@ void setup()
     digitalWrite(GPIO_PIN_BUZZER, LOW);
     delayMicroseconds(200);
   }
+  pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
+  pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
+  digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 #endif
 
   Serial.println("ExpressLRS TX Module Booted...");
@@ -543,7 +554,7 @@ void setup()
   Radio.Begin();
   crsf.Begin();
 
-  SetRFLinkRate(RF_RATE_100HZ);
+  SetRFLinkRate(RF_RATE_200HZ);
 }
 
 void loop()
