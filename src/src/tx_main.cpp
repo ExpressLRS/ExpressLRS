@@ -515,6 +515,8 @@ void setup()
   Radio.SetOutputPower(0b1111);
 #endif
 
+  Radio.SetOutputPower(0b0000);
+
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
