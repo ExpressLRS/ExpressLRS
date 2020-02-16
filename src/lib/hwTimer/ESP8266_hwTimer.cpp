@@ -38,26 +38,26 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     timer1_write(hwTimer::HWtimerInterval >> 1);
 }
 
-void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t NewOffset)
+void ICACHE_RAM_ATTR hwTimer::phaseShift(uint32_t newPhaseShift)
 {
-    int16_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
+    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
 
-    if (NewOffset > MaxPhaseShift)
+    if (newPhaseShift > MaxPhaseShift)
     {
         hwTimer::PhaseShift = MaxPhaseShift;
     }
     else
     {
-        hwTimer::PhaseShift = NewOffset;
+        hwTimer::PhaseShift = newPhaseShift;
     }
 
-    if (NewOffset < -MaxPhaseShift)
+    if (newPhaseShift < -MaxPhaseShift)
     {
         hwTimer::PhaseShift = -MaxPhaseShift;
     }
     else
     {
-        hwTimer::PhaseShift = NewOffset;
+        hwTimer::PhaseShift = newPhaseShift;
     }
     hwTimer::PhaseShift = hwTimer::PhaseShift * 5;
 }
