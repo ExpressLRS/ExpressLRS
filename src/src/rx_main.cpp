@@ -8,6 +8,7 @@
 #include "FHSS.h"
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
+#include "errata.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -21,44 +22,23 @@
 
 hwTimer hwTimer;
 
-#include "errata.h"
-
-#include "ESP8266_hwTimer.h"
-
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
-hwTimer hwTimer;
 
-//Filters//
+/// Filters ////////////////
 LPF LPF_PacketInterval(3);
 LPF LPF_Offset(3);
 LPF LPF_FreqError(3);
 LPF LPF_UplinkRSSI(5);
-
-// ///forward defs///
-// void SetRFLinkRate(expresslrs_mod_settings_s mode);
-// void InitHarwareTimer();
-// void StopHWtimer();
-// void HWtimerSetCallback(void (*CallbackFunc)(void));
-// void HWtimerSetCallback90(void (*CallbackFunc)(void));
-// void HWtimerUpdateInterval(uint32_t Interval);
-// uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
-// uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
-// void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
-// uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
+////////////////////////////
 
 uint8_t scanIndex = 0;
 
-//uint32_t HWtimerLastcallback;
-uint32_t MeasuredHWtimerInterval;
 int32_t HWtimerError;
-int32_t HWtimerError90;
 int32_t Offset;
-int32_t Offset90;
+
 uint32_t SerialDebugPrintInterval = 250;
 uint32_t LastSerialDebugPrint = 0;
-
-uint8_t testdata[7] = {1, 2, 3, 4, 5, 6, 7};
 
 bool LED = false;
 
@@ -169,7 +149,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 // 11 -> tlm packet
 // 10 -> sync packet with hop data
 
-void ICACHE_RAM_ATTR Test90()
+void ICACHE_RAM_ATTR HWtimerCallback()
 {
 
     if (alreadyFHSS == true)
@@ -186,11 +166,6 @@ void ICACHE_RAM_ATTR Test90()
     HandleSendTelemetryResponse();
 
     NonceRXlocal++;
-}
-
-void ICACHE_RAM_ATTR Test()
-{
-    MeasuredHWtimerInterval = micros() - hwTimer.LastCallbackMicrosTick;
 }
 
 void ICACHE_RAM_ATTR LostConnection()
@@ -394,10 +369,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     else
     {
-        //Serial.println("crc failed");
-        //Serial.print(calculatedCRC, HEX);
-        //Serial.print("-");
-        //Serial.println(inCRC, HEX);
         CRCerrorCounter++;
     }
 }
@@ -442,9 +413,9 @@ void ICACHE_RAM_ATTR sampleButton()
 
     if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
     {
-        #ifdef PLATFORM_ESP8266
+#ifdef PLATFORM_ESP8266
         ESP.restart();
-        #endif
+#endif
     }
 
     buttonPrevValue = buttonValue;
@@ -457,7 +428,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     ExpressLRS_currAirRate = mode;
     hwTimer.updateInterval(mode.interval);
     LPF_PacketInterval.init(mode.interval);
-    LPF_Offset.init(0);
+    //LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
 }
@@ -495,7 +466,7 @@ void setup()
 
     Radio.Begin();
 
-    Radio.SetOutputPower(0b1111);
+    Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
     RFnoiseFloor = MeasureNoiseFloor();
     Serial.print("RF noise floor: ");
@@ -507,9 +478,7 @@ void setup()
     Radio.TXdoneCallback1 = &Radio.RXnb;
 
     crsf.Begin();
-
-    hwTimer.callbackTick = &Test;
-    hwTimer.callbackTock = &Test90;
+    hwTimer.callbackTock = &HWtimerCallback;
     hwTimer.init();
 
     SetRFLinkRate(RF_RATE_200HZ);
@@ -544,93 +513,6 @@ void loop()
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
-    // if (millis() > LastSerialDebugPrint + SerialDebugPrintInterval)
-    // { // add stuff here for debug print
-    //     LastSerialDebugPrint = millis();
-    //     Serial.println(linkQuality);
-    //     if (LostConnection)
-    //     {
-    //         Serial.println("-");
-    //     }
-    //     else
-    //     {
-    //         Serial.println("+");
-    //     }
-
-    //     Serial.print(MeasuredHWtimerInterval);
-    //     Serial.print(" ");
-    //     Serial.print(Offset);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError);
-
-    //     Serial.print("----");
-
-    //     Serial.print(Offset90);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError90);
-    //     Serial.print("----");
-    //     Serial.println(packetCounter);
-    // }
-
-    // if (millis() > (PacketRateLastChecked + PacketRateInterval)) //just some debug data
-    // {
-    //     //     float targetFrameRate;
-
-    //     //     if (ExpressLRS_currAirRate.TLMinterval != 0)
-    //     //     {
-    //     //         targetFrameRate = ExpressLRS_currAirRate.rate - ((ExpressLRS_currAirRate.rate) * (1.0 / ExpressLRS_currAirRate.TLMinterval));
-    //     //     }
-    //     //     else
-    //     //     {
-    //     //         targetFrameRate = ExpressLRS_currAirRate.rate;
-    //     //     }
-
-    //     PacketRateLastChecked = millis();
-    //     //     PacketRate = (float)packetCounter / (float)(PacketRateInterval);
-    //     //     linkQuality = int(((float)PacketRate / (float)targetFrameRate) * 100000.0);
-    //     //     if(linkQuality > 99) linkQuality = 99;
-
-    //     //     CRCerrorRate = (((float)CRCerrorCounter / (float)(PacketRateInterval)) * 100);
-
-    //     //     CRCerrorCounter = 0;
-    //     //     packetCounter = 0;
-
-    //     //     //Serial.println(CRCerrorRate);
-    //     // }
-    //     Serial.print(MeasuredHWtimerInterval);
-    //     Serial.print(" ");
-    //     Serial.print(Offset);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError);
-
-    //     Serial.print("----");
-
-    //     Serial.print(Offset90);
-    //     Serial.print(" ");
-    //     Serial.print(HWtimerError90);
-    //     Serial.print("----");
-
-    //Serial.println(linkQuality);
-    //     //Serial.println(packetCounter);
-    // }
-
-    // Serial.print(MeasuredHWtimerInterval);
-    // Serial.print(" ");
-    // Serial.print(" ");
-    // Serial.print(HWtimerError);
-
-    // Serial.print("----");
-
-    // Serial.print(Offset90);
-    // Serial.print(" ");
-    // Serial.print(HWtimerError90);
-    // Serial.print("----");
-    // Serial.println(packetCounter);
-    // delay(200);
-    // Serial.print("LQ: ");
-    // Serial.print(linkQuality);
-    // Serial.print(" Connstate:");
-    // Serial.println(connectionState);
 
     if (millis() > (buttonLastSampled + buttonSampleInterval))
     {
