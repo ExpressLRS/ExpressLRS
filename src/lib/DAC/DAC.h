@@ -14,9 +14,17 @@ typedef enum
     R9_PWR_250mw = 4,
     R9_PWR_500mw = 5,
     R9_PWR_1000mw = 6,
-    R9_PWR_2000mw = 7,
+    R9_PWR_2000mw = 7
 
 } DAC_PWR_;
+
+typedef enum
+{
+    UNKNOWN = 0,
+    RUNNING = 1,
+    STANDBY = 2
+
+} DAC_STATE_;
 
 #define VCC 3300
 
@@ -29,15 +37,15 @@ private:
     static uint8_t ADDR;
 
 public:
+    static DAC_STATE_ DAC_STATE;
     static uint32_t CurrVoltageMV;
     static uint8_t CurrVoltageRegVal;
 
     static void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
-
+    static void standby();
+    static void resume();
     static void setVoltageMV(uint32_t voltsMV);
-
     static void setVoltageRegDirect(uint8_t voltReg);
-
     static void setPower(DAC_PWR_ power);
 };
 

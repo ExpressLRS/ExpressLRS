@@ -257,6 +257,7 @@ void ICACHE_RAM_ATTR HandleTLM()
     if (modresult == 0) // wait for tlm response because it's time
     {
 #ifdef TARGET_R9M_TX
+      R9DAC.standby();
       digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
       digitalWrite(GPIO_PIN_RFamp_APC1, 0);
 #endif
@@ -331,6 +332,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
 #ifdef TARGET_R9M_TX
+  R9DAC.resume();
   digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
   digitalWrite(GPIO_PIN_RFamp_APC1, 1);
 #endif
@@ -532,8 +534,8 @@ void setup()
 
 #if TARGET_R9M_TX
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
-  R9DAC.setPower(R9_PWR_250mw);
   Radio.SetOutputPower(0b0000);
+  R9DAC.setPower(R9_PWR_250mw);
 #endif
 
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!

@@ -24,6 +24,8 @@ uint8_t R9DAC::SDA = 0;
 uint8_t R9DAC::SCL = 0;
 uint8_t R9DAC::ADDR = 0;
 
+DAC_STATE_ R9DAC::DAC_STATE = UNKNOWN;
+
 void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
 {
     R9DAC::SDA = SDA_;
@@ -33,15 +35,38 @@ void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
     Wire.setSDA(SDA); // set is needed or it wont work :/
     Wire.setSCL(SCL);
     Wire.begin();
+    R9DAC::DAC_STATE = UNKNOWN;
+}
+
+void R9DAC::standby()
+{
+    if (R9DAC::DAC_STATE != STANDBY)
+    {
+        Wire.beginTransmission(R9DAC::ADDR);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+        R9DAC::DAC_STATE = STANDBY;
+    }
+}
+
+void R9DAC::resume()
+{
+    if (R9DAC::DAC_STATE != RUNNING)
+    {
+        R9DAC::setVoltageRegDirect(CurrVoltageRegVal);
+        R9DAC::DAC_STATE = RUNNING;
+    }
 }
 
 void R9DAC::setVoltageMV(uint32_t voltsMV)
 {
     uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
     CurrVoltageMV = voltsMV;
-    Wire.beginTransmission(R9DAC::ADDR);
     uint8_t RegH = ((ScaledVolts & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (ScaledVolts & 0b00001111) << 4;
+
+    Wire.beginTransmission(R9DAC::ADDR);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();
@@ -50,9 +75,10 @@ void R9DAC::setVoltageMV(uint32_t voltsMV)
 void R9DAC::setVoltageRegDirect(uint8_t voltReg)
 {
     CurrVoltageRegVal = voltReg;
-    Wire.beginTransmission(R9DAC::ADDR);
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
+    
+    Wire.beginTransmission(R9DAC::ADDR);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();
