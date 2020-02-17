@@ -11,6 +11,8 @@
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+#include "ESP8266_hwTimer.h"
+hwTimer hwTimer;
 #endif
 
 #ifdef PLATFORM_STM32
@@ -18,6 +20,8 @@
 #endif
 
 #include "errata.h"
+
+#include "ESP8266_hwTimer.h"
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
@@ -28,17 +32,17 @@ LPF LPF_Offset(3);
 LPF LPF_FreqError(3);
 LPF LPF_UplinkRSSI(5);
 
-///forward defs///
-void SetRFLinkRate(expresslrs_mod_settings_s mode);
-void InitHarwareTimer();
-void StopHWtimer();
-void HWtimerSetCallback(void (*CallbackFunc)(void));
-void HWtimerSetCallback90(void (*CallbackFunc)(void));
-void HWtimerUpdateInterval(uint32_t Interval);
-uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
-uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
-void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
-uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
+// ///forward defs///
+// void SetRFLinkRate(expresslrs_mod_settings_s mode);
+// void InitHarwareTimer();
+// void StopHWtimer();
+// void HWtimerSetCallback(void (*CallbackFunc)(void));
+// void HWtimerSetCallback90(void (*CallbackFunc)(void));
+// void HWtimerUpdateInterval(uint32_t Interval);
+// uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
+// uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
+// void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
+// uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
 
 uint8_t scanIndex = 0;
 
@@ -183,7 +187,7 @@ void ICACHE_RAM_ATTR Test90()
 
 void ICACHE_RAM_ATTR Test()
 {
-    MeasuredHWtimerInterval = micros() - HWtimerGetlastCallbackMicros();
+    MeasuredHWtimerInterval = micros() - hwTimer.LastCallbackMicrosTick;
 }
 
 void ICACHE_RAM_ATTR LostConnection()
@@ -330,9 +334,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             addPacketToLQ();
 
-            HWtimerError = ((micros() - HWtimerGetlastCallbackMicros()) % ExpressLRS_currAirRate.interval);
+            HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift((Offset >> 4) + timerOffset);
+            hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
@@ -400,7 +404,7 @@ void beginWebsever()
 #ifdef PLATFORM_STM32
 #else
     Radio.StopContRX();
-    StopHWtimer();
+    hwTimer.stop();
 
     BeginWebUpdate();
     webUpdateMode = true;
@@ -447,10 +451,10 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     Radio.StopContRX();
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
-    HWtimerUpdateInterval(mode.interval);
+    hwTimer.updateInterval(mode.interval);
     LPF_PacketInterval.init(mode.interval);
     LPF_Offset.init(0);
-    InitHarwareTimer();
+    //InitHarwareTimer();
     Radio.RXnb();
 }
 
@@ -500,9 +504,12 @@ void setup()
 
     crsf.Begin();
 
-    HWtimerSetCallback(&Test);
-    HWtimerSetCallback90(&Test90);
-    InitHarwareTimer();
+    hwTimer.callbackTick = &Test;
+    hwTimer.callbackTock = &Test90;
+    hwTimer.init();
+    //HWtimerSetCallback(&Test);
+    //HWtimerSetCallback90(&Test90);
+    //InitHarwareTimer();
     SetRFLinkRate(RF_RATE_200HZ);
     //errata(); //-- testing things don't use for now.
     //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
