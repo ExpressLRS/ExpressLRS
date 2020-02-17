@@ -11,16 +11,19 @@
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+#include "ESP8266_hwTimer.h"
 #endif
 
 #ifdef PLATFORM_STM32
 #include "STM32_UARTinHandler.h"
+#include "STM32_hwTimer.h"
 #endif
 
 #include "errata.h"
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
+hwTimer hwTimer;
 
 //Filters//
 LPF LPF_PacketInterval(3);
@@ -332,7 +335,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             HWtimerError = ((micros() - HWtimerGetlastCallbackMicros()) % ExpressLRS_currAirRate.interval);
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            HWtimerPhaseShift((Offset >> 4) + timerOffset);
+            hwTimer.phaseShift((Offset >> 4) + timerOffset);
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
@@ -435,8 +438,9 @@ void ICACHE_RAM_ATTR sampleButton()
 
     if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
     {
-        //ESP.restart();
-        //Serial.println("Setting Bootloader Bit..");
+        #ifdef PLATFORM_ESP8266
+        ESP.restart();
+        #endif
     }
 
     buttonPrevValue = buttonValue;
@@ -449,8 +453,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     ExpressLRS_currAirRate = mode;
     HWtimerUpdateInterval(mode.interval);
     LPF_PacketInterval.init(mode.interval);
-    LPF_Offset.init(0);
-    InitHarwareTimer();
+    //LPF_Offset.init(0); test that this is ok
     Radio.RXnb();
 }
 
@@ -500,12 +503,10 @@ void setup()
 
     crsf.Begin();
 
-    HWtimerSetCallback(&Test);
-    HWtimerSetCallback90(&Test90);
-    InitHarwareTimer();
+    hwTimer.callbackTick = &Test;
+    hwTimer.callbackTock = &Test90;
     SetRFLinkRate(RF_RATE_200HZ);
-    //errata(); //-- testing things don't use for now.
-    //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
+    hwTimer.init();
 }
 
 void loop()
