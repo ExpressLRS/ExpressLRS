@@ -12,12 +12,14 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
 #include "ESP8266_hwTimer.h"
-hwTimer hwTimer;
 #endif
 
 #ifdef PLATFORM_STM32
 #include "STM32_UARTinHandler.h"
+#include "STM32_hwTimer.h"
 #endif
+
+hwTimer hwTimer;
 
 #include "errata.h"
 
@@ -25,6 +27,7 @@ hwTimer hwTimer;
 
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
+hwTimer hwTimer;
 
 //Filters//
 LPF LPF_PacketInterval(3);
@@ -439,8 +442,9 @@ void ICACHE_RAM_ATTR sampleButton()
 
     if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
     {
-        //ESP.restart();
-        //Serial.println("Setting Bootloader Bit..");
+        #ifdef PLATFORM_ESP8266
+        ESP.restart();
+        #endif
     }
 
     buttonPrevValue = buttonValue;
@@ -507,12 +511,9 @@ void setup()
     hwTimer.callbackTick = &Test;
     hwTimer.callbackTock = &Test90;
     hwTimer.init();
-    //HWtimerSetCallback(&Test);
-    //HWtimerSetCallback90(&Test90);
-    //InitHarwareTimer();
+
     SetRFLinkRate(RF_RATE_200HZ);
-    //errata(); //-- testing things don't use for now.
-    //writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
+    hwTimer.init();
 }
 
 void loop()
