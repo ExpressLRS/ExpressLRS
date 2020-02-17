@@ -150,8 +150,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST            PC14
 #define GPIO_PIN_RX_ENABLE      -1
 #define GPIO_PIN_TX_ENABLE      -1
-#define GPIO_PIN_OLED_SDA       -1
-#define GPIO_PIN_OLED_SCK       -1
+#define GPIO_PIN_SDA       PB7
+#define GPIO_PIN_SCL       PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
 #define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
 #define GPIO_PIN_LED_RED        PA11 // Red LED

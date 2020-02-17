@@ -14,6 +14,11 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
+#ifdef TARGET_R9M_TX
+#include "DAC.h"
+R9DAC R9DAC;
+#endif
+
 //#include "HardwareSerial.h"
 //#include "HardwareTimer.h"
 
@@ -483,7 +488,6 @@ void setup()
 
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // TxBaseMac[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
@@ -526,7 +530,11 @@ void setup()
   Radio.SetOutputPower(0b1111);
 #endif
 
+#if TARGET_R9M_TX
+  R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
+  R9DAC.setPower(R9_PWR_250mw);
   Radio.SetOutputPower(0b0000);
+#endif
 
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
@@ -548,7 +556,7 @@ void setup()
   crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   HWtimerSetCallback(TimerExpired);
-  InitHarwareTimer();
+  //InitHarwareTimer(); // it will auto init when it detects UART connection
 #endif
 
   Radio.Begin();

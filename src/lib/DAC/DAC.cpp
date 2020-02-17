@@ -1,0 +1,67 @@
+#pragma once
+
+#ifdef TARGET_R9M_TX
+
+#include "../../src/targets.h"
+#include <wire.h>
+#include "DAC.h"
+
+int R9DAC::LUT[8][4] = {
+    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+    {10, 11, 9, 0},
+    {25, 14, 12, 920},
+    {50, 17, 15, 1030},
+    {100, 20, 18, 1150},
+    {250, 24, 22, 1330},
+    {500, 27, 25, 1520},
+    {1000, 30, 28, 1790},
+    {2000, 33, 31, 2160},
+};
+
+uint32_t R9DAC::CurrVoltageMV = 0;
+uint8_t R9DAC::CurrVoltageRegVal = 0;
+uint8_t R9DAC::SDA = 0;
+uint8_t R9DAC::SCL = 0;
+uint8_t R9DAC::ADDR = 0;
+
+void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
+{
+    R9DAC::SDA = SDA_;
+    R9DAC::SCL = SCL_;
+    R9DAC::ADDR = ADDR_;
+
+    Wire.setSDA(SDA); // set is needed or it wont work :/
+    Wire.setSCL(SCL);
+    Wire.begin();
+}
+
+void R9DAC::setVoltageMV(uint32_t voltsMV)
+{
+    uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
+    CurrVoltageMV = voltsMV;
+    Wire.beginTransmission(R9DAC::ADDR);
+    uint8_t RegH = ((ScaledVolts & 0b11110000) >> 4) + (0b0000 << 4);
+    uint8_t RegL = (ScaledVolts & 0b00001111) << 4;
+    Wire.write(RegH);
+    Wire.write(RegL);
+    Wire.endTransmission();
+}
+
+void R9DAC::setVoltageRegDirect(uint8_t voltReg)
+{
+    CurrVoltageRegVal = voltReg;
+    Wire.beginTransmission(R9DAC::ADDR);
+    uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
+    uint8_t RegL = (voltReg & 0b00001111) << 4;
+    Wire.write(RegH);
+    Wire.write(RegL);
+    Wire.endTransmission();
+}
+
+void R9DAC::setPower(DAC_PWR_ power)
+{
+    uint32_t reqVolt = LUT[(uint8_t)power][3];
+    R9DAC::setVoltageMV(reqVolt);
+}
+
+#endif
