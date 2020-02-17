@@ -468,14 +468,18 @@ void setup()
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
   Serial.begin(115200);
+
+  // Annoying startup beeps
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
-  for (int i = 0; i < 500; i++)
+  const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
+  const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
+  for (int i = 0; i < 7; i++)
   {
-    digitalWrite(GPIO_PIN_BUZZER, HIGH);
-    delayMicroseconds(200);
-    digitalWrite(GPIO_PIN_BUZZER, LOW);
-    delayMicroseconds(200);
+    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+    delay(beepDurations[i]);
+    noTone(GPIO_PIN_BUZZER);
   }
+
   pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
   pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
@@ -534,7 +538,6 @@ void setup()
 
 #if TARGET_R9M_TX
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
-  Radio.SetOutputPower(0b0000);
   R9DAC.setPower(R9_PWR_250mw);
 #endif
 
@@ -558,7 +561,7 @@ void setup()
   crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   HWtimerSetCallback(TimerExpired);
-  //InitHarwareTimer(); // it will auto init when it detects UART connection
+//InitHarwareTimer(); // it will auto init when it detects UART connection
 #endif
 
   Radio.Begin();

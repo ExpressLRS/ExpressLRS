@@ -5,6 +5,9 @@
 #include "../../src/targets.h"
 #include <wire.h>
 #include "DAC.h"
+#include "LoRaRadioLib.h"
+
+extern SX127xDriver Radio;
 
 int R9DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
@@ -54,6 +57,7 @@ void R9DAC::resume()
 {
     if (R9DAC::DAC_STATE != RUNNING)
     {
+        Radio.SetOutputPower(0b0000);
         R9DAC::setVoltageRegDirect(CurrVoltageRegVal);
         R9DAC::DAC_STATE = RUNNING;
     }
@@ -66,6 +70,7 @@ void R9DAC::setVoltageMV(uint32_t voltsMV)
     uint8_t RegH = ((ScaledVolts & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (ScaledVolts & 0b00001111) << 4;
 
+    Radio.SetOutputPower(0b0000);
     Wire.beginTransmission(R9DAC::ADDR);
     Wire.write(RegH);
     Wire.write(RegL);
@@ -77,7 +82,8 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
     CurrVoltageRegVal = voltReg;
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
-    
+
+    Radio.SetOutputPower(0b0000);
     Wire.beginTransmission(R9DAC::ADDR);
     Wire.write(RegH);
     Wire.write(RegL);
@@ -86,6 +92,7 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
 
 void R9DAC::setPower(DAC_PWR_ power)
 {
+    Radio.SetOutputPower(0b0000);
     uint32_t reqVolt = LUT[(uint8_t)power][3];
     R9DAC::setVoltageMV(reqVolt);
 }

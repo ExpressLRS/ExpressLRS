@@ -17,6 +17,10 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "string_view": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "map": "cpp",
+        "ostream": "cpp",
+        "*.tcc": "cpp",
+        "ios": "cpp"
     }
 }
