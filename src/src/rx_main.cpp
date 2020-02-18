@@ -464,6 +464,8 @@ void setup()
     FHSSrandomiseFHSSsequence();
     Radio.SetFrequency(GetInitialFreq());
 
+    //Radio.SetSyncWord(0x122);
+
     Radio.Begin();
 
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
