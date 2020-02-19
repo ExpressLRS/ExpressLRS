@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <stdio.h>
 
-#define TimerIntervalUSDefault 20000
+#define TimerIntervalUSDefault 5000
 
 extern "C"
 {
@@ -14,13 +14,14 @@ extern "C"
 class hwTimer
 {
 public:
-
 	static volatile uint32_t HWtimerInterval;
 	static volatile bool TickTock;
-	static volatile int16_t PhaseShift;
+	static volatile int32_t PhaseShift;
 	static bool ResetNextLoop;
 	static uint32_t LastCallbackMicrosTick;
 	static uint32_t LastCallbackMicrosTock;
+	static uint8_t HWtimerDiv;
+	static uint8_t HWtimerCounter;
 
 	static void init();
 	static void ICACHE_RAM_ATTR pause();

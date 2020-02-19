@@ -50,11 +50,11 @@ typedef enum
 
 typedef enum
 {
-    RATE_4HZ = 0,
-    RATE_25HZ = 1,
+    RATE_4HZ = 5,
+    RATE_25HZ = 3,
     RATE_50HZ = 2,
-    RATE_100HZ = 3,
-    RATE_200HZ = 4,
+    RATE_100HZ = 1,
+    RATE_200HZ = 0,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 typedef struct expresslrs_mod_settings_s
@@ -62,7 +62,7 @@ typedef struct expresslrs_mod_settings_s
     Bandwidth bw;
     SpreadingFactor sf;
     CodingRate cr;
-    int32_t sensitivity;               //expected RF sensitivity based on 
+    int32_t sensitivity;                //expected RF sensitivity based on
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;                       // rate in hz
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
@@ -84,6 +84,8 @@ extern const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[5];
 extern expresslrs_mod_settings_s ExpressLRS_nextAirRate;
 extern expresslrs_mod_settings_s ExpressLRS_currAirRate;
 extern expresslrs_mod_settings_s ExpressLRS_prevAirRate;
+extern bool ExpressLRS_RateUpdateTime;
+extern bool ExpressLRS_RateUpdateJustDone;
 
 #define MaxPower100mW_Module 20
 #define MaxPower1000mW_Module 30

@@ -7,8 +7,11 @@ void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever 
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
 volatile bool hwTimer::TickTock = false;
-volatile int16_t hwTimer::PhaseShift = 0;
+volatile int32_t hwTimer::PhaseShift = 0;
 bool hwTimer::ResetNextLoop = false;
+
+uint8_t hwTimer::HWtimerDiv = 0;
+uint8_t hwTimer::HWtimerCounter;
 
 uint32_t hwTimer::LastCallbackMicrosTick = 0;
 uint32_t hwTimer::LastCallbackMicrosTock = 0;
@@ -89,7 +92,13 @@ void ICACHE_RAM_ATTR hwTimer::callback()
     else
     {
         hwTimer::LastCallbackMicrosTock = micros();
-        hwTimer::callbackTock();
+
+        if (hwTimer::HWtimerCounter % hwTimer::HWtimerDiv == 0)
+        {
+            hwTimer::callbackTock();
+        }
+
+        hwTimer::HWtimerCounter++;
     }
     hwTimer::TickTock = !hwTimer::TickTock;
 }

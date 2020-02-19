@@ -26,7 +26,8 @@ void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
 void (*SX127xDriver::TXtimeout)() = &nullCallback;
 void (*SX127xDriver::RXtimeout)() = &nullCallback;
 
-void (*SX127xDriver::TimerDoneCallback)() = &nullCallback;
+void (*SX127xDriver::TimerDoneCallback1)() = &nullCallback;
+void (*SX127xDriver::TimerDoneCallback2)() = &nullCallback;
 
 /////setup some default variables//////////////
 
@@ -432,7 +433,8 @@ void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
 {
   portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
   portENTER_CRITICAL(&myMutex);
-  TimerDoneCallback();
+  TimerDoneCallback1();
+  TimerDoneCallback2();
   portEXIT_CRITICAL(&myMutex);
 }
 

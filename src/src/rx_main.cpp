@@ -9,6 +9,7 @@
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
+#include "UpdateRFrateTLMrate.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -19,6 +20,9 @@
 #include "STM32_UARTinHandler.h"
 #include "STM32_hwTimer.h"
 #endif
+
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode);
+void ICACHE_RAM_ATTR TentativeConnection();
 
 hwTimer hwTimer;
 
@@ -104,6 +108,29 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
+void ICACHE_RAM_ATTR HandleAirRateUpdate()
+{
+    if (ExpressLRS_RateUpdateTime == true)
+    {
+        if (updateNonceCounter > 3)
+        {
+            ExpressLRS_RateUpdateTime = false;
+            Serial.println("HandleAirRateUpdate");
+            Serial.print("new: ");
+            //Serial.println(ExpressLRS_AirRateConfig[1].interval);
+            //SetRFLinkRate(ExpressLRS_AirRateConfig[(uint8_t)ExpressLRS_nextAirRate.enum_rate]);
+            TentativeConnection();
+            Serial.println(ExpressLRS_nextAirRate.interval);
+            SetRFLinkRate(ExpressLRS_nextAirRate);
+            updateNonceCounter = 0;
+        }
+        else
+        {
+            updateNonceCounter++;
+        }
+    }
+}
+
 void ICACHE_RAM_ATTR HandleFHSS()
 {
     uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval;
@@ -120,9 +147,19 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 }
 
+uint8_t ICACHE_RAM_ATTR FSMpacket()
+{
+    uint8_t Data1 = ((((uint8_t)FSMratesGetState()) & 0b00000011) << 6);
+    uint8_t Data2 = ((((uint8_t)ExpressLRS_nextAirRate.TLMinterval) & 0b00000111) << 3);
+    uint8_t Data3 = ((((uint8_t)ExpressLRS_nextAirRate.enum_rate) & 0b00000111) << 0);
+
+    return Data1 + Data2 + Data3;
+    //return Data1;
+}
+
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState == connected) // don't bother sending tlm if disconnected
+    if (connectionState == connected || connectionState == tentative) // don't bother sending tlm if disconnected
     {
         uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
@@ -131,7 +168,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
             Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
             Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
-            Radio.TXdataBuffer[3] = 0;
+            //Radio.TXdataBuffer[3] = 0;
+            Radio.TXdataBuffer[3] = FSMpacket(); // this will be the TLM rate and RF rate uplink channel.
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
 
@@ -191,6 +229,8 @@ void ICACHE_RAM_ATTR TentativeConnection()
     connectionStatePrev = connectionState;
     connectionState = tentative;
     Serial.println("tentative conn");
+    digitalWrite(GPIO_PIN_LED, 0); // turn on led
+    RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
 }
 
 void ICACHE_RAM_ATTR GotConnection()
@@ -200,7 +240,6 @@ void ICACHE_RAM_ATTR GotConnection()
         connectionStatePrev = connectionState;
         connectionState = connected; //we got a packet, therefore no lost connection
 
-        RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
         digitalWrite(GPIO_PIN_LED, 1); // turn on led
         Serial.println("got conn");
 
@@ -256,6 +295,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacket = millis();
             packetCounter++;
 
+#ifdef TARGET_R9M_RX
+            digitalWrite(PA8, HIGH);
+#endif
+
             getRFlinkInfo();
 
             switch (type)
@@ -263,7 +306,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             case 0b00: //Standard RC Data Packet
                 UnpackChannelData_11bit();
-                crsf.sendRCFrameToFC();
+                //crsf.sendRCFrameToFC();
                 break;
 
             case 0b01:                                                                                                    // Switch Data Packet
@@ -272,7 +315,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    crsf.sendRCFrameToFC();
+                    //crsf.sendRCFrameToFC();
                 }
                 break;
 
@@ -289,10 +332,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                         TentativeConnection();
                     }
 
-                    if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+                    if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1] && linkQuality > 95)
                     {
                         GotConnection();
                     }
+
+                    //ExpressLRS_nextAirRate.enum_rate = (expresslrs_RFrates_e)(Radio.RXdataBuffer[3] & 0b00000111);
+                    //ExpressLRS_nextAirRate.TLMinterval = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] & 0b00111000) >> 3);
+                    ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[(Radio.RXdataBuffer[3] & 0b00000111)];
+                    FSMratesNewEventRX((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
+                    //FSMUpdateState((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
 
                     // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
                     // {
@@ -314,13 +363,24 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+            //Offset = HWtimerError - (ExpressLRS_currAirRate.interval >> 1); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+            //hwTimer.phaseShift((int32_t(Offset >> 3)) + timerOffset);
+            if (ExpressLRS_currAirRate.enum_rate == RATE_50HZ)
+            {
+                hwTimer.phaseShift(int32_t(Offset >> 1) + timerOffset);
+            }
+            else
+            {
+                //hwTimer.phaseShift(((int32_t(Offset >> (3 - (uint8_t)ExpressLRS_currAirRate.enum_rate)))) + timerOffset);
+                hwTimer.phaseShift(((int32_t(Offset >> (4 - (uint8_t)ExpressLRS_currAirRate.enum_rate)))) + timerOffset);
+            }
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
                 int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
-                //Serial.print(freqerror);
-                //Serial.print(" : ");
+                Serial.print(FreqCorrection);
+                Serial.print(" : ");
+                Serial.println(Offset);
 
                 if (freqerror > 0)
                 {
@@ -361,6 +421,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             // Serial.println(linkQuality);
             //Serial.print(":");
             //Serial.println(PacketInterval);
+#ifdef TARGET_R9M_RX
+            digitalWrite(PA8, LOW);
+#endif
         }
         else
         {
@@ -427,8 +490,9 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
     hwTimer.updateInterval(mode.interval);
-    LPF_PacketInterval.init(mode.interval);
-    //LPF_Offset.init(0);
+    //hwTimer.TimerDiv = (uint8_t)mode.enum_rate + 1;
+    //LPF_PacketInterval.init(mode.interval);
+    LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
 }
@@ -440,6 +504,10 @@ void setup()
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
     Serial.begin(420000);
     crsf.InitSerial();
+#endif
+
+#ifdef TARGET_R9M_RX
+    pinMode(PA8, OUTPUT);
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -477,25 +545,26 @@ void setup()
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
 
-    Radio.TXdoneCallback1 = &Radio.RXnb;
+    Radio.TXdoneCallback1 = &HandleAirRateUpdate;
+    Radio.TXdoneCallback2 = &Radio.RXnb;
 
     crsf.Begin();
     hwTimer.callbackTock = &HWtimerCallback;
     hwTimer.init();
 
     SetRFLinkRate(RF_RATE_200HZ);
-    hwTimer.init();
+    Radio.RXnb();
 }
 
 void loop()
 {
-
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate.RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate.RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate(ExpressLRS_AirRateConfig[scanIndex % 3]); //switch between 200hz, 100hz, 50hz, rates
+            //Radio.RXnb();
             LQreset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
@@ -512,7 +581,7 @@ void loop()
 
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SendLinkStatstoFCinterval)) && connectionState != disconnected)
     {
-        crsf.sendLinkStatisticsToFC();
+        //crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
 

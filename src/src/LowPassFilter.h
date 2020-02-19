@@ -30,7 +30,7 @@ public:
 
     int32_t update(int32_t Indata)
     {
-        int RawData;
+        int32_t RawData;
         RawData = Indata;
         RawData <<= FP_Shift; // Shift to fixed point
         SmoothDataFP = (SmoothDataFP << Beta) - SmoothDataFP;

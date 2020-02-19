@@ -99,7 +99,8 @@ public:
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
 
-    static void (*TimerDoneCallback)(); //function pointer for callback
+    static void (*TimerDoneCallback1)(); //function pointer for callback
+    static void (*TimerDoneCallback2)(); //function pointer for callback
 
 #ifdef PLATFORM_ESP32
     static TaskHandle_t Timertask_handle; //Task Handle for ContTX mode

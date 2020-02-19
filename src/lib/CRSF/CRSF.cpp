@@ -38,8 +38,8 @@ bool CRSF::firstboot = true;
 
 bool CRSF::CRSFstate = false;
 
-volatile uint8_t CRSF::SerialInPacketLen = 0;     // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0;     // index where we are reading/writing
+volatile uint8_t CRSF::SerialInPacketLen = 0;                     // length of the CRSF packet as measured
+volatile uint8_t CRSF::SerialInPacketPtr = 0;                     // index where we are reading/writing
 volatile uint8_t CRSF::SerialInBuffer[CRSF_MAX_PACKET_LEN] = {0}; // max 64 bytes for CRSF packet
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
@@ -237,7 +237,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read
         {
             LastDataTime = millis();
 
-            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN-1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
             {
                 SerialInPacketPtr = 0;
             }
@@ -327,7 +327,7 @@ void ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
 #ifdef FEATURE_OPENTX_SYNC
-        xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 254, &xHandleSerialOutFIFO, 1);
+        xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 100, &xHandleSerialOutFIFO, 0);
 #endif
         connected();
     }

@@ -8,6 +8,7 @@
 #include "LED.h"
 #include "Debug.h"
 #include "targets.h"
+#include "UpdateRFrateTLMrate.h"
 
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -21,7 +22,7 @@ CRSF crsf;
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
 uint32_t SwitchPacketSendInterval = 200;      //not used, delete when able to
-uint32_t SyncPacketSendIntervalRXlost = 250;  //how often to send the switch data packet (ms) when there is no response from RX
+uint32_t SyncPacketSendIntervalRXlost = 200;    //how often to send the switch data packet (ms) when there is no response from RX
 uint32_t SyncPacketSendIntervalRXconn = 1500; //how often to send the switch data packet (ms) when there we have a connection
 uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
 
@@ -50,6 +51,8 @@ bool Channels5to8Changed = false;
 bool ChangeAirRateRequested = false;
 bool ChangeAirRateSentUpdate = false;
 
+bool RateUpdateResponseNeeded = false;
+
 bool WaitRXresponse = false;
 
 ///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,8 +70,34 @@ uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this w
 
 void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
+void SetRFLinkRate(expresslrs_mod_settings_s mode);
 
 uint8_t baseMac[6];
+
+void ICACHE_RAM_ATTR UpdateRFrate()
+{
+  uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+  if (modresult == 2)
+  {
+    if (ExpressLRS_RateUpdateTime == true)
+    {
+      if (updateNonceCounter > 3)
+      {
+        SetRFLinkRate(ExpressLRS_nextAirRate);
+        ExpressLRS_RateUpdateTime = false;
+        ExpressLRS_RateUpdateJustDone = true;
+        Serial.println("HandleAirRateUpdate");
+        Serial.print("new: ");
+        Serial.println(ExpressLRS_nextAirRate.interval);
+        updateNonceCounter = 0;
+      }
+      else
+      {
+        updateNonceCounter++;
+      }
+    }
+  }
+}
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
@@ -88,7 +117,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
       packetCounteRX_TX++;
       if (type == 0b11) //tlmpacket
       {
-        isRXconnected = true;
+        if (Radio.RXdataBuffer[5] > 95)
+        {
+          isRXconnected = true;
+        }
+        
         LastTLMpacketRecvMillis = millis();
 
         if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
@@ -103,6 +136,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
           crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+
+          Serial.print((Radio.RXdataBuffer[3] & 0b11000000) >> 6);
+          RateUpdateResponseNeeded = FSMratesNewEventTX((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
 
           crsf.sendLinkStatisticsToTX();
         }
@@ -135,6 +171,15 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
   }
 }
 
+uint8_t FSMpacket()
+{
+  uint8_t Data1 = ((((uint8_t)FSMratesGetState()) & 0b00000011) << 6);
+  uint8_t Data2 = ((((uint8_t)ExpressLRS_nextAirRate.TLMinterval) & 0b00000111) << 3);
+  uint8_t Data3 = ((((uint8_t)ExpressLRS_nextAirRate.enum_rate) & 0b00000111) << 0);
+
+  return Data1 + Data2 + Data3;
+}
+
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
@@ -142,10 +187,11 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
-  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[3] = FSMpacket();
   Radio.TXdataBuffer[4] = TxBaseMac[3];
   Radio.TXdataBuffer[5] = TxBaseMac[4];
   Radio.TXdataBuffer[6] = TxBaseMac[5];
+  Serial.println("sync");
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
@@ -193,7 +239,7 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
   Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
 }
 
-void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
 {
   Radio.TimerInterval = mode.interval;
   Radio.UpdateTimerInterval();
@@ -240,9 +286,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   /////// This Part Handles the Telemetry Response ///////
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult1 = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
 
-    if (modresult == 0)
+    if (modresult1 == 0)
     { // wait for tlm response
       if (WaitRXresponse == true)
       {
@@ -253,6 +299,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       {
         Radio.NonceTX++;
       }
+    }
+
+    if (ExpressLRS_RateUpdateJustDone == true)
+    {
+      Radio.NonceTX++;
+      Serial.println("skipped");
+      ExpressLRS_RateUpdateJustDone = false;
+      return;
     }
   }
 
@@ -268,7 +322,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))
+  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || (RateUpdateResponseNeeded))
   {
 
     GenerateSyncPacketData();
@@ -277,6 +331,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     //Serial.println("sync");
     //Serial.println(Radio.currFreq);
   }
+#ifdef One_Bit_Switches
   else
   {
     if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
@@ -290,15 +345,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       Generate4ChannelData_11bit();
     }
   }
+#endif
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 8);
 
-  if (ChangeAirRateRequested)
+  if (RateUpdateResponseNeeded)
   {
-    ChangeAirRateSentUpdate = true;
+    RateUpdateResponseNeeded = false;
+    Serial.println("resp");
   }
 }
 
@@ -315,10 +372,14 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     switch (crsf.ParameterUpdateData[0])
     {
     case 1:
-      if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-      {
-        SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-      }
+      //if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
+      //{
+      //SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
+      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]];
+      Serial.println(crsf.ParameterUpdateData[1]);
+      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+      RateUpdateResponseNeeded = true;
+      // }
       break;
 
     case 2:
@@ -473,9 +534,10 @@ void setup()
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
   Radio.TXdoneCallback3 = &HandleUpdateParameter;
-  //Radio.TXdoneCallback4 = &NULL;
+  //Radio.TXdoneCallback4 = &UpdateRFrate;
 
-  Radio.TimerDoneCallback = &SendRCdataToRF;
+  Radio.TimerDoneCallback1 = &UpdateRFrate;
+  Radio.TimerDoneCallback2 = &SendRCdataToRF;
 
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
@@ -506,7 +568,7 @@ void loop()
   // }
 
 #ifdef FEATURE_OPENTX_SYNC
-  Serial.println(crsf.OpenTXsyncOffset);
+  //Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
   updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
