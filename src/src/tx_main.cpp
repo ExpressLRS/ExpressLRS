@@ -22,7 +22,7 @@ CRSF crsf;
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
 uint32_t SwitchPacketSendInterval = 200;      //not used, delete when able to
-uint32_t SyncPacketSendIntervalRXlost = 200;    //how often to send the switch data packet (ms) when there is no response from RX
+uint32_t SyncPacketSendIntervalRXlost = 200;  //how often to send the switch data packet (ms) when there is no response from RX
 uint32_t SyncPacketSendIntervalRXconn = 1500; //how often to send the switch data packet (ms) when there we have a connection
 uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
 
@@ -81,8 +81,8 @@ void ICACHE_RAM_ATTR UpdateRFrate()
   {
     if (ExpressLRS_RateUpdateTime == true)
     {
-      if (updateNonceCounter > 3)
-      {
+     // if (updateNonceCounter > 0)
+      //{
         SetRFLinkRate(ExpressLRS_nextAirRate);
         ExpressLRS_RateUpdateTime = false;
         ExpressLRS_RateUpdateJustDone = true;
@@ -90,11 +90,11 @@ void ICACHE_RAM_ATTR UpdateRFrate()
         Serial.print("new: ");
         Serial.println(ExpressLRS_nextAirRate.interval);
         updateNonceCounter = 0;
-      }
-      else
-      {
-        updateNonceCounter++;
-      }
+    //  }
+     // else
+    //  {
+   //     updateNonceCounter++;
+    //  }
     }
   }
 }
@@ -121,7 +121,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         {
           isRXconnected = true;
         }
-        
+
         LastTLMpacketRecvMillis = millis();
 
         if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
@@ -249,7 +249,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
   ExpressLRS_currAirRate = mode;
   crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
   DebugOutput += String(mode.rate) + "Hz";
-  isRXconnected = false;
+  //isRXconnected = false;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()

@@ -31,7 +31,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 /// Filters ////////////////
 LPF LPF_PacketInterval(3);
-LPF LPF_Offset(3);
+LPF LPF_Offset(2);
 LPF LPF_FreqError(3);
 LPF LPF_UplinkRSSI(5);
 ////////////////////////////
@@ -112,8 +112,8 @@ void ICACHE_RAM_ATTR HandleAirRateUpdate()
 {
     if (ExpressLRS_RateUpdateTime == true)
     {
-        if (updateNonceCounter > 3)
-        {
+      // if (updateNonceCounter > 0)
+       // {
             ExpressLRS_RateUpdateTime = false;
             Serial.println("HandleAirRateUpdate");
             Serial.print("new: ");
@@ -123,11 +123,11 @@ void ICACHE_RAM_ATTR HandleAirRateUpdate()
             Serial.println(ExpressLRS_nextAirRate.interval);
             SetRFLinkRate(ExpressLRS_nextAirRate);
             updateNonceCounter = 0;
-        }
-        else
-        {
+      //  }
+      //  else
+      //  {
             updateNonceCounter++;
-        }
+      //  }
     }
 }
 
@@ -295,10 +295,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacket = millis();
             packetCounter++;
 
-#ifdef TARGET_R9M_RX
-            digitalWrite(PA8, HIGH);
-#endif
-
             getRFlinkInfo();
 
             switch (type)
@@ -342,14 +338,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[(Radio.RXdataBuffer[3] & 0b00000111)];
                     FSMratesNewEventRX((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
                     //FSMUpdateState((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
-
-                    // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
-                    // {
-                    //     Serial.println("update air rate");
-                    //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
-                    //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
-                    // }
-
                     FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                     NonceRXlocal = Radio.RXdataBuffer[2];
                 }
@@ -363,24 +351,44 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            //Offset = HWtimerError - (ExpressLRS_currAirRate.interval >> 1); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            //hwTimer.phaseShift((int32_t(Offset >> 3)) + timerOffset);
+                                                                                               //Offset = HWtimerError - (ExpressLRS_currAirRate.interval >> 1); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+                                                                                               //hwTimer.phaseShift((int32_t(Offset >> 3)) + timerOffset);
+
+            // if (Offset > 1500 || Offset < -1500)
+            // {
+            //     hwTimer.phaseShift(Offset >> 2);
+            // }
+            // else
+            //{
+
+            // if (connectionState == tentative)
+            // {
+
             if (ExpressLRS_currAirRate.enum_rate == RATE_50HZ)
             {
-                hwTimer.phaseShift(int32_t(Offset >> 1) + timerOffset);
+                hwTimer.phaseShiftNoLimit(int32_t(Offset) + timerOffset);
             }
             else
             {
-                //hwTimer.phaseShift(((int32_t(Offset >> (3 - (uint8_t)ExpressLRS_currAirRate.enum_rate)))) + timerOffset);
-                hwTimer.phaseShift(((int32_t(Offset >> (4 - (uint8_t)ExpressLRS_currAirRate.enum_rate)))) + timerOffset);
+                hwTimer.phaseShiftNoLimit((int32_t(Offset) + timerOffset));
             }
+            // }
+            // else if (connectionState == connected)
+            // {
+            //     if (Offset > 0)
+            //     {
+            //         hwTimer.phaseShift(1);
+            //     }
+            //     else if (Offset < 0)
+            //     {
+            //         hwTimer.phaseShift(-1);
+            //     }
+            // }
+            // //}
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
                 int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
-                Serial.print(FreqCorrection);
-                Serial.print(" : ");
-                Serial.println(Offset);
 
                 if (freqerror > 0)
                 {
@@ -414,6 +422,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 HandleFHSS();
                 alreadyFHSS = true;
             }
+            Serial.print(FreqCorrection);
+            Serial.print(" : ");
+            Serial.println(Offset);
             //Serial.println("");
             //Serial.print("Offset: ");
             //Serial.println(Offset);
@@ -421,9 +432,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             // Serial.println(linkQuality);
             //Serial.print(":");
             //Serial.println(PacketInterval);
-#ifdef TARGET_R9M_RX
-            digitalWrite(PA8, LOW);
-#endif
         }
         else
         {
@@ -489,8 +497,19 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     Radio.StopContRX();
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
-    hwTimer.updateInterval(mode.interval);
-    //hwTimer.TimerDiv = (uint8_t)mode.enum_rate + 1;
+    //hwTimer.updateInterval(mode.interval);
+    if (mode.enum_rate == RATE_200HZ)
+    {
+        hwTimer.setPrescaler(3);
+    }
+    if (mode.enum_rate == RATE_100HZ)
+    {
+        hwTimer.setPrescaler(6);
+    }
+    if (mode.enum_rate == RATE_50HZ)
+    {
+        hwTimer.setPrescaler(12);
+    }
     //LPF_PacketInterval.init(mode.interval);
     LPF_Offset.init(0);
     //InitHarwareTimer();
@@ -550,9 +569,12 @@ void setup()
 
     crsf.Begin();
     hwTimer.callbackTock = &HWtimerCallback;
+
     hwTimer.init();
+    //hwTimer.updateInterval(5000);
 
     SetRFLinkRate(RF_RATE_200HZ);
+
     Radio.RXnb();
 }
 

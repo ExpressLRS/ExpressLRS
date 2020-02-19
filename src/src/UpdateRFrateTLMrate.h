@@ -44,7 +44,6 @@ bool FSMratesNewEventTX(rates_updater_fsm_ newEvent)
         {
             rates_updater_fsm_busy = true;
             rates_updater_fsm_state = RATES_UPD_SYN;
-            SyncPacketSendIntervalRXconn = 250;
             startTime = millis();
         }
         break;
@@ -62,7 +61,6 @@ bool FSMratesNewEventTX(rates_updater_fsm_ newEvent)
         if (newEvent == RATES_UPD_ACK)
         {
             rates_updater_fsm_state = RATES_UPD_ACK;
-            ExpressLRS_RateUpdateTime = true;
         }
         if (newEvent < rates_updater_fsm_state)
         {
@@ -70,12 +68,15 @@ bool FSMratesNewEventTX(rates_updater_fsm_ newEvent)
         }
         break;
     case RATES_UPD_ACK:
+        if (newEvent < rates_updater_fsm_state)
+        {
+            rates_updater_fsm_state = RATES_UPD_SYN;
+        }
         Serial.println("got to ack stage!");
         Serial.println(millis() - startTime);
         rates_updater_fsm_state = RATES_UPD_NONE;
         rates_updater_fsm_busy = false;
-        SyncPacketSendIntervalRXconn = 1500;
-
+        ExpressLRS_RateUpdateTime = true;
         break;
     default:
         break;
@@ -109,20 +110,19 @@ bool FSMratesNewEventRX(rates_updater_fsm_ newEvent)
         if (newEvent == rates_updater_fsm_state)
         {
             rates_updater_fsm_state = RATES_UPD_SYNACK;
-            
         }
         break;
     case RATES_UPD_SYNACK:
         if (newEvent == rates_updater_fsm_state)
         {
             rates_updater_fsm_state = RATES_UPD_ACK;
-            ExpressLRS_RateUpdateTime = true;
         }
         break;
     case RATES_UPD_ACK:
         Serial.println("got to ack stage!");
         rates_updater_fsm_state = RATES_UPD_NONE;
         rates_updater_fsm_busy = false;
+        ExpressLRS_RateUpdateTime = true;
         break;
     default:
         break;

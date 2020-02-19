@@ -15,13 +15,16 @@ public:
     static HardwareTimer *MyTim;
 
     static volatile uint32_t HWtimerInterval;
-    static volatile bool TickTock;
+    static bool TickTock;
     static volatile int32_t PhaseShift;
-    static volatile bool ResetNextLoop;
-    static volatile uint32_t LastCallbackMicrosTick;
-    static volatile uint32_t LastCallbackMicrosTock;
+    static bool ResetNextLoop;
+    static uint32_t LastCallbackMicrosTick;
+    static uint32_t LastCallbackMicrosTock;
     static uint8_t TimerDiv;
     static uint8_t Counter;
+
+    static uint8_t Prescaler;
+    static bool UpdatePrescaler;
 
     static bool NewIntervalReq;
     static volatile uint32_t newHWtimerInterval;
@@ -29,6 +32,7 @@ public:
     static void init();
     static void ICACHE_RAM_ATTR pause();
     static void ICACHE_RAM_ATTR stop();
+    static void ICACHE_RAM_ATTR setPrescaler(uint32_t newPrescaler);
     static void ICACHE_RAM_ATTR callback(HardwareTimer *);
     static void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
     static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);

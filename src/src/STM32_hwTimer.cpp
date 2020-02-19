@@ -6,18 +6,21 @@ void (*hwTimer::callbackTick)() = &nullCallback; // function is called whenever 
 void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::TickTock = false;
+bool hwTimer::TickTock = false;
 volatile int32_t hwTimer::PhaseShift = 0;
-volatile bool hwTimer::ResetNextLoop = false;
+bool hwTimer::ResetNextLoop = false;
 
-volatile uint32_t hwTimer::LastCallbackMicrosTick = 0;
-volatile uint32_t hwTimer::LastCallbackMicrosTock = 0;
+uint32_t hwTimer::LastCallbackMicrosTick = 0;
+uint32_t hwTimer::LastCallbackMicrosTock = 0;
 
 bool hwTimer::NewIntervalReq = false;
 volatile uint32_t hwTimer::newHWtimerInterval = 0;
 
 uint8_t hwTimer::TimerDiv = 1;
 uint8_t hwTimer::Counter = 0;
+
+uint8_t hwTimer::Prescaler = 0;
+bool hwTimer::UpdatePrescaler = false;
 
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
 
@@ -27,8 +30,17 @@ void hwTimer::init()
     MyTim->attachInterrupt(hwTimer::callback);
     //MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+    //MyTim->setInterruptPriority(0, 0);
     MyTim->resume();
     interrupts();
+    Serial.print("Scaler:");
+    hwTimer::Prescaler = MyTim->getPrescaleFactor();
+    Serial.println(MyTim->getPrescaleFactor());
+
+    Serial.print("TickOverflow: ");
+    Serial.println(MyTim->getOverflow());
+
+    MyTim->refresh();
 }
 
 void hwTimer::stop()
@@ -41,11 +53,21 @@ void hwTimer::pause()
     MyTim->pause();
 }
 
+void hwTimer::setPrescaler(uint32_t newPrescaler)
+{
+    hwTimer::Prescaler = newPrescaler;
+    hwTimer::UpdatePrescaler = true;
+
+    //Serial.print("New Scaler:");
+    //Serial.println(MyTim->getPrescaleFactor());
+}
+
 void hwTimer::updateInterval(uint32_t Interval)
 {
     hwTimer::newHWtimerInterval = Interval;
     NewIntervalReq = true;
     hwTimer::PhaseShift = hwTimer::PhaseShift;
+    MyTim->refresh();
 
     // //Serial.print("==========:");
     // //Serial.println(MyTim->getCount());
@@ -64,7 +86,7 @@ void hwTimer::updateInterval(uint32_t Interval)
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 {
     //Serial.println(newPhaseShift);
-    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
+    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 2;
 
     if (newPhaseShift > MaxPhaseShift)
     {
@@ -94,40 +116,47 @@ void ICACHE_RAM_ATTR hwTimer::callback(HardwareTimer *)
 {
     if (hwTimer::TickTock)
     {
-        if (NewIntervalReq)
+        //if (NewIntervalReq)
+        //{
+        //    NewIntervalReq = false;
+        //     hwTimer::HWtimerInterval = newHWtimerInterval;
+        // }
+
+        if (hwTimer::UpdatePrescaler)
         {
-            NewIntervalReq = false;
-            hwTimer::HWtimerInterval = newHWtimerInterval;
+            hwTimer::UpdatePrescaler = false;
+            MyTim->setPrescaleFactor(hwTimer::Prescaler);
         }
 
         if (hwTimer::ResetNextLoop)
         {
-            MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+            //MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+            MyTim->setOverflow(60000, TICK_FORMAT);
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
-        {
-            MyTim->setOverflow((hwTimer::HWtimerInterval + hwTimer::PhaseShift) >> 1, MICROSEC_FORMAT);
+        //if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < -1)
+        // {
+        //MyTim->setOverflow(((hwTimer::HWtimerInterval + hwTimer::PhaseShift) >> 1), MICROSEC_FORMAT);
+        MyTim->setOverflow(60000 + hwTimer::PhaseShift, TICK_FORMAT);
 
-            hwTimer::ResetNextLoop = true;
-            hwTimer::PhaseShift = 0;
-        }
+        hwTimer::ResetNextLoop = true;
+        hwTimer::PhaseShift = 0;
+        //}
 
-        if (hwTimer::Counter % hwTimer::TimerDiv == 0)
-        {
-            hwTimer::LastCallbackMicrosTick = micros();
-            hwTimer::callbackTick();
-        }
+        hwTimer::LastCallbackMicrosTick = micros();
+        hwTimer::callbackTick();
+#ifdef TARGET_R9M_RX
+        digitalWrite(PA8, HIGH);
+#endif
     }
     else
     {
-
-        if (hwTimer::Counter % hwTimer::TimerDiv == 0)
-        {
-            hwTimer::LastCallbackMicrosTock = micros();
-            hwTimer::callbackTock();
-        }
+        hwTimer::LastCallbackMicrosTock = micros();
+        hwTimer::callbackTock();
+#ifdef TARGET_R9M_RX
+        digitalWrite(PA8, LOW);
+#endif
     }
     hwTimer::Counter++;
     hwTimer::TickTock = !hwTimer::TickTock;
