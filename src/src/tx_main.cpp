@@ -565,17 +565,23 @@ void setup()
 void TaskDynamicRFrates()
 {
   //vTaskDelay(500);
-  if (millis() > (lastRFmodeChange + 2500))
+  if (millis() > (lastRFmodeChange + 2000))
   {
     if ((crsf.LinkStatistics.uplink_Link_quality < 75 || crsf.LinkStatistics.uplink_SNR < 0) && rates_updater_fsm_busy == false && ExpressLRS_currAirRate.enum_rate < 2 && isRXconnected == true)
     {
-      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate + 1];
-      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+      if (ExpressLRS_nextAirRate.enum_rate != ExpressLRS_currAirRate.enum_rate + 1)
+      {
+        ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate + 1];
+        FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+      }
     }
-    if ((crsf.LinkStatistics.uplink_SNR > 20 && crsf.LinkStatistics.uplink_Link_quality == 100) && rates_updater_fsm_busy == false && ExpressLRS_currAirRate.enum_rate > 0 && isRXconnected == true)
+    if ((crsf.LinkStatistics.uplink_SNR > 20 && crsf.LinkStatistics.uplink_Link_quality >= 99) && rates_updater_fsm_busy == false && ExpressLRS_currAirRate.enum_rate > 0 && isRXconnected == true)
     {
-      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate - 1];
-      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+      if (ExpressLRS_nextAirRate.enum_rate != ExpressLRS_currAirRate.enum_rate - 1)
+      {
+        ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate - 1];
+        FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+      }
     }
   }
 }

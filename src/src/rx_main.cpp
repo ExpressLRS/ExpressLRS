@@ -518,10 +518,14 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     }
 #endif
     //LPF_PacketInterval.init(mode.interval);
-    LPF_Offset.init(0);
+    //LPF_Offset.init(0);
     //InitHarwareTimer();
     updateNonceCounter = 0;
-    rates_updater_fsm_busy = false;
+    if (rates_updater_fsm_busy == true)
+    {
+        rates_updater_fsm_busy = false;
+        addPacketToLQ();
+    }
     lastRFmodeChange = millis();
     Radio.RXnb();
 }
