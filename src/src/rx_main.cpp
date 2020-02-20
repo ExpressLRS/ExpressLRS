@@ -24,6 +24,9 @@
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode);
 void ICACHE_RAM_ATTR TentativeConnection();
 
+bool gotfirstSync = false;
+uint32_t lastRFmodeChange = 0;
+
 hwTimer hwTimer;
 
 SX127xDriver Radio;
@@ -103,7 +106,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate.enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -112,8 +115,8 @@ void ICACHE_RAM_ATTR HandleAirRateUpdate()
 {
     if (ExpressLRS_RateUpdateTime == true)
     {
-      // if (updateNonceCounter > 0)
-       // {
+        if (updateNonceCounter > 0)
+        {
             ExpressLRS_RateUpdateTime = false;
             Serial.println("HandleAirRateUpdate");
             Serial.print("new: ");
@@ -123,11 +126,11 @@ void ICACHE_RAM_ATTR HandleAirRateUpdate()
             Serial.println(ExpressLRS_nextAirRate.interval);
             SetRFLinkRate(ExpressLRS_nextAirRate);
             updateNonceCounter = 0;
-      //  }
-      //  else
-      //  {
+        }
+        else
+        {
             updateNonceCounter++;
-      //  }
+        }
     }
 }
 
@@ -217,6 +220,7 @@ void ICACHE_RAM_ATTR LostConnection()
         digitalWrite(GPIO_PIN_LED, 0);        // turn off led
         Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Serial.println("lost conn");
+        SetRFLinkRate(RF_RATE_50HZ);
 
 #ifdef PLATFORM_STM32
         digitalWrite(GPIO_PIN_LED_GEEN, LOW);
@@ -242,6 +246,11 @@ void ICACHE_RAM_ATTR GotConnection()
 
         digitalWrite(GPIO_PIN_LED, 1); // turn on led
         Serial.println("got conn");
+
+        if (gotfirstSync == false)
+        {
+            gotfirstSync = true;
+        }
 
 #ifdef PLATFORM_STM32
         digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
@@ -302,7 +311,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             case 0b00: //Standard RC Data Packet
                 UnpackChannelData_11bit();
-                //crsf.sendRCFrameToFC();
+                crsf.sendRCFrameToFC();
                 break;
 
             case 0b01:                                                                                                    // Switch Data Packet
@@ -311,7 +320,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                     UnpackSwitchData();
                     NonceRXlocal = Radio.RXdataBuffer[5];
                     FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    //crsf.sendRCFrameToFC();
+                    crsf.sendRCFrameToFC();
                 }
                 break;
 
@@ -353,65 +362,58 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
                                                                                                //Offset = HWtimerError - (ExpressLRS_currAirRate.interval >> 1); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
                                                                                                //hwTimer.phaseShift((int32_t(Offset >> 3)) + timerOffset);
-
-            // if (Offset > 1500 || Offset < -1500)
-            // {
-            //     hwTimer.phaseShift(Offset >> 2);
-            // }
-            // else
-            //{
-
-            // if (connectionState == tentative)
-            // {
+#ifdef PLATFORM_STM32
 
             if (ExpressLRS_currAirRate.enum_rate == RATE_50HZ)
             {
-                hwTimer.phaseShiftNoLimit(int32_t(Offset) + timerOffset);
+                hwTimer.phaseShift(int32_t(Offset) + timerOffset);
             }
             else
             {
-                hwTimer.phaseShiftNoLimit((int32_t(Offset) + timerOffset));
+                hwTimer.phaseShift((int32_t(Offset) + timerOffset));
             }
-            // }
-            // else if (connectionState == connected)
-            // {
-            //     if (Offset > 0)
-            //     {
-            //         hwTimer.phaseShift(1);
-            //     }
-            //     else if (Offset < 0)
-            //     {
-            //         hwTimer.phaseShift(-1);
-            //     }
-            // }
-            // //}
+#endif
+#ifdef PLATFORM_ESP8266
+            if (ExpressLRS_currAirRate.enum_rate == RATE_50HZ)
+            {
+                hwTimer.phaseShift(int32_t(Offset >> 4) + timerOffset);
+            }
+            else
+            {
+                hwTimer.phaseShift((int32_t(Offset >> 4) + timerOffset));
+            }
+#endif
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
                 int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
 
-                if (freqerror > 0)
+                if (connectionState != disconnected)
                 {
-                    if (FreqCorrection < FreqCorrectionMax)
+
+                    if (freqerror > 0)
                     {
-                        FreqCorrection += 61; //min freq step is ~ 61hz
+                        if (FreqCorrection < FreqCorrectionMax)
+                        {
+                            FreqCorrection += 61; //min freq step is ~ 61hz
+                        }
+                        else
+                        {
+                            FreqCorrection = FreqCorrectionMax;
+                            Serial.println("Max pos reasontable freq offset correction limit reached!");
+                        }
                     }
                     else
                     {
-                        FreqCorrection = FreqCorrectionMax;
-                        Serial.println("Max pos reasontable freq offset correction limit reached!");
-                    }
-                }
-                else
-                {
-                    if (FreqCorrection > FreqCorrectionMin)
-                    {
-                        FreqCorrection -= 61; //min freq step is ~ 61hz
-                    }
-                    else
-                    {
-                        FreqCorrection = FreqCorrectionMin;
-                        Serial.println("Max neg reasontable freq offset correction limit reached!");
+                        if (FreqCorrection > FreqCorrectionMin)
+                        {
+                            FreqCorrection -= 61; //min freq step is ~ 61hz
+                        }
+                        else
+                        {
+                            FreqCorrection = FreqCorrectionMin;
+                            Serial.println("Max neg reasontable freq offset correction limit reached!");
+                        }
                     }
                 }
 
@@ -422,9 +424,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 HandleFHSS();
                 alreadyFHSS = true;
             }
-            Serial.print(FreqCorrection);
-            Serial.print(" : ");
-            Serial.println(Offset);
+            //Serial.print(FreqCorrection);
+            //Serial.print(" : ");
+            //Serial.println(Offset);
             //Serial.println("");
             //Serial.print("Offset: ");
             //Serial.println(Offset);
@@ -497,7 +499,10 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     Radio.StopContRX();
     Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
-    //hwTimer.updateInterval(mode.interval);
+#ifdef PLATFORM_ESP8266
+    hwTimer.updateInterval(mode.interval);
+#endif
+#ifdef PLATFORM_STM32
     if (mode.enum_rate == RATE_200HZ)
     {
         hwTimer.setPrescaler(3);
@@ -510,9 +515,13 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
     {
         hwTimer.setPrescaler(12);
     }
+#endif
     //LPF_PacketInterval.init(mode.interval);
     LPF_Offset.init(0);
     //InitHarwareTimer();
+    updateNonceCounter = 0;
+    rates_updater_fsm_busy = false;
+    lastRFmodeChange = millis();
     Radio.RXnb();
 }
 
@@ -573,28 +582,31 @@ void setup()
     hwTimer.init();
     //hwTimer.updateInterval(5000);
 
-    SetRFLinkRate(RF_RATE_200HZ);
+    SetRFLinkRate(RF_RATE_50HZ);
 
-    Radio.RXnb();
+    //Radio.RXnb();
 }
 
 void loop()
 {
-    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate.RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate.RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
-    {
-        if ((connectionState == disconnected) && !webUpdateMode)
-        {
-            Radio.SetFrequency(GetInitialFreq());
-            SetRFLinkRate(ExpressLRS_AirRateConfig[scanIndex % 3]); //switch between 200hz, 100hz, 50hz, rates
-            //Radio.RXnb();
-            LQreset();
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
-            Serial.println(ExpressLRS_currAirRate.interval);
-            scanIndex++;
-        }
-        RFmodeLastCycled = millis();
-    }
+    // if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate.RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate.RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
+    // {
+    //     //if (gotfirstSync == false)
+    //     //{
+    //     if ((connectionState == disconnected) && !webUpdateMode)
+    //     {
+    //         Radio.SetFrequency(GetInitialFreq());
+    //         SetRFLinkRate(ExpressLRS_AirRateConfig[scanIndex % 3]); //switch between 200hz, 100hz, 50hz, rates
+    //         //Radio.RXnb();
+    //         LQreset();
+    //         digitalWrite(GPIO_PIN_LED, LED);
+    //         LED = !LED;
+    //         Serial.println(ExpressLRS_currAirRate.interval);
+    //         scanIndex++;
+    //     }
+    //     RFmodeLastCycled = millis();
+    //     //}
+    // }
 
     if (millis() > (LastValidPacket + ExpressLRS_currAirRate.RFmodeCycleAddtionalTime)) // check if we lost conn.
     {
@@ -603,7 +615,7 @@ void loop()
 
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SendLinkStatstoFCinterval)) && connectionState != disconnected)
     {
-        //crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
 

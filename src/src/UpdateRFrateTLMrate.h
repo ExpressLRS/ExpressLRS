@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "../../src/targets.h"
 
 extern SX127xDriver Radio;
 
@@ -32,7 +33,7 @@ uint8_t updateNonceCounter;
 uint32_t startTime;
 
 //void FSMratesNewEvent(rates_updater_fsm_ newEvent, uint8_t newRate)
-bool FSMratesNewEventTX(rates_updater_fsm_ newEvent)
+bool ICACHE_RAM_ATTR FSMratesNewEventTX(rates_updater_fsm_ newEvent)
 {
 
     //bool FSMupdate = false;
@@ -95,7 +96,7 @@ bool FSMratesNewEventTX(rates_updater_fsm_ newEvent)
     //rates_updater_fsm_state_prev = rates_updater_fsm_state;
 }
 
-bool FSMratesNewEventRX(rates_updater_fsm_ newEvent)
+bool ICACHE_RAM_ATTR FSMratesNewEventRX(rates_updater_fsm_ newEvent)
 {
     switch (rates_updater_fsm_state)
     {
@@ -111,17 +112,24 @@ bool FSMratesNewEventRX(rates_updater_fsm_ newEvent)
         {
             rates_updater_fsm_state = RATES_UPD_SYNACK;
         }
+        if (newEvent > rates_updater_fsm_state)
+        {
+            rates_updater_fsm_state = RATES_UPD_NONE;
+        }
         break;
     case RATES_UPD_SYNACK:
         if (newEvent == rates_updater_fsm_state)
         {
             rates_updater_fsm_state = RATES_UPD_ACK;
         }
+        if (newEvent > rates_updater_fsm_state)
+        {
+            rates_updater_fsm_state = RATES_UPD_NONE;
+        }
         break;
     case RATES_UPD_ACK:
         Serial.println("got to ack stage!");
         rates_updater_fsm_state = RATES_UPD_NONE;
-        rates_updater_fsm_busy = false;
         ExpressLRS_RateUpdateTime = true;
         break;
     default:
@@ -136,7 +144,7 @@ rates_updater_fsm_ FSMratesGetState()
     return rates_updater_fsm_state;
 }
 
-void FSMUpdateState(rates_updater_fsm_ newEvent)
+void ICACHE_RAM_ATTR FSMUpdateState(rates_updater_fsm_ newEvent)
 {
     rates_updater_fsm_state = newEvent;
 }

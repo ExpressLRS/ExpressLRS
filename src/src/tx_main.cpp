@@ -9,6 +9,7 @@
 #include "Debug.h"
 #include "targets.h"
 #include "UpdateRFrateTLMrate.h"
+#include "LowPassFilter.h"
 
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -18,6 +19,8 @@ String DebugOutput;
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
+
+LPF LPF_UplinkSNR(2);
 
 //// Switch Data Handling ///////
 uint8_t SwitchPacketsCounter = 0;             //not used for the moment
@@ -31,7 +34,7 @@ uint32_t SyncPacketLastSent = 0;
 
 uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t RXconnectionLostTimeout = 1500; //After 1500ms of no TLM response consider that slave has lost connection
-bool isRXconnected = false;
+bool isRXconnected = true;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
 uint32_t PacketRateInterval = 500;
@@ -43,6 +46,8 @@ uint32_t RFmodeLastCycled = 0;
 uint32_t RFmodeCycleInterval = 1000;
 uint32_t SyncPacketAddtionalTime = 1500; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
 ///////////////////////////////////////
+
+uint32_t lastRFmodeChange = 0;
 
 bool UpdateParamReq = false;
 
@@ -81,8 +86,8 @@ void ICACHE_RAM_ATTR UpdateRFrate()
   {
     if (ExpressLRS_RateUpdateTime == true)
     {
-     // if (updateNonceCounter > 0)
-      //{
+      if (updateNonceCounter > 0)
+      {
         SetRFLinkRate(ExpressLRS_nextAirRate);
         ExpressLRS_RateUpdateTime = false;
         ExpressLRS_RateUpdateJustDone = true;
@@ -90,11 +95,12 @@ void ICACHE_RAM_ATTR UpdateRFrate()
         Serial.print("new: ");
         Serial.println(ExpressLRS_nextAirRate.interval);
         updateNonceCounter = 0;
-    //  }
-     // else
-    //  {
-   //     updateNonceCounter++;
-    //  }
+        rates_updater_fsm_busy = false;
+      }
+      else
+      {
+        updateNonceCounter++;
+      }
     }
   }
 }
@@ -128,14 +134,14 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         {
           crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
           crsf.LinkStatistics.uplink_RSSI_2 = 0;
-          crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
+          crsf.LinkStatistics.uplink_SNR = LPF_UplinkSNR.update(Radio.RXdataBuffer[4]);
           crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
           crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
           crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
           crsf.LinkStatistics.downlink_Link_quality = linkQuality;
           //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-          crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+          crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate.enum_rate;
 
           Serial.print((Radio.RXdataBuffer[3] & 0b11000000) >> 6);
           RateUpdateResponseNeeded = FSMratesNewEventTX((rates_updater_fsm_)((Radio.RXdataBuffer[3] & 0b11000000) >> 6));
@@ -249,6 +255,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
   ExpressLRS_currAirRate = mode;
   crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
   DebugOutput += String(mode.rate) + "Hz";
+  lastRFmodeChange = millis();
   //isRXconnected = false;
 }
 
@@ -372,14 +379,17 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     switch (crsf.ParameterUpdateData[0])
     {
     case 1:
-      //if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-      //{
-      //SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]];
-      Serial.println(crsf.ParameterUpdateData[1]);
-      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
-      RateUpdateResponseNeeded = true;
-      // }
+      if (isRXconnected == true && rates_updater_fsm_busy == false)
+      {
+        ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]];
+        Serial.println(crsf.ParameterUpdateData[1]);
+        FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+        RateUpdateResponseNeeded = true;
+      }
+      else
+      {
+        //SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
+      }
       break;
 
     case 2:
@@ -552,11 +562,30 @@ void setup()
   crsf.Begin();
 }
 
+void TaskDynamicRFrates()
+{
+  //vTaskDelay(500);
+  if (millis() > (lastRFmodeChange + 2500))
+  {
+    if ((crsf.LinkStatistics.uplink_Link_quality < 75 || crsf.LinkStatistics.uplink_SNR < 0) && rates_updater_fsm_busy == false && ExpressLRS_currAirRate.enum_rate < 2 && isRXconnected == true)
+    {
+      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate + 1];
+      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+    }
+    if ((crsf.LinkStatistics.uplink_SNR > 20 && crsf.LinkStatistics.uplink_Link_quality == 100) && rates_updater_fsm_busy == false && ExpressLRS_currAirRate.enum_rate > 0 && isRXconnected == true)
+    {
+      ExpressLRS_nextAirRate = ExpressLRS_AirRateConfig[ExpressLRS_currAirRate.enum_rate - 1];
+      FSMratesNewEventTX((rates_updater_fsm_)(0x01));
+    }
+  }
+}
+
 void loop()
 {
 
   delay(100);
 
+  TaskDynamicRFrates();
   // if (digitalRead(4) == 0)
   // {
   //   Serial.println("Switch Pressed!");
@@ -575,7 +604,13 @@ void loop()
 
   if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
   {
-    isRXconnected = false;
+    if (isRXconnected == true)
+    {
+      isRXconnected = false;
+      SetRFLinkRate(RF_RATE_50HZ);
+      crsf.LinkStatistics.uplink_Link_quality = 0;
+      crsf.LinkStatistics.uplink_SNR = 0;
+    }
   }
   else
   {
@@ -597,14 +632,14 @@ void loop()
   //   crsf.sendLinkStatisticsToTX();
   // }
 
-  float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
-  PacketRateLastChecked = millis();
-  PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
-  linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+  // float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
+  // PacketRateLastChecked = millis();
+  // PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
+  // linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
 
-  if (linkQuality > 99)
-  {
-    linkQuality = 99;
-  }
-  packetCounteRX_TX = 0;
+  // if (linkQuality > 99)
+  // {
+  //   linkQuality = 99;
+  // }
+  // packetCounteRX_TX = 0;
 }

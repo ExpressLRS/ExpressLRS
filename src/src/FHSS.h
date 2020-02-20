@@ -10,8 +10,8 @@ extern volatile uint8_t FHSSptr;
 extern uint8_t NumOfFHSSfrequencies;
 
 extern int32_t FreqCorrection;
-#define FreqCorrectionMax 100000
-#define FreqCorrectionMin -100000
+#define FreqCorrectionMax 25000
+#define FreqCorrectionMin -25000
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value);
 
