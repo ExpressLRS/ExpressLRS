@@ -337,7 +337,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                         TentativeConnection();
                     }
 
-                    if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1] && linkQuality > 95)
+                    if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
                     {
                         GotConnection();
                     }
