@@ -386,10 +386,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
             {
-                int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
 
                 if (connectionState != disconnected)
                 {
+
+                    int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
 
                     if (freqerror > 0)
                     {
