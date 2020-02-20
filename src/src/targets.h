@@ -10,7 +10,7 @@
 #endif
 #endif
 /// General Features ///
-#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
+// #define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 // #define LEGACY_HARDWARE // Uncomment for old TX modules with resistors on half duplex serial UART
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness 
 
@@ -142,6 +142,42 @@ https://github.com/jaxxzer
 #endif
 
 #ifdef TARGET_R9M_TX
+// #define GPIO_PIN_NSS            PB12
+// #define GPIO_PIN_DIO0           PA15
+// #define GPIO_PIN_MOSI           PB15
+// #define GPIO_PIN_MISO           PB14
+// #define GPIO_PIN_SCK            PB13
+// #define GPIO_PIN_RST            PC14
+// #define GPIO_PIN_RX_ENABLE      -1
+// #define GPIO_PIN_TX_ENABLE      -1
+// #define GPIO_PIN_OLED_SDA       -1
+// #define GPIO_PIN_OLED_SCK       -1
+// #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
+// #define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
+// #define GPIO_PIN_LED_RED        PA11 // Red LED
+// #define GPIO_PIN_LED_GREEN      PA12 // Green LED
+// #define GPIO_PIN_BUTTON         PA8 // pullup e.g. LOW when pressed
+// #define GPIO_PIN_BUZZER         PB1
+// #define GPIO_PIN_DIP1           PA12 // dip switch 1
+// #define GPIO_PIN_DIP2           PA11 // dip switch 2
+
+// #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
+// #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
+
+// #define GPIO_PIN_BUZZER      PB1 // confirmed
+
+// #define BUFFER_OE               PA5  //CONFIRMED
+// #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
+// #define GPIO_PIN_DIO1           PA1  //Not Needed
+
+// #define GPIO_PIN_RFamp_APC1              PA6  //CONFIRMED SANDRO
+// #define GPIO_PIN_RFswitch_CONTROL              PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
+// // PwrAmp, RFControl, dodgy measurement with SDR, descending
+// // high low  -5 
+// // low  low  -30
+// // low  high -40
+// // high high -40
+
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_MOSI           PB15
@@ -153,30 +189,21 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SDA       PB7
 #define GPIO_PIN_SCL       PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
-#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
-#define GPIO_PIN_LED_RED        PA11 // Red LED
-#define GPIO_PIN_LED_GREEN      PA12 // Green LED
-#define GPIO_PIN_BUTTON         PA8 // pullup e.g. LOW when pressed
-#define GPIO_PIN_BUZZER         PB1
-#define GPIO_PIN_DIP1           PA12 // dip switch 1
-#define GPIO_PIN_DIP2           PA11 // dip switch 2
+#define GPIO_PIN_RCSIGNAL_TX    PB10//PA5 // not yet confirmed
+#define GPIO_PIN_LED_RED        PC1 // Red LED
+#define GPIO_PIN_LED_GREEN      PB3 // Green LED
+#define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
+#define GPIO_PIN_DEBUG_RX       PA10 // confirmed
+#define GPIO_PIN_DEBUG_TX       PA9 // confirmed
 
-#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
-#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
-
-#define GPIO_PIN_BUZZER      PB1 // confirmed
-
-#define BUFFER_OE               PA5  //CONFIRMED
-#define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
+// #define GPIO_PIN_BUZZER         -1
+// #define GPIO_PIN_DIP1           -1 // dip switch 1
+// #define GPIO_PIN_DIP2           -1 // dip switch 2
+// #define BUFFER_OE               -1  //CONFIRMED
+// #define SPORT                   -1 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #define GPIO_PIN_DIO1           PA1  //Not Needed
-
-#define GPIO_PIN_RFamp_APC1              PA6  //CONFIRMED SANDRO
-#define GPIO_PIN_RFswitch_CONTROL              PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
-// PwrAmp, RFControl, dodgy measurement with SDR, descending
-// high low  -5 
-// low  low  -30
-// low  high -40
-// high high -40
+// #define GPIO_PIN_RFamp_APC1              -1  //CONFIRMED SANDRO
+// #define GPIO_PIN_RFswitch_CON
 
 #include <stdio.h>
 #include "STM32F1xx.h"
