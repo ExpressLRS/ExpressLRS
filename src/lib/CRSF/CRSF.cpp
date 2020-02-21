@@ -164,7 +164,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
             if (millis() > OpenTXsyncLastSent + OpenTXsyncPakcetInterval)
             {
-                // Serial.println(CRSF::OpenTXsyncOffset);
+                Serial.println(CRSF::OpenTXsyncOffset);
 #endif
 
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
@@ -431,7 +431,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             Serial.println("Start2");
 
             // pinMode(BUFFER_OE, OUTPUT);
+            #ifdef TARGET_R9MM_RX_as_TX
             HardwareSerial(USART3);
+            #endif
             CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
             CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
             CRSF::Port.begin(CRSF_OPENTX_BAUDRATE);
@@ -538,8 +540,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
                 if (SerialOutFIFO.size() >= (peekVal + 1))
                 {
-                    // digitalWrite(BUFFER_OE, HIGH);
-
+                    #ifndef TARGET_R9MM_RX_as_TX
+                    digitalWrite(BUFFER_OE, HIGH);
+                    #endif
                     uint8_t OutPktLen = SerialOutFIFO.pop();
                     uint8_t OutData[OutPktLen];
 
@@ -548,7 +551,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                     //FlushSerial(); // we don't need to read back the data we just wrote
                     CRSF::Port.flush();
-                    // digitalWrite(BUFFER_OE, LOW);
+                    #ifndef TARGET_R9MM_RX_as_TX
+                    digitalWrite(BUFFER_OE, LOW);
+                    #endif
                 }
             }
         }

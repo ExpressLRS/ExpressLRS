@@ -257,9 +257,11 @@ void ICACHE_RAM_ATTR HandleTLM()
     if (modresult == 0) // wait for tlm response because it's time
     {
 #ifdef TARGET_R9M_TX
-      // R9DAC.standby();
-      // digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
-      // digitalWrite(GPIO_PIN_RFamp_APC1, 0);
+  #ifndef TARGET_R9MM_RX_as_TX
+      R9DAC.standby();
+      digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
+      digitalWrite(GPIO_PIN_RFamp_APC1, 0);
+  #endif
 #endif
       Radio.RXnb();
       WaitRXresponse = true;
@@ -332,9 +334,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
 #ifdef TARGET_R9M_TX
-  // R9DAC.resume();
-  // digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
-  // digitalWrite(GPIO_PIN_RFamp_APC1, 1);
+  #ifndef TARGET_R9MM_RX_as_TX
+  R9DAC.resume();
+  digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
+  digitalWrite(GPIO_PIN_RFamp_APC1, 1);
+  #endif
 #endif
 
   Radio.TXnb(Radio.TXdataBuffer, 8);
@@ -465,37 +469,29 @@ void setup()
 #endif
 
 #ifdef TARGET_R9M_TX
-  // HardwareSerial(USART2);
+  #ifdef TARGET_R9MM_RX_as_TX
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
   Serial.begin(115200);
   pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-  // for (int i = 0; i < 500; i++)
-  // {
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-    delay(200);
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    delay(200);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
-    // pinMode(GPIO_PIN_RCSIGNAL_RX, INPUT_PULLDOWN);
-    // for(int i = 0; i < 100000; i++)
-    // {
-    //   if(digitalRead(GPIO_PIN_RCSIGNAL_RX))
-    //   {
-    //     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-    //   } else
-    //   {
-    //     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    //   }
-    //   delay(100);
-    // }
-
-
-  // }
-  // pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
-  // pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
-  // digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
+  digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+  #else
+  HardwareSerial(USART2);
+  Serial.setTx(GPIO_PIN_DEBUG_TX);
+  Serial.setRx(GPIO_PIN_DEBUG_RX);
+  Serial.begin(115200);
+  pinMode(GPIO_PIN_BUZZER, OUTPUT);
+  for (int i = 0; i < 500; i++)
+  {
+    digitalWrite(GPIO_PIN_BUZZER, HIGH);
+    delayMicroseconds(200);
+    digitalWrite(GPIO_PIN_BUZZER, LOW);
+    delayMicroseconds(200);
+  }
+  pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
+  pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
+  digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
+  #endif
 #endif
 
   Serial.println("ExpressLRS TX Module Booted...");
@@ -549,10 +545,12 @@ void setup()
   Radio.SetOutputPower(0b1111);
 #endif
 
-#if TARGET_R9M_TX
-  // R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
-  // Radio.SetOutputPower(0b0000);
-  // R9DAC.setPower(R9_PWR_250mw);
+#ifdef TARGET_R9M_TX
+  #ifndef TARGET_R9MM_RX_as_TX
+  R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
+  Radio.SetOutputPower(0b0000);
+  R9DAC.setPower(R9_PWR_250mw);
+  #endif
 #endif
   // Radio.SetOutputPower(0b0000);
   Radio.SetOutputPower(0b1111);

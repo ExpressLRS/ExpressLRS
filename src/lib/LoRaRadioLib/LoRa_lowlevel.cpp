@@ -35,8 +35,11 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.begin();
-  // SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
-  SPI.setClockDivider(SPI_CLOCK_DIV8); // 72 / 8 = 9 MHz //not correct for SPI2
+  #ifdef TARGET_R9MM_RX_as_TX
+  SPI.setClockDivider(SPI_CLOCK_DIV8); // r9mm uses 24MHz osc and r9m tx uses a 12MHz osc
+  #else
+  SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
+  #endif
 
 #endif
 }
