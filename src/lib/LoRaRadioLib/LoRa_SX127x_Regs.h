@@ -64,11 +64,13 @@
 #define SX127X_PA_SELECT_RFO                          0b00000000  //  7     7     RFO pin output, power limited to +14 dBm
 #define SX127X_PA_SELECT_BOOST                        0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
 #define SX127X_OUTPUT_POWER                           0b00001111  //  3     0     output power: P_out = 17 - (15 - OUTPUT_POWER) [dBm] for PA_SELECT_BOOST
+#define SX127X_MAX_OUTPUT_POWER                       0b01110000  //              Enable max output power  
 
 // SX127X_REG_OCP
 #define SX127X_OCP_OFF                                0b00000000  //  5     5     PA overload current protection disabled
 #define SX127X_OCP_ON                                 0b00100000  //  5     5     PA overload current protection enabled
 #define SX127X_OCP_TRIM                               0b00001011  //  4     0     OCP current: I_max(OCP_TRIM = 0b1011) = 100 mA
+#define SX127X_OCP_150MA                              0b00010010  //  4     0     OCP current: I_max(OCP_TRIM = 10010) = 150 mA
 
 // SX127X_REG_LNA
 #define SX127X_LNA_GAIN_0                             0b00000000  //  7     5     LNA gain setting:   not used
