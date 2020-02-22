@@ -335,8 +335,8 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         break;
 
       case 1:
-        Radio.maxPWR = 0b1000;
-        Radio.SetOutputPower(0b1111);
+        Radio.maxPWR = 0b1100;
+        Radio.SetOutputPower(0b1100);
         Serial.println("Setpower 200 mW");
         break;
 
