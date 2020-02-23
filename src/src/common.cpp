@@ -25,13 +25,12 @@ int8_t ExpressLRS_prevPower = 0;
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
 
-//uint8_t TxBaseMac[6] = {48, 174, 164, 200, 100, 50};
-//uint8_t TxBaseMac[6] = {180, 230, 45, 152, 126, 65}; //sandro mac
-uint8_t TxBaseMac[6] = {180, 230, 45, 152, 125, 173}; // Wez's MAC
+//uint8_t UID[6] = {48, 174, 164, 200, 100, 50};
+//uint8_t UID[6] = {180, 230, 45, 152, 126, 65}; //sandro unique ID
+uint8_t UID[6] = {180, 230, 45, 152, 125, 173}; // Wez's unique ID
 
-uint8_t CRCCaesarCipher = TxBaseMac[4];
-
-uint8_t DeviceAddr = TxBaseMac[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
+uint8_t CRCCaesarCipher = UID[4];
+uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20

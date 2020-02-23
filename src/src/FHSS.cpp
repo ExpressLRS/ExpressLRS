@@ -65,7 +65,7 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 
     Serial.print("FHSSsequence[] = ");
 
-    long macSeed = ((long)TxBaseMac[2] << 24) + ((long)TxBaseMac[3] << 16) + ((long)TxBaseMac[4] << 8) + TxBaseMac[5];
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
     rngSeed(macSeed);
 
 #ifdef Regulatory_Domain_AU_915

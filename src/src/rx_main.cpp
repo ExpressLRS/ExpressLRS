@@ -282,7 +282,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
 
             case 0b10: //sync packet from master
-                if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
+                if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
                 {
                     if (connectionState == disconnected)
                     {
