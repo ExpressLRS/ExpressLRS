@@ -20,8 +20,15 @@
 #include "STM32_hwTimer.h"
 #endif
 
-hwTimer hwTimer;
+//// CONSTANTS ////
+#define BUTTON_SAMPLE_INTERVAL          150
+#define WEB_UPDATE_PRESS_INTERVAL       2000 // hold button for 2 sec to enable webupdate mode
+#define BUTTON_RESET_INTERVAL           4000 //hold button for 4 sec to reboot RX
+#define WEB_UPDATE_LED_FLASH_INTERVAL   25
+#define SEND_LINK_STATS_TO_FC_INTERVAL  100
+///////////////////
 
+hwTimer hwTimer;
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
@@ -37,22 +44,15 @@ uint8_t scanIndex = 0;
 int32_t HWtimerError;
 int32_t Offset;
 
-uint32_t SerialDebugPrintInterval = 250;
-uint32_t LastSerialDebugPrint = 0;
-
 bool LED = false;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
 bool buttonDown = false;     //is the button current pressed down?
-uint32_t buttonSampleInterval = 150;
 uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
-uint32_t webUpdatePressInterval = 2000; //hold button for 2 sec to enable webupdate mode
-uint32_t buttonResetInterval = 4000;    //hold button for 4 sec to reboot RX
-bool webUpdateMode = false;
 
-uint32_t webUpdateLedFlashInterval = 25;
+bool webUpdateMode = false;
 uint32_t webUpdateLedFlashIntervalLast;
 ///////////////////////////////////////////////
 
@@ -64,19 +64,10 @@ bool alreadyTLMresp = false;
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
-int packetCounter = 0;
-int CRCerrorCounter = 0;
-float CRCerrorRate = 0;
-uint32_t PacketRateLastChecked = 0;
-uint32_t PacketRateInterval = 1000;
-
-float PacketRate = 0.0;
-
 uint32_t LastValidPacketMicros = 0;
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 
-uint32_t SendLinkStatstoFCinterval = 100;
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
@@ -142,12 +133,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
     }
 }
-
-//expresslrs packet header types
-// 00 -> standard 4 channel data packet
-// 01 -> switch data packet
-// 11 -> tlm packet
-// 10 -> sync packet with hop data
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
@@ -254,19 +239,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             LastValidPacketPrevMicros = LastValidPacketMicros;
             LastValidPacketMicros = micros();
             LastValidPacket = millis();
-            packetCounter++;
 
             getRFlinkInfo();
 
             switch (type)
             {
 
-            case 0b00: //Standard RC Data Packet
+            case RC_DATA_PACKET: //Standard RC Data Packet
                 UnpackChannelData_11bit();
                 crsf.sendRCFrameToFC();
                 break;
 
-            case 0b01:                                                                                                    // Switch Data Packet
+            case SWITCH_DATA_PACKET:                                                                                                    // Switch Data Packet
                 if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
                 {
                     UnpackSwitchData();
@@ -276,12 +260,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 }
                 break;
 
-            case 0b11: //telemetry packet from master
+            case TLM_PACKET: //telemetry packet from master
 
                 // not implimented yet
                 break;
 
-            case 0b10: //sync packet from master
+            case SYNC_PACKET: //sync packet from master
                 if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
                 {
                     if (connectionState == disconnected)
@@ -367,10 +351,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Serial.println("wrong address");
         }
     }
-    else
-    {
-        CRCerrorCounter++;
-    }
 }
 
 void beginWebsever()
@@ -403,7 +383,7 @@ void ICACHE_RAM_ATTR sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + webUpdatePressInterval) && buttonDown) // button held down
+    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) // button held down
     {
         if (!webUpdateMode)
         {
@@ -411,7 +391,7 @@ void ICACHE_RAM_ATTR sampleButton()
         }
     }
 
-    if ((millis() > buttonLastPressed + buttonResetInterval) && buttonDown)
+    if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
 #ifdef PLATFORM_ESP8266
         ESP.restart();
@@ -510,13 +490,13 @@ void loop()
         LostConnection();
     }
 
-    if ((millis() > (SendLinkStatstoFCintervalLastSent + SendLinkStatstoFCinterval)) && connectionState != disconnected)
+    if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
     {
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
 
-    if (millis() > (buttonLastSampled + buttonSampleInterval))
+    if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
     {
         sampleButton();
         buttonLastSampled = millis();
@@ -537,7 +517,7 @@ void loop()
     if (webUpdateMode)
     {
         HandleWebUpdate();
-        if (millis() > webUpdateLedFlashInterval + webUpdateLedFlashIntervalLast)
+        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;

@@ -12,6 +12,15 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
+//// CONSTANTS ////
+#define RX_CONNECTION_LOST_TIMEOUT        1500 // After 1500ms of no TLM response consider that slave has lost connection
+#define PACKET_RATE_INTERVAL              500
+#define RF_MODE_CYCLE_INTERVAL            1000
+#define SWITCH_PACKET_SEND_INTERVAL       200
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
+///////////////////
+
 String DebugOutput;
 
 /// define some libs to use ///
@@ -19,28 +28,20 @@ SX127xDriver Radio;
 CRSF crsf;
 
 //// Switch Data Handling ///////
-uint8_t SwitchPacketsCounter = 0;             //not used for the moment
-uint32_t SwitchPacketSendInterval = 200;      //not used, delete when able to
-uint32_t SyncPacketSendIntervalRXlost = 250;  //how often to send the switch data packet (ms) when there is no response from RX
-uint32_t SyncPacketSendIntervalRXconn = 1500; //how often to send the switch data packet (ms) when there we have a connection
 uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
 
 uint32_t LastTLMpacketRecvMillis = 0;
-uint32_t RXconnectionLostTimeout = 1500; //After 1500ms of no TLM response consider that slave has lost connection
 bool isRXconnected = false;
 int packetCounteRX_TX = 0;
 uint32_t PacketRateLastChecked = 0;
-uint32_t PacketRateInterval = 500;
 float PacketRate = 0.0;
 uint8_t linkQuality = 0;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
-uint32_t RFmodeCycleInterval = 1000;
-uint32_t SyncPacketAddtionalTime = 1500; //After we have a tentative sync we wait this long in addtion before jumping to different RF mode again.
 ///////////////////////////////////////
 
 bool UpdateParamReq = false;
@@ -75,7 +76,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
   uint8_t inCRC = Radio.RXdataBuffer[7];
-  uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+  uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
@@ -86,7 +87,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     if ((inCRC == calculatedCRC))
     {
       packetCounteRX_TX++;
-      if (type == 0b11) //tlmpacket
+      if (type == TLM_PACKET)
       {
         isRXconnected = true;
         LastTLMpacketRecvMillis = millis();
@@ -138,7 +139,7 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + 0b10;
+  PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
@@ -151,7 +152,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
+  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
   Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
@@ -164,7 +165,7 @@ void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
 void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + 0b00;
+  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
   Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
@@ -183,7 +184,7 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + 0b01;
+  PacketHeaderAddr = (DeviceAddr << 2) + SWITCH_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
   Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
@@ -260,11 +261,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   if (isRXconnected)
   {
-    SyncInterval = SyncPacketSendIntervalRXconn;
+    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
   }
   else
   {
-    SyncInterval = SyncPacketSendIntervalRXlost;
+    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
   }
 
   //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
@@ -279,7 +280,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((millis() > (SwitchPacketSendInterval + SwitchPacketLastSent)) || Channels5to8Changed)
+    if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
     {
       Channels5to8Changed = false;
       GenerateSwitchChannelData();
@@ -411,10 +412,10 @@ void DetectOtherRadios()
 
 void setup()
 {
-#ifdef LEGACY_HARDWARE
-  pinMode(4, INPUT_PULLDOWN);
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
+  pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
+  pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
 #endif
-  pinMode(36, INPUT_PULLUP);
 
   Serial.begin(115200);
   Serial.println("ExpressLRS TX Module Booted...");
@@ -511,7 +512,7 @@ void loop()
 
   updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
-  if (millis() > (RXconnectionLostTimeout + LastTLMpacketRecvMillis))
+  if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     isRXconnected = false;
   }
@@ -537,7 +538,7 @@ void loop()
 
   float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
   PacketRateLastChecked = millis();
-  PacketRate = (float)packetCounteRX_TX / (float)(PacketRateInterval);
+  PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
   linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
 
   if (linkQuality > 99)

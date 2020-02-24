@@ -11,7 +11,6 @@
 #endif
 /// General Features ///
 #define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
-// #define LEGACY_HARDWARE // Uncomment for old TX modules with resistors on half duplex serial UART
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
 /////////////////////////
@@ -68,6 +67,11 @@
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
+#endif
+
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
+#define GPIO_PIN_BUTTON 36
+#define RC_SIGNAL_PULLDOWN 4
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
