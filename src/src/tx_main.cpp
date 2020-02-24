@@ -239,20 +239,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
     uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
-    if (modresult != 0)
-    {
-      return;
-    }
-
-    // wait for tlm response
-    if (WaitRXresponse == true)
-    {
-      WaitRXresponse = false;
-      return;
-    }
-    else
-    {
-      Radio.NonceTX++;
+    if (modresult == 0)
+    { // wait for tlm response
+      if (WaitRXresponse == true)
+      {
+        WaitRXresponse = false;
+        return;
+      }
+      else
+      {
+        Radio.NonceTX++;
+      }
     }
   }
 
