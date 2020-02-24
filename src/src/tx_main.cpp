@@ -72,7 +72,6 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-
   uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
   uint8_t inCRC = Radio.RXdataBuffer[7];
   uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -81,46 +80,44 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   //Serial.println("TLMpacket0");
 
-  if (packetAddr == DeviceAddr)
+  if (packetAddr != DeviceAddr)
   {
-    if ((inCRC == calculatedCRC))
+    Serial.println("TLM device address error");
+    return;
+  }
+
+  if ((inCRC != calculatedCRC))
+  {
+    Serial.println("TLM crc error");
+    return;
+  }
+
+  packetCounteRX_TX++;
+  if (type == 0b11) //tlmpacket
+  {
+    isRXconnected = true;
+    LastTLMpacketRecvMillis = millis();
+
+    if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
     {
-      packetCounteRX_TX++;
-      if (type == 0b11) //tlmpacket
-      {
-        isRXconnected = true;
-        LastTLMpacketRecvMillis = millis();
+      crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
+      crsf.LinkStatistics.uplink_RSSI_2 = 0;
+      crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
+      crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
-        if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
-        {
-          crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-          crsf.LinkStatistics.uplink_RSSI_2 = 0;
-          crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-          crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
+      crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
+      crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
+      crsf.LinkStatistics.downlink_Link_quality = linkQuality;
+      //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
+      crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
 
-          crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
-          crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-          crsf.LinkStatistics.downlink_Link_quality = linkQuality;
-          //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-          crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
-
-          crsf.sendLinkStatisticsToTX();
-        }
-      }
-      else
-      {
-        Serial.println("TLM type error");
-        Serial.println(type);
-      }
-    }
-    else
-    {
-      Serial.println("TLM crc error");
+      crsf.sendLinkStatisticsToTX();
     }
   }
   else
   {
-    Serial.println("TLM dev addr");
+    Serial.println("TLM type error");
+    Serial.println(type);
   }
 }
 
@@ -221,12 +218,13 @@ void ICACHE_RAM_ATTR HandleTLM()
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
     uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
-
-    if (modresult == 0) // wait for tlm response because it's time
+    if (modresult != 0) // wait for tlm response because it's time
     {
-      Radio.RXnb();
-      WaitRXresponse = true;
+      return;
     }
+
+    Radio.RXnb();
+    WaitRXresponse = true;
   }
 }
 
@@ -241,18 +239,20 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (ExpressLRS_currAirRate.TLMinterval > 0)
   {
     uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    if (modresult != 0)
+    {
+      return;
+    }
 
-    if (modresult == 0)
-    { // wait for tlm response
-      if (WaitRXresponse == true)
-      {
-        WaitRXresponse = false;
-        return;
-      }
-      else
-      {
-        Radio.NonceTX++;
-      }
+    // wait for tlm response
+    if (WaitRXresponse == true)
+    {
+      WaitRXresponse = false;
+      return;
+    }
+    else
+    {
+      Radio.NonceTX++;
     }
   }
 
@@ -309,73 +309,74 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void ICACHE_RAM_ATTR HandleUpdateParameter()
 {
-
-  if (UpdateParamReq == true)
+  if (!UpdateParamReq)
   {
-    switch (crsf.ParameterUpdateData[0])
+    return;
+  }
+
+  switch (crsf.ParameterUpdateData[0])
+  {
+  case 1:
+    if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
     {
+      SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
+    }
+    break;
+
+  case 2:
+
+    break;
+  case 3:
+
+    switch (crsf.ParameterUpdateData[1])
+    {
+    case 0:
+      Radio.maxPWR = 0b1111;
+      Radio.SetOutputPower(0b1111); // 500 mW
+      Serial.println("Setpower 500 mW");
+      break;
+
     case 1:
-      if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-      {
-        SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-      }
+      Radio.maxPWR = 0b1000;
+      Radio.SetOutputPower(0b1111);
+      Serial.println("Setpower 200 mW");
       break;
 
     case 2:
-
+      Radio.maxPWR = 0b1000;
+      Radio.SetOutputPower(0b1000);
+      Serial.println("Setpower 100 mW");
       break;
+
     case 3:
-
-      switch (crsf.ParameterUpdateData[1])
-      {
-      case 0:
-        Radio.maxPWR = 0b1111;
-        Radio.SetOutputPower(0b1111); // 500 mW
-        Serial.println("Setpower 500 mW");
-        break;
-
-      case 1:
-        Radio.maxPWR = 0b1000;
-        Radio.SetOutputPower(0b1111);
-        Serial.println("Setpower 200 mW");
-        break;
-
-      case 2:
-        Radio.maxPWR = 0b1000;
-        Radio.SetOutputPower(0b1000);
-        Serial.println("Setpower 100 mW");
-        break;
-
-      case 3:
-        Radio.maxPWR = 0b0101;
-        Radio.SetOutputPower(0b0101);
-        Serial.println("Setpower 50 mW");
-        break;
-
-      case 4:
-        Radio.maxPWR = 0b0010;
-        Radio.SetOutputPower(0b0010);
-        Serial.println("Setpower 25 mW");
-        break;
-
-      case 5:
-        Radio.maxPWR = 0b0000;
-        Radio.SetOutputPower(0b0000);
-        Serial.println("Setpower Pit");
-        break;
-
-      default:
-        break;
-      }
-
+      Radio.maxPWR = 0b0101;
+      Radio.SetOutputPower(0b0101);
+      Serial.println("Setpower 50 mW");
       break;
-    case 4:
 
+    case 4:
+      Radio.maxPWR = 0b0010;
+      Radio.SetOutputPower(0b0010);
+      Serial.println("Setpower 25 mW");
+      break;
+
+    case 5:
+      Radio.maxPWR = 0b0000;
+      Radio.SetOutputPower(0b0000);
+      Serial.println("Setpower Pit");
       break;
 
     default:
       break;
     }
+
+    break;
+  case 4:
+
+    break;
+
+  default:
+    break;
   }
 
   UpdateParamReq = false;

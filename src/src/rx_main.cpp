@@ -107,40 +107,44 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 void ICACHE_RAM_ATTR HandleFHSS()
 {
     uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval;
-
-    if (modresult == 0)
+    if (modresult != 0)
     {
-        linkQuality = getRFlinkQuality();
-        if (connectionState != disconnected) // don't hop if we lost
-        {
-            Radio.SetFrequency(FHSSgetNextFreq());
-            Radio.RXnb();
-            //crsf.sendLinkStatisticsToFC();
-        }
+        return;
+    }
+
+    linkQuality = getRFlinkQuality();
+    if (connectionState != disconnected) // don't hop if we lost
+    {
+        Radio.SetFrequency(FHSSgetNextFreq());
+        Radio.RXnb();
+        //crsf.sendLinkStatisticsToFC();
     }
 }
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState == connected) // don't bother sending tlm if disconnected
+    if (connectionState != connected)
     {
-        uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
-
-        if (modresult == 0)
-        {
-            Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
-            Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
-            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
-            Radio.TXdataBuffer[3] = 0;
-            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-
-            uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-            Radio.TXdataBuffer[7] = crc;
-            Radio.TXnb(Radio.TXdataBuffer, 8);
-            addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
-        }
+        return; // don't bother sending tlm if disconnected
     }
+
+    uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    if (modresult != 0)
+    {
+        return;
+    }
+
+    Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
+    Radio.TXdataBuffer[3] = 0;
+    Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+    Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+
+    uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
+    Radio.TXdataBuffer[7] = crc;
+    Radio.TXnb(Radio.TXdataBuffer, 8);
+    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 //expresslrs packet header types
@@ -154,7 +158,6 @@ void ICACHE_RAM_ATTR HWtimerCallback()
 
     if (alreadyFHSS == true)
     {
-
         alreadyFHSS = false;
     }
     else
@@ -170,20 +173,22 @@ void ICACHE_RAM_ATTR HWtimerCallback()
 
 void ICACHE_RAM_ATTR LostConnection()
 {
-    if (connectionState != disconnected)
+    if (connectionState == disconnected)
     {
-        connectionStatePrev = connectionState;
-        connectionState = disconnected; //set lost connection
-        LPF_FreqError.init(0);
+        return; // Already disconnected
+    }
 
-        digitalWrite(GPIO_PIN_LED, 0);        // turn off led
-        Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
-        Serial.println("lost conn");
+    connectionStatePrev = connectionState;
+    connectionState = disconnected; //set lost connection
+    LPF_FreqError.init(0);
+
+    digitalWrite(GPIO_PIN_LED, 0);        // turn off led
+    Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+    Serial.println("lost conn");
 
 #ifdef PLATFORM_STM32
-        digitalWrite(GPIO_PIN_LED_GEEN, LOW);
+    digitalWrite(GPIO_PIN_LED_GEEN, LOW);
 #endif
-    }
 }
 
 void ICACHE_RAM_ATTR TentativeConnection()
@@ -195,19 +200,21 @@ void ICACHE_RAM_ATTR TentativeConnection()
 
 void ICACHE_RAM_ATTR GotConnection()
 {
-    if (connectionState != connected)
+    if (connectionState == connected)
     {
-        connectionStatePrev = connectionState;
-        connectionState = connected; //we got a packet, therefore no lost connection
+        return; // Already connected
+    }
 
-        RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
-        digitalWrite(GPIO_PIN_LED, 1); // turn on led
-        Serial.println("got conn");
+    connectionStatePrev = connectionState;
+    connectionState = connected; //we got a packet, therefore no lost connection
+
+    RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
+    digitalWrite(GPIO_PIN_LED, 1); // turn on led
+    Serial.println("got conn");
 
 #ifdef PLATFORM_STM32
-        digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
+    digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
 #endif
-    }
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
@@ -247,130 +254,127 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
-    if (inCRC == calculatedCRC)
+    if (inCRC != calculatedCRC)
     {
-        if (packetAddr == DeviceAddr)
+        Serial.println("CRC error on RF packet");
+        return;
+    }
+
+    if (packetAddr != DeviceAddr)
+    {
+        Serial.println("Wrong device address on RF packet");
+        return;
+    }
+
+    LastValidPacketPrevMicros = LastValidPacketMicros;
+    LastValidPacketMicros = micros();
+    LastValidPacket = millis();
+    packetCounter++;
+
+    getRFlinkInfo();
+
+    switch (type)
+    {
+    case 0b00: //Standard RC Data Packet
+        UnpackChannelData_11bit();
+        crsf.sendRCFrameToFC();
+        break;
+
+    case 0b01:                                                                                                    // Switch Data Packet
+        if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
         {
-            LastValidPacketPrevMicros = LastValidPacketMicros;
-            LastValidPacketMicros = micros();
-            LastValidPacket = millis();
-            packetCounter++;
+            UnpackSwitchData();
+            NonceRXlocal = Radio.RXdataBuffer[5];
+            FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
+            crsf.sendRCFrameToFC();
+        }
+        break;
 
-            getRFlinkInfo();
+    case 0b11: //telemetry packet from master
 
-            switch (type)
+        // not implimented yet
+        break;
+
+    case 0b10: //sync packet from master
+        if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
+        {
+            if (connectionState == disconnected)
             {
-
-            case 0b00: //Standard RC Data Packet
-                UnpackChannelData_11bit();
-                crsf.sendRCFrameToFC();
-                break;
-
-            case 0b01:                                                                                                    // Switch Data Packet
-                if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
-                {
-                    UnpackSwitchData();
-                    NonceRXlocal = Radio.RXdataBuffer[5];
-                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                    crsf.sendRCFrameToFC();
-                }
-                break;
-
-            case 0b11: //telemetry packet from master
-
-                // not implimented yet
-                break;
-
-            case 0b10: //sync packet from master
-                if (Radio.RXdataBuffer[4] == TxBaseMac[3] && Radio.RXdataBuffer[5] == TxBaseMac[4] && Radio.RXdataBuffer[6] == TxBaseMac[5])
-                {
-                    if (connectionState == disconnected)
-                    {
-                        TentativeConnection();
-                    }
-
-                    if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
-                    {
-                        GotConnection();
-                    }
-
-                    // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
-                    // {
-                    //     Serial.println("update air rate");
-                    //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
-                    //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
-                    // }
-
-                    FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-                    NonceRXlocal = Radio.RXdataBuffer[2];
-                }
-                break;
-
-            default: // code to be executed if n doesn't match any cases
-                break;
+                TentativeConnection();
             }
 
-            addPacketToLQ();
-
-            HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
-            Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-            hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
-
-            if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+            if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
             {
-                int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
-                //Serial.print(freqerror);
-                //Serial.print(" : ");
-
-                if (freqerror > 0)
-                {
-                    if (FreqCorrection < FreqCorrectionMax)
-                    {
-                        FreqCorrection += 61; //min freq step is ~ 61hz
-                    }
-                    else
-                    {
-                        FreqCorrection = FreqCorrectionMax;
-                        Serial.println("Max pos reasontable freq offset correction limit reached!");
-                    }
-                }
-                else
-                {
-                    if (FreqCorrection > FreqCorrectionMin)
-                    {
-                        FreqCorrection -= 61; //min freq step is ~ 61hz
-                    }
-                    else
-                    {
-                        FreqCorrection = FreqCorrectionMin;
-                        Serial.println("Max neg reasontable freq offset correction limit reached!");
-                    }
-                }
-
-                Radio.setPPMoffsetReg(FreqCorrection);
-
-                //Serial.println(FreqCorrection);
-
-                HandleFHSS();
-                alreadyFHSS = true;
+                GotConnection();
             }
-            //Serial.println("");
-            //Serial.print("Offset: ");
-            //Serial.println(Offset);
-            // Serial.print(" LQ: ");
-            // Serial.println(linkQuality);
-            //Serial.print(":");
-            //Serial.println(PacketInterval);
+
+            // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
+            // {
+            //     Serial.println("update air rate");
+            //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
+            //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
+            // }
+
+            FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+            NonceRXlocal = Radio.RXdataBuffer[2];
+        }
+        break;
+
+    default: // code to be executed if n doesn't match any cases
+        break;
+    }
+
+    addPacketToLQ();
+
+    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
+    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+
+    if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+    {
+        int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
+        //Serial.print(freqerror);
+        //Serial.print(" : ");
+
+        if (freqerror > 0)
+        {
+            if (FreqCorrection < FreqCorrectionMax)
+            {
+                FreqCorrection += 61; //min freq step is ~ 61hz
+            }
+            else
+            {
+                FreqCorrection = FreqCorrectionMax;
+                Serial.println("Max pos reasontable freq offset correction limit reached!");
+            }
         }
         else
         {
-            Serial.println("wrong address");
+            if (FreqCorrection > FreqCorrectionMin)
+            {
+                FreqCorrection -= 61; //min freq step is ~ 61hz
+            }
+            else
+            {
+                FreqCorrection = FreqCorrectionMin;
+                Serial.println("Max neg reasontable freq offset correction limit reached!");
+            }
         }
+
+        Radio.setPPMoffsetReg(FreqCorrection);
+
+        //Serial.println(FreqCorrection);
+
+        HandleFHSS();
+        alreadyFHSS = true;
     }
-    else
-    {
-        CRCerrorCounter++;
-    }
+    //Serial.println("");
+    //Serial.print("Offset: ");
+    //Serial.println(Offset);
+    // Serial.print(" LQ: ");
+    // Serial.println(linkQuality);
+    //Serial.print(":");
+    //Serial.println(PacketInterval);
 }
 
 void beginWebsever()
