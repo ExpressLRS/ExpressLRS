@@ -13,10 +13,8 @@
 
 #define One_Bit_Switches
 
-extern uint8_t TxBaseMac[6];
-
+extern uint8_t UID[6];
 extern uint8_t CRCCaesarCipher;
-
 extern uint8_t DeviceAddr;
 
 typedef enum

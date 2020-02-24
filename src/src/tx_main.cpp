@@ -140,9 +140,9 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
   Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = TxBaseMac[3];
-  Radio.TXdataBuffer[5] = TxBaseMac[4];
-  Radio.TXdataBuffer[6] = TxBaseMac[5];
+  Radio.TXdataBuffer[4] = UID[3];
+  Radio.TXdataBuffer[5] = UID[4];
+  Radio.TXdataBuffer[6] = UID[5];
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
@@ -425,10 +425,10 @@ void setup()
 
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
-  // TxBaseMac[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
+  // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
   Serial.println("");
   Serial.println("Copy the below line into common.h.");
-  Serial.print("uint8_t TxBaseMac[6] = {");
+  Serial.print("uint8_t UID[6] = {");
   Serial.print(baseMac[0]);
   Serial.print(", ");
   Serial.print(baseMac[1]);
