@@ -29,6 +29,7 @@
 #define RCframeLength 22             // length of the RC data packed bytes frame. 16 channels in 11 bits each.
 #define LinkStatisticsFrameLength 10 //
 #define OpenTXsyncFrameLength 11     //
+#define BattSensorFrameLength 8      //
 
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
@@ -171,6 +172,17 @@ typedef struct crsf_channels_s
 
 typedef struct crsf_channels_s crsf_channels_t;
 
+// Used by extended header frames (type in range 0x28 to 0x96)
+typedef struct crsf_sensor_battery_s
+{
+    unsigned voltage : 16;  // mv * 100
+    unsigned current : 16;  // ma * 100
+    unsigned capacity : 24; // mah
+    unsigned remaining : 8; // %
+} PACKED crsf_sensor_battery_s;
+
+typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
+
 /*
  * 0x14 Link statistics
  * Payload:
@@ -291,7 +303,7 @@ public:
 
 #endif
 
-#ifdef PLATFORM_STM32
+#ifdef TARGET_R9M_RX
 
     CRSF(Stream *dev) : _dev(dev)
     {
@@ -302,7 +314,6 @@ public:
     {
         _dev->println("CRSF Lib Ready!");
     }
-
 #endif
 
     static HardwareSerial Port;
@@ -324,9 +335,6 @@ public:
 
     static bool firstboot;
 
-    static bool CRSFstate;
-    static bool CRSFstatePrev;
-
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
 
@@ -337,8 +345,20 @@ public:
 
     static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
+    static volatile crsf_sensor_battery_s TLMbattSensor;
 
     static void Begin(); //setup timers etc
+
+    /// UART Handling ///
+
+    static bool CRSFstate;
+    static bool CRSFstatePrev;
+    static bool IsUARTslowBaudrate;
+
+    static uint32_t lastUARTpktTime;
+    static uint32_t lastUARTbuadChangeTime;
+    static uint32_t lastUARTbuadChangeInterval;
+    static uint32_t crsfUARTtimeout;
 
     static void ICACHE_RAM_ATTR duplex_set_RX();
     static void ICACHE_RAM_ATTR duplex_set_TX();
@@ -347,34 +367,44 @@ public:
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
-#else
-    static void ICACHE_RAM_ATTR ESP8266ReadUart();
+#endif
+#ifdef PLATFORM_ESP8266
+    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
+#endif
+#ifdef TARGET_R9M_TX
+    static void ICACHE_RAM_ATTR STM32initUART();
+    static void ICACHE_RAM_ATTR STM32wdtUART();
+    static void ICACHE_RAM_ATTR STM32handleUARTin();
+    static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
-    ///// Variables for OpenTX Syncing //////////////////////////
-    #define OpenTXsyncPakcetInterval 100 // in ms
+///// Variables for OpenTX Syncing //////////////////////////
+#define OpenTXsyncPakcetInterval 100 // in ms
+    static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
+    static void ICACHE_RAM_ATTR sendSyncPacketToTX();
     /////////////////////////////////////////////////////////////
 
-    static void ICACHE_RAM_ATTR ProcessPacket();
+    static void ICACHE_RAM_ATTR ESP32ProcessPacket();
+    static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
 
     static void inline nullCallback(void);
 
-
 private:
     Stream *_dev;
 
-    static volatile uint8_t SerialInPacketLen;   // length of the CRSF packet as measured
-    static volatile uint8_t SerialInPacketPtr;   // index where we are reading/writing
+    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
+    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
     static volatile uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 
     static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket

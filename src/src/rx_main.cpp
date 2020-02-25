@@ -118,7 +118,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         return; // don't bother sending tlm if disconnected
     }
-
     uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
     if (modresult != 0)
     {
@@ -128,9 +127,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
     Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
     Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
-    Radio.TXdataBuffer[3] = 0;
+    Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+    Radio.TXdataBuffer[6] = (crsf.TLMbattSensor.voltage & 0x00FF);
 
     uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
@@ -172,7 +172,8 @@ void ICACHE_RAM_ATTR LostConnection()
     Serial.println("lost conn");
 
 #ifdef PLATFORM_STM32
-    digitalWrite(GPIO_PIN_LED_GEEN, LOW);
+
+        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
 #endif
 }
 
@@ -198,7 +199,10 @@ void ICACHE_RAM_ATTR GotConnection()
     Serial.println("got conn");
 
 #ifdef PLATFORM_STM32
-    digitalWrite(GPIO_PIN_LED_GEEN, HIGH);
+
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+
+
 #endif
 }
 
@@ -430,7 +434,7 @@ void setup()
     pinMode(GPIO_PIN_LED, OUTPUT);
 
 #ifdef PLATFORM_STM32
-    pinMode(GPIO_PIN_LED_GEEN, OUTPUT);
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
 #endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
 
