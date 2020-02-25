@@ -538,7 +538,7 @@ void setup()
 
 #if TARGET_R9M_TX
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
-  R9DAC.setPower(R9_PWR_250mw);
+  R9DAC.setPower(R9_PWR_100mw);
 #endif
 
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
@@ -557,11 +557,10 @@ void setup()
 #endif
 
 #ifdef PLATFORM_STM32
-  crsf.connected = &InitHarwareTimer;
+  crsf.connected = &InitHarwareTimer; // it will auto init when it detects UART connection
   crsf.disconnected = &StopHWtimer;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   HWtimerSetCallback(TimerExpired);
-//InitHarwareTimer(); // it will auto init when it detects UART connection
 #endif
 
   Radio.Begin();

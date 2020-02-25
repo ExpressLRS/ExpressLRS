@@ -66,15 +66,8 @@ void R9DAC::resume()
 void R9DAC::setVoltageMV(uint32_t voltsMV)
 {
     uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
+    setVoltageRegDirect(ScaledVolts);
     CurrVoltageMV = voltsMV;
-    uint8_t RegH = ((ScaledVolts & 0b11110000) >> 4) + (0b0000 << 4);
-    uint8_t RegL = (ScaledVolts & 0b00001111) << 4;
-
-    Radio.SetOutputPower(0b0000);
-    Wire.beginTransmission(R9DAC::ADDR);
-    Wire.write(RegH);
-    Wire.write(RegL);
-    Wire.endTransmission();
 }
 
 void R9DAC::setVoltageRegDirect(uint8_t voltReg)
