@@ -11,8 +11,7 @@
 #endif
 /// General Features ///
 #define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
-// #define LEGACY_HARDWARE // Uncomment for old TX modules with resistors on half duplex serial UART
-#define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness 
+#define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
 /////////////////////////
 
@@ -70,6 +69,11 @@
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #endif
 
+#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
+#define GPIO_PIN_BUTTON 36
+#define RC_SIGNAL_PULLDOWN 4
+#endif
+
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_DIO0 4
@@ -87,7 +91,7 @@
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 2
-#define timerOffset -5
+#define timerOffset -3
 #endif
 
 /*
@@ -113,7 +117,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED PC1      // Red
 #define GPIO_PIN_LED_GREEN PB3 // Green - Currently unused
 #define GPIO_PIN_BUTTON PC13  // pullup e.g. LOW when pressed
-#define timerOffset 0
+#define timerOffset 2
 
 // External pads
 // #define R9m_Ch1    PA8
@@ -131,8 +135,6 @@ https://github.com/jaxxzer
 //#define HSE_VALUE ((uint32_t)16000000).
 //#define HSE_VALUE    25000000U
 // #endif /* HSE_VALUE */
-
-
 
 //#define SYSCLK_FREQ_72MHz
 
