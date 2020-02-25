@@ -58,6 +58,10 @@ void STM32_RX_HandleUARTin()
             {
                 UARTinPacketPtr = 0;
                 UARTframeActive = false;
+                while (Serial.available())
+                {
+                    Serial.read();
+                }
                 Serial.flush();
             }
         }
@@ -98,11 +102,11 @@ void STM32_RX_HandleUARTin()
                 //Serial.println();
                 UARTframeActive = false;
                 UARTinPacketPtr = 0;
-                //Serial.flush();
                 while (Serial.available())
                 {
                     Serial.read(); // dunno why but the flush() method wasn't working
                 }
+                Serial.flush();
             }
         }
     }

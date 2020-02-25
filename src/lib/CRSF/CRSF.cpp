@@ -7,25 +7,18 @@
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
-
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-
-///Out FIFO to buffer messages///
-FIFO SerialOutFIFO;
 TaskHandle_t xHandleSerialOutFIFO = NULL;
 #endif
 
 #ifdef TARGET_R9M_TX
-// HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port(USART3);
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
-// portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
-//TaskHandle_t xHandleSerialOutFIFO = NULL; TODO
-#endif
 
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
 uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
@@ -164,7 +157,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
             if (millis() > OpenTXsyncLastSent + OpenTXsyncPakcetInterval)
             {
-                Serial.println(CRSF::OpenTXsyncOffset);
+                //Serial.println(CRSF::OpenTXsyncOffset);
 #endif
 
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
@@ -172,7 +165,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
                 outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
-                outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 14?
+                outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 13?
                 outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;        // 0x3A
 
                 outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
@@ -428,7 +421,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
         void ICACHE_RAM_ATTR CRSF::STM32initUART() //RTOS task to read and write CRSF packets to the serial port
         {
-            Serial.println("Start2");
+            Serial.println("Start STM32 R9M TX CRSF UART");
 
             pinMode(BUFFER_OE, OUTPUT);
 
@@ -545,9 +538,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                     SerialOutFIFO.popBytes(OutData, OutPktLen);
                     CRSF::Port.write(OutData, OutPktLen); // write the packet out
-
-                    //FlushSerial(); // we don't need to read back the data we just wrote
                     CRSF::Port.flush();
+
                     digitalWrite(BUFFER_OE, LOW);
                 }
             }

@@ -22,11 +22,11 @@ public:
     static volatile uint32_t LastCallbackMicrosTock;
 
     static void init();
-    static void ICACHE_RAM_ATTR pause();
-    static void ICACHE_RAM_ATTR stop();
-    static void ICACHE_RAM_ATTR callback(HardwareTimer *);
-    static void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
-    static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
+    static void pause();
+    static void stop();
+    static void callback(HardwareTimer *);
+    static void updateInterval(uint32_t newTimerInterval);
+    static void phaseShift(int32_t newPhaseShift);
 
     static void inline nullCallback();
     static void (*callbackTick)();

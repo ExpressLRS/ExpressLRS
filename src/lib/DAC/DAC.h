@@ -7,14 +7,14 @@
 
 typedef enum
 {
-    R9_PWR_10mw = 0,
-    R9_PWR_25mw = 1,
-    R9_PWR_50mw = 2,
-    R9_PWR_100mw = 3,
-    R9_PWR_250mw = 4,
-    R9_PWR_500mw = 5,
-    R9_PWR_1000mw = 6,
-    R9_PWR_2000mw = 7
+    R9_PWR_10mW = 0,
+    R9_PWR_25mW = 1,
+    R9_PWR_50mW = 2,
+    R9_PWR_100mW = 3,
+    R9_PWR_250mW = 4,
+    R9_PWR_500mW = 5,
+    R9_PWR_1000mW = 6,
+    R9_PWR_2000mW = 7
 
 } DAC_PWR_;
 

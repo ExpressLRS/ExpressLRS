@@ -16,17 +16,16 @@
 
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
+#include "STM32_hwTimer.h"
 R9DAC R9DAC;
+hwTimer hwTimer;
 #endif
 
-//#include "HardwareSerial.h"
-//#include "HardwareTimer.h"
-
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT        1500 // After 1500ms of no TLM response consider that slave has lost connection
-#define PACKET_RATE_INTERVAL              500
-#define RF_MODE_CYCLE_INTERVAL            1000
-#define SWITCH_PACKET_SEND_INTERVAL       200
+#define RX_CONNECTION_LOST_TIMEOUT 1500 // After 1500ms of no TLM response consider that slave has lost connection
+#define PACKET_RATE_INTERVAL 500
+#define RF_MODE_CYCLE_INTERVAL 1000
+#define SWITCH_PACKET_SEND_INTERVAL 200
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
@@ -37,23 +36,10 @@ String DebugOutput;
 SX127xDriver Radio;
 CRSF crsf;
 
-#ifndef PLATFORM_ESP32
-// Hardware timer func defs
-void InitHarwareTimer();
-void StopHWtimer();
-void HWtimerSetCallback(void (*CallbackFunc)(void));
-void HWtimerSetCallback90(void (*CallbackFunc)(void));
-void HWtimerUpdateInterval(uint32_t Interval);
-uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros();
-uint32_t ICACHE_RAM_ATTR HWtimerGetlastCallbackMicros90();
-void ICACHE_RAM_ATTR HWtimerPhaseShift(int16_t Offset);
-uint32_t ICACHE_RAM_ATTR HWtimerGetIntervalMicros();
-
 void TimerExpired();
-#endif
 
 //// Switch Data Handling ///////
-uint32_t SwitchPacketLastSent = 0;            //time in ms when the last switch data packet was sent
+uint32_t SwitchPacketLastSent = 0; //time in ms when the last switch data packet was sent
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -141,7 +127,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.downlink_Link_quality = linkQuality;
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
     crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
-    
+
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
     crsf.sendLinkStatisticsToTX();
@@ -223,7 +209,7 @@ void SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
   Radio.TimerInterval = mode.interval;
   Radio.UpdateTimerInterval();
 #else
-  HWtimerUpdateInterval(mode.interval); // TODO: Make sure this is equiv to above commented lines
+  hwTimer.updateInterval(mode.interval); // TODO: Make sure this is equiv to above commented lines
 #endif
   Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
   Radio.SetPreambleLength(mode.PreambleLen);
@@ -253,11 +239,11 @@ void ICACHE_RAM_ATTR HandleTLM()
     {
       return;
     }
-   
+
 #ifdef TARGET_R9M_TX
-      R9DAC.standby();
-      digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
-      digitalWrite(GPIO_PIN_RFamp_APC1, 0);
+    R9DAC.standby();
+    digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
+    digitalWrite(GPIO_PIN_RFamp_APC1, 0);
 #endif
 
     Radio.RXnb();
@@ -377,7 +363,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
     case 1:
       Radio.maxPWR = 0b1000;
-      Radio.SetOutputPower(0b1111);
+      Radio.SetOutputPower(0b1000);
       Serial.println("Setpower 200 mW");
       break;
 
@@ -481,6 +467,14 @@ void setup()
   pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
   pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
+
+  R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
+  R9DAC.setPower(R9_PWR_100mW);
+
+  crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
+  crsf.disconnected = &hwTimer.stop;
+  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  hwTimer.callbackTock = &TimerExpired;
 #endif
 
   Serial.println("ExpressLRS TX Module Booted...");
@@ -534,11 +528,6 @@ void setup()
   Radio.SetOutputPower(0b1111);
 #endif
 
-#if TARGET_R9M_TX
-  R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
-  R9DAC.setPower(R9_PWR_100mw);
-#endif
-
   Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
@@ -552,13 +541,6 @@ void setup()
 
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
-#endif
-
-#ifdef PLATFORM_STM32
-  crsf.connected = &InitHarwareTimer; // it will auto init when it detects UART connection
-  crsf.disconnected = &StopHWtimer;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
-  HWtimerSetCallback(TimerExpired);
 #endif
 
   Radio.Begin();
@@ -622,7 +604,6 @@ void loop()
     linkQuality = 99;
   }
   packetCounteRX_TX = 0;
-
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();

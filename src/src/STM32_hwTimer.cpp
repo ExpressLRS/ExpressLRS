@@ -20,7 +20,7 @@ void hwTimer::init()
     noInterrupts();
     MyTim->attachInterrupt(hwTimer::callback);
     //MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
-    MyTim->setOverflow(hwTimer::HWtimerInterval, MICROSEC_FORMAT);
+    MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
     MyTim->resume();
     interrupts();
 }
@@ -41,7 +41,7 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
 }
 
-void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
+void hwTimer::phaseShift(int32_t newPhaseShift)
 {
     //Serial.println(newPhaseShift);
     int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
@@ -65,7 +65,7 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
     }
 }
 
-void ICACHE_RAM_ATTR hwTimer::callback(HardwareTimer *)
+void hwTimer::callback(HardwareTimer *)
 {
     if (hwTimer::TickTock)
     {
