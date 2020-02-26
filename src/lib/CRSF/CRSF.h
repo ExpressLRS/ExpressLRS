@@ -30,7 +30,7 @@
 #define LinkStatisticsFrameLength 10 //
 #define OpenTXsyncFrameLength 11     //
 #define BattSensorFrameLength 8      //
-#define VTXcontrolFrameLength 12      //
+#define VTXcontrolFrameLength 12     //
 
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
@@ -420,6 +420,8 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
+
+    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 

@@ -146,6 +146,35 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
     }
 }
 
+void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
+{
+#define LUArespLength 6
+
+    uint8_t outBuffer[LUArespLength + 4] = {0};
+
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
+
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+
+    outBuffer[5] = val1;
+    outBuffer[6] = val2;
+    outBuffer[7] = val3;
+    outBuffer[8] = val4;
+
+    uint8_t crc = CalcCRC(&outBuffer[2], LUArespLength + 1);
+
+    outBuffer[LUArespLength + 3] = crc;
+
+    if (CRSF::CRSFstate)
+    {
+        SerialOutFIFO.push(LUArespLength + 4); // length
+        SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+    }
+}
+
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 {
     uint8_t outBuffer[BattSensorFrameLength + 4] = {0};

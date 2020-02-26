@@ -20,13 +20,14 @@ extern uint8_t DeviceAddr;
 typedef enum
 {
     TLM_RATIO_NO_TLM = 0,
-    TLM_RATIO_1_2 = 1,
-    TLM_RATIO_1_4 = 2,
-    TLM_RATIO_1_8 = 3,
+    TLM_RATIO_1_128 = 1,
+    TLM_RATIO_1_64 = 2,
+    TLM_RATIO_1_32 = 3,
     TLM_RATIO_1_16 = 4,
-    TLM_RATIO_1_32 = 5,
-    TLM_RATIO_1_64 = 6,
-    TLM_RATIO_1_128 = 7
+    TLM_RATIO_1_8 = 5,
+    TLM_RATIO_1_4 = 6,
+    TLM_RATIO_1_2 = 7
+
 } expresslrs_tlm_ratio_e;
 
 typedef enum
@@ -48,19 +49,21 @@ typedef enum
 
 typedef enum
 {
-    RATE_4HZ = 0,
-    RATE_25HZ = 1,
+    RATE_4HZ = 4,
+    RATE_25HZ = 3,
     RATE_50HZ = 2,
-    RATE_100HZ = 3,
-    RATE_200HZ = 4,
+    RATE_100HZ = 1,
+    RATE_200HZ = 0,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
+
+#define MaxRFrate 2
 
 typedef struct expresslrs_mod_settings_s
 {
     Bandwidth bw;
     SpreadingFactor sf;
     CodingRate cr;
-    int32_t sensitivity;               //expected RF sensitivity based on 
+    int32_t sensitivity;                //expected RF sensitivity based on
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;                       // rate in hz
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
@@ -99,7 +102,7 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 // 01 -> switch data packet
 // 11 -> tlm packet
 // 10 -> sync packet with hop data
-#define RC_DATA_PACKET      0b00
-#define SWITCH_DATA_PACKET  0b01
-#define TLM_PACKET          0b11
-#define SYNC_PACKET         0b10
+#define RC_DATA_PACKET 0b00
+#define SWITCH_DATA_PACKET 0b01
+#define TLM_PACKET 0b11
+#define SYNC_PACKET 0b10
