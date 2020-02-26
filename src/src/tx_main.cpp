@@ -241,7 +241,7 @@ void ICACHE_RAM_ATTR HandleTLM()
     }
 
 #ifdef TARGET_R9M_TX
-    R9DAC.standby();
+    //R9DAC.standby(); //takes too long 
     digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
     digitalWrite(GPIO_PIN_RFamp_APC1, 0);
 #endif
@@ -315,7 +315,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
 #ifdef TARGET_R9M_TX
-  R9DAC.resume();
+  //R9DAC.resume(); takes too long
   digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
   digitalWrite(GPIO_PIN_RFamp_APC1, 1);
 #endif
