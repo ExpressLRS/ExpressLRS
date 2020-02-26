@@ -108,6 +108,44 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
+void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
+{
+    // this is an 'extended header frame'
+
+    uint8_t outBuffer[VTXcontrolFrameLength + 4] = {0};
+
+    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[1] = VTXcontrolFrameLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_COMMAND;
+    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_RECEIVER;
+    /////////////////////////////////////////////
+    outBuffer[5] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[6] = CRSF_ADDRESS_CRSF_RECEIVER;
+    outBuffer[7] = 0x08; // vtx command
+    ////////////////////////////////////////////
+    outBuffer[8] = channel + 8 * band;
+    outBuffer[9] = 0x00;
+    outBuffer[10] = 0x00;
+    outBuffer[11] = 0x00;
+    outBuffer[12] = 0x00;
+    outBuffer[13] = 0x00;
+
+    uint8_t crc1 = CalcCRCcmd(&outBuffer[2], VTXcontrolFrameLength + 1);
+
+    outBuffer[14] = crc1;
+
+    uint8_t crc2 = CalcCRC(&outBuffer[2], VTXcontrolFrameLength + 2);
+
+    outBuffer[15] = crc2;
+
+    if (CRSF::CRSFstate)
+    {
+        SerialOutFIFO.push(VTXcontrolFrameLength + 4); // length
+        SerialOutFIFO.pushBytes(outBuffer, VTXcontrolFrameLength + 4);
+    }
+}
+
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 {
     uint8_t outBuffer[BattSensorFrameLength + 4] = {0};
@@ -539,8 +577,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     SerialOutFIFO.popBytes(OutData, OutPktLen);
                     CRSF::Port.write(OutData, OutPktLen); // write the packet out
                     CRSF::Port.flush();
-
                     digitalWrite(BUFFER_OE, LOW);
+
+                    while (CRSF::Port.available())
+                    {
+                        CRSF::Port.read(); // dunno why but the flush() method wasn't working
+                    }
                 }
             }
         }
