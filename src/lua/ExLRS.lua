@@ -15,6 +15,7 @@
 local version = 'v0.1'
 local refresh = 0
 local lcdChange = true
+local updateValues = false
 local readIdState = 0
 local sendIdState = 0
 local timestamp = 0
@@ -232,8 +233,9 @@ end
 
 local function run_func(event)
 
-if lcdChange == true or refresh == 25 then
+if updateValues == true or refresh == 25 then
 init_func()
+updateValues = false
 end
     -- print(event)
     if refresh == 25 or lcdChange == true or selection.state == true then
@@ -283,6 +285,7 @@ end
             end
 
             lcdChange = true
+			updateValues = true
 
         end
         if event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
@@ -305,6 +308,7 @@ end
             end
 
             lcdChange = true
+			updateValues = true
 
         end
         processResp()
