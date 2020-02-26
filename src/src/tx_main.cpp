@@ -17,6 +17,8 @@
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
 #include "STM32_hwTimer.h"
+#include "button.h"
+button button;
 R9DAC R9DAC;
 hwTimer hwTimer;
 #endif
@@ -496,6 +498,8 @@ void setup()
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
   R9DAC.setPower(R9_PWR_50mW);
 
+  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+
   crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
   crsf.disconnected = &hwTimer.stop;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -613,6 +617,7 @@ void loop()
   crsf.STM32handleUARTin();
   crsf.sendSyncPacketToTX();
   crsf.STM32wdtUART();
+  button.handle();
 #endif
 }
 
