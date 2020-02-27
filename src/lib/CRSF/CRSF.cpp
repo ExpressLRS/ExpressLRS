@@ -508,7 +508,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
                 if (BadPktsCount >= GoodPktsCount)
                 {
-                    Serial.println("Too many bad UART RX packets! Bad:Good = ");
+                    Serial.println("Too many bad UART RX packets! Bad:Good = ");-
                     Serial.print(BadPktsCount);
                     Serial.print(":");
                     Serial.println(GoodPktsCount);
