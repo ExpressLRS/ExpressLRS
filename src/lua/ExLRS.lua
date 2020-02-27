@@ -148,17 +148,13 @@ end
 
 local function processResp()
     local command, data = crossfireTelemetryPop()
-
     if (data ~= nil) then
-
         if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
 			AirRate.selected = data[3]
 			TLMinterval.selected = data[4]
 			MaxPower.selected = data[5]
 			RFfreq.selected = data[6]
 		end
-
-
     end
 end
 
@@ -215,26 +211,24 @@ local function refreshTaranis()
 end
 
 local function init_func()
-    crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-    processResp()
-	
-	        if LCD_W == 480 then
-            refreshHorus()
-        else
-            refreshTaranis()
-        end
+    --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    --processResp()
+	--if LCD_W == 480 then
+    --    refreshHorus()
+   -- else
+   --     refreshTaranis()
+  --  end
 end
 
 local function bg_func(event)
     if refresh < 25 then refresh = refresh + 1 end
 end
 
-
-
 local function run_func(event)
 
 if updateValues == true or refresh == 25 then
-init_func()
+crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+processResp()
 updateValues = false
 end
     -- print(event)
