@@ -466,6 +466,10 @@ void setup()
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
 
+  crsf.connected = &Radio.StartTimerTask;
+  crsf.disconnected = &Radio.StopTimerTask;
+  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  Radio.TimerDoneCallback = &TimerExpired;
 #endif
 
 #ifdef TARGET_R9M_TX
@@ -566,8 +570,6 @@ void setup()
   Radio.TXdoneCallback3 = &HandleUpdateParameter;
   //Radio.TXdoneCallback4 = &NULL;
 
-  Radio.TimerDoneCallback = &SendRCdataToRF;
-
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
@@ -585,7 +587,7 @@ void loop()
   //Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
-  updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
+  //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
