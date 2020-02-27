@@ -394,9 +394,11 @@ public:
     static bool IsUARTslowBaudrate;
 
     static uint32_t lastUARTpktTime;
-    static uint32_t lastUARTbuadChangeTime;
-    static uint32_t lastUARTbuadChangeInterval;
-    static uint32_t crsfUARTtimeout;
+    static uint32_t UARTwdtLastChecked;
+    static uint32_t UARTwdtInterval;
+
+    static uint32_t GoodPktsCount;
+    static uint32_t BadPktsCount;
 
     static void ICACHE_RAM_ATTR duplex_set_RX();
     static void ICACHE_RAM_ATTR duplex_set_TX();

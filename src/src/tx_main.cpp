@@ -220,6 +220,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
   crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
   DebugOutput += String(mode.rate) + "Hz";
   isRXconnected = false;
+  //R9DAC.resume();
 }
 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
