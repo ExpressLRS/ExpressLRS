@@ -139,8 +139,6 @@ https://github.com/jaxxzer
 //#define SYSCLK_FREQ_72MHz
 
 #include <stdio.h>
-#include "STM32F1xx.h"
-#include "stm32f1xx_hal.h"
 #endif
 
 #ifdef TARGET_R9M_TX
@@ -181,6 +179,4 @@ https://github.com/jaxxzer
 // high high -40
 
 #include <stdio.h>
-#include "STM32F1xx.h"
-#include "stm32f1xx_hal.h"
 #endif

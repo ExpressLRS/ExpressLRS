@@ -3,7 +3,7 @@
 #ifdef TARGET_R9M_TX
 
 #include "../../src/targets.h"
-#include <wire.h>
+#include <Wire.h>
 
 typedef enum
 {
