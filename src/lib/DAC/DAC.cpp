@@ -3,7 +3,6 @@
 #ifdef TARGET_R9M_TX
 
 #include "../../src/targets.h"
-#include <wire.h>
 #include "DAC.h"
 #include "LoRaRadioLib.h"
 
