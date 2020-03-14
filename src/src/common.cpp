@@ -37,10 +37,10 @@ uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen
 
 int16_t MeasureNoiseFloor()
 {
-    int NUM_READS = RSSI_FLOOR_NUM_READS * NumOfFHSSfrequencies;
+    int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
     float returnval = 0;
 
-    for (int freq = 0; freq < NumOfFHSSfrequencies; freq++)
+    for (int freq = 0; freq < NR_FHSS_ENTRIES; freq++)
     {
         FHSSsetCurrIndex(freq);
         Radio.SetMode(SX127X_CAD);
