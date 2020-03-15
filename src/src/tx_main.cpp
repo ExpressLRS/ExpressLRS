@@ -560,7 +560,7 @@ void setup()
                                 // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
                                 // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
 #endif
-#elif defined Regulatory_Domain_AU_433
+#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
   Serial.println("Setting 433MHz Mode");
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
   Radio.SetOutputPower(0b1111);
