@@ -15,3 +15,7 @@ jobs:
       run: |
         cd src
         platformio run
+    - uses: actions/upload-artifact@v2-preview
+      with:
+        name: firmware
+        path: src/.pio/build/**/*.bin
