@@ -32,5 +32,5 @@ jobs:
     - name: Upload artifcats
       uses: actions/upload-artifact@v2-preview
       with:
-        name: firmware-$GITHUB_RUN_NUMBER
+        name: firmware
         path: ~/artifcats/**/*.bin
