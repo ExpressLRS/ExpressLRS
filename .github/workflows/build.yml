@@ -4,7 +4,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v1
     - name: Install PlatformIO
@@ -15,7 +16,8 @@ jobs:
       run: |
         cd src
         platformio run
-    - uses: actions/upload-artifact@v2-preview
+    - name: Upload artifcats
+      uses: actions/upload-artifact@v2-preview
       with:
         name: firmware
         path: src/.pio/build/**/*.bin
