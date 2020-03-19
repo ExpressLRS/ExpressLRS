@@ -8,6 +8,7 @@
 #include "LED.h"
 // #include "debug.h"
 #include "targets.h"
+#include "POWERMGNT.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -37,6 +38,7 @@ String DebugOutput;
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
+POWERMGNT POWERMGNT;
 
 void TimerExpired();
 
@@ -365,15 +367,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   switch (crsf.ParameterUpdateData[0])
   {
   case 0: // send all params
-    Serial.println("send all");
-    crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, 7, 1);
+    Serial.println("send all lua params");
     break;
   case 1:
-    // if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-    // {
-    //   SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-    // }
-    //crsf.sendLUAresponse(0x01, (uint8_t)random(1, 5));
     if (crsf.ParameterUpdateData[1] == 0)
     {
       uint8_t newRate = decRFLinkRate();
@@ -383,57 +379,25 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
       uint8_t newRate = incRFLinkRate();
     }
     Serial.println(ExpressLRS_currAirRate.enum_rate);
-    crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, 7, 1);
     break;
 
   case 2:
 
     break;
+
   case 3:
 
-    switch (crsf.ParameterUpdateData[1])
+    if (crsf.ParameterUpdateData[1] == 0)
     {
-    case 0:
-      Radio.maxPWR = 0b1111;
-      Radio.SetOutputPower(0b1111); // 500 mW
-      Serial.println("Setpower 500 mW");
-      break;
-
-    case 1:
-      Radio.maxPWR = 0b1000;
-      Radio.SetOutputPower(0b1000);
-      Serial.println("Setpower 200 mW");
-      break;
-
-    case 2:
-      Radio.maxPWR = 0b1000;
-      Radio.SetOutputPower(0b1000);
-      Serial.println("Setpower 100 mW");
-      break;
-
-    case 3:
-      Radio.maxPWR = 0b0101;
-      Radio.SetOutputPower(0b0101);
-      Serial.println("Setpower 50 mW");
-      break;
-
-    case 4:
-      Radio.maxPWR = 0b0010;
-      Radio.SetOutputPower(0b0010);
-      Serial.println("Setpower 25 mW");
-      break;
-
-    case 5:
-      Radio.maxPWR = 0b0000;
-      Radio.SetOutputPower(0b0000);
-      Serial.println("Setpower Pit");
-      break;
-
-    default:
-      break;
+      POWERMGNT.decPower();
+    }
+    else if (crsf.ParameterUpdateData[1] == 1)
+    {
+      POWERMGNT.incPower();
     }
 
     break;
+
   case 4:
 
     break;
@@ -443,6 +407,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
+  crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, POWERMGNT.currPower(), 1);
 }
 
 void DetectOtherRadios()
@@ -459,6 +424,7 @@ void DetectOtherRadios()
 
 void setup()
 {
+
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
   pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
   pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
@@ -466,7 +432,6 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -501,7 +466,7 @@ void setup()
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-  R9DAC.setPower(R9_PWR_50mW);
+  //R9DAC.setPower(R9_PWR_50mW);
 
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 
@@ -513,10 +478,10 @@ void setup()
 
   Serial.println("ExpressLRS TX Module Booted...");
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+#ifdef PLATFORM_ESP32
+  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector 
 
-  strip.Begin();
+  //strip.Begin();
 
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
@@ -546,26 +511,12 @@ void setup()
 #ifdef Regulatory_Domain_AU_915
   Serial.println("Setting 915MHz Mode");
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#ifdef TARGET_100mW_MODULE
-  Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else                           // Below output power settings are for 1W modules
-  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
-  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
-  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
-#endif
 #elif defined Regulatory_Domain_AU_433
   Serial.println("Setting 433MHz Mode");
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
-  Radio.SetOutputPower(0b1111);
 #endif
 
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
-
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
-
   Radio.TXdoneCallback1 = &HandleFHSS;
   Radio.TXdoneCallback2 = &HandleTLM;
   Radio.TXdoneCallback3 = &HandleUpdateParameter;
@@ -575,6 +526,8 @@ void setup()
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
 
+  POWERMGNT.defaultPower();
+  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
   Radio.Begin();
   crsf.Begin();
 
