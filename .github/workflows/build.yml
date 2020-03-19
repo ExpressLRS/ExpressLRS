@@ -14,10 +14,23 @@ jobs:
         pip install platformio
     - name: Run PlatformIO
       run: |
+        platformio platform update
+        mkdir -p ~/artifcats
         cd src
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_433
         platformio run
+        mv .pio/build ~/artifcats/AU_433
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
+        platformio run
+        mv .pio/build ~/artifcats/AU_915
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_868
+        platformio run
+        mv .pio/build ~/artifcats/EU_868
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433
+        platformio run
+        mv .pio/build ~/artifcats/EU_433
     - name: Upload artifcats
       uses: actions/upload-artifact@v2-preview
       with:
         name: firmware
-        path: src/.pio/build/**/*.bin
+        path: ~/artifcats/**/*.bin

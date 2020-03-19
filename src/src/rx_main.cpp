@@ -441,7 +441,10 @@ void setup()
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#elif defined Regulatory_Domain_AU_433
+#elif defined Regulatory_Domain_EU_868
+    Serial.println("Setting 868MHz Mode");
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif

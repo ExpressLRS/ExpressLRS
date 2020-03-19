@@ -1,12 +1,16 @@
 #pragma once
 
+// define exacly one frequency band of operation here
+
+//#define Regulatory_Domain_AU_915
+//#define Regulatory_Domain_EU_868
+//#define Regulatory_Domain_AU_433
+//#define Regulatory_Domain_EU_433
+
 #include "FHSS.h"
 #include "LoRaRadioLib.h"
 #include <Arduino.h>
 
-// define frequnecy band of operation
-#define Regulatory_Domain_AU_915
-// #define Regulatory_Domain_AU_433
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
 #define Auto_WiFi_On_Boot

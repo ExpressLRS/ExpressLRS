@@ -3,20 +3,11 @@
 uint8_t volatile FHSSptr = 0;
 uint8_t FHSSsequence[256] = {0};
 
-#ifdef Regulatory_Domain_AU_915
-
-uint8_t NumOfFHSSfrequencies = 20;
-
+//uint8_t NumOfFHSSfrequencies = 20;
 int32_t FreqCorrection = 0;
 
-#elif defined Regulatory_Domain_AU_433
-
-uint8_t NumOfFrequencies = 3;
-
-#endif
-
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
-{ // get the current index of the FHSS pointer
+{ // set the current index of the FHSS pointer
     FHSSptr = value;
 }
 
@@ -27,60 +18,40 @@ uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 
 uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 {
-#ifdef Regulatory_Domain_AU_915
-
-    return FHSSfreqs915[0] - FreqCorrection;
-
-#elif defined Regulatory_Domain_AU_433
-
-    return FHSSfreqs433[0] - FreqCorrection;
-
-#endif
+    return FHSSfreqs[0] - FreqCorrection;
 }
 
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 {
-#ifdef Regulatory_Domain_AU_915
-
-    return FHSSfreqs915[FHSSsequence[FHSSptr]] - FreqCorrection;
-
-#elif defined Regulatory_Domain_AU_433
-
-    return FHSSfreqs433[FHSSsequence[FHSSptr]] - FreqCorrection;
-
-#endif
-
-    return 0;
+    return FHSSfreqs[FHSSsequence[FHSSptr]] - FreqCorrection;
 }
 
 uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 {
     FHSSptr++;
-
     return FHSSgetCurrFreq();
 }
 
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
-
+    Serial.print("Number of FHSS frequencies =");
+    Serial.print(NR_FHSS_ENTRIES);
     Serial.print("FHSSsequence[] = ");
 
     long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
     rngSeed(macSeed);
 
-#ifdef Regulatory_Domain_AU_915
-
-    int hopSeqLength = 256;
-    int numOfFreqs = 19;
-    int limit = floor(hopSeqLength / numOfFreqs);
+    const int hopSeqLength = 256;
+    const int numOfFreqs = NR_FHSS_ENTRIES-1;
+    const int limit = floor(hopSeqLength / numOfFreqs);
 
     int prev_val = 0;
     int rand = 0;
 
     int last_InitialFreq = 0;
-    int last_InitialFreq_interval = numOfFreqs;
+    const int last_InitialFreq_interval = numOfFreqs;
 
-    int tracker[20] = {0};
+    int tracker[NR_FHSS_ENTRIES] = {0};
 
     for (int i = 0; i < hopSeqLength; i++)
     {
@@ -106,9 +77,9 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
         Serial.print(", ");
     }
 
-#elif defined Regulatory_Domain_AU_433
+/* Note DaBit: is it really necessary that this is different logic? FHSSsequence[0] is never 0, and it is just a starting frequency anyway? */
 
-    int prev_val = rng0to2(); // Randomised so that FHSSsequence[0] can also be 0.
+/*    int prev_val = rng0to2(); // Randomised so that FHSSsequence[0] can also be 0.
     int rand = 0;
 
     for (int i = 0; i < 256; i++)
@@ -124,8 +95,7 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
         Serial.print(FHSSsequence[i]);
         Serial.print(", ");
     }
-
-#endif
+*/
 
     Serial.println("");
 }
