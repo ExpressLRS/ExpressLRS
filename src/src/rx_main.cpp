@@ -429,7 +429,10 @@ void setup()
 
 #ifdef PLATFORM_ESP8266
     Serial.begin(420000);
+
 #endif
+    // Serial.begin(230400); // for linux debugging
+
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
 
@@ -441,12 +444,17 @@ void setup()
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
+#elif defined Regulatory_Domain_FCC_915
+    Serial.println("Setting 915MHz Mode");
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_EU_868
     Serial.println("Setting 868MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
+#else
+    #error No regulatory domain defined, please define one in common.h
 #endif
 
     FHSSrandomiseFHSSsequence();
