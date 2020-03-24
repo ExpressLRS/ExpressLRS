@@ -59,21 +59,20 @@ local selection = {
     elements = 4
 }
 
+-- returns flags to pass to lcd.drawText for inverted and flashing text
 local function getFlags(element)
     if selection.selected ~= element then return 0 end
     if selection.selected == element and selection.state == false then
         return 0 + INVERS
     end
-    if selection.selected == element and selection.state == true then
-        return 0 + INVERS + BLINK
-    end
-    return
+    -- this element is currently selected
+    return 0 + INVERS + BLINK
 end
 
 local function increase(data)
     if data.selected < data.elements then
         data.selected = data.selected + 1
-        playTone(2000, 50, 0)
+        --playTone(2000, 50, 0)
     end
     -- if data.selected > data.elements then data.selected = 1 end
 end
@@ -81,7 +80,7 @@ end
 local function decrease(data)
     if data.selected > 1 then
         data.selected = data.selected - 1
-        playTone(2000, 50, 0)
+        --playTone(2000, 50, 0)
     end
     -- if data.selected < 1 then data.selected = data.elements end
 end
@@ -146,15 +145,35 @@ local function sendId()
     end
 end
 
+--[[
+
+It's unclear how the telemetry push/pop system works. We don't always seem to get
+a response to a single push event. Can multiple responses be stacked up? Do they timeout?
+
+If there are multiple repsonses we typically want the newest one, so this method
+will keep reading until it gets a nil response, discarding the older data. A maximum number
+of reads is used to defend against the possibility of this function running for an extended
+period.
+
+]]--
 local function processResp()
-    local command, data = crossfireTelemetryPop()
-    if (data ~= nil) then
-        if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
-			AirRate.selected = data[3]
-			TLMinterval.selected = data[4]
-			MaxPower.selected = data[5]
-			RFfreq.selected = data[6]
-		end
+    local tries=0
+    local MAX_TRIES=5
+
+    while tries<MAX_TRIES
+    do
+        local command, data = crossfireTelemetryPop()
+	if (data == nil) then
+	    return
+	else
+            if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
+                AirRate.selected = data[3]
+                TLMinterval.selected = data[4]
+                MaxPower.selected = data[5]
+                RFfreq.selected = data[6]
+            end
+        end
+	tries = tries+1
     end
 end
 
@@ -210,8 +229,20 @@ local function refreshTaranis()
 
 end
 
+-- redraw the screen
+local function refreshLCD()
+
+    if LCD_W == 480 then
+        refreshHorus()
+    else
+        refreshTaranis()
+    end
+
+end
+
 local function init_func()
-    --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    -- first push so that we get the current values. Didn't seem to work.
+    crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
     --processResp()
 	--if LCD_W == 480 then
     --    refreshHorus()
@@ -221,16 +252,105 @@ local function init_func()
 end
 
 local function bg_func(event)
-    if refresh < 25 then refresh = refresh + 1 end
+    --if refresh < 25 then 
+        --refresh = refresh + 1 
+    --end
 end
+--[[
+  Called at (unspecified) intervals when the script is running and the screen is visible
 
+  Handles key presses and sends state changes to the tx module.
+
+  Basic strategy:
+    read any outstanding telemetry data
+    process the event, sending a telemetryPush if necessary
+    if there was no push due to events, send the void push to ensure current values are sent for next iteration
+    redraw the display
+
+]]--
 local function run_func(event)
 
-if updateValues == true or refresh == 25 then
-crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-processResp()
-updateValues = false
+    local pushed = false
+
+
+    -- first check if we have data from the module
+    processResp()
+
+    -- now process key events
+    if event == EVT_ROT_LEFT or 
+       event == EVT_MINUS_BREAK or 
+       event == EVT_DOWN_BREAK then
+        if selection.state == false then
+            decrease(selection)
+        else
+            if selection.selected == 1 then
+	        -- AirRate
+		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x00})
+		pushed = true
+	    elseif selection.selected == 2 then
+	        -- TLMinterval
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x00})
+		pushed = true
+	    elseif selection.selected == 3 then
+	        -- MaxPower
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x00})
+		pushed = true
+	    elseif selection.selected == 4 then
+	        -- RFFreq
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x00})
+		pushed = true
+            end
+	end
+    elseif event == EVT_ROT_RIGHT or 
+           event == EVT_PLUS_BREAK or 
+	   event == EVT_UP_BREAK then
+        if selection.state == false then
+            increase(selection)
+        else
+            if selection.selected == 1 then
+	        -- AirRate
+		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x01})
+		pushed = true
+	    elseif selection.selected == 2 then
+	        -- TLMinterval
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x01})
+		pushed = true
+	    elseif selection.selected == 3 then
+	        -- MaxPower
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x01})
+		pushed = true
+	    elseif selection.selected == 4 then
+	        -- RFFreq
+	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x01})
+		pushed = true
+            end
+	end
+    elseif event == EVT_ENTER_BREAK then
+        selection.state = not selection.state
+
+    elseif event == EVT_EXIT_BREAK and selection.state then
+        -- I was hoping to find the T16 RTN button as an alternate way of deselecting
+	-- a field, but no luck so far
+        selection.state = false
+    end
+
+    if not pushed then
+        -- ensure we get up to date values from the module for next time
+        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    end
+
+    refreshLCD()
+
+    return 0
 end
+
+local function run_funcXXX(event)
+
+    if updateValues == true or refresh == 25 then
+        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+        processResp()
+        updateValues = false
+    end
     -- print(event)
     if refresh == 25 or lcdChange == true or selection.state == true then
         if LCD_W == 480 then
@@ -238,7 +358,7 @@ end
         else
             refreshTaranis()
         end
-		refresh = 0
+        refresh = 0
     end
 
     -- left = up/decrease right = down/increase
@@ -247,42 +367,33 @@ end
             EVT_DOWN_BREAK then
             decrease(selection)
             lcdChange = true
-        end
-        if event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
+        elseif event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
             EVT_UP_BREAK then
             increase(selection)
             lcdChange = true
         end
-    end
-    if selection.state == true then
+    elseif selection.state == true then
         if event == EVT_ROT_LEFT or event == EVT_MINUS_BREAK or event ==
             EVT_DOWN_BREAK then
 
             if selection.selected == 1 then
                 -- increase(AirRate)
                 crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x00})
-            end
-
-            if selection.selected == 2 then
+            elseif selection.selected == 2 then
                 -- decrease(TLMinterval)
                 crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x00})
-            end
-
-            if selection.selected == 3 then
+            elseif selection.selected == 3 then
                 -- increase(MaxPower)
                 crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x00})
-            end
-
-            if selection.selected == 4 then
+            elseif selection.selected == 4 then
                 -- increase(RFfreq)
                 crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x00})
             end
 
             lcdChange = true
-			updateValues = true
+            updateValues = true
 
-        end
-        if event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
+        elseif event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
             EVT_UP_BREAK then
 
             if selection.selected == 1 then
@@ -302,7 +413,7 @@ end
             end
 
             lcdChange = true
-			updateValues = true
+            updateValues = true
 
         end
         processResp()
@@ -316,16 +427,14 @@ end
             -- end
             lcdChange = true
         end
-    end
-    if event == EVT_EXIT_BREAK then
+    elseif event == EVT_EXIT_BREAK then
         if selection.selected == 1 and sensor.sensorId.selected == 29 and
             sensor.sensorType.selected ~= 11 and selection.state == true then
             readIdState = 1
         end
         selection.state = false
         lcdChange = true
-    end
-    if event == EVT_ENTER_LONG or event == EVT_MENU_LONG then
+    elseif event == EVT_ENTER_LONG or event == EVT_MENU_LONG then
         if selection.selected > 3 then
             selection.state = not selection.state
             lcdChange = true
@@ -349,6 +458,10 @@ end
     end
     -- if readIdState > 0 then readId() end
     -- if sendIdState > 0 then sendId() end
+    if lcdChange then
+        refreshHorus()
+        lcdChange = false
+    end
     
     return 0
 end
