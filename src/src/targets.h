@@ -168,7 +168,7 @@ https://github.com/jaxxzer
 
 #define BUFFER_OE               PA5  //CONFIRMED
 #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
-#define GPIO_PIN_DIO1           PA1  //Not Needed
+#define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #define GPIO_PIN_RFamp_APC1           PA6  //CONFIRMED SANDRO// APC2 is connected through a I2C dac and is handled elsewhere
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX

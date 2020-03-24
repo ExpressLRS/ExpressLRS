@@ -1,0 +1,68 @@
+import os
+import platform
+import sys
+
+platform.platform()
+
+def get_commands(env, firmware):
+    platform_name = platform.system().lower()
+
+    BL_CMD = []
+    APP_CMD = []
+
+    flash_start = app_start = 0x08000000
+    bootloader = "" # env['UPLOAD_FLAGS'][0]
+    upload_flags = env['UPLOAD_FLAGS']
+
+    for line in upload_flags:
+        flags = line.split()
+        for flag in flags:
+            if "BOOTLOADER=" in flag:
+                bootloader = flag.split("=")[1]
+            elif "VECT_OFFSET=" in flag:
+                offset = flag.split("=")[1]
+                if "0x" in offset:
+                    offset = int(offset, 16)
+                else:
+                    offset = int(offset, 10)
+                app_start = flash_start + offset
+
+    if "windows" in platform_name:
+        TOOL = os.path.join(
+            env['PROJECT_PACKAGES_DIR'],
+            "tool-stm32duino", "stlink", "ST-LINK_CLI.exe")
+        if bootloader is not None:
+            BL_CMD = [TOOL, "-c SWD SWCLK=8 -P",
+                bootloader, hex(flash_start)]
+        APP_CMD = [TOOL, "-c SWD SWCLK=8 -P",
+            firmware, hex(app_start), "-RST"]
+    elif "linux" in platform_name:
+        TOOL = os.path.join(
+            env['PROJECT_PACKAGES_DIR'],
+            "tool-stm32duino", "stlink", "st-flash")
+        if bootloader is not None:
+            BL_CMD = [TOOL, "write", bootloader, hex(flash_start)]
+        APP_CMD = [TOOL, "--reset", "write", firmware, hex(app_start)]
+    elif "os x" in platform_name:
+        print("OS X not supported at the moment\n")
+        raise OSError
+    else:
+        print("Unknown operating system...\n")
+        raise OSError
+
+    return " ".join(BL_CMD), " ".join(APP_CMD)
+
+
+def on_upload(source, target, env):
+    firmware_path = str(source[0])
+
+    BL_CMD, APP_CMD = get_commands(env, firmware_path)
+
+    # flash bootloader
+    if BL_CMD:
+        print("Cmd: {}".format(BL_CMD))
+        env.Execute(BL_CMD)
+    # flash application
+    if APP_CMD:
+        print("Cmd: {}".format(APP_CMD))
+        env.Execute(APP_CMD)
