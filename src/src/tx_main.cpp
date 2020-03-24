@@ -547,12 +547,13 @@ void setup()
 
   FHSSrandomiseFHSSsequence();
 
-#if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_EU_868
-#ifdef Regulatory_Domain_AU_915
-  Serial.println("Setting 915MHz Mode");
-#else
-  Serial.println("Setting 868MHz Mode");
-#endif
+#if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_EU_868 || defined Regulatory_Domain_FCC_915
+  #ifdef Regulatory_Domain_EU_868
+    Serial.println("Setting 868MHz Mode");
+  #else
+    Serial.println("Setting 915MHz Mode");
+  #endif
+
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
