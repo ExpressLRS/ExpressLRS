@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "HardwareSerial.h"
+#include "HwSerial.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -352,9 +353,10 @@ public:
     {
         _dev->println("CRSF Lib Ready!");
     }
+
 #endif
 
-    static HardwareSerial Port;
+    static HwSerial Port;
     //static Stream *Port;
 
     static volatile uint16_t ChannelDataIn[16];
