@@ -480,6 +480,7 @@ void setup()
   Serial.begin(115200);
 
   // Annoying startup beeps
+#ifndef JUST_BEEP_ONCE
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
   const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
   const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
@@ -490,6 +491,9 @@ void setup()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+#else
+  tone(GPIO_PIN_BUZZER, 400, 200);
+#endif
 
   pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
   pinMode(GPIO_PIN_LED_RED, OUTPUT);
@@ -549,6 +553,7 @@ void setup()
   #else
     Serial.println("Setting 915MHz Mode");
   #endif
+
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
   Radio.SetOutputPower(0b1111); // 20dbm = 100mW
