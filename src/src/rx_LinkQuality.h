@@ -33,4 +33,5 @@ int ICACHE_RAM_ATTR LQreset()
     {
         linkQualityArray[i] = 0;
     }
+    return 0;
 }

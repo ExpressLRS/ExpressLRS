@@ -15,6 +15,7 @@ uint8_t SX1278rxCont()
   // execute common part
   //return
   SX127xDriver::RXnb();
+  (void)headerExplMode;
   return (ERR_NONE);
 }
 
@@ -28,6 +29,7 @@ uint8_t SX1278rxSingle(uint8_t *data, uint8_t length)
   }
 
   // execute common part
+  (void)headerExplMode;
   return SX127xDriver::RXsingle(data, length);
 }
 

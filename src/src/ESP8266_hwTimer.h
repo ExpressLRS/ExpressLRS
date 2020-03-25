@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../src/targets.h"
 #include <Arduino.h>
 #include <stdio.h>
+#include "../../src/targets.h"
 
 #define TimerIntervalUSDefault 20000
 
@@ -14,7 +14,6 @@ extern "C"
 class hwTimer
 {
 public:
-
 	static volatile uint32_t HWtimerInterval;
 	static volatile bool TickTock;
 	static volatile int16_t PhaseShift;

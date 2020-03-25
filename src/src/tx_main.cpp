@@ -128,7 +128,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
     crsf.LinkStatistics.downlink_Link_quality = linkQuality;
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate.enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
@@ -169,8 +169,10 @@ void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
   Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
   Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
   Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) + ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) + ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
+  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
@@ -182,8 +184,11 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
   Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
   Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
+  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
+                          ((crsf.ChannelDataIn[1] & 0b111) << 2) +
+                          ((crsf.ChannelDataIn[2] & 0b110) >> 1);
+  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
+                          ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
@@ -197,28 +202,32 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + SWITCH_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) + ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) + ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
-  Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) + ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
+  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
+  Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) +
+                          ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
   Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
   Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
   Radio.TXdataBuffer[5] = Radio.NonceTX;
   Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
+  const expresslrs_mod_settings_s * const mode = get_elrs_airRateConfig(rate);
 #ifdef PLATFORM_ESP32
-  Radio.TimerInterval = mode.interval;
+  Radio.TimerInterval = mode->interval;
   Radio.UpdateTimerInterval();
 #else
-  hwTimer.updateInterval(mode.interval); // TODO: Make sure this is equiv to above commented lines
+  hwTimer.updateInterval(mode->interval); // TODO: Make sure this is equiv to above commented lines
 #endif
-  Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
-  Radio.SetPreambleLength(mode.PreambleLen);
+  Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+  Radio.SetPreambleLength(mode->PreambleLen);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
-  crsf.RequestedRCpacketInterval = ExpressLRS_currAirRate.interval;
-  DebugOutput += String(mode.rate) + "Hz";
+  crsf.RequestedRCpacketInterval = mode->interval;
+  DebugOutput += String(mode->rate) + "Hz";
   isRXconnected = false;
   //R9DAC.resume();
 }
@@ -226,26 +235,26 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 {
   Serial.println("dec");
-  if ((uint8_t)ExpressLRS_currAirRate.enum_rate < MaxRFrate)
+  if ((uint8_t)ExpressLRS_currAirRate->enum_rate < MaxRFrate)
   {
-    SetRFLinkRate(ExpressLRS_AirRateConfig[(uint8_t)ExpressLRS_currAirRate.enum_rate + 1]);
+    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate + 1));
   }
-  return (uint8_t)ExpressLRS_currAirRate.enum_rate;
+  return (uint8_t)ExpressLRS_currAirRate->enum_rate;
 }
 
 uint8_t ICACHE_RAM_ATTR incRFLinkRate()
 {
   Serial.println("inc");
-  if ((uint8_t)ExpressLRS_currAirRate.enum_rate > 0)
+  if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
   {
-    SetRFLinkRate(ExpressLRS_AirRateConfig[(uint8_t)ExpressLRS_currAirRate.enum_rate - 1]);
+    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate - 1));
   }
-  return (uint8_t)ExpressLRS_currAirRate.enum_rate;
+  return (uint8_t)ExpressLRS_currAirRate->enum_rate;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-  uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate.FHSShopInterval;
+  uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
   {
@@ -255,9 +264,9 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleTLM()
 {
-  if (ExpressLRS_currAirRate.TLMinterval > 0)
+  if (ExpressLRS_currAirRate->TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult != 0) // wait for tlm response because it's time
     {
       return;
@@ -282,9 +291,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   /////// This Part Handles the Telemetry Response ///////
-  if (ExpressLRS_currAirRate.TLMinterval > 0)
+  if (ExpressLRS_currAirRate->TLMinterval > 0)
   {
-    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult == 0)
     { // wait for tlm response
       if (WaitRXresponse == true)
@@ -366,24 +375,24 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   {
   case 0: // send all params
     Serial.println("send all");
-    crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, 7, 1);
+    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
     break;
   case 1:
-    // if (ExpressLRS_currAirRate.enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
+    // if (ExpressLRS_currAirRate->enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
     // {
     //   SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
     // }
     //crsf.sendLUAresponse(0x01, (uint8_t)random(1, 5));
     if (crsf.ParameterUpdateData[1] == 0)
     {
-      uint8_t newRate = decRFLinkRate();
+      /*uint8_t newRate =*/ decRFLinkRate();
     }
     else if (crsf.ParameterUpdateData[1] == 1)
     {
-      uint8_t newRate = incRFLinkRate();
+      /*uint8_t newRate =*/ incRFLinkRate();
     }
-    Serial.println(ExpressLRS_currAirRate.enum_rate);
-    crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, 7, 1);
+    Serial.println(ExpressLRS_currAirRate->enum_rate);
+    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
     break;
 
   case 2:
@@ -587,7 +596,7 @@ void setup()
   Radio.Begin();
   crsf.Begin();
 
-  SetRFLinkRate(RF_RATE_200HZ);
+  SetRFLinkRate(RATE_200HZ);
 }
 
 void loop()
@@ -597,7 +606,7 @@ void loop()
   //Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
-  //updateLEDs(isRXconnected, ExpressLRS_currAirRate.TLMinterval);
+  //updateLEDs(isRXconnected, ExpressLRS_currAirRate->TLMinterval);
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
@@ -614,7 +623,7 @@ void loop()
 #endif
   }
 
-  float targetFrameRate = (ExpressLRS_currAirRate.rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval)));
+  float targetFrameRate = (ExpressLRS_currAirRate->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval)));
   PacketRateLastChecked = millis();
   PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
   linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
