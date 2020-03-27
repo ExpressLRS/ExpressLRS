@@ -38,16 +38,6 @@ typedef enum
 
 typedef enum
 {
-    connected = 2,
-    tentative = 1,
-    disconnected = 0
-} connectionState_e;
-
-extern connectionState_e connectionState;
-extern connectionState_e connectionStatePrev;
-
-typedef enum
-{
     RF_DOWNLINK_INFO = 0,
     RF_UPLINK_INFO = 1,
     RF_AIRMODE_PARAMETERS = 2
