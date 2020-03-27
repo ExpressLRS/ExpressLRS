@@ -5,3 +5,5 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 __pycache__
+*.pyc
+user_defines.txt
