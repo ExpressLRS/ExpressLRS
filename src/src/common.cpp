@@ -1,9 +1,5 @@
 #include "common.h"
 
-void commonConfig()
-{ //settings common to both master and slave
-}
-
 extern SX127xDriver Radio;
 
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
@@ -31,8 +27,6 @@ const expresslrs_mod_settings_s * ExpressLRS_prevAirRate;
 int8_t ExpressLRS_currPower = 0;
 int8_t ExpressLRS_prevPower = 0;
 
-connectionState_e connectionState = disconnected;
-connectionState_e connectionStatePrev = disconnected;
 
 #ifndef MY_UID
 //uint8_t UID[6] = {48, 174, 164, 200, 100, 50};

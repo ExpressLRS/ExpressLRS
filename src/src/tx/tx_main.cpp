@@ -16,11 +16,11 @@
 
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
-#include "STM32_hwTimer.h"
+#include "HwTimer.h"
 #include "button.h"
 button button;
 R9DAC R9DAC;
-hwTimer hwTimer;
+HwTimer hwTimer;
 #endif
 
 //// CONSTANTS ////

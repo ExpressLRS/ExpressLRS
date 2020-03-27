@@ -9,15 +9,14 @@
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
+#include "HwTimer.h"
 
 #ifdef PLATFORM_ESP8266
-#include "ESP8266_WebUpdate.h"
-#include "ESP8266_hwTimer.h"
+#include "esp82xx/ESP8266_WebUpdate.h"
 #endif
 
 #ifdef PLATFORM_STM32
-#include "STM32_UARTinHandler.h"
-#include "STM32_hwTimer.h"
+#include "stm32/STM32_UARTinHandler.h"
 #endif
 
 //// CONSTANTS ////
@@ -28,7 +27,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-hwTimer hwTimer;
+HwTimer hwTimer;
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
@@ -45,6 +44,16 @@ int32_t HWtimerError;
 int32_t Offset;
 
 bool LED = false;
+
+typedef enum
+{
+    connected = 2,
+    tentative = 1,
+    disconnected = 0
+} connectionState_e;
+
+connectionState_e connectionState;
+connectionState_e connectionStatePrev;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
