@@ -374,7 +374,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                     char inChar = CRSF::Port.read();
 
-                    if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+                    if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
                     {
                         SerialInPacketPtr = 0;
                         CRSFframeActive = true;
@@ -544,7 +544,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
                 char inChar = CRSF::Port.read();
 
-                if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+                if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
                 {
                     SerialInPacketPtr = 0;
                     CRSFframeActive = true;
