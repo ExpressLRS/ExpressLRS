@@ -1,7 +1,7 @@
+#include <Arduino.h>
 #include "../../src/targets.h"
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
-#include <Arduino.h>
 #include "HardwareSerial.h"
 
 #ifdef PLATFORM_ESP32
@@ -508,7 +508,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
                 if (BadPktsCount >= GoodPktsCount)
                 {
-                    Serial.println("Too many bad UART RX packets! Bad:Good = ");-
+                    Serial.println("Too many bad UART RX packets! Bad:Good = ");
                     Serial.print(BadPktsCount);
                     Serial.print(":");
                     Serial.println(GoodPktsCount);
@@ -672,6 +672,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
+#if 0
             const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
             ChannelDataIn[0] = (rcChannels->ch0);
             ChannelDataIn[1] = (rcChannels->ch1);
@@ -689,6 +690,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             ChannelDataIn[13] = (rcChannels->ch13);
             ChannelDataIn[14] = (rcChannels->ch14);
             ChannelDataIn[15] = (rcChannels->ch15);
+#else
+    memcpy((void *)ChannelDataIn,
+           (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET],
+           sizeof(crsf_channels_t));
+#endif
         }
 
         void ICACHE_RAM_ATTR CRSF::FlushSerial()

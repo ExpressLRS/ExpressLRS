@@ -285,13 +285,10 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
 };
 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
-static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
+//static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
-static uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length);
-static uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length);
-static uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length);
 
-uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < length; i++)
@@ -301,7 +298,7 @@ uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < length; i++)
@@ -311,7 +308,7 @@ uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < length; i++)

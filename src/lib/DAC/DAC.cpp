@@ -1,4 +1,3 @@
-#pragma once
 
 #ifdef TARGET_R9M_TX
 
