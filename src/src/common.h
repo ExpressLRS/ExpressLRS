@@ -2,10 +2,12 @@
 
 // define exacly one frequency band of operation here
 
-//#define Regulatory_Domain_AU_915
-//#define Regulatory_Domain_EU_868
-//#define Regulatory_Domain_AU_433
-//#define Regulatory_Domain_EU_433
+// #define Regulatory_Domain_AU_915
+// #define Regulatory_Domain_EU_868
+// #define Regulatory_Domain_AU_433
+// #define Regulatory_Domain_EU_433
+// #define Regulatory_Domain_FCC_915
+
 
 #include "FHSS.h"
 #include "LoRaRadioLib.h"

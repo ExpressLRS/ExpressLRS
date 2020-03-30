@@ -81,6 +81,59 @@ const uint32_t FHSSfreqs[] = {
     433100000,
     433925000,
     434450000};
+#elif defined Regulatory_Domain_FCC_915
+/* Very definitely not fully checked. An initial pass at increasing the hops
+*/
+const uint32_t FHSSfreqs[] = {
+    903500000,
+    904100000,
+    904700000,
+    905300000,
+
+    905900000,
+    906500000,
+    907100000,
+    907700000,
+
+    908300000,
+    908900000,
+    909500000,
+    910100000,
+
+    910700000,
+    911300000,
+    911900000,
+    912500000,
+
+    913100000,
+    913700000,
+    914300000,
+    914900000,
+
+    915500000, // as per AU..
+    916100000,
+    916700000,
+    917300000,
+
+    917900000,
+    918500000,
+    919100000,
+    919700000,
+
+    920300000,
+    920900000,
+    921500000,
+    922100000,
+
+    922700000,
+    923300000,
+    923900000,
+    924500000,
+
+    925100000,
+    925700000,
+    926300000,
+    926900000};
 #else
     #error No regulatory domain defined, please define one in common.h
 #endif
@@ -88,7 +141,8 @@ const uint32_t FHSSfreqs[] = {
 // The number of FHSS frequencies in the table
 #define NR_FHSS_ENTRIES (sizeof(FHSSfreqs) / sizeof(uint32_t))
 
-extern uint8_t FHSSsequence[256];
+#define NR_SEQUENCE_ENTRIES 256
+extern uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES];
 
 uint32_t ICACHE_RAM_ATTR GetInitialFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq();
