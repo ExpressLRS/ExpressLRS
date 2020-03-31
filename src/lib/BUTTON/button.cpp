@@ -1,24 +1,24 @@
 #include "button.h"
 
-void inline button::nullCallback(void){};
-void (*button::buttonShortPress)() = &nullCallback; // callbacks
-void (*button::buttonLongPress)() = &nullCallback;  // callbacks
+void inline Button::nullCallback(void){};
+void (*Button::buttonShortPress)() = &nullCallback; // callbacks
+void (*Button::buttonLongPress)() = &nullCallback;  // callbacks
 
-uint32_t button::buttonLastPressed = 0;
-uint32_t button::buttonLastPressedLong = 0;
+uint32_t Button::buttonLastPressed = 0;
+uint32_t Button::buttonLastPressedLong = 0;
 
-bool button::buttonPrevState = true;   //active high, therefore true as default.
-bool button::buttonIsDown = false;     //is the button currently being held down?
-bool button::buttonIsDownLong = false; //is the button currently being held down?
+bool Button::buttonPrevState = true;   //active high, therefore true as default.
+bool Button::buttonIsDown = false;     //is the button currently being held down?
+bool Button::buttonIsDownLong = false; //is the button currently being held down?
 
-uint32_t button::debounceDelay = 30;      //how long the switch must change state to be considered
-uint32_t button::longPressDelay = 500;    //how long the switch must hold state to be considered a long press
-uint32_t button::longPressInterval = 500; //how long the switch must hold long state to be reapeated.
+uint32_t Button::debounceDelay = 30;      //how long the switch must change state to be considered
+uint32_t Button::longPressDelay = 500;    //how long the switch must hold state to be considered a long press
+uint32_t Button::longPressInterval = 500; //how long the switch must hold long state to be reapeated.
 
-int button::buttonPin = -1;
-bool button::activeHigh = true;
+int Button::buttonPin = -1;
+bool Button::activeHigh = true;
 
-void button::init(int Pin, bool ActiveHigh)
+void Button::init(int Pin, bool ActiveHigh)
 {
     if (activeHigh)
     {
@@ -33,12 +33,12 @@ void button::init(int Pin, bool ActiveHigh)
     activeHigh = ActiveHigh;
 }
 
-void button::handle()
+void Button::handle()
 {
     sampleButton();
 }
 
-void button::sampleButton()
+void Button::sampleButton()
 {
     bool currState = digitalRead(buttonPin);
     uint32_t now = millis();

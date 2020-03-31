@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "../../src/targets.h"
 
-class button
+class Button
 {
 private:
     static int buttonPin;

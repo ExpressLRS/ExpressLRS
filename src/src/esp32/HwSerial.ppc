@@ -1,0 +1,228 @@
+#include "HwSerial.h"
+#include "targets.h"
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <driver/uart.h>
+#include <driver/gpio.h>
+
+#define EX_UART_NUM UART_NUM_1
+#define DR_REG_BASE (volatile uart_dev_t *)DR_REG_UART1_BASE
+
+static xSemaphoreHandle uart_lock = NULL;
+static volatile uart_dev_t *uart_dev = DR_REG_BASE;
+QueueHandle_t rx_queue = xQueueCreate(128, sizeof(char));
+
+void dummy_rx_cb(uint8_t) {}
+
+static HwSerial::received_cb rx_cb_ptr = dummy_rx_cb;
+
+#define MUTEX_LOCK(_lock)                                  \
+    while (xSemaphoreTake(_lock, portMAX_DELAY) != pdPASS) \
+        ;
+#define MUTEX_UNLOCK(_lock) xSemaphoreGive(_lock)
+
+static void IRAM_ATTR uart_rx_isr(void *arg)
+{
+    xQueueHandle queue = (xQueueHandle)arg;
+    BaseType_t prio_task_woken;
+    uint8_t c;
+
+    uart_dev->int_clr.rxfifo_full = 1;
+    uart_dev->int_clr.frm_err = 1;
+    uart_dev->int_clr.rxfifo_tout = 1;
+    while (uart_dev->status.rxfifo_cnt)
+    {
+        c = uart_dev->fifo.rw_byte;
+        if (!xQueueIsQueueFullFromISR(queue))
+        {
+            xQueueSendFromISR(queue, &c, &prio_task_woken);
+        }
+    }
+    if (prio_task_woken)
+        portYIELD_FROM_ISR();
+}
+
+static void uartFlush(void)
+{
+    if (uart_dev)
+    {
+        MUTEX_LOCK(uart_lock);
+        while (uart_dev->status.txfifo_cnt)
+            ;
+        uart_dev->conf0.txfifo_rst = 1;
+        uart_dev->conf0.txfifo_rst = 0;
+        uart_dev->conf0.rxfifo_rst = 1;
+        uart_dev->conf0.rxfifo_rst = 0;
+        MUTEX_UNLOCK(uart_lock);
+    }
+}
+
+void serial_send(uint8_t *buff, uint8_t count)
+{
+    if (buff && count && uart_dev)
+    {
+        MUTEX_LOCK(uart_lock);
+        while (count)
+        {
+            while (count && uart_dev->status.txfifo_cnt < 0x7F)
+            {
+                uart_dev->fifo.rw_byte = *buff++;
+                count--;
+            }
+        }
+        while (uart_dev->status.txfifo_cnt == 0x7F)
+            ;
+        MUTEX_UNLOCK(uart_lock);
+    }
+}
+
+void serial_init(uint32_t baud)
+{
+    if (uart_lock == NULL)
+        uart_lock = xSemaphoreCreateMutex();
+
+    /* Configure parameters of an UART driver,
+     * communication pins and install the driver */
+    uart_config_t uart_config = {
+        .baud_rate = (int)baud,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
+    uart_param_config(EX_UART_NUM, &uart_config);
+
+    //Set UART pins (using UART0 default pins ie no changes.)
+    uart_set_pin(EX_UART_NUM, GPIO_PIN_RCSIGNAL_TX, GPIO_PIN_RCSIGNAL_RX,
+                 UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    static uart_isr_handle_t uart_isr_handle = NULL;
+    uart_isr_register(EX_UART_NUM, uart_rx_isr, (void *)rx_queue,
+                      (int)ESP_INTR_FLAG_IRAM, &uart_isr_handle);
+    static intr_handle_t uart_intr_handle = NULL;
+    MUTEX_LOCK(uart_lock);
+    uart_dev->conf1.rxfifo_full_thrhd = 112;
+    uart_dev->conf1.rx_tout_thrhd = 2;
+    uart_dev->conf1.rx_tout_en = 1;
+    uart_dev->int_ena.rxfifo_full = 1;
+    uart_dev->int_ena.frm_err = 1;
+    uart_dev->int_ena.rxfifo_tout = 1;
+    uart_dev->int_clr.val = 0xffffffff;
+    esp_intr_alloc(ETS_UART0_INTR_SOURCE, (int)ESP_INTR_FLAG_IRAM,
+                   uart_rx_isr, NULL, &uart_intr_handle);
+    MUTEX_UNLOCK(uart_lock);
+    uartFlush();
+}
+
+static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
+{
+    QueueHandle_t q_ptr = (QueueHandle_t)pvParameters;
+    portTickType timeout = 500 / portTICK_RATE_MS;
+    char rx_c;
+
+    Serial.println("ESP32 UART LISTEN TASK STARTED");
+
+    for (;;)
+    {
+        if (xQueueReceive(q_ptr, (void *)&rx_c, timeout) != pdTRUE)
+        {
+            rx_c = 0;
+        }
+        rx_cb_ptr(rx_c);
+    }
+}
+
+/********************************************************************************
+ *                                   PUBLIC
+ ********************************************************************************/
+HwSerial CrsfSerial(1, -1);
+
+HwSerial::HwSerial(int uart_nr, int32_t pin)
+{
+    duplex_pin = pin;
+}
+
+void HwSerial::begin(uint32_t baud, uint32_t config)
+{
+    serial_init(baud);
+    enable_receiver();
+    flush();
+
+    xTaskCreatePinnedToCore(
+        ESP32uartTask, "ESP32uartTask",
+        20000, (void *)rx_queue, 255, NULL, 0);
+}
+
+void HwSerial::register_cb(received_cb cb)
+{
+    if (cb)
+        rx_cb_ptr = cb;
+}
+
+void HwSerial::flush()
+{
+    uartFlush();
+}
+
+uint32_t HwSerial::available()
+{
+    return uxQueueMessagesWaiting(rx_queue);
+}
+
+void HwSerial::enable_receiver(void)
+{
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    //ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
+    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+}
+
+void HwSerial::enable_transmitter(void)
+{
+    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+}
+
+void HwSerial::write(FIFO &fifo)
+{
+    const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
+    vTaskDelay(xDelay1);
+
+    uint8_t peekVal = fifo.peek(); // check if we have data in the output FIFO that needs to be written
+    if (peekVal > 0)
+    {
+        if (fifo.size() >= peekVal)
+        {
+            enable_transmitter();
+
+            uint8_t OutPktLen = fifo.pop();
+            uint8_t OutData[OutPktLen];
+
+            fifo.popBytes(OutData, OutPktLen);
+            serial_send(OutData, OutPktLen);
+
+            //vTaskDelay(xDelay1);
+            enable_receiver();
+            flush(); // we don't need to read back the data we just wrote
+        }
+    }
+    //vTaskDelay(xDelay1);
+}
+
+size_t HwSerial::write(const uint8_t *buff, size_t len)
+{
+    enable_transmitter();
+    serial_send((uint8_t *)buff, (uint8_t)len);
+    enable_receiver();
+    flush(); // we don't need to read back the data we just wrote
+    return len;
+}
+
+size_t HwSerial::write(uint8_t buff)
+{
+    return HwSerial::write(&buff, 1);
+}

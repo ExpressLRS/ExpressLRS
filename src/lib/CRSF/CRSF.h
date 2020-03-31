@@ -2,17 +2,7 @@
 #define H_CRSF
 
 #include <Arduino.h>
-#include "HardwareSerial.h"
-#include "HwSerial.h"
-
-#ifdef PLATFORM_ESP32
-#include "esp32-hal-uart.h"
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/uart.h"
-#include "driver/gpio.h"
-#endif
+#include "../../src/HwSerial.h"
 
 #define PACKED __attribute__((packed))
 
@@ -288,7 +278,6 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
 //static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
-
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
 {
     uint8_t crc = 0;
@@ -323,38 +312,18 @@ class CRSF
 {
 
 public:
-    //CRSF(HardwareSerial& serial);
+    CRSF() {}
 
-#if defined(PLATFORM_ESP8266)
-
-    CRSF(Stream *dev) : _dev(dev)
+    CRSF(HwSerial *dev)
     {
+        _dev = dev;
     }
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    void InitSerial()
+    CRSF(HwSerial &dev)
     {
-        _dev->println("CRSF Lib Ready!");
+        _dev = &dev;
     }
 
-#endif
-
-#ifdef TARGET_R9M_RX
-
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-
-#endif
-
-    static HwSerial Port;
-    //static Stream *Port;
+    void Begin();
 
     static volatile uint16_t ChannelDataIn[16];
     static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
@@ -370,21 +339,11 @@ public:
 
     static volatile uint8_t ParameterUpdateData[2];
 
-    static bool firstboot;
-
-    static uint8_t CSFR_TXpin_Module;
-    static uint8_t CSFR_RXpin_Module;
-
-    static uint8_t CSFR_TXpin_Recv;
-    static uint8_t CSFR_RXpin_Recv;
-
     /////Variables/////
 
     static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
     static volatile crsf_sensor_battery_s TLMbattSensor;
-
-    static void Begin(); //setup timers etc
 
     /// UART Handling ///
 
@@ -392,59 +351,41 @@ public:
     static bool CRSFstatePrev;
     static bool IsUARTslowBaudrate;
 
-    static uint32_t lastUARTpktTime;
-    static uint32_t UARTwdtLastChecked;
-    static uint32_t UARTwdtInterval;
-
+    static uint32_t UARTwdtNextCheck;
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
-    static void ICACHE_RAM_ATTR duplex_set_RX();
-    static void ICACHE_RAM_ATTR duplex_set_TX();
-    static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
-    static void ICACHE_RAM_ATTR FlushSerial();
-
-#ifdef PLATFORM_ESP32
-    static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
-#endif
-#ifdef PLATFORM_ESP8266
-    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
-#endif
-#ifdef TARGET_R9M_TX
-    static void ICACHE_RAM_ATTR STM32initUART();
-    static void ICACHE_RAM_ATTR STM32wdtUART();
-    static void ICACHE_RAM_ATTR STM32handleUARTin();
-    static void ICACHE_RAM_ATTR STM32handleUARTout();
-#endif
-
+#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
+    void ICACHE_RAM_ATTR RX_handleUartIn(void);
+
+#else
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
     void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
 
-    static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
+    void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
 ///// Variables for OpenTX Syncing //////////////////////////
 #define OpenTXsyncPakcetInterval 100 // in ms
-    static volatile uint32_t OpenTXsyncLastSent;
-    static volatile uint32_t RequestedRCpacketInterval;
+
+#if defined(FEATURE_OPENTX_SYNC)
     static volatile uint32_t RCdataLastRecv;
+    static volatile uint32_t RequestedRCpacketInterval;
+    static volatile uint32_t OpenTXsynNextSend;
     static volatile int32_t OpenTXsyncOffset;
-    static void ICACHE_RAM_ATTR JustSentRFpacket();
-    static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
-    static void ICACHE_RAM_ATTR sendSyncPacketToTX();
+    void ICACHE_RAM_ATTR JustSentRFpacket(); // called from timer
+    void ICACHE_RAM_ATTR sendSyncPacketToTX();
+#endif
     /////////////////////////////////////////////////////////////
 
-    static void ICACHE_RAM_ATTR ESP32ProcessPacket();
-    static bool ICACHE_RAM_ATTR STM32ProcessPacket();
-    static void ICACHE_RAM_ATTR GetChannelDataIn();
-
-    static void inline nullCallback(void);
+    void ICACHE_RAM_ATTR TX_handleUartIn(void);
+#endif
 
 private:
-    Stream *_dev;
+    static HwSerial *_dev;
 
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
     static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
@@ -454,6 +395,14 @@ private:
 
     static volatile bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
+
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
+    void ICACHE_RAM_ATTR wdtUART();
+    bool ICACHE_RAM_ATTR TX_ProcessPacket();
+    void ICACHE_RAM_ATTR GetChannelDataIn();
+#endif
+
+    static void inline nullCallback(void);
 };
 
 #endif

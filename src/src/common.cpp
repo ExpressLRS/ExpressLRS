@@ -11,7 +11,7 @@ const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
 };
 
-const expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e rate)
+const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
 {
     if (RATE_MAX <= rate)
         rate = RATE_4HZ;
@@ -21,12 +21,11 @@ const expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e ra
 }
 
 //const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-const expresslrs_mod_settings_s * ExpressLRS_currAirRate;
-const expresslrs_mod_settings_s * ExpressLRS_prevAirRate;
+const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 int8_t ExpressLRS_currPower = 0;
 int8_t ExpressLRS_prevPower = 0;
-
 
 #ifndef MY_UID
 //uint8_t UID[6] = {48, 174, 164, 200, 100, 50};
@@ -67,7 +66,7 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
     switch (enumval)
     {
     case TLM_RATIO_NO_TLM:
-        return 0;
+        return 0; // todo: check whether this can be 1 or not
         break;
     case TLM_RATIO_1_2:
         return 2;

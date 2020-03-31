@@ -5,15 +5,6 @@
 
 #include "LoRa_SX127x_Regs.h"
 
-#ifdef PLATFORM_ESP32
-#include "FreeRTOS.h"
-#include "esp32-hal-timer.h"
-#endif
-
-#ifdef PLATFORM_8266
-#include <cstdint>
-#endif
-
 typedef enum
 {
     CURR_OPMODE_FSK_OOK = 0b00000000,
@@ -101,10 +92,6 @@ public:
 
     static void (*TimerDoneCallback)(); //function pointer for callback
 
-#ifdef PLATFORM_ESP32
-    static TaskHandle_t Timertask_handle; //Task Handle for ContTX mode
-#endif
-
     //static void (*TXcallback)();
 
     ////////Hardware/////////////
@@ -119,8 +106,6 @@ public:
     static uint8_t SX127x_MISO;
     static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
-
-    static bool HighPowerModule;
 
     /////////////////////////////
 
@@ -166,7 +151,7 @@ public:
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
-    static uint8_t Begin();
+    static uint8_t Begin(bool HighPowerModule = false);
     static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
     static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
@@ -203,14 +188,9 @@ public:
     ////////////Non-blocking TX related Functions/////////////////
     static void nullCallback(void);
 
-    static void ICACHE_RAM_ATTR StartTimerTask(); //Start Cont TX mode, sends data continuiously
-    static void ICACHE_RAM_ATTR StopTimerTask();
-    static void ICACHE_RAM_ATTR UpdateTimerInterval();
     static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
 
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
-    static void ICACHE_RAM_ATTR TimerTask_ISRhandler();
-    static void ICACHE_RAM_ATTR TimerTask(void *param);
 
     /////////////Non-blocking RX related Functions///////////////
     static void ICACHE_RAM_ATTR StopContRX();

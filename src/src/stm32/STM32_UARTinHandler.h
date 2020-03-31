@@ -40,7 +40,7 @@ void STM32_RX_HandleUARTin()
         UARTLastDataTime = millis();
         char inChar = Serial.read();
 
-        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || CRSF_SYNC_BYTE) && UARTframeActive == false) // we got sync, reset write pointer
+        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE) && UARTframeActive == false) // we got sync, reset write pointer
         {
             UARTinPacketPtr = 0;
             UARTframeActive = true;

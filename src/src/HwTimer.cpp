@@ -6,8 +6,8 @@ void (*HwTimer::callbackTick)() = &nullCallback; // function is called whenever 
 void (*HwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint32_t HwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool HwTimer::TickTock = false;
-volatile int16_t HwTimer::PhaseShift = 0;
+volatile bool HwTimer::TickTock = 0;
+volatile int32_t HwTimer::PhaseShift = 0;
 volatile bool HwTimer::ResetNextLoop = false;
 
 volatile uint32_t HwTimer::LastCallbackMicrosTick = 0;
@@ -15,12 +15,8 @@ volatile uint32_t HwTimer::LastCallbackMicrosTock = 0;
 
 void HwTimer::updateInterval(uint32_t newTimerInterval)
 {
-#ifdef PLATFORM_STM32
     HwTimer::HWtimerInterval = newTimerInterval;
-#else
-    HwTimer::HWtimerInterval = newTimerInterval * 5;
-#endif
-    HwTimer::setTime(HwTimer::HWtimerInterval >> 1);
+    HwTimer::setTime(newTimerInterval >> 1);
 }
 
 void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
@@ -45,9 +41,6 @@ void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
     {
         HwTimer::PhaseShift = newPhaseShift;
     }
-#ifndef PLATFORM_STM32
-    HwTimer::PhaseShift = HwTimer::PhaseShift * 5;
-#endif
 }
 
 void ICACHE_RAM_ATTR HwTimer::callback()
@@ -79,5 +72,5 @@ void ICACHE_RAM_ATTR HwTimer::callback()
         HwTimer::LastCallbackMicrosTock = micros();
         HwTimer::callbackTock();
     }
-    HwTimer::TickTock = !HwTimer::TickTock;
+    HwTimer::TickTock ^= 1;
 }

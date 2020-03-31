@@ -1,0 +1,141 @@
+#include "HwSerial.h"
+#include "targets.h"
+#include <Arduino.h>
+#include <uart.h>
+#include <stm32f1xx_hal_uart.h>
+#include <stm32f1xx_ll_gpio.h>
+
+// arduinostm32 core specific to enable UART RX IRQ
+static serial_t _serial = {0};
+
+void dummy_rx_cb(uint8_t)
+{
+}
+static HwSerial::received_cb rx_cb_ptr = dummy_rx_cb;
+
+static void uart_rx_irq(serial_t *obj)
+{
+    uint8_t c;
+    if (uart_getc(obj, &c) == 0)
+    {
+        rx_cb_ptr(c);
+    }
+}
+
+#if defined(GPIO_PIN_RCSIGNAL_RX) && defined(GPIO_PIN_RCSIGNAL_TX)
+HwSerial CrsfSerial(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, BUFFER_OE);
+#else
+#if (SPORT == PB10)
+// USART3
+#define SPORT_RX_TX PB11, SPORT
+#elif (SPORT == PA2)
+// USART2
+#define SPORT_RX_TX PA3, SPORT
+#elif (SPORT == PA9)
+// USART1
+#define SPORT_RX_TX PA10, SPORT
+#else
+#error "No valid SPORT pin defined!"
+#endif
+
+HwSerial CrsfSerial(SPORT_RX_TX, BUFFER_OE);
+#endif
+
+HwSerial::HwSerial(uint32_t _rx, uint32_t _tx, int32_t duplex_pin)
+{
+    duplex_pin = duplex_pin;
+    _serial.pin_rx = digitalPinToPinName(_rx);
+    _serial.pin_tx = digitalPinToPinName(_tx);
+}
+
+HwSerial::HwSerial(void *peripheral, int32_t duplex_pin)
+{
+    duplex_pin = duplex_pin;
+    _serial.pin_rx = pinmap_pin(peripheral, PinMap_UART_RX);
+    _serial.pin_tx = pinmap_pin(peripheral, PinMap_UART_TX);
+}
+
+void HwSerial::begin(uint32_t baud, uint32_t config)
+{
+    (void)config;
+    Serial.println("Start STM32 R9M TX UART");
+
+    if (duplex_pin > -1)
+        pinMode(duplex_pin, OUTPUT);
+
+    uart_init(&_serial, (uint32_t)baud,
+              UART_WORDLENGTH_8B, UART_PARITY_NONE, UART_STOPBITS_1);
+    uart_attach_rx_callback(&_serial, uart_rx_irq);
+}
+
+void HwSerial::register_cb(received_cb cb)
+{
+    if (cb)
+    {
+        rx_cb_ptr = cb;
+    }
+}
+
+void HwSerial::flush()
+{
+}
+
+uint32_t HwSerial::available()
+{
+    return 0;
+}
+
+void HwSerial::enable_receiver(void)
+{
+    if (duplex_pin > -1)
+    {
+        digitalWrite(duplex_pin, LOW);
+        HAL_HalfDuplex_EnableReceiver(&_serial.handle);
+    }
+}
+
+void HwSerial::enable_transmitter(void)
+{
+    if (duplex_pin > -1)
+    {
+        HAL_HalfDuplex_EnableTransmitter(&_serial.handle);
+        digitalWrite(duplex_pin, HIGH);
+    }
+}
+
+void HwSerial::write(FIFO &fifo)
+{
+    uint8_t peekVal = fifo.peek(); // check if we have data in the output FIFO that needs to be written
+    if (peekVal > 0)
+    {
+        if (fifo.size() >= (peekVal + 1))
+        {
+            delayMicroseconds(100); // delay after RX
+
+            enable_transmitter();
+
+            uint8_t OutPktLen = fifo.pop();
+            uint8_t OutData[OutPktLen];
+
+            fifo.popBytes(OutData, OutPktLen);
+            write(OutData, OutPktLen); // write the packet out
+
+            enable_receiver();
+        }
+    }
+}
+
+size_t HwSerial::write(const uint8_t *buff, size_t len)
+{
+    enable_transmitter();
+    //serial_send(buff, len);
+    HAL_UART_Transmit(&_serial.handle, (uint8_t *)buff, len, HAL_MAX_DELAY);
+    enable_receiver();
+    flush(); // we don't need to read back the data we just wrote
+    return len;
+}
+
+size_t HwSerial::write(uint8_t buff)
+{
+    return HwSerial::write(&buff, 1);
+}

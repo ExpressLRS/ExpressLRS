@@ -1,12 +1,12 @@
 #include "HwTimer.h"
-#include "user_interface.h"
+#include <user_interface.h>
 
 void HwTimer::init()
 {
     noInterrupts();
     timer1_attachInterrupt(HwTimer::callback);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
-    timer1_write(HwTimer::HWtimerInterval);       //120000 us
+    HwTimer::setTime(HwTimer::HWtimerInterval);
     interrupts();
 }
 
@@ -22,5 +22,5 @@ void HwTimer::pause()
 
 void HwTimer::setTime(uint32_t time)
 {
-    timer1_write(time);
+    timer1_write(time * 5);
 }

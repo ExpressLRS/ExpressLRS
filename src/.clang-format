@@ -1,0 +1,16 @@
+#   https://clang.llvm.org/docs/ClangFormat.html
+#   https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+---
+BasedOnStyle: LLVM
+Language: Cpp
+IndentWidth: 4
+TabWidth: 4
+UseTab: false
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+ColumnLimit: 0 #120
+AccessModifierOffset: -4
+IncludeBlocks: Preserve
+SortIncludes: false
+#IndentPPDirectives: AfterHash
+...
