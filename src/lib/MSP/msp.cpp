@@ -32,8 +32,6 @@ uint8_t crc8_dvb_s2(uint8_t crc, unsigned char a)
 bool
 MSP::processReceivedByte(uint8_t c)
 {
-    Serial.print("processReceivedByte ");
-    Serial.println(m_inputState);
     switch (m_inputState) {
 
         case MSP_IDLE:
@@ -116,7 +114,6 @@ MSP::processReceivedByte(uint8_t c)
             }
             else {
                 Serial.println("CRC failure on MSP packet");
-                Serial.println(m_crc);
                 m_inputState = MSP_IDLE;
             }
             break;
