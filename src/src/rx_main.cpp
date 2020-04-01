@@ -86,7 +86,13 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
-    crsf.LinkStatistics.uplink_RSSI_1 = (LPF_UplinkRSSI.update(Radio.GetLastPacketRSSI()) + 130);
+    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.GetLastPacketRSSI());
+    // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
+    // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
+    if (rssiDBM > 0)
+        rssiDBM = 0;
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM;   // to match BF
+
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
@@ -126,7 +132,19 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
     Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
+
+    // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
+    // rssi we send is for display only.
+    // OpenTX treats the rssi values as signed.
+
+    uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
+    // truncate the range to fit into OpenTX's 8 bit signed value
+    if (openTxRSSI>127)
+        openTxRSSI = 127;
+    // convert to 8 bit signed value in the negative range (-128 to 0)
+    openTxRSSI = 255-openTxRSSI;
+    Radio.TXdataBuffer[2] = openTxRSSI;
+
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
