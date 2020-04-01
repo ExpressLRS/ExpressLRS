@@ -217,7 +217,7 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
-  const expresslrs_mod_settings_s * const mode = get_elrs_airRateConfig(rate);
+  const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
 #ifdef PLATFORM_ESP32
   Radio.TimerInterval = mode->interval;
   Radio.UpdateTimerInterval();
@@ -377,7 +377,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   {
   case 0: // send all params
     Serial.println("send all");
-    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
+    //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
     break;
   case 1:
     // if (ExpressLRS_currAirRate->enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
@@ -387,14 +387,14 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     //crsf.sendLUAresponse(0x01, (uint8_t)random(1, 5));
     if (crsf.ParameterUpdateData[1] == 0)
     {
-      /*uint8_t newRate =*/ decRFLinkRate();
+      /*uint8_t newRate =*/decRFLinkRate();
     }
     else if (crsf.ParameterUpdateData[1] == 1)
     {
-      /*uint8_t newRate =*/ incRFLinkRate();
+      /*uint8_t newRate =*/incRFLinkRate();
     }
     Serial.println(ExpressLRS_currAirRate->enum_rate);
-    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
+    //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
     break;
 
   case 2:
@@ -423,7 +423,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
-  crsf.sendLUAresponse((ExpressLRS_currAirRate.enum_rate + 2), ExpressLRS_currAirRate.TLMinterval + 1, POWERMGNT.currPower(), 1);
+  //Serial.println("Power");
+  //Serial.println(POWERMGNT.currPower());
+  crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
 }
 
 void DetectOtherRadios()
@@ -499,7 +501,7 @@ void setup()
   Serial.println("ExpressLRS TX Module Booted...");
 
 #ifdef PLATFORM_ESP32
-  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector 
+  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
   //strip.Begin();
 
@@ -529,11 +531,11 @@ void setup()
   FHSSrandomiseFHSSsequence();
 
 #if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_EU_868 || defined Regulatory_Domain_FCC_915
-  #ifdef Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
-  #else
-    Serial.println("Setting 915MHz Mode");
-  #endif
+#ifdef Regulatory_Domain_EU_868
+  Serial.println("Setting 868MHz Mode");
+#else
+  Serial.println("Setting 915MHz Mode");
+#endif
 
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE

@@ -6,19 +6,19 @@
 #include "DAC.h"
 
 #ifdef TARGET_R9M_TX
-#define MaxPower 1000
+#define MaxPower 7
 #define MaxPowerEnum 6
 #define DefaultPowerEnum 3
 #endif
 
 #ifdef TARGET_100mW_MODULE
-#define MaxPower 50
+#define MaxPower 2
 #define MaxPowerEnum 2
 #define DefaultPowerEnum 2
 #endif
 
 #ifdef TARGET_1000mW_MODULE
-#define MaxPower 500
+#define MaxPower 6
 #define MaxPowerEnum 5
 #define DefaultPowerEnum 3
 #endif
@@ -49,7 +49,7 @@ class POWERMGNT
 
 private:
     static PowerLevels_e CurrentPower;
-    static void setPower(PowerLevels_e Power);
+    static PowerLevels_e setPower(PowerLevels_e Power);
 
 public:
     static PowerLevels_e incPower();

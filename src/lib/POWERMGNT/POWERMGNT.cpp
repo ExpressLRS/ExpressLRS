@@ -1,7 +1,7 @@
 #include "POWERMGNT.h"
 
 extern SX127xDriver Radio;
-#ifdef PLATFORM_R9M_TX
+#ifdef TARGET_R9M_TX
 extern R9DAC R9DAC;
 #endif
 
@@ -11,8 +11,7 @@ PowerLevels_e POWERMGNT::incPower()
 {
     if (CurrentPower < MaxPower)
     {
-        CurrentPower = (PowerLevels_e)((uint8_t)CurrentPower + 1);
-        setPower(CurrentPower);
+        CurrentPower = setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
     return CurrentPower;
 }
@@ -21,8 +20,7 @@ PowerLevels_e POWERMGNT::decPower()
 {
     if (CurrentPower > 0)
     {
-        CurrentPower = (PowerLevels_e)((uint8_t)CurrentPower - 1);
-        setPower(CurrentPower);
+        CurrentPower = setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
     return CurrentPower;
 }
@@ -37,33 +35,45 @@ void POWERMGNT::defaultPower()
     setPower((PowerLevels_e)DefaultPowerEnum);
 }
 
-void POWERMGNT::setPower(PowerLevels_e Power)
+PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 {
 
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
-    //R9DAC.setPower((DAC_PWR_)Power);
+    R9DAC.setPower((DAC_PWR_)Power);
+    return Power;
 #endif
 
 #ifdef TARGET_100mW_MODULE
 
-    if (Power == PWR_10mW)
+    if (Power <= PWR_50mW)
     {
-        Radio.SetOutputPower(0b1000);
+        if (Power == PWR_10mW)
+        {
+            Radio.SetOutputPower(0b1000);
+            return PWR_10mW;
+        }
+        if (Power == PWR_25mW)
+        {
+            Radio.SetOutputPower(0b1100);
+            return PWR_25mW;
+        }
+        if (Power == PWR_50mW)
+        {
+            Radio.SetOutputPower(0b1111); //15
+            return PWR_50mW;
+        }
     }
-    if (Power == PWR_25mW)
+    else
     {
-        Radio.SetOutputPower(0b1100);
-    }
-    if (Power == PWR_50mW)
-    {
-        Radio.SetOutputPower(0b1111); //15
+        return CurrentPower;
     }
 
 #endif
 
 #ifdef TARGET_1000mW_MODULE
     Radio.SetOutputPower(0b0000);
+    return PWR_25mW;
 // not done yet
 #endif
 }
