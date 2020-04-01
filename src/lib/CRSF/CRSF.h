@@ -287,7 +287,6 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
 //static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
-
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
 {
     uint8_t crc = 0;
@@ -404,13 +403,14 @@ public:
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
+    static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
 #endif
 #ifdef PLATFORM_ESP8266
     // static void ICACHE_RAM_ATTR ESP8266ReadUart();
 #endif
 #ifdef TARGET_R9M_TX
     static void ICACHE_RAM_ATTR STM32initUART();
-    static void ICACHE_RAM_ATTR STM32wdtUART();
+    static void ICACHE_RAM_ATTR UARTwdt();
     static void ICACHE_RAM_ATTR STM32handleUARTin();
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
