@@ -8,6 +8,7 @@
 #include "LoRa_SX1278.h"
 
 #include "../../src/targets.h"
+#include "../../src/debug.h"
 
 #define DEBUG
 
@@ -92,7 +93,7 @@ InterruptAssignment_ InterruptAssignment = NONE;
 
 uint8_t SX127xDriver::Begin(bool HighPowerModule)
 {
-    Serial.println("Driver Begin");
+    DEBUG_PRINTLN("Driver Begin");
     uint8_t status;
 
     pinMode(SX127x_RST, OUTPUT);
@@ -115,15 +116,15 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule)
 
     if (RFmodule == RFMOD_SX1278)
     {
-        Serial.println("Init SX1278");
+        DEBUG_PRINTLN("Init SX1278");
         status = SX1278begin(SX127x_nss, SX127x_dio0, SX127x_dio1);
-        Serial.println("SX1278 Done");
+        DEBUG_PRINTLN("SX1278 Done");
     }
     else
     {
-        Serial.println("Init SX1276");
+        DEBUG_PRINTLN("Init SX1276");
         status = SX1276begin(SX127x_nss, SX127x_dio0, SX127x_dio1);
-        Serial.println("SX1276 Done");
+        DEBUG_PRINTLN("SX1276 Done");
     }
 
     return (status);
@@ -316,7 +317,7 @@ uint8_t SX127xDriver::SX127xBegin()
     while ((i < 10) && !flagFound)
     {
         uint8_t version = readRegister(SX127X_REG_VERSION);
-        Serial.println(version, HEX);
+        DEBUG_PRINTLN(version, HEX);
         if (version == 0x12)
         {
             flagFound = true;
@@ -324,14 +325,14 @@ uint8_t SX127xDriver::SX127xBegin()
         else
         {
 #ifdef DEBUG
-            Serial.print(" not found! (");
-            Serial.print(i + 1);
-            Serial.print(" of 10 tries) REG_VERSION == ");
+            DEBUG_PRINT(" not found! (");
+            DEBUG_PRINT(i + 1);
+            DEBUG_PRINT(" of 10 tries) REG_VERSION == ");
 
             char buffHex[5];
             sprintf(buffHex, "0x%02X", version);
-            Serial.print(buffHex);
-            Serial.println();
+            DEBUG_PRINT(buffHex);
+            DEBUG_PRINTLN();
 #endif
             delay(200);
             i++;
@@ -341,7 +342,7 @@ uint8_t SX127xDriver::SX127xBegin()
     if (!flagFound)
     {
 #ifdef DEBUG
-        Serial.println(" not found!");
+        DEBUG_PRINTLN(" not found!");
 #endif
         //SPI.end();
         return (ERR_CHIP_NOT_FOUND);
@@ -349,7 +350,7 @@ uint8_t SX127xDriver::SX127xBegin()
 #ifdef DEBUG
     else
     {
-        Serial.println(" found! (match by REG_VERSION == 0x12)");
+        DEBUG_PRINTLN(" found! (match by REG_VERSION == 0x12)");
     }
 #endif
     return (ERR_NONE);
@@ -385,7 +386,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
-    Serial.println("tx");
+    DEBUG_PRINTLN("tx");
 
     SetMode(SX127X_TX);
 
@@ -397,7 +398,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
         //TODO: calculate timeout dynamically based on modem settings
         if (millis() - start > (length * 100))
         {
-            Serial.println("Send Timeout");
+            DEBUG_PRINTLN("Send Timeout");
             ClearIRQFlags();
             return (ERR_TX_TIMEOUT);
         }
@@ -422,7 +423,7 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
 
-    //Serial.println("TX done ISR");
+    //DEBUG_PRINTLN("TX done ISR");
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
@@ -655,9 +656,9 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
     return (ERR_NONE);
     //  } else {
     //    if (DebugVerbosity >= DEBUG_3) {
-    //      Serial.print("OPMODE was already at requested value: ");
+    //      DEBUG_PRINT("OPMODE was already at requested value: ");
     //      printOPMODE(mode);
-    //      Serial.println();
+    //      DEBUG_PRINTLN();
     //    }
     //  }
 }

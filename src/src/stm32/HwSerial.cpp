@@ -34,7 +34,6 @@ HwSerial::HwSerial(void *peripheral, int32_t duplex_pin)
 
 void HwSerial::Begin(uint32_t baud, uint32_t config)
 {
-    //Serial.println("Start STM32 R9M TX UART");
     HardwareSerial::begin((unsigned long)baud, (uint8_t)config);
     if (duplex_pin > -1)
         pinMode(duplex_pin, OUTPUT);

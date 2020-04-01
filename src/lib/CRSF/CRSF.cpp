@@ -186,7 +186,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 }
 
 #if defined(FEATURE_OPENTX_SYNC)
-void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
+void ICACHE_RAM_ATTR CRSF::UpdateOpenTxSyncOffset()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
     //DEBUG_PRINTLN(CRSF::OpenTXsyncOffset);
@@ -272,6 +272,10 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 
 void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
+#if defined(FEATURE_OPENTX_SYNC)
+    sendSyncPacketToTX();
+#endif
+
     wdtUART();
 
     uint8_t inChar = _dev->read();

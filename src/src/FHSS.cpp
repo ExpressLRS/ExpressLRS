@@ -1,4 +1,5 @@
 #include "FHSS.h"
+#include "debug.h"
 
 uint8_t volatile FHSSptr = 0;
 uint8_t FHSSsequence[256] = {0};
@@ -41,7 +42,7 @@ void ICACHE_RAM_ATTR resetIsAvailable(uint8_t *array)
     array[0] = 0;
 
     // all other entires to 1
-    for(unsigned int i=1; i<NR_FHSS_ENTRIES; i++)
+    for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
         array[i] = 1;
 }
 
@@ -64,8 +65,8 @@ Approach:
 */
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
-    Serial.print("Number of FHSS frequencies =");
-    Serial.println(NR_FHSS_ENTRIES);
+    DEBUG_PRINT("Number of FHSS frequencies =");
+    DEBUG_PRINTLN(NR_FHSS_ENTRIES);
 
     long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
     rngSeed(macSeed);
@@ -80,34 +81,43 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     // sync channels
     const int SYNC_INTERVAL = 20;
 
-    int nLeft = NR_FHSS_ENTRIES-1; // how many channels are left to be allocated. Does not include the sync channel
-    unsigned int prev = 0; // needed to prevent repeats of the same index
+    int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
+    unsigned int prev = 0;           // needed to prevent repeats of the same index
 
     // for each slot in the sequence table
-    for(int i=0; i<NR_SEQUENCE_ENTRIES; i++) {
-        if (i % SYNC_INTERVAL == 0) {
+    for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++)
+    {
+        if (i % SYNC_INTERVAL == 0)
+        {
             // assign sync channel 0
             FHSSsequence[i] = 0;
             prev = 0;
-        } else {
+        }
+        else
+        {
             // pick one of the available channels. May need to loop to avoid repeats
             unsigned int index;
-            do {
+            do
+            {
                 int c = rngN(nLeft); // returnc 0<c<nLeft
                 // find the c'th entry in the isAvailable array
                 // can skip 0 as that's the sync channel and is never available for normal allocation
-                index=1;
-                int found=0;
-                while(index<NR_FHSS_ENTRIES) {
-                    if (isAvailable[index]) {
-                        if (found==c) break;
+                index = 1;
+                int found = 0;
+                while (index < NR_FHSS_ENTRIES)
+                {
+                    if (isAvailable[index])
+                    {
+                        if (found == c)
+                            break;
                         found++;
                     }
                     index++;
                 }
-                if (index == NR_FHSS_ENTRIES) {
+                if (index == NR_FHSS_ENTRIES)
+                {
                     // This should never happen
-                    Serial.print("FAILED to find the available entry!\n");
+                    DEBUG_PRINT("FAILED to find the available entry!\n");
                     // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
                     // Use the sync channel
                     index = 0;
@@ -119,31 +129,34 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
             isAvailable[index] = 0;  // clear the flag
             prev = index;            // remember for next iteration
             nLeft--;                 // reduce the count of available channels
-            if (nLeft==0) {
+            if (nLeft == 0)
+            {
                 // we've assigned all of the channels, so reset for next cycle
                 resetIsAvailable(isAvailable);
-                nLeft = NR_FHSS_ENTRIES-1;
+                nLeft = NR_FHSS_ENTRIES - 1;
             }
         }
 
-        Serial.print(FHSSsequence[i]);
-        if ((i+1) % 10 == 0) {
-            Serial.println();
-        } else {
-            Serial.print(" ");
+        DEBUG_PRINT(FHSSsequence[i]);
+        if ((i + 1) % 10 == 0)
+        {
+            DEBUG_PRINTLN();
+        }
+        else
+        {
+            DEBUG_PRINT(" ");
         }
     } // for each element in FHSSsequence
 
-    Serial.println();
-
+    DEBUG_PRINTLN();
 }
 
 /** Previous version of FHSSrandomiseFHSSsequence
 
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
-    Serial.print("Number of FHSS frequencies =");
-    Serial.print(NR_FHSS_ENTRIES);
+    DEBUG_PRINT("Number of FHSS frequencies =");
+    DEBUG_PRINT(NR_FHSS_ENTRIES);
 
     long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
     rngSeed(macSeed);
@@ -152,10 +165,10 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     const int numOfFreqs = NR_FHSS_ENTRIES-1;
     const int limit = floor(hopSeqLength / numOfFreqs);
 
-    Serial.print("limit =");
-    Serial.print(limit);
+    DEBUG_PRINT("limit =");
+    DEBUG_PRINT(limit);
 
-    Serial.print("FHSSsequence[] = ");
+    DEBUG_PRINT("FHSSsequence[] = ");
 
     int prev_val = 0;
     int rand = 0;
@@ -185,8 +198,8 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
         tracker[rand]++;
         prev_val = rand;
 
-        Serial.print(FHSSsequence[i]);
-        Serial.print(", ");
+        DEBUG_PRINT(FHSSsequence[i]);
+        DEBUG_PRINT(", ");
     }
 
 // Note DaBit: is it really necessary that this is different logic? FHSSsequence[0] is never 0, and it is just a starting frequency anyway?
@@ -204,11 +217,11 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     //     prev_val = rand;
     //     FHSSsequence[i] = rand;
 
-    //     Serial.print(FHSSsequence[i]);
-    //     Serial.print(", ");
+    //     DEBUG_PRINT(FHSSsequence[i]);
+    //     DEBUG_PRINT(", ");
     // }
 
 
-    Serial.println("");
+    DEBUG_PRINTLN("");
 }
 */

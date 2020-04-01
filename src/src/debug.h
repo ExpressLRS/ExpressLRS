@@ -20,10 +20,12 @@
 // Debug enabled
 #define DEBUG_PRINT(...) DEBUG_SERIAL.print(__VA_ARGS__)
 #define DEBUG_PRINTLN(...) DEBUG_SERIAL.println(__VA_ARGS__)
+#define DEBUG_PRINTF(...) DEBUG_SERIAL.printf(__VA_ARGS__)
 #else
 // Debug disabled
 #define DEBUG_PRINT(...)
 #define DEBUG_PRINTLN(...)
+#define DEBUG_PRINTF(...)
 #endif
 
 #endif // DEBUG_H_

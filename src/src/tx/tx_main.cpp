@@ -15,13 +15,6 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
-#ifdef TARGET_R9M_TX
-#include "DAC.h"
-#include "button.h"
-Button button;
-R9DAC r9dac;
-#endif
-
 HwTimer hwTimer;
 
 //// CONSTANTS ////
@@ -32,8 +25,6 @@ HwTimer hwTimer;
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
-
-String DebugOutput;
 
 /// define some libs to use ///
 SX127xDriver Radio;
@@ -215,21 +206,27 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
     const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+
 //#ifdef PLATFORM_ESP32
 #if 0
-  Radio.TimerInterval = mode->interval;
-  Radio.UpdateTimerInterval();
+    Radio.TimerInterval = mode->interval;
+    Radio.UpdateTimerInterval();
 #else
     hwTimer.updateInterval(mode->interval); // TODO: Make sure this is equiv to above commented lines
 #endif
+
     Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
     Radio.SetPreambleLength(mode->PreambleLen);
+
     ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
     ExpressLRS_currAirRate = mode;
+
     crsf.RequestedRCpacketInterval = mode->interval;
-    DebugOutput += String(mode->rate) + "Hz";
+
     isRXconnected = false;
+#ifdef TARGET_R9M_TX
     //r9dac.resume();
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
@@ -285,9 +282,8 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
-
 #ifdef FEATURE_OPENTX_SYNC
-    crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+    crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
 
     /////// This Part Handles the Telemetry Response ///////
@@ -308,22 +304,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         }
     }
 
-    uint32_t SyncInterval;
-
-    if (isRXconnected)
-    {
-        SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
-    }
-    else
-    {
-        SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
-    }
-
     uint32_t current_ms = millis();
 
     //if (((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
     if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
     {
+        uint32_t SyncInterval =
+            (isRXconnected) ? SYNC_PACKET_SEND_INTERVAL_RX_CONN : SYNC_PACKET_SEND_INTERVAL_RX_LOST;
 
         GenerateSyncPacketData();
         SyncPacketNextSend = current_ms + SyncInterval;
@@ -472,53 +459,7 @@ void setup()
 {
     CrsfSerial.Begin(CRSF_OPENTX_BAUDRATE);
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
-    pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
-    pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
-#endif
-
-#ifdef PLATFORM_ESP32
-#ifdef DEBUG_SERIAL
-    DEBUG_SERIAL.begin(115200);
-#endif
-#elif defined TARGET_R9M_TX
-#ifdef DEBUG_SERIAL
-    DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
-    DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
-    DEBUG_SERIAL.begin(115200);
-#endif
-
-    // Annoying startup beeps
-#ifndef JUST_BEEP_ONCE
-    pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
-    const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
-
-    for (int i = 0; i < 7; i++)
-    {
-        tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-        delay(beepDurations[i]);
-        noTone(GPIO_PIN_BUZZER);
-    }
-#else  // JUST_BEEP_ONCE
-    tone(GPIO_PIN_BUZZER, 400, 200);
-#endif // JUST_BEEP_ONCE
-
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
-    pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
-    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
-    digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
-
-    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-    r9dac.setPower(R9_PWR_50mW);
-
-    button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-
-#endif // TARGET_R9M_TX
+    platform_setup();
 
     crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
     crsf.disconnected = &hwTimer.stop;
@@ -526,35 +467,6 @@ void setup()
     hwTimer.callbackTock = &TimerExpired;
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
-
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-
-    strip.Begin();
-
-    uint8_t baseMac[6];
-    // Get base mac address
-    esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-    // Print base mac address
-    // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
-    // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-    DEBUG_PRINTLN("");
-    DEBUG_PRINTLN("Copy the below line into common.h.");
-    DEBUG_PRINT("uint8_t UID[6] = {");
-    DEBUG_PRINT(baseMac[0]);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINT(baseMac[1]);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINT(baseMac[2]);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINT(baseMac[3]);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINT(baseMac[4]);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINT(baseMac[5]);
-    DEBUG_PRINTLN("};");
-    DEBUG_PRINTLN("");
-#endif
 
     FHSSrandomiseFHSSsequence();
 
@@ -616,24 +528,20 @@ void loop()
     if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
     {
         isRXconnected = false;
-#ifdef TARGET_R9M_TX
-        digitalWrite(GPIO_PIN_LED_RED, LOW);
-#endif
     }
     else
     {
         isRXconnected = true;
-#ifdef TARGET_R9M_TX
-        digitalWrite(GPIO_PIN_LED_RED, HIGH);
-#endif
     }
+    platform_connection_state(isRXconnected);
 
     if (current_ms >= PacketRateNextCheck)
     {
+        PacketRateNextCheck = current_ms + PACKET_RATE_INTERVAL;
+
         float targetFrameRate = ExpressLRS_currAirRate->rate;
         if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
             targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        PacketRateNextCheck = current_ms + 100; // calc every 100ms
         PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
         linkQuality = int((((float)PacketRate / targetFrameRate) * 100000.0));
         if (linkQuality > 99)
@@ -643,16 +551,10 @@ void loop()
         packetCounteRX_TX = 0;
     }
 
-#if defined(FEATURE_OPENTX_SYNC)
-    crsf.sendSyncPacketToTX();
-#endif
-
     // Process CRSF packets from TX
     crsf.TX_handleUartIn();
 
-#ifdef TARGET_R9M_TX
-    button.handle();
-#endif
+    platform_loop();
 }
 
 void ICACHE_RAM_ATTR TimerExpired()

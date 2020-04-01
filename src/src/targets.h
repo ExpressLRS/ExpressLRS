@@ -181,4 +181,11 @@ https://github.com/jaxxzer
 // high high -40
 
 #include <stdio.h>
+
+class R9DAC;
+extern R9DAC r9dac;
 #endif
+
+void platform_setup(void);
+void platform_loop(bool connected);
+void platform_connection_state(bool connected);

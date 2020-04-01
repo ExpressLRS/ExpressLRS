@@ -1,4 +1,5 @@
 #include "button.h"
+#include "../../src/debug.h"
 
 void inline Button::nullCallback(void){};
 void (*Button::buttonShortPress)() = &nullCallback; // callbacks
@@ -48,7 +49,7 @@ void Button::sampleButton()
         { //button release
             if (buttonIsDown and (!buttonIsDownLong))
             {
-                Serial.println("button short pressed");
+                DEBUG_PRINTLN("button short pressed");
                 buttonShortPress();
             }
             buttonIsDown = false; //button has been released at some point
@@ -61,7 +62,7 @@ void Button::sampleButton()
         { //button release
             if (buttonIsDown and (!buttonIsDownLong))
             {
-                Serial.println("button short pressed");
+                DEBUG_PRINTLN("button short pressed");
                 buttonShortPress();
             }
             buttonIsDown = false; //button has been released at some point
@@ -103,7 +104,7 @@ void Button::sampleButton()
     {
         if (buttonIsDown)
         {
-            Serial.println("button pressed long");
+            DEBUG_PRINTLN("button pressed long");
             buttonLastPressedLong = now;
             buttonIsDownLong = true;
             buttonLongPress();

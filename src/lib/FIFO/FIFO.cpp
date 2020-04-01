@@ -28,6 +28,7 @@
  * Modified/Ammended by Alessandro Carcione 2020
  */
 #include "FIFO.h"
+#include "../../src/debug.h"
 
 FIFO::FIFO()
 {
@@ -44,7 +45,7 @@ void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
 {
     if (numElements == FIFO_SIZE)
     {
-        Serial.println(("CRITICAL ERROR: Buffer full, will flush"));
+        DEBUG_PRINTLN(("CRITICAL ERROR: Buffer full, will flush"));
         this->flush();
         return;
     }
@@ -80,7 +81,7 @@ uint8_t ICACHE_RAM_ATTR FIFO::pop()
 {
     if (numElements == 0)
     {
-        //    Serial.println(F("Buffer empty"));
+        //    DEBUG_PRINTLN(F("Buffer empty"));
         return 0;
     }
     else
@@ -115,7 +116,7 @@ uint8_t ICACHE_RAM_ATTR FIFO::peek()
 {
     if (numElements == 0)
     {
-        //    Serial.println(F("Buffer empty"));
+        //    DEBUG_PRINTLN(F("Buffer empty"));
         return 0;
     }
     else

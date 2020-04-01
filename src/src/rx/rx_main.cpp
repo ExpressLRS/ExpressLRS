@@ -6,18 +6,18 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-// #include "Debug.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
 #include "HwTimer.h"
 #include "HwSerial.h"
+#include "debug.h"
 
 #ifdef PLATFORM_ESP8266
 #include "esp82xx/ESP8266_WebUpdate.h"
 #endif
 
 #ifdef PLATFORM_STM32
-#include "stm32/STM32_UARTinHandler.h"
+//#include "stm32/STM32_UARTinHandler.h"
 #endif
 
 //// CONSTANTS ////
@@ -181,10 +181,7 @@ void LostConnection()
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
-#ifdef PLATFORM_STM32
-
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-#endif
+    platform_connection_state(false);
 }
 
 void ICACHE_RAM_ATTR TentativeConnection()
@@ -208,11 +205,7 @@ void ICACHE_RAM_ATTR GotConnection()
     digitalWrite(GPIO_PIN_LED, 1); // turn on led
     DEBUG_PRINTLN("got conn");
 
-#ifdef PLATFORM_STM32
-
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
-#endif
+    platform_connection_state(true);
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
@@ -369,8 +362,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
 void beginWebsever()
 {
-#ifdef PLATFORM_STM32
-#else
+#ifdef PLATFORM_ESP8266
     Radio.StopContRX();
     hwTimer.stop();
 
@@ -436,12 +428,10 @@ void setup()
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
     // CrsfSerial.Begin(230400); // for linux debugging
 
+    platform_setup();
+
     DEBUG_PRINTLN("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
-
-#ifdef PLATFORM_STM32
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-#endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
 
 #ifdef Regulatory_Domain_AU_915
@@ -523,16 +513,12 @@ void loop()
         buttonNextSample = now + BUTTON_SAMPLE_INTERVAL;
     }
 
-#ifdef Auto_WiFi_On_Boot
-    if ((connectionState == disconnected) && !webUpdateMode && millis() > 10000 && millis() < 11000)
-    {
-        beginWebsever();
-    }
-#endif
-
     crsf.RX_handleUartIn();
 
+    platform_loop(connectionState == connected);
+
 #ifdef PLATFORM_ESP8266
+    now = millis();
     if (webUpdateMode)
     {
         HandleWebUpdate();
@@ -543,5 +529,11 @@ void loop()
             webUpdateLedFlashIntervalLast = millis();
         }
     }
-#endif
+#ifdef Auto_WiFi_On_Boot
+    else if ((connectionState == disconnected) && now > 10000 && now < 11000)
+    {
+        beginWebsever();
+    }
+#endif /* Auto_WiFi_On_Boot */
+#endif /* PLATFORM_ESP8266 */
 }

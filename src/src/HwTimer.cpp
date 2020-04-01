@@ -21,7 +21,6 @@ void HwTimer::updateInterval(uint32_t newTimerInterval)
 
 void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
 {
-    //Serial.println(newPhaseShift);
     int32_t MaxPhaseShift = HwTimer::HWtimerInterval >> 1;
 
     if (newPhaseShift > MaxPhaseShift)

@@ -377,7 +377,7 @@ public:
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t OpenTXsynNextSend;
     static volatile int32_t OpenTXsyncOffset;
-    void ICACHE_RAM_ATTR JustSentRFpacket(); // called from timer
+    void ICACHE_RAM_ATTR UpdateOpenTxSyncOffset(); // called from timer
     void ICACHE_RAM_ATTR sendSyncPacketToTX();
 #endif
     /////////////////////////////////////////////////////////////
