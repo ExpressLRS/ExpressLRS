@@ -5,15 +5,9 @@
 #include "LoRaRadioLib.h"
 #include "CRSF.h"
 #include "FHSS.h"
-#include "LED.h"
 #include "targets.h"
 #include "HwTimer.h"
 #include "debug.h"
-
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#endif
 
 HwTimer hwTimer;
 
@@ -554,7 +548,7 @@ void loop()
     // Process CRSF packets from TX
     crsf.TX_handleUartIn();
 
-    platform_loop();
+    platform_loop(isRXconnected);
 }
 
 void ICACHE_RAM_ATTR TimerExpired()

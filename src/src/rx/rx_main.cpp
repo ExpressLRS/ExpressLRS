@@ -44,8 +44,6 @@ uint8_t scanIndex = 0;
 int32_t HWtimerError;
 int32_t Offset;
 
-bool LED = false;
-
 typedef enum
 {
     connected = 2,
@@ -59,11 +57,13 @@ connectionState_e connectionStatePrev;
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
 bool buttonDown = false;     //is the button current pressed down?
-uint32_t buttonNextSample = 0;
+uint32_t buttonNextSample = BUTTON_SAMPLE_INTERVAL;
 uint32_t buttonLastPressed = 0;
 
 bool webUpdateMode = false;
-uint32_t webUpdateLedFlashIntervalLast;
+#ifdef PLATFORM_ESP8266
+uint32_t webUpdateLedFlashIntervalNext = 0;
+#endif
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
@@ -78,7 +78,7 @@ uint32_t LastValidPacketMicros = 0;
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 
-uint32_t SendLinkStatstoFCintervalNextSend = 0;
+uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 ///////////////////////////////////////////////////////////////
@@ -89,6 +89,19 @@ uint32_t PacketInterval;
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
+
+static bool ledState = false;
+static inline void led_set_state(bool state)
+{
+    ledState = state;
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, state);
+#endif
+}
+static inline void led_toggle(void)
+{
+    led_set_state(!ledState);
+}
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -177,7 +190,7 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     LPF_FreqError.init(0);
 
-    digitalWrite(GPIO_PIN_LED, 0);        // turn off led
+    led_set_state(0);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
@@ -201,8 +214,8 @@ void ICACHE_RAM_ATTR GotConnection()
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
 
-    RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
-    digitalWrite(GPIO_PIN_LED, 1); // turn on led
+    RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
+    led_set_state(1);            // turn on led
     DEBUG_PRINTLN("got conn");
 
     platform_connection_state(true);
@@ -368,6 +381,7 @@ void beginWebsever()
 
     BeginWebUpdate();
     webUpdateMode = true;
+    webUpdateLedFlashIntervalNext = 0;
 #endif
 }
 
@@ -431,7 +445,9 @@ void setup()
     platform_setup();
 
     DEBUG_PRINTLN("Module Booting...");
+#ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
+#endif
     pinMode(GPIO_PIN_BUTTON, INPUT);
 
 #ifdef Regulatory_Domain_AU_915
@@ -486,8 +502,7 @@ void loop()
             Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % RATE_25HZ)); //switch between 200hz, 100hz, 50hz, rates
             LQreset();
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
+            led_toggle();
             DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
             scanIndex++;
         }
@@ -522,15 +537,14 @@ void loop()
     if (webUpdateMode)
     {
         HandleWebUpdate();
-        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+        if (now > webUpdateLedFlashIntervalNext)
         {
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
-            webUpdateLedFlashIntervalLast = millis();
+            led_toggle();
+            webUpdateLedFlashIntervalNext = now + WEB_UPDATE_LED_FLASH_INTERVAL;
         }
     }
 #ifdef Auto_WiFi_On_Boot
-    else if ((connectionState == disconnected) && now > 10000 && now < 11000)
+    else if (now < 11000 && now > 10000 && (connectionState == disconnected))
     {
         beginWebsever();
     }

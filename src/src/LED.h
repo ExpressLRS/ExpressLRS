@@ -1,3 +1,5 @@
+#include "common.h"
+
 /// LED SUPPORT ///////
 #ifdef PLATFORM_ESP32
 #include <NeoPixelBus.h>
@@ -24,38 +26,38 @@ HslColor hslBlack(black);
 void updateLEDs(uint8_t isRXconnected, uint8_t tlm)
 {
 #ifdef PLATFORM_ESP32
-  LEDGlowIndex = millis() % 5000;
+    LEDGlowIndex = millis() % 5000;
 
-  if (LEDGlowIndex < 2500)
-  {
-    LEDGlowIndex = LEDGlowIndex / 10;
-  }
-  else
-  {
-    LEDGlowIndex = 250 - (LEDGlowIndex - 2500) / 10;
-  }
+    if (LEDGlowIndex < 2500)
+    {
+        LEDGlowIndex = LEDGlowIndex / 10;
+    }
+    else
+    {
+        LEDGlowIndex = 250 - (LEDGlowIndex - 2500) / 10;
+    }
 
-  for (int n = 0; n < numberOfLEDs; n++)
-    strip.SetPixelColor(n, RgbColor(LEDGlowIndex, LEDGlowIndex, LEDGlowIndex));
+    for (int n = 0; n < numberOfLEDs; n++)
+        strip.SetPixelColor(n, RgbColor(LEDGlowIndex, LEDGlowIndex, LEDGlowIndex));
 
-  if (isRXconnected || tlm == 0)
-  {
-    if (ExpressLRS_currAirRate->enum_rate == RATE_200HZ)
+    if (isRXconnected || tlm == 0)
     {
-      for (int n = 0; n < numberOfLEDs; n++)
-        strip.SetPixelColor(n, RgbColor(0, 0, LEDGlowIndex));
+        if (ExpressLRS_currAirRate->enum_rate == RATE_200HZ)
+        {
+            for (int n = 0; n < numberOfLEDs; n++)
+                strip.SetPixelColor(n, RgbColor(0, 0, LEDGlowIndex));
+        }
+        if (ExpressLRS_currAirRate->enum_rate == RATE_100HZ)
+        {
+            for (int n = 0; n < numberOfLEDs; n++)
+                strip.SetPixelColor(n, RgbColor(0, LEDGlowIndex, 0));
+        }
+        if (ExpressLRS_currAirRate->enum_rate == RATE_50HZ)
+        {
+            for (int n = 0; n < numberOfLEDs; n++)
+                strip.SetPixelColor(n, RgbColor(LEDGlowIndex, 0, 0));
+        }
     }
-    if (ExpressLRS_currAirRate->enum_rate == RATE_100HZ)
-    {
-      for (int n = 0; n < numberOfLEDs; n++)
-        strip.SetPixelColor(n, RgbColor(0, LEDGlowIndex, 0));
-    }
-    if (ExpressLRS_currAirRate->enum_rate == RATE_50HZ)
-    {
-      for (int n = 0; n < numberOfLEDs; n++)
-        strip.SetPixelColor(n, RgbColor(LEDGlowIndex, 0, 0));
-    }
-  }
-  strip.Show();
+    strip.Show();
 #endif
 }

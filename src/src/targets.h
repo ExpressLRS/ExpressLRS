@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 #define EMPTY()
 #define UNDEF_PIN (0xff)
 

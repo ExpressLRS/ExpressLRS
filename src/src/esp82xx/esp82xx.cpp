@@ -1,25 +1,18 @@
 #include "targets.h"
 #include "debug.h"
+#include "button.h"
 #include <Arduino.h>
 
-bool webUpdateMode = false;
+//Button button;
 
 void platform_setup(void)
 {
+    //button.init(GPIO_PIN_BUTTON, true);
 }
 
 void platform_loop(bool connected)
 {
-    if (webUpdateMode)
-    {
-        HandleWebUpdate();
-        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
-        {
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
-            webUpdateLedFlashIntervalLast = millis();
-        }
-    }
+    (void)connected;
 }
 
 void platform_connection_state(bool connected)

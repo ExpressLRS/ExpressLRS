@@ -404,6 +404,8 @@ private:
 #endif
 
     static void inline nullCallback(void);
+
+    void command_find_and_dispatch(void);
 };
 
 #endif

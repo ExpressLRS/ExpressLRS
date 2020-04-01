@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 
         if (SerialInPacketPtr == (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
         {
-            char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+            uint8_t CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
             if (CalculatedCRC == inChar)
             {
@@ -492,20 +492,22 @@ void CRSF::RX_handleUartIn(void)
             SerialInPacketPtr = 0;
             CRSFframeActive = true;
         }
-
-        if (SerialInPacketPtr == 1 && CRSFframeActive == true) // we read the packet length and save it
+        else if (CRSFframeActive)
         {
-            SerialInPacketLen = inChar;
-            CRSFframeActive = true;
-        }
-
-        if (CRSFframeActive && SerialInPacketPtr > 0) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-        {
-            if (SerialInPacketPtr > SerialInPacketLen + 2)
+            if (SerialInPacketPtr == 1) // we read the packet length and save it
             {
-                SerialInPacketPtr = 0;
-                CRSFframeActive = false;
-                _dev->flush_read();
+                SerialInPacketLen = inChar;
+                CRSFframeActive = true;
+            }
+
+            if (CRSFframeActive && SerialInPacketPtr > 0) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+            {
+                if (SerialInPacketPtr > SerialInPacketLen + 2)
+                {
+                    SerialInPacketPtr = 0;
+                    CRSFframeActive = false;
+                    _dev->flush_read();
+                }
             }
         }
 
@@ -514,7 +516,7 @@ void CRSF::RX_handleUartIn(void)
 
         if (SerialInPacketPtr == SerialInPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
         {
-            char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+            uint8_t CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
             if (CalculatedCRC == inChar)
             {
@@ -543,3 +545,63 @@ void CRSF::RX_handleUartIn(void)
     }
 }
 #endif // RX
+
+void CRSF::command_find_and_dispatch(void)
+{
+    volatile uint8_t *ptr = SerialInBuffer;
+    uint8_t count = SerialInPacketPtr;
+    if (count < 3)
+        return;
+
+    while (--count)
+    {
+        uint8_t cmd = *ptr++;
+
+        if (cmd == CRSF_ADDRESS_CRSF_RECEIVER ||
+            cmd == CRSF_ADDRESS_CRSF_TRANSMITTER ||
+            cmd == CRSF_SYNC_BYTE)
+        {
+            uint8_t len = *ptr++;
+            if (len < 3)
+            {
+                printf("  invalid len %u for cmd: %X!\n", len, cmd);
+            }
+            else if (len <= count)
+            {
+                // enough data, check crc...
+                // Note: CRC is calculated over actual data bytes = [len - 1(cmd) - 1(len) - 1(crc)]
+                uint8_t crc = CalcCRC(ptr, (len - 3));
+                if (crc == ptr[len - 3])
+                {
+                    // CRC ok, dispatch command
+                    //printf("  CRC OK\n");
+                }
+                else
+                {
+                    // Bad CRC...
+                    //printf("  CRC BAD\n");
+                }
+                // pass handled command
+                ptr += (len - 3);
+                uint8_t end = ptr - SerialInBuffer + 1;
+                int needcopy = (int)SerialInPacketPtr - (end);
+                if (0 < needcopy)
+                {
+                    memmove((void *)&SerialInBuffer[0], (void *)&SerialInBuffer[end], needcopy);
+                }
+                SerialInPacketPtr = count = needcopy;
+                ptr = SerialInBuffer;
+            }
+            else
+            {
+                // need more data...
+                goto exit_dispatch;
+            }
+        }
+    }
+
+    SerialInPacketPtr = 0; // just grab, discard all
+
+exit_dispatch:
+    return;
+}
