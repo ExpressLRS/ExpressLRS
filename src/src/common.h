@@ -1,12 +1,16 @@
 #pragma once
 
+// define exacly one frequency band of operation here
+
+// #define Regulatory_Domain_AU_915
+// #define Regulatory_Domain_EU_868
+// #define Regulatory_Domain_AU_433
+// #define Regulatory_Domain_EU_433
+// #define Regulatory_Domain_FCC_915
+
 #include "FHSS.h"
 #include "LoRaRadioLib.h"
 #include <Arduino.h>
-
-// define frequnecy band of operation
-#define Regulatory_Domain_AU_915
-// #define Regulatory_Domain_AU_433
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
 #define Auto_WiFi_On_Boot
@@ -49,11 +53,12 @@ typedef enum
 
 typedef enum
 {
-    RATE_4HZ = 4,
-    RATE_25HZ = 3,
-    RATE_50HZ = 2,
-    RATE_100HZ = 1,
     RATE_200HZ = 0,
+    RATE_100HZ,
+    RATE_50HZ,
+    RATE_25HZ,
+    RATE_4HZ,
+    RATE_MAX
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 #define MaxRFrate 2
@@ -74,17 +79,11 @@ typedef struct expresslrs_mod_settings_s
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;
 
-extern expresslrs_mod_settings_s RF_RATE_200HZ;
-extern expresslrs_mod_settings_s RF_RATE_100HZ;
-extern expresslrs_mod_settings_s RF_RATE_50HZ;
-extern expresslrs_mod_settings_s RF_RATE_25HZ;
-extern expresslrs_mod_settings_s RF_RATE_4HZ;
+const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
 
-extern const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[5];
-
-extern expresslrs_mod_settings_s ExpressLRS_nextAirRate;
-extern expresslrs_mod_settings_s ExpressLRS_currAirRate;
-extern expresslrs_mod_settings_s ExpressLRS_prevAirRate;
+//extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
+extern const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+extern const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 #define MaxPower100mW_Module 20
 #define MaxPower1000mW_Module 30

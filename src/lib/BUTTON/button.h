@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../src/targets.h"
 #include <Arduino.h>
+#include "../../src/targets.h"
 
 class button
 {

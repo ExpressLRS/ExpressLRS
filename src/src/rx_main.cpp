@@ -21,11 +21,11 @@
 #endif
 
 //// CONSTANTS ////
-#define BUTTON_SAMPLE_INTERVAL          150
-#define WEB_UPDATE_PRESS_INTERVAL       2000 // hold button for 2 sec to enable webupdate mode
-#define BUTTON_RESET_INTERVAL           4000 //hold button for 4 sec to reboot RX
-#define WEB_UPDATE_LED_FLASH_INTERVAL   25
-#define SEND_LINK_STATS_TO_FC_INTERVAL  100
+#define BUTTON_SAMPLE_INTERVAL 150
+#define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
+#define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
+#define WEB_UPDATE_LED_FLASH_INTERVAL 25
+#define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
 hwTimer hwTimer;
@@ -90,14 +90,14 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate.enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval;
+    uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval;
     if (modresult != 0)
     {
         return;
@@ -118,7 +118,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         return; // don't bother sending tlm if disconnected
     }
-    uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate.TLMinterval);
+    uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult != 0)
     {
         return;
@@ -173,7 +173,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
 #ifdef PLATFORM_STM32
 
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
 #endif
 }
 
@@ -200,8 +200,7 @@ void ICACHE_RAM_ATTR GotConnection()
 
 #ifdef PLATFORM_STM32
 
-        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 
 #endif
 }
@@ -268,7 +267,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
-    case SWITCH_DATA_PACKET:                                                                                                    // Switch Data Packet
+    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
         if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
         {
             UnpackSwitchData();
@@ -296,7 +295,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 GotConnection();
             }
 
-            // if (ExpressLRS_currAirRate.enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
+            // if (ExpressLRS_currAirRate->enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
             // {
             //     Serial.println("update air rate");
             //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
@@ -314,11 +313,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate.interval);
-    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate.interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
     hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
 
-    if (((NonceRXlocal + 1) % ExpressLRS_currAirRate.FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+    if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
         int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
         //Serial.print(freqerror);
@@ -406,13 +405,14 @@ void ICACHE_RAM_ATTR sampleButton()
     buttonPrevValue = buttonValue;
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_mod_settings_s mode) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
+    const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
     Radio.StopContRX();
-    Radio.Config(mode.bw, mode.sf, mode.cr, Radio.currFreq, Radio._syncWord);
+    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = mode;
-    hwTimer.updateInterval(mode.interval);
-    LPF_PacketInterval.init(mode.interval);
+    hwTimer.updateInterval(mode->interval);
+    LPF_PacketInterval.init(mode->interval);
     //LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
@@ -429,7 +429,10 @@ void setup()
 
 #ifdef PLATFORM_ESP8266
     Serial.begin(420000);
+
 #endif
+    // Serial.begin(230400); // for linux debugging
+
     Serial.println("Module Booting...");
     pinMode(GPIO_PIN_LED, OUTPUT);
 
@@ -441,9 +444,17 @@ void setup()
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#elif defined Regulatory_Domain_AU_433
+#elif defined Regulatory_Domain_FCC_915
+    Serial.println("Setting 915MHz Mode");
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+#elif defined Regulatory_Domain_EU_868
+    Serial.println("Setting 868MHz Mode");
+    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
+#else
+#error No regulatory domain defined, please define one in common.h
 #endif
 
     FHSSrandomiseFHSSsequence();
@@ -468,29 +479,29 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallback;
     hwTimer.init();
 
-    SetRFLinkRate(RF_RATE_200HZ);
+    SetRFLinkRate(RATE_200HZ);
     hwTimer.init();
 }
 
 void loop()
 {
 
-    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate.RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate.RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
+    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             Radio.SetFrequency(GetInitialFreq());
-            SetRFLinkRate(ExpressLRS_AirRateConfig[scanIndex % 3]); //switch between 200hz, 100hz, 50hz, rates
+            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % RATE_25HZ)); //switch between 200hz, 100hz, 50hz, rates
             LQreset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
-            Serial.println(ExpressLRS_currAirRate.interval);
+            Serial.println(ExpressLRS_currAirRate->interval);
             scanIndex++;
         }
         RFmodeLastCycled = millis();
     }
 
-    if (millis() > (LastValidPacket + ExpressLRS_currAirRate.RFmodeCycleAddtionalTime)) // check if we lost conn.
+    if (millis() > (LastValidPacket + ExpressLRS_currAirRate->RFmodeCycleAddtionalTime)) // check if we lost conn.
     {
         LostConnection();
     }

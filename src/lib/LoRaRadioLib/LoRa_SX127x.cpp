@@ -163,7 +163,7 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
 {
   //todo make function turn on PA_BOOST ect
   uint8_t status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power, 7, 0);
-  
+
   currPWR = Power;
 
   if (status != ERR_NONE)
@@ -423,7 +423,6 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
 
 //on the ESP32 we can use a hardware timer to do fancy things like schedule regular TX transmissions
 
-static SemaphoreHandle_t timer_sem;
 hw_timer_t *timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t TimerTask_handle = NULL;
@@ -731,6 +730,7 @@ uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, ui
   {
     SX1278config(bw, sf, cr, freq, syncWord);
   }
+  return 0;
 }
 
 uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)

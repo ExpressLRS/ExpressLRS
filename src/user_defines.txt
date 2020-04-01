@@ -1,0 +1,22 @@
+#
+# This file can be used to pass defines for compiler
+#
+# Purpose is mainly to define user specific variables
+# without modifying the actual source codes. These
+# flags are passed for all build targets.
+#
+# Define need to start with '-D' keyword
+#
+
+### Enable one of these regulatory domains
+
+-DRegulatory_Domain_AU_915
+#-DRegulatory_Domain_EU_868
+#-DRegulatory_Domain_AU_433
+#-DRegulatory_Domain_EU_433
+#-DRegulatory_Domain_FCC_915
+
+
+### Set your UID here. Must be 6 bytes!
+
+-DMY_UID=0xBA,0xBE,0xCA,0xFE,0xAC,0xDC
