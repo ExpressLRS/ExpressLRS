@@ -316,7 +316,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #ifdef PLATFORM_STM32
-                void ICACHE_RAM_ATTR CRSF::uartWDT()
+                void ICACHE_RAM_ATTR CRSF::UARTwdt()
                 {
                     if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
                     {

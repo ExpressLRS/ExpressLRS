@@ -637,7 +637,7 @@ void loop()
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
   crsf.sendSyncPacketToTX();
-  crsf.STM32wdtUART();
+  crsf.UARTwdt();
   button.handle();
 #endif
 }
