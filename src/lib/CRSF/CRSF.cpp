@@ -308,6 +308,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         }
 #endif
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
+
 #ifdef PLATFORM_ESP32
         void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
         {
@@ -374,6 +376,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
                     }
                 }
+#endif
 
 #ifdef PLATFORM_ESP32
 
