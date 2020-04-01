@@ -50,8 +50,9 @@ typedef struct {
 class MSP
 {
 public:
-    bool processReceivedByte(uint8_t c);
+    bool        processReceivedByte(uint8_t c);
     mspPacket_t getReceivedPacket() const;
+    void        markPacketReceived();
 
 private:
     mspState_e  m_inputState;

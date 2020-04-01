@@ -609,6 +609,7 @@ void loop()
   
     if (packetComplete) {
       mspPacket_t packet = MSPProtocol.getReceivedPacket();
+      MSPProtocol.markPacketReceived();
       Serial.print("Got an MSP packet with function code = ");
       Serial.println(packet.function);
     }

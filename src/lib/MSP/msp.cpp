@@ -39,9 +39,6 @@ MSP::processReceivedByte(uint8_t c)
             if (c == '$') {
                 m_inputState = MSP_HEADER_START;
             }
-            else {
-                return false;
-            }
             break;
 
         case MSP_HEADER_START:
@@ -124,11 +121,20 @@ MSP::processReceivedByte(uint8_t c)
             break;
     }
 
-    return true;
+    if (m_inputState == MSP_COMMAND_RECEIVED) {
+        return true;
+    }
+    return false;
 }
 
 mspPacket_t
 MSP::getReceivedPacket() const
 {
     return m_packet;
+}
+
+void
+MSP::markPacketReceived()
+{
+    m_inputState = MSP_IDLE;
 }
