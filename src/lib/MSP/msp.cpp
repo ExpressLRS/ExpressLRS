@@ -32,6 +32,8 @@ uint8_t crc8_dvb_s2(uint8_t crc, unsigned char a)
 bool
 MSP::processReceivedByte(uint8_t c)
 {
+    Serial.print("processReceivedByte ");
+    Serial.println(m_inputState);
     switch (m_inputState) {
 
         case MSP_IDLE:
@@ -91,12 +93,13 @@ MSP::processReceivedByte(uint8_t c)
                 m_packet.flags = header->flags;
                 // reset the offset iterator for re-use in payload below
                 m_offset = 0;
+                m_inputState = MSP_PAYLOAD_V2_NATIVE;
             }
             break;
 
         case MSP_PAYLOAD_V2_NATIVE:
             // Read bytes until we reach payloadSize
-            m_inputBuffer[m_offset++] = c;
+            m_packet.payload[m_offset++] = c;
             m_crc = crc8_dvb_s2(m_crc, c);
 
             // If we've received the correct amount of bytes for payload
@@ -112,6 +115,8 @@ MSP::processReceivedByte(uint8_t c)
                 m_inputState = MSP_COMMAND_RECEIVED;
             }
             else {
+                Serial.println("CRC failure on MSP packet");
+                Serial.println(m_crc);
                 m_inputState = MSP_IDLE;
             }
             break;
