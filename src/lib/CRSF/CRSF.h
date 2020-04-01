@@ -357,8 +357,9 @@ public:
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
     void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
-    void ICACHE_RAM_ATTR RX_handleUartIn(void);
+    void sendLinkStatisticsToFC();
+    void RX_processPacket(void);
+    void RX_handleUartIn(void);
 
 #else
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();

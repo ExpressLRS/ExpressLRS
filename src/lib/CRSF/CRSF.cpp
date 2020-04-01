@@ -237,21 +237,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
 bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 {
+    bool ret = false;
     if (CRSFstate == false)
     {
         CRSFstate = true;
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
     }
+
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
         DEBUG_PRINTLN("Got Other Packet");
-        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
+            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
             ParameterUpdateData[0] = SerialInBuffer[5];
             ParameterUpdateData[1] = SerialInBuffer[6];
             RecvParameterUpdate();
-            return true;
+            ret = true;
         }
     }
     else if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -262,16 +265,16 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
         GetChannelDataIn();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
-        return true;
+        ret = true;
     }
-    return false;
+    return ret;
 }
 
-void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void)
+void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
     wdtUART();
 
-    uint8_t inChar = CrsfSerial.read();
+    uint8_t inChar = _dev->read();
 
     if (0 < inChar)
     {
@@ -307,8 +310,6 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void)
                 }
 
                 GoodPktsCount++;
-                SerialInPacketPtr = 0;
-                CRSFframeActive = false;
             }
             else
             {
@@ -325,11 +326,11 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void)
                 }
                 DEBUG_PRINTLN();
                 DEBUG_PRINTLN();
-                CRSFframeActive = false;
-                SerialInPacketPtr = 0;
                 BadPktsCount++;
                 _dev->flush_read();
             }
+            SerialInPacketPtr = 0;
+            CRSFframeActive = false;
         }
     }
 }
@@ -406,7 +407,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 #endif // TX
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
+void CRSF::sendLinkStatisticsToFC()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
 
@@ -441,7 +442,100 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     //DEBUG_PRINT(".");
 }
 
-void ICACHE_RAM_ATTR CRSF::RX_handleUartIn(void)
+void CRSF::RX_processPacket()
 {
+    if (SerialInBuffer[2] == CRSF_FRAMETYPE_COMMAND)
+    {
+        //DEBUG_PRINTLN("Got CMD Packet");
+        if (SerialInBuffer[3] == 0x62 && SerialInBuffer[4] == 0x6c)
+        {
+            delay(100);
+            DEBUG_PRINTLN("Jumping to Bootloader...");
+            delay(100);
+#ifdef PLATFORM_STM32
+            HAL_NVIC_SystemReset();
+#endif
+#ifdef PLATFORM_ESP8266
+            ESP.restart();
+#endif
+        }
+    }
+    else if (SerialInBuffer[2] == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        TLMbattSensor.voltage = (SerialInBuffer[3] << 8) + SerialInBuffer[4];
+        TLMbattSensor.current = (SerialInBuffer[5] << 8) + SerialInBuffer[6];
+        TLMbattSensor.capacity = (SerialInBuffer[7] << 16) + (SerialInBuffer[8] << 8) + SerialInBuffer[9];
+        TLMbattSensor.remaining = SerialInBuffer[9];
+    }
+}
+
+void CRSF::RX_handleUartIn(void)
+{
+    char inChar;
+    while ((inChar = _dev->read()) > 0)
+    {
+        //UARTLastDataTime = millis();
+
+        if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
+        {
+            // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+            SerialInPacketPtr = 0;
+        }
+
+        // optimize this!
+        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+        {
+            SerialInPacketPtr = 0;
+            CRSFframeActive = true;
+        }
+
+        if (SerialInPacketPtr == 1 && CRSFframeActive == true) // we read the packet length and save it
+        {
+            SerialInPacketLen = inChar;
+            CRSFframeActive = true;
+        }
+
+        if (CRSFframeActive && SerialInPacketPtr > 0) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+        {
+            if (SerialInPacketPtr > SerialInPacketLen + 2)
+            {
+                SerialInPacketPtr = 0;
+                CRSFframeActive = false;
+                _dev->flush_read();
+            }
+        }
+
+        SerialInBuffer[SerialInPacketPtr] = inChar;
+        SerialInPacketPtr++;
+
+        if (SerialInPacketPtr == SerialInPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
+        {
+            char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+
+            if (CalculatedCRC == inChar)
+            {
+                RX_processPacket();
+            }
+            else
+            {
+                //DEBUG_PRINTLN("UART CRC failure");
+                //DEBUG_PRINTLN(SerialInPacketPtr, HEX);
+                //DEBUG_PRINT("Expected: ");
+                //DEBUG_PRINTLN(CalculatedCRC, HEX);
+                //DEBUG_PRINT("Got: ");
+                //DEBUG_PRINTLN(inChar, HEX);
+                //for (int i = 0; i < SerialInPacketPtr + 2; i++)
+                // {
+                //DEBUG_PRINT(SerialInBuffer[i], HEX);
+                //    DEBUG_PRINT(" ");
+                //}
+                //DEBUG_PRINTLN();
+                //DEBUG_PRINTLN();
+                _dev->flush_read();
+            }
+            CRSFframeActive = false;
+            SerialInPacketPtr = 0;
+        }
+    }
 }
 #endif // RX

@@ -20,9 +20,6 @@
 #include "stm32/STM32_UARTinHandler.h"
 #endif
 
-#define DEBUG_PRINT(...) CrsfSerial.print(__VA_ARGS__)
-#define DEBUG_PRINTLN(...) CrsfSerial.println(__VA_ARGS__)
-
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
@@ -81,7 +78,7 @@ uint32_t LastValidPacketMicros = 0;
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 
-uint32_t SendLinkStatstoFCintervalLastSent = 0;
+uint32_t SendLinkStatstoFCintervalNextSend = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 ///////////////////////////////////////////////////////////////
@@ -169,7 +166,7 @@ void ICACHE_RAM_ATTR HWtimerCallback()
     NonceRXlocal++;
 }
 
-void ICACHE_RAM_ATTR LostConnection()
+void LostConnection()
 {
     if (connectionState == disconnected)
     {
@@ -382,7 +379,7 @@ void beginWebsever()
 #endif
 }
 
-void ICACHE_RAM_ATTR sampleButton()
+void sampleButton()
 {
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
     uint32_t now = millis();
@@ -421,7 +418,7 @@ void ICACHE_RAM_ATTR sampleButton()
     buttonPrevValue = buttonValue;
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+void SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
     const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
     Radio.StopContRX();
@@ -513,10 +510,10 @@ void loop()
     }
 
     now = millis();
-    if ((now > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
+    if ((now > SendLinkStatstoFCintervalNextSend) && connectionState != disconnected)
     {
         crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalLastSent = now;
+        SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
     }
 
     now = millis();
@@ -533,9 +530,7 @@ void loop()
     }
 #endif
 
-#ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-#endif
+    crsf.RX_handleUartIn();
 
 #ifdef PLATFORM_ESP8266
     if (webUpdateMode)
