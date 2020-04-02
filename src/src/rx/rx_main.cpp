@@ -54,8 +54,8 @@ typedef enum
 connectionState_e connectionState = disconnected;
 
 //// Variables Relating to Button behaviour ////
-bool buttonPrevValue = true; //default pullup
-bool buttonDown = false;     //is the button current pressed down?
+bool buttonPrevValue = false;
+bool buttonDown = false; //is the button current pressed down?
 uint32_t buttonNextSample = BUTTON_SAMPLE_INTERVAL;
 uint32_t buttonLastPressed = 0;
 
@@ -399,43 +399,57 @@ void beginWebsever()
 #endif
 }
 
+#ifndef INVERTED_BUTTON
+#define INVERTED_BUTTON 1
+#endif // INVERTED_BUTTON
+
 void sampleButton()
 {
-    bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
     uint32_t now = millis();
-
-    if (buttonValue == false && buttonPrevValue == true)
-    { //falling edge
-        buttonLastPressed = now;
-        buttonDown = true;
-        DEBUG_PRINTLN("Manual Start");
-        Radio.SetFrequency(GetInitialFreq());
-        Radio.RXnb();
-    }
-
-    if (buttonValue == true && buttonPrevValue == false) //rising edge
+    if (now > buttonNextSample)
     {
-        buttonDown = false;
-    }
-    else if (buttonDown)
-    { // button held down
-        now -= buttonLastPressed;
-        if (now > WEB_UPDATE_PRESS_INTERVAL)
-        {
-            if (!webUpdateMode)
-            {
-                beginWebsever();
+        buttonNextSample = now + BUTTON_SAMPLE_INTERVAL;
+
+        bool buttonValue = digitalRead(GPIO_PIN_BUTTON) ^ INVERTED_BUTTON;
+
+        if (buttonValue && buttonPrevValue)
+        { // button still pressed
+            if (!buttonDown)
+            { // Debounce over
+                DEBUG_PRINTLN("Manual Start");
+                Radio.SetFrequency(GetInitialFreq());
+                Radio.RXnb();
+                buttonLastPressed = now;
+                buttonDown = true;
+            }
+            else if (now > buttonLastPressed)
+            { // button held down
+                now -= buttonLastPressed;
+                if (now > WEB_UPDATE_PRESS_INTERVAL)
+                {
+                    if (!webUpdateMode)
+                    {
+                        beginWebsever();
+                    }
+                }
+                else if (now > BUTTON_RESET_INTERVAL)
+                {
+#ifdef PLATFORM_STM32
+                    HAL_NVIC_SystemReset();
+#endif
+#ifdef PLATFORM_ESP8266
+                    ESP.restart();
+#endif
+                }
             }
         }
-        else if (now > BUTTON_RESET_INTERVAL)
+        else
         {
-#ifdef PLATFORM_ESP8266
-            ESP.restart();
-#endif
+            buttonDown = false;
         }
-    }
 
-    buttonPrevValue = buttonValue;
+        buttonPrevValue = buttonValue;
+    }
 }
 
 void SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
@@ -534,12 +548,7 @@ void loop()
         SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
     }
 
-    now = millis();
-    if (now > buttonNextSample)
-    {
-        sampleButton();
-        buttonNextSample = now + BUTTON_SAMPLE_INTERVAL;
-    }
+    sampleButton();
 
     crsf.RX_handleUartIn();
 
