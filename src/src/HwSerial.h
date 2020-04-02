@@ -1,6 +1,7 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include <Arduino.h>
 #include <HardwareSerial.h>
 
 class FIFO;
@@ -28,10 +29,14 @@ public:
     size_t write(const uint8_t *buff, size_t len)
     {
         size_t ret;
+        enable_transmitter();
 #ifdef PLATFORM_ESP32
         vTaskDelay(1 / portTICK_PERIOD_MS);
 #endif
-        enable_transmitter();
+#ifdef TARGET_R9M_TX
+        //delayMicroseconds(200);
+        delay(1);
+#endif
         ret = HardwareSerial::write(buff, len);
         enable_receiver();
         return ret;
