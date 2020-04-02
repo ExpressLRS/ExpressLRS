@@ -1,0 +1,22 @@
+=== 
+openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c "program bootloader/Bootloader.hex verify reset exit"
+===
+
+openocd -f ~/openocd_stm32f1.cfg
+=> telnet localhost 4444
+
+command:
+reset halt
+init
+flash probe 0
+# disable protect:
+flash protect 0 0 127 off
+reset halt
+stm32f1x mass_erase 0
+
+lash write_image STM3210CTest/test_rom.elf
+
+# protect back on:
+monitor flash protect 0 0 127 on
+
+
