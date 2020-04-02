@@ -2,10 +2,9 @@
 #define DEBUG_H_
 
 #include <Arduino.h>
+#include <HardwareSerial.h>
 #include "targets.h"
-
-class HwSerial;
-extern HwSerial CrsfSerial;
+#include "HwSerial.h"
 
 #ifndef DEBUG_SERIAL
 
@@ -15,10 +14,10 @@ extern HwSerial CrsfSerial;
 #define DEBUG_SERIAL Serial
 #elif defined(PLATFORM_ESP8266)
 //#define DEBUG_SERIAL CrsfSerial
-#define DEBUG_SERIAL Serial1 // TX1 as output
+#define DEBUG_SERIAL Serial // TX1 as output
 #elif defined(TARGET_R9M_RX)
 //#define DEBUG_SERIAL CrsfSerial
-#define DEBUG_SERIAL Serial
+//#define DEBUG_SERIAL Serial
 #endif
 
 #endif // ifndef DEBUG_SERIAL
