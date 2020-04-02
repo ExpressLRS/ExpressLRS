@@ -54,11 +54,10 @@ typedef enum
 typedef enum
 {
     RATE_200HZ = 0,
-    RATE_100HZ,
-    RATE_50HZ,
-    RATE_25HZ,
-    RATE_4HZ,
-    RATE_MAX
+    RATE_100HZ = 1,
+    RATE_50HZ = 2,
+    RATE_25HZ = 3,
+    RATE_4HZ = 4
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 #define MaxRFrate 2

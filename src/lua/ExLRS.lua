@@ -20,6 +20,7 @@ local readIdState = 0
 local sendIdState = 0
 local timestamp = 0
 local sensorIdTx = 17 -- sensorid 18
+local gotFirstResp = false
 
 local binding = false
 
@@ -38,12 +39,12 @@ local TLMinterval = {
     elements = 9
 }
 local MaxPower = {
-    selected = 7,
+    selected = 1,
     list = {
-        '500 mW', '250 mW', '100 mW', '50 mW', '25 mW', 'Pit mode', '------'
+        '------', '10 mW', '25 mW', '50 mW', '100 mW', '250 mW', '500 mW', '1000 mW', '2000 mW',
     },
-    dataId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0xFF},
-    elements = 7
+    dataId = {0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    elements = 9
 }
 local RFfreq = {
     selected = 4,
@@ -118,32 +119,32 @@ local function readId()
     end
 end
 
-local function sendId()
-    -- stop sensors
-    if sendIdState >= 1 and sendIdState <= 15 and getTime() - timestamp > 11 then
-        sportTelemetryPush(sensorIdTx, 0x21, 0xFFFF, 0x80)
-        timestamp = getTime()
-        sendIdState = sendIdState + 1
-    end
-    -- send id
-    if sendIdState >= 16 and sendIdState <= 30 and getTime() - timestamp > 11 then
-        sportTelemetryPush(sensorIdTx, 0x31,
-                           sensor.sensorType.dataId[sensor.sensorType.selected],
-                           0x01 + (sensor.sensorId.selected - 1) * 256)
-        timestamp = getTime()
-        sendIdState = sendIdState + 1
-    end
-    -- restart sensors
-    if sendIdState >= 31 and sendIdState <= 45 and getTime() - timestamp > 11 then
-        sportTelemetryPush(sensorIdTx, 0x20, 0xFFFF, 0x80)
-        timestamp = getTime()
-        sendIdState = sendIdState + 1
-    end
-    if sendIdState == 46 then
-        sendIdState = 0
-        lcdChange = true
-    end
-end
+-- local function sendId()
+    --stop sensors
+    -- if sendIdState >= 1 and sendIdState <= 15 and getTime() - timestamp > 11 then
+        -- sportTelemetryPush(sensorIdTx, 0x21, 0xFFFF, 0x80)
+        -- timestamp = getTime()
+        -- sendIdState = sendIdState + 1
+    -- end
+    --send id
+    -- if sendIdState >= 16 and sendIdState <= 30 and getTime() - timestamp > 11 then
+        -- sportTelemetryPush(sensorIdTx, 0x31,
+                           -- sensor.sensorType.dataId[sensor.sensorType.selected],
+                           -- 0x01 + (sensor.sensorId.selected - 1) * 256)
+        -- timestamp = getTime()
+        -- sendIdState = sendIdState + 1
+    -- end
+    --restart sensors
+    -- if sendIdState >= 31 and sendIdState <= 45 and getTime() - timestamp > 11 then
+        -- sportTelemetryPush(sensorIdTx, 0x20, 0xFFFF, 0x80)
+        -- timestamp = getTime()
+        -- sendIdState = sendIdState + 1
+    -- end
+    -- if sendIdState == 46 then
+        -- sendIdState = 0
+        -- lcdChange = true
+    -- end
+-- end
 
 --[[
 
@@ -171,6 +172,9 @@ local function processResp()
                 TLMinterval.selected = data[4]
                 MaxPower.selected = data[5]
                 RFfreq.selected = data[6]
+				if (gotFirstResp == false) then
+					gotFirstResp = true -- detect when first contact is made with TX module 
+				end
             end
         end
 	tries = tries+1
@@ -243,7 +247,9 @@ end
 local function init_func()
     -- first push so that we get the current values. Didn't seem to work.
     crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-    --processResp()
+	--crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+	--crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    processResp()
 	--if LCD_W == 480 then
     --    refreshHorus()
    -- else
@@ -271,10 +277,12 @@ end
 local function run_func(event)
 
     local pushed = false
-
-
-    -- first check if we have data from the module
-    processResp()
+	
+	processResp() -- first check if we have data from the module
+	
+	if gotFirstResp == false then
+		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
+	end
 
     -- now process key events
     if event == EVT_ROT_LEFT or 
@@ -282,6 +290,7 @@ local function run_func(event)
        event == EVT_DOWN_BREAK then
         if selection.state == false then
             decrease(selection)
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
         else
             if selection.selected == 1 then
 	        -- AirRate
@@ -306,6 +315,7 @@ local function run_func(event)
 	   event == EVT_UP_BREAK then
         if selection.state == false then
             increase(selection)
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
         else
             if selection.selected == 1 then
 	        -- AirRate
@@ -336,133 +346,11 @@ local function run_func(event)
 
     if not pushed then
         -- ensure we get up to date values from the module for next time
-        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+        --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
     end
 
     refreshLCD()
 
-    return 0
-end
-
-local function run_funcXXX(event)
-
-    if updateValues == true or refresh == 25 then
-        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-        processResp()
-        updateValues = false
-    end
-    -- print(event)
-    if refresh == 25 or lcdChange == true or selection.state == true then
-        if LCD_W == 480 then
-            refreshHorus()
-        else
-            refreshTaranis()
-        end
-        refresh = 0
-    end
-
-    -- left = up/decrease right = down/increase
-    if selection.state == false then
-        if event == EVT_ROT_LEFT or event == EVT_MINUS_BREAK or event ==
-            EVT_DOWN_BREAK then
-            decrease(selection)
-            lcdChange = true
-        elseif event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
-            EVT_UP_BREAK then
-            increase(selection)
-            lcdChange = true
-        end
-    elseif selection.state == true then
-        if event == EVT_ROT_LEFT or event == EVT_MINUS_BREAK or event ==
-            EVT_DOWN_BREAK then
-
-            if selection.selected == 1 then
-                -- increase(AirRate)
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x00})
-            elseif selection.selected == 2 then
-                -- decrease(TLMinterval)
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x00})
-            elseif selection.selected == 3 then
-                -- increase(MaxPower)
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x00})
-            elseif selection.selected == 4 then
-                -- increase(RFfreq)
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x00})
-            end
-
-            lcdChange = true
-            updateValues = true
-
-        elseif event == EVT_ROT_RIGHT or event == EVT_PLUS_BREAK or event ==
-            EVT_UP_BREAK then
-
-            if selection.selected == 1 then
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x01})
-            end
-
-            if selection.selected == 2 then
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x01})
-            end
-
-            if selection.selected == 3 then
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x01})
-            end
-
-            if selection.selected == 4 then
-                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x01})
-            end
-
-            lcdChange = true
-            updateValues = true
-
-        end
-        processResp()
-    end
-
-    if event == EVT_ENTER_BREAK and sendIdState == 0 then
-        if selection.selected < 5 then
-            selection.state = not selection.state
-            -- if selection.selected == 1 and sensor.sensorId.selected == 29 and sensor.sensorType.selected ~= 11 and selection.state == false then
-            -- readIdState = 1
-            -- end
-            lcdChange = true
-        end
-    elseif event == EVT_EXIT_BREAK then
-        if selection.selected == 1 and sensor.sensorId.selected == 29 and
-            sensor.sensorType.selected ~= 11 and selection.state == true then
-            readIdState = 1
-        end
-        selection.state = false
-        lcdChange = true
-    elseif event == EVT_ENTER_LONG or event == EVT_MENU_LONG then
-        if selection.selected > 3 then
-            selection.state = not selection.state
-            lcdChange = true
-        end
-
-        if selection.selected == 5 or selection.selected == 6 then
-            if binding then
-                playTone(1750, 150, 0)
-                playTone(1500, 150, 200)
-            else
-                playTone(1500, 150, 0)
-                playTone(1750, 150, 200)
-            end
-            binding = not binding
-        end
-        -- killEvents(EVT_ENTER_LONG) -- not working
-        -- if sensor.sensorId.selected ~= 29 and sensor.sensorType.selected ~= 11  then
-        --  sendIdState = 1
-        --  lcdChange = true
-        -- end
-    end
-    -- if readIdState > 0 then readId() end
-    -- if sendIdState > 0 then sendId() end
-    if lcdChange then
-        refreshHorus()
-        lcdChange = false
-    end
-    
     return 0
 end
 

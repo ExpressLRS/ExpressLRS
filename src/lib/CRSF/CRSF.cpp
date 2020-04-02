@@ -687,28 +687,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
         memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
-#if 0
-        const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
-        ChannelDataIn[0] = (rcChannels->ch0);
-        ChannelDataIn[1] = (rcChannels->ch1);
-        ChannelDataIn[2] = (rcChannels->ch2);
-        ChannelDataIn[3] = (rcChannels->ch3);
-        ChannelDataIn[4] = (rcChannels->ch4);
-        ChannelDataIn[5] = (rcChannels->ch5);
-        ChannelDataIn[6] = (rcChannels->ch6);
-        ChannelDataIn[7] = (rcChannels->ch7);
-        ChannelDataIn[8] = (rcChannels->ch8);
-        ChannelDataIn[9] = (rcChannels->ch9);
-        ChannelDataIn[10] = (rcChannels->ch10);
-        ChannelDataIn[11] = (rcChannels->ch11);
-        ChannelDataIn[12] = (rcChannels->ch12);
-        ChannelDataIn[13] = (rcChannels->ch13);
-        ChannelDataIn[14] = (rcChannels->ch14);
-        ChannelDataIn[15] = (rcChannels->ch15);
-#else
-        memcpy((void *)ChannelDataIn, (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET], sizeof(crsf_channels_t));
-#endif
-    }
+            const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
+            ChannelDataIn[0] = (rcChannels->ch0);
+            ChannelDataIn[1] = (rcChannels->ch1);
+            ChannelDataIn[2] = (rcChannels->ch2);
+            ChannelDataIn[3] = (rcChannels->ch3);
+            ChannelDataIn[4] = (rcChannels->ch4);
+            ChannelDataIn[5] = (rcChannels->ch5);
+            ChannelDataIn[6] = (rcChannels->ch6);
+            ChannelDataIn[7] = (rcChannels->ch7);
+            ChannelDataIn[8] = (rcChannels->ch8);
+            ChannelDataIn[9] = (rcChannels->ch9);
+            ChannelDataIn[10] = (rcChannels->ch10);
+            ChannelDataIn[11] = (rcChannels->ch11);
+            ChannelDataIn[12] = (rcChannels->ch12);
+            ChannelDataIn[13] = (rcChannels->ch13);
+            ChannelDataIn[14] = (rcChannels->ch14);
+            ChannelDataIn[15] = (rcChannels->ch15);
+        }
 
     void ICACHE_RAM_ATTR CRSF::FlushSerial()
     {
