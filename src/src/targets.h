@@ -116,12 +116,15 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
 #define BUFFER_OE -1
-#define GPIO_PIN_RCSIGNAL_RX PA10
-#define GPIO_PIN_RCSIGNAL_TX PA9
-#define GPIO_PIN_LED PC1       // Red
-#define GPIO_PIN_LED_GREEN PB3 // Green - Currently unused
-#define GPIO_PIN_BUTTON PC13   // pullup e.g. LOW when pressed
+#define GPIO_PIN_RCSIGNAL_RX PA10 // USART1
+#define GPIO_PIN_RCSIGNAL_TX PA9  // USART1
+#define GPIO_PIN_LED PC1          // Red
+#define GPIO_PIN_LED_GREEN PB3    // Green - Currently unused
+#define GPIO_PIN_BUTTON PC13      // pullup e.g. LOW when pressed
 #define timerOffset 2
+
+#define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
+#define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2
 
 // External pads
 // #define R9m_Ch1    PA8
@@ -191,4 +194,3 @@ extern R9DAC r9dac;
 void platform_setup(void);
 void platform_loop(bool connected);
 void platform_connection_state(bool connected);
-

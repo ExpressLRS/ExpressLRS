@@ -16,6 +16,7 @@ void platform_setup(void)
 #if defined(TARGET_R9M_TX)
 
 #ifdef DEBUG_SERIAL
+    // Map HW Serial1 to debug pins
     DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
     DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
     DEBUG_SERIAL.begin(115200);
