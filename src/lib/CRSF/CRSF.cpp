@@ -44,7 +44,7 @@ bool CRSF::firstboot = true;
 
 /// UART Handling ///
 bool CRSF::CRSFstate = false;
-bool CRSF::IsUARTslowBaudrate = false;
+bool CRSF::IsUARTslowBaudrate = true;
 
 uint32_t CRSF::lastUARTpktTime = 0;
 uint32_t CRSF::UARTwdtLastChecked = 0;
@@ -313,7 +313,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #ifdef PLATFORM_ESP32
         void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
         {
-            vTaskDelay(UARTwdtInterval); // adds a small delay so that the WDT function doesn't trigger immediately at boot
             for (;;)
             {
 #endif
@@ -549,7 +548,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
                     CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
                     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE);
-                    UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
                     Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
                     FlushSerial();
@@ -683,32 +681,32 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-                void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-                {
+    void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+    {
 #define SERIAL_PACKET_OFFSET 3
 
-                    memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
+        memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
-                    const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
-                    ChannelDataIn[0] = (rcChannels->ch0);
-                    ChannelDataIn[1] = (rcChannels->ch1);
-                    ChannelDataIn[2] = (rcChannels->ch2);
-                    ChannelDataIn[3] = (rcChannels->ch3);
-                    ChannelDataIn[4] = (rcChannels->ch4);
-                    ChannelDataIn[5] = (rcChannels->ch5);
-                    ChannelDataIn[6] = (rcChannels->ch6);
-                    ChannelDataIn[7] = (rcChannels->ch7);
-                    ChannelDataIn[8] = (rcChannels->ch8);
-                    ChannelDataIn[9] = (rcChannels->ch9);
-                    ChannelDataIn[10] = (rcChannels->ch10);
-                    ChannelDataIn[11] = (rcChannels->ch11);
-                    ChannelDataIn[12] = (rcChannels->ch12);
-                    ChannelDataIn[13] = (rcChannels->ch13);
-                    ChannelDataIn[14] = (rcChannels->ch14);
-                    ChannelDataIn[15] = (rcChannels->ch15);
-                }
+            const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
+            ChannelDataIn[0] = (rcChannels->ch0);
+            ChannelDataIn[1] = (rcChannels->ch1);
+            ChannelDataIn[2] = (rcChannels->ch2);
+            ChannelDataIn[3] = (rcChannels->ch3);
+            ChannelDataIn[4] = (rcChannels->ch4);
+            ChannelDataIn[5] = (rcChannels->ch5);
+            ChannelDataIn[6] = (rcChannels->ch6);
+            ChannelDataIn[7] = (rcChannels->ch7);
+            ChannelDataIn[8] = (rcChannels->ch8);
+            ChannelDataIn[9] = (rcChannels->ch9);
+            ChannelDataIn[10] = (rcChannels->ch10);
+            ChannelDataIn[11] = (rcChannels->ch11);
+            ChannelDataIn[12] = (rcChannels->ch12);
+            ChannelDataIn[13] = (rcChannels->ch13);
+            ChannelDataIn[14] = (rcChannels->ch14);
+            ChannelDataIn[15] = (rcChannels->ch15);
+        }
 
-                void ICACHE_RAM_ATTR CRSF::FlushSerial()
-                {
-                    CRSF::Port.flush();
-                }
+    void ICACHE_RAM_ATTR CRSF::FlushSerial()
+    {
+        CRSF::Port.flush();
+    }
