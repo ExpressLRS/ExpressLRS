@@ -44,7 +44,7 @@ bool CRSF::firstboot = true;
 
 /// UART Handling ///
 bool CRSF::CRSFstate = false;
-bool CRSF::IsUARTslowBaudrate = false;
+bool CRSF::IsUARTslowBaudrate = true;
 
 uint32_t CRSF::lastUARTpktTime = 0;
 uint32_t CRSF::UARTwdtLastChecked = 0;
@@ -308,7 +308,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         }
 #endif
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
 
 #ifdef PLATFORM_ESP32
         void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
@@ -317,7 +317,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
 #endif
 
-#ifdef PLATFORM_STM32
+#ifdef TARGET_R9M_TX
                 void ICACHE_RAM_ATTR CRSF::UARTwdt()
                 {
                     if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
@@ -405,40 +405,17 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
                 {
-
-                    const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     // CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false);
                     //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
+                    const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
-
-                    lastUARTpktTime = millis();
-                    uint32_t YieldInterval = 200;
-
                     CRSF::duplex_set_RX();
                     FlushSerial();
 
                     for (;;)
                     {
-                        // if (millis() > (lastUARTpktTime + YieldInterval))
-                        // { //prevents WDT reset by yielding when there is no CRSF data to proces
-                        //     vTaskDelay(YieldInterval / portTICK_PERIOD_MS);
-                        //     if (CRSFstate == true)
-                        //     {
-                        //         CRSFstate = false;
-                        //         Serial.println("CRSF UART Lost");
-                        //         if (xHandleSerialOutFIFO != NULL)
-                        //         {
-                        //             vTaskDelete(xHandleSerialOutFIFO);
-                        //         }
-                        //         SerialOutFIFO.flush();
-                        //         disconnected();
-                        //     }
-                        // }
-
                         if (CRSF::Port.available())
                         {
-                            //lastUARTpktTime = millis();
-
                             if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
                             {
                                 SerialInPacketPtr = 0;
@@ -704,38 +681,36 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-                void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-                {
+    void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+    {
 #define SERIAL_PACKET_OFFSET 3
 
-                    memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
+        memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
 #if 0
-            const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
-            ChannelDataIn[0] = (rcChannels->ch0);
-            ChannelDataIn[1] = (rcChannels->ch1);
-            ChannelDataIn[2] = (rcChannels->ch2);
-            ChannelDataIn[3] = (rcChannels->ch3);
-            ChannelDataIn[4] = (rcChannels->ch4);
-            ChannelDataIn[5] = (rcChannels->ch5);
-            ChannelDataIn[6] = (rcChannels->ch6);
-            ChannelDataIn[7] = (rcChannels->ch7);
-            ChannelDataIn[8] = (rcChannels->ch8);
-            ChannelDataIn[9] = (rcChannels->ch9);
-            ChannelDataIn[10] = (rcChannels->ch10);
-            ChannelDataIn[11] = (rcChannels->ch11);
-            ChannelDataIn[12] = (rcChannels->ch12);
-            ChannelDataIn[13] = (rcChannels->ch13);
-            ChannelDataIn[14] = (rcChannels->ch14);
-            ChannelDataIn[15] = (rcChannels->ch15);
+        const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
+        ChannelDataIn[0] = (rcChannels->ch0);
+        ChannelDataIn[1] = (rcChannels->ch1);
+        ChannelDataIn[2] = (rcChannels->ch2);
+        ChannelDataIn[3] = (rcChannels->ch3);
+        ChannelDataIn[4] = (rcChannels->ch4);
+        ChannelDataIn[5] = (rcChannels->ch5);
+        ChannelDataIn[6] = (rcChannels->ch6);
+        ChannelDataIn[7] = (rcChannels->ch7);
+        ChannelDataIn[8] = (rcChannels->ch8);
+        ChannelDataIn[9] = (rcChannels->ch9);
+        ChannelDataIn[10] = (rcChannels->ch10);
+        ChannelDataIn[11] = (rcChannels->ch11);
+        ChannelDataIn[12] = (rcChannels->ch12);
+        ChannelDataIn[13] = (rcChannels->ch13);
+        ChannelDataIn[14] = (rcChannels->ch14);
+        ChannelDataIn[15] = (rcChannels->ch15);
 #else
-    memcpy((void *)ChannelDataIn,
-           (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET],
-           sizeof(crsf_channels_t));
+        memcpy((void *)ChannelDataIn, (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET], sizeof(crsf_channels_t));
 #endif
-                }
+    }
 
-                void ICACHE_RAM_ATTR CRSF::FlushSerial()
-                {
-                    CRSF::Port.flush();
-                }
+    void ICACHE_RAM_ATTR CRSF::FlushSerial()
+    {
+        CRSF::Port.flush();
+    }
