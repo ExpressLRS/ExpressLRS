@@ -13,14 +13,32 @@ R9DAC r9dac;
 
 void platform_setup(void)
 {
-#ifdef DEBUG_SERIAL
-    // init debug serial
-    DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
-    DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
-    DEBUG_SERIAL.begin(115200);
+#if defined(DEBUG_SERIAL)
+    if ((void *)&DEBUG_SERIAL != (void *)&CrsfSerial)
+    {
+        // init debug serial
+        DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
+        DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
+        DEBUG_SERIAL.begin(115200);
+    }
 #endif
 
 #if defined(TARGET_R9M_TX)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    digitalWrite(GPIO_PIN_LED_RED, LOW);
+
+    pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
+    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
+    digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
+
+    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
+    //r9dac.setPower(R9_PWR_50mW);
+
+    button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+
 #ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 
@@ -38,24 +56,10 @@ void platform_setup(void)
         noTone(GPIO_PIN_BUZZER);
     }
 #else  // JUST_BEEP_ONCE
-    tone(GPIO_PIN_BUZZER, 400, 200);
+    //tone(GPIO_PIN_BUZZER, 400, 200);
+    tone(GPIO_PIN_BUZZER, 200, 50);
 #endif // JUST_BEEP_ONCE
 #endif // GPIO_PIN_BUZZER
-
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
-
-    pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
-    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
-    digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
-
-    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-    //r9dac.setPower(R9_PWR_50mW);
-
-    button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 
 #endif /* TARGET_R9M_TX */
 
