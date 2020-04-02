@@ -277,14 +277,14 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 
 void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
-    uint8_t inChar;
+    uint8_t inChar, split_cnt = 0;
 
 #if defined(FEATURE_OPENTX_SYNC)
     sendSyncPacketToTX();
 #endif
     wdtUART();
 
-    while (_dev->available())
+    while (_dev->available() && ((++split_cnt & 0xF) > 0))
     {
         inChar = _dev->read();
 
@@ -314,7 +314,7 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
             if (SerialInPacketLen == 0) // we read the packet length and save it
             {
                 SerialInPacketLen = inChar;
-                if (SerialInPacketLen < 3)
+                if (SerialInPacketLen < 3 || ((CRSF_MAX_PACKET_LEN - 2) < SerialInPacketLen))
                 {
                     // failure -> discard
                     CRSFframeActive = false;
@@ -325,9 +325,9 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
             }
             else
             {
-                if (SerialInPacketPtr == SerialInPacketLen)
+                if (SerialInPacketPtr == (SerialInPacketLen + 2))
                 {
-                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 3);
+                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 1);
 
                     if (CalculatedCRC == inChar)
                     {
@@ -414,7 +414,6 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
     memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
-#if 0
     const crsf_channels_t *const rcChannels =
         (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
     ChannelDataIn[0] = (rcChannels->ch0);
@@ -433,11 +432,6 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-#else
-    memcpy((void *)ChannelDataIn,
-           (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET],
-           sizeof(crsf_channels_t));
-#endif
 }
 #endif // TX
 
@@ -506,11 +500,11 @@ void CRSF::RX_processPacket()
 
 void CRSF::RX_handleUartIn(void)
 {
-    uint8_t inChar;
-    while (_dev->available())
+    uint8_t inChar, split_cnt = 0;
+
+    while (_dev->available() && ((++split_cnt & 0xF) > 0))
     {
         inChar = _dev->read();
-        //UARTLastDataTime = millis();
 
         if (SerialInPacketPtr >= CRSF_MAX_PACKET_LEN)
         {
@@ -538,7 +532,7 @@ void CRSF::RX_handleUartIn(void)
             if (SerialInPacketLen == 0) // we read the packet length and save it
             {
                 SerialInPacketLen = inChar;
-                if (SerialInPacketLen < 3)
+                if (SerialInPacketLen < 3 || ((CRSF_MAX_PACKET_LEN - 2) < SerialInPacketLen))
                 {
                     // failure -> discard
                     CRSFframeActive = false;
@@ -549,9 +543,9 @@ void CRSF::RX_handleUartIn(void)
             }
             else
             {
-                if (SerialInPacketPtr == SerialInPacketLen)
+                if (SerialInPacketPtr == (SerialInPacketLen + 2))
                 {
-                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 3);
+                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 1);
 
                     if (CalculatedCRC == inChar)
                     {
@@ -612,16 +606,16 @@ void CRSF::command_find_and_dispatch(void)
             cmd == CRSF_SYNC_BYTE)
         {
             uint8_t len = *ptr++;
-            if (len < 3)
+            if (len < 3 || ((CRSF_MAX_PACKET_LEN - 2) < len))
             {
                 printf("  invalid len %u for cmd: %X!\n", len, cmd);
             }
             else if (len <= count)
             {
+                len -= 1; // remove CRC
                 // enough data, check crc...
-                // Note: CRC is calculated over actual data bytes = [len - 1(cmd) - 1(len) - 1(crc)]
-                uint8_t crc = CalcCRC(ptr, (len - 3));
-                if (crc == ptr[len - 3])
+                uint8_t crc = CalcCRC(ptr, (len));
+                if (crc == ptr[len])
                 {
                     // CRC ok, dispatch command
                     //printf("  CRC OK\n");
@@ -637,7 +631,7 @@ void CRSF::command_find_and_dispatch(void)
                     //printf("  CRC BAD\n");
                 }
                 // pass handled command
-                ptr += (len - 3);
+                ptr += (len);
                 uint8_t end = ptr - SerialInBuffer + 1;
                 int needcopy = (int)SerialInPacketPtr - (end);
                 if (0 < needcopy)
