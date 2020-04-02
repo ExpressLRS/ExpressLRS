@@ -51,8 +51,7 @@ typedef enum
     disconnected = 0
 } connectionState_e;
 
-connectionState_e connectionState;
-connectionState_e connectionStatePrev;
+connectionState_e connectionState = disconnected;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -95,7 +94,7 @@ static inline void led_set_state(bool state)
 {
     ledState = state;
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, state);
+    digitalWrite(GPIO_PIN_LED, (uint32_t)state);
 #endif
 }
 static inline void led_toggle(void)
@@ -114,7 +113,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM;   // to match BF
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
@@ -162,10 +161,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI>127)
+    if (openTxRSSI > 127)
         openTxRSSI = 127;
     // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255-openTxRSSI;
+    openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
 
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
@@ -204,7 +203,6 @@ void LostConnection()
         return; // Already disconnected
     }
 
-    connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     LPF_FreqError.init(0);
 
@@ -217,7 +215,6 @@ void LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    connectionStatePrev = connectionState;
     connectionState = tentative;
     DEBUG_PRINTLN("tentative conn");
 }
@@ -229,7 +226,6 @@ void ICACHE_RAM_ATTR GotConnection()
         return; // Already connected
     }
 
-    connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
 
     RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
@@ -489,7 +485,7 @@ void setup()
 
     //Radio.SetSyncWord(0x122);
 
-    Radio.Begin();
+    Radio.Begin(false);
 
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
@@ -507,7 +503,6 @@ void setup()
     hwTimer.init();
 
     SetRFLinkRate(RATE_200HZ);
-    hwTimer.init();
 }
 
 void loop()

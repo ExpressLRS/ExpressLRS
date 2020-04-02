@@ -50,8 +50,8 @@ uint8_t SX127xDriver::SX127x_MISO = GPIO_PIN_MISO;
 uint8_t SX127xDriver::SX127x_SCK = GPIO_PIN_SCK;
 uint8_t SX127xDriver::SX127x_RST = GPIO_PIN_RST;
 
-uint8_t SX127xDriver::_RXenablePin = -1;
-uint8_t SX127xDriver::_TXenablePin = -1;
+int8_t SX127xDriver::_RXenablePin = -1;
+int8_t SX127xDriver::_TXenablePin = -1;
 
 /////////////////////////////////////////////////////////////////
 
@@ -101,16 +101,17 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule)
     delay(100);
     digitalWrite(SX127x_RST, 1);
     delay(100);
-
+    _RXenablePin = _TXenablePin = -1;
     if (HighPowerModule)
     {
         _RXenablePin = GPIO_PIN_RX_ENABLE;
         _TXenablePin = GPIO_PIN_TX_ENABLE;
-        if (-1 != _TXenablePin)
-            pinMode(SX127xDriver::_TXenablePin, OUTPUT);
-        if (-1 != _RXenablePin)
-            pinMode(SX127xDriver::_RXenablePin, OUTPUT);
     }
+
+    if (-1 != _TXenablePin)
+        pinMode(_TXenablePin, OUTPUT);
+    if (-1 != _RXenablePin)
+        pinMode(_RXenablePin, OUTPUT);
 
     //static uint8_t SX127x_SCK;
 

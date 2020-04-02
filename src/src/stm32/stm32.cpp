@@ -13,18 +13,21 @@ R9DAC r9dac;
 
 void platform_setup(void)
 {
-#if defined(TARGET_R9M_TX)
-
 #ifdef DEBUG_SERIAL
-    // Map HW Serial1 to debug pins
+    // init debug serial
     DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
     DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
     DEBUG_SERIAL.begin(115200);
 #endif
 
-    // Annoying startup beeps
-#ifndef JUST_BEEP_ONCE
+#if defined(TARGET_R9M_TX)
+#ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
+
+#define JUST_BEEP_ONCE 1
+
+#ifndef JUST_BEEP_ONCE
+    // Annoying startup beeps
     const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
     const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
 
@@ -37,11 +40,13 @@ void platform_setup(void)
 #else  // JUST_BEEP_ONCE
     tone(GPIO_PIN_BUZZER, 400, 200);
 #endif // JUST_BEEP_ONCE
+#endif // GPIO_PIN_BUZZER
 
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
 
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    digitalWrite(GPIO_PIN_LED_RED, LOW);
 
     pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
@@ -74,7 +79,8 @@ void platform_loop(bool connected)
 void platform_connection_state(bool connected)
 {
 #if defined(TARGET_R9M_TX)
-    digitalWrite(GPIO_PIN_LED_RED, (connected ? HIGH : LOW));
+    digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));
+    //digitalWrite(GPIO_PIN_LED_RED, (connected ? LOW : HIGH));
 #endif /* TARGET_R9M_TX */
 #if defined(TARGET_R9M_RX)
     digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));

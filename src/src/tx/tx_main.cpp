@@ -101,6 +101,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     }
 
     isRXconnected = true;
+    platform_connection_state(true);
     LastTLMpacketRecvMillis = millis();
 
     if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
@@ -220,6 +221,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
     crsf.RequestedRCpacketInterval = mode->interval;
 
     isRXconnected = false;
+    platform_connection_state(false);
 #ifdef TARGET_R9M_TX
     //r9dac.resume();
 #endif
@@ -478,23 +480,19 @@ void setup()
     crsf.Begin();
 
     SetRFLinkRate(RATE_200HZ);
+
+    platform_connection_state(false);
 }
 
 void loop()
 {
     uint32_t current_ms = millis();
 
-    //updateLEDs(isRXconnected, ExpressLRS_currAirRate->TLMinterval);
-
     if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
     {
         isRXconnected = false;
+        platform_connection_state(false);
     }
-    else
-    {
-        isRXconnected = true;
-    }
-    platform_connection_state(isRXconnected);
 
     if (current_ms >= PacketRateNextCheck)
     {

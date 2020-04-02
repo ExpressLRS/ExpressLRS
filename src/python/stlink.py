@@ -11,7 +11,7 @@ def get_commands(env, firmware):
     APP_CMD = []
 
     flash_start = app_start = 0x08000000
-    bootloader = "" # env['UPLOAD_FLAGS'][0]
+    bootloader = None # env['UPLOAD_FLAGS'][0]
     upload_flags = env['UPLOAD_FLAGS']
 
     for line in upload_flags:

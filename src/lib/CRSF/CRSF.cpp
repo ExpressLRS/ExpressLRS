@@ -64,6 +64,8 @@ void CRSF::Begin()
     //The Reciever uses seperate rx and tx pins
 
     DEBUG_PRINTLN("CRSF UART LISTEN TASK STARTED");
+    uint32_t now = millis();
+    UARTwdtNextCheck = now + UARTwdtInterval * 2;
 }
 
 #if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
@@ -243,6 +245,9 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
         CRSFstate = true;
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
+#ifdef GPIO_PIN_LED_RED
+        digitalWrite(GPIO_PIN_LED_RED, LOW);
+#endif
     }
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
@@ -272,69 +277,90 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 
 void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
+    uint8_t inChar;
+
 #if defined(FEATURE_OPENTX_SYNC)
     sendSyncPacketToTX();
 #endif
-
     wdtUART();
 
-    uint8_t inChar = _dev->read();
-
-    if (0 < inChar)
+    while (_dev->available())
     {
-        if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
+        inChar = _dev->read();
+
+        if (SerialInPacketPtr >= CRSF_MAX_PACKET_LEN)
         {
             // we reached the maximum allowable packet length, so start again because shit fucked up hey.
             SerialInPacketPtr = 0;
         }
 
-        if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+        // store byte
+        SerialInBuffer[SerialInPacketPtr++] = inChar;
+
+        if (CRSFframeActive == false)
         {
-            SerialInPacketPtr = 0;
-            CRSFframeActive = true;
-        }
-
-        if (SerialInPacketPtr == 1 && CRSFframeActive == true) // we read the packet length and save it
-        {
-            SerialInPacketLen = inChar;
-        }
-
-        SerialInBuffer[SerialInPacketPtr] = inChar;
-        SerialInPacketPtr++;
-
-        if (SerialInPacketPtr == (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-        {
-            uint8_t CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
-
-            if (CalculatedCRC == inChar)
+            if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE)
             {
-                if (TX_ProcessPacket())
-                {
-                    _dev->write(SerialOutFIFO);
-                }
-
-                GoodPktsCount++;
+                CRSFframeActive = true;
+                SerialInPacketLen = 0;
             }
             else
             {
-                DEBUG_PRINTLN("UART CRC failure");
-                // DEBUG_PRINTLN(SerialInPacketPtr, HEX);
-                // DEBUG_PRINT("Expected: ");
-                // DEBUG_PRINTLN(CalculatedCRC, HEX);
-                // DEBUG_PRINT("Got: ");
-                // DEBUG_PRINTLN(inChar, HEX);
-                for (int i = 0; i < SerialInPacketLen + 2; i++)
-                {
-                    DEBUG_PRINT(SerialInBuffer[i], HEX);
-                    DEBUG_PRINT(" ");
-                }
-                DEBUG_PRINTLN();
-                DEBUG_PRINTLN();
-                BadPktsCount++;
-                _dev->flush_read();
+                SerialInPacketPtr = 0;
             }
-            SerialInPacketPtr = 0;
-            CRSFframeActive = false;
+        }
+        else
+        {
+            if (SerialInPacketLen == 0) // we read the packet length and save it
+            {
+                SerialInPacketLen = inChar;
+                if (SerialInPacketLen < 3)
+                {
+                    // failure -> discard
+                    CRSFframeActive = false;
+                    SerialInPacketPtr = 0;
+                    SerialInPacketLen = 0;
+                    BadPktsCount++;
+                }
+            }
+            else
+            {
+                if (SerialInPacketPtr == SerialInPacketLen)
+                {
+                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 3);
+
+                    if (CalculatedCRC == inChar)
+                    {
+                        if (TX_ProcessPacket())
+                        {
+                            _dev->write(SerialOutFIFO);
+                        }
+
+                        GoodPktsCount++;
+                    }
+                    else
+                    {
+                        DEBUG_PRINTLN("UART CRC failure");
+                        // DEBUG_PRINTLN(SerialInPacketPtr, HEX);
+                        // DEBUG_PRINT("Expected: ");
+                        // DEBUG_PRINTLN(CalculatedCRC, HEX);
+                        // DEBUG_PRINT("Got: ");
+                        // DEBUG_PRINTLN(inChar, HEX);
+                        for (int i = 0; i < (SerialInPacketLen + 2); i++)
+                        {
+                            DEBUG_PRINT(SerialInBuffer[i], HEX);
+                            DEBUG_PRINT(" ");
+                        }
+                        DEBUG_PRINTLN();
+                        //DEBUG_PRINTLN();
+                        BadPktsCount++;
+                    }
+                    // packet handled, start next
+                    CRSFframeActive = false;
+                    SerialInPacketPtr = 0;
+                    SerialInPacketLen = 0;
+                }
+            }
         }
     }
 }
@@ -344,12 +370,17 @@ void ICACHE_RAM_ATTR CRSF::wdtUART()
     uint32_t now = millis();
     if (now > UARTwdtNextCheck)
     {
+        DEBUG_PRINT("UART RX packets! Bad: ");
+        DEBUG_PRINT(BadPktsCount);
+        DEBUG_PRINT(" Good: ");
+        DEBUG_PRINTLN(GoodPktsCount);
+
         if (BadPktsCount >= GoodPktsCount)
         {
-            DEBUG_PRINTLN("Too many bad UART RX packets! Bad:Good = ");
-            DEBUG_PRINT(BadPktsCount);
-            DEBUG_PRINT(":");
-            DEBUG_PRINTLN(GoodPktsCount);
+#ifdef GPIO_PIN_LED_RED
+            digitalWrite(GPIO_PIN_LED_RED, HIGH);
+#endif
+            DEBUG_PRINTLN("  Too many bad UART RX packets!");
 
             if (CRSFstate == true)
             {
@@ -476,71 +507,81 @@ void CRSF::RX_processPacket()
 void CRSF::RX_handleUartIn(void)
 {
     uint8_t inChar;
-    while ((inChar = _dev->read()) > 0)
+    while (_dev->available())
     {
+        inChar = _dev->read();
         //UARTLastDataTime = millis();
 
-        if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
+        if (SerialInPacketPtr >= CRSF_MAX_PACKET_LEN)
         {
             // we reached the maximum allowable packet length, so start again because shit fucked up hey.
             SerialInPacketPtr = 0;
         }
 
-        // optimize this!
-        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+        // store byte
+        SerialInBuffer[SerialInPacketPtr++] = inChar;
+
+        if (CRSFframeActive == false)
         {
-            SerialInPacketPtr = 0;
-            CRSFframeActive = true;
-        }
-        else if (CRSFframeActive)
-        {
-            if (SerialInPacketPtr == 1) // we read the packet length and save it
+            if (inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE)
             {
-                SerialInPacketLen = inChar;
                 CRSFframeActive = true;
-            }
-
-            if (CRSFframeActive && SerialInPacketPtr > 0) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-            {
-                if (SerialInPacketPtr > SerialInPacketLen + 2)
-                {
-                    SerialInPacketPtr = 0;
-                    CRSFframeActive = false;
-                    _dev->flush_read();
-                }
-            }
-        }
-
-        SerialInBuffer[SerialInPacketPtr] = inChar;
-        SerialInPacketPtr++;
-
-        if (SerialInPacketPtr == SerialInPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-        {
-            uint8_t CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
-
-            if (CalculatedCRC == inChar)
-            {
-                RX_processPacket();
+                SerialInPacketLen = 0;
             }
             else
             {
-                //DEBUG_PRINTLN("UART CRC failure");
-                //DEBUG_PRINTLN(SerialInPacketPtr, HEX);
-                //DEBUG_PRINT("Expected: ");
-                //DEBUG_PRINTLN(CalculatedCRC, HEX);
-                //DEBUG_PRINT("Got: ");
-                //DEBUG_PRINTLN(inChar, HEX);
-                //for (int i = 0; i < SerialInPacketPtr + 2; i++)
-                // {
-                //DEBUG_PRINT(SerialInBuffer[i], HEX);
-                //    DEBUG_PRINT(" ");
-                //}
-                //DEBUG_PRINTLN();
-                //DEBUG_PRINTLN();
-                _dev->flush_read();
+                SerialInPacketPtr = 0;
             }
-            CRSFframeActive = false;
-            SerialInPacketPtr = 0;
+        }
+        else
+        {
+            if (SerialInPacketLen == 0) // we read the packet length and save it
+            {
+                SerialInPacketLen = inChar;
+                if (SerialInPacketLen < 3)
+                {
+                    // failure -> discard
+                    CRSFframeActive = false;
+                    SerialInPacketPtr = 0;
+                    SerialInPacketLen = 0;
+                    BadPktsCount++;
+                }
+            }
+            else
+            {
+                if (SerialInPacketPtr == SerialInPacketLen)
+                {
+                    uint8_t CalculatedCRC = CalcCRC((uint8_t *)&SerialInBuffer[2], SerialInPacketLen - 3);
+
+                    if (CalculatedCRC == inChar)
+                    {
+                        RX_processPacket();
+                        GoodPktsCount++;
+                    }
+                    else
+                    {
+                        //DEBUG_PRINTLN("UART CRC failure");
+                        //DEBUG_PRINTLN(SerialInPacketPtr, HEX);
+                        //DEBUG_PRINT("Expected: ");
+                        //DEBUG_PRINTLN(CalculatedCRC, HEX);
+                        //DEBUG_PRINT("Got: ");
+                        //DEBUG_PRINTLN(inChar, HEX);
+                        //for (int i = 0; i < SerialInPacketPtr + 2; i++)
+                        // {
+                        //DEBUG_PRINT(SerialInBuffer[i], HEX);
+                        //    DEBUG_PRINT(" ");
+                        //}
+                        //DEBUG_PRINTLN();
+                        //DEBUG_PRINTLN();
+                        BadPktsCount++;
+                    }
+
+                    // packet handled, start next
+                    CRSFframeActive = false;
+                    SerialInPacketPtr = 0;
+                    SerialInPacketLen = 0;
+                }
+            }
         }
     }
 }
@@ -548,10 +589,9 @@ void CRSF::RX_handleUartIn(void)
 
 void CRSF::process_input(void)
 {
-    uint8_t inChar;
-    while (SerialInPacketPtr < CRSF_MAX_PACKET_LEN && (inChar = _dev->read()) > 0)
+    while (SerialInPacketPtr < CRSF_MAX_PACKET_LEN && _dev->available())
     {
-        SerialInBuffer[SerialInPacketPtr++] = inChar;
+        SerialInBuffer[SerialInPacketPtr++] = _dev->read();
     }
     command_find_and_dispatch();
 }

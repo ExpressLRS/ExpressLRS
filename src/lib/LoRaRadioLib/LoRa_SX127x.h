@@ -95,8 +95,8 @@ public:
     //static void (*TXcallback)();
 
     ////////Hardware/////////////
-    static uint8_t _RXenablePin;
-    static uint8_t _TXenablePin;
+    static int8_t _RXenablePin;
+    static int8_t _TXenablePin;
 
     static uint8_t SX127x_nss;
     static uint8_t SX127x_dio0;
