@@ -475,7 +475,7 @@ void CRSF::RX_processPacket()
 
 void CRSF::RX_handleUartIn(void)
 {
-    char inChar;
+    uint8_t inChar;
     while ((inChar = _dev->read()) > 0)
     {
         //UARTLastDataTime = millis();
@@ -546,6 +546,16 @@ void CRSF::RX_handleUartIn(void)
 }
 #endif // RX
 
+void CRSF::process_input(void)
+{
+    uint8_t inChar;
+    while (SerialInPacketPtr < CRSF_MAX_PACKET_LEN && (inChar = _dev->read()) > 0)
+    {
+        SerialInBuffer[SerialInPacketPtr++] = inChar;
+    }
+    command_find_and_dispatch();
+}
+
 void CRSF::command_find_and_dispatch(void)
 {
     volatile uint8_t *ptr = SerialInBuffer;
@@ -575,6 +585,11 @@ void CRSF::command_find_and_dispatch(void)
                 {
                     // CRC ok, dispatch command
                     //printf("  CRC OK\n");
+#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+                    RX_processPacket();
+#else
+                    TX_ProcessPacket();
+#endif
                 }
                 else
                 {

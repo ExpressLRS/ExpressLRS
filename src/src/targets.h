@@ -191,3 +191,4 @@ extern R9DAC r9dac;
 void platform_setup(void);
 void platform_loop(bool connected);
 void platform_connection_state(bool connected);
+

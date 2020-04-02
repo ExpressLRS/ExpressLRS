@@ -358,7 +358,6 @@ public:
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void sendLinkStatisticsToFC();
-    void RX_processPacket(void);
     void RX_handleUartIn(void);
 
 #else
@@ -385,6 +384,8 @@ public:
     void ICACHE_RAM_ATTR TX_handleUartIn(void);
 #endif
 
+    void process_input(void);
+
 private:
     static HwSerial *_dev;
 
@@ -401,6 +402,8 @@ private:
     void ICACHE_RAM_ATTR wdtUART();
     bool ICACHE_RAM_ATTR TX_ProcessPacket();
     void ICACHE_RAM_ATTR GetChannelDataIn();
+#else
+    void RX_processPacket(void);
 #endif
 
     static void inline nullCallback(void);

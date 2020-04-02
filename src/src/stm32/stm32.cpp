@@ -47,7 +47,7 @@ void platform_setup(void)
     digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-    r9dac.setPower(R9_PWR_50mW);
+    //r9dac.setPower(R9_PWR_50mW);
 
     button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 

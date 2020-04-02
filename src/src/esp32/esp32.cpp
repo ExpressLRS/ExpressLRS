@@ -20,9 +20,9 @@ void platform_setup(void)
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+    //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
-    strip.Begin();
+    //strip.Begin();
 
     uint8_t baseMac[6];
     // Get base mac address

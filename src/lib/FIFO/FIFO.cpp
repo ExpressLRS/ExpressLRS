@@ -46,7 +46,8 @@ void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
     if (numElements == FIFO_SIZE)
     {
         DEBUG_PRINTLN(("CRITICAL ERROR: Buffer full, will flush"));
-        this->flush();
+        //this->flush();
+        this->popBytes(nullptr, numElements);
         return;
     }
     else

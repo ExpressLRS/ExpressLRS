@@ -6,6 +6,7 @@
 #include "CRSF.h"
 #include "FHSS.h"
 #include "targets.h"
+#include "POWERMGNT.h"
 #include "HwTimer.h"
 #include "debug.h"
 
@@ -23,6 +24,7 @@ HwTimer hwTimer;
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf(CrsfSerial);
+POWERMGNT POWERMGNT;
 
 void TimerExpired();
 
@@ -358,14 +360,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     {
     case 0: // send all params
         DEBUG_PRINTLN("send all");
-        crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
+        //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
         break;
     case 1:
-        // if (ExpressLRS_currAirRate->enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-        // {
-        //   SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-        // }
-        //crsf.sendLUAresponse(0x01, (uint8_t)random(1, 5));
         if (crsf.ParameterUpdateData[1] == 0)
         {
             /*uint8_t newRate =*/decRFLinkRate();
@@ -375,7 +372,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
             /*uint8_t newRate =*/incRFLinkRate();
         }
         DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
-        crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
+        //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
         break;
 
     case 2:
@@ -383,46 +380,13 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         break;
     case 3:
 
-        switch (crsf.ParameterUpdateData[1])
+        if (crsf.ParameterUpdateData[1] == 0)
         {
-        case 0:
-            Radio.maxPWR = 0b1111;
-            Radio.SetOutputPower(0b1111); // 500 mW
-            DEBUG_PRINTLN("Setpower 500 mW");
-            break;
-
-        case 1:
-            Radio.maxPWR = 0b1000;
-            Radio.SetOutputPower(0b1000);
-            DEBUG_PRINTLN("Setpower 200 mW");
-            break;
-
-        case 2:
-            Radio.maxPWR = 0b1000;
-            Radio.SetOutputPower(0b1000);
-            DEBUG_PRINTLN("Setpower 100 mW");
-            break;
-
-        case 3:
-            Radio.maxPWR = 0b0101;
-            Radio.SetOutputPower(0b0101);
-            DEBUG_PRINTLN("Setpower 50 mW");
-            break;
-
-        case 4:
-            Radio.maxPWR = 0b0010;
-            Radio.SetOutputPower(0b0010);
-            DEBUG_PRINTLN("Setpower 25 mW");
-            break;
-
-        case 5:
-            Radio.maxPWR = 0b0000;
-            Radio.SetOutputPower(0b0000);
-            DEBUG_PRINTLN("Setpower Pit");
-            break;
-
-        default:
-            break;
+            POWERMGNT.decPower();
+        }
+        else if (crsf.ParameterUpdateData[1] == 1)
+        {
+            POWERMGNT.incPower();
         }
 
         break;
@@ -435,6 +399,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     }
 
     UpdateParamReq = false;
+    //DEBUG_PRINTLN("Power");
+    //DEBUG_PRINTLN(POWERMGNT.currPower());
+    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
 }
 
 void DetectOtherRadios()
@@ -487,10 +454,7 @@ void setup()
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     DEBUG_PRINTLN("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
-    Radio.SetOutputPower(0b1111);
 #endif
-
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     Radio.RXdoneCallback1 = &ProcessTLMpacket;
 
@@ -502,6 +466,9 @@ void setup()
 #ifndef One_Bit_Switches
     crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
+
+    POWERMGNT.defaultPower();
+    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     bool HighPower = false;
 #ifdef TARGET_1000mW_MODULE
