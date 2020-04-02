@@ -8,7 +8,6 @@
 #include "LED.h"
 // #include "debug.h"
 #include "targets.h"
-#include "msp.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -38,7 +37,6 @@ String DebugOutput;
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf;
-MSP MSPProtocol;
 
 void TimerExpired();
 
