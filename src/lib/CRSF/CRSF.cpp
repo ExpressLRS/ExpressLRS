@@ -44,7 +44,7 @@ bool CRSF::firstboot = true;
 
 /// UART Handling ///
 bool CRSF::CRSFstate = false;
-bool CRSF::IsUARTslowBaudrate = true;
+bool CRSF::IsUARTslowBaudrate = false;
 
 uint32_t CRSF::lastUARTpktTime = 0;
 uint32_t CRSF::UARTwdtLastChecked = 0;
@@ -313,6 +313,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #ifdef PLATFORM_ESP32
         void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
         {
+            vTaskDelay(UARTwdtInterval); // adds a small delay so that the WDT function doesn't trigger immediately at boot
             for (;;)
             {
 #endif
@@ -548,6 +549,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
                     CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
                     CRSF::Port.begin(CRSF_OPENTX_BAUDRATE);
+                    UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
                     Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
                     FlushSerial();
