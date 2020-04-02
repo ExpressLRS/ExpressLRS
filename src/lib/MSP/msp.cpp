@@ -59,7 +59,7 @@ MSP::processReceivedByte(uint8_t c)
 
             // Start of a new packet
             // reset the packet, offset iterator, and CRC
-            m_packet.Reset();
+            m_packet.reset();
             m_offset = 0;
             m_crc = 0;
 
@@ -68,7 +68,7 @@ MSP::processReceivedByte(uint8_t c)
                     m_packet.type = MSP_PACKET_COMMAND;
                     break;
                 case '>':
-                    m_packet.type = MSP_PACKET_REPLY;
+                    m_packet.type = MSP_PACKET_RESPONSE;
                     break;
                 default:
                     m_packet.type = MSP_PACKET_UNKNOWN;
@@ -113,7 +113,10 @@ MSP::processReceivedByte(uint8_t c)
                 m_inputState = MSP_COMMAND_RECEIVED;
             }
             else {
-                Serial.println("CRC failure on MSP packet");
+                Serial.print("CRC failure on MSP packet - Got ");
+                Serial.print(c);
+                Serial.print(" Expected ");
+                Serial.println(m_crc);
                 m_inputState = MSP_IDLE;
             }
             break;
@@ -123,6 +126,9 @@ MSP::processReceivedByte(uint8_t c)
             break;
     }
 
+    // If we've successfully parsed a complete packet
+    // return true so the calling function knows that
+    // a new packet is ready.
     if (m_inputState == MSP_COMMAND_RECEIVED) {
         return true;
     }
@@ -138,5 +144,61 @@ MSP::getReceivedPacket() const
 void
 MSP::markPacketReceived()
 {
+    // Set input state to idle, ready to receive the next packet
+    // The current packet data will be discarded internally
     m_inputState = MSP_IDLE;
+}
+
+bool
+MSP::sendPacket(mspPacket_t packet, Stream* port)
+{
+    // Sanity check the packet before sending
+    if (packet.type != MSP_PACKET_COMMAND && packet.type != MSP_PACKET_RESPONSE) {
+        // Unsupported packet type (note: ignoring '!' until we know what it is)
+        return false;
+    }
+
+    if (packet.type == MSP_PACKET_RESPONSE && packet.payloadSize == 0) {
+        // Response packet with no payload
+        return false;
+    }
+    
+    // Write out the framing chars
+    port->write('$');
+    port->write('X');
+
+    // Write out the packet type
+    if (packet.type == MSP_PACKET_COMMAND) {
+        port->write('<');
+    }
+    else if (packet.type == MSP_PACKET_RESPONSE) {
+        port->write('>');
+    }
+
+    // Subsequent bytes are contained in the crc
+    uint8_t crc = 0;
+
+    // Pack header struct into buffer
+    uint8_t headerBuffer[5];
+    mspHeaderV2_t* header = (mspHeaderV2_t*)&headerBuffer[0];
+    header->flags = packet.flags;
+    header->function = packet.function;
+    header->payloadSize = packet.payloadSize;
+
+    // Write out the header buffer, adding each byte to the crc
+    for (uint8_t i = 0; i < sizeof(mspHeaderV2_t); ++i) {
+        port->write(headerBuffer[i]);
+        crc = crc8_dvb_s2(crc, headerBuffer[i]);
+    }
+
+    // Write out the payload, adding each byte to the crc
+    for (uint16_t i = 0; i < packet.payloadSize; ++i) {
+        port->write(packet.payload[i]);
+        crc = crc8_dvb_s2(crc, packet.payload[i]);
+    }
+
+    // Write out the crc
+    port->write(crc);
+
+    return true;
 }

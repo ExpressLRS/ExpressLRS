@@ -603,17 +603,6 @@ void setup()
 
 void loop()
 {
-  if (Serial.available()) {
-    uint8_t c = Serial.read();
-    bool packetComplete = MSPProtocol.processReceivedByte(c);
-  
-    if (packetComplete) {
-      mspPacket_t packet = MSPProtocol.getReceivedPacket();
-      MSPProtocol.markPacketReceived();
-      Serial.print("Got an MSP packet with function code = ");
-      Serial.println(packet.function);
-    }
-  }
 
 #ifdef FEATURE_OPENTX_SYNC
   //Serial.println(crsf.OpenTXsyncOffset);

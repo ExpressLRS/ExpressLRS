@@ -20,7 +20,7 @@ typedef enum {
 typedef enum {
     MSP_PACKET_UNKNOWN,
     MSP_PACKET_COMMAND,
-    MSP_PACKET_REPLY
+    MSP_PACKET_RESPONSE
 } mspPacketType_e;
 
 typedef struct __attribute__((packed)) {
@@ -36,12 +36,27 @@ typedef struct {
     uint16_t        payloadSize;
     uint8_t         payload[MSP_PORT_INBUF_SIZE];
 
-    void Reset()
+    void reset()
     {
         type = MSP_PACKET_UNKNOWN;
         flags = 0;
         function = 0;
         payloadSize = 0;
+    }
+
+    void addByte(uint8_t b)
+    {
+        payload[payloadSize++] = b;
+    }
+
+    void makeResponse()
+    {
+        type = MSP_PACKET_RESPONSE;
+    }
+
+    void makeCommand()
+    {
+        type = MSP_PACKET_COMMAND;
     }
 } mspPacket_t;
 
@@ -53,6 +68,7 @@ public:
     bool        processReceivedByte(uint8_t c);
     mspPacket_t getReceivedPacket() const;
     void        markPacketReceived();
+    bool        sendPacket(mspPacket_t packet, Stream* port);
 
 private:
     mspState_e  m_inputState;
