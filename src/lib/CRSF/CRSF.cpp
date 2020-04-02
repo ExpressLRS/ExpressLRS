@@ -672,7 +672,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
-#if 0
             const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
             ChannelDataIn[0] = (rcChannels->ch0);
             ChannelDataIn[1] = (rcChannels->ch1);
@@ -690,11 +689,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             ChannelDataIn[13] = (rcChannels->ch13);
             ChannelDataIn[14] = (rcChannels->ch14);
             ChannelDataIn[15] = (rcChannels->ch15);
-#else
-    memcpy((void *)ChannelDataIn,
-           (void *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET],
-           sizeof(crsf_channels_t));
-#endif
         }
 
         void ICACHE_RAM_ATTR CRSF::FlushSerial()
