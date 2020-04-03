@@ -9,7 +9,7 @@ extern SX127xDriver Radio;
 
 int R9DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
-    {10, 11, 9, 0},
+    {10, 11, 9, 800},
     {25, 14, 12, 920},
     {50, 17, 15, 1030},
     {100, 20, 18, 1150},

@@ -54,11 +54,10 @@ typedef enum
 typedef enum
 {
     RATE_200HZ = 0,
-    RATE_100HZ,
-    RATE_50HZ,
-    RATE_25HZ,
-    RATE_4HZ,
-    RATE_MAX
+    RATE_100HZ = 1,
+    RATE_50HZ = 2,
+    RATE_25HZ = 3,
+    RATE_4HZ = 4
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 #define MaxRFrate 2
@@ -85,15 +84,12 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rat
 extern const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 extern const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
-#define MaxPower100mW_Module 20
-#define MaxPower1000mW_Module 30
-#define RF_Gain 10
-
 extern int8_t ExpressLRS_currPower;
 extern int8_t ExpressLRS_prevPower;
 
-int16_t MeasureNoiseFloor();
-int16_t MeasureRSSI(int FHSSindex);
+int16_t MeasureNoiseFloor(); //--todo, move this to radio lib
+int16_t MeasureRSSI(int FHSSindex); //--todo, move this to radio lib
+
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 
 // expresslrs packet header types
