@@ -19,10 +19,16 @@ const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 
 const expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e rate)
 {
-    if (RATE_MAX <= rate)
-        rate = RATE_50HZ;
-    else if (RATE_200HZ >= rate)
-        rate = RATE_200HZ;
+    // Protect against out of bounds rate
+    if (rate < 0) {
+        // Set to first entry in the array (200HZ)
+        return &ExpressLRS_AirRateConfig[0];
+    }
+    else if (rate > MaxRFrate) {
+        // Set to last usable entry in the array (currently 50HZ)
+        return &ExpressLRS_AirRateConfig[MaxRFrate];
+    }
+        
     return &ExpressLRS_AirRateConfig[rate];
 }
 
