@@ -2,16 +2,19 @@
 
 /* HW specific code can be found from <mcu type>/ folder */
 
-void (*HwTimer::callbackTick)() = &nullCallback; // function is called whenever there is new RC data.
-void (*HwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
+HwTimer::HwTimer()
+{
+    callbackTick = nullCallback; // function is called whenever there is new RC data.
+    callbackTick = nullCallback; // function is called whenever there is new RC data.
 
-volatile uint32_t HwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool HwTimer::TickTock = 0;
-volatile int32_t HwTimer::PhaseShift = 0;
-volatile bool HwTimer::ResetNextLoop = false;
+    HWtimerInterval = TimerIntervalUSDefault;
+    TickTock = 0;
+    PhaseShift = 0;
+    ResetNextLoop = false;
 
-volatile uint32_t HwTimer::LastCallbackMicrosTick = 0;
-volatile uint32_t HwTimer::LastCallbackMicrosTock = 0;
+    LastCallbackMicrosTick = 0;
+    LastCallbackMicrosTock = 0;
+}
 
 void HwTimer::updateInterval(uint32_t newTimerInterval)
 {

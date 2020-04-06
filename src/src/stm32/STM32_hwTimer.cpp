@@ -1,33 +1,35 @@
 #include "HwTimer.h"
 
-static HardwareTimer MyTim(TIM1);
+HwTimer TxTimer;
 
-void MyTimCallback(HardwareTimer *)
+static HardwareTimer timer_tx(TIM1);
+
+static void TimerCallback(HardwareTimer *)
 {
-    HwTimer::callback();
+    TxTimer.callback();
 }
 
 void HwTimer::init()
 {
     noInterrupts();
-    MyTim.attachInterrupt(MyTimCallback);
-    //MyTim.setMode(2, TIMER_OUTPUT_COMPARE);
+    timer_tx.attachInterrupt(TimerCallback);
+    //timer_tx.setMode(2, TIMER_OUTPUT_COMPARE);
     setTime(HWtimerInterval >> 1);
-    MyTim.resume();
+    timer_tx.resume();
     interrupts();
 }
 
 void HwTimer::stop()
 {
-    MyTim.pause();
+    timer_tx.pause();
 }
 
 void HwTimer::pause()
 {
-    MyTim.pause();
+    timer_tx.pause();
 }
 
 void HwTimer::setTime(uint32_t time)
 {
-    MyTim.setOverflow(time, MICROSEC_FORMAT);
+    timer_tx.setOverflow(time, MICROSEC_FORMAT);
 }

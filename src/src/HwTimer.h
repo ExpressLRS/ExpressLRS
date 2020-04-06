@@ -9,26 +9,29 @@
 class HwTimer
 {
 public:
-    static volatile uint32_t LastCallbackMicrosTick;
-    static volatile uint32_t LastCallbackMicrosTock;
+    volatile uint32_t LastCallbackMicrosTick;
+    volatile uint32_t LastCallbackMicrosTock;
 
-    static void init();
-    static void ICACHE_RAM_ATTR pause();
-    static void ICACHE_RAM_ATTR stop();
-    static void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
-    static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
+    HwTimer();
+    void init();
+    void ICACHE_RAM_ATTR pause();
+    void ICACHE_RAM_ATTR stop();
+    void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
+    void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
 
-    static void ICACHE_RAM_ATTR callback();
+    void ICACHE_RAM_ATTR callback();
 
     static inline void nullCallback(){};
-    static void (*callbackTick)();
-    static void (*callbackTock)();
+    void (*callbackTick)();
+    void (*callbackTock)();
 
 private:
-    static volatile uint32_t HWtimerInterval;
-    static volatile bool TickTock;
-    static volatile int32_t PhaseShift;
-    static volatile bool ResetNextLoop;
+    volatile uint32_t HWtimerInterval;
+    volatile bool TickTock;
+    volatile int32_t PhaseShift;
+    volatile bool ResetNextLoop;
 
-    static void setTime(uint32_t);
+    void setTime(uint32_t);
 };
+
+extern HwTimer TxTimer;

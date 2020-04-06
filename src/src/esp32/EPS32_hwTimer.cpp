@@ -3,13 +3,15 @@
 #include <FreeRTOS.h>
 #include <esp32-hal-timer.h>
 
+HwTimer TxTimer;
+
 static hw_timer_t *timer = NULL;
 static portMUX_TYPE isrMutex = portMUX_INITIALIZER_UNLOCKED;
 
 void ICACHE_RAM_ATTR TimerTask_ISRhandler(void)
 {
     portENTER_CRITICAL(&isrMutex);
-    HwTimer::callback();
+    TxTimer.callback();
     portEXIT_CRITICAL(&isrMutex);
 }
 

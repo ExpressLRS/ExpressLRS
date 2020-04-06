@@ -28,7 +28,6 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-HwTimer hwTimer;
 SX127xDriver Radio;
 CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
@@ -458,9 +457,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+    TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -506,7 +505,7 @@ void beginWebsever()
 {
 #ifdef PLATFORM_ESP8266
     Radio.StopContRX();
-    hwTimer.stop();
+    TxTimer.stop();
 
     BeginWebUpdate();
     webUpdateMode = true;
@@ -576,7 +575,7 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.StopContRX();
     Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
     ExpressLRS_currAirRate = config;
-    hwTimer.updateInterval(config->interval);
+    TxTimer.updateInterval(config->interval);
     LPF_PacketInterval.init(config->interval);
     //LPF_Offset.init(0);
     //InitHarwareTimer();
@@ -631,8 +630,8 @@ void setup()
     Radio.TXdoneCallback1 = &Radio.RXnb;
 
     crsf.Begin();
-    hwTimer.callbackTock = &HWtimerCallback;
-    hwTimer.init();
+    TxTimer.callbackTock = &HWtimerCallback;
+    TxTimer.init();
 
     SetRFLinkRate(RATE_DEFAULT);
 }
