@@ -18,7 +18,6 @@ void HwSerial::Begin(uint32_t baud, uint32_t config)
 {
     HardwareSerial::begin(baud, (enum SerialConfig)config);
     enable_receiver();
-    HardwareSerial::flush();
 }
 
 void HwSerial::enable_receiver(void)

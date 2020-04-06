@@ -21,7 +21,6 @@ void HwSerial::Begin(uint32_t baud, uint32_t config)
 {
     HardwareSerial::begin(baud, config);
     enable_receiver();
-    HardwareSerial::flush();
 }
 
 void HwSerial::enable_receiver(void)
@@ -40,4 +39,6 @@ void HwSerial::enable_transmitter(void)
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+
+    vTaskDelay(1 / portTICK_PERIOD_MS);
 }

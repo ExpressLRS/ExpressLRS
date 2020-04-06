@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
+#include "debug.h"
 
 class FIFO;
 
@@ -20,27 +21,24 @@ public:
 
     void flush_read()
     {
-        HardwareSerial::flush();
-        while (read() > 0)
-        {
-        }
+        while (available())
+            (void)read();
     }
 
     size_t write(const uint8_t *buff, size_t len)
     {
         size_t ret;
         enable_transmitter();
-#ifdef PLATFORM_ESP32
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-#endif
-#ifdef TARGET_R9M_TX
-        //delayMicroseconds(200);
-        delay(1);
-#endif
         ret = HardwareSerial::write(buff, len);
+        HardwareSerial::flush(); // wait until write ends
         enable_receiver();
         return ret;
     }
+
+    /*size_t write(uint8_t data)
+    {
+        return HardwareSerial::write(data);
+    }*/
 
     size_t write(FIFO &fifo);
 

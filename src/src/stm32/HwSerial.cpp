@@ -48,6 +48,7 @@ void HwSerial::enable_receiver(void)
 
 void HwSerial::enable_transmitter(void)
 {
+    delayMicroseconds(20);
     if (duplex_pin > -1)
     {
         HAL_HalfDuplex_EnableTransmitter(&_serial.handle);
