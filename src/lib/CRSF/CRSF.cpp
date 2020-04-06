@@ -51,7 +51,7 @@ uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
 
 VOLATILE uint8_t CRSF::ParameterUpdateData[2] = {0};
 
-VOLATILE crsf_channels_s CRSF::PackedRCdataOut;
+volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 VOLATILE crsf_sensor_battery_s CRSF::TLMbattSensor;
 
@@ -136,16 +136,16 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 
 void ICACHE_RAM_ATTR CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
 {
-    if (CRSF::CRSFstate)
-    {
-        buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
-        SerialOutFIFO.push(size); // length
-        SerialOutFIFO.pushBytes(buff, size);
-    }
+    buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
+    SerialOutFIFO.push(size); // length
+    SerialOutFIFO.pushBytes(buff, size);
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
+    if (!CRSF::CRSFstate)
+        return;
+
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength)] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -159,11 +159,8 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     uint8_t crc = CalcCRC(&outBuffer[2], (outBuffer[1] - 1));
     outBuffer[sizeof(outBuffer) - 1] = crc;
 
-    if (CRSF::CRSFstate)
-    {
-        SerialOutFIFO.push(sizeof(outBuffer)); // length
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    }
+    SerialOutFIFO.push(sizeof(outBuffer)); // length
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
 #else
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 #endif
@@ -171,6 +168,8 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
 void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
 {
+    if (!CRSF::CRSFstate)
+        return;
     // this is an 'extended header frame'
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(VTXcontrolFrameLength)] = {0};
@@ -199,11 +198,8 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
     uint8_t crc2 = CalcCRC(&outBuffer[2], VTXcontrolFrameLength + 2); // bug??
     outBuffer[15] = crc2;
 
-    if (CRSF::CRSFstate)
-    {
-        SerialOutFIFO.push(VTXcontrolFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, VTXcontrolFrameLength + 4);
-    }
+    SerialOutFIFO.push(VTXcontrolFrameLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, VTXcontrolFrameLength + 4);
 #else
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 #endif
@@ -211,7 +207,8 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
 
 void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
 {
-#define LUArespLength 6
+    if (!CRSF::CRSFstate)
+        return;
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LUArespLength)] = {0};
 
@@ -231,11 +228,8 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t v
     uint8_t crc = CalcCRC(&outBuffer[2], LUArespLength + 1);
     outBuffer[9] = crc;
 
-    if (CRSF::CRSFstate)
-    {
-        SerialOutFIFO.push(sizeof(outBuffer)); // length
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    }
+    SerialOutFIFO.push(sizeof(outBuffer)); // length
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
 #else
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 #endif
@@ -243,19 +237,22 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t v
 
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 {
+    if (!CRSF::CRSFstate)
+        return;
+
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(BattSensorFrameLength)] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = CRSF_FRAME_SIZE(BattSensorFrameLength);
     outBuffer[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
 
-    outBuffer[3] = CRSF::TLMbattSensor.voltage << 8;
-    outBuffer[4] = CRSF::TLMbattSensor.voltage;
-    outBuffer[5] = CRSF::TLMbattSensor.current << 8;
-    outBuffer[6] = CRSF::TLMbattSensor.current;
-    outBuffer[7] = CRSF::TLMbattSensor.capacity << 16;
-    outBuffer[9] = CRSF::TLMbattSensor.capacity << 8;
-    outBuffer[10] = CRSF::TLMbattSensor.capacity;
+    outBuffer[3] = (CRSF::TLMbattSensor.voltage >> 8) & 0xff;
+    outBuffer[4] = CRSF::TLMbattSensor.voltage & 0xff;
+    outBuffer[5] = (CRSF::TLMbattSensor.current >> 8) & 0xff;
+    outBuffer[6] = CRSF::TLMbattSensor.current & 0xff;
+    outBuffer[7] = (CRSF::TLMbattSensor.capacity >> 16) & 0xff;
+    outBuffer[9] = (CRSF::TLMbattSensor.capacity >> 8) & 0xff;
+    outBuffer[10] = CRSF::TLMbattSensor.capacity & 0xff;
     outBuffer[11] = CRSF::TLMbattSensor.remaining;
 
 #if 0
@@ -263,11 +260,8 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 
     outBuffer[BattSensorFrameLength + 3] = crc;
 
-    if (CRSF::CRSFstate)
-    {
-        SerialOutFIFO.push(BattSensorFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, BattSensorFrameLength + 4);
-    }
+    SerialOutFIFO.push(BattSensorFrameLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, BattSensorFrameLength + 4);
 #else
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 #endif
@@ -296,11 +290,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             int32_t offset = OpenTXsyncOffset - RequestedRCpacketAdvance;
             offset *= 10;
 
-            uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
+            uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(OpenTXsyncFrameLength)] = {0};
 
-            outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
-            outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 13?
-            outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;        // 0x3A
+            outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;         // 0xEA
+            outBuffer[1] = CRSF_FRAME_SIZE(OpenTXsyncFrameLength); // 13
+            outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;                // 0x3A
 
             outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
             outBuffer[4] = 0x00;                           //??? not sure doesn't seem to matter
@@ -316,16 +310,18 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             outBuffer[12] = (offset & 0x0000FF00) >> 8;
             outBuffer[13] = (offset & 0x000000FF) >> 0;
 
+#if 0
             uint8_t crc = CalcCRC(&outBuffer[2], OpenTXsyncFrameLength + 1);
 
             outBuffer[OpenTXsyncFrameLength + 3] = crc;
 
             SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
             SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
-
-#if !SYNC_MIN
-            OpenTXsynNextSend = current + OpenTXsyncPakcetInterval;
+#else
+            CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 #endif
+
+            OpenTXsynNextSend = current + OpenTXsyncPakcetInterval;
         }
     }
 }
@@ -561,38 +557,53 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 #endif // TX
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+
+void ICACHE_RAM_ATTR CRSF::CrsfFrameSendToFC(uint8_t *buff, uint8_t size)
+{
+    buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
+    _dev->write(buff, size);
+}
+
 void CRSF::sendLinkStatisticsToFC()
 {
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength)] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
+    outBuffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
     outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    volatile_memcpy(&outBuffer[3], &LinkStatistics, LinkStatisticsFrameLength);
 
+#if 0
     uint8_t crc = CalcCRC(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
     _dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+#else
+    CrsfFrameSendToFC(outBuffer, sizeof(outBuffer));
+#endif
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-    uint8_t outBuffer[RCframeLength + 4] = {0};
+    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(RCframeLength)] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = RCframeLength + 2;
+    outBuffer[1] = CRSF_FRAME_SIZE(RCframeLength);
     outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
+    volatile_memcpy(&outBuffer[3], &PackedRCdataOut, RCframeLength);
 
+#if 0
     uint8_t crc = CalcCRC(&outBuffer[2], RCframeLength + 1);
 
     outBuffer[RCframeLength + 3] = crc;
 
     _dev->write(outBuffer, RCframeLength + 4);
+#else
+    CrsfFrameSendToFC(outBuffer, sizeof(outBuffer));
+#endif
     //DEBUG_PRINT(".");
 }
 

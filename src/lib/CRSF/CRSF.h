@@ -23,12 +23,13 @@
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define RCframeLength 22 // length of the RC data packed bytes frame. 16 channels in 11 bits each.
+#define RCframeLength sizeof(crsf_channels_t) // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
 //#define LinkStatisticsFrameLength 10 //
-#define LinkStatisticsFrameLength sizeof(LinkStatistics)
-#define OpenTXsyncFrameLength 11 //
-#define BattSensorFrameLength 8  //
-#define VTXcontrolFrameLength 12 //
+#define LinkStatisticsFrameLength sizeof(crsfPayloadLinkstatistics_s)
+#define OpenTXsyncFrameLength 11                            //
+#define BattSensorFrameLength sizeof(crsf_sensor_battery_t) // 8
+#define VTXcontrolFrameLength 12                            //
+#define LUArespLength 6
 
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
@@ -94,7 +95,7 @@ static const unsigned int VTXtable[6][8] =
      {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917},  /* Race */
      {5621, 5584, 5547, 5510, 5473, 5436, 5399, 5362}}; /* LO Race */
 
-typedef enum
+enum crsf_frame_type_e
 {
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
@@ -115,9 +116,9 @@ typedef enum
     CRSF_FRAMETYPE_MSP_REQ = 0x7A,   // response request using msp sequence as command
     CRSF_FRAMETYPE_MSP_RESP = 0x7B,  // reply with 58 byte chunked binary
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
-} crsf_frame_type_e;
+};
 
-typedef enum
+enum crsf_addr_e
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
@@ -132,9 +133,7 @@ typedef enum
     CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
-} crsf_addr_e;
-
-//typedef struct crsf_addr_e asas;
+};
 
 typedef enum
 {
@@ -194,7 +193,7 @@ typedef struct crsf_channels_s
     unsigned ch14 : 11;
     unsigned ch15 : 11;
 } PACKED crsf_channels_t;
-typedef struct crsf_channels_s crsf_channels_t;
+//typedef struct crsf_channels_s crsf_channels_t;
 
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_sensor_battery_s
@@ -203,8 +202,8 @@ typedef struct crsf_sensor_battery_s
     unsigned current : 16;  // ma * 100
     unsigned capacity : 24; // mah
     unsigned remaining : 8; // %
-} PACKED crsf_sensor_battery_s;
-typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
+} PACKED crsf_sensor_battery_t;
+//typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
 
 /*
  * 0x14 Link statistics
@@ -216,13 +215,15 @@ typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
  * int8_t Uplink SNR ( db )
  * uint8_t Diversity active antenna ( enum ant. 1 = 0, ant. 2 )
  * uint8_t RF Mode ( enum 4fps = 0 , 50fps, 150hz)
- * uint8_t Uplink TX Power ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW )
+ * uint8_t Downlink TX Power ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 250mW )
  * uint8_t Downlink RSSI ( dBm * -1 )
  * uint8_t Downlink package success rate / Link quality ( % )
  * int8_t Downlink SNR ( db )
+ *
  * Uplink is the connection from the ground to the UAV and downlink the opposite direction.
+ * Uplink:   PILOT => UAV
+ * Downlink: UAV   => PILOT
  */
-
 typedef struct crsfPayloadLinkstatistics_s
 {
     uint8_t uplink_RSSI_1;
@@ -231,25 +232,11 @@ typedef struct crsfPayloadLinkstatistics_s
     int8_t uplink_SNR;
     uint8_t active_antenna;
     uint8_t rf_Mode;
-    uint8_t uplink_TX_Power;
+    uint8_t downlink_TX_Power;
     uint8_t downlink_RSSI;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
 } crsfLinkStatistics_t;
-
-// typedef struct crsfOpenTXsyncFrame_s
-// {
-//     uint32_t adjustedRefreshRate;
-//     uint32_t lastUpdate;
-//     uint16_t refreshRate;
-//     int8_t refreshRate;
-//     uint16_t inputLag;
-//     uint8_t interval;
-//     uint8_t target;
-//     uint8_t downlink_RSSI;
-//     uint8_t downlink_Link_quality;
-//     int8_t downlink_SNR;
-// } crsfOpenTXsyncFrame_t;
 
 /////inline and utility functions//////
 
@@ -353,7 +340,7 @@ public:
 
     /////Variables/////
 
-    static VOLATILE crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
     static VOLATILE crsf_sensor_battery_s TLMbattSensor;
 
@@ -420,6 +407,7 @@ private:
     void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
 #else
+    void ICACHE_RAM_ATTR CrsfFrameSendToFC(uint8_t *buff, uint8_t size);
     void RX_processPacket(void);
 #endif
 
