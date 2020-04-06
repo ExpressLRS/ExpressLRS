@@ -4,60 +4,50 @@
 #include "../../src/targets.h"
 #include "DAC.h"
 #include "LoRaRadioLib.h"
+#include <Arduino.h>
 
 extern SX127xDriver Radio;
 
-int R9DAC::LUT[8][4] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
-    {10, 11, 9, 800},
-    {25, 14, 12, 920},
-    {50, 17, 15, 1030},
-    {100, 20, 18, 1150},
-    {250, 24, 22, 1330},
-    {500, 27, 25, 1520},
-    {1000, 30, 28, 1790},
-    {2000, 33, 31, 2160},
-};
+#define VCC 3300
 
-uint32_t R9DAC::CurrVoltageMV = 0;
-uint8_t R9DAC::CurrVoltageRegVal = 0;
-uint8_t R9DAC::SDA = 0;
-uint8_t R9DAC::SCL = 0;
-uint8_t R9DAC::ADDR = 0;
-
-DAC_STATE_ R9DAC::DAC_STATE = UNKNOWN;
-
-void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
+R9DAC::R9DAC()
 {
-    R9DAC::SDA = SDA_;
-    R9DAC::SCL = SCL_;
-    R9DAC::ADDR = ADDR_;
+    CurrVoltageMV = 0;
+    CurrVoltageRegVal = 0;
+    ADDR = 0;
 
-    Wire.setSDA(SDA); // set is needed or it wont work :/
-    Wire.setSCL(SCL);
+    DAC_State = UNKNOWN;
+}
+
+void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr)
+{
+    ADDR = addr;
+    DAC_State = UNKNOWN;
+
+    Wire.setSDA(sda); // set is needed or it wont work :/
+    Wire.setSCL(scl);
     Wire.begin();
-    R9DAC::DAC_STATE = UNKNOWN;
 }
 
 void R9DAC::standby()
 {
-    if (R9DAC::DAC_STATE != STANDBY)
+    if (DAC_State != STANDBY)
     {
-        Wire.beginTransmission(R9DAC::ADDR);
+        Wire.beginTransmission(ADDR);
         Wire.write(0x00);
         Wire.write(0x00);
         Wire.endTransmission();
-        R9DAC::DAC_STATE = STANDBY;
+        DAC_State = STANDBY;
     }
 }
 
 void R9DAC::resume()
 {
-    if (R9DAC::DAC_STATE != RUNNING)
+    if (DAC_State != RUNNING)
     {
         Radio.SetOutputPower(0b0000);
-        R9DAC::setVoltageRegDirect(CurrVoltageRegVal);
-        R9DAC::DAC_STATE = RUNNING;
+        setVoltageRegDirect(CurrVoltageRegVal);
+        DAC_State = RUNNING;
     }
 }
 
@@ -75,7 +65,7 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
     Radio.SetOutputPower(0b0000);
-    Wire.beginTransmission(R9DAC::ADDR);
+    Wire.beginTransmission(ADDR);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();
@@ -85,7 +75,7 @@ void R9DAC::setPower(DAC_PWR_ power)
 {
     Radio.SetOutputPower(0b0000);
     uint32_t reqVolt = LUT[(uint8_t)power][3];
-    R9DAC::setVoltageMV(reqVolt);
+    setVoltageMV(reqVolt);
 }
 
 #endif

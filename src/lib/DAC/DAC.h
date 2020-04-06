@@ -18,35 +18,51 @@ typedef enum
 
 } DAC_PWR_;
 
-typedef enum
+/*typedef enum
 {
     UNKNOWN = 0,
     RUNNING = 1,
     STANDBY = 2
 
 } DAC_STATE_;
-
-#define VCC 3300
+*/
 
 class R9DAC
 {
 private:
-    static int LUT[8][4];
-    static uint8_t SDA;
-    static uint8_t SCL;
-    static uint8_t ADDR;
+    const int LUT[8][4] = {
+        // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+        {10, 11, 9, 800},
+        {25, 14, 12, 920},
+        {50, 17, 15, 1030},
+        {100, 20, 18, 1150},
+        {250, 24, 22, 1330},
+        {500, 27, 25, 1520},
+        {1000, 30, 28, 1790},
+        {2000, 33, 31, 2160},
+    };
+
+    //DAC_STATE_ DAC_State;
+    enum
+    {
+        UNKNOWN = 0,
+        RUNNING = 1,
+        STANDBY = 2
+
+    } DAC_State;
+    uint8_t ADDR;
 
 public:
-    static DAC_STATE_ DAC_STATE;
-    static uint32_t CurrVoltageMV;
-    static uint8_t CurrVoltageRegVal;
+    uint32_t CurrVoltageMV;
+    uint8_t CurrVoltageRegVal;
 
-    static void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
-    static void standby();
-    static void resume();
-    static void setVoltageMV(uint32_t voltsMV);
-    static void setVoltageRegDirect(uint8_t voltReg);
-    static void setPower(DAC_PWR_ power);
+    R9DAC();
+    void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
+    void standby();
+    void resume();
+    void setVoltageMV(uint32_t voltsMV);
+    void setVoltageRegDirect(uint8_t voltReg);
+    void setPower(DAC_PWR_ power);
 };
 
 #endif
