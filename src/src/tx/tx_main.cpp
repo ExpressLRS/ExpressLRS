@@ -10,59 +10,62 @@
 #include "HwTimer.h"
 #include "debug.h"
 
-HwTimer hwTimer;
-
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
-#define PACKET_RATE_INTERVAL 500
-#define RF_MODE_CYCLE_INTERVAL 1000
-#define SWITCH_PACKET_SEND_INTERVAL 200
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
+#define PACKET_RATE_INTERVAL 500u
+//#define RF_MODE_CYCLE_INTERVAL 1000u
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u  // how often to send the switch data packet (ms) when there is no response from RX
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
 
 /// define some libs to use ///
 SX127xDriver Radio;
 CRSF crsf(CrsfSerial);
-POWERMGNT POWERMGNT;
+POWERMGNT PowerMgmt;
 
 //// Switch Data Handling ///////
+#if !defined(HYBRID_SWITCHES_8) && !defined(SEQ_SWITCHES)
 uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet will be send
+#define SWITCH_PACKET_SEND_INTERVAL 200u
+#endif
 
-////////////SYNC PACKET/////////
+/////////// SYNC PACKET ////////
 uint32_t SyncPacketNextSend = 0;
 
+/////////// CONNECTION /////////
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 volatile bool isRXconnected = false;
-volatile int packetCounteRX_TX = 0;
+
+//////////// TELEMETRY /////////
+volatile uint32_t recv_tlm_counter = 0;
+volatile uint8_t downlink_linkQuality = 0;
 uint32_t PacketRateNextCheck = 0;
-float PacketRate = 0.0;
-uint8_t linkQuality = 0;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
+
 ///////////////////////////////////////
 
 bool UpdateParamReq = false;
 
 bool Channels5to8Changed = false;
 
-bool ChangeAirRateRequested = false;
-bool ChangeAirRateSentUpdate = false;
+//bool ChangeAirRateRequested = false;
+//bool ChangeAirRateSentUpdate = false;
 
-bool WaitRXresponse = false;
+volatile bool WaitRXresponse = false;
 
 ///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
-uint8_t TelemetryWaitBuffer[7] = {0};
+//uint8_t TelemetryWaitBuffer[7] = {0};
 
-uint32_t LinkSpeedIncreaseDelayFactor = 500; // wait for the connection to be 'good' for this long before increasing the speed.
-uint32_t LinkSpeedDecreaseDelayFactor = 200; // this long wait this long for connection to be below threshold before dropping speed
+//uint32_t LinkSpeedIncreaseDelayFactor = 500; // wait for the connection to be 'good' for this long before increasing the speed.
+//uint32_t LinkSpeedDecreaseDelayFactor = 200; // this long wait this long for connection to be below threshold before dropping speed
 
-uint32_t LinkSpeedDecreaseFirstMetCondition = 0;
-uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
+//uint32_t LinkSpeedDecreaseFirstMetCondition = 0;
+//uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
 
-uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
-uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
+//uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
+//uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ICACHE_RAM_ATTR IncreasePower();
@@ -90,7 +93,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         return;
     }
 
-    packetCounteRX_TX++;
+    recv_tlm_counter++;
 
     if (type != TLM_PACKET)
     {
@@ -111,9 +114,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
         crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
         crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-        crsf.LinkStatistics.downlink_Link_quality = linkQuality;
+        crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
         //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-        crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
+        crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
 
         crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
@@ -273,7 +276,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.TimerInterval = config->interval;
     Radio.UpdateTimerInterval();
 #else
-    hwTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
+    TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 #endif
 
     Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
@@ -284,8 +287,9 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 
     crsf.RequestedRCpacketInterval = config->interval;
 
-    isRXconnected = false;
-    platform_connection_state(false);
+    // Set connected if telemetry is not used
+    isRXconnected = (TLM_RATIO_NO_TLM == config->TLMinterval); // false;
+    platform_connection_state(isRXconnected);
 #ifdef TARGET_R9M_TX
     //r9dac.resume();
 #endif
@@ -344,7 +348,11 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+    uint32_t current_ms;
+    uint8_t crc;
+
     DEBUG_PRINT("I");
+
 #ifdef FEATURE_OPENTX_SYNC
     crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
@@ -362,22 +370,20 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
             }
             else
             {
-                Radio.NonceTX++;
+                Radio.NonceTX++; // what for?
             }
         }
     }
 
-    uint32_t current_ms = millis();
+    current_ms = millis();
 
-    //if (((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
+    //only send sync when its time and only on channel 0;
+    //if (((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested)
     if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
     {
-        uint32_t SyncInterval =
-            (isRXconnected) ? SYNC_PACKET_SEND_INTERVAL_RX_CONN : SYNC_PACKET_SEND_INTERVAL_RX_LOST;
-
         GenerateSyncPacketData();
-        SyncPacketNextSend = current_ms + SyncInterval;
-        ChangeAirRateSentUpdate = true;
+        SyncPacketNextSend = current_ms + ((isRXconnected) ? SYNC_PACKET_SEND_INTERVAL_RX_CONN : SYNC_PACKET_SEND_INTERVAL_RX_LOST);
+        //ChangeAirRateSentUpdate = true;
         //DEBUG_PRINTLN("sync");
         //DEBUG_PRINTLN(Radio.currFreq);
     }
@@ -402,7 +408,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
 
     ///// Next, Calculate the CRC and put it into the buffer /////
-    uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
+    crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
 #ifdef TARGET_R9M_TX
     //r9dac.resume(); takes too long
@@ -411,10 +417,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
     Radio.TXnb(Radio.TXdataBuffer, 8);
 
-    if (ChangeAirRateRequested)
+    /*if (ChangeAirRateRequested)
     {
         ChangeAirRateSentUpdate = true;
-    }
+    }*/
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -433,7 +439,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     {
     case 0: // send all params
         DEBUG_PRINTLN("send all");
-        //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
         break;
     case 1:
         if (crsf.ParameterUpdateData[1] == 0)
@@ -445,7 +450,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
             /*uint8_t newRate =*/incRFLinkRate();
         }
         DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
-        //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
         break;
 
     case 2:
@@ -455,11 +459,11 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
         if (crsf.ParameterUpdateData[1] == 0)
         {
-            POWERMGNT.decPower();
+            PowerMgmt.decPower();
         }
         else if (crsf.ParameterUpdateData[1] == 1)
         {
-            POWERMGNT.incPower();
+            PowerMgmt.incPower();
         }
 
         break;
@@ -473,8 +477,11 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
     UpdateParamReq = false;
     //DEBUG_PRINTLN("Power");
-    //DEBUG_PRINTLN(POWERMGNT.currPower());
-    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
+    //DEBUG_PRINTLN(PowerMgmt.currPower());
+    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2),
+                         ExpressLRS_currAirRate->TLMinterval + 1,
+                         PowerMgmt.currPower() + 2,
+                         4);
 }
 
 void DetectOtherRadios()
@@ -489,16 +496,25 @@ void DetectOtherRadios()
     // }
 }
 
+static void hw_timer_init(void)
+{
+    TxTimer.init();
+}
+static void hw_timer_stop(void)
+{
+    TxTimer.stop();
+}
+
 void setup()
 {
     CrsfSerial.Begin(CRSF_OPENTX_BAUDRATE);
 
     platform_setup();
 
-    crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
-    crsf.disconnected = &hwTimer.stop;
+    crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
+    crsf.disconnected = hw_timer_stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
-    hwTimer.callbackTock = &SendRCdataToRF;
+    TxTimer.callbackTock = &SendRCdataToRF;
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
 
@@ -540,7 +556,7 @@ void setup()
     crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
 
-    POWERMGNT.defaultPower();
+    PowerMgmt.defaultPower();
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
 
     bool HighPower = false;
@@ -557,28 +573,45 @@ void setup()
 
 void loop()
 {
-    uint32_t current_ms = millis();
-
-    if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
+    if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
     {
-        isRXconnected = false;
-        platform_connection_state(false);
-    }
+        uint32_t current_ms = millis();
 
-    if (current_ms >= PacketRateNextCheck)
-    {
-        PacketRateNextCheck = current_ms + PACKET_RATE_INTERVAL;
+        if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
+        {
+            isRXconnected = false;
+            platform_connection_state(false);
+        }
 
+        if (current_ms >= PacketRateNextCheck)
+        {
+            PacketRateNextCheck = current_ms + PACKET_RATE_INTERVAL;
+
+#if 0
+        // TODO: this is not ok... need improvements
         float targetFrameRate = ExpressLRS_currAirRate->rate; // 200
         if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
             targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
-        PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);           // num tlm packets
-        linkQuality = int((((float)PacketRate / targetFrameRate) * 100000.0));
-        if (linkQuality > 99)
+        float PacketRate = recv_tlm_counter;
+        PacketRate /= PACKET_RATE_INTERVAL; // num tlm packets
+        downlink_linkQuality = int(((PacketRate / targetFrameRate) * 100000.0));
+        if (downlink_linkQuality > 99)
         {
-            linkQuality = 99;
+            downlink_linkQuality = 99;
         }
-        packetCounteRX_TX = 0;
+        recv_tlm_counter = 0;
+#else
+            // Calc LQ based on good tlm packets and receptions done
+            uint8_t rx_cnt = Radio.NonceRX;
+            uint32_t tlm_cnt = recv_tlm_counter;
+            Radio.NonceRX = recv_tlm_counter = 0; // Clear RX counter
+            if (rx_cnt)
+                downlink_linkQuality = (tlm_cnt * 100u) / rx_cnt;
+            else
+                // failure value??
+                downlink_linkQuality = 0;
+#endif
+        }
     }
 
     // Process CRSF packets from TX
