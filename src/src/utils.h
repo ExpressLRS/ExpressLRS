@@ -18,3 +18,5 @@ long rng5Bit(void);
 
 // returns 0<x<n where n <= 256
 unsigned int rngN(unsigned int upper);
+
+unsigned int volatile_memcpy(volatile void *d, volatile void *s, unsigned int n);

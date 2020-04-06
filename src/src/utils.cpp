@@ -72,3 +72,16 @@ long rng0to2(void)
     }
     return randomNumber;
 }
+
+unsigned int
+volatile_memcpy(volatile void *d, volatile void *s, unsigned int n)
+{
+    volatile uint8_t *dst = (uint8_t *)d;
+    volatile uint8_t *src = (uint8_t *)s;
+    uint32_t iter;
+    for (iter = 0; iter < n; iter++)
+    {
+        *dst++ = *src++;
+    }
+    return iter;
+}
