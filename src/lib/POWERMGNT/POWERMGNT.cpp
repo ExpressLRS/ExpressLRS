@@ -2,9 +2,13 @@
 
 extern SX127xDriver Radio;
 
-PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+POWERMGNT::POWERMGNT()
+{
+    CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+}
 
-PowerLevels_e POWERMGNT::incPower()
+PowerLevels_e
+POWERMGNT::incPower()
 {
     if (CurrentPower < MaxPower)
     {
@@ -34,15 +38,12 @@ void POWERMGNT::defaultPower()
 
 PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 {
-
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
     r9dac.setPower((DAC_PWR_)Power);
     return Power;
-#endif
 
-#ifdef TARGET_100mW_MODULE
-
+#elif defined(TARGET_100mW_MODULE)
     if (Power <= PWR_50mW)
     {
         if (Power == PWR_10mW)
@@ -61,16 +62,13 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
             return PWR_50mW;
         }
     }
-    else
-    {
-        return CurrentPower;
-    }
+    return CurrentPower;
 
-#endif
-
-#ifdef TARGET_1000mW_MODULE
+#elif defined(TARGET_1000mW_MODULE)
     Radio.SetOutputPower(0b0000);
     return PWR_25mW;
 // not done yet
+#else
+    return 0;
 #endif
 }
