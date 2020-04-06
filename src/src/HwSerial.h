@@ -35,11 +35,6 @@ public:
         return ret;
     }
 
-    /*size_t write(uint8_t data)
-    {
-        return HardwareSerial::write(data);
-    }*/
-
     size_t write(FIFO &fifo);
 
 private:
