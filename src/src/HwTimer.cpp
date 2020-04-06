@@ -15,61 +15,60 @@ volatile uint32_t HwTimer::LastCallbackMicrosTock = 0;
 
 void HwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    HwTimer::HWtimerInterval = newTimerInterval;
-    HwTimer::setTime(newTimerInterval >> 1);
+    HWtimerInterval = newTimerInterval;
+    setTime(newTimerInterval >> 1);
 }
 
 void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
 {
-    int32_t MaxPhaseShift = HwTimer::HWtimerInterval >> 1;
+    int32_t const MaxPhaseShift = HWtimerInterval >> 1;
 
     if (newPhaseShift > MaxPhaseShift)
     {
-        HwTimer::PhaseShift = MaxPhaseShift;
+        PhaseShift = MaxPhaseShift;
+    }
+    else if (newPhaseShift < -MaxPhaseShift)
+    {
+        PhaseShift = -MaxPhaseShift;
     }
     else
     {
-        HwTimer::PhaseShift = newPhaseShift;
-    }
-
-    if (newPhaseShift < -MaxPhaseShift)
-    {
-        HwTimer::PhaseShift = -MaxPhaseShift;
-    }
-    else
-    {
-        HwTimer::PhaseShift = newPhaseShift;
+        PhaseShift = newPhaseShift;
     }
 }
 
 void ICACHE_RAM_ATTR HwTimer::callback()
 {
 
-    if (HwTimer::TickTock)
+    if (TickTock)
     {
-        if (HwTimer::ResetNextLoop)
+#if 0
+        if (ResetNextLoop)
         {
 
-            HwTimer::setTime(HwTimer::HWtimerInterval >> 1);
-            HwTimer::ResetNextLoop = false;
+            setTime(HWtimerInterval >> 1);
+            ResetNextLoop = false;
         }
 
-        if (HwTimer::PhaseShift > 0 || HwTimer::PhaseShift < 0)
+        if (PhaseShift != 0)
         {
 
-            HwTimer::setTime((HwTimer::HWtimerInterval + HwTimer::PhaseShift) >> 1);
+            setTime((HWtimerInterval + PhaseShift) >> 1);
 
-            HwTimer::ResetNextLoop = true;
-            HwTimer::PhaseShift = 0;
+            ResetNextLoop = true;
+            PhaseShift = 0;
         }
-
-        HwTimer::LastCallbackMicrosTick = micros();
-        HwTimer::callbackTick();
+#else
+        setTime((HWtimerInterval + PhaseShift) >> 1);
+        PhaseShift = 0;
+#endif
+        LastCallbackMicrosTick = micros();
+        callbackTick();
     }
     else
     {
-        HwTimer::LastCallbackMicrosTock = micros();
-        HwTimer::callbackTock();
+        LastCallbackMicrosTock = micros();
+        callbackTock();
     }
-    HwTimer::TickTock ^= 1;
+    TickTock ^= 1;
 }

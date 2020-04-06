@@ -12,7 +12,7 @@ void HwTimer::init()
     noInterrupts();
     MyTim.attachInterrupt(MyTimCallback);
     //MyTim.setMode(2, TIMER_OUTPUT_COMPARE);
-    HwTimer::setTime(HwTimer::HWtimerInterval >> 1);
+    setTime(HWtimerInterval >> 1);
     MyTim.resume();
     interrupts();
 }
