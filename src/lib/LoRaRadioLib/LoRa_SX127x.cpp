@@ -74,8 +74,8 @@ uint32_t SX127xDriver::currFreq = 123456789;
 uint8_t SX127xDriver::currPWR = 0b0000;
 uint8_t SX127xDriver::maxPWR = 0b1111;
 
-uint8_t volatile SX127xDriver::TXdataBuffer[256];
-uint8_t volatile SX127xDriver::RXdataBuffer[256];
+uint8_t volatile SX127xDriver::TXdataBuffer[16];
+uint8_t volatile SX127xDriver::RXdataBuffer[16];
 
 ContinousMode SX127xDriver::ContMode = CONT_OFF;
 RFmodule_ SX127xDriver::RFmodule = RFMOD_SX1276;

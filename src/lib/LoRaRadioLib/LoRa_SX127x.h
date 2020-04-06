@@ -110,8 +110,8 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static volatile uint8_t TXdataBuffer[256];
-    static volatile uint8_t RXdataBuffer[256];
+    static volatile uint8_t TXdataBuffer[16];
+    static volatile uint8_t RXdataBuffer[16];
 
     static volatile uint8_t TXbuffLen;
     static volatile uint8_t RXbuffLen;
