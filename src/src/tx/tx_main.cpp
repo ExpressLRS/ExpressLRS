@@ -26,17 +26,15 @@ SX127xDriver Radio;
 CRSF crsf(CrsfSerial);
 POWERMGNT POWERMGNT;
 
-void TimerExpired();
-
 //// Switch Data Handling ///////
 uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet will be send
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketNextSend = 0;
 
-uint32_t LastTLMpacketRecvMillis = 0;
-bool isRXconnected = false;
-int packetCounteRX_TX = 0;
+volatile uint32_t LastTLMpacketRecvMillis = 0;
+volatile bool isRXconnected = false;
+volatile int packetCounteRX_TX = 0;
 uint32_t PacketRateNextCheck = 0;
 float PacketRate = 0.0;
 uint8_t linkQuality = 0;
@@ -264,25 +262,27 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
     Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
-    const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+    const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
+    if (config == ExpressLRS_currAirRate)
+        return; // No need to modify, rate is same
 
 //#ifdef PLATFORM_ESP32
 #if 0
-    Radio.TimerInterval = mode->interval;
+    Radio.TimerInterval = config->interval;
     Radio.UpdateTimerInterval();
 #else
-    hwTimer.updateInterval(mode->interval); // TODO: Make sure this is equiv to above commented lines
+    hwTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 #endif
 
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
-    Radio.SetPreambleLength(mode->PreambleLen);
+    Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
+    Radio.SetPreambleLength(config->PreambleLen);
 
     ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
-    ExpressLRS_currAirRate = mode;
+    ExpressLRS_currAirRate = config;
 
-    crsf.RequestedRCpacketInterval = mode->interval;
+    crsf.RequestedRCpacketInterval = config->interval;
 
     isRXconnected = false;
     platform_connection_state(false);
@@ -294,9 +294,9 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 {
     DEBUG_PRINTLN("dec");
-    if ((uint8_t)ExpressLRS_currAirRate->enum_rate < MaxRFrate)
+    if ((uint8_t)ExpressLRS_currAirRate->enum_rate < (RATE_MAX - 1))
     {
-        SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate + 1));
+        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
     }
     return (uint8_t)ExpressLRS_currAirRate->enum_rate;
 }
@@ -306,7 +306,7 @@ uint8_t ICACHE_RAM_ATTR incRFLinkRate()
     DEBUG_PRINTLN("inc");
     if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
     {
-        SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate - 1));
+        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
     }
     return (uint8_t)ExpressLRS_currAirRate->enum_rate;
 }
@@ -323,7 +323,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleTLM()
 {
-    if (ExpressLRS_currAirRate->TLMinterval > 0)
+    if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
         uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
         if (modresult != 0) // wait for tlm response because it's time
@@ -344,12 +344,13 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+    DEBUG_PRINT("I");
 #ifdef FEATURE_OPENTX_SYNC
     crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
 
     /////// This Part Handles the Telemetry Response ///////
-    if (ExpressLRS_currAirRate->TLMinterval > 0)
+    if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
         uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
         if (modresult == 0)
@@ -497,7 +498,7 @@ void setup()
     crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
     crsf.disconnected = &hwTimer.stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
-    hwTimer.callbackTock = &TimerExpired;
+    hwTimer.callbackTock = &SendRCdataToRF;
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
 
@@ -549,7 +550,7 @@ void setup()
     Radio.Begin(HighPower);
     crsf.Begin();
 
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(RATE_DEFAULT);
 
     platform_connection_state(false);
 }
@@ -568,10 +569,10 @@ void loop()
     {
         PacketRateNextCheck = current_ms + PACKET_RATE_INTERVAL;
 
-        float targetFrameRate = ExpressLRS_currAirRate->rate;
+        float targetFrameRate = ExpressLRS_currAirRate->rate; // 200
         if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
-            targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
+            targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
+        PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);           // num tlm packets
         linkQuality = int((((float)PacketRate / targetFrameRate) * 100000.0));
         if (linkQuality > 99)
         {
@@ -584,9 +585,4 @@ void loop()
     crsf.TX_handleUartIn();
 
     platform_loop(isRXconnected);
-}
-
-void ICACHE_RAM_ATTR TimerExpired()
-{
-    SendRCdataToRF();
 }

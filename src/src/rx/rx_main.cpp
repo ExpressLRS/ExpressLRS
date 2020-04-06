@@ -73,9 +73,9 @@ bool alreadyTLMresp = false;
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
-uint32_t LastValidPacketMicros = 0;
-uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
-uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
+//volatile uint32_t LastValidPacketMicros = 0;
+//volatile uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
+volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 
 uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
 
@@ -86,8 +86,17 @@ uint32_t PacketIntervalError;
 uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
-uint32_t RFmodeLastCycled = 0;
+uint32_t RFmodeNextCycle = 0;
+
 ///////////////////////////////////////
+
+static inline void RfModeNextCycleCalc(void)
+{
+    // if connection == tentative, add a little delay
+    RFmodeNextCycle = millis() +
+                      ExpressLRS_currAirRate->RFmodeCycleInterval +
+                      ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
+}
 
 static bool ledState = false;
 static inline void led_set_state(bool state)
@@ -142,10 +151,14 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState != connected)
+    if (connectionState != connected ||
+        ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
     {
-        return; // don't bother sending tlm if disconnected
+        // don't bother sending tlm if disconnected or no tlm enabled
+        return;
     }
+
+    // Check if tlm time
     uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult != 0)
     {
@@ -228,8 +241,9 @@ void ICACHE_RAM_ATTR GotConnection()
 
     connectionState = connected; //we got a packet, therefore no lost connection
 
-    RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
-    led_set_state(1);            // turn on led
+    RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
+
+    led_set_state(1); // turn on led
     DEBUG_PRINTLN("got conn");
 
     platform_connection_state(true);
@@ -379,12 +393,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    LastValidPacketPrevMicros = LastValidPacketMicros;
-    LastValidPacketMicros = micros();
+    //LastValidPacketPrevMicros = LastValidPacketMicros;
+    //LastValidPacketMicros = micros();
     LastValidPacket = millis();
 
     getRFlinkInfo();
 
+    // TODO: move to main loop!
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
@@ -426,11 +441,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 GotConnection();
             }
 
-            // if (ExpressLRS_currAirRate->enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
+            // if (ExpressLRS_currAirRate->enum_rate == !(uint8_t)(Radio.RXdataBuffer[2] & 0b00001111))
             // {
             //     DEBUG_PRINTLN("update air rate");
-            //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
-            //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
+            //     SetRFLinkRate(Radio.RXdataBuffer[3]);
             // }
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
@@ -553,14 +567,17 @@ void sampleButton()
     }
 }
 
-void SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
-    const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+    const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
+    if (config == ExpressLRS_currAirRate)
+        return; // No need to modify, rate is same
+
     Radio.StopContRX();
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
-    ExpressLRS_currAirRate = mode;
-    hwTimer.updateInterval(mode->interval);
-    LPF_PacketInterval.init(mode->interval);
+    Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
+    ExpressLRS_currAirRate = config;
+    hwTimer.updateInterval(config->interval);
+    LPF_PacketInterval.init(config->interval);
     //LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
@@ -617,24 +634,24 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallback;
     hwTimer.init();
 
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(RATE_DEFAULT);
 }
 
 void loop()
 {
     uint32_t now = millis();
-    if (now > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
+    if (now > RFmodeNextCycle)
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             Radio.SetFrequency(GetInitialFreq());
-            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % RATE_25HZ)); //switch between 200hz, 100hz, 50hz, rates
+            SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
             LQreset();
             led_toggle();
             DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
             scanIndex++;
         }
-        RFmodeLastCycled = now;
+        RfModeNextCycleCalc();
     }
 
     if (millis() > (LastValidPacket + ExpressLRS_currAirRate->RFmodeCycleAddtionalTime)) // check if we lost conn.
