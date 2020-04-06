@@ -4,21 +4,21 @@ extern SX127xDriver Radio;
 
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
 
-#define RATE_MAX 3
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},
     {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000},
     {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500},
-    //{BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
-    //{BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
+#if RATE_MAX > 3
+    {BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
+#elif RATE_MAX > 4
+    {BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
+#endif
 };
 
-const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
+const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate)
 {
     if (RATE_MAX <= rate)
-        rate = RATE_50HZ;
-    else if (RATE_200HZ >= rate)
-        rate = RATE_200HZ;
+        rate = (RATE_MAX - 1);
     return &ExpressLRS_AirRateConfig[rate];
 }
 
@@ -63,13 +63,10 @@ int16_t MeasureNoiseFloor()
     return (returnval);
 }
 
-uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
+uint8_t TLMratioEnumToValue(uint8_t enumval)
 {
     switch (enumval)
     {
-    case TLM_RATIO_NO_TLM:
-        return 0; // todo: check whether this can be 1 or not
-        break;
     case TLM_RATIO_1_2:
         return 2;
         break;
@@ -91,6 +88,7 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
     case TLM_RATIO_1_128:
         return 128;
         break;
+    case TLM_RATIO_NO_TLM:
     default:
         return 0xFF;
     }

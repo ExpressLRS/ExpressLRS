@@ -21,7 +21,7 @@ extern uint8_t UID[6];
 extern uint8_t CRCCaesarCipher;
 extern uint8_t DeviceAddr;
 
-typedef enum
+enum
 {
     TLM_RATIO_NO_TLM = 0,
     TLM_RATIO_1_128 = 1,
@@ -31,8 +31,7 @@ typedef enum
     TLM_RATIO_1_8 = 5,
     TLM_RATIO_1_4 = 6,
     TLM_RATIO_1_2 = 7
-
-} expresslrs_tlm_ratio_e;
+};
 
 typedef enum
 {
@@ -41,34 +40,35 @@ typedef enum
     RF_AIRMODE_PARAMETERS = 2
 } expresslrs_tlm_header_e;
 
-typedef enum
+enum
 {
     RATE_200HZ = 0,
     RATE_100HZ = 1,
     RATE_50HZ = 2,
-    RATE_25HZ = 3,
-    RATE_4HZ = 4
-} expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    //RATE_25HZ = 3,
+    //RATE_4HZ = 4
+    RATE_MAX = 3
+}; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
-#define MaxRFrate 2
+#define RATE_DEFAULT RATE_200HZ
 
 typedef struct expresslrs_mod_settings_s
 {
     Bandwidth bw;
     SpreadingFactor sf;
     CodingRate cr;
-    int32_t sensitivity;                //expected RF sensitivity based on
-    uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
-    uint8_t rate;                       // rate in hz
-    expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint8_t PreambleLen;
-    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    int32_t sensitivity;     //expected RF sensitivity based on
+    uint32_t interval;       //interval in us seconds that corresponds to that frequnecy
+    uint8_t rate;            // rate in hz
+    uint8_t TLMinterval;     // every X packets is a response TLM packet, should be a power of 2
+    uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t PreambleLen;     //
+    uint8_t enum_rate;       // Max value of 16 since only 4 bits have been assigned in the sync package.
     uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;
 
-const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
+const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 
 //extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
 extern const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
@@ -83,7 +83,7 @@ extern int8_t ExpressLRS_prevPower;
 
 int16_t MeasureNoiseFloor();
 int16_t MeasureRSSI(int FHSSindex);
-uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
+uint8_t TLMratioEnumToValue(uint8_t enumval);
 
 // expresslrs packet header types
 // 00 -> standard 4 channel data packet
