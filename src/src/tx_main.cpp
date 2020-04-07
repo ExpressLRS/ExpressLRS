@@ -622,7 +622,7 @@ void loop()
 #endif
 
   if (Serial2.available()) {
-    uint8_t c = Serial.read();
+    uint8_t c = Serial2.read();
     
     if (msp.processReceivedByte(c)) {
       // Finished processing a complete packet
