@@ -2,8 +2,11 @@
 #include "FIFO.h"
 
 #include "../../src/targets.h"
+//#include "../../src/common.h"
 #include "../../src/utils.h"
 #include "../../src/debug.h"
+
+extern void platform_set_led(bool state);
 
 HwSerial *CRSF::_dev = NULL;
 
@@ -339,9 +342,7 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 #endif
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
-#ifdef GPIO_PIN_LED_RED
-        digitalWrite(GPIO_PIN_LED_RED, LOW);
-#endif
+        platform_set_led(LOW);
     }
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
@@ -475,9 +476,8 @@ void ICACHE_RAM_ATTR CRSF::wdtUART()
 
         if (BadPktsCount >= GoodPktsCount)
         {
-#ifdef GPIO_PIN_LED_RED
-            digitalWrite(GPIO_PIN_LED_RED, HIGH);
-#endif
+            platform_set_led(HIGH);
+
             DEBUG_PRINTLN("  Too many bad UART RX packets!");
 
             if (CRSFstate == true)

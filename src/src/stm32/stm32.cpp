@@ -1,14 +1,36 @@
 #include "targets.h"
 #include "debug.h"
+#include "common.h"
 #include <Arduino.h>
+
+#ifdef GPIO_PIN_BUTTON
+#include "button.h"
+Button button;
+
+void button_event_short(uint32_t ms)
+{
+    (void)ms;
+#if defined(TARGET_R9M_TX)
+#elif defined(TARGET_R9M_RX)
+    forced_start();
+#endif /* TARGET_R9M_RX */
+}
+
+void button_event_long(uint32_t ms)
+{
+#if defined(TARGET_R9M_TX)
+#elif defined(TARGET_R9M_RX)
+    if (ms > BUTTON_RESET_INTERVAL_RX)
+        HAL_NVIC_SystemReset();
+#endif /* TARGET_R9M_RX */
+}
+#endif
 
 #if defined(TARGET_R9M_TX)
 #include "DAC.h"
-#include "button.h"
-Button button;
 R9DAC r9dac;
-#endif
-#if defined(TARGET_R9M_RX)
+
+#elif defined(TARGET_R9M_RX)
 #endif /* TARGET_R9M_RX */
 
 void platform_setup(void)
@@ -23,21 +45,32 @@ void platform_setup(void)
     }
 #endif
 
-#if defined(TARGET_R9M_TX)
+/*************** CONFIGURE LEDs *******************/
+#ifdef GPIO_PIN_LED
+    pinMode(GPIO_PIN_LED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED, LOW);
+#endif
+#ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+#endif
 
+/*************** CONFIGURE BUTTON *******************/
+#ifdef GPIO_PIN_BUTTON
+    button.buttonShortPress = button_event_short;
+    button.buttonLongPress = button_event_long;
+    // R9M TX appears to be active high
+    button.init(GPIO_PIN_BUTTON, true);
+#endif
+
+/*************** CONFIGURE TX *******************/
+#if defined(TARGET_R9M_TX)
     pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
     digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
     //r9dac.setPower(R9_PWR_50mW);
-
-    button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 
 #ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -61,32 +94,34 @@ void platform_setup(void)
 #endif // JUST_BEEP_ONCE
 #endif // GPIO_PIN_BUZZER
 
-#endif /* TARGET_R9M_TX */
-
-#if defined(TARGET_R9M_RX)
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+/*************** CONFIGURE RX *******************/
+#elif defined(TARGET_R9M_RX)
 #endif /* TARGET_R9M_RX */
 }
 
-void platform_loop(bool connected)
+void platform_loop(connectionState_e state)
 {
-    (void)connected;
-
-#if defined(TARGET_R9M_TX)
+    (void)state;
+#ifdef GPIO_PIN_BUTTON
     button.handle();
-#endif /* TARGET_R9M_TX */
-#if defined(TARGET_R9M_RX)
+#endif
+
+#if defined(TARGET_R9M_TX)
+#elif defined(TARGET_R9M_RX)
 #endif /* TARGET_R9M_RX */
 }
 
-void platform_connection_state(bool connected)
+void platform_connection_state(connectionState_e state)
 {
-#if defined(TARGET_R9M_TX)
+    bool connected = (state == STATE_connected);
+#ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));
-    //digitalWrite(GPIO_PIN_LED_RED, (connected ? LOW : HIGH));
-#endif /* TARGET_R9M_TX */
-#if defined(TARGET_R9M_RX)
-    digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));
-#endif /* TARGET_R9M_RX */
+#endif
+}
+
+void platform_set_led(bool state)
+{
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, (uint32_t)state);
+#endif
 }

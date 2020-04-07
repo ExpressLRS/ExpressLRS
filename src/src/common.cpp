@@ -1,4 +1,6 @@
 #include "common.h"
+#include "LoRaRadioLib.h"
+#include "utils.h"
 
 extern SX127xDriver Radio;
 
@@ -92,4 +94,16 @@ uint8_t TLMratioEnumToValue(uint8_t enumval)
     default:
         return 0xFF;
     }
+}
+
+static bool ledState = false;
+void led_set_state(bool state)
+{
+    ledState = state;
+    platform_set_led(state);
+}
+
+void led_toggle(void)
+{
+    led_set_state(!ledState);
 }

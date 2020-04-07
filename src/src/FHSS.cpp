@@ -1,5 +1,8 @@
 #include "FHSS.h"
 #include "debug.h"
+#include "LoRaRadioLib.h"
+#include "common.h"
+#include "utils.h"
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433

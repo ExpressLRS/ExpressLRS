@@ -1,4 +1,3 @@
-#ifdef PLATFORM_ESP8266
 #include "debug.h"
 
 #include <ESP8266WiFi.h>
@@ -38,5 +37,3 @@ void HandleWebUpdate(void)
     httpServer.handleClient();
     MDNS.update();
 }
-
-#endif

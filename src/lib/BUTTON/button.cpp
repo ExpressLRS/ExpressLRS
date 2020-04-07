@@ -1,80 +1,98 @@
 #include "button.h"
-#include "../../src/debug.h"
+#include "../../src/targets.h"
+#include <Arduino.h>
 
-void inline Button::nullCallback(void){};
+static void nullCallback(uint32_t){};
 
-Button::Button()
+Button::Button(int debounce)
 {
-    buttonShortPress = &nullCallback; // callbacks
-    buttonLongPress = &nullCallback;  // callbacks
+    if (debounce < 0)
+        debounce = 80;
+
+    buttonShortPress = &nullCallback;
+    buttonLongPress = &nullCallback;
+
+    p_nextSamplingTime = 0;
 
     buttonLastPressed = 0;
     buttonLastPressedLong = 0;
 
-    buttonPrevState = true;   //active high, therefore true as default.
-    buttonIsDown = false;     //is the button currently being held down?
-    buttonIsDownLong = false; //is the button currently being held down?
+    buttonPrevState = false;
+    buttonIsDown = false;
+    buttonIsDownLong = false;
 
-    debounceDelay = 80;      //how long the switch must change state to be considered
-    longPressDelay = 500;    //how long the switch must hold state to be considered a long press
-    longPressInterval = 500; //how long the switch must hold long state to be reapeated.
+    debounceDelay = debounce;
+    shortPressDelay = 100;
+    longPressDelay = 500;
+    longPressInterval = 500;
 
     buttonPin = -1;
-    activeHigh = 0;
+    p_inverted = 0;
 }
 
-void Button::init(int Pin, bool high)
+void Button::init(int Pin, bool inverted, int debounce)
 {
-    pinMode(Pin, (high ? INPUT_PULLUP : INPUT));
+    pinMode(Pin, (inverted ? INPUT_PULLUP : INPUT));
     buttonPin = Pin;
-    activeHigh = high;
+
+    buttonPrevState = false;
+    buttonIsDown = false;
+    buttonIsDownLong = false;
+
+    p_inverted = inverted;
+    if (0 <= debounce)
+        debounceDelay = debounce;
 }
 
 void Button::handle()
 {
+    if (buttonPin < 0)
+        return;
     sampleButton();
 }
 
 void Button::sampleButton()
 {
-    if (buttonPin < 0)
-        return;
-
-    bool currState = !!digitalRead(buttonPin) ^ activeHigh;
     uint32_t now = millis();
-
-    if (currState == false && buttonPrevState == true)
-    { //button release
-        if (buttonIsDown && (!buttonIsDownLong))
-        {
-            DEBUG_PRINTLN("button short pressed");
-            buttonShortPress();
-        }
-        buttonIsDown = false; //button has been released at some point
-        buttonIsDownLong = false;
-    }
-    else if (currState == true && buttonPrevState == false)
-    { //button pressed
-        buttonLastPressed = now;
-    }
-
-    if (currState == true && buttonPrevState == true && (now - buttonLastPressed) > debounceDelay)
+    uint32_t interval = 10;
+    if (now >= p_nextSamplingTime)
     {
-        buttonIsDown = true;
-    }
+        uint32_t press_time = now - buttonLastPressed;
+        const bool currState = !!digitalRead(buttonPin) ^ p_inverted;
 
-    if (buttonIsDown &&
-        ((now - buttonLastPressed) > longPressDelay) &&
-        ((now - buttonLastPressedLong) > longPressInterval))
-    {
-        if (buttonIsDown)
-        {
-            DEBUG_PRINTLN("button pressed long");
-            buttonLastPressedLong = now;
-            buttonIsDownLong = true;
-            buttonLongPress();
+        if (currState == false && buttonPrevState == true)
+        { //button release
+            if (buttonIsDown && (!buttonIsDownLong))
+            {
+                // Check that button was pressed long enough
+                if (press_time > shortPressDelay)
+                {
+                    buttonShortPress(press_time);
+                }
+            }
+            buttonIsDown = false;
+            buttonIsDownLong = false;
         }
-    }
+        else if (currState == true && buttonPrevState == false)
+        { //button pressed
+            buttonLastPressed = now;
+            interval = debounceDelay;
+        }
+        else if (currState == true && buttonPrevState == true)
+        { // button hold
+            buttonIsDown = true;
 
-    buttonPrevState = currState;
+            if ((press_time > longPressDelay) &&
+                ((now - buttonLastPressedLong) > longPressInterval))
+            {
+                buttonLongPress(press_time);
+
+                buttonLastPressedLong = now;
+                buttonIsDownLong = true;
+            }
+        }
+
+        buttonPrevState = currState;
+        p_nextSamplingTime = now + interval;
+    }
 }

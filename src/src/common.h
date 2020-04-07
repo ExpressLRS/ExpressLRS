@@ -17,6 +17,26 @@
 
 #define One_Bit_Switches
 
+#define BUTTON_RESET_INTERVAL_RX 4000u  // Hold button for 4 sec to reboot RX
+#define WEB_UPDATE_PRESS_INTERVAL 2000u // hold button for 2 sec to enable webupdate mode
+
+typedef enum
+{
+    STATE_fw_upgrade = -1,
+    STATE_disconnected = 0,
+    STATE_tentative = 1,
+    STATE_connected = 2,
+} connectionState_e;
+extern connectionState_e connectionState;
+
+void platform_setup(void);
+void platform_loop(connectionState_e state);
+void platform_connection_state(connectionState_e state);
+void platform_set_led(bool state);
+
+void led_set_state(bool state);
+void led_toggle(void);
+
 extern uint8_t UID[6];
 extern uint8_t CRCCaesarCipher;
 extern uint8_t DeviceAddr;
@@ -94,3 +114,6 @@ uint8_t TLMratioEnumToValue(uint8_t enumval);
 #define SWITCH_DATA_PACKET 0b01
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
+
+void forced_start(void);
+void forced_stop(void);

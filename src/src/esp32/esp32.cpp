@@ -1,5 +1,6 @@
 #include "targets.h"
 #include "debug.h"
+#include "common.h"
 #include <Arduino.h>
 //#include "LED.h"
 
@@ -49,12 +50,16 @@ void platform_setup(void)
 #endif
 }
 
-void platform_loop(bool connected)
+void platform_loop(connectionState_e state)
 {
-    (void)connected;
+    (void)state;
 }
 
-void platform_connection_state(bool connected)
+void platform_connection_state(connectionState_e state)
 {
-    (void)connected;
+    (void)state;
+}
+
+void platform_set_led(bool state)
+{
 }

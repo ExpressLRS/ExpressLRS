@@ -163,7 +163,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX PB10 // USART3 TX for S.Port, needs BUFFER_OE
 #define GPIO_PIN_LED_RED PA11     // Red LED
 #define GPIO_PIN_LED_GREEN PA12   // Green LED
-#define GPIO_PIN_BUTTON PA8       // pullup e.g. LOW when pressed
+#define GPIO_PIN_LED GPIO_PIN_LED_RED
+//#define GPIO_PIN_BUTTON PA8       // pullup e.g. LOW when pressed
 #define GPIO_PIN_BUZZER PB1
 #define GPIO_PIN_DIP1 PA12 // dip switch 1
 #define GPIO_PIN_DIP2 PA11 // dip switch 2
@@ -190,7 +191,3 @@ https://github.com/jaxxzer
 class R9DAC;
 extern R9DAC r9dac;
 #endif
-
-void platform_setup(void);
-void platform_loop(bool connected);
-void platform_connection_state(bool connected);

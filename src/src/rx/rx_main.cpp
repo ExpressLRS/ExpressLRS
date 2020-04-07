@@ -12,80 +12,44 @@
 #include "HwSerial.h"
 #include "debug.h"
 
-#ifdef PLATFORM_ESP8266
-#include "esp82xx/ESP8266_WebUpdate.h"
-#endif
-
-#ifdef PLATFORM_STM32
-//#include "stm32/STM32_UARTinHandler.h"
-#endif
-
 //// CONSTANTS ////
-#define BUTTON_SAMPLE_INTERVAL 150
-#define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
-#define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
-#define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
+
 ///////////////////
 
 SX127xDriver Radio;
 CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
+connectionState_e connectionState = STATE_disconnected;
+
 /// Filters ////////////////
-LPF LPF_PacketInterval(3);
-LPF LPF_Offset(3);
-LPF LPF_FreqError(3);
-LPF LPF_UplinkRSSI(5);
+static LPF LPF_PacketInterval(3);
+static LPF LPF_Offset(3);
+static LPF LPF_FreqError(3);
+static LPF LPF_UplinkRSSI(5);
 ////////////////////////////
 
-uint8_t scanIndex = 0;
+static uint8_t scanIndex = 0;
 
-int32_t HWtimerError;
-int32_t Offset;
-
-typedef enum
-{
-    connected = 2,
-    tentative = 1,
-    disconnected = 0
-} connectionState_e;
-
-connectionState_e connectionState = disconnected;
-
-//// Variables Relating to Button behaviour ////
-bool buttonPrevValue = false;
-bool buttonDown = false; //is the button current pressed down?
-uint32_t buttonNextSample = BUTTON_SAMPLE_INTERVAL;
-uint32_t buttonLastPressed = 0;
-
-bool webUpdateMode = false;
-#ifdef PLATFORM_ESP8266
-uint32_t webUpdateLedFlashIntervalNext = 0;
-#endif
 ///////////////////////////////////////////////
 
-volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
+static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 
-bool alreadyFHSS = false;
-bool alreadyTLMresp = false;
+static bool alreadyFHSS = false;
 
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
 //volatile uint32_t LastValidPacketMicros = 0;
 //volatile uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
-volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
+static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 
-uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
+static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
 
-int16_t RFnoiseFloor; //measurement of the current RF noise floor
 ///////////////////////////////////////////////////////////////
 
-uint32_t PacketIntervalError;
-uint32_t PacketInterval;
-
 /// Variables for Sync Behaviour ////
-uint32_t RFmodeNextCycle = 0;
+static uint32_t RFmodeNextCycle = 0;
 
 ///////////////////////////////////////
 
@@ -94,20 +58,7 @@ static inline void RfModeNextCycleCalc(void)
     // if connection == tentative, add a little delay
     RFmodeNextCycle = millis() +
                       ExpressLRS_currAirRate->RFmodeCycleInterval +
-                      ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
-}
-
-static bool ledState = false;
-static inline void led_set_state(bool state)
-{
-    ledState = state;
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, (uint32_t)state);
-#endif
-}
-static inline void led_toggle(void)
-{
-    led_set_state(!ledState);
+                      ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
 }
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -140,7 +91,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     linkQuality = getRFlinkQuality();
-    if (connectionState != disconnected) // don't hop if we lost
+    if (connectionState != STATE_disconnected) // don't hop if we lost
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
@@ -150,7 +101,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState != connected ||
+    if (connectionState != STATE_connected ||
         ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
     {
         // don't bother sending tlm if disconnected or no tlm enabled
@@ -210,42 +161,42 @@ void ICACHE_RAM_ATTR HWtimerCallback()
 
 void LostConnection()
 {
-    if (connectionState == disconnected)
+    if (connectionState == STATE_disconnected)
     {
         return; // Already disconnected
     }
 
-    connectionState = disconnected; //set lost connection
+    connectionState = STATE_disconnected; //set lost connection
     LPF_FreqError.init(0);
 
     led_set_state(0);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
-    platform_connection_state(false);
+    platform_connection_state(connectionState);
 }
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    connectionState = tentative;
+    connectionState = STATE_tentative;
     DEBUG_PRINTLN("tentative conn");
 }
 
 void ICACHE_RAM_ATTR GotConnection()
 {
-    if (connectionState == connected)
+    if (connectionState == STATE_connected)
     {
         return; // Already connected
     }
 
-    connectionState = connected; //we got a packet, therefore no lost connection
+    connectionState = STATE_connected; //we got a packet, therefore no lost connection
 
     RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
 
     led_set_state(1); // turn on led
     DEBUG_PRINTLN("got conn");
 
-    platform_connection_state(true);
+    platform_connection_state(connectionState);
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
@@ -430,12 +381,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case SYNC_PACKET: //sync packet from master
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
-            if (connectionState == disconnected)
+            if (connectionState == STATE_disconnected)
             {
                 TentativeConnection();
             }
 
-            if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+            if (connectionState == STATE_tentative &&
+                NonceRXlocal == Radio.RXdataBuffer[2] &&
+                FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
             {
                 GotConnection();
             }
@@ -457,8 +410,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
-    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+    int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
     TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
@@ -501,69 +454,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 }
 
-void beginWebsever()
+void forced_start(void)
 {
-#ifdef PLATFORM_ESP8266
-    Radio.StopContRX();
-    TxTimer.stop();
-
-    BeginWebUpdate();
-    webUpdateMode = true;
-    webUpdateLedFlashIntervalNext = 0;
-#endif
+    DEBUG_PRINTLN("Manual Start");
+    Radio.SetFrequency(GetInitialFreq());
+    Radio.RXnb();
 }
 
-#ifndef INVERTED_BUTTON
-#define INVERTED_BUTTON 1
-#endif // INVERTED_BUTTON
-
-void sampleButton()
+void forced_stop(void)
 {
-    uint32_t now = millis();
-    if (now > buttonNextSample)
-    {
-        buttonNextSample = now + BUTTON_SAMPLE_INTERVAL;
-
-        bool buttonValue = digitalRead(GPIO_PIN_BUTTON) ^ INVERTED_BUTTON;
-
-        if (buttonValue && buttonPrevValue)
-        { // button still pressed
-            if (!buttonDown)
-            { // Debounce over
-                DEBUG_PRINTLN("Manual Start");
-                Radio.SetFrequency(GetInitialFreq());
-                Radio.RXnb();
-                buttonLastPressed = now;
-                buttonDown = true;
-            }
-            else if (now > buttonLastPressed)
-            { // button held down
-                now -= buttonLastPressed;
-                if (now > WEB_UPDATE_PRESS_INTERVAL)
-                {
-                    if (!webUpdateMode)
-                    {
-                        beginWebsever();
-                    }
-                }
-                else if (now > BUTTON_RESET_INTERVAL)
-                {
-#ifdef PLATFORM_STM32
-                    HAL_NVIC_SystemReset();
-#endif
-#ifdef PLATFORM_ESP8266
-                    ESP.restart();
-#endif
-                }
-            }
-        }
-        else
-        {
-            buttonDown = false;
-        }
-
-        buttonPrevValue = buttonValue;
-    }
+    Radio.StopContRX();
+    TxTimer.stop();
 }
 
 void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
@@ -590,10 +491,6 @@ void setup()
     platform_setup();
 
     DEBUG_PRINTLN("Module Booting...");
-#ifdef GPIO_PIN_LED
-    pinMode(GPIO_PIN_LED, OUTPUT);
-#endif
-    pinMode(GPIO_PIN_BUTTON, INPUT);
 
 #ifdef Regulatory_Domain_AU_915
     DEBUG_PRINTLN("Setting 915MHz Mode");
@@ -620,10 +517,11 @@ void setup()
 
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
-    RFnoiseFloor = MeasureNoiseFloor();
+    int16_t RFnoiseFloor = MeasureNoiseFloor();
     DEBUG_PRINT("RF noise floor: ");
     DEBUG_PRINT(RFnoiseFloor);
     DEBUG_PRINTLN("dBm");
+    (void)RFnoiseFloor;
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
 
@@ -641,7 +539,7 @@ void loop()
     uint32_t now = millis();
     if (now > RFmodeNextCycle)
     {
-        if ((connectionState == disconnected) && !webUpdateMode)
+        if (connectionState == STATE_disconnected)
         {
             Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
@@ -659,34 +557,13 @@ void loop()
     }
 
     now = millis();
-    if ((now > SendLinkStatstoFCintervalNextSend) && connectionState != disconnected)
+    if ((now > SendLinkStatstoFCintervalNextSend) && connectionState > STATE_disconnected)
     {
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
     }
 
-    sampleButton();
-
     crsf.RX_handleUartIn();
 
-    platform_loop(connectionState == connected);
-
-#ifdef PLATFORM_ESP8266
-    now = millis();
-    if (webUpdateMode)
-    {
-        HandleWebUpdate();
-        if (now > webUpdateLedFlashIntervalNext)
-        {
-            led_toggle();
-            webUpdateLedFlashIntervalNext = now + WEB_UPDATE_LED_FLASH_INTERVAL;
-        }
-    }
-#ifdef Auto_WiFi_On_Boot
-    else if (now < 11000 && now > 10000 && (connectionState == disconnected))
-    {
-        beginWebsever();
-    }
-#endif /* Auto_WiFi_On_Boot */
-#endif /* PLATFORM_ESP8266 */
+    platform_loop(connectionState);
 }

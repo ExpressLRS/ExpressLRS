@@ -12,8 +12,7 @@
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
-#define PACKET_RATE_INTERVAL 500u
-//#define RF_MODE_CYCLE_INTERVAL 1000u
+#define LQ_CALCULATE_INTERVAL 500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
@@ -30,30 +29,26 @@ uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet
 #endif
 
 /////////// SYNC PACKET ////////
-uint32_t SyncPacketNextSend = 0;
+static uint32_t SyncPacketNextSend = 0;
 
 /////////// CONNECTION /////////
-volatile uint32_t LastTLMpacketRecvMillis = 0;
-volatile bool isRXconnected = false;
+static volatile uint32_t LastTLMpacketRecvMillis = 0;
+static volatile bool isRXconnected = false;
 
 //////////// TELEMETRY /////////
-volatile uint32_t recv_tlm_counter = 0;
-volatile uint8_t downlink_linkQuality = 0;
-uint32_t PacketRateNextCheck = 0;
-
-/// Variables for Sync Behaviour ////
-uint32_t RFmodeLastCycled = 0;
+static volatile uint32_t recv_tlm_counter = 0;
+static volatile uint8_t downlink_linkQuality = 0;
+static uint32_t PacketRateNextCheck = 0;
+static volatile bool WaitRXresponse = false;
 
 ///////////////////////////////////////
 
-bool UpdateParamReq = false;
+static volatile bool UpdateParamReq = false;
 
-bool Channels5to8Changed = false;
+static volatile bool Channels5to8Changed = false;
 
-//bool ChangeAirRateRequested = false;
-//bool ChangeAirRateSentUpdate = false;
-
-volatile bool WaitRXresponse = false;
+//static bool ChangeAirRateRequested = false;
+//static bool ChangeAirRateSentUpdate = false;
 
 ///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //uint8_t TelemetryWaitBuffer[7] = {0};
@@ -102,7 +97,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     }
 
     isRXconnected = true;
-    platform_connection_state(true);
+    platform_connection_state(STATE_connected);
     LastTLMpacketRecvMillis = millis();
 
     if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
@@ -289,7 +284,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 
     // Set connected if telemetry is not used
     isRXconnected = (TLM_RATIO_NO_TLM == config->TLMinterval); // false;
-    platform_connection_state(isRXconnected);
+    platform_connection_state((isRXconnected ? STATE_connected : STATE_disconnected));
 #ifdef TARGET_R9M_TX
     //r9dac.resume();
 #endif
@@ -568,7 +563,7 @@ void setup()
 
     SetRFLinkRate(RATE_DEFAULT);
 
-    platform_connection_state(false);
+    platform_connection_state(STATE_disconnected);
 }
 
 void loop()
@@ -580,12 +575,12 @@ void loop()
         if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
         {
             isRXconnected = false;
-            platform_connection_state(false);
+            platform_connection_state(STATE_disconnected);
         }
 
         if (current_ms >= PacketRateNextCheck)
         {
-            PacketRateNextCheck = current_ms + PACKET_RATE_INTERVAL;
+            PacketRateNextCheck = current_ms + LQ_CALCULATE_INTERVAL;
 
 #if 0
         // TODO: this is not ok... need improvements
@@ -593,7 +588,7 @@ void loop()
         if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
             targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
         float PacketRate = recv_tlm_counter;
-        PacketRate /= PACKET_RATE_INTERVAL; // num tlm packets
+        PacketRate /= LQ_CALCULATE_INTERVAL; // num tlm packets
         downlink_linkQuality = int(((PacketRate / targetFrameRate) * 100000.0));
         if (downlink_linkQuality > 99)
         {
@@ -617,5 +612,5 @@ void loop()
     // Process CRSF packets from TX
     crsf.TX_handleUartIn();
 
-    platform_loop(isRXconnected);
+    platform_loop((isRXconnected ? STATE_connected : STATE_disconnected));
 }

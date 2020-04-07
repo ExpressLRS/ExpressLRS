@@ -1,9 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "LoRaRadioLib.h"
-#include "utils.h"
-#include "common.h"
+#include "targets.h"
 
 extern int32_t FreqCorrection;
 #define FreqCorrectionMax 100000
