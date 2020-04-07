@@ -35,6 +35,8 @@ typedef struct {
     uint16_t        function;
     uint16_t        payloadSize;
     uint8_t         payload[MSP_PORT_INBUF_SIZE];
+    uint16_t        payloadReadIterator;
+    bool            readError;
 
     void reset()
     {
@@ -42,6 +44,8 @@ typedef struct {
         flags = 0;
         function = 0;
         payloadSize = 0;
+        payloadReadIterator = 0;
+        readError = false;
     }
 
     void addByte(uint8_t b)
@@ -57,6 +61,17 @@ typedef struct {
     void makeCommand()
     {
         type = MSP_PACKET_COMMAND;
+    }
+
+    uint8_t readByte()
+    {
+        if (payloadReadIterator >= payloadSize) {
+            // We are trying to read beyond the length of the payload
+            readError = true;
+            return 0;
+        }
+
+        return payload[payloadReadIterator++];
     }
 } mspPacket_t;
 

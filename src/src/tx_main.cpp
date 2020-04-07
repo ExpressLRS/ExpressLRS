@@ -9,6 +9,8 @@
 // #include "debug.h"
 #include "targets.h"
 #include "POWERMGNT.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -39,6 +41,7 @@ String DebugOutput;
 SX127xDriver Radio;
 CRSF crsf;
 POWERMGNT POWERMGNT;
+MSP msp;
 
 void TimerExpired();
 
@@ -617,4 +620,105 @@ void loop()
 void ICACHE_RAM_ATTR TimerExpired()
 {
   SendRCdataToRF();
+}
+
+void OnRFModePacket(mspPacket_t packet)
+{
+  // Parse the RF mode
+  uint8_t rfMode = packet.readByte();
+  CHECK_PACKET_PARSING();
+
+  switch (rfMode) {
+  case RATE_200HZ:
+    SetRFLinkRate(RATE_200HZ);
+    break;
+  case RATE_100HZ:
+    SetRFLinkRate(RATE_100HZ);
+    break;
+  case RATE_50HZ:
+    SetRFLinkRate(RATE_50HZ);
+    break;
+  default:
+    // Unsupported rate requested
+    break;
+  }
+}
+
+void OnTxPowerPacket(mspPacket_t packet)
+{
+  // Parse the TX power
+  uint8_t txPower = packet.readByte();
+  CHECK_PACKET_PARSING();
+
+  switch (txPower) {
+  case PWR_10mW:
+    POWERMGNT.setPower(PWR_10mW);
+    break;
+  case PWR_25mW:
+    POWERMGNT.setPower(PWR_25mW);
+    break;
+  case PWR_50mW:
+    POWERMGNT.setPower(PWR_50mW);
+    break;
+  case PWR_100mW:
+    POWERMGNT.setPower(PWR_100mW);
+    break;
+  case PWR_250mW:
+    POWERMGNT.setPower(PWR_250mW);
+    break;
+  case PWR_500mW:
+    POWERMGNT.setPower(PWR_500mW);
+    break;
+  case PWR_1000mW:
+    POWERMGNT.setPower(PWR_1000mW);
+    break;
+  case PWR_2000mW:
+    POWERMGNT.setPower(PWR_2000mW);
+    break;
+  default:
+    // Unsupported power requested
+    break;
+  }
+}
+
+void OnTLMRatePacket(mspPacket_t packet)
+{
+  // Parse the TLM rate
+  uint8_t tlmRate = packet.readByte();
+  CHECK_PACKET_PARSING();
+
+  // TODO: Implement dynamic TLM rates
+  // switch (tlmRate) {
+  // case TLM_RATIO_NO_TLM:
+  //   break;
+  // case TLM_RATIO_1_128:
+  //   break;
+  // default:
+  //   // Unsupported rate requested
+  //   break;
+  // }
+}
+
+void ProcessMSPPacket(mspPacket_t packet)
+{
+  // Inspect packet for ELRS specific opcodes
+  if (packet.function == MSP_ELRS_FUNC) {
+    uint8_t opcode = packet.readByte();
+
+    CHECK_PACKET_PARSING();
+
+    switch (opcode) {
+    case MSP_ELRS_RF_MODE:
+      OnRFModePacket(packet);
+      break;
+    case MSP_ELRS_TX_PWR:
+      OnTxPowerPacket(packet);
+      break;
+    case MSP_ELRS_TLM_RATE:
+      OnTLMRatePacket(packet);
+      break;
+    default:
+      break;
+    }
+  }
 }
