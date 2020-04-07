@@ -621,12 +621,14 @@ void loop()
   button.handle();
 #endif
 
-  if (Serial.available()) {
+  if (Serial2.available()) {
     uint8_t c = Serial.read();
     
     if (msp.processReceivedByte(c)) {
       // Finished processing a complete packet
+      Serial.println("MSP: Received complete packet");
       ProcessMSPPacket(msp.getReceivedPacket());
+      Serial.println("MSP: Finished with complete packet - resetting for next packet");
       msp.markPacketReceived();
     }
   }
@@ -639,9 +641,13 @@ void ICACHE_RAM_ATTR TimerExpired()
 
 void OnRFModePacket(mspPacket_t packet)
 {
+  Serial.println("MSP: OnRFModePacket");
   // Parse the RF mode
   uint8_t rfMode = packet.readByte();
   CHECK_PACKET_PARSING();
+
+  Serial.print("rfMode = ");
+  Serial.println(rfMode);
 
   switch (rfMode) {
   case RATE_200HZ:
@@ -661,9 +667,13 @@ void OnRFModePacket(mspPacket_t packet)
 
 void OnTxPowerPacket(mspPacket_t packet)
 {
+  Serial.println("MSP: OnTxPowerPacket");
   // Parse the TX power
   uint8_t txPower = packet.readByte();
   CHECK_PACKET_PARSING();
+
+  Serial.print("txPower = ");
+  Serial.println(txPower);
 
   switch (txPower) {
   case PWR_10mW:
@@ -698,6 +708,7 @@ void OnTxPowerPacket(mspPacket_t packet)
 
 void OnTLMRatePacket(mspPacket_t packet)
 {
+  Serial.println("MSP: OnTLMRatePacket");
   // Parse the TLM rate
   uint8_t tlmRate = packet.readByte();
   CHECK_PACKET_PARSING();
