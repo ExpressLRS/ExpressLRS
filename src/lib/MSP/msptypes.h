@@ -1,6 +1,6 @@
 #pragma once
 
-#define MSP_ELRS_FUNC 17784     // ['E','x']
+#define MSP_ELRS_FUNC 0x4578     // ['E','x']
 
 // ELRS specific opcodes
 #define MSP_ELRS_RF_MODE    0x00

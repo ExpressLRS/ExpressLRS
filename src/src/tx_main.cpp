@@ -621,9 +621,16 @@ void loop()
   button.handle();
 #endif
 
+#ifdef TARGET_R9M_TX
+  if (Serial.available()) {
+    uint8_t c = Serial.read();
+#endif
+
+#ifdef PLATFORM_ESP32
   if (Serial2.available()) {
     uint8_t c = Serial2.read();
-    
+#endif
+
     if (msp.processReceivedByte(c)) {
       // Finished processing a complete packet
       Serial.println("MSP: Received complete packet");
