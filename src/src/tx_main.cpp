@@ -728,10 +728,15 @@ void OnTLMRatePacket(mspPacket_t packet)
 void ProcessMSPPacket(mspPacket_t packet)
 {
   // Inspect packet for ELRS specific opcodes
+  Serial.print("ProcessMSPPacket packet.function = ");
+  Serial.println(packet.function);
   if (packet.function == MSP_ELRS_FUNC) {
     uint8_t opcode = packet.readByte();
+    Serial.print("opcode = ");
+    Serial.println(opcode);
 
     CHECK_PACKET_PARSING();
+    Serial.println("Passed error check");
 
     switch (opcode) {
     case MSP_ELRS_RF_MODE:
