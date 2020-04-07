@@ -615,6 +615,16 @@ void loop()
   crsf.UARTwdt();
   button.handle();
 #endif
+
+  if (Serial.available()) {
+    uint8_t c = Serial.read();
+    
+    if (msp.processReceivedByte(c)) {
+      // Finished processing a complete packet
+      ProcessMSPPacket(msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
 }
 
 void ICACHE_RAM_ATTR TimerExpired()
