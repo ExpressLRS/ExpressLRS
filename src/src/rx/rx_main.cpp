@@ -17,7 +17,6 @@
 
 ///////////////////
 
-SX127xDriver Radio;
 CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
 connectionState_e connectionState = STATE_disconnected;
@@ -483,6 +482,11 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.RXnb();
 }
 
+void tx_done_cb(void)
+{
+    Radio.RXnb();
+}
+
 void setup()
 {
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
@@ -525,7 +529,7 @@ void setup()
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
 
-    Radio.TXdoneCallback1 = &Radio.RXnb;
+    Radio.TXdoneCallback1 = &tx_done_cb;
 
     crsf.Begin();
     TxTimer.callbackTock = &HWtimerCallback;

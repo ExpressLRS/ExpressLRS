@@ -4,11 +4,9 @@
 #include "LoRa_SX1278.h"
 #include "../../src/debug.h"
 
-//SX1276::SX1276(int nss, float freq, Bandwidth bw, SpreadingFactor sf, CodingRate cr, int dio0, int dio1, uint8_t syncWord) : SX1278(nss, freq, bw, sf, cr, dio0, dio1, syncWord) {
-//
-//}
+uint8_t SX1276configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
-uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1276config(SX127xDriver *drv, Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
     uint8_t status = ERR_NONE;
     uint8_t newBandwidth, newSpreadingFactor, newCodingRate;
@@ -85,17 +83,17 @@ uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
     }
 
     // execute common part
-    status = SX1276configCommon(newBandwidth, newSpreadingFactor, newCodingRate, freq, syncWord);
+    status = SX1276configCommon(drv, newBandwidth, newSpreadingFactor, newCodingRate, freq, syncWord);
     if (status != ERR_NONE)
     {
         return (status);
     }
 
     // configuration successful, save the new settings
-    SX127xDriver::currBW = bw;
-    SX127xDriver::currSF = sf;
-    SX127xDriver::currCR = cr;
-    SX127xDriver::currFreq = freq;
+    drv->currBW = bw;
+    drv->currSF = sf;
+    drv->currCR = cr;
+    drv->currFreq = freq;
     return (ERR_NONE);
 }
 
@@ -113,10 +111,10 @@ uint8_t SX1276config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
 //   }
 // }
 
-uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1276configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {
     // configure common registers
-    uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq, syncWord);
+    uint8_t status = drv->SX127xConfig(bw, sf, cr, freq, syncWord);
     if (status != ERR_NONE)
     {
         return (status);
@@ -189,22 +187,4 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     }
 
     return (status);
-}
-
-uint8_t SX1276begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
-{
-    // initialize low-level drivers
-    //initModule(nss, dio0, dio1);
-    DEBUG_PRINTLN("Init module SX1276");
-    initModule(nss, dio1, dio0);
-
-    // execute common part
-    uint8_t status = SX127xDriver::SX127xBegin();
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
-
-    // start configuration
-    return (SX1276config(SX127xDriver::currBW, SX127xDriver::currSF, SX127xDriver::currCR, SX127xDriver::currFreq, SX127xDriver::_syncWord)); //check to see if this needs to be changed later
 }

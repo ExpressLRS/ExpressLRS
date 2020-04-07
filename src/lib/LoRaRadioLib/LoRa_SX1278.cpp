@@ -1,80 +1,11 @@
-#include <Arduino.h>
 #include "LoRa_SX127x.h"
 #include "LoRa_SX1278.h"
 #include "LoRa_lowlevel.h"
 #include "../../src/debug.h"
 
-uint8_t SX1278rxCont()
-{ //ADDED CHANGED
-    // get header mode
-    bool headerExplMode = false;
-    if (getRegValue(SX127X_REG_MODEM_CONFIG_1, 0, 0) == SX1278_HEADER_EXPL_MODE)
-    {
-        headerExplMode = true;
-    }
+uint8_t SX1278configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
-    // execute common part
-    //return
-    SX127xDriver::RXnb();
-    (void)headerExplMode;
-    return (ERR_NONE);
-}
-
-uint8_t SX1278rxSingle(uint8_t *data, uint8_t length)
-{
-    // get header mode
-    bool headerExplMode = false;
-    if (getRegValue(SX127X_REG_MODEM_CONFIG_1, 0, 0) == SX1278_HEADER_EXPL_MODE)
-    {
-        headerExplMode = true;
-    }
-
-    // execute common part
-    (void)headerExplMode;
-    return SX127xDriver::RXsingle(data, length);
-}
-
-// uint8_t SX1278setBandwidth(Bandwidth bw) {  //moved renamed
-// uint8_t state = config(bw, _sf, _cr, _freq, _syncWord);
-// if (state == ERR_NONE) {
-// _bw = bw;
-// }
-// return (state);
-// }
-
-// uint8_t SX1278setSpreadingFactor(SpreadingFactor sf) {  //moved renamed
-// uint8_t state = config(_bw, sf, _cr, _freq, _syncWord);
-// if (state == ERR_NONE) {
-// _sf = sf;
-// }
-// return (state);
-// }
-
-// uint8_t SX1278setCodingRate(CodingRate cr) { //moved renamed
-// uint8_t state = config(_bw, _sf, cr, _freq, _syncWord);
-// if (state == ERR_NONE) {
-// _cr = cr;
-// }
-// return (state);
-// }
-
-// uint8_t SX1278setFrequency(float freq) {
-// uint8_t state = config(_bw, _sf, _cr, freq, _syncWord);
-// if (state == ERR_NONE) {
-// _freq = freq;
-// }
-// return (state);
-// }
-
-// uint8_t SX1278setSyncWord(uint8_t syncWord) {
-// uint8_t state = config(_bw, _sf, _cr, _freq, syncWord);
-// if (state == ERR_NONE) {
-// _syncWord = syncWord;
-// }
-// return (state);
-// }
-
-uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1278config(SX127xDriver *drv, Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
     uint8_t status = ERR_NONE;
     uint8_t newBandwidth, newSpreadingFactor, newCodingRate;
@@ -169,25 +100,25 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
     }
 
     // execute common part
-    status = SX1278configCommon(newBandwidth, newSpreadingFactor, newCodingRate, freq, syncWord);
+    status = SX1278configCommon(drv, newBandwidth, newSpreadingFactor, newCodingRate, freq, syncWord);
     if (status != ERR_NONE)
     {
         return (status);
     }
 
     // configuration successful, save the new settings
-    SX127xDriver::currBW = bw;
-    SX127xDriver::currSF = sf;
-    SX127xDriver::currCR = cr;
-    SX127xDriver::currFreq = freq;
+    drv->currBW = bw;
+    drv->currSF = sf;
+    drv->currCR = cr;
+    drv->currFreq = freq;
 
     return (ERR_NONE);
 }
 
-uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1278configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {
     // configure common registers
-    uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq, syncWord);
+    uint8_t status = drv->SX127xConfig(bw, sf, cr, freq, syncWord);
     if (status != ERR_NONE)
     {
         return (status);
@@ -247,22 +178,4 @@ uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     }
 
     return (status);
-}
-
-uint8_t SX1278begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
-{
-    // initialize low-level drivers
-    //initModule(nss, dio0, dio1);
-    DEBUG_PRINTLN("Init module SX1278");
-    initModule(nss, dio0, dio1);
-
-    // execute common part
-    uint8_t status = SX127xDriver::SX127xBegin();
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
-
-    // start configuration
-    return (SX1278config(SX127xDriver::currBW, SX127xDriver::currSF, SX127xDriver::currCR, SX127xDriver::currFreq, SX127xDriver::_syncWord));
 }

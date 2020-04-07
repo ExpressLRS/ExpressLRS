@@ -63,22 +63,20 @@ typedef enum
     RFMOD_SX1278,
     RFMOD_SX1276
 } RFmodule_;
-typedef enum
-{
-    CONT_OFF,
-    CONT_TX,
-    CONT_RX
-} ContinousMode;
-typedef enum
+
+/*typedef enum
 {
     RADIO_IDLE,
     RADIO_BUSY
 } RadioState_;
+*/
 
 class SX127xDriver
 {
 
 public:
+    SX127xDriver();
+
     ///////Callback Function Pointers/////
     static void (*RXdoneCallback1)(); //function pointer for callback
     static void (*RXdoneCallback2)(); //function pointer for callback
@@ -87,119 +85,103 @@ public:
     static void (*TXdoneCallback3)(); //function pointer for callback
     static void (*TXdoneCallback4)(); //function pointer for callback
 
-    static void (*TXtimeout)(); //function pointer for callback
-    static void (*RXtimeout)(); //function pointer for callback
-
-    static void (*TimerDoneCallback)(); //function pointer for callback
-
-    //static void (*TXcallback)();
+    //static void (*TXtimeout)(); //function pointer for callback
+    //static void (*RXtimeout)(); //function pointer for callback
 
     ////////Hardware/////////////
-    static int8_t _RXenablePin;
-    static int8_t _TXenablePin;
+    int8_t _RXenablePin;
+    int8_t _TXenablePin;
 
-    static uint8_t SX127x_nss;
     static uint8_t SX127x_dio0;
     static uint8_t SX127x_dio1;
-
-    static uint8_t SX127x_MOSI;
-    static uint8_t SX127x_MISO;
-    static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
 
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static volatile uint8_t TXdataBuffer[16];
-    static volatile uint8_t RXdataBuffer[16];
+    volatile uint8_t TXdataBuffer[16];
+    volatile uint8_t RXdataBuffer[16];
 
-    static volatile uint8_t TXbuffLen;
-    static volatile uint8_t RXbuffLen;
+    uint8_t TXbuffLen = 8;
+    uint8_t RXbuffLen = 8;
 
-    static volatile uint32_t PacketCount;
+    uint32_t PacketCount;
 
-    static volatile bool headerExplMode;
+    bool headerExplMode;
 
-    static volatile uint32_t TimerInterval; //20ms default for now.
-
-    static uint32_t currFreq;
-    static uint8_t _syncWord;
-
-    static ContinousMode ContMode;
-    static RFmodule_ RFmodule;
-    static Bandwidth currBW;
-    static SpreadingFactor currSF;
-    static CodingRate currCR;
-    static uint8_t currPWR;
-    static uint8_t maxPWR;
-    static RadioOPmodes _opmode;
-    static RadioState_ RadioState;
+    RFmodule_ RFmodule;
+    Bandwidth currBW;
+    SpreadingFactor currSF;
+    CodingRate currCR;
+    uint8_t _syncWord;
+    uint32_t currFreq;
+    uint8_t currPWR;
+    //uint8_t maxPWR;
+    //static RadioOPmodes _opmode;
+    //static RadioState_ RadioState;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
-    static int8_t LastPacketRSSI;
-    static int8_t LastPacketSNR;
-    static float PacketLossRate;
-    static volatile uint8_t NonceTX;
-    static volatile uint8_t NonceRX;
-    static uint32_t TimeOnAir;
-    static uint32_t TXstartMicros;
-    static uint32_t TXspiTime;
-    static uint32_t HeadRoom;
-    static uint32_t LastTXdoneMicros;
-    static uint32_t TXdoneMicros;
+    volatile int8_t LastPacketRSSI;
+    volatile int8_t LastPacketSNR;
+    volatile uint8_t NonceTX;
+    volatile uint8_t NonceRX;
+    //static uint32_t TimeOnAir;
+    //static uint32_t TXstartMicros;
+    //static uint32_t TXspiTime;
+    //static uint32_t HeadRoom;
+    //static uint32_t LastTXdoneMicros;
+    //static uint32_t TXdoneMicros;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
-    static uint8_t Begin(bool HighPowerModule = false);
-    static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
-    static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
+    uint8_t Begin(bool HighPowerModule = false);
+    uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
+    uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
-    static uint8_t SetBandwidth(Bandwidth bw);
-    static uint32_t getCurrBandwidth();
-    static uint32_t getCurrBandwidthNormalisedShifted();
-    static uint8_t SetSyncWord(uint8_t syncWord);
-    static uint8_t SetOutputPower(uint8_t Power);
-    static uint8_t SetPreambleLength(uint8_t PreambleLen);
-    static uint8_t SetSpreadingFactor(SpreadingFactor sf);
-    static uint8_t SetCodingRate(CodingRate cr);
-    static uint8_t SetFrequency(uint32_t freq);
-    static int32_t GetFrequencyError();
-    static void setPPMoffsetReg(int32_t offset);
+    uint8_t SetBandwidth(Bandwidth bw);
+    uint32_t getCurrBandwidth();
+    uint32_t getCurrBandwidthNormalisedShifted();
+    uint8_t SetSyncWord(uint8_t syncWord);
+    uint8_t SetOutputPower(uint8_t Power);
+    uint8_t SetPreambleLength(uint8_t PreambleLen);
+    uint8_t SetSpreadingFactor(SpreadingFactor sf);
+    uint8_t SetCodingRate(CodingRate cr);
+    uint8_t SetFrequency(uint32_t freq);
+    int32_t GetFrequencyError();
+    void setPPMoffsetReg(int32_t offset);
 
-    static uint8_t SX127xBegin();
-    static uint8_t SetMode(uint8_t mode);
-    static uint8_t TX(uint8_t *data, uint8_t length);
+    uint8_t SX127xBegin();
+    uint8_t SetMode(uint8_t mode);
+    uint8_t TX(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
 
+    void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
+    void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
+
     /////////////////Utility Funcitons//////////////////
-    static void ClearIRQFlags();
+    void ClearIRQFlags();
 
     //////////////RX related Functions/////////////////
 
-    static uint8_t RunCAD();
+    uint8_t RunCAD();
 
-    static uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
-
-    static int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
-    static int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
-    static int8_t ICACHE_RAM_ATTR GetCurrRSSI();
+    uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned() const;
+    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI() const;
+    int8_t ICACHE_RAM_ATTR GetLastPacketSNR() const;
+    int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
-    static void nullCallback(void);
-
-    static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
-
-    static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
+    uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
 
     /////////////Non-blocking RX related Functions///////////////
-    static void ICACHE_RAM_ATTR StopContRX();
-    static void ICACHE_RAM_ATTR RXnb();
+    void ICACHE_RAM_ATTR StopContRX();
+    void ICACHE_RAM_ATTR RXnb();
 
-    static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
-
-    static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
-    static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
+    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
+    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
 
 private:
 };
+
+extern SX127xDriver Radio;

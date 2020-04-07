@@ -30,7 +30,7 @@ void HwTimer::stop()
 {
     /* are these rly needed?? */
     detachInterrupt(SX127xDriver::SX127x_dio0);
-    SX127xDriver::ClearIRQFlags();
+    Radio.ClearIRQFlags();
     if (timer)
     {
         timerEnd(timer);

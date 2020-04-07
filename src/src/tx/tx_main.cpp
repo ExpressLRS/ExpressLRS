@@ -18,7 +18,6 @@
 ///////////////////
 
 /// define some libs to use ///
-SX127xDriver Radio;
 CRSF crsf(CrsfSerial);
 POWERMGNT PowerMgmt;
 
@@ -266,13 +265,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
-//#ifdef PLATFORM_ESP32
-#if 0
-    Radio.TimerInterval = config->interval;
-    Radio.UpdateTimerInterval();
-#else
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
-#endif
 
     Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
     Radio.SetPreambleLength(config->PreambleLen);
