@@ -87,6 +87,11 @@ uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this w
 void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
+void ProcessMSPPacket(mspPacket_t packet);
+void OnRFModePacket(mspPacket_t packet);
+void OnTxPowerPacket(mspPacket_t packet);
+void OnTLMRatePacket(mspPacket_t packet);
+
 uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
