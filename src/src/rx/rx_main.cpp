@@ -365,6 +365,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
+#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
     case SWITCH_DATA_PACKET: // Switch Data Packet
         DEBUG_PRINT("D");
         if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
@@ -375,6 +376,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             crsf.sendRCFrameToFC();
         }
         break;
+#endif
 
     case TLM_PACKET: //telemetry packet from master
         DEBUG_PRINT("T");
@@ -501,10 +503,10 @@ void tx_done_cb(void)
 
 void setup()
 {
+    platform_setup();
+
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
     // CrsfSerial.Begin(230400); // for linux debugging
-
-    platform_setup();
 
     DEBUG_PRINTLN("Module Booting...");
 
@@ -556,9 +558,10 @@ void setup()
 void loop()
 {
     uint32_t now = millis();
-    if (now > RFmodeNextCycle)
+
+    if (connectionState == STATE_disconnected)
     {
-        if (connectionState == STATE_disconnected)
+        if (now > RFmodeNextCycle)
         {
             Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
@@ -566,25 +569,27 @@ void loop()
             led_toggle();
             DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
             scanIndex++;
+
+            RfModeNextCycleCalc();
         }
-        RfModeNextCycleCalc();
     }
-
-    if (millis() > (LastValidPacket + ExpressLRS_currAirRate->RFmodeCycleAddtionalTime)) // check if we lost conn.
+    else if (connectionState > STATE_disconnected)
     {
-        LostConnection();
-    }
-
-    now = millis();
-    if ((now > SendLinkStatstoFCintervalNextSend) && connectionState > STATE_disconnected)
-    {
-        //linkQuality = getRFlinkQuality();
-        //crsf.LinkStatistics.uplink_RSSI_2 = 0;
-        //crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
-        //crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-        //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
-        crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
+        // check if we lost conn.
+        if (now > (LastValidPacket + ExpressLRS_currAirRate->RFmodeCycleAddtionalTime))
+        {
+            LostConnection();
+        }
+        else if (now > SendLinkStatstoFCintervalNextSend)
+        {
+            //linkQuality = getRFlinkQuality();
+            //crsf.LinkStatistics.uplink_RSSI_2 = 0;
+            //crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
+            //crsf.LinkStatistics.uplink_Link_quality = linkQuality;
+            //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
+            crsf.sendLinkStatisticsToFC();
+            SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
+        }
     }
 
     crsf.RX_handleUartIn();
