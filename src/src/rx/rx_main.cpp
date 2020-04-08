@@ -90,7 +90,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     linkQuality = getRFlinkQuality();
-    if (connectionState != STATE_disconnected) // don't hop if we lost
+    if (connectionState > STATE_disconnected) // don't hop if we lost
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
@@ -162,7 +162,7 @@ void ICACHE_RAM_ATTR HWtimerCallback()
 
 void LostConnection()
 {
-    if (connectionState == STATE_disconnected)
+    if (connectionState <= STATE_disconnected)
     {
         return; // Already disconnected
     }
