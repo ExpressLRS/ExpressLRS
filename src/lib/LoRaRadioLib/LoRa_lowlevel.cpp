@@ -10,13 +10,12 @@ void initModule()
 
 uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
 {
-    if ((msb > 7) || (lsb > 7) || (lsb > msb))
+    uint8_t value = readRegister(reg);
+    if ((msb - lsb) < 7)
     {
-        return (ERR_INVALID_BIT_RANGE);
+        value = value & ((0b11111111 << lsb) & (0b11111111 >> (7 - msb)));
     }
-    uint8_t rawValue = readRegister(reg);
-    uint8_t maskedValue = rawValue & ((0b11111111 << lsb) & (0b11111111 >> (7 - msb)));
-    return (maskedValue);
+    return (value);
 }
 
 uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
@@ -118,15 +117,13 @@ uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg)
 
 uint8_t ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb)
 {
-    if ((msb > 7) || (lsb > 7) || (lsb > msb))
+    if ((msb - lsb) < 7)
     {
-        return (ERR_INVALID_BIT_RANGE);
+        uint8_t currentValue = readRegister(reg);
+        uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
+        value = (currentValue & ~mask) | (value & mask);
     }
-
-    uint8_t currentValue = readRegister(reg);
-    uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
-    uint8_t newValue = (currentValue & ~mask) | (value & mask);
-    writeRegister(reg, newValue);
+    writeRegister(reg, value);
     return (ERR_NONE);
 }
 
