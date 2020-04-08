@@ -39,8 +39,12 @@ void platform_setup(void)
     if ((void *)&DEBUG_SERIAL != (void *)&CrsfSerial)
     {
         // init debug serial
+#ifdef GPIO_PIN_DEBUG_TX
         DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
+#endif
+#ifdef GPIO_PIN_DEBUG_RX
         DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
+#endif
         DEBUG_SERIAL.begin(400000);
     }
 #endif
