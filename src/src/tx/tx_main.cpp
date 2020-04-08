@@ -118,6 +118,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     }
 }
 
+#ifndef One_Bit_Switches
 void ICACHE_RAM_ATTR CheckChannels5to8Change()
 { //check if channels 5 to 8 have new data (switch channels)
     for (int i = 4; i < 8; i++)
@@ -128,6 +129,7 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
         }
     }
 }
+#endif
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
@@ -142,6 +144,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Radio.TXdataBuffer[6] = UID[5];
 }
 
+#if 0
 void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
 {
     uint8_t PacketHeaderAddr;
@@ -156,30 +159,9 @@ void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
                             ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
                             ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
 }
-
-void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-    Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-    Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-    Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-    Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
-                            ((crsf.ChannelDataIn[1] & 0b111) << 2) +
-                            ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-    Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
-                            ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
-#ifdef One_Bit_Switches
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
-}
 
-#ifdef SEQ_SWITCHES
+#if defined(SEQ_SWITCHES)
 /**
  * Sequential switches packet
  * Replaces Generate4ChannelData_11bit
@@ -205,9 +187,8 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
     // put the bits into buf[6]
     Radio.TXdataBuffer[6] += (i << 2) + crsf.currentSwitches[i];
 }
-#endif
 
-#ifdef HYBRID_SWITCHES_8
+#elif defined(HYBRID_SWITCHES_8)
 /**
  * Hybrid switches packet
  * Replaces Generate4ChannelData_11bit
@@ -241,7 +222,29 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8()
     // currentSwitches[i] is in the range 0 through 2, takes 2 bits.
     Radio.TXdataBuffer[6] += (i << 2) + (crsf.currentSwitches[i] & 0b11); // mask for paranoia
 }
+#else
+
+void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
+{
+    uint8_t PacketHeaderAddr;
+    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
+    Radio.TXdataBuffer[0] = PacketHeaderAddr;
+    Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
+    Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
+    Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
+    Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
+    Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
+                            ((crsf.ChannelDataIn[1] & 0b111) << 2) +
+                            ((crsf.ChannelDataIn[2] & 0b110) >> 1);
+    Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
+                            ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
+#ifdef One_Bit_Switches
+    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
+    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
+    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
+    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
+}
 
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 {
@@ -258,6 +261,8 @@ void ICACHE_RAM_ATTR GenerateSwitchChannelData()
     Radio.TXdataBuffer[5] = Radio.NonceTX;
     Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
 }
+
+#endif
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
@@ -377,9 +382,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-#if defined HYBRID_SWITCHES_8
+#if defined(HYBRID_SWITCHES_8)
         GenerateChannelDataHybridSwitch8();
-#elif defined SEQ_SWITCHES
+#elif defined(SEQ_SWITCHES)
         GenerateChannelDataSeqSwitch();
 #else
         if ((current_ms > SwitchPacketNextSend) || Channels5to8Changed)
@@ -556,8 +561,6 @@ void setup()
     crsf.Begin();
 
     SetRFLinkRate(RATE_DEFAULT);
-
-    platform_connection_state(STATE_disconnected);
 }
 
 void loop()
