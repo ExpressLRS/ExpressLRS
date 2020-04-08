@@ -62,22 +62,20 @@ static inline void RfModeNextCycleCalc(void)
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int8_t LastRSSI = Radio.GetLastPacketRSSI();
+    int8_t LastRSSI = Radio.LastPacketRSSI; //Radio.GetLastPacketRSSI();
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
 
-    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.GetLastPacketRSSI());
+    int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
-
-    crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
+    //crsf.LinkStatistics.uplink_RSSI_2 = 0;
+    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
-
+    //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
@@ -94,7 +92,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        //crsf.sendLinkStatisticsToFC();
     }
 }
 
@@ -128,7 +125,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // convert to 8 bit signed value in the negative range (-128 to 0)
     openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
-
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
@@ -420,6 +416,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (connectionState == STATE_connected)
     {
+        /* Adjust timer only if sync ok */
         int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
         int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
         TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
@@ -490,6 +487,8 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval);
     LPF_PacketInterval.init(config->interval);
+    crsf.LinkStatistics.uplink_RSSI_2 = 0;
+    crsf.LinkStatistics.rf_Mode = 4 - config->enum_rate;
     //LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
@@ -579,6 +578,11 @@ void loop()
     now = millis();
     if ((now > SendLinkStatstoFCintervalNextSend) && connectionState > STATE_disconnected)
     {
+        //linkQuality = getRFlinkQuality();
+        //crsf.LinkStatistics.uplink_RSSI_2 = 0;
+        //crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
+        //crsf.LinkStatistics.uplink_Link_quality = linkQuality;
+        //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
     }
