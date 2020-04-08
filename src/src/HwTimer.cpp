@@ -45,7 +45,7 @@ void ICACHE_RAM_ATTR HwTimer::callback()
 
     if (TickTock)
     {
-#if 0
+#if 1
         if (ResetNextLoop)
         {
 

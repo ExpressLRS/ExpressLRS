@@ -41,6 +41,7 @@ void HwSerial::enable_receiver(void)
 {
     if (duplex_pin > -1)
     {
+        HardwareSerial::flush(); // wait until write ends
         digitalWrite(duplex_pin, LOW);
         HAL_HalfDuplex_EnableReceiver(&_serial.handle);
     }
@@ -48,9 +49,9 @@ void HwSerial::enable_receiver(void)
 
 void HwSerial::enable_transmitter(void)
 {
-    delayMicroseconds(20);
     if (duplex_pin > -1)
     {
+        delayMicroseconds(20);
         HAL_HalfDuplex_EnableTransmitter(&_serial.handle);
         digitalWrite(duplex_pin, HIGH);
     }

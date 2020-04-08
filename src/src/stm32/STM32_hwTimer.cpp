@@ -19,6 +19,11 @@ void HwTimer::init()
     interrupts();
 }
 
+void HwTimer::start()
+{
+    timer_tx.resume();
+}
+
 void HwTimer::stop()
 {
     timer_tx.pause();

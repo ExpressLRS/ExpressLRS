@@ -14,6 +14,7 @@ public:
 
     HwTimer();
     void init();
+    void ICACHE_RAM_ATTR start();
     void ICACHE_RAM_ATTR pause();
     void ICACHE_RAM_ATTR stop();
     void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);

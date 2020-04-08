@@ -30,7 +30,6 @@ public:
         size_t ret;
         enable_transmitter();
         ret = HardwareSerial::write(buff, len);
-        HardwareSerial::flush(); // wait until write ends
         enable_receiver();
         return ret;
     }

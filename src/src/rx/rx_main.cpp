@@ -100,7 +100,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState != STATE_connected ||
+    if (/*connectionState != STATE_connected ||*/
         ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
     {
         // don't bother sending tlm if disconnected or no tlm enabled
@@ -142,6 +142,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
+    //DEBUG_PRINT("T");
 
     if (alreadyFHSS == true)
     {
@@ -156,6 +157,7 @@ void ICACHE_RAM_ATTR HWtimerCallback()
     HandleSendTelemetryResponse();
 
     NonceRXlocal++;
+    //DEBUG_PRINT("Y");
 }
 
 void LostConnection()
@@ -168,7 +170,7 @@ void LostConnection()
     connectionState = STATE_disconnected; //set lost connection
     LPF_FreqError.init(0);
 
-    led_set_state(0);                     // turn off led
+    led_set_state(1);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
@@ -183,16 +185,19 @@ void ICACHE_RAM_ATTR TentativeConnection()
 
 void ICACHE_RAM_ATTR GotConnection()
 {
-    if (connectionState == STATE_connected)
+    //if (connectionState == STATE_connected)
+    if (connectionState != STATE_tentative)
     {
         return; // Already connected
     }
+
+    //TxTimer.start(); // start tlm timer
 
     connectionState = STATE_connected; //we got a packet, therefore no lost connection
 
     RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
 
-    led_set_state(1); // turn on led
+    led_set_state(0); // turn on led
     DEBUG_PRINTLN("got conn");
 
     platform_connection_state(connectionState);
@@ -325,6 +330,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -352,6 +358,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
+        DEBUG_PRINT("R");
 #if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches();
 #elif defined HYBRID_SWITCHES_8
@@ -362,7 +369,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
-    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
+    case SWITCH_DATA_PACKET: // Switch Data Packet
+        DEBUG_PRINT("D");
         if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
         {
             UnpackSwitchData();
@@ -373,11 +381,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case TLM_PACKET: //telemetry packet from master
-
+        DEBUG_PRINT("T");
         // not implimented yet
         break;
 
     case SYNC_PACKET: //sync packet from master
+        DEBUG_PRINT("S");
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             if (connectionState == STATE_disconnected)
@@ -409,9 +418,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
-    int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-    TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+    if (connectionState == STATE_connected)
+    {
+        int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+        int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+        TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+    }
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -451,6 +463,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         HandleFHSS();
         alreadyFHSS = true;
     }
+    DEBUG_PRINT("E");
 }
 
 void forced_start(void)
@@ -534,6 +547,7 @@ void setup()
     crsf.Begin();
     TxTimer.callbackTock = &HWtimerCallback;
     TxTimer.init();
+    //TxTimer.start(); // start tlm timer
 
     SetRFLinkRate(RATE_DEFAULT);
 }
