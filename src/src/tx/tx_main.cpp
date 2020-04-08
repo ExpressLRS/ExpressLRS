@@ -341,7 +341,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
     DEBUG_PRINT("I");
 
-#ifdef FEATURE_OPENTX_SYNC
+#if (FEATURE_OPENTX_SYNC)
     crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
 
@@ -503,6 +503,7 @@ void setup()
     crsf.disconnected = hw_timer_stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
     TxTimer.callbackTock = &SendRCdataToRF;
+    Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
 
@@ -551,7 +552,7 @@ void setup()
 #ifdef TARGET_1000mW_MODULE
     HighPower = true;
 #endif // TARGET_1000mW_MODULE
-    Radio.Begin(HighPower);
+    Radio.Begin(HighPower, GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
     crsf.Begin();
 
     SetRFLinkRate(RATE_DEFAULT);

@@ -5,15 +5,7 @@
 #define EMPTY()
 #define UNDEF_PIN (0xff)
 
-#ifdef PLATFORM_STM32
-#define ICACHE_RAM_ATTR //nothing//
-#else
-#ifndef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266
-#define ICACHE_RAM_ATTR IRAM_ATTR
-#endif
-#endif
 /// General Features ///
-#define FEATURE_OPENTX_SYNC   //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
 /////////////////////////
@@ -102,7 +94,6 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 #ifdef TARGET_R9M_RX
-#undef FEATURE_OPENTX_SYNC
 
 #define GPIO_PIN_NSS PB12
 #define GPIO_PIN_DIO0 PA15
@@ -145,7 +136,6 @@ https://github.com/jaxxzer
 
 //#define SYSCLK_FREQ_72MHz
 
-#include <stdio.h>
 #endif
 
 #ifdef TARGET_R9M_TX
@@ -185,8 +175,6 @@ https://github.com/jaxxzer
 // low  low  -30
 // low  high -40
 // high high -40
-
-#include <stdio.h>
 
 class R9DAC;
 extern R9DAC r9dac;

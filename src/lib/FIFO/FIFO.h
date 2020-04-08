@@ -32,7 +32,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include "../../src/targets.h"
 
 #define FIFO_SIZE 512
 

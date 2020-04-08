@@ -1,5 +1,4 @@
 #include "button.h"
-#include "../../src/targets.h"
 #include <Arduino.h>
 
 static void nullCallback(uint32_t){};

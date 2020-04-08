@@ -525,6 +525,8 @@ void setup()
 #error No regulatory domain defined, please define one in common.h
 #endif
 
+    Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
+
     FHSSrandomiseFHSSsequence();
     Radio.SetFrequency(GetInitialFreq());
 

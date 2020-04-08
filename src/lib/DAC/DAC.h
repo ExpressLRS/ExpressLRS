@@ -2,8 +2,7 @@
 
 #ifdef TARGET_R9M_TX
 
-#include "../../src/targets.h"
-#include <Wire.h>
+#include <stdint.h>
 
 typedef enum
 {

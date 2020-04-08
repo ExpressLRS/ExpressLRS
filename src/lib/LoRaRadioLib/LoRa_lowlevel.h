@@ -3,8 +3,7 @@
 
 #define DebugVerbosity 1
 
-#include "../../src/targets.h"
-#include <stdint.h>
+#include <Arduino.h>
 
 void initModule();
 

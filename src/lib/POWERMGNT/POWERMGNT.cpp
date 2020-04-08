@@ -1,5 +1,10 @@
 #include "POWERMGNT.h"
 
+#ifdef TARGET_R9M_TX
+class R9DAC;
+extern R9DAC r9dac;
+#endif
+
 extern SX127xDriver Radio;
 
 POWERMGNT::POWERMGNT()

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include "targets.h"
 
 extern int32_t FreqCorrection;
 #define FreqCorrectionMax 100000

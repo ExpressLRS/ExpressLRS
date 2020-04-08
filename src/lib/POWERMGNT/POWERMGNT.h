@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Arduino.h"
-#include "../../src/targets.h"
 #include "LoRaRadioLib.h"
 #include "DAC.h"
 

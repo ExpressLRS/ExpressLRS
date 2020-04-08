@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
-#include "targets.h"
+//#include "targets.h"
 #include "HwSerial.h"
 
 #ifndef DEBUG_SERIAL

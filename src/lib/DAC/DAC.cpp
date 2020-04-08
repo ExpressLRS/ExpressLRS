@@ -1,10 +1,10 @@
 
 #ifdef TARGET_R9M_TX
 
-#include "../../src/targets.h"
 #include "DAC.h"
 #include "LoRaRadioLib.h"
 #include <Arduino.h>
+#include <Wire.h>
 
 extern SX127xDriver Radio;
 

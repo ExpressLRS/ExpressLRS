@@ -1,11 +1,8 @@
-#include <Arduino.h>
-
 #include "LoRa_lowlevel.h"
 #include "LoRa_SX127x.h"
 #include "LoRa_SX1276.h"
 #include "LoRa_SX1278.h"
 
-#include "../../src/targets.h"
 #include "../../src/debug.h"
 
 #define DEBUG
@@ -26,10 +23,9 @@ void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
 /////setup some default variables//////////////
 
 //////////////////Hardware Pin Variable defaults////////////////
-uint8_t SX127xDriver::SX127x_dio0 = GPIO_PIN_DIO0;
-uint8_t SX127xDriver::SX127x_dio1 = GPIO_PIN_DIO1;
-
-uint8_t SX127xDriver::SX127x_RST = GPIO_PIN_RST;
+uint8_t SX127xDriver::SX127x_dio0 = 0xff;
+uint8_t SX127xDriver::SX127x_dio1 = 0xff;
+uint8_t SX127xDriver::SX127x_RST = 0xff;
 
 /////////////////////////////////////////////////////////////////
 
@@ -79,7 +75,14 @@ SX127xDriver::SX127xDriver()
     NonceRX = 0;
 }
 
-uint8_t SX127xDriver::Begin(bool HighPowerModule)
+void SX127xDriver::SetPins(int rst, int dio0, int dio1)
+{
+    SX127x_RST = rst;
+    SX127x_dio0 = dio0;
+    SX127x_dio1 = dio1;
+}
+
+uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
 {
     DEBUG_PRINTLN("Driver Begin");
     uint8_t status;
@@ -96,8 +99,8 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule)
     _RXenablePin = _TXenablePin = -1;
     if (HighPowerModule)
     {
-        _RXenablePin = GPIO_PIN_RX_ENABLE;
-        _TXenablePin = GPIO_PIN_TX_ENABLE;
+        _TXenablePin = txpin;
+        _RXenablePin = rxpin;
 
         if (-1 != _TXenablePin)
         {

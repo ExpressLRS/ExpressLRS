@@ -354,12 +354,12 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+#if (RX_MODULE)
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void sendLinkStatisticsToFC();
     void RX_handleUartIn(void);
 
-#else
+#elif (TX_MODULE)
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
@@ -372,7 +372,7 @@ public:
 ///// Variables for OpenTX Syncing //////////////////////////
 #define OpenTXsyncPakcetInterval 100 // in ms
 
-#if defined(FEATURE_OPENTX_SYNC)
+#if (FEATURE_OPENTX_SYNC)
     static VOLATILE uint32_t RCdataLastRecv;
     static VOLATILE uint32_t RequestedRCpacketInterval;
     static VOLATILE int32_t RequestedRCpacketAdvance;
@@ -384,7 +384,7 @@ public:
     /////////////////////////////////////////////////////////////
 
     void ICACHE_RAM_ATTR TX_handleUartIn(void);
-#endif
+#endif /* TX_MODULE */
 
     void process_input(void);
 
@@ -401,12 +401,12 @@ private:
     static VOLATILE bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
     static VOLATILE bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
+#if (TX_MODULE)
     void ICACHE_RAM_ATTR wdtUART();
     bool ICACHE_RAM_ATTR TX_ProcessPacket();
     void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
-#else
+#elif (RX_MODULE)
     void ICACHE_RAM_ATTR CrsfFrameSendToFC(uint8_t *buff, uint8_t size);
     void RX_processPacket(void);
 #endif

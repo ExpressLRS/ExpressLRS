@@ -1,8 +1,6 @@
 #include "CRSF.h"
 #include "FIFO.h"
 
-#include "../../src/targets.h"
-//#include "../../src/common.h"
 #include "../../src/utils.h"
 #include "../../src/debug.h"
 
@@ -58,8 +56,8 @@ volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 VOLATILE crsf_sensor_battery_s CRSF::TLMbattSensor;
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
-#if defined(FEATURE_OPENTX_SYNC)
+#if (TX_MODULE)
+#if (FEATURE_OPENTX_SYNC)
 VOLATILE uint32_t CRSF::RCdataLastRecv = 0;
 VOLATILE int32_t CRSF::OpenTXsyncOffset = 0;
 VOLATILE uint32_t CRSF::OpenTXsynNextSend = 0;
@@ -81,8 +79,8 @@ void CRSF::Begin()
     uint32_t now = millis();
     UARTwdtNextCheck = now + UARTwdtInterval * 2;
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
-#if defined(FEATURE_OPENTX_SYNC)
+#if (TX_MODULE)
+#if (FEATURE_OPENTX_SYNC)
     OpenTXsynNextSend = 0;
     OpenTXsyncOffset = 0;
 #endif
@@ -91,7 +89,7 @@ void CRSF::Begin()
     _dev->flush_read();
 }
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
+#if (TX_MODULE)
 /**
  * Determine which switch to send next.
  * If any switch has changed since last sent, we send the lowest index changed switch
@@ -271,7 +269,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
     //DEBUG_PRINTLN(CRSFoutBuffer[0]);
 }
 
-#if defined(FEATURE_OPENTX_SYNC)
+#if (FEATURE_OPENTX_SYNC)
 void ICACHE_RAM_ATTR CRSF::UpdateOpenTxSyncOffset()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
@@ -336,7 +334,7 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
     if (CRSFstate == false)
     {
         CRSFstate = true;
-#if defined(FEATURE_OPENTX_SYNC)
+#if (FEATURE_OPENTX_SYNC)
         RCdataLastRecv = 0;
         OpenTXsynNextSend = millis() + 60;
 #endif
@@ -360,7 +358,7 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
     else if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         DEBUG_PRINT("X");
-#if defined(FEATURE_OPENTX_SYNC)
+#if (FEATURE_OPENTX_SYNC)
         CRSF::RCdataLastRecv = micros();
 #endif
         GetChannelDataIn();
@@ -375,7 +373,7 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
     uint8_t inChar, split_cnt = 0;
 
-#if defined(FEATURE_OPENTX_SYNC)
+#if (FEATURE_OPENTX_SYNC)
     sendSyncPacketToTX();
 #endif
     wdtUART();
@@ -554,9 +552,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     updateSwitchValues();
 }
 
-#endif // TX
-
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+#elif (RX_MODULE) /* END TX_MODULE */
 
 void ICACHE_RAM_ATTR CRSF::CrsfFrameSendToFC(uint8_t *buff, uint8_t size)
 {
@@ -715,7 +711,7 @@ void CRSF::RX_handleUartIn(void)
         }
     }
 }
-#endif // RX
+#endif // END RX_MODULE
 
 void CRSF::process_input(void)
 {
@@ -755,9 +751,9 @@ void CRSF::command_find_and_dispatch(void)
                 {
                     // CRC ok, dispatch command
                     //printf("  CRC OK\n");
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+#if (RX_MODULE)
                     RX_processPacket();
-#else
+#elif (TX_MODULE)
                     TX_ProcessPacket();
 #endif
                 }
