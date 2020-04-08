@@ -181,12 +181,10 @@ public:
     uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
 
 private:
-    uint8_t p_reg_mode = 0;
+    uint8_t p_RegOpMode = 0;
     uint8_t p_RegDioMapping1 = 0;
     uint8_t p_RegDioMapping2 = 0;
 
-    uint8_t ICACHE_RAM_ATTR
-    reg_op_mode_sleep(uint8_t value);
     uint8_t ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
 
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);

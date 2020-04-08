@@ -124,7 +124,7 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
     }
 
     // Store mode register locally
-    p_reg_mode = readRegister(SX127X_REG_OP_MODE);
+    p_RegOpMode = readRegister(SX127X_REG_OP_MODE);
     p_RegDioMapping1 = readRegister(SX127X_REG_DIO_MAPPING_1);
     p_RegDioMapping2 = readRegister(SX127X_REG_DIO_MAPPING_2);
 
@@ -395,7 +395,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 
     //uint32_t TXstartMicros = micros();
     //HeadRoom = TXstartMicros - TXdoneMicros;
-    ClearIRQFlags();
     SetMode(SX127X_STANDBY);
 
     if (InterruptAssignment != TX_DONE)
@@ -406,6 +405,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 
     //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
     reg_dio1_tx_done();
+    ClearIRQFlags();
 
     writeRegister(SX127X_REG_PAYLOAD_LENGTH, length);
     writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
@@ -446,7 +446,7 @@ void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
     detachInterrupt(SX127x_dio0);
     SetMode(SX127X_SLEEP);
-    ClearIRQFlags();
+    //ClearIRQFlags();
     InterruptAssignment = NONE;
 }
 
@@ -467,8 +467,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
         InterruptAssignment = RX_DONE;
     }
 
-    ClearIRQFlags();
-
     if (headerExplMode == false)
     {
         writeRegister(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
@@ -476,6 +474,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 
     //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE | SX127X_DIO1_RX_TIMEOUT, 7, 4);
     reg_dio1_rx_done();
+    ClearIRQFlags();
 
     writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
     writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
@@ -608,11 +607,9 @@ uint8_t SX127xDriver::RunCAD()
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 { //if radio is not already in the required mode set it to the requested mode
 
-    //setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
-
-    p_reg_mode &= 0b11111000;
-    p_reg_mode |= mode;
-    writeRegister(SX127X_REG_OP_MODE, p_reg_mode);
+    p_RegOpMode &= (~SX127X_CAD);
+    p_RegOpMode |= (mode & SX127X_CAD);
+    writeRegister(SX127X_REG_OP_MODE, p_RegOpMode);
 
     return (ERR_NONE);
 }
@@ -840,19 +837,11 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
     writeRegister(SX127X_REG_IRQ_FLAGS, 0xff);
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::reg_op_mode_sleep(uint8_t mode)
-{
-    p_reg_mode &= ~0x7u;
-    p_reg_mode |= mode;
-    writeRegister(SX127X_REG_OP_MODE, p_reg_mode);
-    return p_reg_mode;
-}
-
 uint8_t ICACHE_RAM_ATTR SX127xDriver::reg_op_mode_mode_lora(void)
 {
-    p_reg_mode |= SX127X_LORA;
-    writeRegister(SX127X_REG_OP_MODE, p_reg_mode);
-    return p_reg_mode;
+    p_RegOpMode |= SX127X_LORA;
+    writeRegister(SX127X_REG_OP_MODE, p_RegOpMode);
+    return p_RegOpMode;
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_rx_done(void)
