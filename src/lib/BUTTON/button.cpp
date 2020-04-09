@@ -29,6 +29,16 @@ Button::Button(int debounce)
     p_inverted = 0;
 }
 
+void Button::set_press_delay_short(uint32_t delay)
+{
+    shortPressDelay = delay;
+}
+void Button::set_press_delay_long(uint32_t delay, uint32_t interval)
+{
+    longPressDelay = delay;
+    longPressInterval = interval;
+}
+
 void Button::init(int Pin, bool inverted, int debounce)
 {
     pinMode(Pin, (inverted ? INPUT_PULLUP : INPUT));
@@ -45,14 +55,19 @@ void Button::init(int Pin, bool inverted, int debounce)
 
 void Button::handle()
 {
-    if (buttonPin < 0)
-        return;
-    sampleButton();
+    sampleButton(millis());
 }
 
-void Button::sampleButton()
+void Button::handle(uint32_t now)
 {
-    uint32_t now = millis();
+    sampleButton(now);
+}
+
+void Button::sampleButton(uint32_t now)
+{
+    if (buttonPin < 0)
+        return;
+
     uint32_t interval = 10;
     if (now >= p_nextSamplingTime)
     {
@@ -84,10 +99,10 @@ void Button::sampleButton()
             if ((press_time > longPressDelay) &&
                 ((now - buttonLastPressedLong) > longPressInterval))
             {
-                buttonLongPress(press_time);
-
                 buttonLastPressedLong = now;
                 buttonIsDownLong = true;
+
+                buttonLongPress(press_time);
             }
         }
 

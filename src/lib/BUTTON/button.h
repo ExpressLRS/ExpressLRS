@@ -21,12 +21,15 @@ private:
     uint32_t longPressDelay;    // how long the switch must hold state to be considered a long press
     uint32_t longPressInterval; // how long the switch must hold long state to be reapeated.
 
-    void sampleButton();
+    void sampleButton(uint32_t now);
 
 public:
     Button(int debounce = -1);
+    void set_press_delay_short(uint32_t delay);
+    void set_press_delay_long(uint32_t delay, uint32_t interval = 500);
     void init(int Pin, bool inverted = true, int debounce = -1);
     void handle();
+    void handle(uint32_t now);
 
     /* Button event callback, time is how long button is/was pressed */
     void (*buttonShortPress)(uint32_t time);
