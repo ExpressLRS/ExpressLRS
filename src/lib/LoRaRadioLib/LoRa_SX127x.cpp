@@ -791,6 +791,7 @@ int32_t SX127xDriver::GetFrequencyError()
     readRegisterBurst(SX127X_REG_FEI_MSB, sizeof(fei_reg), fei_reg);
 
     memcpy(&intFreqError, fei_reg, sizeof(fei_reg));
+    intFreqError = (__builtin_bswap32(intFreqError) >> 8); // 24bit
 
     //uint8_t MSB_reg = fei_reg[0] /*readRegister(SX127X_REG_FEI_MSB)*/ & 0b1111;
     //uint32_t RegFei = MSB_reg;
@@ -853,10 +854,11 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::reg_op_mode_mode_lora(void)
 
 void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_rx_done(void)
 {
-    // 0b00 == DIO1 RxTimeout , DIO0 RxDone
-    p_RegDioMapping1 &= 0b00001111;
-    //p_RegDioMapping1 |= (SX127X_DIO0_RX_DONE | SX127X_DIO1_RX_TIMEOUT);
+    // 0b00 == DIO0 RxDone
+    p_RegDioMapping1 &= 0b00111111;
+    //p_RegDioMapping1 |= (SX127X_DIO0_RX_DONE);
     writeRegister(SX127X_REG_DIO_MAPPING_1, p_RegDioMapping1);
+    writeRegister(SX127X_REG_IRQ_FLAGS_MASK, ~(SX127X_MASK_IRQ_FLAG_RX_DONE));
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_tx_done(void)
@@ -865,6 +867,7 @@ void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_tx_done(void)
     p_RegDioMapping1 &= 0b00111111;
     p_RegDioMapping1 |= SX127X_DIO0_TX_DONE;
     writeRegister(SX127X_REG_DIO_MAPPING_1, p_RegDioMapping1);
+    writeRegister(SX127X_REG_IRQ_FLAGS_MASK, ~(SX127X_MASK_IRQ_FLAG_TX_DONE));
 }
 
 SX127xDriver Radio;
