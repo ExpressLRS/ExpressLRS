@@ -69,7 +69,7 @@ SX127xDriver::SX127xDriver()
     currPWR = 0b0000;
     //maxPWR = 0b1111;
 
-    LastPacketRSSI = 0;
+    LastPacketRSSI = LastPacketRssiRaw = 0;
     LastPacketSNR = 0;
     NonceTX = 0;
     NonceRX = 0;
@@ -128,6 +128,7 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
     p_RegDioMapping1 = readRegister(SX127X_REG_DIO_MAPPING_1);
     p_RegDioMapping2 = readRegister(SX127X_REG_DIO_MAPPING_2);
 
+#if 0
     if (RFmodule == RFMOD_SX1278)
     {
         DEBUG_PRINTLN("Init module SX1278");
@@ -139,6 +140,7 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
         status = SX1276config(this, currBW, currSF, currCR, currFreq, _syncWord);
     }
     DEBUG_PRINTLN("Done");
+#endif
 
     return (status);
 }
@@ -434,8 +436,8 @@ static void ICACHE_RAM_ATTR rx_isr_handler(void)
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, (uint8_t *)RXdataBuffer);
-    LastPacketRSSI = GetLastPacketRSSI();
-    LastPacketSNR = GetLastPacketSNR();
+    GetLastPacketRSSI();
+    GetLastPacketSNR();
     NonceRX++;
     ClearIRQFlags();
     RXdoneCallback1();
@@ -517,8 +519,8 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
     }
 
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, length, data);
-    LastPacketRSSI = GetLastPacketRSSI();
-    LastPacketSNR = GetLastPacketSNR();
+    GetLastPacketRSSI();
+    GetLastPacketSNR();
 
     ClearIRQFlags();
 
@@ -562,8 +564,8 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
     }
 
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, length, data);
-    LastPacketRSSI = GetLastPacketRSSI();
-    LastPacketSNR = GetLastPacketSNR();
+    GetLastPacketRSSI();
+    GetLastPacketSNR();
 
     ClearIRQFlags();
     NonceRX++;
@@ -816,15 +818,18 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSIUnsigned() const
     return (readRegister(SX127X_REG_PKT_RSSI_VALUE));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI() const
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
-    return (-157 + readRegister(SX127X_REG_PKT_RSSI_VALUE));
+    LastPacketRssiRaw = readRegister(SX127X_REG_PKT_RSSI_VALUE);
+    LastPacketRSSI = (-157 + LastPacketRssiRaw);
+    return LastPacketRSSI;
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR() const
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 {
-    int8_t rawSNR = (int8_t)readRegister(SX127X_REG_PKT_SNR_VALUE);
-    return (rawSNR / 4);
+    LastPacketSNR = (int8_t)readRegister(SX127X_REG_PKT_SNR_VALUE);
+    LastPacketSNR /= 4;
+    return LastPacketSNR;
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI() const

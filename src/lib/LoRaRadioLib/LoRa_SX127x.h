@@ -87,8 +87,8 @@ public:
     //static void (*RXtimeout)(); //function pointer for callback
 
     ////////Hardware/////////////
-    int8_t _RXenablePin;
-    int8_t _TXenablePin;
+    volatile int8_t _RXenablePin;
+    volatile int8_t _TXenablePin;
 
     static uint8_t SX127x_dio0;
     static uint8_t SX127x_dio1;
@@ -103,23 +103,24 @@ public:
     uint8_t TXbuffLen = 8;
     uint8_t RXbuffLen = 8;
 
-    uint32_t PacketCount;
+    volatile uint32_t PacketCount;
 
-    bool headerExplMode;
+    volatile bool headerExplMode;
 
-    RFmodule_ RFmodule;
-    Bandwidth currBW;
-    SpreadingFactor currSF;
-    CodingRate currCR;
-    uint8_t _syncWord;
-    uint32_t currFreq;
-    uint8_t currPWR;
+    volatile RFmodule_ RFmodule;
+    volatile Bandwidth currBW;
+    volatile SpreadingFactor currSF;
+    volatile CodingRate currCR;
+    volatile uint8_t _syncWord;
+    volatile uint32_t currFreq;
+    volatile uint8_t currPWR;
     //uint8_t maxPWR;
     //static RadioOPmodes _opmode;
     //static RadioState_ RadioState;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
+    volatile uint8_t LastPacketRssiRaw;
     volatile int8_t LastPacketRSSI;
     volatile int8_t LastPacketSNR;
     volatile uint8_t NonceTX;
@@ -166,8 +167,8 @@ public:
     uint8_t RunCAD();
 
     uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned() const;
-    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI() const;
-    int8_t ICACHE_RAM_ATTR GetLastPacketSNR() const;
+    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
+    int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
@@ -181,9 +182,9 @@ public:
     uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
 
 private:
-    uint8_t p_RegOpMode = 0;
-    uint8_t p_RegDioMapping1 = 0;
-    uint8_t p_RegDioMapping2 = 0;
+    volatile uint8_t p_RegOpMode = 0;
+    volatile uint8_t p_RegDioMapping1 = 0;
+    volatile uint8_t p_RegDioMapping2 = 0;
 
     uint8_t ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
 
