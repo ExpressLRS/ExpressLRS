@@ -1,7 +1,7 @@
 import serial
 from xmodem import XMODEM
 import time
-import sys
+import sys, glob
 
 result = []
 
@@ -42,7 +42,7 @@ print(serial_ports())
 sys.stdout.write("Dected the following serial ports on this system: \n")
 sys.stdout.write(str(serial_ports())[1:-1])
 sys.stdout.write("\n")
-	
+
 if(len(result) == 0):
     raise EnvironmentError('No valid serial port detected or port already open')
 
@@ -86,25 +86,25 @@ for line in lines:
 for line in serialInfo:
     data = line.split()
     SerialInfoSplit.append(data)
-  
+
 for i in range(0,len(serialInfo)):
     data = SerialInfoSplit[i][2]
     if(data == "64"):
         uartNumber = data
         SerialRXindex = i
 
-sys.stdout.write('\n')	
-	
+sys.stdout.write('\n')
+
 if uartNumber != -1:
     print("Detected Betaflight Serial RX config: " +str(serialInfo[SerialRXindex]))
 else:
     sys.stdout.write("Failed to make contact with Betaflight, possibly already in passthrough mode?\n")
     sys.stdout.write("If the next step fails please reboot FC\n")
     sys.stdout.write('\n')
-    sys.stdout.flush()	
+    sys.stdout.flush()
     sys.exit()
 
-sys.stdout.write("Setting serial passthrough...\n")    
+sys.stdout.write("Setting serial passthrough...\n")
 s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n').encode())
 sys.stdout.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n'))
 time.sleep(1)
