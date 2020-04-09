@@ -2,20 +2,17 @@
 #include "../../src/targets.h"
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
-#include "HardwareSerial.h"
 
 #ifdef PLATFORM_ESP32
-HardwareSerial SerialPort(1);
-HardwareSerial CRSF::Port = SerialPort;
+HwSerial SerialPort(1);
+HwSerial CRSF::Port = SerialPort;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleSerialOutFIFO = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 #endif
 
 #ifdef TARGET_R9M_TX
-HardwareSerial CRSF::Port(USART3);
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
+HwSerial CRSF::Port(USART3);
 #endif
 
 ///Out FIFO to buffer messages///
@@ -614,11 +611,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 Serial.println();
                                 CRSFframeActive = false;
                                 SerialInPacketPtr = 0;
-                                Port.flush();
-                                while (CRSF::Port.available())
-                                {
-                                    CRSF::Port.read(); // dunno why but the flush() method wasn't working
-                                }
+                                FlushSerial();
                                 BadPktsCount++;
                             }
                         }
@@ -633,19 +626,18 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         if (SerialOutFIFO.size() >= (peekVal + 1))
                         {
                             digitalWrite(BUFFER_OE, HIGH);
+                            CRSF::Port.enable_transmitter();
 
                             uint8_t OutPktLen = SerialOutFIFO.pop();
                             uint8_t OutData[OutPktLen];
 
                             SerialOutFIFO.popBytes(OutData, OutPktLen);
                             CRSF::Port.write(OutData, OutPktLen); // write the packet out
-                            CRSF::Port.flush();
+                            CRSF::Port.flush(); // Wait until TX is done
+                            CRSF::Port.enable_receiver();
                             digitalWrite(BUFFER_OE, LOW);
 
-                            while (CRSF::Port.available())
-                            {
-                                CRSF::Port.read(); // dunno why but the flush() method wasn't working
-                            }
+                            //FlushSerial();
                         }
                     }
                 }
@@ -710,5 +702,5 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
     void ICACHE_RAM_ATTR CRSF::FlushSerial()
     {
-        CRSF::Port.flush();
+        CRSF::Port.flush_read();
     }
