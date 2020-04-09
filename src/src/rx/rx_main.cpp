@@ -104,6 +104,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
             return;
         }
 
+        DEBUG_PRINT("F");
         linkQuality = getRFlinkQuality();
         Radio.SetFrequency(FHSSgetNextFreq()); // 220us => 85us
         Radio.RXnb();                          // 260us => 148us
@@ -125,6 +126,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         return;
     }
+
+    DEBUG_PRINT("T");
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
     Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
@@ -156,7 +159,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-#if 0
+    DEBUG_PRINT("H");
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -165,9 +168,6 @@ void ICACHE_RAM_ATTR HWtimerCallback()
     {
         HandleFHSS();
     }
-#else
-    HandleFHSS();
-#endif
 
     incrementLQArray();
     HandleSendTelemetryResponse();
@@ -487,10 +487,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         Radio.setPPMoffsetReg(FreqCorrection);
         //DEBUG_PRINTLN(FreqCorrection);
 
-        //HandleFHSS();
-        //alreadyFHSS = true;
+        HandleFHSS();
+        alreadyFHSS = true;
     }
-    DEBUG_PRINT("E");
+    //DEBUG_PRINT("E");
 }
 
 void forced_start(void)
