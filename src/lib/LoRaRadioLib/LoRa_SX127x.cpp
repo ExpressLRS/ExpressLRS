@@ -769,14 +769,17 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // th
 
 void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
 {
-    int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)currFreq / 1000000)) << 8);
-    offsetValue >>= 8;
+    //int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)currFreq / 1000000)) << 8);
+    offset <<= 8;
+    offset *= 243;
+    offset /= ((currFreq / 1000000) << 8);
+    offset >>= 8;
 
-    uint8_t regValue = offsetValue & 0b01111111;
+    uint8_t regValue = offset & 0b01111111;
 
-    if (offsetValue < 0)
+    if (offset < 0)
     {
-        regValue = regValue | 0b10000000; //set neg bit for 2s complement
+        regValue |= 0b10000000; //set neg bit for 2s complement
     }
 
     writeRegister(SX127x_PPMOFFSET, regValue);
