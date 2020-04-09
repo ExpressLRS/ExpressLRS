@@ -41,7 +41,7 @@ private:
     int head;
     int tail;
     int numElements;
-    uint8_t buffer[FIFO_SIZE] = {0};
+    volatile uint8_t buffer[FIFO_SIZE] = {0};
 
 public:
     FIFO();
