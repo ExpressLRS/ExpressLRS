@@ -19,7 +19,7 @@
 
 CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
-connectionState_e connectionState = STATE_disconnected;
+volatile connectionState_e connectionState = STATE_disconnected;
 
 /// Filters ////////////////
 static LPF LPF_PacketInterval(3);
@@ -34,11 +34,11 @@ static uint8_t scanIndex = 0;
 
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 
-static bool alreadyFHSS = false;
+static volatile bool alreadyFHSS = false;
 
 //////////////////////////////////////////////////////////////
+////// Variables for Telemetry and Link Quality //////////////
 
-///////Variables for Telemetry and Link Quality///////////////
 //volatile uint32_t LastValidPacketMicros = 0;
 //volatile uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
@@ -46,11 +46,8 @@ static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was r
 static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
 
 ///////////////////////////////////////////////////////////////
-
-/// Variables for Sync Behaviour ////
-static uint32_t RFmodeNextCycle = 0;
-
-///////////////////////////////////////
+///////////// Variables for Sync Behaviour ////////////////////
+static volatile uint32_t RFmodeNextCycle = 0;
 
 static inline void RfModeNextCycleCalc(void)
 {
@@ -60,20 +57,27 @@ static inline void RfModeNextCycleCalc(void)
                       ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
 }
 
+///////////////////////////////////////
+
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int8_t LastRSSI = Radio.LastPacketRSSI; //Radio.GetLastPacketRSSI();
+    int8_t LastRSSI = Radio.LastPacketRSSI;
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
-
+#if 0
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
+#else
+    //DEBUG_PRINT(Radio.LastPacketRssiRaw);
+    uint8_t rssi = LPF_UplinkRSSI.update(Radio.LastPacketRssiRaw);
+    crsf.LinkStatistics.uplink_RSSI_1 = (rssi > 127) ? 127 : rssi;
+#endif
     //crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
+    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
     //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
@@ -90,8 +94,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
     linkQuality = getRFlinkQuality();
     if (connectionState > STATE_disconnected) // don't hop if we lost
     {
-        Radio.SetFrequency(FHSSgetNextFreq());
-        Radio.RXnb();
+        Radio.SetFrequency(FHSSgetNextFreq()); // 220us => 85us
+        Radio.RXnb();                          // 260us => 148us
     }
 }
 
@@ -117,7 +121,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
     // rssi we send is for display only.
     // OpenTX treats the rssi values as signed.
-
+#if 0
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
     if (openTxRSSI > 127)
@@ -125,6 +129,9 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // convert to 8 bit signed value in the negative range (-128 to 0)
     openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
+#else
+    Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
+#endif
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
@@ -138,8 +145,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-    //DEBUG_PRINT("T");
-
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -153,7 +158,6 @@ void ICACHE_RAM_ATTR HWtimerCallback()
     HandleSendTelemetryResponse();
 
     NonceRXlocal++;
-    //DEBUG_PRINT("Y");
 }
 
 void LostConnection()
@@ -190,8 +194,8 @@ void ICACHE_RAM_ATTR GotConnection()
     //TxTimer.start(); // start tlm timer
 
     connectionState = STATE_connected; //we got a packet, therefore no lost connection
-
-    RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
+    scanIndex = 0;
+    //RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
 
     led_set_state(0); // turn on led
     DEBUG_PRINTLN("got conn");
@@ -255,9 +259,8 @@ void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches()
         break;
     }
 }
-#endif
 
-#ifdef HYBRID_SWITCHES_8
+#elif defined(HYBRID_SWITCHES_8)
 /**
  * Hybrid switches uses 10 bits for each analog channel,
  * 2 bits for the low latency switch[0]
@@ -308,6 +311,7 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8()
 }
 #endif
 
+#if 0
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
 {
     crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));
@@ -315,7 +319,9 @@ void ICACHE_RAM_ATTR UnpackChannelData_10bit()
     crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 2));
     crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
 }
+#endif
 
+#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
 void ICACHE_RAM_ATTR UnpackSwitchData()
 {
     crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
@@ -323,6 +329,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
     crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
     crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
 }
+#endif
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
@@ -350,14 +357,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     getRFlinkInfo();
 
-    // TODO: move to main loop!
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        DEBUG_PRINT("R");
-#if defined SEQ_SWITCHES
+#if defined(SEQ_SWITCHES)
         UnpackChannelDataSeqSwitches();
-#elif defined HYBRID_SWITCHES_8
+#elif defined(HYBRID_SWITCHES_8)
         UnpackChannelDataHybridSwitches8();
 #else
         UnpackChannelData_11bit();
@@ -366,8 +371,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
 #if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-    case SWITCH_DATA_PACKET: // Switch Data Packet
-        DEBUG_PRINT("D");
+    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
         if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
         {
             UnpackSwitchData();
@@ -379,12 +383,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #endif
 
     case TLM_PACKET: //telemetry packet from master
-        DEBUG_PRINT("T");
         // not implimented yet
         break;
 
     case SYNC_PACKET: //sync packet from master
-        DEBUG_PRINT("S");
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             if (connectionState == STATE_disconnected)
@@ -426,7 +428,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
-        int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError());
+        int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError()); // get freq error = 90us
         //DEBUG_PRINT(freqerror);
         //DEBUG_PRINT(" : ");
 
@@ -456,7 +458,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
 
         Radio.setPPMoffsetReg(FreqCorrection);
-
         //DEBUG_PRINTLN(FreqCorrection);
 
         HandleFHSS();
@@ -527,14 +528,12 @@ void setup()
 #endif
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
+    Radio.Begin(false);
 
     FHSSrandomiseFHSSsequence();
     Radio.SetFrequency(GetInitialFreq());
 
     //Radio.SetSyncWord(0x122);
-
-    Radio.Begin(false);
-
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
     int16_t RFnoiseFloor = MeasureNoiseFloor();
@@ -547,12 +546,13 @@ void setup()
 
     Radio.TXdoneCallback1 = &tx_done_cb;
 
-    crsf.Begin();
     TxTimer.callbackTock = &HWtimerCallback;
     TxTimer.init();
     //TxTimer.start(); // start tlm timer
 
     SetRFLinkRate(RATE_DEFAULT);
+
+    crsf.Begin();
 }
 
 void loop()
@@ -567,7 +567,7 @@ void loop()
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
             LQreset();
             led_toggle();
-            DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
+            //DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
             scanIndex++;
 
             RfModeNextCycleCalc();
@@ -582,11 +582,6 @@ void loop()
         }
         else if (now > SendLinkStatstoFCintervalNextSend)
         {
-            //linkQuality = getRFlinkQuality();
-            //crsf.LinkStatistics.uplink_RSSI_2 = 0;
-            //crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR /*Radio.GetLastPacketSNR()*/ * 10;
-            //crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-            //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
         }

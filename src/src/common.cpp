@@ -25,8 +25,8 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate)
 }
 
 //const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+volatile const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 int8_t ExpressLRS_currPower = 0;
 int8_t ExpressLRS_prevPower = 0;

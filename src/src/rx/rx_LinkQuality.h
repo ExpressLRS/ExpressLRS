@@ -1,12 +1,10 @@
 volatile uint8_t linkQuality = 0;
 volatile uint8_t linkQualityArray[100] = {0};
-volatile uint32_t linkQualityArrayCounter = 0;
 volatile uint8_t linkQualityArrayIndex = 0;
 
 void ICACHE_RAM_ATTR incrementLQArray()
 {
-    linkQualityArrayCounter++;
-    linkQualityArrayIndex = linkQualityArrayCounter % 100;
+    linkQualityArrayIndex = (linkQualityArrayIndex + 1) % sizeof(linkQualityArray);
     linkQualityArray[linkQualityArrayIndex] = 0;
 }
 

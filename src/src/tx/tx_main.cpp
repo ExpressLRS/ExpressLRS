@@ -32,7 +32,7 @@ static uint32_t SyncPacketNextSend = 0;
 
 /////////// CONNECTION /////////
 static volatile uint32_t LastTLMpacketRecvMillis = 0;
-static volatile bool isRXconnected = false;
+volatile connectionState_e connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
 static volatile uint32_t recv_tlm_counter = 0;
@@ -73,6 +73,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
     uint8_t TLMheader = Radio.RXdataBuffer[1];
 
+    WaitRXresponse = false;
+    //Radio.NonceTX++;
+
     //DEBUG_PRINTLN("TLMpacket0");
 
     if (packetAddr != DeviceAddr)
@@ -95,9 +98,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         DEBUG_PRINTLN(type);
     }
 
-    isRXconnected = true;
+    connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
-    LastTLMpacketRecvMillis = millis();
+    LastTLMpacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
 
     if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
     {
@@ -270,19 +273,21 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
+    TxTimer.stop();
+    ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
+    ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
     Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
     Radio.SetPreambleLength(config->PreambleLen);
-
-    ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
-    ExpressLRS_currAirRate = config;
-
     crsf.RequestedRCpacketInterval = config->interval;
 
     // Set connected if telemetry is not used
-    isRXconnected = (TLM_RATIO_NO_TLM == config->TLMinterval); // false;
-    platform_connection_state((isRXconnected ? STATE_connected : STATE_disconnected));
+    connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
+    platform_connection_state(connectionState);
+
+    TxTimer.start();
+
 #ifdef TARGET_R9M_TX
     //r9dac.resume();
 #endif
@@ -361,10 +366,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
                 WaitRXresponse = false;
                 return;
             }
-            else
-            {
-                Radio.NonceTX++; // what for?
-            }
+
+            Radio.NonceTX++;
         }
     }
 
@@ -375,7 +378,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
     {
         GenerateSyncPacketData();
-        SyncPacketNextSend = current_ms + ((isRXconnected) ? SYNC_PACKET_SEND_INTERVAL_RX_CONN : SYNC_PACKET_SEND_INTERVAL_RX_LOST);
+        SyncPacketNextSend =
+            current_ms +
+            ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
         //ChangeAirRateSentUpdate = true;
         //DEBUG_PRINTLN("sync");
         //DEBUG_PRINTLN(Radio.currFreq);
@@ -508,7 +513,13 @@ void setup()
     crsf.disconnected = hw_timer_stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
     TxTimer.callbackTock = &SendRCdataToRF;
+
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
+    bool HighPower = false;
+#ifdef TARGET_1000mW_MODULE
+    HighPower = true;
+#endif // TARGET_1000mW_MODULE
+    Radio.Begin(HighPower, GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
 
@@ -552,30 +563,24 @@ void setup()
 
     PowerMgmt.defaultPower();
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
-
-    bool HighPower = false;
-#ifdef TARGET_1000mW_MODULE
-    HighPower = true;
-#endif // TARGET_1000mW_MODULE
-    Radio.Begin(HighPower, GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
-    crsf.Begin();
-
     SetRFLinkRate(RATE_DEFAULT);
+
+    crsf.Begin();
 }
 
 void loop()
 {
-    if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
+    if (TLM_RATIO_NO_TLM < ExpressLRS_currAirRate->TLMinterval)
     {
         uint32_t current_ms = millis();
 
-        if (current_ms > (LastTLMpacketRecvMillis + RX_CONNECTION_LOST_TIMEOUT))
+        if (connectionState != STATE_disconnected &&
+            current_ms > LastTLMpacketRecvMillis)
         {
-            isRXconnected = false;
+            connectionState = STATE_disconnected;
             platform_connection_state(STATE_disconnected);
         }
-
-        if (current_ms >= PacketRateNextCheck)
+        else if (current_ms >= PacketRateNextCheck)
         {
             PacketRateNextCheck = current_ms + LQ_CALCULATE_INTERVAL;
 
@@ -609,5 +614,5 @@ void loop()
     // Process CRSF packets from TX
     crsf.TX_handleUartIn();
 
-    platform_loop((isRXconnected ? STATE_connected : STATE_disconnected));
+    platform_loop(connectionState);
 }

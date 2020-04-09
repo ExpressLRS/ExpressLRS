@@ -61,8 +61,10 @@ void platform_setup(void)
 
 /*************** CONFIGURE BUTTON *******************/
 #ifdef GPIO_PIN_BUTTON
-    button.buttonShortPress = button_event_short;
+    //button.set_press_delay_short();
+    //button.buttonShortPress = button_event_short;
     button.buttonLongPress = button_event_long;
+    button.set_press_delay_long(BUTTON_RESET_INTERVAL_RX, 1000);
     // R9M TX appears to be active high
     button.init(GPIO_PIN_BUTTON, true);
 #endif
@@ -107,7 +109,7 @@ void platform_loop(connectionState_e state)
 {
     (void)state;
 #ifdef GPIO_PIN_BUTTON
-    if (connectionState == STATE_disconnected)
+    if (state == STATE_disconnected)
         button.handle();
 #endif
 
@@ -121,6 +123,9 @@ void platform_connection_state(connectionState_e state)
     bool connected = (state == STATE_connected);
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));
+#endif
+#if defined(TARGET_R9M_TX)
+    platform_set_led(!connected);
 #endif
 }
 

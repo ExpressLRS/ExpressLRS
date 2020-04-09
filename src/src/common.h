@@ -27,7 +27,7 @@ typedef enum
     STATE_tentative = 1,
     STATE_connected = 2,
 } connectionState_e;
-extern connectionState_e connectionState;
+extern volatile connectionState_e connectionState;
 
 void platform_setup(void);
 void platform_loop(connectionState_e state);
@@ -91,8 +91,8 @@ typedef struct expresslrs_mod_settings_s
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 
 //extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-extern const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-extern const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+extern volatile const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 #define MaxPower100mW_Module 20
 #define MaxPower1000mW_Module 30

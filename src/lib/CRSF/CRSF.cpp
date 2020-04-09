@@ -333,7 +333,7 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 #endif
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
-        platform_set_led(LOW);
+        //platform_set_led(LOW);
     }
 
     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
@@ -467,7 +467,7 @@ void ICACHE_RAM_ATTR CRSF::wdtUART()
 
         if (BadPktsCount >= GoodPktsCount)
         {
-            platform_set_led(HIGH);
+            //platform_set_led(HIGH);
 
             DEBUG_PRINTLN("  Too many bad UART RX packets!");
 

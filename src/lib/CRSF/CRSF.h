@@ -195,7 +195,7 @@ typedef struct crsfPayloadLinkstatistics_s
 {
     uint8_t uplink_RSSI_1;
     uint8_t uplink_RSSI_2;
-    uint8_t uplink_Link_quality;
+    uint8_t uplink_Link_quality; // this goes to opentx rssi
     int8_t uplink_SNR;
     uint8_t active_antenna;
     uint8_t rf_Mode;
