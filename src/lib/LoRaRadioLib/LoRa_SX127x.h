@@ -120,6 +120,7 @@ public:
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
+    volatile uint32_t LastPacketIsrMicros;
     volatile uint8_t LastPacketRssiRaw;
     volatile int8_t LastPacketRSSI;
     volatile int8_t LastPacketSNR;

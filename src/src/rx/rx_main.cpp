@@ -348,6 +348,8 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    uint32_t now_us = Radio.LastPacketIsrMicros; // micros();
+
     DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -368,7 +370,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    TimerAdjustment(micros()); // Adjust timer phase
+    TimerAdjustment(now_us); // Adjust timer phase
 
     //LastValidPacketPrevMicros = LastValidPacketMicros;
     //LastValidPacketMicros = micros();

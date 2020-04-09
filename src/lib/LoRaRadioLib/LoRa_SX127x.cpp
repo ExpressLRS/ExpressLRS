@@ -69,6 +69,7 @@ SX127xDriver::SX127xDriver()
     currPWR = 0b0000;
     //maxPWR = 0b1111;
 
+    LastPacketIsrMicros = 0;
     LastPacketRSSI = LastPacketRssiRaw = 0;
     LastPacketSNR = 0;
     NonceTX = 0;
@@ -372,16 +373,13 @@ static void ICACHE_RAM_ATTR tx_isr_handler(void)
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-
-    //DEBUG_PRINTLN("TX done ISR");
+    LastPacketIsrMicros = micros();
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
     //detachInterrupt(dio0);
     ClearIRQFlags();
-
-    //CalcOnAirTime();
 
     //RadioState = RADIO_IDLE;
     NonceTX++;
@@ -435,6 +433,7 @@ static void ICACHE_RAM_ATTR rx_isr_handler(void)
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
+    LastPacketIsrMicros = micros();
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, (uint8_t *)RXdataBuffer);
     GetLastPacketRSSI();
     GetLastPacketSNR();
