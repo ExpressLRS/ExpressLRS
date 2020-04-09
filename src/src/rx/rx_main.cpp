@@ -57,6 +57,17 @@ static inline void RfModeNextCycleCalc(void)
                       ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
 }
 
+static inline void TimerAdjustment(uint32_t us)
+{
+    /* Adjust timer only if sync ok */
+    uint32_t interval = ExpressLRS_currAirRate->interval;
+    us -= TxTimer.LastCallbackMicrosTick;
+    int32_t HWtimerError = us % interval;
+    HWtimerError -= (interval >> 1);
+    int32_t Offset = LPF_Offset.update(HWtimerError); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+    TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+}
+
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -85,15 +96,15 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval;
-    if (modresult != 0)
-    {
-        return;
-    }
-
-    linkQuality = getRFlinkQuality();
     if (connectionState > STATE_disconnected) // don't hop if we lost
     {
+        uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval;
+        if (modresult != 0)
+        {
+            return;
+        }
+
+        linkQuality = getRFlinkQuality();
         Radio.SetFrequency(FHSSgetNextFreq()); // 220us => 85us
         Radio.RXnb();                          // 260us => 148us
     }
@@ -145,6 +156,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
+#if 0
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -153,6 +165,9 @@ void ICACHE_RAM_ATTR HWtimerCallback()
     {
         HandleFHSS();
     }
+#else
+    HandleFHSS();
+#endif
 
     incrementLQArray();
     HandleSendTelemetryResponse();
@@ -341,15 +356,19 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (inCRC != calculatedCRC)
     {
-        DEBUG_PRINTLN("CRC error on RF packet");
+        //DEBUG_PRINTLN("CRC error on RF packet");
+        DEBUG_PRINT("!CRC");
         return;
     }
 
     if (packetAddr != DeviceAddr)
     {
-        DEBUG_PRINTLN("Wrong device address on RF packet");
+        //DEBUG_PRINTLN("Wrong device address on RF packet");
+        DEBUG_PRINT("!ADDR");
         return;
     }
+
+    TimerAdjustment(micros()); // Adjust timer phase
 
     //LastValidPacketPrevMicros = LastValidPacketMicros;
     //LastValidPacketMicros = micros();
@@ -418,13 +437,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    if (connectionState == STATE_connected)
+#if 0
+    if (connectionState >= STATE_tentative)
     {
         /* Adjust timer only if sync ok */
         int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
         int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
         TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
     }
+#else
+    //TimerAdjustment(micros());
+#endif
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -436,32 +459,34 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             if (FreqCorrection < FreqCorrectionMax)
             {
-                FreqCorrection += 61; //min freq step is ~ 61hz
+                FreqCorrection += FreqCorrectionStep;
             }
             else
             {
                 FreqCorrection = FreqCorrectionMax;
-                DEBUG_PRINTLN("Max pos reasontable freq offset correction limit reached!");
+                //DEBUG_PRINTLN("Max pos reasontable freq offset correction limit reached!");
+                DEBUG_PRINT("FREQ_MAX");
             }
         }
         else
         {
             if (FreqCorrection > FreqCorrectionMin)
             {
-                FreqCorrection -= 61; //min freq step is ~ 61hz
+                FreqCorrection -= FreqCorrectionStep;
             }
             else
             {
                 FreqCorrection = FreqCorrectionMin;
-                DEBUG_PRINTLN("Max neg reasontable freq offset correction limit reached!");
+                //DEBUG_PRINTLN("Max neg reasontable freq offset correction limit reached!");
+                DEBUG_PRINT("FREQ_MIN");
             }
         }
 
         Radio.setPPMoffsetReg(FreqCorrection);
         //DEBUG_PRINTLN(FreqCorrection);
 
-        HandleFHSS();
-        alreadyFHSS = true;
+        //HandleFHSS();
+        //alreadyFHSS = true;
     }
     DEBUG_PRINT("E");
 }

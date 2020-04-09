@@ -21,15 +21,14 @@ public:
 
     void ICACHE_RAM_ATTR callback();
 
-    static inline void nullCallback(){};
     void (*callbackTick)();
     void (*callbackTock)();
 
 private:
     volatile uint32_t HWtimerInterval;
-    volatile bool TickTock;
     volatile int32_t PhaseShift;
-    volatile bool ResetNextLoop;
+    volatile bool TickTock;
+    bool ResetNextLoop;
 
     void setTime(uint32_t);
 };

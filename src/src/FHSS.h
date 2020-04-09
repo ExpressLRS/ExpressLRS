@@ -5,6 +5,7 @@
 extern int32_t FreqCorrection;
 #define FreqCorrectionMax 100000
 #define FreqCorrectionMin -100000
+#define FreqCorrectionStep 61 //min freq step is ~ 61hz
 
 // The number of FHSS frequencies in the table
 extern const uint32_t NR_FHSS_ENTRIES;

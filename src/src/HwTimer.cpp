@@ -2,6 +2,8 @@
 
 /* HW specific code can be found from <mcu type>/ folder */
 
+static void nullCallback(){};
+
 HwTimer::HwTimer()
 {
     callbackTick = nullCallback; // function is called whenever there is new RC data.
@@ -18,6 +20,8 @@ HwTimer::HwTimer()
 
 void HwTimer::updateInterval(uint32_t newTimerInterval)
 {
+    TickTock = 0;
+    PhaseShift = 0;
     HWtimerInterval = newTimerInterval;
     setTime(newTimerInterval >> 1);
 }
@@ -42,10 +46,10 @@ void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
 
 void ICACHE_RAM_ATTR HwTimer::callback()
 {
-
+    uint32_t us = micros();
     if (TickTock)
     {
-#if 1
+#if 0
         if (ResetNextLoop)
         {
 
@@ -62,15 +66,20 @@ void ICACHE_RAM_ATTR HwTimer::callback()
             PhaseShift = 0;
         }
 #else
-        setTime((HWtimerInterval + PhaseShift) >> 1);
-        PhaseShift = 0;
+        if (PhaseShift != 0 || ResetNextLoop)
+        {
+            setTime((HWtimerInterval + PhaseShift) >> 1);
+            ResetNextLoop = (PhaseShift != 0);
+            PhaseShift = 0;
+        }
 #endif
-        LastCallbackMicrosTick = micros();
+
+        LastCallbackMicrosTick = us;
         callbackTick();
     }
     else
     {
-        LastCallbackMicrosTock = micros();
+        LastCallbackMicrosTock = us;
         callbackTock();
     }
     TickTock ^= 1;
