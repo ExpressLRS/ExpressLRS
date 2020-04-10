@@ -1,4 +1,5 @@
 #include "HwTimer.h"
+#include "targets.h"
 #include "LoRa_SX127x.h"
 #include <FreeRTOS.h>
 #include <esp32-hal-timer.h>
@@ -26,10 +27,15 @@ void HwTimer::init()
     }
 }
 
+void HwTimer::start()
+{
+    init();
+}
+
 void HwTimer::stop()
 {
     /* are these rly needed?? */
-    detachInterrupt(SX127xDriver::SX127x_dio0);
+    detachInterrupt(GPIO_PIN_DIO0);
     Radio.ClearIRQFlags();
     if (timer)
     {

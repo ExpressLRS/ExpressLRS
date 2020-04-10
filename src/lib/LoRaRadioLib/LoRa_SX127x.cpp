@@ -349,7 +349,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
-    //detachInterrupt(dio0);
     ClearIRQFlags();
 
     NonceTX++;
