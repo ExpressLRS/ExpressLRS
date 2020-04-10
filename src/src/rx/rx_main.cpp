@@ -75,7 +75,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     int8_t LastRSSI = Radio.LastPacketRSSI;
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
-#if 0
+#if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
@@ -101,7 +101,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
             return;
         }
 
-        DEBUG_PRINT("F");
+        //DEBUG_PRINT("F");
         linkQuality = getRFlinkQuality();
         Radio.SetFrequency(FHSSgetNextFreq()); // 220us => 85us
         Radio.RXnb();                          // 260us => 148us
@@ -124,7 +124,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return;
     }
 
-    DEBUG_PRINT("T");
+    //DEBUG_PRINT("T");
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
     Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
@@ -132,7 +132,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
     // rssi we send is for display only.
     // OpenTX treats the rssi values as signed.
-#if 0
+#if 1
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
     if (openTxRSSI > 127)
@@ -156,7 +156,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-    DEBUG_PRINT("H");
+    //DEBUG_PRINT("H");
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -345,7 +345,7 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    DEBUG_PRINT("I");
+    //DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -401,7 +401,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-        DEBUG_PRINT("S");
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             if (connectionState == STATE_disconnected)
@@ -428,8 +427,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     default: // code to be executed if n doesn't match any cases
-        DEBUG_PRINT("!");
-        DEBUG_PRINT(type);
         break;
     }
 
