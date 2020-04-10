@@ -306,6 +306,48 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             this->_dev->write(outBuffer, RCframeLength + 4);
             //this->_dev->print(".");
         }
+
+        // Frame structure
+        typedef struct crsfMspFrame_s {
+            uint8_t deviceAddress;
+            uint8_t frameLength;
+            uint8_t type;
+            uint8_t destination;
+            uint8_t origin;
+            uint8_t payload[8 + 1];
+        } crsfMspFrame_t;
+
+        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC()
+        {
+            #define MSP_FRAME_LEN 10
+            uint8_t outBuffer[MSP_FRAME_LEN + 4] = {0};
+
+            outBuffer[0] = CRSF_ADDRESS_BROADCAST;
+            outBuffer[1] = MSP_FRAME_LEN + 2;
+            outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;
+
+            uint8_t mspBuffer[MSP_FRAME_LEN] = {0};
+            mspBuffer[0] = 0xC8; // destination
+            mspBuffer[1] = 0xEA; // origin
+
+            // payload
+            mspBuffer[2] = 0x30; // header
+            mspBuffer[3] = 0x06; // mspPayloadSize
+            mspBuffer[4] = 0x59; // packet->cmd
+            mspBuffer[5] = 0x00; //newFrequency b1
+            mspBuffer[6] = 0x00; // newFrequency b2
+            mspBuffer[5] = 0x17; // power
+            mspBuffer[6] = 0x00; // pitmode
+
+            uint8_t mspcrc = CalcCRC(&mspBuffer[3], 6);
+            mspBuffer[7] = mspcrc; // crc
+
+            uint8_t crc = CalcCRC(&outBuffer[2], MSP_FRAME_LEN + 1);
+
+            outBuffer[MSP_FRAME_LEN + 3] = crc;
+
+            this->_dev->write(outBuffer, MSP_FRAME_LEN + 4);
+        }
 #endif
 
 #if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)

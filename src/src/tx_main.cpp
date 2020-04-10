@@ -468,7 +468,7 @@ void setup()
   HardwareSerial(USART2);
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.begin(115200);
+  Serial.begin(400000);
 
   // Annoying startup beeps
 #ifndef JUST_BEEP_ONCE
@@ -624,6 +624,7 @@ void loop()
 #ifdef TARGET_R9M_TX
   if (Serial.available()) {
     uint8_t c = Serial.read();
+    Serial.println(c);
 #endif
 
 #ifdef PLATFORM_ESP32

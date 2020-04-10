@@ -501,8 +501,14 @@ void setup()
     hwTimer.init();
 }
 
+bool mspSent = false;
+
 void loop()
 {
+    if (millis() > 8000 && !mspSent) {
+        mspSent = true;
+        crsf.sendMSPFrameToFC();
+    }
 
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
