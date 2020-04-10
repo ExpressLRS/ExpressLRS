@@ -42,6 +42,7 @@ void ICACHE_RAM_ATTR HwTimer::phaseShift(int32_t newPhaseShift)
     {
         PhaseShift = newPhaseShift;
     }
+    // TODO: modify TMR counter directly
 }
 
 void ICACHE_RAM_ATTR HwTimer::callback()
@@ -49,30 +50,12 @@ void ICACHE_RAM_ATTR HwTimer::callback()
     uint32_t us = micros();
     if (TickTock)
     {
-#if 0
-        if (ResetNextLoop)
-        {
-
-            setTime(HWtimerInterval >> 1);
-            ResetNextLoop = false;
-        }
-
-        if (PhaseShift != 0)
-        {
-
-            setTime((HWtimerInterval + PhaseShift) >> 1);
-
-            ResetNextLoop = true;
-            PhaseShift = 0;
-        }
-#else
         if (PhaseShift != 0 || ResetNextLoop)
         {
             setTime((HWtimerInterval + PhaseShift) >> 1);
             ResetNextLoop = (PhaseShift != 0);
             PhaseShift = 0;
         }
-#endif
 
         LastCallbackMicrosTick = us;
         callbackTick();
