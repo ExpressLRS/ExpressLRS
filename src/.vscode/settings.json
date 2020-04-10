@@ -22,5 +22,6 @@
         "ostream": "cpp",
         "*.tcc": "cpp",
         "ios": "cpp"
-    }
+    },
+    "C_Cpp.dimInactiveRegions": false
 }

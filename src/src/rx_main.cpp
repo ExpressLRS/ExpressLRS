@@ -234,6 +234,10 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
     crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
+
+    if (Radio.RXdataBuffer[6] & 0b00001000) {
+        crsf.sendMSPFrameToFC();
+    }
 #endif
 }
 
@@ -505,11 +509,6 @@ bool mspSent = false;
 
 void loop()
 {
-    if (millis() > 8000 && !mspSent) {
-        mspSent = true;
-        crsf.sendMSPFrameToFC();
-    }
-
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
