@@ -83,14 +83,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 #else
-    //DEBUG_PRINT(Radio.LastPacketRssiRaw);
     uint8_t rssi = LPF_UplinkRSSI.update(Radio.LastPacketRssiRaw);
     crsf.LinkStatistics.uplink_RSSI_1 = (rssi > 127) ? 127 : rssi;
 #endif
-    //crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    //crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
@@ -348,8 +345,6 @@ void ICACHE_RAM_ATTR UnpackSwitchData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    uint32_t now_us = Radio.LastPacketIsrMicros; // micros();
-
     DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -369,8 +364,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         DEBUG_PRINT("!ADDR");
         return;
     }
-
-    TimerAdjustment(now_us); // Adjust timer phase
 
     //LastValidPacketPrevMicros = LastValidPacketMicros;
     //LastValidPacketMicros = micros();
@@ -408,6 +401,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
+        DEBUG_PRINT("S");
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             if (connectionState == STATE_disconnected)
@@ -434,22 +428,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     default: // code to be executed if n doesn't match any cases
+        DEBUG_PRINT("!");
+        DEBUG_PRINT(type);
         break;
     }
 
     addPacketToLQ();
 
-#if 0
-    if (connectionState >= STATE_tentative)
-    {
-        /* Adjust timer only if sync ok */
-        int32_t HWtimerError = ((micros() - TxTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
-        int32_t Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-        TxTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
-    }
-#else
-    //TimerAdjustment(micros());
-#endif
+    //TimerAdjustment(Radio.LastPacketIsrMicros);
+    TimerAdjustment(micros());
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -518,7 +505,7 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     TxTimer.updateInterval(config->interval);
     LPF_PacketInterval.init(config->interval);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.rf_Mode = 4 - config->enum_rate;
+    crsf.LinkStatistics.rf_Mode = RATE_MAX - config->enum_rate;
     //LPF_Offset.init(0);
     //InitHarwareTimer();
     Radio.RXnb();
@@ -555,7 +542,7 @@ void setup()
 #endif
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
-    Radio.Begin(false);
+    Radio.Begin();
 
     FHSSrandomiseFHSSsequence();
     Radio.SetFrequency(GetInitialFreq());
