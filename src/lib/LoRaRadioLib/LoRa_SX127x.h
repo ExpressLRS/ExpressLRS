@@ -83,16 +83,13 @@ public:
     static void (*TXdoneCallback3)(); //function pointer for callback
     static void (*TXdoneCallback4)(); //function pointer for callback
 
-    //static void (*TXtimeout)(); //function pointer for callback
-    //static void (*RXtimeout)(); //function pointer for callback
-
     ////////Hardware/////////////
     volatile int8_t _RXenablePin;
     volatile int8_t _TXenablePin;
 
-    static uint8_t SX127x_dio0;
-    static uint8_t SX127x_dio1;
-    static uint8_t SX127x_RST;
+    volatile uint8_t SX127x_dio0;
+    volatile uint8_t SX127x_dio1;
+    volatile uint8_t SX127x_RST;
 
     /////////////////////////////
 
@@ -100,10 +97,8 @@ public:
     volatile uint8_t TXdataBuffer[16];
     volatile uint8_t RXdataBuffer[16];
 
-    uint8_t TXbuffLen = 8;
-    uint8_t RXbuffLen = 8;
-
-    volatile uint32_t PacketCount;
+    volatile uint8_t TXbuffLen;
+    volatile uint8_t RXbuffLen;
 
     volatile bool headerExplMode;
 
@@ -114,9 +109,6 @@ public:
     volatile uint8_t _syncWord;
     volatile uint32_t currFreq;
     volatile uint8_t currPWR;
-    //uint8_t maxPWR;
-    //static RadioOPmodes _opmode;
-    //static RadioState_ RadioState;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -126,12 +118,6 @@ public:
     volatile int8_t LastPacketSNR;
     volatile uint8_t NonceTX;
     volatile uint8_t NonceRX;
-    //static uint32_t TimeOnAir;
-    //static uint32_t TXstartMicros;
-    //static uint32_t TXspiTime;
-    //static uint32_t HeadRoom;
-    //static uint32_t LastTXdoneMicros;
-    //static uint32_t TXdoneMicros;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
@@ -167,7 +153,7 @@ public:
 
     uint8_t RunCAD();
 
-    uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned() const;
+    uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned();
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
@@ -184,11 +170,10 @@ public:
 
 private:
     volatile uint8_t p_RegOpMode = 0;
-    volatile uint8_t p_RegDioMapping1 = 0;
-    volatile uint8_t p_RegDioMapping2 = 0;
+    //volatile uint8_t p_RegDioMapping1 = 0;
+    //volatile uint8_t p_RegDioMapping2 = 0;
 
-    uint8_t ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
-
+    void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);
     void ICACHE_RAM_ATTR reg_dio1_tx_done(void);
 };
