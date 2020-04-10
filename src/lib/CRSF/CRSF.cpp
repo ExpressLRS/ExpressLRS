@@ -334,13 +334,13 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             mspBuffer[2] = 0x30; // header
             mspBuffer[3] = 0x04; // mspPayloadSize
             mspBuffer[4] = 0x59; // packet->cmd
-            mspBuffer[5] = 0x00; // newFrequency b1
+            mspBuffer[5] = 0x18; // newFrequency b1
             mspBuffer[6] = 0x00; // newFrequency b2
-            mspBuffer[7] = 0x17; // power
+            mspBuffer[7] = 0x01; // power
             mspBuffer[8] = 0x00; // pitmode
 
             uint8_t mspcrc = CalcCRC(&mspBuffer[3], 6);
-            mspBuffer[9] = 74; // crc
+            mspBuffer[9] = 68; // crc
 
             memcpy(outBuffer + 3, (byte *)&mspBuffer, MSP_FRAME_LEN);
 
