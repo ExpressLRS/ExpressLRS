@@ -664,8 +664,6 @@ void loop()
   button.handle();
 #endif
 
-<<<<<<< 1b13d02ffb71cc3cadb6d80e9de4f51f4ff71dda
-<<<<<<< 017e1958d86feddb32c14cc2d5c67cd93acd9400
 #ifdef PLATFORM_ESP32
   if (Serial2.available()) {
     uint8_t c = Serial2.read();
@@ -680,12 +678,6 @@ void loop()
       msp.markPacketReceived();
     }
   }
-=======
->>>>>>> Sequential and hybrid switch modes
-=======
-  vTaskDelay(2);
-
->>>>>>> Created OTA lib for packet encoding
 }
 
 void ICACHE_RAM_ATTR TimerExpired()

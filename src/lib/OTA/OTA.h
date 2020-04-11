@@ -1,8 +1,8 @@
 #ifndef H_OTA
 #define H_OTA
 
+#include "LoRaRadioLib.h" // this has to come before CRSF.h when compiling on R9
 #include "CRSF.h"
-#include "LoRaRadioLib.h"
 
 // expresslrs packet header types
 // 00 -> standard 4 channel data packet
