@@ -9,6 +9,7 @@
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
+#include "OTA.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
