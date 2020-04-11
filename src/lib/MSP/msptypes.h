@@ -8,6 +8,6 @@
 #define MSP_ELRS_TLM_RATE   0x02
 
 #define CHECK_PACKET_PARSING() \
-  if (packet.readError) {\
+  if (packet->readError) {\
     return;\
   }

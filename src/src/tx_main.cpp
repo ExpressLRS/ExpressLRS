@@ -87,10 +87,11 @@ uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this w
 void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
-void ProcessMSPPacket(mspPacket_t packet);
-void OnRFModePacket(mspPacket_t packet);
-void OnTxPowerPacket(mspPacket_t packet);
-void OnTLMRatePacket(mspPacket_t packet);
+// MSP packet handling function defs
+void ProcessMSPPacket(mspPacket_t* packet);
+void OnRFModePacket(mspPacket_t* packet);
+void OnTxPowerPacket(mspPacket_t* packet);
+void OnTLMRatePacket(mspPacket_t* packet);
 
 uint8_t baseMac[6];
 
@@ -642,10 +643,10 @@ void ICACHE_RAM_ATTR TimerExpired()
   SendRCdataToRF();
 }
 
-void OnRFModePacket(mspPacket_t packet)
+void OnRFModePacket(mspPacket_t* packet)
 {
   // Parse the RF mode
-  uint8_t rfMode = packet.readByte();
+  uint8_t rfMode = packet->readByte();
   CHECK_PACKET_PARSING();
 
   switch (rfMode) {
@@ -664,10 +665,10 @@ void OnRFModePacket(mspPacket_t packet)
   }
 }
 
-void OnTxPowerPacket(mspPacket_t packet)
+void OnTxPowerPacket(mspPacket_t* packet)
 {
   // Parse the TX power
-  uint8_t txPower = packet.readByte();
+  uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
 
   switch (txPower) {
@@ -701,10 +702,10 @@ void OnTxPowerPacket(mspPacket_t packet)
   }
 }
 
-void OnTLMRatePacket(mspPacket_t packet)
+void OnTLMRatePacket(mspPacket_t* packet)
 {
   // Parse the TLM rate
-  uint8_t tlmRate = packet.readByte();
+  uint8_t tlmRate = packet->readByte();
   CHECK_PACKET_PARSING();
 
   // TODO: Implement dynamic TLM rates
@@ -719,11 +720,11 @@ void OnTLMRatePacket(mspPacket_t packet)
   // }
 }
 
-void ProcessMSPPacket(mspPacket_t packet)
+void ProcessMSPPacket(mspPacket_t* packet)
 {
   // Inspect packet for ELRS specific opcodes
-  if (packet.function == MSP_ELRS_FUNC) {
-    uint8_t opcode = packet.readByte();
+  if (packet->function == MSP_ELRS_FUNC) {
+    uint8_t opcode = packet->readByte();
 
     CHECK_PACKET_PARSING();
 

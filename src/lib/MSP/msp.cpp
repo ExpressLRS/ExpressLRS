@@ -135,10 +135,10 @@ MSP::processReceivedByte(uint8_t c)
     return false;
 }
 
-mspPacket_t
-MSP::getReceivedPacket() const
+mspPacket_t*
+MSP::getReceivedPacket()
 {
-    return m_packet;
+    return &m_packet;
 }
 
 void
@@ -150,15 +150,15 @@ MSP::markPacketReceived()
 }
 
 bool
-MSP::sendPacket(mspPacket_t packet, Stream* port)
+MSP::sendPacket(mspPacket_t* packet, Stream* port)
 {
     // Sanity check the packet before sending
-    if (packet.type != MSP_PACKET_COMMAND && packet.type != MSP_PACKET_RESPONSE) {
+    if (packet->type != MSP_PACKET_COMMAND && packet->type != MSP_PACKET_RESPONSE) {
         // Unsupported packet type (note: ignoring '!' until we know what it is)
         return false;
     }
 
-    if (packet.type == MSP_PACKET_RESPONSE && packet.payloadSize == 0) {
+    if (packet->type == MSP_PACKET_RESPONSE && packet->payloadSize == 0) {
         // Response packet with no payload
         return false;
     }
@@ -168,10 +168,10 @@ MSP::sendPacket(mspPacket_t packet, Stream* port)
     port->write('X');
 
     // Write out the packet type
-    if (packet.type == MSP_PACKET_COMMAND) {
+    if (packet->type == MSP_PACKET_COMMAND) {
         port->write('<');
     }
-    else if (packet.type == MSP_PACKET_RESPONSE) {
+    else if (packet->type == MSP_PACKET_RESPONSE) {
         port->write('>');
     }
 
@@ -181,9 +181,9 @@ MSP::sendPacket(mspPacket_t packet, Stream* port)
     // Pack header struct into buffer
     uint8_t headerBuffer[5];
     mspHeaderV2_t* header = (mspHeaderV2_t*)&headerBuffer[0];
-    header->flags = packet.flags;
-    header->function = packet.function;
-    header->payloadSize = packet.payloadSize;
+    header->flags = packet->flags;
+    header->function = packet->function;
+    header->payloadSize = packet->payloadSize;
 
     // Write out the header buffer, adding each byte to the crc
     for (uint8_t i = 0; i < sizeof(mspHeaderV2_t); ++i) {
@@ -192,9 +192,9 @@ MSP::sendPacket(mspPacket_t packet, Stream* port)
     }
 
     // Write out the payload, adding each byte to the crc
-    for (uint16_t i = 0; i < packet.payloadSize; ++i) {
-        port->write(packet.payload[i]);
-        crc = crc8_dvb_s2(crc, packet.payload[i]);
+    for (uint16_t i = 0; i < packet->payloadSize; ++i) {
+        port->write(packet->payload[i]);
+        crc = crc8_dvb_s2(crc, packet->payload[i]);
     }
 
     // Write out the crc

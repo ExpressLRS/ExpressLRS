@@ -2,8 +2,11 @@
 
 #include <Arduino.h>
 
-// TODO: MSP_PORT_INBUF_SIZE could be changed to dynamically allocate array length based on the payload size
-#define MSP_PORT_INBUF_SIZE 192
+// TODO: MSP_PORT_INBUF_SIZE should be changed to
+// dynamically allocate array length based on the payload size
+// Hardcoding payload size to 8 bytes for now, since MSP is
+// limited to a 4 byte payload on the BF side
+#define MSP_PORT_INBUF_SIZE 8
 
 typedef enum {
     MSP_IDLE,
@@ -80,10 +83,10 @@ typedef struct {
 class MSP
 {
 public:
-    bool        processReceivedByte(uint8_t c);
-    mspPacket_t getReceivedPacket() const;
-    void        markPacketReceived();
-    bool        sendPacket(mspPacket_t packet, Stream* port);
+    bool            processReceivedByte(uint8_t c);
+    mspPacket_t*    getReceivedPacket();
+    void            markPacketReceived();
+    bool            sendPacket(mspPacket_t* packet, Stream* port);
 
 private:
     mspState_e  m_inputState;
