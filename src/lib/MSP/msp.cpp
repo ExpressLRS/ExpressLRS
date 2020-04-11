@@ -32,11 +32,6 @@ uint8_t crc8_dvb_s2(uint8_t crc, unsigned char a)
 bool
 MSP::processReceivedByte(uint8_t c)
 {
-    Serial.print("MSP: processReceivedByte byte = ");
-    Serial.print(c);
-    Serial.print(" m_inputState = ");
-    Serial.println(m_inputState);
-
     switch (m_inputState) {
 
         case MSP_IDLE:
