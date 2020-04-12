@@ -307,20 +307,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             //this->_dev->print(".");
         }
 
-        // Frame structure
-        typedef struct crsfMspFrame_s {
-            uint8_t deviceAddress;
-            uint8_t frameLength;
-            uint8_t type;
-            uint8_t destination;
-            uint8_t origin;
-            uint8_t payload[8 + 1];
-        } crsfMspFrame_t;
-
-        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC()
+        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t packet)
         {
-            #define MSP_FRAME_LEN 10
-            uint8_t outBuffer[MSP_FRAME_LEN + 4] = {0};
+            crsf_ext_header_t crsfHeader;
+
+            // TODO: This currently only supports single MSP packets per cmd
+            // To support longer packets we need to re-write this to allow packet splitting
+            crsfHeader.device_addr = CRSF_ADDRESS_BROADCAST;
+            crsfHeader.frame_size = CRSF_EXT_FRAME_SIZE(CRSF_MSP_REQ_PAYLOAD_SIZE);
+            if (packet.type == MSP_PACKET_COMMAND) {
+                crsfHeader.type = CRSF_FRAMETYPE_MSP_WRITE;
+            }
+            else {
+                crsfHeader.type = CRSF_FRAMETYPE_MSP_REQ;
+            }
+            crsfHeader.dest_addr = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+            crsfHeader.orig_addr = CRSF_ADDRESS_RADIO_TRANSMITTER;
+            
+            uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(packet.payloadSize) + CRSF_FRAME_CRC_SIZE] = {0};
 
             outBuffer[0] = CRSF_ADDRESS_BROADCAST;
             outBuffer[1] = MSP_FRAME_LEN + 2;
