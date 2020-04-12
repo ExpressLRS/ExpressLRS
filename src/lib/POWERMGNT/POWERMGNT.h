@@ -49,9 +49,9 @@ class POWERMGNT
 
 private:
     static PowerLevels_e CurrentPower;
-    static PowerLevels_e setPower(PowerLevels_e Power);
 
 public:
+    static void setPower(PowerLevels_e Power);
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();

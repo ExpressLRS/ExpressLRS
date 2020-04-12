@@ -2,8 +2,11 @@
 
 #include <Arduino.h>
 
-// TODO: MSP_PORT_INBUF_SIZE could be changed to dynamically allocate array length based on the payload size
-#define MSP_PORT_INBUF_SIZE 192
+// TODO: MSP_PORT_INBUF_SIZE should be changed to
+// dynamically allocate array length based on the payload size
+// Hardcoding payload size to 8 bytes for now, since MSP is
+// limited to a 4 byte payload on the BF side
+#define MSP_PORT_INBUF_SIZE 8
 
 typedef enum {
     MSP_IDLE,
@@ -35,6 +38,8 @@ typedef struct {
     uint16_t        function;
     uint16_t        payloadSize;
     uint8_t         payload[MSP_PORT_INBUF_SIZE];
+    uint16_t        payloadReadIterator;
+    bool            readError;
 
     void reset()
     {
@@ -42,6 +47,8 @@ typedef struct {
         flags = 0;
         function = 0;
         payloadSize = 0;
+        payloadReadIterator = 0;
+        readError = false;
     }
 
     void addByte(uint8_t b)
@@ -58,6 +65,17 @@ typedef struct {
     {
         type = MSP_PACKET_COMMAND;
     }
+
+    uint8_t readByte()
+    {
+        if (payloadReadIterator >= payloadSize) {
+            // We are trying to read beyond the length of the payload
+            readError = true;
+            return 0;
+        }
+
+        return payload[payloadReadIterator++];
+    }
 } mspPacket_t;
 
 /////////////////////////////////////////////////
@@ -65,10 +83,10 @@ typedef struct {
 class MSP
 {
 public:
-    bool        processReceivedByte(uint8_t c);
-    mspPacket_t getReceivedPacket() const;
-    void        markPacketReceived();
-    bool        sendPacket(mspPacket_t packet, Stream* port);
+    bool            processReceivedByte(uint8_t c);
+    mspPacket_t*    getReceivedPacket();
+    void            markPacketReceived();
+    bool            sendPacket(mspPacket_t* packet, Stream* port);
 
 private:
     mspState_e  m_inputState;
