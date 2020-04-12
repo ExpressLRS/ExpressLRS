@@ -276,7 +276,6 @@ void test_decodingSEQ()
 
     // copy into the required buffer for the decoder
     memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
-    for(int i=0;i<8; i++) Serial.printf("%d %d\n", Radio.RXdataBuffer[i], Radio.TXdataBuffer[i]);
 
     // clear the output buffer to avoid cross-talk between tests
     memset((void *) &crsf.PackedRCdataOut, 0, sizeof(crsf.PackedRCdataOut));

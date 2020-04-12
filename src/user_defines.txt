@@ -19,6 +19,8 @@
 
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 
+# if neither of the below are set the code defaults to 1bit switches
+
 # Sequential switches
 # 5 bits are used in each rc packet to encode 8 3 position switches
 # first 3 bits are the switch ID, followed by 2 bits for the switch value.
@@ -37,7 +39,7 @@
 # channels are reduced to 10bit resolution to free up space in the rc packet
 # for switches.
 
--DHYBRID_SWITCHES_8
+#-DHYBRID_SWITCHES_8
 
 
 ### Set your UID here. Must be 6 bytes!
