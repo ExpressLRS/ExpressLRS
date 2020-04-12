@@ -8,6 +8,11 @@
 // limited to a 4 byte payload on the BF side
 #define MSP_PORT_INBUF_SIZE 8
 
+#define CHECK_PACKET_PARSING() \
+  if (packet->readError) {\
+    return;\
+  }
+
 typedef enum {
     MSP_IDLE,
     MSP_HEADER_START,
@@ -75,32 +80,6 @@ typedef struct {
         }
 
         return payload[payloadReadIterator++];
-    }
-} mspPacket_t;
-
-typedef struct {
-    uint8_t     header;
-    uint8_t     function;
-    uint16_t    payloadSize;
-    uint8_t     payload[ENCAPSULATED_MSP_PAYLOAD_SIZE];
-    uint8_t     crc;
-
-    void reset()
-    {
-        header = 0;
-        function = 0;
-        payloadSize = 0;
-        crc = 0;
-    }
-
-    void addByte(uint8_t b)
-    {
-        payload[payloadSize++] = b;
-    }
-
-    void setSeqNumber(uint8_t seq)
-    {
-        header &= seq & 
     }
 } mspPacket_t;
 

@@ -307,15 +307,32 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             //this->_dev->print(".");
         }
 
-        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t packet)
+        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t* packet)
         {
-            crsf_ext_header_t crsfHeader;
-
             // TODO: This currently only supports single MSP packets per cmd
             // To support longer packets we need to re-write this to allow packet splitting
+
+            // Encapsulated MSP section
+            encapsulatedMspPacket_t encapsulatedMspPacket;
+            encapsulatedMspPacket.reset();
+            encapsulatedMspPacket.setVersion(TELEMETRY_MSP_VERSION);
+            encapsulatedMspPacket.setStartingFlag(true);
+            encapsulatedMspPacket.setSeqNumber(0);
+            // Copy the payload from the mspPacket_t into the encapsulatedMspPacket_t
+            for (uint8_t i = 0; i < packet->payloadSize; ++i) {
+                if (!encapsulatedMspPacket.addByte(packet->payload[i])) {
+                    // Payload won't fit - bail out without sending anything
+                    Serial.println("Failed to send encapsulated MSP packet");
+                    return;
+                }
+            }
+            encapsulatedMspPacket.calcCRC();
+
+            // CRSF extended header section
+            crsf_ext_header_t crsfHeader;
             crsfHeader.device_addr = CRSF_ADDRESS_BROADCAST;
-            crsfHeader.frame_size = CRSF_EXT_FRAME_SIZE(CRSF_MSP_REQ_PAYLOAD_SIZE);
-            if (packet.type == MSP_PACKET_COMMAND) {
+            crsfHeader.frame_size = CRSF_EXT_FRAME_SIZE(encapsulatedMspPacket.getTotalSize());
+            if (packet->type == MSP_PACKET_COMMAND) {
                 crsfHeader.type = CRSF_FRAMETYPE_MSP_WRITE;
             }
             else {
@@ -324,35 +341,23 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             crsfHeader.dest_addr = CRSF_ADDRESS_FLIGHT_CONTROLLER;
             crsfHeader.orig_addr = CRSF_ADDRESS_RADIO_TRANSMITTER;
             
-            uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(packet.payloadSize) + CRSF_FRAME_CRC_SIZE] = {0};
+            // Copy the header and msp packet into output buffer, ordered as:
+            // [crsf_ext_header_t, encapsulatedMspPacket_t, crsfCrc]
+            uint8_t outBufferAddr;
+            uint8_t outBufferTotalSize = CRSF_EXT_FRAME_SIZE(sizeof(crsfHeader.device_addr) + crsfHeader.frame_size + CRSF_FRAME_CRC_SIZE;
+            uint8_t outBuffer[outBufferTotalSize] = {0};
 
-            outBuffer[0] = CRSF_ADDRESS_BROADCAST;
-            outBuffer[1] = MSP_FRAME_LEN + 2;
-            outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;
+            outBufferAddr = 0;
+            memcpy(outBuffer[outBufferAddr], (byte*)&crsfHeader, sizeof(crsf_ext_header_t));
+            outBufferAddr += sizeof(crsf_ext_header_t);
+            memcpy(outBuffer[outBufferAddr], (byte*)&encapsulatedMspPacket, encapsulatedMspPacket.getTotalSize());
+            outBufferAddr += encapsulatedMspPacket.getTotalSize();
 
-            uint8_t mspBuffer[MSP_FRAME_LEN] = {0};
-            mspBuffer[0] = 0xC8; // destination
-            mspBuffer[1] = 0xEA; // origin
+            uint8_t crsfCrc = CalcCRC(&outBuffer[sizeof(crsfHeader.device_addr) + sizeof(crsfHeader.frame_size)], crsfHeader.frame_size);
 
-            // payload
-            mspBuffer[2] = 0x30; // header
-            mspBuffer[3] = 0x04; // mspPayloadSize
-            mspBuffer[4] = 0x59; // packet->cmd
-            mspBuffer[5] = 0x18; // newFrequency b1
-            mspBuffer[6] = 0x00; // newFrequency b2
-            mspBuffer[7] = 0x01; // power
-            mspBuffer[8] = 0x00; // pitmode
+            outBuffer[outBufferAddr] = crsfCrc;
 
-            uint8_t mspcrc = CalcCRC(&mspBuffer[3], 6);
-            mspBuffer[9] = 68; // crc
-
-            memcpy(outBuffer + 3, (byte *)&mspBuffer, MSP_FRAME_LEN);
-
-            uint8_t crc = CalcCRC(&outBuffer[2], MSP_FRAME_LEN + 1);
-
-            outBuffer[MSP_FRAME_LEN + 3] = crc;
-
-            this->_dev->write(outBuffer, MSP_FRAME_LEN + 4);
+            this->_dev->write(outBuffer, outBufferTotalSize);
         }
 #endif
 

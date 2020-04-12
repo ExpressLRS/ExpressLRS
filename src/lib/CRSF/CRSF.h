@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "HardwareSerial.h"
 #include "msp.h"
+#include "msptypes.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -52,7 +53,6 @@
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
-#define CRSF_MSP_FRAME_SIZE(payload_size) ((payload_size) + 2) // 2 extra bytes
 
 /* CRC8 implementation with polynom = x​7​+ x​6​+ x​4​+ x​2​+ x​0 ​(0xD5) */
 static const unsigned char crc8tab[256] = {
@@ -419,7 +419,7 @@ public:
 #endif
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t packet);
+    void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
