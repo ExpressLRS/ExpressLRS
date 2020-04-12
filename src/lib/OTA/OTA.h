@@ -14,8 +14,19 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-#ifdef HYBRID_SWITCHES_8
-void GenerateChannelDataHybridSwitch8(SX127xDriver *Radio, CRSF *crsf, uint8_t addr);
-#endif
+#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
-#endif
+void GenerateChannelDataHybridSwitch8(SX127xDriver *Radio, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataHybridSwitches8(SX127xDriver *Radio, CRSF *crsf);
+
+#endif // HYBRID_SWITCHES_8
+
+#if defined SEQ_SWITCHES or defined UNIT_TEST
+
+void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(SX127xDriver *Radio, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataSeqSwitches(SX127xDriver *Radio, CRSF *crsf);
+
+#endif // SEQ_SWITCHES
+
+
+#endif // H_OTA

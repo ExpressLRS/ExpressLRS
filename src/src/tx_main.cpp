@@ -209,40 +209,6 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 #endif
 }
 
-#ifdef SEQ_SWITCHES
-/**
- * Sequential switches packet
- * Replaces Generate4ChannelData_11bit
- * Channel 3 is reduced to 10 bits to allow a 3 bit switch index and 2 bit value
- * We cycle through 8 switches on successive packets. If any switches have changed
- * we take the lowest indexed one and send that, hence lower indexed switches have
- * higher priority in the event that several are changed at once.
- */
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b110) << 4);
-
-  // find the next switch to send
-  uint8_t i = crsf.getNextSwitchIndex() & 0b111; // mask for paranoia
-  uint8_t value = crsf.currentSwitches[i] & 0b11; // mask for paranoia
-
-  // put the bits into buf[6]
-  Radio.TXdataBuffer[6] += (i << 2) + value;
-
-  // update the sent value
-  crsf.setSentSwitch(i, value);
-}
-#endif
-
-
 void ICACHE_RAM_ATTR GenerateSwitchChannelData()
 {
   uint8_t PacketHeaderAddr;
@@ -377,11 +343,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-#if defined HYBRID_SWITCHES_8
+    #if defined HYBRID_SWITCHES_8
     GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-#elif defined SEQ_SWITCHES
-    GenerateChannelDataSeqSwitch();
-#else
+    #elif defined SEQ_SWITCHES
+    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    #else
     if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
     {
       Channels5to8Changed = false;
@@ -392,7 +358,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       Generate4ChannelData_11bit();
     }
-#endif
+    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////

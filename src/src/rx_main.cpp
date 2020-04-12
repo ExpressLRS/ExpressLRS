@@ -238,98 +238,7 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
 #endif
 }
 
-#ifdef SEQ_SWITCHES
-/**
- * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
- */
-void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01100000) >> 4);
 
-    uint8_t switchIndex = (Radio.RXdataBuffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Radio.RXdataBuffer[6] & 0b11);
-
-    switch (switchIndex) {
-        case 0:
-            crsf.PackedRCdataOut.ch4 = switchValue;
-            break;
-        case 1:
-            crsf.PackedRCdataOut.ch5 = switchValue;
-            break;
-        case 2:
-            crsf.PackedRCdataOut.ch6 = switchValue;
-            break;
-        case 3:
-            crsf.PackedRCdataOut.ch7 = switchValue;
-            break;
-        case 4:
-            crsf.PackedRCdataOut.ch8 = switchValue;
-            break;
-        case 5:
-            crsf.PackedRCdataOut.ch9 = switchValue;
-            break;
-        case 6:
-            crsf.PackedRCdataOut.ch10 = switchValue;
-            break;
-        case 7:
-            crsf.PackedRCdataOut.ch11 = switchValue;
-            break;
-    }
-}
-#endif
-
-#ifdef HYBRID_SWITCHES_8
-/**
- * Hybrid switches uses 10 bits for each analog channel, 
- * 2 bits for the low latency switch[0]
- * 3 bits for the round-robin switch index and 2 bits for the value
- */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8()
-{
-    // The analog channels
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 3);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 1);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1);
-
-    // The low latency switch
-    crsf.PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Radio.RXdataBuffer[6] & 0b01100000) >> 5);
-
-    // The round-robin switch
-    uint8_t switchIndex = (Radio.RXdataBuffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Radio.RXdataBuffer[6] & 0b11);
-
-    switch (switchIndex) {
-        case 0:   // we should never get index 0 here since that is the low latency switch
-            Serial.println("BAD switchIndex 0");
-            break;
-        case 1:
-            crsf.PackedRCdataOut.ch5 = switchValue;
-            break;
-        case 2:
-            crsf.PackedRCdataOut.ch6 = switchValue;
-            break;
-        case 3:
-            crsf.PackedRCdataOut.ch7 = switchValue;
-            break;
-        case 4:
-            crsf.PackedRCdataOut.ch8 = switchValue;
-            break;
-        case 5:
-            crsf.PackedRCdataOut.ch9 = switchValue;
-            break;
-        case 6:
-            crsf.PackedRCdataOut.ch10 = switchValue;
-            break;
-        case 7:
-            crsf.PackedRCdataOut.ch11 = switchValue;
-            break;
-    }
-}
-#endif
 
 
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
@@ -376,13 +285,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-#if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches();
-#elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8();
-#else
+        #if defined SEQ_SWITCHES
+        UnpackChannelDataSeqSwitches(&Radio, &crsf);
+        #elif defined HYBRID_SWITCHES_8
+        UnpackChannelDataHybridSwitches8(&Radio, &crsf);
+        #else
         UnpackChannelData_11bit();
-#endif
+        #endif
         crsf.sendRCFrameToFC();
         break;
 
