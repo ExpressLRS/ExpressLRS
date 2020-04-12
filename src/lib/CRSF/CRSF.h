@@ -40,6 +40,7 @@
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_FRAME_CRC_SIZE 1
+#define CRSF_FRAME_LENGTH_EXT_TYPE_CRC 4 // length of Extended Dest/Origin, TYPE and CRC fields combined
 
 // Macros for big-endian (assume little endian host for now) etc
 #define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
@@ -326,7 +327,7 @@ class CRSF
 public:
     //CRSF(HardwareSerial& serial);
 
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {

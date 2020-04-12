@@ -271,7 +271,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
         void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
         {
             uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -318,6 +318,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             encapsulatedMspPacket.setVersion(TELEMETRY_MSP_VERSION);
             encapsulatedMspPacket.setStartingFlag(true);
             encapsulatedMspPacket.setSeqNumber(0);
+            encapsulatedMspPacket.function = packet->function;
             // Copy the payload from the mspPacket_t into the encapsulatedMspPacket_t
             for (uint8_t i = 0; i < packet->payloadSize; ++i) {
                 if (!encapsulatedMspPacket.addByte(packet->payload[i])) {
@@ -331,7 +332,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             // CRSF extended header section
             crsf_ext_header_t crsfHeader;
             crsfHeader.device_addr = CRSF_ADDRESS_BROADCAST;
-            crsfHeader.frame_size = CRSF_EXT_FRAME_SIZE(encapsulatedMspPacket.getTotalSize());
+            crsfHeader.frame_size = encapsulatedMspPacket.getTotalSize() + CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
             if (packet->type == MSP_PACKET_COMMAND) {
                 crsfHeader.type = CRSF_FRAMETYPE_MSP_WRITE;
             }
@@ -344,13 +345,13 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             // Copy the header and msp packet into output buffer, ordered as:
             // [crsf_ext_header_t, encapsulatedMspPacket_t, crsfCrc]
             uint8_t outBufferAddr;
-            uint8_t outBufferTotalSize = CRSF_EXT_FRAME_SIZE(sizeof(crsfHeader.device_addr) + crsfHeader.frame_size + CRSF_FRAME_CRC_SIZE;
-            uint8_t outBuffer[outBufferTotalSize] = {0};
+            uint8_t outBufferTotalSize = encapsulatedMspPacket.getTotalSize() + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + crsfHeader.frame_size + CRSF_FRAME_CRC_SIZE;
+            uint8_t outBuffer[outBufferTotalSize];
 
             outBufferAddr = 0;
-            memcpy(outBuffer[outBufferAddr], (byte*)&crsfHeader, sizeof(crsf_ext_header_t));
+            memcpy(outBuffer, (byte*)&crsfHeader, sizeof(crsf_ext_header_t));
             outBufferAddr += sizeof(crsf_ext_header_t);
-            memcpy(outBuffer[outBufferAddr], (byte*)&encapsulatedMspPacket, encapsulatedMspPacket.getTotalSize());
+            memcpy(outBuffer + outBufferAddr, (byte*)&encapsulatedMspPacket, encapsulatedMspPacket.getTotalSize());
             outBufferAddr += encapsulatedMspPacket.getTotalSize();
 
             uint8_t crsfCrc = CalcCRC(&outBuffer[sizeof(crsfHeader.device_addr) + sizeof(crsfHeader.frame_size)], crsfHeader.frame_size);

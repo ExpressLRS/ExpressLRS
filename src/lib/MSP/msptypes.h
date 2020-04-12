@@ -16,12 +16,10 @@
 #define TELEMETRY_MSP_START_FLAG (1 << 4)
 #define TELEMETRY_MSP_SEQ_MASK   0x0F
 
-
-
 typedef struct {
     uint8_t     header;
-    uint8_t     function;
     uint8_t     payloadSize;
+    uint8_t     function;
     uint8_t     payload[ENCAPSULATED_MSP_PAYLOAD_SIZE];
     uint8_t     crc;
 
@@ -82,4 +80,4 @@ typedef struct {
     {
         return payloadSize + sizeof(header) + sizeof(function) + sizeof(payloadSize) + sizeof(crc);
     }
-} PACKED encapsulatedMspPacket_t;
+} __attribute__ ((packed)) encapsulatedMspPacket_t;
