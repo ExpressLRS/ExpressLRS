@@ -3,7 +3,7 @@ from xmodem import XMODEM
 import time
 import sys
 import logging
-import os
+import os, glob
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -21,14 +21,14 @@ sys.stdout.flush()
 def StatusCallback(total_packets, success_count, error_count):
     #sys.stdout.write(".")
     sys.stdout.flush()
-    
+
     if(total_packets % 10 == 0):
-        
+
         if(error_count > 0):
             sys.stdout.write(str(round((total_packets/filechunks)*100)) + "% err: " + str(error_count) + "\n")
         else:
             sys.stdout.write(str(round((total_packets/filechunks)*100)) + "%\n")
-            
+
         sys.stdout.flush()
 
 def getc(size, timeout=3):
@@ -80,7 +80,7 @@ time.sleep(1)
 
 
 reading = s.read(3).decode('utf-8')
-	
+
 if('C' in reading):
     alreadyInBootloader = True
 
@@ -89,11 +89,11 @@ currAttempt = 0
 gotBootloader = False
 
 if(alreadyInBootloader == False):
-    
+
     sys.stdout.write("\nAttempting to reboot into bootloader...\n")
-    
+
     while gotBootloader == False:
-        
+
         s.flush()
         s.write(BootloaderInitSeq1)
         time.sleep(1)
@@ -113,16 +113,16 @@ if(alreadyInBootloader == False):
                 sys.stdout.flush()
                 gotBootloader = True
                 break
-				
-            if('C' in line):	
+
+            if('C' in line):
                 gotBootloader = True
                 break
-            
+
         if(currAttempt == 20):
             sys.stdout.write("Failed to get to BL in reasonable time\n")
             raise SystemExit
             break
-        
+
         currAttempt = currAttempt + 1
 
     s.write(BootloaderInitSeq2)
@@ -130,7 +130,7 @@ if(alreadyInBootloader == False):
 else:
     sys.stdout.write("\nWe were already in bootloader\n")
     sys.stdout.flush()
-    
+
 
 time.sleep(0.2)
 s.close()
@@ -150,7 +150,7 @@ filechunks = filesize/128
 sys.stdout.write("uploading ")
 sys.stdout.write(str(filesize)+" bytes...\n")
 sys.stdout.flush()
-                
+
 modem = XMODEM(getc, putc)
 status = modem.send(stream, retry=10, callback=StatusCallback)
 

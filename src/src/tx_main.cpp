@@ -87,10 +87,11 @@ uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this w
 void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
-void ProcessMSPPacket(mspPacket_t packet);
-void OnRFModePacket(mspPacket_t packet);
-void OnTxPowerPacket(mspPacket_t packet);
-void OnTLMRatePacket(mspPacket_t packet);
+// MSP packet handling function defs
+void ProcessMSPPacket(mspPacket_t* packet);
+void OnRFModePacket(mspPacket_t* packet);
+void OnTxPowerPacket(mspPacket_t* packet);
+void OnTLMRatePacket(mspPacket_t* packet);
 
 uint8_t baseMac[6];
 
@@ -621,22 +622,17 @@ void loop()
   button.handle();
 #endif
 
-#ifdef TARGET_R9M_TX
-  if (Serial.available()) {
-    uint8_t c = Serial.read();
-    Serial.println(c);
-#endif
-
 #ifdef PLATFORM_ESP32
   if (Serial2.available()) {
     uint8_t c = Serial2.read();
+#else
+  if (Serial.available()) {
+    uint8_t c = Serial.read();
 #endif
 
     if (msp.processReceivedByte(c)) {
       // Finished processing a complete packet
-      Serial.println("MSP: Received complete packet");
       ProcessMSPPacket(msp.getReceivedPacket());
-      Serial.println("MSP: Finished with complete packet - resetting for next packet");
       msp.markPacketReceived();
     }
   }
@@ -647,15 +643,11 @@ void ICACHE_RAM_ATTR TimerExpired()
   SendRCdataToRF();
 }
 
-void OnRFModePacket(mspPacket_t packet)
+void OnRFModePacket(mspPacket_t* packet)
 {
-  Serial.println("MSP: OnRFModePacket");
   // Parse the RF mode
-  uint8_t rfMode = packet.readByte();
+  uint8_t rfMode = packet->readByte();
   CHECK_PACKET_PARSING();
-
-  Serial.print("rfMode = ");
-  Serial.println(rfMode);
 
   switch (rfMode) {
   case RATE_200HZ:
@@ -673,15 +665,11 @@ void OnRFModePacket(mspPacket_t packet)
   }
 }
 
-void OnTxPowerPacket(mspPacket_t packet)
+void OnTxPowerPacket(mspPacket_t* packet)
 {
-  Serial.println("MSP: OnTxPowerPacket");
   // Parse the TX power
-  uint8_t txPower = packet.readByte();
+  uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
-
-  Serial.print("txPower = ");
-  Serial.println(txPower);
 
   switch (txPower) {
   case PWR_10mW:
@@ -714,11 +702,10 @@ void OnTxPowerPacket(mspPacket_t packet)
   }
 }
 
-void OnTLMRatePacket(mspPacket_t packet)
+void OnTLMRatePacket(mspPacket_t* packet)
 {
-  Serial.println("MSP: OnTLMRatePacket");
   // Parse the TLM rate
-  uint8_t tlmRate = packet.readByte();
+  uint8_t tlmRate = packet->readByte();
   CHECK_PACKET_PARSING();
 
   // TODO: Implement dynamic TLM rates
@@ -733,18 +720,13 @@ void OnTLMRatePacket(mspPacket_t packet)
   // }
 }
 
-void ProcessMSPPacket(mspPacket_t packet)
+void ProcessMSPPacket(mspPacket_t* packet)
 {
   // Inspect packet for ELRS specific opcodes
-  Serial.print("ProcessMSPPacket packet.function = ");
-  Serial.println(packet.function);
-  if (packet.function == MSP_ELRS_FUNC) {
-    uint8_t opcode = packet.readByte();
-    Serial.print("opcode = ");
-    Serial.println(opcode);
+  if (packet->function == MSP_ELRS_FUNC) {
+    uint8_t opcode = packet->readByte();
 
     CHECK_PACKET_PARSING();
-    Serial.println("Passed error check");
 
     switch (opcode) {
     case MSP_ELRS_RF_MODE:
