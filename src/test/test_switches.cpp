@@ -31,34 +31,34 @@ SX127xDriver Radio; // needed for Radio.TXdataBuffer
  * Successive calls should increment the next index until wrap
  * around from 7 to either 0 or 1 depending on mode.
  */
-void test_round_robin(void) {
+void test_round_robin(void) 
+{
+    uint8_t expectedIndex = crsf.nextSwitchIndex;
 
-    uint8_t expectedIndex=crsf.nextSwitchIndex;
-
-    for(uint8_t i=0; i<10; i++) {
+    for(uint8_t i = 0; i < 10; i++) {
         uint8_t nsi = crsf.getNextSwitchIndex();
         TEST_ASSERT_EQUAL(expectedIndex, nsi);
         expectedIndex++;
         if (expectedIndex == 8) {
-#ifdef HYBRID_SWITCHES_8
+            #ifdef HYBRID_SWITCHES_8
             expectedIndex = 1;
-#else
+            #else
             expectedIndex = 0;
-#endif
+            #endif
         }
     }
 }
 
 /* Check that a changed switch gets priority
 */
-void test_priority(void) {
-
+void test_priority(void)
+{
     uint8_t nsi;
 
-    crsf.nextSwitchIndex=0; // this would be the next switch if nothing changed
+    crsf.nextSwitchIndex = 0; // this would be the next switch if nothing changed
 
     // set all switches and sent values to be equal
-    for(uint8_t i=0; i<N_SWITCHES; i++) {
+    for(uint8_t i = 0; i < N_SWITCHES; i++) {
         crsf.sentSwitches[i] = 0;
         crsf.currentSwitches[i] = 0;
     }
@@ -85,7 +85,6 @@ void test_priority(void) {
     // to get the last returned value +1
     nsi = crsf.getNextSwitchIndex();
     TEST_ASSERT_EQUAL(7, nsi);
-
 }
 
 // ------------------------------------------------
@@ -107,13 +106,13 @@ void test_encodingHybrid8()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i=0; i<N_SWITCHES; i++) {
+    for(int i = 0; i < N_SWITCHES; i++) {
         crsf.currentSwitches[i] =  i % 3;
         crsf.sentSwitches[i] = i % 3; // make all the sent values match
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex=3;
+    crsf.nextSwitchIndex = 3;
 
     // encode it
     GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
@@ -124,14 +123,14 @@ void test_encodingHybrid8()
     TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
-    for(int i=0; i<4; i++) {
+    for(int i = 0; i < 4; i++) {
         expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i+1]);
+        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i + 1]);
     }
 
     // byte 5 is bits 1 and 2 of each analog channel
     expected = 0;
-    for(int i=0; i<4; i++) {
+    for(int i = 0; i < 4; i++) {
         expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
     }
     TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[5]);
@@ -160,13 +159,13 @@ void test_decodingHybrid8()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i=0; i<N_SWITCHES; i++) {
+    for(int i = 0; i < N_SWITCHES; i++) {
         crsf.currentSwitches[i] =  i % 3;
         crsf.sentSwitches[i] = i % 3; // make all the sent values match
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex=3;
+    crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into Radio.TXdataBuffer
     GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
@@ -187,7 +186,6 @@ void test_decodingHybrid8()
     TEST_ASSERT_EQUAL(SWITCH2b_to_CRSF(crsf.currentSwitches[3] & 0b11), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
 }
 
-
 // ------------------------------------------------------
 // Test the sequential switches encoding/decoding
 
@@ -206,13 +204,13 @@ void test_encodingSEQ()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i=0; i<N_SWITCHES; i++) {
+    for(int i = 0; i < N_SWITCHES; i++) {
         crsf.currentSwitches[i] =  i % 3;
         crsf.sentSwitches[i] = i % 3; // make all the sent values match
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex=3;
+    crsf.nextSwitchIndex = 3;
 
     // encode it
     GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
@@ -223,9 +221,9 @@ void test_encodingSEQ()
     TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
     // bytes 1 through 4 are the high bits of the analog channels
-    for(int i=0; i<4; i++) {
+    for(int i = 0; i < 4; i++) {
         expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i+1]);
+        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i + 1]);
     }
 
     // byte 5 contains some bits from the first three channels
@@ -242,7 +240,7 @@ void test_encodingSEQ()
 
     // the sequential switch bits:
     // expect index in 2-4 and value in 0,1
-    TEST_ASSERT_EQUAL(3, (Radio.TXdataBuffer[6] & 0b11100)>>2);
+    TEST_ASSERT_EQUAL(3, (Radio.TXdataBuffer[6] & 0b11100) >> 2);
     TEST_ASSERT_EQUAL(crsf.currentSwitches[3], Radio.TXdataBuffer[6] & 0b11);
 }
 
@@ -263,13 +261,13 @@ void test_decodingSEQ()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i=0; i<N_SWITCHES; i++) {
-        crsf.currentSwitches[i] =  (i+1) % 3;
-        crsf.sentSwitches[i] = (i+1) % 3; // make all the sent values match
+    for(int i = 0; i < N_SWITCHES; i++) {
+        crsf.currentSwitches[i] =  (i + 1) % 3;
+        crsf.sentSwitches[i] = (i + 1) % 3; // make all the sent values match
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex=3;
+    crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into Radio.TXdataBuffer
     GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);

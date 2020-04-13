@@ -21,6 +21,8 @@
 
 # if neither of the below are set the code defaults to 1bit switches
 
+# NB The TX and RX must be compiled with matching switch protocols!
+
 # Sequential switches
 # 5 bits are used in each rc packet to encode 8 3 position switches
 # first 3 bits are the switch ID, followed by 2 bits for the switch value.

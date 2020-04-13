@@ -63,7 +63,7 @@ volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
 uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
 
-uint8_t CRSF::nextSwitchIndex=0;    // for round-robin sequential switches
+uint8_t CRSF::nextSwitchIndex = 0;    // for round-robin sequential switches
 
 volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
 
@@ -107,31 +107,34 @@ void CRSF::Begin()
  */
 uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 {
-    int i;
     int firstSwitch = 0; // sequential switches includes switch 0
 
-#if defined HYBRID_SWITCHES_8
+    #if defined HYBRID_SWITCHES_8
     firstSwitch = 1; // skip 0 since it is sent on every packet
-#endif
+    #endif
 
     // look for a changed switch
-    for(i=firstSwitch; i<N_SWITCHES; i++) {
+    int i;
+    for(i = firstSwitch; i < N_SWITCHES; i++) {
         if (currentSwitches[i] != sentSwitches[i])
             break;
     }
     // if we didn't find a changed switch, we get here with i==N_SWITCHES
-    if (i==N_SWITCHES) i = nextSwitchIndex;
+    if (i == N_SWITCHES) {
+        i = nextSwitchIndex;
+    }
 
     // keep track of which switch to send next if there are no changed switches
     // during the next call.
-    nextSwitchIndex = (i+1) % 8;
+    nextSwitchIndex = (i + 1) % 8;
 
-#ifdef HYBRID_SWITCHES_8
+    #ifdef HYBRID_SWITCHES_8
     // for hydrid switches 0 is sent on every packet, so we can skip
     // that value for the round-robin
-    if (nextSwitchIndex==0)
+    if (nextSwitchIndex == 0) {
         nextSwitchIndex = 1;
-#endif
+    }
+    #endif
 
     return i;
 }
@@ -143,8 +146,6 @@ void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
 {
     sentSwitches[index] = value;
 }
-
-
 
 #if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX)
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
@@ -382,10 +383,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
                         if (BadPktsCount >= GoodPktsCount)
                         {
-                            Serial.print("Too many bad UART RX packets! Bad:Good = ");
-                            Serial.print(BadPktsCount);
-                            Serial.print(":");
-                            Serial.println(GoodPktsCount);
+                            Serial.print("Too many bad UART RX packets!");
+                            // Serial.print(BadPktsCount);
+                            // Serial.print(":");
+                            // Serial.println(GoodPktsCount);
 
                             if (CRSFstate == true)
                             {
@@ -463,7 +464,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
                 {
                     // CRSF::Port.begin(CRSF_OPENTX_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false);
-                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
+                    // gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
                     CRSF::duplex_set_RX();
@@ -749,8 +750,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
  */
 void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
 {
-    for(int i=0; i<N_SWITCHES; i++) {
-        currentSwitches[i] = ChannelDataIn[i+4] / 682; // input is 0 - 2048, output is 0 - 2
+    #define INPUT_RANGE 2048
+    const uint16_t SWITCH_DIVISOR = INPUT_RANGE / 3; // input is 0 - 2048
+    for(int i = 0; i < N_SWITCHES; i++) {
+        currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;
     }
 }
 

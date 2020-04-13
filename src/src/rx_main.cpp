@@ -238,9 +238,6 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
 #endif
 }
 
-
-
-
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
 {
     crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));

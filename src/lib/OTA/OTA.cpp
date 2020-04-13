@@ -1,5 +1,9 @@
 /**
- * TODO - add header
+ * This file is part of ExpressLRS
+ * See https://github.com/AlessandroAU/ExpressLRS
+ *
+ * This file provides utilities for packing and unpacking the data to
+ * be sent over the radio link.
  */
 
 #include "OTA.h"
@@ -38,15 +42,15 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(SX127xDriver *Radio, CRSF 
   Radio->TXdataBuffer[6] = (crsf->currentSwitches[0] & 0b11) << 5; // note this leaves the top bit of byte 6 unused
 
   // find the next switch to send
-  int i = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
-  uint8_t value = crsf->currentSwitches[i] & 0b11; // mask for paranoia
+  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
+  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11; // mask for paranoia
 
-  // put the bits into buf[6]-> i is in the range 1 through 7 so takes 3 bits
-  // currentSwitches[i] is in the range 0 through 2, takes 2 bits->
-  Radio->TXdataBuffer[6] += (i << 2) + value;
+  // put the bits into buf[6]. nextSwitchIndex is in the range 1 through 7 so takes 3 bits
+  // currentSwitches[nextSwitchIndex] is in the range 0 through 2, takes 2 bits.
+  Radio->TXdataBuffer[6] += (nextSwitchIndex << 2) + value;
 
   // update the sent value
-  crsf->setSentSwitch(i, value);
+  crsf->setSentSwitch(nextSwitchIndex, value);
 }
 
 /**
@@ -127,16 +131,15 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(SX127xDriver *Radio, CRSF *crs
   Radio->TXdataBuffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) + ((crsf->ChannelDataIn[3] & 0b110) << 4);
 
   // find the next switch to send
-  uint8_t i = crsf->getNextSwitchIndex() & 0b111; // mask for paranoia
-  uint8_t value = crsf->currentSwitches[i] & 0b11; // mask for paranoia
+  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111; // mask for paranoia
+  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11; // mask for paranoia
 
   // put the bits into buf[6]
-  Radio->TXdataBuffer[6] += (i << 2) + value;
+  Radio->TXdataBuffer[6] += (nextSwitchIndex << 2) + value;
 
   // update the sent value
-  crsf->setSentSwitch(i, value);
+  crsf->setSentSwitch(nextSwitchIndex, value);
 }
-
 
 /**
  * Sequential switches decoding of over the air packet
