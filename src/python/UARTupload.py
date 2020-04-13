@@ -79,7 +79,10 @@ s.flush()
 time.sleep(1)
 
 
-reading = s.read(3).decode('utf-8')
+try:
+    reading = s.read(3).decode('utf-8')
+except UnicodeDecodeError:
+    reading = ""
 
 if('C' in reading):
     alreadyInBootloader = True
@@ -103,7 +106,10 @@ if(alreadyInBootloader == False):
         inChars = ""
 
         while s.in_waiting:
-            inChars += s.read().decode('utf-8')
+            try:
+                inChars += s.read().decode('utf-8')
+            except UnicodeDecodeError:
+                pass
 
         for line in inChars.split('\n'):
             if "UART Bootloader for ExpressLRS" in line:
