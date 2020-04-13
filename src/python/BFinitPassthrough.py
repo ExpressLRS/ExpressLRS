@@ -67,7 +67,11 @@ print()
 print("Attempting to detect Betaflight UART configuration...")
 
 while s.in_waiting:
-    inChars += s.read().decode('utf-8')
+    try:
+        inChars += s.read().decode('utf-8')
+    except UnicodeDecodeError:
+        # just discard possible RC / TLM data
+        pass
 
 
 for line in inChars.split('\n'):
