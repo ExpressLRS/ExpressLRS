@@ -29,7 +29,7 @@ int ICACHE_RAM_ATTR LQreset()
 {
     for (int i = 0; i < 100; i++)
     {
-        linkQualityArray[i] = 0;
+        linkQualityArray[i] = 1; // set all good by default
     }
     return 0;
 }

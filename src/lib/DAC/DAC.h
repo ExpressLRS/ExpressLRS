@@ -14,17 +14,7 @@ typedef enum
     R9_PWR_500mW = 5,
     R9_PWR_1000mW = 6,
     R9_PWR_2000mW = 7
-
 } DAC_PWR_;
-
-/*typedef enum
-{
-    UNKNOWN = 0,
-    RUNNING = 1,
-    STANDBY = 2
-
-} DAC_STATE_;
-*/
 
 class R9DAC
 {
@@ -41,7 +31,6 @@ private:
         {2000, 33, 31, 2160},
     };
 
-    //DAC_STATE_ DAC_State;
     enum
     {
         UNKNOWN = 0,
@@ -49,12 +38,12 @@ private:
         STANDBY = 2
 
     } DAC_State;
+
+    uint32_t CurrVoltageMV;
+    uint8_t CurrVoltageRegVal;
     uint8_t ADDR;
 
 public:
-    uint32_t CurrVoltageMV;
-    uint8_t CurrVoltageRegVal;
-
     R9DAC();
     void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
     void standby();

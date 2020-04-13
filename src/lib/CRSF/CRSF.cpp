@@ -43,8 +43,6 @@ const unsigned char crc8tabcmd[256] =
      0x5A, 0xE0, 0x94, 0x2E, 0x7C, 0xC6, 0xB2, 0x08, 0x16, 0xAC, 0xD8, 0x62, 0x30, 0x8A, 0xFE, 0x44};
 #endif
 
-extern void platform_set_led(bool state);
-
 HwSerial *CRSF::_dev = NULL;
 
 ///Out FIFO to buffer messages///
@@ -89,7 +87,7 @@ uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
 
 uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
 
-VOLATILE uint8_t CRSF::ParameterUpdateData[2] = {0};
+volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
 
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
@@ -333,12 +331,14 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 #endif
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
-        //platform_set_led(LOW);
     }
 
-    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    switch (SerialInBuffer[2])
     {
-        DEBUG_PRINTLN("Got Other Packet");
+    case CRSF_FRAMETYPE_PARAMETER_WRITE:
+    {
+        //DEBUG_PRINTLN("Got Other Packet");
+        DEBUG_PRINTLN("L");
         if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
             SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
@@ -348,17 +348,21 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
             ret = true;
         }
     }
-    else if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+    case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
     {
         DEBUG_PRINT("X");
 #if (FEATURE_OPENTX_SYNC)
-        CRSF::RCdataLastRecv = micros();
+        RCdataLastRecv = micros();
 #endif
         GetChannelDataIn();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
         ret = true;
+        break;
     }
+    default:
+        break;
+    };
     return ret;
 }
 
@@ -467,8 +471,6 @@ void ICACHE_RAM_ATTR CRSF::wdtUART()
 
         if (BadPktsCount >= GoodPktsCount)
         {
-            //platform_set_led(HIGH);
-
             DEBUG_PRINTLN("  Too many bad UART RX packets!");
 
             if (CRSFstate == true)

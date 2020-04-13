@@ -112,7 +112,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED PC1          // Red
 #define GPIO_PIN_LED_GREEN PB3    // Green - Currently unused
 #define GPIO_PIN_BUTTON PC13      // pullup e.g. LOW when pressed
-#define timerOffset 2
+#define timerOffset 5
 
 #define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
 #define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2

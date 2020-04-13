@@ -575,15 +575,20 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 
 uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
 {
+    if (freq == 0)
+        freq = currFreq;
+    if (syncWord == 0)
+        syncWord = _syncWord;
+
     if (RFmodule == RFMOD_SX1276)
     {
-        SX1276config(this, bw, sf, cr, freq, syncWord);
+        return SX1276config(this, bw, sf, cr, freq, syncWord);
     }
     else if (RFmodule == RFMOD_SX1278)
     {
-        SX1278config(this, bw, sf, cr, freq, syncWord);
+        return SX1278config(this, bw, sf, cr, freq, syncWord);
     }
-    return 0;
+    return 1;
 }
 
 uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)

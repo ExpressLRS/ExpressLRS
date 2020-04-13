@@ -307,7 +307,7 @@ public:
 
     static void (*RecvParameterUpdate)();
 
-    static VOLATILE uint8_t ParameterUpdateData[2];
+    static volatile uint8_t ParameterUpdateData[2];
 
     /////Variables/////
 

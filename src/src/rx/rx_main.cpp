@@ -20,42 +20,36 @@
 CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
 volatile connectionState_e connectionState = STATE_disconnected;
-
-/// Filters ////////////////
-static LPF LPF_PacketInterval(3);
-static LPF LPF_Offset(3);
-static LPF LPF_FreqError(3);
-static LPF LPF_UplinkRSSI(5);
-////////////////////////////
-
-static uint8_t scanIndex = 0;
+static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
+static volatile bool alreadyFHSS = false;
 
 ///////////////////////////////////////////////
-
-static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
-
-static volatile bool alreadyFHSS = false;
+////////////////  Filters  ////////////////////
+static LPF LPF_Offset(3);
+static LPF LPF_FreqError(5);
+static LPF LPF_UplinkRSSI(5);
 
 //////////////////////////////////////////////////////////////
 ////// Variables for Telemetry and Link Quality //////////////
 
-//volatile uint32_t LastValidPacketMicros = 0;
-//volatile uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
-
 static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
 
 ///////////////////////////////////////////////////////////////
 ///////////// Variables for Sync Behaviour ////////////////////
-static volatile uint32_t RFmodeNextCycle = 0;
+static uint32_t RFmodeNextCycle = 0;
+static volatile uint8_t scanIndex = 0;
+static volatile uint8_t tentative_cnt = 0;
 
 static inline void RfModeNextCycleCalc(void)
 {
-    // if connection == tentative, add a little delay
     RFmodeNextCycle = millis() +
                       ExpressLRS_currAirRate->RFmodeCycleInterval +
-                      ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);
+                      /* ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);*/
+                      ExpressLRS_currAirRate->RFmodeCycleAddtionalTime;
 }
+
+///////////////////////////////////////
 
 static inline void TimerAdjustment(uint32_t us)
 {
@@ -110,8 +104,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (/*connectionState != STATE_connected ||*/
-        ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
+    if (ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
     {
         // don't bother sending tlm if disconnected or no tlm enabled
         return;
@@ -166,8 +159,12 @@ void ICACHE_RAM_ATTR HWtimerCallback()
         HandleFHSS();
     }
 
-    incrementLQArray();
-    HandleSendTelemetryResponse();
+    // Check if connected before sending tlm resp
+    if (STATE_disconnected < connectionState)
+    {
+        incrementLQArray();
+        HandleSendTelemetryResponse();
+    }
 
     NonceRXlocal++;
 }
@@ -181,6 +178,7 @@ void LostConnection()
 
     connectionState = STATE_disconnected; //set lost connection
     LPF_FreqError.init(0);
+    scanIndex = 0;
 
     led_set_state(1);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
@@ -191,23 +189,14 @@ void LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
+    tentative_cnt = 0;
     connectionState = STATE_tentative;
     DEBUG_PRINTLN("tentative conn");
 }
 
 void ICACHE_RAM_ATTR GotConnection()
 {
-    //if (connectionState == STATE_connected)
-    if (connectionState != STATE_tentative)
-    {
-        return; // Already connected
-    }
-
-    //TxTimer.start(); // start tlm timer
-
     connectionState = STATE_connected; //we got a packet, therefore no lost connection
-    scanIndex = 0;
-    //RfModeNextCycleCalc(); // give another 3 sec for loc to occur.
 
     led_set_state(0); // turn on led
     DEBUG_PRINTLN("got conn");
@@ -374,24 +363,30 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
+        if (connectionState == STATE_connected)
+        {
 #if defined(SEQ_SWITCHES)
-        UnpackChannelDataSeqSwitches();
+            UnpackChannelDataSeqSwitches();
 #elif defined(HYBRID_SWITCHES_8)
-        UnpackChannelDataHybridSwitches8();
+            UnpackChannelDataHybridSwitches8();
 #else
-        UnpackChannelData_11bit();
+            UnpackChannelData_11bit();
 #endif
-        crsf.sendRCFrameToFC();
+            crsf.sendRCFrameToFC();
+        }
         break;
 
 #if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
-        if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
+    case SWITCH_DATA_PACKET: // Switch Data Packet
+        if (connectionState == STATE_connected)
         {
-            UnpackSwitchData();
-            NonceRXlocal = Radio.RXdataBuffer[5];
-            FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-            crsf.sendRCFrameToFC();
+            if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
+            {
+                UnpackSwitchData();
+                NonceRXlocal = Radio.RXdataBuffer[5];
+                FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
+                crsf.sendRCFrameToFC();
+            }
         }
         break;
 #endif
@@ -401,25 +396,26 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-        if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+        if (Radio.RXdataBuffer[4] == UID[3] &&
+            Radio.RXdataBuffer[5] == UID[4] &&
+            Radio.RXdataBuffer[6] == UID[5])
         {
             if (connectionState == STATE_disconnected)
             {
                 TentativeConnection();
             }
-
-            if (connectionState == STATE_tentative &&
-                NonceRXlocal == Radio.RXdataBuffer[2] &&
-                FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+            else if (connectionState == STATE_tentative)
             {
-                GotConnection();
+                if (NonceRXlocal == Radio.RXdataBuffer[2] &&
+                    FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+                {
+                    GotConnection();
+                }
+                else if (2 < (tentative_cnt++))
+                {
+                    LostConnection();
+                }
             }
-
-            // if (ExpressLRS_currAirRate->enum_rate == !(uint8_t)(Radio.RXdataBuffer[2] & 0b00001111))
-            // {
-            //     DEBUG_PRINTLN("update air rate");
-            //     SetRFLinkRate(Radio.RXdataBuffer[3]);
-            // }
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
             NonceRXlocal = Radio.RXdataBuffer[2];
@@ -496,15 +492,19 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
+    /* TODO:
+     * 1. timer stop and start!
+     * 2. reset LPF_Offset, LPF_FreqError, LPF_UplinkRSSI,
+     * 3. reset
+     */
+
     Radio.StopContRX();
-    Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
+    Radio.Config(config->bw, config->sf, config->cr);
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval);
-    LPF_PacketInterval.init(config->interval);
+    //LPF_Offset.init(0);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.rf_Mode = RATE_MAX - config->enum_rate;
-    //LPF_Offset.init(0);
-    //InitHarwareTimer();
     Radio.RXnb();
 }
 
@@ -561,7 +561,10 @@ void setup()
     TxTimer.init();
     //TxTimer.start(); // start tlm timer
 
+    LQreset();
+    scanIndex = 0;
     SetRFLinkRate(RATE_DEFAULT);
+    RfModeNextCycleCalc();
 
     crsf.Begin();
 }
@@ -591,7 +594,8 @@ void loop()
         {
             LostConnection();
         }
-        else if (now > SendLinkStatstoFCintervalNextSend)
+        else if (connectionState == STATE_connected &&
+                 now > SendLinkStatstoFCintervalNextSend)
         {
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;

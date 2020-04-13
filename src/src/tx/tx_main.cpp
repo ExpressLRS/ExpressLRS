@@ -62,9 +62,6 @@ static volatile bool Channels5to8Changed = false;
 //uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ICACHE_RAM_ATTR IncreasePower();
-void ICACHE_RAM_ATTR DecreasePower();
-
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
@@ -90,8 +87,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         return;
     }
 
-    recv_tlm_counter++;
-
     if (type != TLM_PACKET)
     {
         DEBUG_PRINTLN("TLM type error");
@@ -101,6 +96,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
     LastTLMpacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
+    recv_tlm_counter++;
 
     if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
     {
@@ -278,7 +274,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
-    Radio.Config(config->bw, config->sf, config->cr, Radio.currFreq, Radio._syncWord);
+    Radio.Config(config->bw, config->sf, config->cr);
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.RequestedRCpacketInterval = config->interval;
 
@@ -436,8 +432,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     switch (crsf.ParameterUpdateData[0])
     {
     case 0: // send all params
-        DEBUG_PRINTLN("send all");
+        //DEBUG_PRINTLN("send all");
         break;
+
     case 1:
         if (crsf.ParameterUpdateData[1] == 0)
         {
@@ -451,10 +448,9 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         break;
 
     case 2:
-
         break;
-    case 3:
 
+    case 3:
         if (crsf.ParameterUpdateData[1] == 0)
         {
             PowerMgmt.decPower();
@@ -465,8 +461,8 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
         }
 
         break;
-    case 4:
 
+    case 4:
         break;
 
     default:
@@ -480,18 +476,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
                          ExpressLRS_currAirRate->TLMinterval + 1,
                          PowerMgmt.currPower() + 2,
                          4);
-}
-
-void DetectOtherRadios()
-{
-    Radio.SetFrequency(GetInitialFreq());
-    //Radio.RXsingle();
-
-    // if (Radio.RXsingle(RXdata, 7, 2 * (RF_RATE_50HZ.interval / 1000)) == ERR_NONE)
-    // {
-    //   DEBUG_PRINTLN("got fastsync resp 1");
-    //   break;
-    // }
 }
 
 static void hw_timer_init(void)
@@ -512,6 +496,10 @@ void setup()
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
     crsf.disconnected = hw_timer_stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
+#ifndef One_Bit_Switches
+    crsf.RCdataCallback1 = &CheckChannels5to8Change;
+#endif
+
     TxTimer.callbackTock = &SendRCdataToRF;
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
@@ -557,10 +545,6 @@ void setup()
     Radio.TXdoneCallback3 = &HandleUpdateParameter;
     //Radio.TXdoneCallback4 = &NULL;
 
-#ifndef One_Bit_Switches
-    crsf.RCdataCallback1 = &CheckChannels5to8Change;
-#endif
-
     PowerMgmt.defaultPower();
     Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
     SetRFLinkRate(RATE_DEFAULT);
@@ -574,7 +558,7 @@ void loop()
     {
         uint32_t current_ms = millis();
 
-        if (connectionState != STATE_disconnected &&
+        if (connectionState > STATE_disconnected &&
             current_ms > LastTLMpacketRecvMillis)
         {
             connectionState = STATE_disconnected;
