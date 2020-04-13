@@ -9,6 +9,7 @@
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
+#include "OTA.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -281,7 +282,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
+        #if defined SEQ_SWITCHES
+        UnpackChannelDataSeqSwitches(&Radio, &crsf);
+        #elif defined HYBRID_SWITCHES_8
+        UnpackChannelDataHybridSwitches8(&Radio, &crsf);
+        #else
         UnpackChannelData_11bit();
+        #endif
         crsf.sendRCFrameToFC();
         break;
 

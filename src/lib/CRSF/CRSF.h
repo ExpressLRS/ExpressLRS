@@ -269,6 +269,9 @@ static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return rou
 
 static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
 
+// 2b switches use 0, 1 and 2 as values to represent low, middle and high
+static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 2, 188, 1795)); };
+
 static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val)
 {
     if (Val > 1000)
@@ -357,6 +360,14 @@ public:
     static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
     static volatile uint16_t ChannelDataOut[16];
 
+    // current and sent switch values
+    #define N_SWITCHES 8
+
+    static uint8_t currentSwitches[N_SWITCHES];
+    static uint8_t sentSwitches[N_SWITCHES];
+    // which switch should be sent in the next rc packet
+    static uint8_t nextSwitchIndex;
+
     static void (*RCdataCallback1)(); //function pointer for new RC data callback
     static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
@@ -415,6 +426,7 @@ public:
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
+
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -423,6 +435,9 @@ public:
     void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
+
+    uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
+    void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
 #define OpenTXsyncPakcetInterval 100 // in ms
@@ -438,6 +453,7 @@ public:
     static void ICACHE_RAM_ATTR ESP32ProcessPacket();
     static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
+    static void ICACHE_RAM_ATTR updateSwitchValues();
 
     static void inline nullCallback(void);
 

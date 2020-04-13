@@ -2,6 +2,7 @@
 #include <unity.h>
 #include "mock_serial.h"
 #include "msp_tests.h"
+#include "test_switches.h"
 
 void setup() {
     // NOTE!!! Wait for >2 secs
@@ -12,6 +13,8 @@ void setup() {
 
     RUN_TEST(test_msp_receive);
     RUN_TEST(test_msp_send);
+
+    setup_switches();
 }
 
 void loop() {

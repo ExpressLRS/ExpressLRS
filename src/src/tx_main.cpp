@@ -11,6 +11,7 @@
 #include "POWERMGNT.h"
 #include "msp.h"
 #include "msptypes.h"
+#include <OTA.h>
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -342,6 +343,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
+    #if defined HYBRID_SWITCHES_8
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+    #elif defined SEQ_SWITCHES
+    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    #else
     if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
     {
       Channels5to8Changed = false;
@@ -352,6 +358,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       Generate4ChannelData_11bit();
     }
+    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
