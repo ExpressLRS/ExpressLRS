@@ -8,6 +8,22 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
+#include "esp_task_wdt.h"
+
+#include "soc/timer_group_struct.h"
+#include "soc/timer_group_reg.h"
+
+void feedTheDog(void)
+{
+    // feed dog 0
+    TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE; // write enable
+    TIMERG0.wdt_feed = 1;                       // feed dog
+    TIMERG0.wdt_wprotect = 0;                   // write protect
+    // feed dog 1
+    TIMERG1.wdt_wprotect = TIMG_WDT_WKEY_VALUE; // write enable
+    TIMERG1.wdt_feed = 1;                       // feed dog
+    TIMERG1.wdt_wprotect = 0;                   // write protect
+}
 
 void platform_setup(void)
 {
@@ -53,6 +69,7 @@ void platform_setup(void)
 void platform_loop(connectionState_e state)
 {
     (void)state;
+    esp_task_wdt_reset(); // make sure the WD is feeded
 }
 
 void platform_connection_state(connectionState_e state)
