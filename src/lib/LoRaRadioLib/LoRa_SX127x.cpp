@@ -26,7 +26,7 @@ enum InterruptAssignment_
     TX_DONE
 };
 
-InterruptAssignment_ InterruptAssignment = NONE;
+static InterruptAssignment_ InterruptAssignment = NONE;
 //////////////////////////////////////////////
 
 SX127xDriver::SX127xDriver()
@@ -143,20 +143,9 @@ uint8_t SX127xDriver::SetBandwidth(Bandwidth bw)
 
 uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
-#if 0
-    uint8_t status = setRegValue(SX127X_REG_SYNC_WORD, syncWord);
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
-    else
-#else
     writeRegister(SX127X_REG_SYNC_WORD, syncWord);
-#endif
-    {
-        _syncWord = syncWord;
-        return (ERR_NONE);
-    }
+    _syncWord = syncWord;
+    return (ERR_NONE);
 }
 
 uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
@@ -209,11 +198,7 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 
 uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 {
-    currFreq = freq;
-
-    uint8_t status = ERR_NONE;
-
-    status = SetMode(SX127X_SLEEP);
+    uint8_t status = SetMode(SX127X_SLEEP);
     if (status != ERR_NONE)
     {
         return (status);
@@ -224,9 +209,9 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
     uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
     uint8_t buff[3] = {(uint8_t)((FRQ >> 16) & 0xFF), (uint8_t)((FRQ >> 8) & 0xFF), (uint8_t)(FRQ & 0xFF)};
     writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
+    currFreq = freq;
 
-    status = SetMode(SX127X_STANDBY);
-    return (status);
+    return SetMode(SX127X_STANDBY);
 }
 
 uint8_t SX127xDriver::SX127xBegin()
@@ -282,7 +267,6 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
 
     SetMode(SX127X_STANDBY);
 
-    //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
     reg_dio1_tx_done();
 
     ClearIRQFlags();
@@ -416,7 +400,6 @@ void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-    //attach interrupt to DIO0, RX continuous mode
     SetMode(SX127X_STANDBY);
 
     if (-1 != _TXenablePin)
@@ -424,6 +407,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
     if (-1 != _RXenablePin)
         digitalWrite(_RXenablePin, HIGH);
 
+    //attach interrupt to DIO0, RX continuous mode
     if (InterruptAssignment != RX_DONE)
     {
         attachInterrupt(digitalPinToInterrupt(SX127x_dio0), rx_isr_handler, RISING);
@@ -550,7 +534,6 @@ uint8_t SX127xDriver::RunCAD()
         }
         else
         {
-            //yield();
             if (digitalRead(SX127x_dio1))
             {
                 ClearIRQFlags();
@@ -669,25 +652,25 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
 
     switch (currBW)
     {
-    case 0:
+    case BW_7_80_KHZ:
         return 7.8E3;
-    case 1:
+    case BW_10_40_KHZ:
         return 10.4E3;
-    case 2:
+    case BW_15_60_KHZ:
         return 15.6E3;
-    case 3:
+    case BW_20_80_KHZ:
         return 20.8E3;
-    case 4:
+    case BW_31_25_KHZ:
         return 31.25E3;
-    case 5:
+    case BW_41_70_KHZ:
         return 41.7E3;
-    case 6:
+    case BW_62_50_KHZ:
         return 62.5E3;
-    case 7:
+    case BW_125_00_KHZ:
         return 125E3;
-    case 8:
+    case BW_250_00_KHZ:
         return 250E3;
-    case 9:
+    case BW_500_00_KHZ:
         return 500E3;
     }
 
@@ -699,25 +682,25 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // th
 
     switch (currBW)
     {
-    case 0:
+    case BW_7_80_KHZ:
         return 1026;
-    case 1:
+    case BW_10_40_KHZ:
         return 769;
-    case 2:
+    case BW_15_60_KHZ:
         return 513;
-    case 3:
+    case BW_20_80_KHZ:
         return 385;
-    case 4:
+    case BW_31_25_KHZ:
         return 256;
-    case 5:
+    case BW_41_70_KHZ:
         return 192;
-    case 6:
+    case BW_62_50_KHZ:
         return 128;
-    case 7:
+    case BW_125_00_KHZ:
         return 64;
-    case 8:
+    case BW_250_00_KHZ:
         return 32;
-    case 9:
+    case BW_500_00_KHZ:
         return 16;
     }
 
