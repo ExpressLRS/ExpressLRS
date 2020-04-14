@@ -464,6 +464,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
+  Serial2.begin(400000);
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
