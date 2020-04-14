@@ -27,16 +27,13 @@ FIFO SerialOutFIFO;
 uint8_t CRSF::CSFR_TXpin_Module = GPIO_PIN_RCSIGNAL_TX;
 uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 
-//U1RXD_IN_IDX
-//U1TXD_OUT_IDX
-
 volatile bool CRSF::ignoreSerialData = false;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
 void inline CRSF::nullCallback(void){};
 
-void (*CRSF::RCdataCallback1)() = &nullCallback; // function is called whenever there is new RC data.
-void (*CRSF::RCdataCallback2)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
+void (*CRSF::RCdataCallback2)() = &nullCallback; // null placeholder callback
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
@@ -78,9 +75,7 @@ volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
-volatile uint32_t CRSF::RequestedRCpacketInterval = 10000; // default to 250hz as per 'normal'
-
-//CRSF::CRSF(HardwareSerial &serial) : CRSF_SERIAL(serial){};
+volatile uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 
 void CRSF::Begin()
 {
@@ -262,13 +257,15 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
     outBuffer[1] = BattSensorFrameLength + 2;
     outBuffer[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
 
-    //memcpy(outBuffer + 3, (byte *)&TLMbattSensor, BattSensorFrameLength);
     outBuffer[3] = CRSF::TLMbattSensor.voltage << 8;
     outBuffer[4] = CRSF::TLMbattSensor.voltage;
+
     outBuffer[5] = CRSF::TLMbattSensor.current << 8;
     outBuffer[6] = CRSF::TLMbattSensor.current;
+
     outBuffer[7] = CRSF::TLMbattSensor.capacity << 16;
     outBuffer[9] = CRSF::TLMbattSensor.capacity << 8;
+
     outBuffer[10] = CRSF::TLMbattSensor.capacity;
     outBuffer[11] = CRSF::TLMbattSensor.remaining;
 
@@ -287,7 +284,6 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
         xSemaphoreGive(mutexOutFIFO);
 #endif
     }
-    //Serial.println(CRSFoutBuffer[0]);
 }
 
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
@@ -309,7 +305,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
             if (millis() > OpenTXsyncLastSent + OpenTXsyncPakcetInterval)
             {
-                //Serial.println(CRSF::OpenTXsyncOffset);
 #endif
 
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
@@ -391,7 +386,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             outBuffer[RCframeLength + 3] = crc;
 
             this->_dev->write(outBuffer, RCframeLength + 4);
-            //this->_dev->print(".");
         }
 #endif
 
@@ -413,10 +407,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
                         if (BadPktsCount >= GoodPktsCount)
                         {
-                            Serial.print("Too many bad UART RX packets!");
-                            // Serial.print(BadPktsCount);
-                            // Serial.print(":");
-                            // Serial.println(GoodPktsCount);
+                            Serial.print("Too many bad UART RX packets! ");
 
                             if (CRSFstate == true)
                             {
@@ -449,7 +440,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         GoodPktsCount = 0;
 
 #ifdef PLATFORM_ESP32
-                        //xSemaphoreGive(binUARTSemaphore);
                         vTaskDelay(UARTwdtInterval);
 #endif
                     }
@@ -461,11 +451,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
                 {
                     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-                    //ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-                    //ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
                     gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
-
-                    //CRSF::FlushSerial();
                 }
                 void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
                 {
@@ -477,16 +463,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
                 }
 
-                void ICACHE_RAM_ATTR duplex_set_HIGHZ()
-                {
-                }
-
                 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
                 {
                     CRSF::duplex_set_RX();
                     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false, 500);
                     UARTcurrentBaud = UARTrequestedBaud;
-                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
                     FlushSerial();
@@ -495,8 +476,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     {
                         if (CRSF::Port.available())
                         {
-                            xSemaphoreTake(binUARTSemaphore, portMAX_DELAY);
-
                             char inChar = CRSF::Port.read();
 
                             if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
@@ -529,9 +508,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     SerialInPacketPtr = 0;
                                     CRSFframeActive = false;
                                     lastUARTpktTime = millis();
-                                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_2);
-                                    //taskYIELD();
-                                    //vTaskDelay(xDelay1);
 
                                     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                                     if (peekVal > 0)
@@ -539,7 +515,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                         if (SerialOutFIFO.size() >= peekVal)
                                         {
                                             CRSF::duplex_set_TX();
-                                            xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+                                            xSemaphoreTake(mutexOutFIFO, portMAX_DELAY); // stops other tasks from writing to the FIFO when we want to read it
                                             uint8_t OutPktLen = SerialOutFIFO.pop();
                                             uint8_t OutData[OutPktLen];
                                             SerialOutFIFO.popBytes(OutData, OutPktLen);
@@ -547,35 +523,20 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                             xSemaphoreGive(mutexOutFIFO);
                                             CRSF::Port.flush(); // flush makes sure all bytes are pushed.
                                             CRSF::duplex_set_RX();
-                                            vTaskDelay(3);
+                                            vTaskDelay(2); // we don't expect anything for while so feel free to delay 
                                         }
                                     }
-                                    //vTaskDelay(xDelay1);
-                                    //gpio_set_drive_capability((gpio_num_t)CSFR_TXpin_Module, GPIO_DRIVE_CAP_0);
                                 }
                                 else
                                 {
                                     BadPktsCount++;
                                     Serial.println("UART CRC failure");
-                                    // Serial.println(SerialInPacketPtr, HEX);
-                                    // Serial.print("Expected: ");
-                                    // Serial.println(CalculatedCRC, HEX);
-                                    // Serial.print("Got: ");
-                                    // Serial.println(inChar, HEX);
-                                    // for (int i = 0; i < SerialInPacketLen + 2; i++)
-                                    // {
-                                    //     Serial.print(SerialInBuffer[i], HEX);
-                                    //     Serial.print(" ");
-                                    // }
-                                    // Serial.println();
-                                    //Serial.println();
                                     CRSFframeActive = false;
                                     SerialInPacketPtr = 0;
                                     FlushSerial();
                                     vTaskDelay(3);
                                 }
                             }
-                            xSemaphoreGive(binUARTSemaphore);
                             taskYIELD();
                         }
                         else
@@ -610,7 +571,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
                         connected();
                     }
-                    //portENTER_CRITICAL(&mux);
                     if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
                     {
                         Serial.println("Got Other Packet");
@@ -629,8 +589,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         (RCdataCallback1)(); // run new RC data callback
                         (RCdataCallback2)(); // run new RC data callback
                     }
-                    //portEXIT_CRITICAL(&mux);
-                    //vTaskDelay(2);
                 }
 #endif
 
@@ -702,18 +660,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             else
                             {
                                 Serial.println("UART CRC failure");
-                                // Serial.println(SerialInPacketPtr, HEX);
-                                // Serial.print("Expected: ");
-                                // Serial.println(CalculatedCRC, HEX);
-                                // Serial.print("Got: ");
-                                // Serial.println(inChar, HEX);
-                                // for (int i = 0; i < SerialInPacketLen + 2; i++)
-                                // {
-                                //     Serial.print(SerialInBuffer[i], HEX);
-                                //     Serial.print(" ");
-                                // }
-                                // Serial.println();
-                                //Serial.println();
                                 CRSFframeActive = false;
                                 SerialInPacketPtr = 0;
                                 Port.flush();
