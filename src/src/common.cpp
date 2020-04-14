@@ -2,8 +2,6 @@
 #include "LoRaRadioLib.h"
 #include "utils.h"
 
-extern SX127xDriver Radio;
-
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
 
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
@@ -24,12 +22,7 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate)
     return &ExpressLRS_AirRateConfig[rate];
 }
 
-//const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-volatile const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
-
-int8_t ExpressLRS_currPower = 0;
-int8_t ExpressLRS_prevPower = 0;
+volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate = NULL;
 
 #ifndef MY_UID
 //uint8_t UID[6] = {48, 174, 164, 200, 100, 50};
@@ -65,8 +58,9 @@ int16_t MeasureNoiseFloor()
     return (returnval);
 }
 
-uint8_t TLMratioEnumToValue(uint8_t enumval)
+uint16_t TLMratioEnumToValue(uint8_t enumval)
 {
+#if 0
     switch (enumval)
     {
     case TLM_RATIO_1_2:
@@ -94,6 +88,9 @@ uint8_t TLMratioEnumToValue(uint8_t enumval)
     default:
         return 0xFF;
     }
+#else
+    return (256u >> (enumval));
+#endif
 }
 
 static bool ledState = false;

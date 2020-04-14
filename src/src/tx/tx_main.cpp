@@ -270,7 +270,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
         return; // No need to modify, rate is same
 
     TxTimer.stop();
-    ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 

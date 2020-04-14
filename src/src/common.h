@@ -90,20 +90,10 @@ typedef struct expresslrs_mod_settings_s
 
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 
-//extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
 extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-extern volatile const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
-
-#define MaxPower100mW_Module 20
-#define MaxPower1000mW_Module 30
-#define RF_Gain 10
-
-extern int8_t ExpressLRS_currPower;
-extern int8_t ExpressLRS_prevPower;
 
 int16_t MeasureNoiseFloor();
-int16_t MeasureRSSI(int FHSSindex);
-uint8_t TLMratioEnumToValue(uint8_t enumval);
+uint16_t TLMratioEnumToValue(uint8_t enumval);
 
 // expresslrs packet header types
 // 00 -> standard 4 channel data packet
