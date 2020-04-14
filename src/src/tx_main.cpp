@@ -48,6 +48,7 @@ void TimerExpired();
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0; // time in ms when the last switch data packet was sent
 uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
+mspPacket_t* MSPPacket;
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -209,23 +210,23 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 #endif
 }
 
-void ICACHE_RAM_ATTR GenerateMSPData(mspPacket_t* packet)
+void ICACHE_RAM_ATTR GenerateMSPData()
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = packet->function;
-  Radio.TXdataBuffer[2] = packet->payloadSize;
+  Radio.TXdataBuffer[1] = MSPPacket->function;
+  Radio.TXdataBuffer[2] = MSPPacket->payloadSize;
   Radio.TXdataBuffer[3] = 0;
   Radio.TXdataBuffer[4] = 0;
   Radio.TXdataBuffer[5] = 0;
   Radio.TXdataBuffer[6] = 0;
-  if (packet->payloadSize <= 4)
+  if (MSPPacket->payloadSize <= 4)
   {
-    packet->payloadReadIterator = 0;
-    for (int i = 0; i < packet->payloadSize; i++)
+    MSPPacket->payloadReadIterator = 0;
+    for (int i = 0; i < MSPPacket->payloadSize; i++)
     {
-      Radio.TXdataBuffer[3+i] = packet->readByte();
+      Radio.TXdataBuffer[3+i] = MSPPacket->readByte();
     }
   }
 }
@@ -350,6 +351,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
+      GenerateMSPData();
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
     }
@@ -749,7 +751,7 @@ void ProcessMSPPacket(mspPacket_t* packet)
     }
   } else
   if (packet->function == MSP_SET_VTX_CONFIG) {
-    GenerateMSPData(packet);
+    MSPPacket = packet;
     MSPPacketSendCount = 6;
   }
 }
