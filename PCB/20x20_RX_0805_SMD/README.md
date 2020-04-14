@@ -1,5 +1,9 @@
 # 20x20 RX PCB
 
+<img src="img/bare_pcb.jpg" width="25%">
+<img src="img/populated_side_1.jpg" width="25%">
+<img src="img/populated_side_2.jpg" width="25%">
+
 ## Features
 
  * 20x20 footprint
@@ -16,3 +20,4 @@
  ## Ordering
 
  * I've had good results using JLCPCB (https://jlcpcb.com/). Upload the .zip file in this repo and adjust any PCB parameters that you want (defaults work fine).
+ * A super-lightweight build can be achieved by going to a 0.6mm PCB thickness (without an increase to cost)
