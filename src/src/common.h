@@ -98,6 +98,6 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 // 11 -> tlm packet
 // 10 -> sync packet with hop data
 #define RC_DATA_PACKET 0b00
-#define SWITCH_DATA_PACKET 0b01
+#define MSP_DATA_PACKET 0b01
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10

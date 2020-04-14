@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
-    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
+    case MSP_DATA_PACKET:                                                                                      // Switch Data Packet
         if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
         {
             UnpackSwitchData();
