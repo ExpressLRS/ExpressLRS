@@ -136,7 +136,7 @@ const uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(uint32_t));
 uint8_t volatile FHSSptr = 0;
 uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 
-int32_t FreqCorrection = 0;
+int32_t volatile FreqCorrection = 0;
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer

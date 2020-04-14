@@ -135,9 +135,10 @@ public:
     uint8_t SetPreambleLength(uint8_t PreambleLen);
     uint8_t SetSpreadingFactor(SpreadingFactor sf);
     uint8_t SetCodingRate(CodingRate cr);
-    uint8_t SetFrequency(uint32_t freq);
-    int32_t GetFrequencyError();
-    void setPPMoffsetReg(int32_t offset);
+    uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
+    int32_t ICACHE_RAM_ATTR GetFrequencyError();
+    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t offset);
+    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t error_hz, uint32_t frf);
 
     uint8_t SX127xBegin();
     uint8_t SetMode(uint8_t mode);
@@ -173,6 +174,7 @@ private:
     volatile uint8_t p_RegOpMode = 0;
     //volatile uint8_t p_RegDioMapping1 = 0;
     //volatile uint8_t p_RegDioMapping2 = 0;
+    volatile uint8_t p_ppm_off = 0;
 
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);

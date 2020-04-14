@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-extern int32_t FreqCorrection;
+extern int32_t volatile FreqCorrection;
 #define FreqCorrectionMax 100000
 #define FreqCorrectionMin -100000
 #define FreqCorrectionStep 61 //min freq step is ~ 61hz

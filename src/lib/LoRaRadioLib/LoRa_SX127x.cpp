@@ -196,7 +196,7 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
     return (state);
 }
 
-uint8_t SX127xDriver::SetFrequency(uint32_t freq)
+uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq)
 {
     uint8_t status = SetMode(SX127X_SLEEP);
     if (status != ERR_NONE)
@@ -663,7 +663,7 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
     case BW_31_25_KHZ:
         return 31.25E3;
     case BW_41_70_KHZ:
-        return 41.7E3;
+        return 41.667E3;
     case BW_62_50_KHZ:
         return 62.5E3;
     case BW_125_00_KHZ:
@@ -721,11 +721,27 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
     {
         regValue |= 0b10000000; //set neg bit for 2s complement
     }
-
+    if (regValue == p_ppm_off)
+        return;
+    p_ppm_off = regValue;
     writeRegister(SX127x_PPMOFFSET, regValue);
 }
 
-int32_t SX127xDriver::GetFrequencyError()
+void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t error_hz, uint32_t frf)
+{
+    if (!frf) // use locally stored value if not defined
+        frf = currFreq;
+    // Calc new PPM
+    error_hz /= (frf / 1E6);
+
+    uint8_t regValue = (uint8_t)error_hz;
+    if (regValue == p_ppm_off)
+        return;
+    p_ppm_off = regValue;
+    writeRegister(SX127x_PPMOFFSET, regValue);
+}
+
+int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
 {
     int32_t intFreqError;
     uint8_t fei_reg[3] = {0x0, 0x0, 0x0};
@@ -746,10 +762,20 @@ int32_t SX127xDriver::GetFrequencyError()
         intFreqError -= 524288;
     }
 
+#if !NEW_FREQ_CORR
     // bit shift hackery so we don't have to use floaty bois; the >> 3 is intentional
     // and is a simplification of the formula on page 114 of sx1276 datasheet
     intFreqError = (intFreqError >> 3) * (getCurrBandwidthNormalisedShifted());
     intFreqError >>= 4;
+#else
+    // Calculate Hz error where XTAL is 32MHz
+    int64_t tmp_f = intFreqError;
+    tmp_f <<= 11;
+    tmp_f *= getCurrBandwidth();
+    tmp_f /= 1953125000;
+    intFreqError = tmp_f;
+    //intFreqError = ((tmp_f << 11) * getCurrBandwidth()) / 1953125000;
+#endif
     return intFreqError;
 }
 

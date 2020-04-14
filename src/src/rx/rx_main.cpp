@@ -433,6 +433,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
+#if !NEW_FREQ_CORR
         int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError()); // get freq error = 90us
         //DEBUG_PRINT(freqerror);
         //DEBUG_PRINT(" : ");
@@ -465,6 +466,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
 
         Radio.setPPMoffsetReg(FreqCorrection);
+#else
+        // Do freq error correction
+        int32_t freqerror = Radio.GetFrequencyError();
+        //freqerror = LPF_FreqError.update(freqerror);
+        if ((freqerror < (-FreqCorrectionStep)) ||
+            (FreqCorrectionStep < freqerror))
+        {
+            FreqCorrection += freqerror;
+            Radio.setPPMoffsetReg(freqerror, 0);
+        }
+#endif
         //DEBUG_PRINTLN(FreqCorrection);
 
         HandleFHSS();
