@@ -11,7 +11,6 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 TaskHandle_t xESP32uartWDT = NULL;
-SemaphoreHandle_t binUARTSemaphore = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
@@ -82,8 +81,6 @@ void CRSF::Begin()
     Serial.println("About to start CRSF task...");
 
 #ifdef PLATFORM_ESP32
-    //xTaskHandle UartTaskHandle = NULL;
-    vSemaphoreCreateBinary(binUARTSemaphore);
     mutexOutFIFO = xSemaphoreCreateMutex();
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
     xTaskCreatePinnedToCore(UARTwdt, "ESP32uartWDTTask", 2000, NULL, 10, &xESP32uartWDT, 1);
@@ -306,7 +303,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             if (millis() > OpenTXsyncLastSent + OpenTXsyncPakcetInterval)
             {
 #endif
-
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
                 int32_t offset = CRSF::OpenTXsyncOffset * 10 - 8000;        // + offset that seems to be needed
                 uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
@@ -465,12 +461,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
                 {
-                    CRSF::duplex_set_RX();
                     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false, 500);
                     UARTcurrentBaud = UARTrequestedBaud;
                     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
-                    FlushSerial();
+                    CRSF::duplex_set_RX();
 
                     for (;;)
                     {
