@@ -418,13 +418,16 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             if (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE)
                             {
                                 UARTrequestedBaud = CRSF_OPENTX_SLOW_BAUDRATE;
-                                Serial.println("UART WDT: Switch to 115000 baud");
                             }
                             else if (UARTcurrentBaud == CRSF_OPENTX_SLOW_BAUDRATE)
                             {
                                 UARTrequestedBaud = CRSF_OPENTX_FAST_BAUDRATE;
-                                Serial.println("UART WDT: Switch to 400000 baud");
                             }
+
+                            Serial.print("UART WDT: Switch to: ");
+                            Serial.print(UARTrequestedBaud);
+                            Serial.println(" baud");
+
                         }
                         Serial.print("UART STATS Bad:Good = ");
                         Serial.print(BadPktsCount);
