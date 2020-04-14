@@ -19,7 +19,7 @@ void hwTimer::init()
 {
     noInterrupts();
     MyTim->attachInterrupt(hwTimer::callback);
-    //MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
+    MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
     MyTim->resume();
     interrupts();
