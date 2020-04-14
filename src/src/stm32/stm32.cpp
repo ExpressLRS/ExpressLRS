@@ -21,7 +21,7 @@ void button_event_long(uint32_t ms)
 #if defined(TARGET_R9M_TX)
 #elif defined(TARGET_R9M_RX)
     if (ms > BUTTON_RESET_INTERVAL_RX)
-        HAL_NVIC_SystemReset();
+        platform_restart();
 #endif /* TARGET_R9M_RX */
 }
 #endif
@@ -71,11 +71,9 @@ void platform_setup(void)
 
 /*************** CONFIGURE TX *******************/
 #if defined(TARGET_R9M_TX)
-    pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
-    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
-    digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
-
-    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
+    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100,
+               GPIO_PIN_RFswitch_CONTROL,
+               GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
     //r9dac.setPower(R9_PWR_50mW);
 
 #ifdef GPIO_PIN_BUZZER
@@ -134,4 +132,9 @@ void platform_set_led(bool state)
 #ifdef GPIO_PIN_LED
     digitalWrite(GPIO_PIN_LED, (uint32_t)state);
 #endif
+}
+
+void platform_restart(void)
+{
+    HAL_NVIC_SystemReset();
 }

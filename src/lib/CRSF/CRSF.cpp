@@ -591,12 +591,7 @@ void CRSF::RX_processPacket()
             delay(100);
             DEBUG_PRINTLN("Jumping to Bootloader...");
             delay(100);
-#ifdef PLATFORM_STM32
-            HAL_NVIC_SystemReset();
-#endif
-#ifdef PLATFORM_ESP8266
-            ESP.restart();
-#endif
+            platform_restart();
         }
     }
     else if (SerialInBuffer[2] == CRSF_FRAMETYPE_BATTERY_SENSOR)
@@ -689,6 +684,7 @@ void CRSF::RX_handleUartIn(void)
         }
     }
 }
+
 #endif // END RX_MODULE
 
 void CRSF::process_input(void)

@@ -282,10 +282,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     platform_connection_state(connectionState);
 
     TxTimer.start();
-
-#ifdef TARGET_R9M_TX
-    //r9dac.resume();
-#endif
 }
 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
@@ -328,12 +324,7 @@ void ICACHE_RAM_ATTR HandleTLM()
             return;
         }
 
-#ifdef TARGET_R9M_TX
-        //r9dac.standby(); //takes too long
-        digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
-        digitalWrite(GPIO_PIN_RFamp_APC1, 0);
-#endif
-
+        PowerMgmt.pa_off();
         Radio.RXnb();
         WaitRXresponse = true;
     }
@@ -403,11 +394,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     ///// Next, Calculate the CRC and put it into the buffer /////
     crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
-#ifdef TARGET_R9M_TX
-    //r9dac.resume(); takes too long
-    digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
-    digitalWrite(GPIO_PIN_RFamp_APC1, 1);
-#endif
+    PowerMgmt.pa_on();
     Radio.TXnb(Radio.TXdataBuffer, 8);
 
     /*if (ChangeAirRateRequested)

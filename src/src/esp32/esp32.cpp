@@ -63,3 +63,8 @@ void platform_connection_state(connectionState_e state)
 void platform_set_led(bool state)
 {
 }
+
+void platform_restart(void)
+{
+    ESP.restart();
+}

@@ -20,3 +20,5 @@ long rng5Bit(void);
 unsigned int rngN(unsigned int upper);
 
 unsigned int volatile_memcpy(volatile void *d, volatile void *s, unsigned int n);
+
+extern void platform_restart(void);

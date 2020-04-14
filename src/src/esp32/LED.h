@@ -1,8 +1,8 @@
 #include "common.h"
 
 /// LED SUPPORT ///////
-#ifdef PLATFORM_ESP32
 #include <NeoPixelBus.h>
+
 const uint16_t PixelCount = 4; // this example assumes 4 pixels, making it smaller will cause a failure
 const uint8_t PixelPin = 27;   // make sure to set this to the correct pin, ignored for Esp8266
 const uint8_t numberOfLEDs = 3;
@@ -21,11 +21,9 @@ HslColor hslGreen(green);
 HslColor hslBlue(blue);
 HslColor hslWhite(white);
 HslColor hslBlack(black);
-#endif
 
 void updateLEDs(uint8_t isRXconnected, uint8_t tlm)
 {
-#ifdef PLATFORM_ESP32
     LEDGlowIndex = millis() % 5000;
 
     if (LEDGlowIndex < 2500)
@@ -59,5 +57,4 @@ void updateLEDs(uint8_t isRXconnected, uint8_t tlm)
         }
     }
     strip.Show();
-#endif
 }

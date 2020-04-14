@@ -15,13 +15,27 @@ R9DAC::R9DAC()
     CurrVoltageMV = 0;
     CurrVoltageRegVal = 0;
     ADDR = 0;
+    pin_RFswitch = -1;
+    pin_RFamp = -1;
 
     DAC_State = UNKNOWN;
 }
 
-void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr)
+void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr,
+                 int8_t pin_switch, int8_t pin_amp)
 {
     ADDR = addr;
+    if (0 <= pin_switch)
+    {
+        pin_RFswitch = pin_switch;
+        pinMode(pin_switch, OUTPUT);
+    }
+    if (0 <= pin_amp)
+    {
+        pin_RFamp = pin_amp;
+        pinMode(pin_amp, OUTPUT);
+        digitalWrite(pin_amp, HIGH);
+    }
     DAC_State = UNKNOWN;
 
     Wire.setSDA(sda); // set is needed or it wont work :/
@@ -31,6 +45,7 @@ void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr)
 
 void R9DAC::standby()
 {
+#if 0 // takes too long
     if (DAC_State != STANDBY)
     {
         Wire.beginTransmission(ADDR);
@@ -39,16 +54,28 @@ void R9DAC::standby()
         Wire.endTransmission();
         DAC_State = STANDBY;
     }
+#else
+    if (0 <= pin_RFswitch)
+        digitalWrite(pin_RFswitch, HIGH);
+    if (0 <= pin_RFamp)
+        digitalWrite(pin_RFamp, LOW);
+#endif
 }
 
 void R9DAC::resume()
 {
+#if 0 // takes too long
     if (DAC_State != RUNNING)
     {
-        Radio.SetOutputPower(0b0000);
         setVoltageRegDirect(CurrVoltageRegVal);
         DAC_State = RUNNING;
     }
+#else
+    if (0 <= pin_RFswitch)
+        digitalWrite(pin_RFswitch, LOW);
+    if (0 <= pin_RFamp)
+        digitalWrite(pin_RFamp, HIGH);
+#endif
 }
 
 void R9DAC::setVoltageMV(uint32_t voltsMV)
@@ -71,11 +98,46 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
     Wire.endTransmission();
 }
 
-void R9DAC::setPower(DAC_PWR_ power)
+void R9DAC::setPower(PowerLevels_e &power)
 {
-    Radio.SetOutputPower(0b0000);
-    uint32_t reqVolt = LUT[(uint8_t)power][3];
+    uint32_t reqVolt = get_lut(power).volts;
     setVoltageMV(reqVolt);
+}
+
+const R9DAC::r9dac_lut_s &R9DAC::get_lut(PowerLevels_e &power)
+{
+    uint8_t index;
+    switch (power)
+    {
+    case PWR_25mW:
+        index = R9_PWR_25mW;
+        break;
+    case PWR_50mW:
+        index = R9_PWR_50mW;
+        break;
+    case PWR_100mW:
+        index = R9_PWR_100mW;
+        break;
+    case PWR_250mW:
+        index = R9_PWR_250mW;
+        break;
+    case PWR_500mW:
+        index = R9_PWR_500mW;
+        break;
+    case PWR_1000mW:
+        index = R9_PWR_1000mW;
+        break;
+    case PWR_2000mW:
+        index = R9_PWR_2000mW;
+        break;
+    case PWR_10mW:
+    default:
+        index = R9_PWR_10mW;
+        power = PWR_10mW;
+        break;
+    };
+
+    return LUT[index];
 }
 
 #endif

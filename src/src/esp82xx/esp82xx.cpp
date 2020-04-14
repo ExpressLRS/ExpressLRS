@@ -93,3 +93,8 @@ void platform_set_led(bool state)
     digitalWrite(GPIO_PIN_LED, (uint32_t)state);
 #endif
 }
+
+void platform_restart(void)
+{
+    ESP.restart();
+}

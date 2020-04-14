@@ -3,23 +3,33 @@
 #ifdef TARGET_R9M_TX
 
 #include <stdint.h>
-
-typedef enum
-{
-    R9_PWR_10mW = 0,
-    R9_PWR_25mW = 1,
-    R9_PWR_50mW = 2,
-    R9_PWR_100mW = 3,
-    R9_PWR_250mW = 4,
-    R9_PWR_500mW = 5,
-    R9_PWR_1000mW = 6,
-    R9_PWR_2000mW = 7
-} DAC_PWR_;
+#include "POWERMGNT.h"
 
 class R9DAC
 {
 private:
-    const int LUT[8][4] = {
+    enum
+    {
+        R9_PWR_10mW = 0,
+        R9_PWR_25mW,
+        R9_PWR_50mW,
+        R9_PWR_100mW,
+        R9_PWR_250mW,
+        R9_PWR_500mW,
+        R9_PWR_1000mW,
+        R9_PWR_2000mW,
+        R9_PWR_MAX
+    };
+
+    typedef struct
+    {
+        uint16_t mW;
+        uint8_t dB;
+        uint8_t gain;
+        uint16_t volts; // APC2volts*1000
+    } r9dac_lut_s;
+
+    const r9dac_lut_s LUT[R9_PWR_MAX] = {
         // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
         {10, 11, 9, 800},
         {25, 14, 12, 920},
@@ -42,15 +52,21 @@ private:
     uint32_t CurrVoltageMV;
     uint8_t CurrVoltageRegVal;
     uint8_t ADDR;
+    int8_t pin_RFswitch;
+    int8_t pin_RFamp;
+
+    const r9dac_lut_s &
+    get_lut(PowerLevels_e &power);
 
 public:
     R9DAC();
-    void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
+    void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_,
+              int8_t pin_switch = -1, int8_t pin_amp = -1);
     void standby();
     void resume();
     void setVoltageMV(uint32_t voltsMV);
     void setVoltageRegDirect(uint8_t voltReg);
-    void setPower(DAC_PWR_ power);
+    void setPower(PowerLevels_e &power);
 };
 
 #endif
