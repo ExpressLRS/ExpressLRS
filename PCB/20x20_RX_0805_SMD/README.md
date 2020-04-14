@@ -1,8 +1,6 @@
 # 20x20 RX PCB
 
-<img src="img/bare_pcb.jpg" width="25%">
-<img src="img/populated_side_1.jpg" width="25%">
-<img src="img/populated_side_2.jpg" width="25%">
+<img src="img/bare_pcb.jpg" width="25%"> <img src="img/populated_side_1.jpg" width="25%"> <img src="img/populated_side_2.jpg" width="25%">
 
 ## Features
 
