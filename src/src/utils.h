@@ -1,8 +1,5 @@
 #pragma once
 
-// void ICACHE_RAM_ATTR PrintRC()
-// }
-
 // the max value returned by rng
 #define RNG_MAX 0x7FFF
 
