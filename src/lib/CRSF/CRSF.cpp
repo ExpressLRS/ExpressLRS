@@ -462,15 +462,17 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
                 {
                     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false, 500);
-                    UARTcurrentBaud = UARTrequestedBaud;
+                    UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
                     const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
                     CRSF::duplex_set_RX();
 
                     while (CRSF::Port.available())
                     {
-                        char inChar = CRSF::Port.read(); // measure sure there is no garbage on the UART at the start
+                        CRSF::Port.read(); // measure sure there is no garbage on the UART at the start
                     }
+
+                    vTaskDelay(5); // wait for the first packet to arrive
 
                     for (;;)
                     {
