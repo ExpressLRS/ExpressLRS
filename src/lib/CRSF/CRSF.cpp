@@ -467,6 +467,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
                     CRSF::duplex_set_RX();
 
+                    while (CRSF::Port.available())
+                    {
+                        char inChar = CRSF::Port.read(); // measure sure there is no garbage on the UART at the start
+                    }
+
                     for (;;)
                     {
                         if (CRSF::Port.available())
@@ -476,7 +481,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             if (CRSFframeActive == false)
                             {
                                 // stage 1 wait for sync byte //
-                                if ((inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) && CRSFframeActive == false) // we got sync, reset write pointer
+                                if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) // we got sync, reset write pointer
                                 {
                                     SerialInPacketPtr = 0;
                                     CRSFframeActive = true;
@@ -513,7 +518,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                         CRSFframeActive = false;
                                         lastUARTpktTime = millis();
                                         SerialInPacketPtr = 0;
-                                        memset((void *)SerialInBuffer, 0, sizeof(SerialInBuffer));
 
                                         uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                                         if (peekVal > 0)
@@ -539,11 +543,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                         Serial.println("UART CRC failure");
                                         CRSFframeActive = false;
                                         SerialInPacketPtr = 0;
-                                        FlushSerial();
-                                        vTaskDelay(2);
                                     }
+                                    memset((void *)SerialInBuffer, 0, sizeof(SerialInBuffer)); // either crc was good or not, either way zero the buffer
                                 }
-                                taskYIELD();
                             }
                         }
                         else
@@ -558,7 +560,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     UARTcurrentBaud = UARTrequestedBaud;
                                     CRSF::duplex_set_RX();
                                 }
-                                vTaskDelay(3); //delay when crsf state is not connected, this will prevent WDT triggering
+                                vTaskDelay(1); //delay when crsf state is not connected, this will prevent WDT triggering
                             }
                         }
                     }
