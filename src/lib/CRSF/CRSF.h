@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "../../src/HwSerial.h"
+#include "helpers.h"
 
 #ifdef ARDUINO_ARCH_STM32
 #define VOLATILE
@@ -12,10 +13,15 @@
 
 #define PACKED __attribute__((packed))
 
+// current and sent switch values
+#define N_CONTROLS 4
+#define N_SWITCHES 8
+#define N_CHANNELS 16 // (N_CONTROLS + N_SWITCHES)
+
 #define CRSF_RX_BAUDRATE 420000
 #define CRSF_OPENTX_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
-#define CRSF_NUM_CHANNELS 16
+#define CRSF_NUM_CHANNELS 16             // Number of input channels
 #define CRSF_CHANNEL_VALUE_MIN 172
 #define CRSF_CHANNEL_VALUE_MID 992
 #define CRSF_CHANNEL_VALUE_MAX 1811
@@ -49,18 +55,6 @@
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
-
-extern const unsigned char crc8tab[256];
-
-#if 0
-static const unsigned int VTXtable[6][8] =
-    {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
-     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866},  /* Band B */
-     {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945},  /* Band E */
-     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880},  /* Ariwave */
-     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917},  /* Race */
-     {5621, 5584, 5547, 5510, 5473, 5436, 5399, 5362}}; /* LO Race */
-#endif
 
 enum crsf_frame_type_e
 {
@@ -207,49 +201,34 @@ typedef struct crsfPayloadLinkstatistics_s
 
 /////inline and utility functions//////
 
-//static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
-static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
+#define CRSF_to_US(val) MAP_U16((val), 172, 1811, 988, 2012)
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
-static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
+#define UINT10_to_CRSF(val) MAP_U16((val), 0, 1024, 172, 1811)
+#define CRSF_to_UINT10(val) MAP_U16((val), 172, 1811, 0, 1023)
 
-static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
-
+#define SWITCH3b_to_CRSF(val) MAP_U16((val), 0, 7, 188, 1795)
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
-static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 2, 188, 1795)); };
+#define SWITCH2b_to_CRSF(val) MAP((val), 0, 2, 188, 1795)
 
-static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val)
-{
-    if (Val > 1000)
-        return 1;
-    else
-        return 0;
-};
-static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
-{
-    if (Val)
-        return 1795;
-    else
-        return 188;
-};
+#define CRSF_to_BIT(val) (((val) > 1000) ? 1 : 0)
+#define BIT_to_CRSF(val) ((val) ? 1795 : 188)
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); };
-//static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
+extern const unsigned char crc8tab[256];
 
-static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t const *data, int length)
 {
     uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
+    while (length--)
     {
         crc = crc8tab[crc ^ *data++];
     }
     return crc;
 }
 
-static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t const *data, int length)
 {
     uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
+    while (length--)
     {
         crc = crc8tab[crc ^ *data++];
     }
@@ -259,10 +238,10 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
 #if (CRSF_CMD_CRC)
 extern const unsigned char crc8tabcmd[256];
 
-static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
+static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t const *data, int length)
 {
     uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
+    while (length--)
     {
         crc = crc8tabcmd[crc ^ *data++];
     }
@@ -270,60 +249,42 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
 }
 #endif
 
+#if (N_SWITCHES > (N_CHANNELS - N_CONTROLS))
+#error "CRSF Channels Config is not OK"
+#endif
+
 class CRSF
 {
-
 public:
-    CRSF() {}
-
-    CRSF(HwSerial *dev)
-    {
-        _dev = dev;
-    }
-    CRSF(HwSerial &dev)
-    {
-        _dev = &dev;
-    }
+    CRSF(HwSerial *dev);
+    CRSF(HwSerial &dev) : CRSF(&dev) {}
 
     void Begin();
 
-    static VOLATILE uint16_t ChannelDataIn[16];
-    static VOLATILE uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
-    static VOLATILE uint16_t ChannelDataOut[16];
-
-// current and sent switch values
-#define N_SWITCHES 8
-
-    static uint8_t currentSwitches[N_SWITCHES];
-    static uint8_t sentSwitches[N_SWITCHES];
-    // which switch should be sent in the next rc packet
-    static uint8_t nextSwitchIndex;
-
+    ///// Callbacks /////
     static void (*RCdataCallback1)(); //function pointer for new RC data callback
-    static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
     static void (*disconnected)();
     static void (*connected)();
 
     static void (*RecvParameterUpdate)();
 
-    static volatile uint8_t ParameterUpdateData[2];
+    ///// Variables /////
+    volatile uint16_t ChannelDataIn[N_CHANNELS];
 
-    /////Variables/////
+    // current and sent switch values, used for prioritising sequential switch transmission
+    volatile uint8_t currentSwitches[N_SWITCHES];
+    volatile uint8_t sentSwitches[N_SWITCHES];
+    // which switch should be sent in the next rc packet
+    volatile uint8_t nextSwitchIndex;
 
-    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
-    static VOLATILE crsf_sensor_battery_s TLMbattSensor;
+    volatile uint8_t ParameterUpdateData[2];
 
-    /// UART Handling ///
+    volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
+    volatile crsf_sensor_battery_s TLMbattSensor;
 
-    static bool CRSFstate;
-    static bool CRSFstatePrev;
-    static bool IsUARTslowBaudrate;
-
-    static uint32_t UARTwdtNextCheck;
-    static uint32_t GoodPktsCount;
-    static uint32_t BadPktsCount;
+    volatile bool CRSFstate; // connected staet
 
 #if (RX_MODULE)
     void ICACHE_RAM_ATTR sendRCFrameToFC();
@@ -340,49 +301,75 @@ public:
 
     uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
 
-///// Variables for OpenTX Syncing //////////////////////////
-#define OpenTXsyncPakcetInterval 100 // in ms
-
+    ///// Variables for OpenTX Syncing //////////////////////////
+    void ICACHE_RAM_ATTR setRcPacketRate(uint32_t rate)
+    {
 #if (FEATURE_OPENTX_SYNC)
-    static VOLATILE uint32_t RCdataLastRecv;
-    static VOLATILE uint32_t RequestedRCpacketInterval;
-    static VOLATILE int32_t RequestedRCpacketAdvance;
-    static VOLATILE uint32_t OpenTXsynNextSend;
-    static VOLATILE int32_t OpenTXsyncOffset;
-    void ICACHE_RAM_ATTR UpdateOpenTxSyncOffset(); // called from timer
-    void ICACHE_RAM_ATTR sendSyncPacketToTX();
+        RequestedRCpacketInterval = rate;
 #endif
+    }
+    void ICACHE_RAM_ATTR UpdateOpenTxSyncOffset() // called from timer
+    {
+#if (FEATURE_OPENTX_SYNC)
+        OpenTXsyncOffset = micros() - RCdataLastRecv;
+#endif
+    }
+
     /////////////////////////////////////////////////////////////
 
-    void ICACHE_RAM_ATTR TX_handleUartIn(void);
+    void TX_handleUartIn(void);
+
+    uint16_t ICACHE_RAM_ATTR AuxChannelsChanged(uint16_t mask = 0xffff)
+    {
+        return p_auxChannelsChanged & mask;
+    }
 #endif /* TX_MODULE */
 
     void process_input(void);
 
 private:
-    static HwSerial *_dev;
+    HwSerial *_dev;
 
-    static VOLATILE uint8_t SerialInPacketStart;
-    static VOLATILE uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
-    static VOLATILE uint8_t SerialInPacketPtr;                   // index where we are reading/writing
-    static VOLATILE uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
+    bool IsUARTslowBaudrate;
+    bool CRSFframeActive;
+    uint8_t SerialInPacketStart;
+    uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
+    uint8_t SerialInPacketPtr;                   // index where we are reading/writing
+    uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 
-    static VOLATILE uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
+    /// UART validity check ///
+    // for the UART wdt, every 1000ms we change bauds when connect is lost
+#define UARTwdtInterval 1000
+    uint32_t UARTwdtNextCheck;
+    uint32_t GoodPktsCount;
+    uint32_t BadPktsCount;
 
-    static VOLATILE bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
-    static VOLATILE bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
+    // TODO: Use this instead!
+    //VOLATILE uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1];
 
 #if (TX_MODULE)
-    void ICACHE_RAM_ATTR wdtUART();
-    bool ICACHE_RAM_ATTR TX_ProcessPacket();
-    void ICACHE_RAM_ATTR GetChannelDataIn();
-    static void ICACHE_RAM_ATTR updateSwitchValues();
+    volatile uint16_t p_auxChannelsChanged; // true if some of the switches is changed
+
+    void ICACHE_RAM_ATTR
+    wdtUART();
+    void TX_ProcessPacket(uint8_t const *input);
+    void StoreChannelData(uint8_t const *const data);
+
+#if (FEATURE_OPENTX_SYNC)
+#define OpenTXsyncPakcetInterval 100 // in ms
+#define RequestedRCpacketAdvance 500 // 800 timing adcance in us
+
+    volatile uint32_t RCdataLastRecv;
+    volatile int32_t OpenTXsyncOffset;
+    uint32_t RequestedRCpacketInterval;
+    uint32_t OpenTXsynNextSend;
+    void sendSyncPacketToTX(); // called from main loop
+#endif
+
 #elif (RX_MODULE)
     void ICACHE_RAM_ATTR CrsfFrameSendToFC(uint8_t *buff, uint8_t size);
     void RX_processPacket(void);
 #endif
-
-    static void inline nullCallback(void);
 
     void command_find_and_dispatch(void);
 };

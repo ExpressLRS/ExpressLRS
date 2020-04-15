@@ -3,6 +3,7 @@
 
 #include "DAC.h"
 #include "LoRaRadioLib.h"
+#include "helpers.h"
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -80,7 +81,7 @@ void R9DAC::resume()
 
 void R9DAC::setVoltageMV(uint32_t voltsMV)
 {
-    uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
+    uint8_t ScaledVolts = MAP(voltsMV, 0, VCC, 0, 255);
     setVoltageRegDirect(ScaledVolts);
     CurrVoltageMV = voltsMV;
 }

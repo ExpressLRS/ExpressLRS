@@ -43,67 +43,50 @@ const unsigned char crc8tabcmd[256] =
      0x5A, 0xE0, 0x94, 0x2E, 0x7C, 0xC6, 0xB2, 0x08, 0x16, 0xAC, 0xD8, 0x62, 0x30, 0x8A, 0xFE, 0x44};
 #endif
 
-HwSerial *CRSF::_dev = NULL;
-
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 
 //U1RXD_IN_IDX
 //U1TXD_OUT_IDX
 
-VOLATILE bool CRSF::ignoreSerialData = false;
-VOLATILE bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
-
-void inline CRSF::nullCallback(void){};
+void nullCallback(void){};
 
 void (*CRSF::RCdataCallback1)() = &nullCallback; // function is called whenever there is new RC data.
-void (*CRSF::RCdataCallback2)() = &nullCallback; // function is called whenever there is new RC data.
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
 
 void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
 
-/// UART Handling ///
-bool CRSF::CRSFstate = false;
-bool CRSF::IsUARTslowBaudrate = false;
+CRSF::CRSF(HwSerial *dev)
+{
+    _dev = dev;
 
-uint32_t CRSF::UARTwdtNextCheck = 0;
-#define UARTwdtInterval 1000 // for the UART wdt, every 1000ms we change bauds when connect is lost
+    nextSwitchIndex = 0;
 
-uint32_t CRSF::GoodPktsCount = 0;
-uint32_t CRSF::BadPktsCount = 0;
+    CRSFstate = false;
+    IsUARTslowBaudrate = false;
 
-VOLATILE uint8_t CRSF::SerialInPacketStart = 0;                   // length of the CRSF packet as measured
-VOLATILE uint8_t CRSF::SerialInPacketLen = 0;                     // length of the CRSF packet as measured
-VOLATILE uint8_t CRSF::SerialInPacketPtr = 0;                     // index where we are reading/writing
-VOLATILE uint8_t CRSF::SerialInBuffer[CRSF_MAX_PACKET_LEN] = {0}; // max 64 bytes for CRSF packet
-VOLATILE uint16_t CRSF::ChannelDataIn[16] = {0};
-VOLATILE uint16_t CRSF::ChannelDataInPrev[16] = {0};
+    UARTwdtNextCheck = 0;
+    GoodPktsCount = 0;
+    BadPktsCount = 0;
 
-// current and sent switch values, used for prioritising sequential switch transmission
-uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
-uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
-
-uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
-
-volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
-
-volatile crsf_channels_s CRSF::PackedRCdataOut;
-volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-VOLATILE crsf_sensor_battery_s CRSF::TLMbattSensor;
+    SerialInPacketStart = 0;
+    SerialInPacketLen = 0;
+    SerialInPacketPtr = 0;
+    CRSFframeActive = false;
 
 #if (TX_MODULE)
+    p_auxChannelsChanged = 0;
+
 #if (FEATURE_OPENTX_SYNC)
-VOLATILE uint32_t CRSF::RCdataLastRecv = 0;
-VOLATILE int32_t CRSF::OpenTXsyncOffset = 0;
-VOLATILE uint32_t CRSF::OpenTXsynNextSend = 0;
-//VOLATILE uint32_t CRSF::RequestedRCpacketInterval = 10000; // default to 100hz as per 'normal'
-VOLATILE uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
-//VOLATILE int32_t CRSF::RequestedRCpacketAdvance = 800;  // timing advance, us
-VOLATILE int32_t CRSF::RequestedRCpacketAdvance = 500; // timing advance, us
+    RCdataLastRecv = 0;
+    RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+    OpenTXsynNextSend = 0;
+    OpenTXsyncOffset = 0;
 #endif
 #endif
+}
 
 void CRSF::Begin()
 {
@@ -157,7 +140,7 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 
     // keep track of which switch to send next if there are no changed switches
     // during the next call.
-    nextSwitchIndex = (i + 1) % 8;
+    nextSwitchIndex = (i + 1) % N_SWITCHES;
 
 #ifdef HYBRID_SWITCHES_8
     // for hydrid switches 0 is sent on every packet, so we can skip
@@ -181,7 +164,7 @@ void ICACHE_RAM_ATTR CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSFstate)
         return;
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength)] = {0};
@@ -191,14 +174,14 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
     // this is nok with volatile
-    volatile_memcpy(&outBuffer[3], &LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
+void ICACHE_RAM_ATTR CRSF::sendSetVTXchannel(uint8_t band, uint8_t channel)
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSFstate)
         return;
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(VTXcontrolFrameLength)] = {0};
@@ -225,7 +208,7 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
 
 void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSFstate)
         return;
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LUArespLength)] = {0};
@@ -247,7 +230,7 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t v
 
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSFstate)
         return;
 
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(BattSensorFrameLength)] = {0};
@@ -256,36 +239,29 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
     outBuffer[1] = CRSF_FRAME_SIZE(BattSensorFrameLength);
     outBuffer[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
 
-    outBuffer[3] = (CRSF::TLMbattSensor.voltage >> 8) & 0xff;
-    outBuffer[4] = CRSF::TLMbattSensor.voltage & 0xff;
-    outBuffer[5] = (CRSF::TLMbattSensor.current >> 8) & 0xff;
-    outBuffer[6] = CRSF::TLMbattSensor.current & 0xff;
-    outBuffer[7] = (CRSF::TLMbattSensor.capacity >> 16) & 0xff;
-    outBuffer[9] = (CRSF::TLMbattSensor.capacity >> 8) & 0xff;
-    outBuffer[10] = CRSF::TLMbattSensor.capacity & 0xff;
-    outBuffer[11] = CRSF::TLMbattSensor.remaining;
+    outBuffer[3] = (TLMbattSensor.voltage >> 8) & 0xff;
+    outBuffer[4] = TLMbattSensor.voltage & 0xff;
+    outBuffer[5] = (TLMbattSensor.current >> 8) & 0xff;
+    outBuffer[6] = TLMbattSensor.current & 0xff;
+    outBuffer[7] = (TLMbattSensor.capacity >> 16) & 0xff;
+    outBuffer[9] = (TLMbattSensor.capacity >> 8) & 0xff;
+    outBuffer[10] = TLMbattSensor.capacity & 0xff;
+    outBuffer[11] = TLMbattSensor.remaining;
 
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
-    //DEBUG_PRINTLN(CRSFoutBuffer[0]);
 }
 
 #if (FEATURE_OPENTX_SYNC)
-void ICACHE_RAM_ATTR CRSF::UpdateOpenTxSyncOffset()
-{
-    CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
-    //DEBUG_PRINTLN(CRSF::OpenTXsyncOffset);
-}
-
-void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
+void CRSF::sendSyncPacketToTX() // in values in us.
 {
     if (RCdataLastRecv && CRSFstate)
     {
         uint32_t current = millis();
-        //DEBUG_PRINT(CRSF::OpenTXsyncOffset);
+        //DEBUG_PRINT(OpenTXsyncOffset);
 
         if (current >= OpenTXsynNextSend)
         {
-            uint32_t packetRate = CRSF::RequestedRCpacketInterval;
+            uint32_t packetRate = RequestedRCpacketInterval;
             packetRate *= 10; //convert from us to right format
 
             int32_t offset = OpenTXsyncOffset - RequestedRCpacketAdvance;
@@ -319,9 +295,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 }
 #endif
 
-bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
+void ICACHE_RAM_ATTR CRSF::TX_ProcessPacket(uint8_t const *input)
 {
-    bool ret = false;
     if (CRSFstate == false)
     {
         CRSFstate = true;
@@ -333,19 +308,18 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
         connected();
     }
 
-    switch (SerialInBuffer[2])
+    switch (*input++)
     {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
     {
         //DEBUG_PRINTLN("Got Other Packet");
         DEBUG_PRINTLN("L");
-        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
-            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        if (input[0] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
+            input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
-            ParameterUpdateData[0] = SerialInBuffer[5];
-            ParameterUpdateData[1] = SerialInBuffer[6];
+            ParameterUpdateData[0] = input[2];
+            ParameterUpdateData[1] = input[3];
             RecvParameterUpdate();
-            ret = true;
         }
     }
     case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
@@ -354,19 +328,16 @@ bool ICACHE_RAM_ATTR CRSF::TX_ProcessPacket()
 #if (FEATURE_OPENTX_SYNC)
         RCdataLastRecv = micros();
 #endif
-        GetChannelDataIn();
+        StoreChannelData(input);
         (RCdataCallback1)(); // run new RC data callback
-        (RCdataCallback2)(); // run new RC data callback
-        ret = true;
         break;
     }
     default:
         break;
     };
-    return ret;
 }
 
-void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
+void CRSF::TX_handleUartIn(void) // Merge with RX version...
 {
     uint8_t inChar, split_cnt = 0;
 
@@ -394,7 +365,6 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
             {
                 CRSFframeActive = true;
                 SerialInPacketLen = 0;
-                SerialInPacketStart = SerialInPacketPtr - 1;
             }
             else
             {
@@ -407,12 +377,11 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
             {
                 SerialInPacketLen = inChar;
                 SerialInPacketStart = SerialInPacketPtr;
-                if (SerialInPacketLen < 3 || ((CRSF_MAX_PACKET_LEN - 2) < SerialInPacketLen))
+                if ((SerialInPacketLen < 2) || (CRSF_FRAME_SIZE_MAX < SerialInPacketLen))
                 {
                     // failure -> discard
                     CRSFframeActive = false;
                     SerialInPacketPtr = 0;
-                    SerialInPacketLen = 0;
                     BadPktsCount++;
                 }
             }
@@ -420,17 +389,14 @@ void ICACHE_RAM_ATTR CRSF::TX_handleUartIn(void) // Merge with RX version...
             {
                 if ((SerialInPacketPtr - SerialInPacketStart) == (SerialInPacketLen))
                 {
-                    uint8_t CalculatedCRC =
-                        CalcCRC((uint8_t *)&SerialInBuffer[SerialInPacketStart],
-                                (SerialInPacketLen - 1));
+                    uint8_t *payload = &SerialInBuffer[SerialInPacketStart];
+                    uint8_t CalculatedCRC = CalcCRC(payload, (SerialInPacketLen - 1));
 
                     if (CalculatedCRC == inChar)
                     {
-                        if (TX_ProcessPacket())
-                        {
-                            /* Can write right after successful package reception */
-                            _dev->write(SerialOutFIFO);
-                        }
+                        TX_ProcessPacket(payload);
+                        /* Can write right after successful package reception */
+                        _dev->write(SerialOutFIFO);
                         GoodPktsCount++;
                     }
                     else
@@ -503,30 +469,14 @@ void ICACHE_RAM_ATTR CRSF::wdtUART()
     }
 }
 
-/**
- * Convert the rc data corresponding to switches to 2 bit values.
- *
- * I'm defining channels 4 through 11 inclusive as representing switches
- * Take the input values and convert them to the range 0 - 2.
- * (not 0-3 because most people use 3 way switches and expect the middle
- *  position to be represented by a middle numeric value)
- */
-void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
+void CRSF::StoreChannelData(uint8_t const *const data)
 {
-    for (int i = 0; i < N_SWITCHES; i++)
-    {
-        currentSwitches[i] = ChannelDataIn[i + 4] / 682; // input is 0 - 2048, output is 0 - 2
-    }
-}
+    uint8_t switch_state;
 
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-{
-#define SERIAL_PACKET_OFFSET 3
+    // data is packed as 11 bits per channel
+    const crsf_channels_t *const rcChannels = (crsf_channels_t *)data;
 
-    memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
-
-    const crsf_channels_t *const rcChannels =
-        (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
+    // TODO: loop N_CHANNELS times
     ChannelDataIn[0] = (rcChannels->ch0);
     ChannelDataIn[1] = (rcChannels->ch1);
     ChannelDataIn[2] = (rcChannels->ch2);
@@ -544,7 +494,25 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
 
-    updateSwitchValues();
+    p_auxChannelsChanged = 0;
+
+    /**
+     * Convert the rc data corresponding to switches to 2 bit values.
+     *
+     * I'm defining channels 4 through 11 inclusive as representing switches
+     * Take the input values and convert them to the range 0 - 2.
+     * (not 0-3 because most people use 3 way switches and expect the middle
+     *  position to be represented by a middle numeric value)
+     */
+    for (int i = 0; i < N_SWITCHES; i++)
+    {
+        // input is 0 - 2048, output is 0 - 2
+        switch_state = ChannelDataIn[i + N_CONTROLS] / 682;
+        // Check if state is changed
+        if (switch_state != currentSwitches[i])
+            p_auxChannelsChanged |= (0x1 << i);
+        currentSwitches[i] = switch_state;
+    }
 }
 
 #elif (RX_MODULE) /* END TX_MODULE */
@@ -563,7 +531,7 @@ void CRSF::sendLinkStatisticsToFC()
     outBuffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
     outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    volatile_memcpy(&outBuffer[3], &LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
     CrsfFrameSendToFC(outBuffer, sizeof(outBuffer));
 }
@@ -698,7 +666,7 @@ void CRSF::process_input(void)
 
 void CRSF::command_find_and_dispatch(void)
 {
-    VOLATILE uint8_t *ptr = SerialInBuffer;
+    uint8_t *ptr = SerialInBuffer;
     uint8_t count = SerialInPacketPtr;
     if (count < 3)
         return;
@@ -712,7 +680,7 @@ void CRSF::command_find_and_dispatch(void)
             cmd == CRSF_SYNC_BYTE)
         {
             uint8_t len = *ptr++;
-            if (len < 3 || ((CRSF_MAX_PACKET_LEN - 2) < len))
+            if (len < 3 || ((CRSF_FRAME_SIZE_MAX) < len))
             {
                 printf("  invalid len %u for cmd: %X!\n", len, cmd);
             }
@@ -728,7 +696,7 @@ void CRSF::command_find_and_dispatch(void)
 #if (RX_MODULE)
                     RX_processPacket();
 #elif (TX_MODULE)
-                    TX_ProcessPacket();
+                    TX_ProcessPacket(ptr);
 #endif
                 }
                 else

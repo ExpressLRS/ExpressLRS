@@ -11,6 +11,7 @@
 #include "HwTimer.h"
 #include "HwSerial.h"
 #include "debug.h"
+#include "helpers.h"
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -67,8 +68,8 @@ static inline void TimerAdjustment(uint32_t us)
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.LastPacketRSSI;
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
 #if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range

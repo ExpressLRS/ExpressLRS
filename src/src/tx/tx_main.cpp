@@ -44,8 +44,6 @@ static volatile bool WaitRXresponse = false;
 
 static volatile bool UpdateParamReq = false;
 
-static volatile bool Channels5to8Changed = false;
-
 //static bool ChangeAirRateRequested = false;
 //static bool ChangeAirRateSentUpdate = false;
 
@@ -117,19 +115,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     }
 }
 
-#ifndef One_Bit_Switches
-void ICACHE_RAM_ATTR CheckChannels5to8Change()
-{ //check if channels 5 to 8 have new data (switch channels)
-    for (int i = 4; i < 8; i++)
-    {
-        if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
-        {
-            Channels5to8Changed = true;
-        }
-    }
-}
-#endif
-
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
     uint8_t PacketHeaderAddr;
@@ -199,7 +184,8 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  */
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8()
+void ICACHE_RAM_ATTR
+GenerateChannelDataHybridSwitch8()
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
@@ -275,7 +261,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 
     Radio.Config(config->bw, config->sf, config->cr);
     Radio.SetPreambleLength(config->PreambleLen);
-    crsf.RequestedRCpacketInterval = config->interval;
+    crsf.setRcPacketRate(config->interval);
 
     // Set connected if telemetry is not used
     connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
@@ -378,9 +364,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #elif defined(SEQ_SWITCHES)
         GenerateChannelDataSeqSwitch();
 #else
-        if ((current_ms > SwitchPacketNextSend) || Channels5to8Changed)
+        if ((current_ms > SwitchPacketNextSend) || crsf.AuxChannelsChanged(0xf))
         {
-            Channels5to8Changed = false;
             GenerateSwitchChannelData();
             SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
         }
@@ -482,9 +467,6 @@ void setup()
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
     crsf.disconnected = hw_timer_stop;
     crsf.RecvParameterUpdate = &ParamUpdateReq;
-#ifndef One_Bit_Switches
-    crsf.RCdataCallback1 = &CheckChannels5to8Change;
-#endif
 
     TxTimer.callbackTock = &SendRCdataToRF;
 
