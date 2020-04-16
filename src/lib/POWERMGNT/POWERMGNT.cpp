@@ -3,7 +3,6 @@
 extern SX127xDriver Radio;
 #ifdef TARGET_R9M_TX
 extern R9DAC R9DAC;
-DefaultPowerEnum
 #endif
 
     PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
