@@ -1,10 +1,10 @@
 #ifndef H_CRSF
 #define H_CRSF
 
-#include <Arduino.h>
-#include "../../src/HwSerial.h"
+#include "HwSerial.h"
 #include "helpers.h"
 #include "crc.h"
+#include "platform.h"
 
 // current and sent switch values
 #define N_CONTROLS 4
@@ -14,7 +14,7 @@
 #define CRSF_RX_BAUDRATE 420000
 #define CRSF_OPENTX_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
-//#define CRSF_NUM_CHANNELS 16             // Number of input channels
+#define CRSF_NUM_CHANNELS 16             // Number of input channels
 #define CRSF_CHANNEL_VALUE_MIN 172
 #define CRSF_CHANNEL_VALUE_MID 992
 #define CRSF_CHANNEL_VALUE_MAX 1811

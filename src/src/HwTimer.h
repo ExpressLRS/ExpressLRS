@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
-#include <stdio.h>
+#include "platform.h"
+#include <stdint.h>
 
 #define TimerIntervalUSDefault 20000
 

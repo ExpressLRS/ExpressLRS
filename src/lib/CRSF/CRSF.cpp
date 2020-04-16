@@ -1,10 +1,5 @@
 #include "CRSF.h"
-
-#include "../../src/utils.h"
-#include "../../src/debug.h"
-
-//U1RXD_IN_IDX
-//U1TXD_OUT_IDX
+#include "debug.h"
 
 void nullCallback(void){};
 

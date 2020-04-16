@@ -1,5 +1,5 @@
 #include "LoRa_lowlevel.h"
-#include "../../src/debug.h"
+#include "debug.h"
 #include "LoRa_SX127x.h"
 #include "HwSpi.h"
 

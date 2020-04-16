@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Arduino.h"
 #include "LoRaRadioLib.h"
 
 #ifdef TARGET_R9M_TX

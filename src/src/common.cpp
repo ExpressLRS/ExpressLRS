@@ -1,6 +1,7 @@
 #include "common.h"
 #include "LoRaRadioLib.h"
 #include "utils.h"
+#include <Arduino.h>
 
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
 
@@ -41,7 +42,7 @@ uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen
 int16_t MeasureNoiseFloor()
 {
     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
-    float returnval = 0;
+    int32_t returnval = 0;
 
     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
     {
@@ -50,11 +51,11 @@ int16_t MeasureNoiseFloor()
 
         for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
         {
-            returnval = returnval + Radio.GetCurrRSSI();
+            returnval += Radio.GetCurrRSSI();
             delay(5);
         }
     }
-    returnval = returnval / NUM_READS;
+    returnval /= NUM_READS;
     return (returnval);
 }
 

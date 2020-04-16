@@ -4,7 +4,7 @@
 #include "DAC.h"
 #include "LoRaRadioLib.h"
 #include "helpers.h"
-#include <Arduino.h>
+
 #include <Wire.h>
 
 extern SX127xDriver Radio;

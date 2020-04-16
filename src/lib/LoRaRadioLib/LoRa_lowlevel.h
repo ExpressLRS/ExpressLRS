@@ -3,7 +3,8 @@
 
 #define DebugVerbosity 1
 
-#include <Arduino.h>
+#include "platform.h"
+#include <stdint.h>
 
 void initModule();
 

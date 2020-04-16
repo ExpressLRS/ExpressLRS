@@ -3,7 +3,7 @@
 #include "LoRa_SX1276.h"
 #include "LoRa_SX1278.h"
 
-#include "../../src/debug.h"
+#include "debug.h"
 
 #define DEBUG
 
@@ -196,7 +196,7 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
     return (state);
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq)
+uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
     uint8_t status = SetMode(SX127X_SLEEP);
     if (status != ERR_NONE)
@@ -211,7 +211,9 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq)
     writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
     currFreq = freq;
 
-    return SetMode(SX127X_STANDBY);
+    if (mode != SX127X_SLEEP)
+        status = SetMode(mode);
+    return status;
 }
 
 uint8_t SX127xDriver::SX127xBegin()
@@ -589,7 +591,7 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     // set LoRa mode
     reg_op_mode_mode_lora();
 
-    SetFrequency(freq);
+    SetFrequency(freq, SX127X_SLEEP);
 
     // output power configuration
 

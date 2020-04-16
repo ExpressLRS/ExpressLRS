@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
+#include "platform.h"
+#include <stdint.h>
 
 extern int32_t volatile FreqCorrection;
 #define FreqCorrectionMax 100000

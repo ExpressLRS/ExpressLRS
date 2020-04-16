@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "debug.h"
+//#include "debug.h"
 
 unsigned long seed = 0;
 
@@ -57,9 +57,9 @@ long rng0to2(void)
 unsigned int
 volatile_memcpy(volatile void *d, volatile void *s, unsigned int n)
 {
-    volatile uint8_t *dst = (uint8_t *)d;
-    volatile uint8_t *src = (uint8_t *)s;
-    uint32_t iter;
+    volatile unsigned char *dst = (unsigned char *)d;
+    volatile unsigned char *src = (unsigned char *)s;
+    unsigned int iter;
     for (iter = 0; iter < n; iter++)
     {
         *dst++ = *src++;

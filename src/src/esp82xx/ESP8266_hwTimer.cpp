@@ -1,5 +1,6 @@
 #include "HwTimer.h"
 #include <user_interface.h>
+#include <Arduino.h>
 
 HwTimer TxTimer;
 

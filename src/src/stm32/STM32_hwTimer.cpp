@@ -1,4 +1,5 @@
 #include "HwTimer.h"
+#include <Arduino.h>
 
 HwTimer TxTimer;
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Arduino.h>
+#include "platform.h"
 #include "LoRa_SX127x_Regs.h"
+#include <stdint.h>
 
 typedef enum
 {
@@ -135,7 +136,7 @@ public:
     uint8_t SetPreambleLength(uint8_t PreambleLen);
     uint8_t SetSpreadingFactor(SpreadingFactor sf);
     uint8_t SetCodingRate(CodingRate cr);
-    uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
+    uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq, uint8_t mode = SX127X_STANDBY);
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
     void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t offset);
     void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t error_hz, uint32_t frf);

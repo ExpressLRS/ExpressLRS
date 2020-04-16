@@ -28,7 +28,7 @@
  * Modified/Ammended by Alessandro Carcione 2020
  */
 #include "FIFO.h"
-#include "../../src/debug.h"
+#include "debug.h"
 
 FIFO::FIFO()
 {

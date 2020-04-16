@@ -1,7 +1,7 @@
 #include "LoRa_SX127x.h"
 #include "LoRa_SX1278.h"
 #include "LoRa_lowlevel.h"
-#include "../../src/debug.h"
+#include "debug.h"
 
 uint8_t SX1278configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 

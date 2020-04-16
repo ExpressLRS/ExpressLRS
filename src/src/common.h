@@ -10,7 +10,7 @@
 
 #include "FHSS.h"
 #include "LoRaRadioLib.h"
-#include <Arduino.h>
+#include <stdint.h>
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
 #define Auto_WiFi_On_Boot

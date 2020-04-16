@@ -1,7 +1,5 @@
 #include "CRSF_TX.h"
-#include "../../src/utils.h"
-#include "../../src/debug.h"
-
+#include "debug.h"
 #include "FIFO.h"
 
 ///Out FIFO to buffer messages///

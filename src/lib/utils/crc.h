@@ -1,6 +1,7 @@
 #ifndef CRC_H_
 #define CRC_H_
 
+#include "platform.h"
 #include <stdint.h>
 
 uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t const *data, int length);

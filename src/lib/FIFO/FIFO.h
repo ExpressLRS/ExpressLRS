@@ -31,7 +31,8 @@
 
 #pragma once
 
-#include <Arduino.h>
+#include "platform.h"
+#include <stdint.h>
 
 #define FIFO_SIZE 512
 
