@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
-#include "CRSF.h"
+#include "CRSF_TX.h"
 #include "FHSS.h"
 #include "targets.h"
 #include "POWERMGNT.h"
@@ -18,7 +18,7 @@
 ///////////////////
 
 /// define some libs to use ///
-CRSF crsf(CrsfSerial);
+CRSF_TX crsf(CrsfSerial);
 POWERMGNT PowerMgmt;
 
 //// Switch Data Handling ///////
@@ -111,7 +111,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
         crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
-        crsf.sendLinkStatisticsToTX();
+        crsf.sendLinkStatisticsToRadio();
     }
 }
 
@@ -364,7 +364,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #elif defined(SEQ_SWITCHES)
         GenerateChannelDataSeqSwitch();
 #else
-        if ((current_ms > SwitchPacketNextSend) || crsf.AuxChannelsChanged(0xf))
+        if ((current_ms > SwitchPacketNextSend) || crsf.auxChannelsChanged(0xf))
         {
             GenerateSwitchChannelData();
             SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
@@ -443,10 +443,10 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     UpdateParamReq = false;
     //DEBUG_PRINTLN("Power");
     //DEBUG_PRINTLN(PowerMgmt.currPower());
-    crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2),
-                         ExpressLRS_currAirRate->TLMinterval + 1,
-                         PowerMgmt.currPower() + 2,
-                         4);
+    crsf.sendLUAresponseToRadio((ExpressLRS_currAirRate->enum_rate + 2),
+                                ExpressLRS_currAirRate->TLMinterval + 1,
+                                PowerMgmt.currPower() + 2,
+                                4);
 }
 
 static void hw_timer_init(void)
@@ -564,7 +564,7 @@ void loop()
     }
 
     // Process CRSF packets from TX
-    crsf.TX_handleUartIn();
+    crsf.handleUartIn();
 
     platform_loop(connectionState);
 }

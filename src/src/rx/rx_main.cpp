@@ -4,7 +4,7 @@
 #include "common.h"
 #include "LowPassFilter.h"
 #include "LoRaRadioLib.h"
-#include "CRSF.h"
+#include "CRSF_RX.h"
 #include "FHSS.h"
 #include "rx_LinkQuality.h"
 #include "errata.h"
@@ -18,7 +18,7 @@
 
 ///////////////////
 
-CRSF crsf(CrsfSerial); //pass a serial port object to the class for it to use
+CRSF_RX crsf(CrsfSerial); //pass a serial port object to the class for it to use
 
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
@@ -615,7 +615,7 @@ void loop()
         }
     }
 
-    crsf.RX_handleUartIn();
+    crsf.handleUartIn();
 
     platform_loop(connectionState);
 }

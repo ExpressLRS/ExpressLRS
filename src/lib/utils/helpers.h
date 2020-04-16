@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#define PACKED __attribute__((packed))
+
+// Macros for big-endian (assume little endian host for now) etc
+#define BYTE_SWAP_U16(x) ((uint16_t)__builtin_bswap16(x))
+#define BYTE_SWAP_U32(x) ((uint32_t)__builtin_bswap32(x))
+
 /* Function copied from Arduino code */
 static inline long MAP(long x, long in_min, long in_max, long out_min, long out_max)
 {
