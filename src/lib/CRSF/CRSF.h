@@ -140,7 +140,6 @@ typedef struct crsf_channels_s
     unsigned ch14 : 11;
     unsigned ch15 : 11;
 } PACKED crsf_channels_t;
-//typedef struct crsf_channels_s crsf_channels_t;
 
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_sensor_battery_s
@@ -150,7 +149,6 @@ typedef struct crsf_sensor_battery_s
     unsigned capacity : 24; // mah
     unsigned remaining : 8; // %
 } PACKED crsf_sensor_battery_t;
-//typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
 
 /*
  * 0x14 Link statistics
@@ -192,9 +190,16 @@ typedef struct crsfPayloadLinkstatistics_s
 #define UINT10_to_CRSF(val) MAP_U16((val), 0, 1024, 172, 1811)
 #define CRSF_to_UINT10(val) MAP_U16((val), 172, 1811, 0, 1023)
 
-#define SWITCH3b_to_CRSF(val) MAP_U16((val), 0, 7, 188, 1795)
+//#define CRSF_to_SWITCH3b(val) MAP_U16((val), 188, 1795, 0, 7)
+//#define SWITCH3b_to_CRSF(val) MAP_U16((val), 0, 7, 188, 1795)
+#define CRSF_to_SWITCH3b(val) ((val) / 229)     // 229 = (1795-188)/7
+#define SWITCH3b_to_CRSF(val) ((val)*229 + 188) // 229 = (1795-188)/7
+
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
-#define SWITCH2b_to_CRSF(val) MAP((val), 0, 2, 188, 1795)
+//#define CRSF_to_SWITCH2b(val) MAP((val), 188, 1795, 0, 2)
+//#define SWITCH2b_to_CRSF(val) MAP((val), 0, 2, 188, 1795)
+#define CRSF_to_SWITCH2b(val) ((val) / 803)     // 803 = ((1795-188)/2)
+#define SWITCH2b_to_CRSF(val) ((val)*803 + 188) // 803 = (1795-188)/2
 
 #define CRSF_to_BIT(val) (((val) > 1000) ? 1 : 0)
 #define BIT_to_CRSF(val) ((val) ? 1795 : 188)
@@ -212,12 +217,17 @@ public:
     void Begin();
 
     ///// Callbacks /////
-    static void (*RCdataCallback1)(); //function pointer for new RC data callback
+    static void (*RCdataCallback1)(crsf_channels_t const *const channels); //function pointer for new RC data callback
 
     static void (*disconnected)();
     static void (*connected)();
 
     static void (*RecvParameterUpdate)();
+
+    // Protocol funcs
+    void ICACHE_RAM_ATTR LinkStatisticsExtract(volatile uint8_t const *const data,
+                                               int8_t snr, uint8_t rssi, uint8_t lq);
+    void ICACHE_RAM_ATTR LinkStatisticsPack(volatile uint8_t *const output);
 
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct
     volatile crsf_sensor_battery_s TLMbattSensor = {0};
@@ -226,6 +236,8 @@ public:
 
 protected:
     uint8_t *HandleUartIn(uint8_t inChar);
+    virtual void ICACHE_RAM_ATTR LinkStatisticsSend(void) = 0;
+    virtual void ICACHE_RAM_ATTR BatterySensorSend(void);
 
     HwSerial *_dev = NULL;
 

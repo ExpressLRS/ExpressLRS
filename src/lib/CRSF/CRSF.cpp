@@ -2,8 +2,9 @@
 #include "debug.h"
 
 void nullCallback(void){};
+void rcNullCb(crsf_channels_t const *const) {}
 
-void (*CRSF::RCdataCallback1)() = &nullCallback; // function is called whenever there is new RC data.
+void (*CRSF::RCdataCallback1)(crsf_channels_t const *const) = &rcNullCb; // function is called whenever there is new RC data.
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
@@ -23,6 +24,60 @@ void CRSF::Begin()
     CRSFframeActive = false;
 
     _dev->flush_read();
+}
+
+void ICACHE_RAM_ATTR CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
+                                                 int8_t snr, uint8_t rssi, uint8_t lq)
+{
+    // NOTE: input is only 6 bytes!!
+
+    LinkStatistics.downlink_SNR = snr * 10;
+    LinkStatistics.downlink_RSSI = 120 + rssi;
+    LinkStatistics.downlink_Link_quality = lq;
+
+    if (input[0] == CRSF_FRAMETYPE_LINK_STATISTICS)
+    {
+        LinkStatistics.uplink_RSSI_1 = input[1];
+        LinkStatistics.uplink_RSSI_2 = 0;
+        LinkStatistics.uplink_SNR = input[3];
+        LinkStatistics.uplink_Link_quality = input[4];
+
+        TLMbattSensor.voltage = (input[2] << 8) + input[5];
+
+        LinkStatisticsSend();
+    }
+
+    //BatterySensorSend();
+}
+
+void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(volatile uint8_t *const output)
+{
+    // NOTE: output is only 6 bytes!!
+
+    output[0] = CRSF_FRAMETYPE_LINK_STATISTICS;
+
+    // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
+    // rssi we send is for display only.
+    // OpenTX treats the rssi values as signed.
+#if 1
+    uint8_t openTxRSSI = LinkStatistics.uplink_RSSI_1;
+    // truncate the range to fit into OpenTX's 8 bit signed value
+    if (openTxRSSI > 127)
+        openTxRSSI = 127;
+    // convert to 8 bit signed value in the negative range (-128 to 0)
+    openTxRSSI = 255 - openTxRSSI;
+    output[1] = openTxRSSI;
+#else
+    output[1] = LinkStatistics.uplink_RSSI_1;
+#endif
+    output[2] = (TLMbattSensor.voltage & 0xFF00) >> 8;
+    output[3] = LinkStatistics.uplink_SNR;
+    output[4] = LinkStatistics.uplink_Link_quality;
+    output[5] = (TLMbattSensor.voltage & 0x00FF);
+}
+
+void ICACHE_RAM_ATTR CRSF::BatterySensorSend(void)
+{
 }
 
 uint8_t *CRSF::HandleUartIn(uint8_t inChar)

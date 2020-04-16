@@ -12,6 +12,7 @@
 #include "HwSerial.h"
 #include "debug.h"
 #include "helpers.h"
+#include "rc_channels.h"
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -19,6 +20,9 @@
 ///////////////////
 
 CRSF_RX crsf(CrsfSerial); //pass a serial port object to the class for it to use
+RcChannels rc_ch;
+
+crsf_channels_t PackedRCdataOut = {0};
 
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
@@ -68,8 +72,8 @@ static inline void TimerAdjustment(uint32_t us)
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.LastPacketRSSI;
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
+    PackedRCdataOut.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
+    PackedRCdataOut.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
 #if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
@@ -121,26 +125,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     //DEBUG_PRINT("T");
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
-    Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
-    // rssi we send is for display only.
-    // OpenTX treats the rssi values as signed.
-#if 1
-    uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
-    // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI > 127)
-        openTxRSSI = 127;
-    // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255 - openTxRSSI;
-    Radio.TXdataBuffer[2] = openTxRSSI;
-#else
-    Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1;
-#endif
-    Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
-    Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-    Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-    Radio.TXdataBuffer[6] = (crsf.TLMbattSensor.voltage & 0x00FF);
+    crsf.LinkStatisticsPack(&Radio.TXdataBuffer[1]);
 
     uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
@@ -205,134 +191,6 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_11bit()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01110000) >> 4);
-#ifdef One_Bit_Switches
-    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00001000);
-    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
-    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
-    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
-#endif
-}
-
-#ifdef SEQ_SWITCHES
-/**
- * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
- */
-void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01100000) >> 4);
-
-    uint8_t switchIndex = (Radio.RXdataBuffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Radio.RXdataBuffer[6] & 0b11);
-
-    switch (switchIndex)
-    {
-    case 0:
-        crsf.PackedRCdataOut.ch4 = switchValue;
-        break;
-    case 1:
-        crsf.PackedRCdataOut.ch5 = switchValue;
-        break;
-    case 2:
-        crsf.PackedRCdataOut.ch6 = switchValue;
-        break;
-    case 3:
-        crsf.PackedRCdataOut.ch7 = switchValue;
-        break;
-    case 4:
-        crsf.PackedRCdataOut.ch8 = switchValue;
-        break;
-    case 5:
-        crsf.PackedRCdataOut.ch9 = switchValue;
-        break;
-    case 6:
-        crsf.PackedRCdataOut.ch10 = switchValue;
-        break;
-    case 7:
-        crsf.PackedRCdataOut.ch11 = switchValue;
-        break;
-    }
-}
-
-#elif defined(HYBRID_SWITCHES_8)
-/**
- * Hybrid switches uses 10 bits for each analog channel,
- * 2 bits for the low latency switch[0]
- * 3 bits for the round-robin switch index and 2 bits for the value
- */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8()
-{
-    // The analog channels
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 3);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 1);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1);
-
-    // The low latency switch
-    crsf.PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Radio.RXdataBuffer[6] & 0b01100000) >> 5);
-
-    // The round-robin switch
-    uint8_t switchIndex = (Radio.RXdataBuffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Radio.RXdataBuffer[6] & 0b11);
-
-    switch (switchIndex)
-    {
-    case 0: // we should never get index 0 here since that is the low latency switch
-        Serial.println("BAD switchIndex 0");
-        break;
-    case 1:
-        crsf.PackedRCdataOut.ch5 = switchValue;
-        break;
-    case 2:
-        crsf.PackedRCdataOut.ch6 = switchValue;
-        break;
-    case 3:
-        crsf.PackedRCdataOut.ch7 = switchValue;
-        break;
-    case 4:
-        crsf.PackedRCdataOut.ch8 = switchValue;
-        break;
-    case 5:
-        crsf.PackedRCdataOut.ch9 = switchValue;
-        break;
-    case 6:
-        crsf.PackedRCdataOut.ch10 = switchValue;
-        break;
-    case 7:
-        crsf.PackedRCdataOut.ch11 = switchValue;
-        break;
-    }
-}
-#endif
-
-#if 0
-void ICACHE_RAM_ATTR UnpackChannelData_10bit()
-{
-    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));
-    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 2) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 4));
-    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 2));
-    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
-}
-#endif
-
-#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-void ICACHE_RAM_ATTR UnpackSwitchData()
-{
-    crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
-    crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
-    crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
-}
-#endif
-
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     //DEBUG_PRINT("I");
@@ -355,8 +213,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    //LastValidPacketPrevMicros = LastValidPacketMicros;
-    //LastValidPacketMicros = micros();
     LastValidPacket = millis();
 
     getRFlinkInfo();
@@ -366,14 +222,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case RC_DATA_PACKET: //Standard RC Data Packet
         if (connectionState == STATE_connected)
         {
-#if defined(SEQ_SWITCHES)
-            UnpackChannelDataSeqSwitches();
-#elif defined(HYBRID_SWITCHES_8)
-            UnpackChannelDataHybridSwitches8();
-#else
-            UnpackChannelData_11bit();
-#endif
-            crsf.sendRCFrameToFC();
+            rc_ch.channels_extract(Radio.RXdataBuffer, PackedRCdataOut);
+            crsf.sendRCFrameToFC(&PackedRCdataOut);
         }
         break;
 
@@ -381,12 +231,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case SWITCH_DATA_PACKET: // Switch Data Packet
         if (connectionState == STATE_connected)
         {
-            if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
+            // extra layer of protection incase the crc and addr headers fail us.
+            if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) &&
+                (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]))
             {
-                UnpackSwitchData();
+                rc_ch.channels_extract(Radio.RXdataBuffer, PackedRCdataOut);
                 NonceRXlocal = Radio.RXdataBuffer[5];
                 FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                crsf.sendRCFrameToFC();
+                crsf.sendRCFrameToFC(&PackedRCdataOut);
             }
         }
         break;
@@ -610,7 +462,7 @@ void loop()
         else if (connectionState == STATE_connected &&
                  now > SendLinkStatstoFCintervalNextSend)
         {
-            crsf.sendLinkStatisticsToFC();
+            crsf.LinkStatisticsSend();
             SendLinkStatstoFCintervalNextSend = now + SEND_LINK_STATS_TO_FC_INTERVAL;
         }
     }

@@ -9,6 +9,7 @@
 #include "POWERMGNT.h"
 #include "HwTimer.h"
 #include "debug.h"
+#include "rc_channels.h"
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
@@ -19,19 +20,14 @@
 
 /// define some libs to use ///
 CRSF_TX crsf(CrsfSerial);
+RcChannels rc_ch;
 POWERMGNT PowerMgmt;
-
-//// Switch Data Handling ///////
-#if !defined(HYBRID_SWITCHES_8) && !defined(SEQ_SWITCHES)
-uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet will be send
-#define SWITCH_PACKET_SEND_INTERVAL 200u
-#endif
 
 /////////// SYNC PACKET ////////
 static uint32_t SyncPacketNextSend = 0;
 
 /////////// CONNECTION /////////
-static volatile uint32_t LastTLMpacketRecvMillis = 0;
+static volatile uint32_t LastPacketRecvMillis = 0;
 volatile connectionState_e connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
@@ -40,25 +36,10 @@ static volatile uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
 static volatile bool WaitRXresponse = false;
 
-///////////////////////////////////////
-
+//////////// LUA /////////
 static volatile bool UpdateParamReq = false;
 
-//static bool ChangeAirRateRequested = false;
-//static bool ChangeAirRateSentUpdate = false;
-
-///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
-//uint8_t TelemetryWaitBuffer[7] = {0};
-
-//uint32_t LinkSpeedIncreaseDelayFactor = 500; // wait for the connection to be 'good' for this long before increasing the speed.
-//uint32_t LinkSpeedDecreaseDelayFactor = 200; // this long wait this long for connection to be below threshold before dropping speed
-
-//uint32_t LinkSpeedDecreaseFirstMetCondition = 0;
-//uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
-
-//uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
-//uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
@@ -66,10 +47,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-    uint8_t TLMheader = Radio.RXdataBuffer[1];
 
     WaitRXresponse = false;
-    //Radio.NonceTX++;
 
     //DEBUG_PRINTLN("TLMpacket0");
 
@@ -93,26 +72,13 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
     connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
-    LastTLMpacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
+    LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
     recv_tlm_counter++;
 
-    if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
-    {
-        crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-        crsf.LinkStatistics.uplink_RSSI_2 = 0;
-        crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-        crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-
-        crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
-        crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-        crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
-        //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-        crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
-
-        crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
-
-        crsf.sendLinkStatisticsToRadio();
-    }
+    crsf.LinkStatisticsExtract(&Radio.RXdataBuffer[1],
+                               Radio.LastPacketSNR,
+                               Radio.LastPacketRSSI,
+                               downlink_linkQuality);
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -128,127 +94,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Radio.TXdataBuffer[6] = UID[5];
 }
 
-#if 0
-void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
-    Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
-    Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
-    Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-    Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
-}
-#endif
-
-#if defined(SEQ_SWITCHES)
-/**
- * Sequential switches packet
- * Replaces Generate4ChannelData_11bit
- * Channel 3 is reduced to 10 bits to allow a 3 bit switch index and 2 bit value
- * We cycle through 8 switches on successive packets. If any switches have changed
- * we take the lowest indexed one and send that, hence lower indexed switches have
- * higher priority in the event that several are changed at once.
- */
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-    Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-    Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-    Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-    Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) + ((crsf.ChannelDataIn[1] & 0b111) << 2) + ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-    Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) + ((crsf.ChannelDataIn[3] & 0b110) << 4);
-
-    // find the next switch to send
-    int i = crsf.getNextSwitchIndex();
-    // put the bits into buf[6]
-    Radio.TXdataBuffer[6] += (i << 2) + crsf.currentSwitches[i];
-}
-
-#elif defined(HYBRID_SWITCHES_8)
-/**
- * Hybrid switches packet
- * Replaces Generate4ChannelData_11bit
- * Analog channels are reduced to 10 bits to allow for switch encoding
- * Switch[0] is sent on every packet.
- * A 3 bit switch index and 2 bit value is used to send the remaining switches
- * in a round-robin fashion.
- * If any of the round-robin switches have changed
- * we take the lowest indexed one and send that, hence lower indexed switches have
- * higher priority in the event that several are changed at once.
- */
-void ICACHE_RAM_ATTR
-GenerateChannelDataHybridSwitch8()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-    Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-    Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-    Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-    Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b110) << 5) + ((crsf.ChannelDataIn[1] & 0b110) << 3) +
-                            ((crsf.ChannelDataIn[2] & 0b110) << 1) + ((crsf.ChannelDataIn[3] & 0b110) >> 1);
-
-    // switch 0 is sent on every packet - intended for low latency arm/disarm
-    Radio.TXdataBuffer[6] = (crsf.currentSwitches[0] & 0b11) << 5; // note this leaves the top bit of byte 6 unused
-
-    // find the next switch to send
-    int i = crsf.getNextSwitchIndex() & 0b111; // mask for paranoia
-
-    // put the bits into buf[6]. i is in the range 1 through 7 so takes 3 bits
-    // currentSwitches[i] is in the range 0 through 2, takes 2 bits.
-    Radio.TXdataBuffer[6] += (i << 2) + (crsf.currentSwitches[i] & 0b11); // mask for paranoia
-}
-#else
-
-void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-    Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-    Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-    Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-    Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
-                            ((crsf.ChannelDataIn[1] & 0b111) << 2) +
-                            ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-    Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
-                            ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
-#ifdef One_Bit_Switches
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-    Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
-#endif
-}
-
-void ICACHE_RAM_ATTR GenerateSwitchChannelData()
-{
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + SWITCH_DATA_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
-    Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) +
-                            ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
-    Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
-    Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
-    Radio.TXdataBuffer[5] = Radio.NonceTX;
-    Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
-}
-
-#endif
-
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
@@ -262,6 +107,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.Config(config->bw, config->sf, config->cr);
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
+    crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
 
     // Set connected if telemetry is not used
     connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
@@ -346,34 +192,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     current_ms = millis();
 
     //only send sync when its time and only on channel 0;
-    //if (((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested)
     if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
     {
         GenerateSyncPacketData();
         SyncPacketNextSend =
             current_ms +
             ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
-        //ChangeAirRateSentUpdate = true;
-        //DEBUG_PRINTLN("sync");
+        //DEBUG_PRINT("sync ");
         //DEBUG_PRINTLN(Radio.currFreq);
     }
     else
     {
-#if defined(HYBRID_SWITCHES_8)
-        GenerateChannelDataHybridSwitch8();
-#elif defined(SEQ_SWITCHES)
-        GenerateChannelDataSeqSwitch();
-#else
-        if ((current_ms > SwitchPacketNextSend) || crsf.auxChannelsChanged(0xf))
-        {
-            GenerateSwitchChannelData();
-            SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
-        }
-        else // else we just have regular channel data which we send as 8 + 2 bits
-        {
-            Generate4ChannelData_11bit();
-        }
-#endif
+        rc_ch.channels_pack(Radio.TXdataBuffer);
     }
 
     ///// Next, Calculate the CRC and put it into the buffer /////
@@ -381,19 +211,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     Radio.TXdataBuffer[7] = crc;
     PowerMgmt.pa_on();
     Radio.TXnb(Radio.TXdataBuffer, 8);
-
-    /*if (ChangeAirRateRequested)
-    {
-        ChangeAirRateSentUpdate = true;
-    }*/
 }
 
-void ICACHE_RAM_ATTR ParamUpdateReq()
+static void ICACHE_RAM_ATTR ParamUpdateReq(void)
 {
     UpdateParamReq = true;
 }
 
-void ICACHE_RAM_ATTR HandleUpdateParameter()
+static void ICACHE_RAM_ATTR HandleUpdateParameter()
 {
     if (!UpdateParamReq)
     {
@@ -458,6 +283,11 @@ static void hw_timer_stop(void)
     TxTimer.stop();
 }
 
+static void rc_data_cb(crsf_channels_t const *const channels)
+{
+    rc_ch.processChannels(channels);
+}
+
 void setup()
 {
     CrsfSerial.Begin(CRSF_OPENTX_BAUDRATE);
@@ -466,7 +296,8 @@ void setup()
 
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
     crsf.disconnected = hw_timer_stop;
-    crsf.RecvParameterUpdate = &ParamUpdateReq;
+    crsf.RecvParameterUpdate = ParamUpdateReq;
+    crsf.RCdataCallback1 = rc_data_cb;
 
     TxTimer.callbackTock = &SendRCdataToRF;
 
@@ -527,7 +358,7 @@ void loop()
         uint32_t current_ms = millis();
 
         if (connectionState > STATE_disconnected &&
-            current_ms > LastTLMpacketRecvMillis)
+            current_ms > LastPacketRecvMillis)
         {
             connectionState = STATE_disconnected;
             platform_connection_state(STATE_disconnected);

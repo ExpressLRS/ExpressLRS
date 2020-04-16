@@ -11,10 +11,8 @@ public:
 
     void handleUartIn(void);
 
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void sendLinkStatisticsToFC();
-
-    volatile crsf_channels_s PackedRCdataOut = {0}; // RC data in packed format for output.
+    void ICACHE_RAM_ATTR sendRCFrameToFC(crsf_channels_t const *const channels);
+    void LinkStatisticsSend();
 
 private:
     void ICACHE_RAM_ATTR sendFrameToFC(uint8_t *buff, uint8_t size);

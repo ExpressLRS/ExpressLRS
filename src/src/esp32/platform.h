@@ -1,5 +1,5 @@
-#ifndef PLATFORM_H_
-#define PLATFORM_H_
+#ifndef __PLATFORM_H_
+#define __PLATFORM_H_
 
 #include <esp_attr.h>
 
@@ -7,4 +7,4 @@
 #define ICACHE_RAM_ATTR IRAM_ATTR
 #endif // !defined(ICACHE_RAM_ATTR)
 
-#endif /* PLATFORM_H_ */
+#endif /* __PLATFORM_H_ */
