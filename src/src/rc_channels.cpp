@@ -232,7 +232,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
     switch (switchIndex)
     {
     case 0: // we should never get index 0 here since that is the low latency switch
-        Serial.println("BAD switchIndex 0");
+        DEBUG_PRINTLN("BAD switchIndex 0");
         break;
     case 1:
         PackedRCdataOut.ch5 = switchValue;

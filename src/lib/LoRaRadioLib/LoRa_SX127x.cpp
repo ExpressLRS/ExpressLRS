@@ -5,6 +5,8 @@
 
 #include "debug.h"
 
+#include <stdio.h>
+
 #define DEBUG
 
 static void nullCallback(void){};

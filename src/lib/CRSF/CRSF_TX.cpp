@@ -1,6 +1,7 @@
 #include "CRSF_TX.h"
 #include "debug.h"
 #include "FIFO.h"
+#include <string.h>
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
