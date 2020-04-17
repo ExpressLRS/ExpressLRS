@@ -21,7 +21,7 @@ void CRSF_RX::LinkStatisticsSend()
     sendFrameToFC(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC(crsf_channels_t const *const channels)
+void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC()
 {
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(RCframeLength)] = {0};
 
@@ -29,7 +29,7 @@ void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC(crsf_channels_t const *const chann
     outBuffer[1] = CRSF_FRAME_SIZE(RCframeLength);
     outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    memcpy(&outBuffer[3], channels, RCframeLength);
+    memcpy(&outBuffer[3], &ChannelsPacked, RCframeLength);
 
     sendFrameToFC(outBuffer, sizeof(outBuffer));
 }

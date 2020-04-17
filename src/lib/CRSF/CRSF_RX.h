@@ -11,8 +11,11 @@ public:
 
     void handleUartIn(void);
 
-    void ICACHE_RAM_ATTR sendRCFrameToFC(crsf_channels_t const *const channels);
+    void ICACHE_RAM_ATTR sendRCFrameToFC();
     void LinkStatisticsSend();
+
+    // Received channel data
+    crsf_channels_t ChannelsPacked = {0};
 
 private:
     void ICACHE_RAM_ATTR sendFrameToFC(uint8_t *buff, uint8_t size);

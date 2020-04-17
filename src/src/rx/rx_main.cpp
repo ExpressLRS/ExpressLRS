@@ -22,8 +22,6 @@
 CRSF_RX crsf(CrsfSerial); //pass a serial port object to the class for it to use
 RcChannels rc_ch;
 
-crsf_channels_t PackedRCdataOut = {0};
-
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 static volatile bool alreadyFHSS = false;
@@ -72,8 +70,8 @@ static inline void TimerAdjustment(uint32_t us)
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.LastPacketRSSI;
-    PackedRCdataOut.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
-    PackedRCdataOut.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
+    crsf.ChannelsPacked.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
+    crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
 #if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
@@ -222,8 +220,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case RC_DATA_PACKET: //Standard RC Data Packet
         if (connectionState == STATE_connected)
         {
-            rc_ch.channels_extract(Radio.RXdataBuffer, PackedRCdataOut);
-            crsf.sendRCFrameToFC(&PackedRCdataOut);
+            rc_ch.channels_extract(Radio.RXdataBuffer, crsf.ChannelsPacked);
+            crsf.sendRCFrameToFC();
         }
         break;
 
@@ -235,10 +233,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) &&
                 (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]))
             {
-                rc_ch.channels_extract(Radio.RXdataBuffer, PackedRCdataOut);
+                rc_ch.channels_extract(Radio.RXdataBuffer, crsf.ChannelsPacked);
                 NonceRXlocal = Radio.RXdataBuffer[5];
                 FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-                crsf.sendRCFrameToFC(&PackedRCdataOut);
+                crsf.sendRCFrameToFC();
             }
         }
         break;
