@@ -2,6 +2,9 @@
 #include "common.h"
 #include "helpers.h"
 
+#include "LoRaRadioLib.h"
+#include "FHSS.h"
+
 #define USE_RC_DATA_STRUCTS 1
 
 #if defined(SEQ_SWITCHES)
@@ -34,7 +37,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
     output[0] = PacketHeaderAddr;
 
     // find the next switch to send
-    int ch_idx = getNextSwitchIndex() & 0b111;
+    uint8_t ch_idx = getNextSwitchIndex() & 0b111;
 
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&output[1];
@@ -69,6 +72,9 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
 void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
                                                   crsf_channels_t &PackedRCdataOut)
 {
+    uint16_t switchValue;
+    uint8_t switchIndex;
+
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
     // The analog channels
@@ -77,16 +83,16 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
     PackedRCdataOut.ch0 = rcdata->rc3;
     PackedRCdataOut.ch0 = rcdata->rc4;
     // The round-robin switch
-    uint8_t switchIndex = rcdata->aux_n_idx;
-    uint16_t switchValue = SWITCH2b_to_CRSF(rcdata->aux_n);
+    switchIndex = rcdata->aux_n_idx;
+    switchValue = SWITCH2b_to_CRSF(rcdata->aux_n);
 #else
     PackedRCdataOut.ch0 = (input[1] << 3) + ((input[5] & 0b11100000) >> 5);
     PackedRCdataOut.ch1 = (input[2] << 3) + ((input[5] & 0b00011100) >> 2);
     PackedRCdataOut.ch2 = (input[3] << 3) + ((input[5] & 0b00000011) << 1) + (input[6] & 0b10000000 >> 7);
     PackedRCdataOut.ch3 = (input[4] << 3) + ((input[6] & 0b01100000) >> 4);
 
-    uint8_t switchIndex = (input[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(input[6] & 0b11);
+    switchIndex = (input[6] & 0b11100) >> 2;
+    switchValue = SWITCH2b_to_CRSF(input[6] & 0b11);
 #endif
 
     switch (switchIndex)
@@ -284,9 +290,10 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
     uint8_t PacketHeaderAddr = (DeviceAddr << 2);
 
 #ifndef One_Bit_Switches
-    if ((current_ms > SwitchPacketNextSend) || auxChannelsChanged(0xf))
+    if ((current_ms > SwitchPacketNextSend) || (p_auxChannelsChanged & 0xf))
     {
         SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
+        p_auxChannelsChanged = 0;
 
         output[0] = PacketHeaderAddr + SWITCH_DATA_PACKET;
 #if USE_RC_DATA_STRUCTS
@@ -416,8 +423,6 @@ void ICACHE_RAM_ATTR RcChannels::processChannels(crsf_channels_t const *const rc
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
 
-    p_auxChannelsChanged = 0;
-
     /**
      * Convert the rc data corresponding to switches to 2 bit values.
      *
@@ -426,7 +431,7 @@ void ICACHE_RAM_ATTR RcChannels::processChannels(crsf_channels_t const *const rc
      * (not 0-3 because most people use 3 way switches and expect the middle
      *  position to be represented by a middle numeric value)
      */
-    for (int i = 0; i < N_SWITCHES; i++)
+    for (uint8_t i = 0; i < N_SWITCHES; i++)
     {
         // input is 0 - 2048, output is 0 - 2
         switch_state = CRSF_to_SWITCH2b(ChannelDataIn[i + N_CONTROLS]) & 0b11; //ChannelDataIn[i + N_CONTROLS] / 682;
@@ -448,12 +453,30 @@ void ICACHE_RAM_ATTR RcChannels::processChannels(crsf_channels_t const *const rc
  */
 uint8_t ICACHE_RAM_ATTR RcChannels::getNextSwitchIndex()
 {
-    int i;
-    int firstSwitch = 0; // sequential switches includes switch 0
-
+    int8_t i;
 #ifdef HYBRID_SWITCHES_8
-    firstSwitch = 1; // skip 0 since it is sent on every packet
+#define firstSwitch 1 // skip 0 since it is sent on every packet
+#else
+#define firstSwitch 0 // sequential switches includes switch 0
 #endif
+
+#if OPTIMIZED_SEARCH
+#ifdef HYBRID_SWITCHES_8
+    // for hydrid switches 0 is sent on every packet
+    p_auxChannelsChanged &= 0xfffe;
+#endif
+    i = __builtin_ffs(p_auxChannelsChanged) - 1;
+    if (i < 0)
+    {
+        i = p_nextSwitchIndex++;
+        p_nextSwitchIndex %= N_SWITCHES;
+    }
+    else
+    {
+        p_auxChannelsChanged &= ~(0x1 << i);
+    }
+
+#else // !OPTIMIZED_SEARCH
 
     // look for a changed switch
     for (i = firstSwitch; i < N_SWITCHES; i++)
@@ -461,6 +484,7 @@ uint8_t ICACHE_RAM_ATTR RcChannels::getNextSwitchIndex()
         if (currentSwitches[i] != sentSwitches[i])
             break;
     }
+
     // if we didn't find a changed switch, we get here with i==N_SWITCHES
     if (i == N_SWITCHES)
         i = p_nextSwitchIndex;
@@ -469,15 +493,17 @@ uint8_t ICACHE_RAM_ATTR RcChannels::getNextSwitchIndex()
     // during the next call.
     p_nextSwitchIndex = (i + 1) % N_SWITCHES;
 
+    // since we are going to send i, we can put that value into the sent list.
+    sentSwitches[i] = currentSwitches[i];
+
+#endif // OPTIMIZED_SEARCH
+
 #ifdef HYBRID_SWITCHES_8
     // for hydrid switches 0 is sent on every packet, so we can skip
     // that value for the round-robin
-    if (p_nextSwitchIndex == 0)
-        p_nextSwitchIndex = 1;
+    if (p_nextSwitchIndex < firstSwitch)
+        p_nextSwitchIndex = firstSwitch;
 #endif
-
-    // since we are going to send i, we can put that value into the sent list.
-    sentSwitches[i] = currentSwitches[i];
 
     return i;
 }
