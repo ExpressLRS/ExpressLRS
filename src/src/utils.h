@@ -16,5 +16,5 @@ long rng8Bit(void);
 // 0..31 returned
 long rng5Bit(void);
 
-// returns 0<x<n where n <= 256
+// returns 0 <= x < n where n <= 256
 unsigned int rngN(unsigned int upper);
