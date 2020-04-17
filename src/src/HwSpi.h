@@ -3,8 +3,6 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#define USE_HWSPI 1
-
 class HwSpi : public SPIClass
 {
 public:
