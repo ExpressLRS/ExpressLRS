@@ -7,7 +7,6 @@
 #include "CRSF_RX.h"
 #include "FHSS.h"
 #include "rx_LinkQuality.h"
-#include "errata.h"
 #include "HwTimer.h"
 #include "HwSerial.h"
 #include "debug.h"
