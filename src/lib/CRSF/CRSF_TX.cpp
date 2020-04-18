@@ -220,9 +220,9 @@ void CRSF_TX::uart_wdt(void)
     uint32_t now = millis();
     if (now > p_UartNextCheck)
     {
-        DEBUG_PRINT("UART RX packets! Bad: ");
+        DEBUG_PRINT("UART RX packets! Bad:Good ");
         DEBUG_PRINT(BadPktsCount);
-        DEBUG_PRINT(" Good: ");
+        DEBUG_PRINT(":");
         DEBUG_PRINTLN(GoodPktsCount);
 
         if (BadPktsCount >= GoodPktsCount)
@@ -232,7 +232,7 @@ void CRSF_TX::uart_wdt(void)
             if (CRSFstate == true)
             {
                 SerialOutFIFO.flush();
-                DEBUG_PRINTLN("UART WDT: Disconnected");
+                //DEBUG_PRINTLN("UART WDT: Disconnected");
                 disconnected();
                 CRSFstate = false;
 #if (FEATURE_OPENTX_SYNC)

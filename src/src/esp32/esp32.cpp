@@ -33,7 +33,7 @@ void platform_setup(void)
 #endif
 
 #ifdef DEBUG_SERIAL
-    DEBUG_SERIAL.begin(115200);
+    DEBUG_SERIAL.begin(250000);
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3

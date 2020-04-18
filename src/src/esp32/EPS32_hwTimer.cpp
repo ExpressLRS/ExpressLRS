@@ -3,6 +3,7 @@
 #include "LoRa_SX127x.h"
 #include <FreeRTOS.h>
 #include <esp32-hal-timer.h>
+#include "debug.h"
 
 HwTimer TxTimer;
 
@@ -22,14 +23,19 @@ void HwTimer::init()
     {
         timer = timerBegin(0, (APB_CLK_FREQ / 1000000), true); // us timer
         timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
-        timerAlarmWrite(timer, HwTimer::HWtimerInterval, true);
-        timerAlarmEnable(timer);
     }
+    timerStop(timer);
+    setTime(HWtimerInterval >> 1);
+    timerAlarmEnable(timer);
+    timerStart(timer);
 }
 
 void HwTimer::start()
 {
-    init();
+    if (timer)
+        timerStart(timer);
+    else
+        init();
 }
 
 void HwTimer::stop()
@@ -37,16 +43,20 @@ void HwTimer::stop()
     /* are these rly needed?? */
     detachInterrupt(GPIO_PIN_DIO0);
     Radio.ClearIRQFlags();
-    if (timer)
+
+    /*if (timer)
     {
         timerEnd(timer);
         timer = NULL;
-    }
+    }*/
+    if (timer)
+        timerStop(timer);
 }
 
 void HwTimer::pause()
 {
-    stop();
+    if (timer)
+        timerAlarmDisable(timer);
 }
 
 void HwTimer::setTime(uint32_t time)

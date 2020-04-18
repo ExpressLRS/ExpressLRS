@@ -121,19 +121,22 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     //DEBUG_PRINT("T");
 
-    Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    uint32_t __tx_buffer[2]; // esp requires aligned buffer
+    uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
-    crsf.LinkStatisticsPack(&Radio.TXdataBuffer[1]);
+    tx_buffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
 
-    uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-    Radio.TXdataBuffer[7] = crc;
-    Radio.TXnb(Radio.TXdataBuffer, 8);
+    crsf.LinkStatisticsPack(&tx_buffer[1]);
+
+    uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
+    tx_buffer[7] = crc;
+    Radio.TXnb(tx_buffer, 8);
     addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-    //DEBUG_PRINT("H");
+    DEBUG_PRINT("H");
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -190,7 +193,7 @@ void ICACHE_RAM_ATTR GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //DEBUG_PRINT("I");
+    DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -354,6 +357,9 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
+    DEBUG_PRINTF("Set RF rate: %u\n", rate);
+    //DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
+
     /* TODO:
      * 1. timer stop and start!
      * 2. reset LPF_Offset, LPF_FreqError, LPF_UplinkRSSI,
@@ -380,7 +386,6 @@ void setup()
     platform_setup();
 
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
-    // CrsfSerial.Begin(230400); // for linux debugging
 
     DEBUG_PRINTLN("Module Booting...");
 
@@ -440,11 +445,12 @@ void loop()
         if (now > RFmodeNextCycle)
         {
             Radio.SetFrequency(GetInitialFreq());
-            SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
+            SetRFLinkRate(((++scanIndex) % RATE_MAX)); //switch between rates
             LQreset();
             led_toggle();
-            //DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
-            scanIndex++;
+
+            if (RATE_MAX < scanIndex)
+                platform_connection_state(STATE_search_iteration_done);
 
             RfModeNextCycleCalc();
         }

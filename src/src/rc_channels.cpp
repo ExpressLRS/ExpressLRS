@@ -30,7 +30,7 @@ typedef struct
  * higher priority in the event that several are changed at once.
  */
 //void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
+void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
@@ -153,7 +153,7 @@ typedef struct
  * higher priority in the event that several are changed at once.
  */
 //void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
+void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
@@ -284,7 +284,7 @@ typedef struct
 } PACKED RcDataPacket_s;
 
 //void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(volatile uint8_t *const output)
+void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint32_t current_ms = millis();
     uint8_t PacketHeaderAddr = (DeviceAddr << 2);

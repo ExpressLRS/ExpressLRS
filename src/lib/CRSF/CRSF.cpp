@@ -50,7 +50,7 @@ void ICACHE_RAM_ATTR CRSF::LinkStatisticsExtract(volatile uint8_t const *const i
     //BatterySensorSend();
 }
 
-void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(volatile uint8_t *const output)
+void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(uint8_t *const output)
 {
     // NOTE: output is only 6 bytes!!
 

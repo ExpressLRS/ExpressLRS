@@ -14,7 +14,7 @@ public:
 
     // TX related
     void ICACHE_RAM_ATTR processChannels(crsf_channels_t const *const channels);
-    void ICACHE_RAM_ATTR channels_pack(volatile uint8_t *const output);
+    void ICACHE_RAM_ATTR channels_pack(uint8_t *const output);
 
     // RX related
     void ICACHE_RAM_ATTR channels_extract(volatile uint8_t const *const input,

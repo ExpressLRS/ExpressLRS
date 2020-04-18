@@ -90,13 +90,15 @@ public:
 
     volatile uint8_t SX127x_dio0;
     volatile uint8_t SX127x_dio1;
-    volatile uint8_t SX127x_RST;
+    volatile int8_t SX127x_RST;
 
     /////////////////////////////
 
     ///////////Radio Variables////////
-    volatile uint8_t TXdataBuffer[16];
-    volatile uint8_t RXdataBuffer[16];
+    //volatile uint8_t TXdataBuffer[16];
+    volatile uint32_t __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
+    //volatile uint8_t RXdataBuffer[16];
+    volatile uint8_t *RXdataBuffer = (uint8_t *)&__RXdataBuffer;
 
     volatile uint8_t TXbuffLen;
     volatile uint8_t RXbuffLen;
@@ -162,7 +164,7 @@ public:
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
-    uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
+    uint8_t ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length);
 
     /////////////Non-blocking RX related Functions///////////////
     void ICACHE_RAM_ATTR StopContRX();

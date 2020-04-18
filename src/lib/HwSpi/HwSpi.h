@@ -18,13 +18,13 @@ public:
         platform_init();
     }
 
-    void set_ss(uint8_t state)
+    void ICACHE_RAM_ATTR set_ss(uint8_t state)
     {
-        digitalWrite(SS, !!state);
+        digitalWrite(SS, state);
     }
 
-    void write(uint8_t data);
-    void write(uint8_t *data, uint8_t numBytes);
+    void ICACHE_RAM_ATTR write(uint8_t data);
+    void ICACHE_RAM_ATTR write(uint8_t *data, uint8_t numBytes);
 
 private:
     int SS, MOSI, MISO, SCK;

@@ -68,8 +68,9 @@ void platform_loop(connectionState_e state)
             webUpdateLedFlashIntervalNext = now + WEB_UPDATE_LED_FLASH_INTERVAL;
         }
     }
-#ifdef Auto_WiFi_On_Boot
-    else if (now < 11000 && now > 10000 && (state == STATE_disconnected))
+//#ifdef Auto_WiFi_On_Boot
+#if 0
+    else if (now < 16000 && now > 15000 && (state == STATE_disconnected))
     {
         beginWebsever();
     }
@@ -84,7 +85,12 @@ void platform_loop(connectionState_e state)
 
 void platform_connection_state(connectionState_e state)
 {
-    (void)state;
+#ifdef Auto_WiFi_On_Boot
+    if (state == STATE_search_iteration_done && millis() < 30000)
+    {
+        beginWebsever();
+    }
+#endif /* Auto_WiFi_On_Boot */
 }
 
 void platform_set_led(bool state)

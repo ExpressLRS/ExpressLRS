@@ -21,12 +21,12 @@ void HwSpi::platform_init(void)
     setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
 }
 
-void HwSpi::write(uint8_t data)
+void ICACHE_RAM_ATTR HwSpi::write(uint8_t data)
 {
     SPIClass::transfer(data);
 }
 
-void HwSpi::write(uint8_t *data, uint8_t numBytes)
+void ICACHE_RAM_ATTR HwSpi::write(uint8_t *data, uint8_t numBytes)
 {
     SPIClass::transfer((uint8_t *)data, numBytes);
 }

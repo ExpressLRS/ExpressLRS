@@ -227,7 +227,7 @@ public:
     // Protocol funcs
     void ICACHE_RAM_ATTR LinkStatisticsExtract(volatile uint8_t const *const data,
                                                int8_t snr, uint8_t rssi, uint8_t lq);
-    void ICACHE_RAM_ATTR LinkStatisticsPack(volatile uint8_t *const output);
+    void ICACHE_RAM_ATTR LinkStatisticsPack(uint8_t *const output);
 
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct
     volatile crsf_sensor_battery_s TLMbattSensor = {0};

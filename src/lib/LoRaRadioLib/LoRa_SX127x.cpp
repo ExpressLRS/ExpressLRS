@@ -37,7 +37,7 @@ SX127xDriver::SX127xDriver()
     _TXenablePin = -1;
     SX127x_dio0 = 0xff;
     SX127x_dio1 = 0xff;
-    SX127x_RST = 0xff;
+    SX127x_RST = -1;
 
     TXbuffLen = RXbuffLen = 8;
 
@@ -74,11 +74,14 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
     pinMode(SX127x_dio0, INPUT);
     pinMode(SX127x_dio1, INPUT);
 
-    pinMode(SX127x_RST, OUTPUT);
-    digitalWrite(SX127x_RST, 0);
-    delay(100);
-    digitalWrite(SX127x_RST, 1);
-    delay(100);
+    if (-1 < SX127x_RST)
+    {
+        pinMode(SX127x_RST, OUTPUT);
+        digitalWrite(SX127x_RST, 0);
+        delay(100);
+        digitalWrite(SX127x_RST, 1);
+        delay(100);
+    }
 
     _RXenablePin = _TXenablePin = -1;
     if (HighPowerModule)
@@ -346,7 +349,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
     TXdoneCallback4();
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t length)
+uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length)
 {
     SetMode(SX127X_STANDBY);
 
@@ -735,6 +738,8 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t error_hz, uint32_t fr
 {
     if (!frf) // use locally stored value if not defined
         frf = currFreq;
+    if (!frf)
+        return;
     // Calc new PPM
     error_hz /= (frf / 1E6);
 

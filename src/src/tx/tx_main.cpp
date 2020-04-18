@@ -81,17 +81,17 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
                                downlink_linkQuality);
 }
 
-void ICACHE_RAM_ATTR GenerateSyncPacketData()
+void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
-    Radio.TXdataBuffer[0] = PacketHeaderAddr;
-    Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-    Radio.TXdataBuffer[2] = Radio.NonceTX;
-    Radio.TXdataBuffer[3] = 0;
-    Radio.TXdataBuffer[4] = UID[3];
-    Radio.TXdataBuffer[5] = UID[4];
-    Radio.TXdataBuffer[6] = UID[5];
+    output[0] = PacketHeaderAddr;
+    output[1] = FHSSgetCurrIndex();
+    output[2] = Radio.NonceTX;
+    output[3] = 0;
+    output[4] = UID[3];
+    output[5] = UID[4];
+    output[6] = UID[5];
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
@@ -100,7 +100,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
-    TxTimer.stop();
+    //TxTimer.stop();
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
@@ -113,7 +113,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
     platform_connection_state(connectionState);
 
-    TxTimer.start();
+    //TxTimer.start();
 }
 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
@@ -165,6 +165,8 @@ void ICACHE_RAM_ATTR HandleTLM()
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
     uint32_t current_ms;
+    uint32_t __tx_buffer[2]; // esp requires aligned buffer
+    uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
     uint8_t crc;
 
     DEBUG_PRINT("I");
@@ -194,7 +196,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     //only send sync when its time and only on channel 0;
     if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
     {
-        GenerateSyncPacketData();
+        GenerateSyncPacketData(tx_buffer);
         SyncPacketNextSend =
             current_ms +
             ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
@@ -203,14 +205,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-        rc_ch.channels_pack(Radio.TXdataBuffer);
+        rc_ch.channels_pack(tx_buffer);
     }
 
     ///// Next, Calculate the CRC and put it into the buffer /////
-    crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-    Radio.TXdataBuffer[7] = crc;
+    crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
+    tx_buffer[7] = crc;
     PowerMgmt.pa_on();
-    Radio.TXnb(Radio.TXdataBuffer, 8);
+    Radio.TXnb(tx_buffer, 8);
 }
 
 static void ICACHE_RAM_ATTR ParamUpdateReq(void)
@@ -322,7 +324,9 @@ void setup()
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #ifdef TARGET_100mW_MODULE
     Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else
+
+#else // TARGET_100mW_MODULE
+
     // Below output power settings are for 1W modules
     // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
     // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
@@ -331,7 +335,9 @@ void setup()
 
     // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
     // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
+
 #endif // TARGET_100mW_MODULE
+
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     DEBUG_PRINTLN("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here

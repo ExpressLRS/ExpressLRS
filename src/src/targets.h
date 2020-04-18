@@ -6,7 +6,9 @@
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
-/////////////////////////
+/******************************************************************************************/
+/*                                     ESP TX CONFIGS                                     */
+/******************************************************************************************/
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
@@ -67,6 +69,28 @@
 #define RC_SIGNAL_PULLDOWN 4
 #endif
 
+#ifdef TARGET_ESP32_WROOM_RFM95
+#define GPIO_PIN_NSS 5   // V_SPI_CS0
+#define GPIO_PIN_DIO0 35 //26
+#define GPIO_PIN_DIO1 34 //25
+#define GPIO_PIN_MOSI 23 // V_SPI
+#define GPIO_PIN_MISO 19 // V_SPI
+#define GPIO_PIN_SCK 18  // V_SPI
+#define GPIO_PIN_RST -1  //14  // not connected ATM
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_PIN_OLED_SDA -1
+#define GPIO_PIN_OLED_SCK -1
+// so we don't have to solder the extra resistor,
+// we switch rx/tx using gpio mux
+#define GPIO_PIN_RCSIGNAL_RX 2
+#define GPIO_PIN_RCSIGNAL_TX 2
+#endif
+
+/******************************************************************************************/
+/*                                     ESP RX CONFIGS                                     */
+/******************************************************************************************/
+
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_DIO0 4
@@ -82,10 +106,14 @@
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 2
-#define timerOffset -3
+//#define timerOffset -3
+#define timerOffset 5
 #endif
+
+/******************************************************************************************/
+/*                                        R9 CONFIGS                                      */
+/******************************************************************************************/
 
 /*
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
@@ -133,7 +161,6 @@ https://github.com/jaxxzer
 // #endif /* HSE_VALUE */
 
 //#define SYSCLK_FREQ_72MHz
-
 #endif
 
 #ifdef TARGET_R9M_TX
