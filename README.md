@@ -7,22 +7,20 @@ Please join at
  * [RCGroups Discussion](https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system)
  * [Discord Chat](https://discord.gg/dS6ReFY)
 
-## ESP32/ESP8285 based LoRa Radio Link
+## ESP32/ESP8285/STM32 based LoRa Radio Link
 
 ![Build Status](https://github.com/gretel/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)
 
-ExpressLRS is an open source RC link for RC aircraft. It is based on **SX127x** hardware combined with an **ESP8285** and **ESP32** for RX and TX respectively.
+ExpressLRS is an open source RC link for RC aircraft. It is based on **SX127x** hardware combined with an **ESP8285**, **ESP32** or **STM32** for RX and TX respectively.
 
-It can be built with various hardware or customized to suit. The standard build fits in a JR module and the standard RX can be mounted in a 20x20mm stack.
+ExpressLRS can be flashed into existing Frsky R9M hardware (RX and TX) or custom PCBs can be make to suit. It can run at 200 Hz, 100 Hz or 50 Hz depending on if you prefer range or low latency. This system does FHSS over a configurable number of channels. 
+At 200 Hz it is the fastest 900/433 MHz RC link on the market with a Stick -> OpenTX > RF -> RX -> Serial Packet Latency of ~10ms or ~6.5ms on firmwares with **crsfshot** support. 
 
-It can run at 200 Hz, 100 Hz or 50 Hz depending on if you prefer range or low latency.
-At 200 Hz it is the fastest 900/433 MHz RC link on the market with a Stick -> OpenTX > RF -> RX -> Serial Packet Latency of ~10ms.
-
-Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported. This system does FHSS over 20 channels combined with LoRa modulaiton.
+Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported. 
 
 TX and RX modules communicate via the standard CRSF serial protocol for easy use with Betaflight and openTX.
 
-Compared to commerical R9M or XF systems ExpressLRS is also very affordable, a TX module can be built for $30 and recievers for $15-20.
+Compared to commerical systems ExpressLRS is also very affordable, a TX module can be built for $30 and recievers for $15-20.
 
 ### TTGO LoRa boards
 
@@ -52,3 +50,6 @@ STLs for printing your own enclosure are available in the [STL folder](https://g
 ### Building a RX
 
 - https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1
+
+### Legal Stuff
+The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability.
