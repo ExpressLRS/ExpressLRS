@@ -13,7 +13,7 @@
 #elif defined(TARGET_R9M_TX)
 #define DEBUG_SERIAL Serial
 #elif defined(PLATFORM_ESP8266)
-#define DEBUG_SERIAL CrsfSerial
+//#define DEBUG_SERIAL CrsfSerial
 //#define DEBUG_SERIAL Serial1 // TX1 as output
 #elif defined(TARGET_R9M_RX)
 //#define DEBUG_SERIAL CrsfSerial
