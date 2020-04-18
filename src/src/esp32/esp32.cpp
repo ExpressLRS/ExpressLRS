@@ -71,6 +71,7 @@ void platform_loop(connectionState_e state)
     (void)state;
     //esp_task_wdt_reset(); // make sure the WD is feeded
     feedTheDog();
+    yield();
 }
 
 void platform_connection_state(connectionState_e state)
