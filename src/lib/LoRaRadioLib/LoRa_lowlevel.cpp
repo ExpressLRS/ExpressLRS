@@ -46,64 +46,6 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t
     return (ERR_NONE);
 }
 
-/*
-uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, volatile uint8_t *inBytes)
-{
-    RadioSpi.set_ss(LOW);
-    RadioSpi.write((reg | SPI_READ));
-    RadioSpi.transfer((uint8_t *)inBytes, numBytes);
-    RadioSpi.set_ss(HIGH);
-
-#if (DebugVerbosity >= 4)
-    {
-        DEBUG_PRINT("SPI: Read Burst ");
-        DEBUG_PRINT("REG: ");
-        DEBUG_PRINT(reg);
-        DEBUG_PRINT(" LEN: ");
-        DEBUG_PRINT(numBytes);
-        DEBUG_PRINT(" DATA: ");
-
-        for (int i = 0; i < numBytes; i++)
-        {
-            DEBUG_PRINT(inBytes[i]);
-        }
-
-        DEBUG_PRINTLN();
-    }
-#endif
-    return (ERR_NONE);
-}
-*/
-
-/*
-uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *inBytes)
-{
-    RadioSpi.set_ss(LOW);
-    RadioSpi.write(reg | SPI_READ);
-    RadioSpi.transfer((uint8_t *)inBytes, numBytes);
-    RadioSpi.set_ss(HIGH);
-
-#if (DebugVerbosity >= 4)
-    {
-        DEBUG_PRINT("SPI: Read BurstStr ");
-        DEBUG_PRINT("REG: ");
-        DEBUG_PRINT(reg);
-        DEBUG_PRINT(" LEN: ");
-        DEBUG_PRINT(numBytes);
-        DEBUG_PRINT(" DATA: ");
-
-        for (int i = 0; i < numBytes; i++)
-        {
-            DEBUG_PRINT(inBytes[i]);
-        }
-
-        DEBUG_PRINTLN();
-    }
-#endif
-    return (ERR_NONE);
-}
-*/
-
 uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg)
 {
     uint8_t InByte;
