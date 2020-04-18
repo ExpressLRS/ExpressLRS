@@ -201,12 +201,15 @@ void CRSF_TX::handleUartIn(void) // Merge with RX version...
     sendSyncPacketToRadio();
 #endif
 
-    while (_dev->available() && ((++split_cnt & 0xF) > 0))
+    while (_dev->available() && ((++split_cnt & 0x7) > 0))
     {
         uint8_t *ptr = HandleUartIn(_dev->read());
         if (ptr)
         {
             processPacket(ptr);
+#ifdef PLATFORM_ESP32
+            yield();
+#endif
             /* Can write right after successful package reception */
             _dev->write(SerialOutFIFO);
         }
