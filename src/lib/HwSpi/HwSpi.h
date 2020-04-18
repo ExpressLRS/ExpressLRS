@@ -18,7 +18,7 @@ public:
         platform_init();
     }
 
-    void ICACHE_RAM_ATTR set_ss(uint8_t state)
+    void set_ss(uint8_t state)
     {
         digitalWrite(SS, state);
     }
