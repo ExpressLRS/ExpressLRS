@@ -35,6 +35,7 @@ void platform_loop(connectionState_e state);
 void platform_connection_state(connectionState_e state);
 void platform_set_led(bool state);
 void platform_restart(void);
+void platform_wd_feed(void);
 
 void led_set_state(bool state);
 void led_toggle(void);

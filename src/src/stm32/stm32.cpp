@@ -138,3 +138,7 @@ void platform_restart(void)
 {
     HAL_NVIC_SystemReset();
 }
+
+void platform_wd_feed(void)
+{
+}

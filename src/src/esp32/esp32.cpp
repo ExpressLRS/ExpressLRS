@@ -27,6 +27,9 @@ void feedTheDog(void)
 
 void platform_setup(void)
 {
+    disableCore0WDT();
+    disableCore1WDT();
+
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
     pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
     pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
@@ -69,9 +72,6 @@ void platform_setup(void)
 void platform_loop(connectionState_e state)
 {
     (void)state;
-    //esp_task_wdt_reset(); // make sure the WD is feeded
-    feedTheDog();
-    yield();
 }
 
 void platform_connection_state(connectionState_e state)
@@ -86,4 +86,11 @@ void platform_set_led(bool state)
 void platform_restart(void)
 {
     ESP.restart();
+}
+
+void platform_wd_feed(void)
+{
+    //esp_task_wdt_reset(); // make sure the WD is feeded
+    feedTheDog();
+    yield();
 }

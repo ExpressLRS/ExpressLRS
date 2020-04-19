@@ -1,7 +1,10 @@
 #include "CRSF_TX.h"
 #include "debug.h"
 #include "FIFO.h"
+//#include "common.h"
 #include <string.h>
+
+extern void platform_wd_feed(void);
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
@@ -147,6 +150,7 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
             CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 
             OpenTXsynNextSend = current + OpenTXsyncPakcetInterval;
+            platform_wd_feed();
         }
     }
 }
@@ -170,7 +174,7 @@ void ICACHE_RAM_ATTR CRSF_TX::processPacket(uint8_t const *input)
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
     {
         //DEBUG_PRINTLN("Got Other Packet");
-        DEBUG_PRINTLN("L");
+        //DEBUG_PRINTLN("L");
         if (input[0] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
             input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
@@ -181,7 +185,7 @@ void ICACHE_RAM_ATTR CRSF_TX::processPacket(uint8_t const *input)
     }
     case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
     {
-        DEBUG_PRINT("X");
+        //DEBUG_PRINT("X");
 #if (FEATURE_OPENTX_SYNC)
         RCdataLastRecv = micros();
 #endif
@@ -207,12 +211,10 @@ void CRSF_TX::handleUartIn(void) // Merge with RX version...
         if (ptr)
         {
             processPacket(ptr);
-#ifdef PLATFORM_ESP32
-            yield();
-#endif
             /* Can write right after successful package reception */
             _dev->write(SerialOutFIFO);
         }
+        platform_wd_feed();
     }
 
     uart_wdt();
@@ -245,6 +247,8 @@ void CRSF_TX::uart_wdt(void)
             }
 
             _dev->end();
+            platform_wd_feed();
+
             if (p_slowBaudrate)
             {
                 _dev->Begin(CRSF_OPENTX_BAUDRATE);

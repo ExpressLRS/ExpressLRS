@@ -473,4 +473,5 @@ void loop()
     crsf.handleUartIn();
 
     platform_loop(connectionState);
+    platform_wd_feed();
 }

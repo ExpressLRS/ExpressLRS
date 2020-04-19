@@ -169,7 +169,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
     uint8_t crc;
 
-    DEBUG_PRINT("I");
+    //DEBUG_PRINT("I");
 
 #if (FEATURE_OPENTX_SYNC)
     crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
@@ -404,4 +404,5 @@ void loop()
     crsf.handleUartIn();
 
     platform_loop(connectionState);
+    platform_wd_feed();
 }

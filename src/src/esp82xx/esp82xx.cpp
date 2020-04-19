@@ -104,3 +104,7 @@ void platform_restart(void)
 {
     ESP.restart();
 }
+
+void platform_wd_feed(void)
+{
+}
