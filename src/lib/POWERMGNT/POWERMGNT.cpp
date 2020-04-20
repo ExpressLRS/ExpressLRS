@@ -47,6 +47,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         return CurrentPower;
 
 #ifdef TARGET_R9M_TX
+    Radio.SetOutputPower(0b1000);
     r9dac.setPower(Power);
 
 #elif defined(TARGET_100mW_MODULE)
