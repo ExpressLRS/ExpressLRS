@@ -39,6 +39,8 @@ const uint32_t FHSSfreqs[] = {
     926900000};
 
 #elif defined Regulatory_Domain_EU_868
+#define FRSKY_FREQS 0
+
 /* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: these frequencies fall in the license free H-band, but in combination with 500kHz
  * LoRa modem bandwidth used by ExpressLRS (EU allows up to 125kHz modulation BW only) they
@@ -47,6 +49,7 @@ const uint32_t FHSSfreqs[] = {
  * Therefore we simply maximize the usage of available spectrum so laboratory testing of the software won't disturb existing
  * 868MHz ISM band traffic too much.
  */
+#if !FRSKY_FREQS
 const uint32_t FHSSfreqs[] = {
     863275000, // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
     863800000,
@@ -61,6 +64,42 @@ const uint32_t FHSSfreqs[] = {
     868525000, // Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
     869050000,
     869575000};
+
+#else //FRSKY_FREQS
+// https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
+static uint32_t FHSSfreqs[] = { // FrSkyR9_freq_map_868
+    859504640,
+    860004352,
+    860504064,
+    861003776,
+    861503488,
+    862003200,
+    862502912,
+    863002624,
+    863502336,
+    864002048,
+    864501760,
+    865001472,
+    865501184,
+    866000896,
+    866500608,
+    867000320,
+    867500032,
+    867999744,
+    868499456,
+    868999168,
+    869498880,
+    869998592,
+    870498304,
+    870998016,
+    871497728,
+    871997440,
+    872497152,
+
+    // last two determined by FrSkyR9_step
+    0,
+    0};
+#endif
 
 #elif defined Regulatory_Domain_EU_433
 /* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
