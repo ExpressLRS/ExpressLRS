@@ -115,40 +115,17 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
     //p_RegDioMapping1 = readRegister(SX127X_REG_DIO_MAPPING_1);
     //p_RegDioMapping2 = readRegister(SX127X_REG_DIO_MAPPING_2);
 
-#if 0
-    if (RFmodule == RFMOD_SX1278)
-    {
-        DEBUG_PRINTLN("Init module SX1278");
-        status = SX1278config(this, currBW, currSF, currCR, currFreq, _syncWord);
-    }
-    else if (RFmodule == RFMOD_SX1276)
-    {
-        DEBUG_PRINTLN("Init module SX1276");
-        status = SX1276config(this, currBW, currSF, currCR, currFreq, _syncWord);
-    }
-    else
-    {
-        status = ERR_CHIP_NOT_FOUND;
-    }
-    DEBUG_PRINTLN("Done");
-#endif
-
     return (status);
 }
 
 uint8_t SX127xDriver::SetBandwidth(Bandwidth bw)
 {
-    uint8_t state = SX127xConfig(bw, currSF, currCR, currFreq, _syncWord);
-    if (state == ERR_NONE)
-    {
-        currBW = bw;
-    }
-    return (state);
+    return Config(bw, currSF, currCR, currFreq, _syncWord);
 }
 
 uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
-    writeRegister(SX127X_REG_SYNC_WORD, syncWord);
+    //writeRegister(SX127X_REG_SYNC_WORD, syncWord);
     _syncWord = syncWord;
     return (ERR_NONE);
 }
@@ -171,48 +148,38 @@ uint8_t SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
 
 uint8_t SX127xDriver::SetSpreadingFactor(SpreadingFactor sf)
 {
-    uint8_t status;
-    if (sf == SX127X_SF_6)
-    {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
-        status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
-        writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
-    }
-    else
-    {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
-        status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
-        writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
-    }
-    if (status == ERR_NONE)
-    {
-        currSF = sf;
-    }
-    return (status);
+    return Config(currBW, sf, currCR, currFreq, _syncWord);
 }
 
 uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 {
-    uint8_t state = SX127xConfig(currBW, currSF, cr, currFreq, _syncWord);
-    if (state == ERR_NONE)
-    {
-        currCR = cr;
-    }
-    return (state);
+    return Config(currBW, currSF, cr, currFreq, _syncWord);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
+    if (freq == currFreq)
+        return;
+
     uint8_t status = SetMode(SX127X_SLEEP);
     if (status != ERR_NONE)
     {
         return (status);
     }
 
+#if FREQ_USE_DOUBLE
 #define FREQ_STEP 61.03515625
 
     uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
     uint8_t buff[3] = {(uint8_t)((FRQ >> 16) & 0xFF), (uint8_t)((FRQ >> 8) & 0xFF), (uint8_t)(FRQ & 0xFF)};
+#else
+    uint64_t frf = ((uint64_t)freq << 19) / 32000000;
+    uint8_t buff[3] = {
+        (uint8_t)(frf >> 16),
+        (uint8_t)(frf >> 8),
+        (uint8_t)(frf >> 0),
+    };
+#endif
     writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
     currFreq = freq;
 
@@ -604,18 +571,17 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     // basic setting (bw, cr, sf, header mode and CRC)
     if (sf == SX127X_SF_6)
     {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_CONT, 7, 3);
+        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
         status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
     }
     else
     {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_CONT, 7, 3);
+        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
         status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
     }
+    status = setRegValue(SX127X_REG_MODEM_CONFIG_2, (sf | SX127X_TX_MODE_SINGLE), 7, 3);
 
     if (status != ERR_NONE)
     {

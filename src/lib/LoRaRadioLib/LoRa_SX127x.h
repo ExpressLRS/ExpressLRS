@@ -128,6 +128,7 @@ public:
     uint8_t Begin(bool HighPowerModule = false, int txpin = -1, int rxpin = -1);
     uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr,
                    uint32_t freq = 0, uint8_t syncWord = 0);
+    // Don't call SX127xConfig directly from app! use Config instead
     uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
     uint8_t SetBandwidth(Bandwidth bw);

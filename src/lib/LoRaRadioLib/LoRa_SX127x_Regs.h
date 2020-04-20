@@ -64,7 +64,7 @@
 #define SX127X_PA_SELECT_RFO                          0b00000000  //  7     7     RFO pin output, power limited to +14 dBm
 #define SX127X_PA_SELECT_BOOST                        0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
 #define SX127X_OUTPUT_POWER                           0b00001111  //  3     0     output power: P_out = 17 - (15 - OUTPUT_POWER) [dBm] for PA_SELECT_BOOST
-#define SX127X_MAX_OUTPUT_POWER                       0b01110000  //              Enable max output power  
+#define SX127X_MAX_OUTPUT_POWER                       0b01110000  //              Enable max output power
 
 // SX127X_REG_OCP
 #define SX127X_OCP_OFF                                0b00000000  //  5     5     PA overload current protection disabled
@@ -104,9 +104,11 @@
 #define SX127X_PREAMBLE_LENGTH_LSB                    0b00001000  //  7     0         where l_p = preamble length
 //#define SX127X_PREAMBLE_LENGTH_LSB                    0b00000100  //  7     0         where l_p = preamble length  //CHANGED
 
-// SX127X_REG_DETECT_OPTIMIZE
-#define SX127X_DETECT_OPTIMIZE_SF_6                   0b00000101  //  2     0     SF6 detection optimization
-#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b00000011  //  2     0     SF7 to SF12 detection optimization
+// SX127X_REG_DETECT_OPTIMIZE - Errata, set bits 7,6
+#define SX127X_DETECT_OPTIMIZE_SF_6                   0b11000101  //  2     0     SF6 detection optimization
+#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b11000011  //  2     0     SF7 to SF12 detection optimization
+//#define SX127X_DETECT_OPTIMIZE_SF_6                   0b00000101  //  2     0     SF6 detection optimization
+//#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b00000011  //  2     0     SF7 to SF12 detection optimization
 
 // SX127X_REG_DETECTION_THRESHOLD
 #define SX127X_DETECTION_THRESHOLD_SF_6               0b00001100  //  7     0     SF6 detection threshold
