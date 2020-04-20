@@ -6,9 +6,11 @@
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
 
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},
-    {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000},
-    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500},
+    //{BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},  // airtime =  4.512ms
+    {BW_500_00_KHZ, SF_6, CR_4_6, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.896ms, up-to 9bytes
+    //{BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  10.560ms, up-to 11bytes
+    {BW_500_00_KHZ, SF_7, CR_4_6, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  9.792ms, up-to 11bytes
+    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500},  // airtime = 18.560ms, up-to 9bytes
 #if RATE_MAX > 3
     {BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
 #elif RATE_MAX > 4
