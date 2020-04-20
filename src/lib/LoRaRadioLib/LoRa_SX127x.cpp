@@ -238,9 +238,10 @@ uint8_t SX127xDriver::SX127xBegin()
         else
         {
 #ifdef DEBUG
-            DEBUG_PRINTF(" not found! (%u of 10 tries) REG_VERSION == 0x%02X",
-                         (i + 1), version);
-            DEBUG_PRINTLN();
+            DEBUG_PRINT("SX127x not found! (");
+            DEBUG_PRINT(i + 1);
+            DEBUG_PRINT(" of 10 tries) REG_VERSION == 0x");
+            DEBUG_PRINTLN(version, HEX);
 #endif
             delay(200);
             i++;

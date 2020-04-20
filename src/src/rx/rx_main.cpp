@@ -357,7 +357,8 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
-    DEBUG_PRINTF("Set RF rate: %u\n", rate);
+    DEBUG_PRINT("Set RF rate: ");
+    DEBUG_PRINTLN(rate);
     //DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
 
     /* TODO:
