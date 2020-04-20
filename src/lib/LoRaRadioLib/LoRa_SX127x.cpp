@@ -228,21 +228,18 @@ uint8_t SX127xDriver::SX127xBegin()
     while ((i < 10) && !flagFound)
     {
         uint8_t version = readRegister(SX127X_REG_VERSION);
-        DEBUG_PRINTLN(version, HEX);
         if (version == 0x12)
         {
             flagFound = true;
+#ifdef DEBUG
+            DEBUG_PRINTLN("SX127x found! (match by REG_VERSION == 0x12)");
+#endif
         }
         else
         {
 #ifdef DEBUG
-            DEBUG_PRINT(" not found! (");
-            DEBUG_PRINT(i + 1);
-            DEBUG_PRINT(" of 10 tries) REG_VERSION == ");
-
-            char buffHex[5];
-            sprintf(buffHex, "0x%02X", version);
-            DEBUG_PRINT(buffHex);
+            DEBUG_PRINTF(" not found! (%u of 10 tries) REG_VERSION == 0x%02X",
+                         (i + 1), version);
             DEBUG_PRINTLN();
 #endif
             delay(200);
@@ -252,18 +249,8 @@ uint8_t SX127xDriver::SX127xBegin()
 
     if (!flagFound)
     {
-#ifdef DEBUG
-        DEBUG_PRINTLN(" not found!");
-#endif
-        //SPI.end();
         return (ERR_CHIP_NOT_FOUND);
     }
-#ifdef DEBUG
-    else
-    {
-        DEBUG_PRINTLN(" found! (match by REG_VERSION == 0x12)");
-    }
-#endif
     return (ERR_NONE);
 }
 
