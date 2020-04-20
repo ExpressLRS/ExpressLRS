@@ -36,6 +36,23 @@ uint8_t UID[6] = {MY_UID};
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
 
+static uint8_t my_sync_word = 0;
+uint8_t getSyncWord(void)
+{
+    if (my_sync_word)
+        return my_sync_word;
+    uint8_t i,
+        u, syncw = 0;
+    for (u = 0; u < 10 && (syncw < 0x10 || syncw == SX127X_SYNC_WORD_LORAWAN); u++)
+    {
+        syncw = SX127X_SYNC_WORD + u;
+        for (i = 0; i < sizeof(UID); i++)
+            syncw ^= UID[i];
+    }
+    my_sync_word = syncw;
+    return syncw;
+}
+
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
 

@@ -368,7 +368,8 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
      */
 
     Radio.StopContRX();
-    Radio.Config(config->bw, config->sf, config->cr);
+    Radio.Config(config->bw, config->sf, config->cr,
+                 GetInitialFreq(), 0);
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval);
     //LPF_Offset.init(0);
@@ -407,12 +408,12 @@ void setup()
 #endif
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
+    Radio.SetSyncWord(getSyncWord());
     Radio.Begin();
 
     FHSSrandomiseFHSSsequence();
-    Radio.SetFrequency(GetInitialFreq());
+    //Radio.SetFrequency(GetInitialFreq());
 
-    //Radio.SetSyncWord(0x122);
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
     int16_t RFnoiseFloor = MeasureNoiseFloor();
@@ -445,7 +446,7 @@ void loop()
     {
         if (now > RFmodeNextCycle)
         {
-            Radio.SetFrequency(GetInitialFreq());
+            //Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate(((++scanIndex) % RATE_MAX)); //switch between rates
             LQreset();
             led_toggle();

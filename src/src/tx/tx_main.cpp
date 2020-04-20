@@ -304,6 +304,8 @@ void setup()
     TxTimer.callbackTock = &SendRCdataToRF;
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
+    Radio.SetSyncWord(getSyncWord());
+
     bool HighPower = false;
 #ifdef TARGET_1000mW_MODULE
     HighPower = true;
@@ -314,7 +316,7 @@ void setup()
 
     FHSSrandomiseFHSSsequence();
 
-#if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_EU_868 || defined Regulatory_Domain_FCC_915
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915)
 #ifdef Regulatory_Domain_EU_868
     DEBUG_PRINTLN("Setting 868MHz Mode");
 #else

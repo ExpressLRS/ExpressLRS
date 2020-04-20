@@ -177,6 +177,8 @@ uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 
 int32_t volatile FreqCorrection = 0;
 
+uint32_t freq_offset_uid = 0;
+
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
     FHSSptr = value;
@@ -238,7 +240,13 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     DEBUG_PRINT("Number of FHSS frequencies =");
     DEBUG_PRINTLN(NR_FHSS_ENTRIES);
 
-    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    for (uint8_t i = 0; i < sizeof(UID); i++)
+        freq_offset_uid ^= UID[i];
+
+    uint32_t macSeed = ((uint32_t)UID[2] << 24) +
+                       ((uint32_t)UID[3] << 16) +
+                       ((uint32_t)UID[4] << 8) +
+                       UID[5];
     rngSeed(macSeed);
 
     uint8_t isAvailable[NR_FHSS_ENTRIES];

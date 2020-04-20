@@ -44,6 +44,8 @@ extern uint8_t UID[6];
 extern uint8_t CRCCaesarCipher;
 extern uint8_t DeviceAddr;
 
+uint8_t getSyncWord(void);
+
 enum
 {
     TLM_RATIO_NO_TLM = 0,
