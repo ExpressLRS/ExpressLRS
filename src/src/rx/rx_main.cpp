@@ -356,10 +356,11 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
+    ExpressLRS_currAirRate = config;
 
     DEBUG_PRINT("Set RF rate: ");
     DEBUG_PRINTLN(rate);
-    //DEBUG_PRINTLN(ExpressLRS_currAirRate->interval);
+    //DEBUG_PRINTLN(config->interval);
 
     /* TODO:
      * 1. timer stop and start!
@@ -370,7 +371,7 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.StopContRX();
     Radio.Config(config->bw, config->sf, config->cr,
                  GetInitialFreq(), 0);
-    ExpressLRS_currAirRate = config;
+    Radio.SetPreambleLength(config->PreambleLen);
     TxTimer.updateInterval(config->interval);
     //LPF_Offset.init(0);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;

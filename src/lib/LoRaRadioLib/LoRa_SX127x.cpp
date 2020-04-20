@@ -66,7 +66,7 @@ void SX127xDriver::SetPins(int rst, int dio0, int dio1)
     SX127x_dio1 = dio1;
 }
 
-uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
+uint8_t SX127xDriver::Begin(int txpin, int rxpin)
 {
     DEBUG_PRINTLN("Driver Begin");
     uint8_t status;
@@ -83,22 +83,18 @@ uint8_t SX127xDriver::Begin(bool HighPowerModule, int txpin, int rxpin)
         delay(100);
     }
 
-    _RXenablePin = _TXenablePin = -1;
-    if (HighPowerModule)
-    {
-        _TXenablePin = txpin;
-        _RXenablePin = rxpin;
+    _TXenablePin = txpin;
+    _RXenablePin = rxpin;
 
-        if (-1 != _TXenablePin)
-        {
-            pinMode(_TXenablePin, OUTPUT);
-            digitalWrite(_RXenablePin, LOW);
-        }
-        if (-1 != _RXenablePin)
-        {
-            pinMode(_RXenablePin, OUTPUT);
-            digitalWrite(_RXenablePin, LOW);
-        }
+    if (-1 != _TXenablePin)
+    {
+        pinMode(_TXenablePin, OUTPUT);
+        digitalWrite(_RXenablePin, LOW);
+    }
+    if (-1 != _RXenablePin)
+    {
+        pinMode(_RXenablePin, OUTPUT);
+        digitalWrite(_RXenablePin, LOW);
     }
 
     // initialize low-level drivers
@@ -140,9 +136,15 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
     return (ERR_NONE);
 }
 
-uint8_t SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
+uint8_t SX127xDriver::SetPreambleLength(uint16_t PreambleLen)
 {
-    writeRegister(SX127X_REG_PREAMBLE_LSB, PreambleLen);
+    if (PreambleLen < 6)
+        PreambleLen = 6;
+    //SetMode(SX127X_SLEEP); // needed??
+    uint8_t len[2] = {(uint8_t)(PreambleLen >> 16), (uint8_t)(PreambleLen & 0xff)};
+    writeRegisterBurstStr(SX127X_REG_PREAMBLE_MSB, len, sizeof(len));
+    //SetMode(SX127X_STANDBY);
+    //writeRegister(SX127X_REG_PREAMBLE_LSB, (uint8_t)PreambleLen);
     return (ERR_NONE);
 }
 
@@ -159,13 +161,10 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
     if (freq == currFreq)
-        return;
+        return ERR_NONE;
 
-    uint8_t status = SetMode(SX127X_SLEEP);
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
+    if (mode != 0xff)
+        SetMode(SX127X_SLEEP);
 
 #if FREQ_USE_DOUBLE
 #define FREQ_STEP 61.03515625
@@ -183,9 +182,10 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
     writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
     currFreq = freq;
 
-    if (mode != SX127X_SLEEP)
-        status = SetMode(mode);
-    return status;
+    if (mode != 0xff && mode != SX127X_SLEEP)
+        SetMode(mode);
+
+    return ERR_NONE;
 }
 
 uint8_t SX127xDriver::SX127xBegin()
@@ -551,12 +551,10 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     // set LoRa mode
     reg_op_mode_mode_lora();
 
-    SetFrequency(freq, SX127X_SLEEP);
+    SetFrequency(freq, 0xff); // 0xff = skip mode set calls
 
     // output power configuration
-
-    writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | currPWR);
-    //writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_OUTPUT_POWER);
+    SetOutputPower(currPWR);
     status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | 23, 5, 0); //200ma
     //writeRegister(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);
 
@@ -569,19 +567,18 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     writeRegister(SX127X_REG_HOP_PERIOD, SX127X_HOP_PERIOD_OFF);
 
     // basic setting (bw, cr, sf, header mode and CRC)
+    uint8_t cfg2 = (sf | SX127X_TX_MODE_SINGLE | SX127X_RX_CRC_MODE_OFF);
+    status = setRegValue(SX127X_REG_MODEM_CONFIG_2, cfg2, 7, 2);
     if (sf == SX127X_SF_6)
     {
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
         status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
     }
     else
     {
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
         status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
     }
-    status = setRegValue(SX127X_REG_MODEM_CONFIG_2, (sf | SX127X_TX_MODE_SINGLE), 7, 3);
 
     if (status != ERR_NONE)
     {
@@ -591,21 +588,10 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     // set the sync word
     writeRegister(SX127X_REG_SYNC_WORD, syncWord);
 
-    // set default preamble length
-    //status = setRegValue(SX127X_REG_PREAMBLE_MSB, SX127X_PREAMBLE_LENGTH_MSB);
-    //status = setRegValue(SX127X_REG_PREAMBLE_LSB, SX127X_PREAMBLE_LENGTH_LSB);
-
-    //status = setRegValue(SX127X_REG_PREAMBLE_MSB, 0);
-    //status = setRegValue(SX127X_REG_PREAMBLE_LSB, 6);
-
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
-
     // set mode to STANDBY
-    status = SetMode(SX127X_STANDBY);
-    return (status);
+    SetMode(SX127X_STANDBY);
+
+    return ERR_NONE;
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()

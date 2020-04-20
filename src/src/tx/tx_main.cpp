@@ -104,7 +104,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
-    Radio.Config(config->bw, config->sf, config->cr);
+    Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
     crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
@@ -305,12 +305,7 @@ void setup()
 
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
-
-    bool HighPower = false;
-#ifdef TARGET_1000mW_MODULE
-    HighPower = true;
-#endif // TARGET_1000mW_MODULE
-    Radio.Begin(HighPower, GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
+    Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
 
     DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
 
@@ -322,25 +317,9 @@ void setup()
 #else
     DEBUG_PRINTLN("Setting 915MHz Mode");
 #endif
-
     Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#ifdef TARGET_100mW_MODULE
-    Radio.SetOutputPower(0b1111); // 20dbm = 100mW
 
-#else // !TARGET_100mW_MODULE
-
-    // Below output power settings are for 1W modules
-    // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
-    // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-    // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
-    Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-
-    // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-    // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
-
-#endif // TARGET_100mW_MODULE
-
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
+#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     DEBUG_PRINTLN("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
@@ -353,7 +332,7 @@ void setup()
     //Radio.TXdoneCallback4 = &NULL;
 
     PowerMgmt.defaultPower();
-    Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
+
     SetRFLinkRate(RATE_DEFAULT);
 
     crsf.Begin();

@@ -160,20 +160,11 @@ uint8_t SX1276configCommon(SX127xDriver *drv, uint8_t bw, uint8_t sf, uint8_t cr
         return (status);
     }
 
-    // set SF6 optimizations
-    if (sf == SX127X_SF_6)
-    {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, 2, 2);
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
-    }
-    else
-    {
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, 2, 2); //Changed to CRC off
-        //status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
-        status = setRegValue(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
-    }
+    //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_RX_CRC_MODE_OFF, 2, 2);
+    uint8_t cfg1_reg = bw | cr;
+    if (drv->headerExplMode == false)
+        cfg1_reg |= SX1276_HEADER_IMPL_MODE;
+    status = setRegValue(SX127X_REG_MODEM_CONFIG_1, cfg1_reg);
 
     if (bw == SX1276_BW_500_00_KHZ)
     {

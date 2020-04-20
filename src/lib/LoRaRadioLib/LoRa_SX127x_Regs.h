@@ -95,6 +95,8 @@
 #define SX127X_TX_MODE_SINGLE                         0b00000000  //  3     3     single TX
 #define SX127X_TX_MODE_CONT                           0b00001000  //  3     3     continuous TX
 #define SX127X_RX_TIMEOUT_MSB                         0b00000000  //  1     0
+#define SX127X_RX_CRC_MODE_OFF                        0b00000000 //  2     2     CRC disabled
+#define SX127X_RX_CRC_MODE_ON                         0b00000100  //  2     2     CRC enabled
 
 // SX127X_REG_SYMB_TIMEOUT_LSB
 #define SX127X_RX_TIMEOUT_LSB                         0b01100100  //  7     0     10 bit RX operation timeout
@@ -161,8 +163,6 @@
 // #define SX127X_SYNC_WORD                              0x12        //  18    0     default LoRa sync word
 #define SX127X_SYNC_WORD_LORAWAN                      0x34        //  52    0     sync word reserved for LoRaWAN networks
 
-#define IRQpin 26
-
 ///Added by Sandro
 #define SX127x_TXCONTINUOUSMODE_MASK     0xF7
 #define SX127x_TXCONTINUOUSMODE_ON       0x08
@@ -171,11 +171,9 @@
 
 
 
-
-
-
-
-///// SX1278 Regs /////
+/*****************************************************************
+ * SX1278 SPECIFIC
+ *****************************************************************/
 //SX1278 specific register map
 #define SX1278_REG_MODEM_CONFIG_3                     0x26
 #define SX1278_REG_TCXO                               0x4B
@@ -223,8 +221,6 @@
 #define SX1278_HEADER_IMPL_MODE                       0b00000001  //  0     0     implicit header mode
 
 //SX1278_REG_MODEM_CONFIG_2
-#define SX1278_RX_CRC_MODE_OFF                        0b00000000  //  2     2     CRC disabled
-#define SX1278_RX_CRC_MODE_ON                         0b00000100  //  2     2     CRC enabled
 
 //SX1278_REG_MODEM_CONFIG_3
 #define SX1278_LOW_DATA_RATE_OPT_OFF                  0b00000000  //  3     3     low data rate optimization disabled
@@ -235,11 +231,9 @@
 
 
 
-
-
-
-
-
+/*****************************************************************
+ * SX1276 SPECIFIC
+ *****************************************************************/
 //The below values were cut and paste from SX1278 values, they should be the same but just take note.
 //SX1276_REG_MODEM_CONFIG_1
 #define SX1276_BW_7_80_KHZ                            0b00000000  //  7     4     bandwidth:  7.80 kHz

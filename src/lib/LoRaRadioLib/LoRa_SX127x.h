@@ -125,7 +125,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     void SetPins(int rst, int dio0, int dio1);
-    uint8_t Begin(bool HighPowerModule = false, int txpin = -1, int rxpin = -1);
+    uint8_t Begin(int txpin = -1, int rxpin = -1);
     uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr,
                    uint32_t freq = 0, uint8_t syncWord = 0);
     // Don't call SX127xConfig directly from app! use Config instead
@@ -136,7 +136,7 @@ public:
     uint32_t getCurrBandwidthNormalisedShifted();
     uint8_t SetSyncWord(uint8_t syncWord);
     uint8_t SetOutputPower(uint8_t Power);
-    uint8_t SetPreambleLength(uint8_t PreambleLen);
+    uint8_t SetPreambleLength(uint16_t PreambleLen);
     uint8_t SetSpreadingFactor(SpreadingFactor sf);
     uint8_t SetCodingRate(CodingRate cr);
     uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq, uint8_t mode = SX127X_STANDBY);
