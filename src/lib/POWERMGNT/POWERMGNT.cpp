@@ -5,7 +5,7 @@ extern SX127xDriver Radio;
 extern R9DAC R9DAC;
 #endif
 
-PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+    PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
 
 PowerLevels_e POWERMGNT::incPower()
 {
@@ -68,8 +68,29 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #endif
 
 #ifdef TARGET_1000mW_MODULE
-    Radio.SetOutputPower(0b0000);
-    CurrentPower = PWR_25mW;
-// not done yet
+    switch (Power)
+    {
+    case PWR_100mW:
+        Radio.SetOutputPower(0b0101);
+        CurrentPower = PWR_100mW;
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(0b1000);
+        CurrentPower = PWR_250mW;
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(0b1100);
+        CurrentPower = PWR_500mW;
+        break;
+    case PWR_1000mW:
+        Radio.SetOutputPower(0b1111);
+        CurrentPower = PWR_1000mW;
+        break;
+    case PWR_50mW:
+    default:
+        Radio.SetOutputPower(0b0010);
+        CurrentPower = PWR_50mW;
+        break;
+    }
 #endif
 }

@@ -37,7 +37,7 @@ void rngSeed(long newSeed)
     seed = newSeed;
 }
 
-// returns 0<x<max where max <= 256
+// returns 0 <= x < max where max <= 256
 // (actual upper limit is higher, but there is one and I haven't
 //  thought carefully about what it is)
 unsigned int rngN(unsigned int max)

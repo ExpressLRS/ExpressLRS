@@ -11,6 +11,7 @@
 #include "POWERMGNT.h"
 #include "msp.h"
 #include "msptypes.h"
+#include <OTA.h>
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -342,6 +343,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
+    #if defined HYBRID_SWITCHES_8
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+    #elif defined SEQ_SWITCHES
+    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    #else
     if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
     {
       Channels5to8Changed = false;
@@ -352,6 +358,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       Generate4ChannelData_11bit();
     }
+    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
@@ -459,6 +466,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
+  Serial2.begin(400000);
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -547,16 +555,7 @@ void setup()
 #endif
 
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#ifdef TARGET_100mW_MODULE
-  Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else                           // Below output power settings are for 1W modules
-  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
-  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
-  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
-#endif
+
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
   Serial.println("Setting 433MHz Mode");
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
