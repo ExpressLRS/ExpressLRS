@@ -100,15 +100,5 @@ extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 int16_t MeasureNoiseFloor();
 uint16_t TLMratioEnumToValue(uint8_t enumval);
 
-// expresslrs packet header types
-// 00 -> standard 4 channel data packet
-// 01 -> switch data packet
-// 11 -> tlm packet
-// 10 -> sync packet with hop data
-#define RC_DATA_PACKET 0b00
-#define SWITCH_DATA_PACKET 0b01
-#define TLM_PACKET 0b11
-#define SYNC_PACKET 0b10
-
 void forced_start(void);
 void forced_stop(void);

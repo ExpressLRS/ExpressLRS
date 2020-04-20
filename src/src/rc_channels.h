@@ -7,6 +7,19 @@
 
 #define OPTIMIZED_SEARCH 1
 
+// expresslrs packet header types
+// 00 -> standard 4 channel data packet
+// 01 -> switch data packet
+// 11 -> tlm packet
+// 10 -> sync packet with hop data
+enum
+{
+    RC_DATA_PACKET = 0b00,
+    SWITCH_DATA_PACKET = 0b01,
+    SYNC_PACKET = 0b10,
+    TLM_PACKET = 0b11,
+};
+
 class RcChannels
 {
 public:
