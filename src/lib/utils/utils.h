@@ -1,20 +1,22 @@
 #pragma once
 
+#include <stdint.h>
+
 // the max value returned by rng
 #define RNG_MAX 0x7FFF
 
-extern unsigned long seed;
+extern uint32_t seed;
 
-long rng(void);
-
-void rngSeed(long newSeed);
+void rngSeed(uint32_t newSeed);
+uint32_t rng(void);
 // 0..255 returned
-long rng8Bit(void);
+uint32_t rng8Bit(void);
 // 0..31 returned
-long rng5Bit(void);
-
+uint32_t rng5Bit(void);
+// 0..3 returned
+uint32_t rng0to2(void);
 // returns 0<x<n where n <= 256
-unsigned int rngN(unsigned int upper);
+uint32_t rngN(uint32_t upper);
 
 unsigned int volatile_memcpy(volatile void *d, volatile void *s, unsigned int n);
 
