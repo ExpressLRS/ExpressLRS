@@ -4,7 +4,8 @@
 
 #ifdef TARGET_R9M_TX
 //#define MaxPower PWR_2000mW        // 7
-#define MaxPower PWR_1000mW        // 6
+#define MaxPower PWR_1000mW // 6
+// #define DefaultPowerEnum PWR_50mW
 #define DefaultPowerEnum PWR_100mW // 3
 #elif defined(TARGET_100mW_MODULE)
 #define MaxPower PWR_50mW         // 2
@@ -24,6 +25,7 @@ typedef enum
     PWR_500mW,
     PWR_1000mW,
     PWR_2000mW,
+    PWR_UNKNOWN
 } PowerLevels_e;
 
 // typedef enum
@@ -37,7 +39,7 @@ class POWERMGNT
 {
 private:
     PowerLevels_e CurrentPower;
-    PowerLevels_e setPower(PowerLevels_e Power);
+    void setPower(PowerLevels_e Power);
 
 public:
     POWERMGNT();
@@ -45,6 +47,35 @@ public:
     PowerLevels_e decPower();
     PowerLevels_e currPower();
     void defaultPower();
+
+    uint8_t power_to_radio_enum(PowerLevels_e val = PWR_UNKNOWN)
+    {
+        if (val == PWR_UNKNOWN)
+            val = CurrentPower;
+        // ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 250mW )
+        switch (val)
+        {
+        case PWR_10mW:
+            return 1;
+        case PWR_25mW:
+            return 2;
+        case PWR_50mW:
+            return 2; // not speficied
+        case PWR_100mW:
+            return 3;
+        case PWR_250mW:
+            return 7;
+        case PWR_500mW:
+            return 4;
+        case PWR_1000mW:
+            return 5;
+        case PWR_2000mW:
+            return 6;
+        case PWR_UNKNOWN:
+        default:
+            return 0;
+        }
+    }
 
     void pa_off(void);
     void pa_on(void);

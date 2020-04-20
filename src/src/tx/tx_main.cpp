@@ -257,6 +257,7 @@ static void ICACHE_RAM_ATTR HandleUpdateParameter()
         {
             PowerMgmt.incPower();
         }
+        crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
         break;
 
@@ -332,6 +333,7 @@ void setup()
     //Radio.TXdoneCallback4 = &NULL;
 
     PowerMgmt.defaultPower();
+    crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(RATE_DEFAULT);
 

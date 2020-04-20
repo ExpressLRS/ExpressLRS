@@ -40,11 +40,11 @@ void POWERMGNT::defaultPower()
     setPower(DefaultPowerEnum);
 }
 
-PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
+void POWERMGNT::setPower(PowerLevels_e Power)
 {
     if (Power == CurrentPower || Power < PWR_10mW ||
         Power > MaxPower)
-        return CurrentPower;
+        return;
 
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b1000);
@@ -69,12 +69,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(TARGET_1000mW_MODULE)
     Radio.SetOutputPower(0b0000);
     Power = PWR_25mW;
-#else
-    Power = 0;
 #endif
-
     CurrentPower = Power;
-    return Power;
 }
 
 void POWERMGNT::pa_off(void)
