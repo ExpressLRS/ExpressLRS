@@ -429,7 +429,7 @@ void setup()
     //TxTimer.start(); // start tlm timer
 
     LQreset();
-    scanIndex = 0;
+    scanIndex = RATE_DEFAULT;
     SetRFLinkRate(RATE_DEFAULT);
     RfModeNextCycleCalc();
 

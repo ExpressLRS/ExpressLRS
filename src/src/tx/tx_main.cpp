@@ -325,7 +325,7 @@ void setup()
 #ifdef TARGET_100mW_MODULE
     Radio.SetOutputPower(0b1111); // 20dbm = 100mW
 
-#else // TARGET_100mW_MODULE
+#else // !TARGET_100mW_MODULE
 
     // Below output power settings are for 1W modules
     // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
