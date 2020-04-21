@@ -21,14 +21,31 @@ void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
 
 /////////////////////////////////////////////////////////////////
 
-enum InterruptAssignment_
+enum isr_states
 {
     NONE,
     RX_DONE,
-    TX_DONE
+    TX_DONE,
+    ISR_RCVD,
 };
 
-static InterruptAssignment_ InterruptAssignment = NONE;
+static volatile enum isr_states p_state_dio0_isr = NONE;
+static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio0(void)
+{
+    if (p_state_dio0_isr == RX_DONE)
+        Radio.RXnbISR();
+    else if (p_state_dio0_isr == TX_DONE)
+        Radio.TXnbISR();
+    else
+        p_state_dio0_isr = ISR_RCVD;
+}
+
+static volatile enum isr_states p_state_dio1_isr = NONE;
+static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio1(void)
+{
+    p_state_dio1_isr = ISR_RCVD;
+}
+
 //////////////////////////////////////////////
 
 SX127xDriver::SX127xDriver()
@@ -73,6 +90,12 @@ uint8_t SX127xDriver::Begin(int txpin, int rxpin)
 
     pinMode(SX127x_dio0, INPUT);
     pinMode(SX127x_dio1, INPUT);
+
+    /* Attach interrupts to pins */
+    if (0xff != SX127x_dio0)
+        attachInterrupt(digitalPinToInterrupt(SX127x_dio0), _rxtx_isr_handler_dio0, RISING);
+    if (0xff != SX127x_dio1)
+        attachInterrupt(digitalPinToInterrupt(SX127x_dio1), _rxtx_isr_handler_dio1, RISING);
 
     if (-1 < SX127x_RST)
     {
@@ -160,8 +183,8 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
-    if (freq == currFreq)
-        return ERR_NONE;
+    //if (freq == currFreq)
+    //    return ERR_NONE;
 
     if (mode != 0xff)
         SetMode(SX127X_SLEEP);
@@ -222,39 +245,38 @@ uint8_t SX127xDriver::SX127xBegin()
     return (ERR_NONE);
 }
 
-uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
+////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// TX functions ///////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
+
+uint8_t ICACHE_RAM_ATTR SX127xDriver::TX(uint8_t *data, uint8_t length)
 {
-    detachInterrupt(SX127x_dio0);
-    InterruptAssignment = NONE;
+    p_state_dio0_isr = p_state_dio1_isr = NONE;
 
     SetMode(SX127X_STANDBY);
-
-    reg_dio1_tx_done();
-
-    ClearIRQFlags();
 
     if (length >= 256)
     {
         return (ERR_PACKET_TOO_LONG);
     }
 
-    writeRegister(SX127X_REG_PAYLOAD_LENGTH, length);
-    writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-    writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-
-    writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, (uint8_t)length);
-
     if (-1 != _RXenablePin)
         digitalWrite(_RXenablePin, LOW);
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
-    DEBUG_PRINTLN("tx");
+    writeRegister(SX127X_REG_PAYLOAD_LENGTH, length);
+    writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
+    writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
+    writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, (uint8_t)length);
+
+    reg_dio1_tx_done();
+    ClearIRQFlags();
 
     SetMode(SX127X_TX);
 
     unsigned long start = millis();
-    while (!digitalRead(SX127x_dio0))
+    while (p_state_dio0_isr != ISR_RCVD)
     {
         //yield();
         //delay(1);
@@ -262,30 +284,12 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
         if (millis() - start > (length * 100))
         {
             DEBUG_PRINTLN("Send Timeout");
-            ClearIRQFlags();
             return (ERR_TX_TIMEOUT);
         }
     }
     NonceTX++;
-    ClearIRQFlags();
 
     return (ERR_NONE);
-
-#if 0 /* Obsolete code, cannot be reached! */
-  if (-1 != _RXenablePin)
-    digitalWrite(_RXenablePin, LOW);
-  if (-1 != _TXenablePin)
-    digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////TX functions/////////////////////////////////////////
-
-static void ICACHE_RAM_ATTR tx_isr_handler(void)
-{
-    Radio.TXnbISR();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
@@ -297,32 +301,30 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 
     ClearIRQFlags();
 
-    NonceTX++;
+    NonceTX++; // keep this before callbacks!
     TXdoneCallback1();
     TXdoneCallback2();
     TXdoneCallback3();
     TXdoneCallback4();
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length)
+uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, uint32_t freq)
 {
     SetMode(SX127X_STANDBY);
+    p_state_dio0_isr = TX_DONE;
 
     if (-1 != _RXenablePin)
         digitalWrite(_RXenablePin, LOW);
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 
-    if (InterruptAssignment != TX_DONE)
-    {
-        attachInterrupt(digitalPinToInterrupt(SX127x_dio0), tx_isr_handler, RISING);
-        InterruptAssignment = TX_DONE;
-    }
+    // Set freq if defined
+    if (freq)
+        SetFrequency(freq, 0xff);
 
     writeRegister(SX127X_REG_PAYLOAD_LENGTH, length);
     writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
     writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-
     writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, (uint8_t *)data, length);
 
     reg_dio1_tx_done();
@@ -334,11 +336,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length)
 }
 
 ///////////////////////////////////RX Functions Non-Blocking///////////////////////////////////////////
-
-static void ICACHE_RAM_ATTR rx_isr_handler(void)
-{
-    Radio.RXnbISR();
-}
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
@@ -354,27 +351,24 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
-    detachInterrupt(SX127x_dio0);
     SetMode(SX127X_SLEEP);
-    ClearIRQFlags();
-    InterruptAssignment = NONE;
+    p_state_dio0_isr = NONE;
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::RXnb()
+void ICACHE_RAM_ATTR SX127xDriver::RXnb(uint32_t freq)
 {
     SetMode(SX127X_STANDBY);
+    p_state_dio0_isr = RX_DONE;
+    p_state_dio1_isr = NONE;
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
     if (-1 != _RXenablePin)
         digitalWrite(_RXenablePin, HIGH);
 
-    //attach interrupt to DIO0, RX continuous mode
-    if (InterruptAssignment != RX_DONE)
-    {
-        attachInterrupt(digitalPinToInterrupt(SX127x_dio0), rx_isr_handler, RISING);
-        InterruptAssignment = RX_DONE;
-    }
+    // Set freq if defined
+    if (freq)
+        SetFrequency(freq, 0xff);
 
     if (headerExplMode == false)
     {
@@ -394,8 +388,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, uint32_t timeout)
 {
-    detachInterrupt(SX127x_dio0); //disable int callback
-    InterruptAssignment = NONE;
+    p_state_dio0_isr = p_state_dio1_isr = NONE;
 
     SetMode(SX127X_STANDBY);
 
@@ -409,25 +402,17 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
 
     uint32_t StartTime = millis();
 
-    while (!digitalRead(SX127x_dio0))
+    while (p_state_dio0_isr != ISR_RCVD)
     {
         if (millis() > (StartTime + timeout))
         {
-            ClearIRQFlags();
             return (ERR_RX_TIMEOUT);
         }
-        // if (digitalRead(SX127x_dio1) || millis() > (StartTime + timeout))
-        //{
-
-        //SetMode(SX127X_STANDBY);
-        //}
     }
 
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, length, data);
     GetLastPacketRSSI();
     GetLastPacketSNR();
-
-    ClearIRQFlags();
 
     NonceRX++;
 
@@ -436,6 +421,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
 {
+    p_state_dio0_isr = p_state_dio1_isr = NONE;
 
     SetMode(SX127X_STANDBY);
 
@@ -447,11 +433,10 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
 
     SetMode(SX127X_RXSINGLE);
 
-    while (!digitalRead(SX127x_dio0))
+    while (p_state_dio0_isr != ISR_RCVD)
     {
-        if (digitalRead(SX127x_dio1))
+        if (p_state_dio1_isr != NONE)
         {
-            ClearIRQFlags();
             return (ERR_RX_TIMEOUT);
         }
     }
@@ -470,7 +455,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
     GetLastPacketRSSI();
     GetLastPacketSNR();
 
-    ClearIRQFlags();
     NonceRX++;
 
     return (ERR_NONE);
@@ -478,6 +462,8 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
 
 uint8_t SX127xDriver::RunCAD()
 {
+    p_state_dio0_isr = p_state_dio1_isr = NONE;
+
     SetMode(SX127X_STANDBY);
 
     writeRegister(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_CAD_DONE | SX127X_DIO1_CAD_DETECTED);
@@ -488,7 +474,7 @@ uint8_t SX127xDriver::RunCAD()
 
     uint32_t startTime = millis();
 
-    while (!digitalRead(SX127x_dio0))
+    while (p_state_dio0_isr != ISR_RCVD)
     {
         if (millis() > (startTime + 500))
         {
@@ -496,15 +482,13 @@ uint8_t SX127xDriver::RunCAD()
         }
         else
         {
-            if (digitalRead(SX127x_dio1))
+            if (p_state_dio1_isr != NONE)
             {
-                ClearIRQFlags();
                 return (PREAMBLE_DETECTED);
             }
         }
     }
 
-    ClearIRQFlags();
     return (CHANNEL_FREE);
 }
 

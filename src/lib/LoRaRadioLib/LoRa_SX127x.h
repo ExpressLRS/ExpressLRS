@@ -149,18 +149,17 @@ public:
     {
         return (p_RegOpMode & SX127X_CAD);
     }
-    uint8_t TX(uint8_t *data, uint8_t length);
-    ////////////////////////////////////////////////////
-
-    void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
-    void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
     /////////////////Utility Funcitons//////////////////
-    void ClearIRQFlags();
+    void ICACHE_RAM_ATTR ClearIRQFlags();
+
+    //////////////TX related Functions/////////////////
+    uint8_t ICACHE_RAM_ATTR TX(uint8_t *data, uint8_t length);
 
     //////////////RX related Functions/////////////////
-
     uint8_t RunCAD();
+    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
+    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
 
     uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned();
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
@@ -168,14 +167,13 @@ public:
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
-    uint8_t ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length);
+    uint8_t ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length, uint32_t freq = 0);
+    void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
 
     /////////////Non-blocking RX related Functions///////////////
     void ICACHE_RAM_ATTR StopContRX();
-    void ICACHE_RAM_ATTR RXnb();
-
-    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
-    uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
+    void ICACHE_RAM_ATTR RXnb(uint32_t freq = 0);
+    void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
 private:
     volatile uint8_t p_RegOpMode = 0;
