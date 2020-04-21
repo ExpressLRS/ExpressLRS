@@ -53,22 +53,44 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(TARGET_100mW_MODULE)
     switch (Power)
     {
-    case PWR_10mW:
-        Radio.SetOutputPower(0b1000);
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(0b1100);
-        break;
-    case PWR_50mW:
-        Radio.SetOutputPower(0b1111);
-        break;
-    default:
-        Power = CurrentPower;
-        break;
+        case PWR_10mW:
+            Radio.SetOutputPower(0b1000);
+            break;
+        case PWR_25mW:
+            Radio.SetOutputPower(0b1100);
+            break;
+        case PWR_50mW:
+            Radio.SetOutputPower(0b1111);
+            break;
+        default:
+            Power = CurrentPower;
+            break;
     }
 #elif defined(TARGET_1000mW_MODULE)
-    Radio.SetOutputPower(0b0000);
-    Power = PWR_25mW;
+    switch (Power)
+    {
+        case PWR_100mW:
+            Radio.SetOutputPower(0b0101);
+            CurrentPower = PWR_100mW;
+            break;
+        case PWR_250mW:
+            Radio.SetOutputPower(0b1000);
+            CurrentPower = PWR_250mW;
+            break;
+        case PWR_500mW:
+            Radio.SetOutputPower(0b1100);
+            CurrentPower = PWR_500mW;
+            break;
+        case PWR_1000mW:
+            Radio.SetOutputPower(0b1111);
+            CurrentPower = PWR_1000mW;
+            break;
+        case PWR_50mW:
+        default:
+            Radio.SetOutputPower(0b0010);
+            CurrentPower = PWR_50mW;
+            break;
+    }
 #endif
     CurrentPower = Power;
 }
