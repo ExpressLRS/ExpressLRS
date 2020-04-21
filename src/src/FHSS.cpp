@@ -175,9 +175,8 @@ const uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(uint32_t));
 uint8_t volatile FHSSptr = 0;
 uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 
-int32_t volatile FreqCorrection = 0;
-
-uint32_t const freq_offset_uid = UID[4] + UID[5];
+#define FREQ_OFFSET_UID (UID[4] + UID[5])
+int32_t volatile FreqCorrection = FREQ_OFFSET_UID;
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
@@ -187,6 +186,11 @@ void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 { // get the current index of the FHSS pointer
     return FHSSptr;
+}
+
+void ICACHE_RAM_ATTR FHSSincCurrIndex()
+{
+    FHSSptr++;
 }
 
 uint32_t ICACHE_RAM_ATTR GetInitialFreq()

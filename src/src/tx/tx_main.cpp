@@ -22,6 +22,7 @@
 CRSF_TX crsf(CrsfSerial);
 RcChannels rc_ch;
 POWERMGNT PowerMgmt;
+static volatile uint32_t _rf_rxtx_counter = 0;
 
 /////////// SYNC PACKET ////////
 static uint32_t SyncPacketNextSend = 0;
@@ -34,19 +35,15 @@ volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint32_t recv_tlm_counter = 0;
 static volatile uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
-static volatile uint8_t WaitTelemetry = false;
 
 //////////// LUA /////////
-static volatile bool UpdateParamReq = false;
 
 ///////////////////////////////////////
 
-void ICACHE_RAM_ATTR ProcessTLMpacket()
+static void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t in_byte = Radio.RXdataBuffer[7];
-
-    WaitTelemetry = 0;
 
     //DEBUG_PRINTLN("TLMpacket0");
 
@@ -80,24 +77,21 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
 ///////////////////////////////////////
 
-void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
+static void SetRFLinkRate(uint8_t rate, uint8_t init = 0) // Set speed of RF link (hz)
 {
-    output[0] = (DeviceAddr) + SYNC_PACKET;
-    output[1] = FHSSgetCurrIndex();
-    output[2] = Radio.NonceTX;
-    output[3] = 0;
-    output[4] = UID[3];
-    output[5] = UID[4];
-    output[6] = UID[5];
-}
+    // TODO: Protect this by disabling timer/isr...
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
-{
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
-    //TxTimer.stop();
+    if (!init)
+    {
+        // Stop timer and put radio into sleep
+        TxTimer.stop();
+        Radio.StopContRX();
+    }
+
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
@@ -110,80 +104,65 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
     platform_connection_state(connectionState);
 
-    //TxTimer.start();
+    if (!init)
+        TxTimer.start();
 }
 
-uint8_t ICACHE_RAM_ATTR decRFLinkRate()
+static void ICACHE_RAM_ATTR HandleFHSS_TX()
 {
-    DEBUG_PRINTLN("dec");
-    if ((uint8_t)ExpressLRS_currAirRate->enum_rate < (RATE_MAX - 1))
-    {
-        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
-    }
-    return (uint8_t)ExpressLRS_currAirRate->enum_rate;
-}
-
-uint8_t ICACHE_RAM_ATTR incRFLinkRate()
-{
-    DEBUG_PRINTLN("inc");
-    if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
-    {
-        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
-    }
-    return (uint8_t)ExpressLRS_currAirRate->enum_rate;
-}
-
-void ICACHE_RAM_ATTR HandleFHSS()
-{
-    uint8_t modresult = (Radio.NonceTX) % ExpressLRS_currAirRate->FHSShopInterval;
-
+    // Called after successful TX
+    uint8_t modresult = (_rf_rxtx_counter) % ExpressLRS_currAirRate->FHSShopInterval;
     if (modresult == 0) // if it time to hop, do so.
     {
-        Radio.SetFrequency(FHSSgetNextFreq());
+        FHSSincCurrIndex();
     }
+    _rf_rxtx_counter++;
 }
 
-void ICACHE_RAM_ATTR HandleTLM()
+static void ICACHE_RAM_ATTR HandleTLM()
 {
+    // Called after successful TX
     if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
-        uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        if (modresult != 0) // wait for tlm response because it's time
+        uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+        if (modresult == 0)
         {
-            return;
+            PowerMgmt.pa_off();
+            Radio.RXnb(FHSSgetCurrFreq());
         }
-
-        PowerMgmt.pa_off();
-        Radio.RXnb();
-        WaitTelemetry = 1;
     }
 }
 
-void ICACHE_RAM_ATTR SendRCdataToRF()
+static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 {
+    output[0] = (DeviceAddr) + SYNC_PACKET;
+    output[1] = FHSSgetCurrIndex();
+    output[2] = _rf_rxtx_counter;
+    output[3] = 0;
+    output[4] = UID[3];
+    output[5] = UID[4];
+    output[6] = UID[5];
+}
+
+static void ICACHE_RAM_ATTR SendRCdataToRF()
+{
+    // Called by HW timer
     uint32_t current_ms;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
     //DEBUG_PRINT("I");
 
-#if (FEATURE_OPENTX_SYNC)
     crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
-#endif
 
-    /////// This Part Handles the Telemetry Response ///////
+    /////// This Part Handles the Telemetry RX ///////
     if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
-        uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+        uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
         if (modresult == 0)
-        { // wait for tlm response
-            if (WaitTelemetry)
-            {
-                WaitTelemetry = 0;
-                return;
-            }
-
-            Radio.NonceTX++;
+        {
+            // Skip TX because TLM RX is ongoing and increate TX cnt to keep sync
+            goto exit_rx_send;
         }
     }
 
@@ -196,8 +175,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         SyncPacketNextSend =
             current_ms +
             ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
-        //DEBUG_PRINT("sync ");
-        //DEBUG_PRINTLN(Radio.currFreq);
     }
     else
     {
@@ -206,38 +183,55 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
     // Calculate the CRC
     tx_buffer[7] = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
-
+    // Enable PA
     PowerMgmt.pa_on();
-    Radio.TXnb(tx_buffer, 8);
+    // Send data to rf
+    Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
+exit_rx_send:
+    // Increase TX counter
+    HandleFHSS_TX();
 }
 
-static void ICACHE_RAM_ATTR ParamUpdateReq(void)
+static void decRFLinkRate(void)
 {
-    UpdateParamReq = true;
-}
-
-static void ICACHE_RAM_ATTR HandleUpdateParameter()
-{
-    if (!UpdateParamReq)
+    if (ExpressLRS_currAirRate->enum_rate < (RATE_MAX - 1))
     {
-        return;
+        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
     }
+}
 
-    switch (crsf.ParameterUpdateData[0])
+static void incRFLinkRate(void)
+{
+    if (ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
+    {
+        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
+    }
+}
+
+static void ParamUpdateReq(uint8_t const *msg, uint16_t len)
+{
+    // Called from UART handling loop (main loop)
+
+    if (len != 2)
+        return;
+
+    uint8_t value = msg[1];
+
+    switch (msg[0])
     {
         case 0: // send all params
-            //DEBUG_PRINTLN("send all");
             break;
 
         case 1:
-            if (crsf.ParameterUpdateData[1] == 0)
+            if (value == 0)
             {
-                /*uint8_t newRate =*/decRFLinkRate();
+                decRFLinkRate();
             }
-            else if (crsf.ParameterUpdateData[1] == 1)
+            else if (value == 1)
             {
-                /*uint8_t newRate =*/incRFLinkRate();
+                incRFLinkRate();
             }
+            DEBUG_PRINT("Rate: ");
             DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
             break;
 
@@ -245,16 +239,17 @@ static void ICACHE_RAM_ATTR HandleUpdateParameter()
             break;
 
         case 3:
-            if (crsf.ParameterUpdateData[1] == 0)
+            if (value == 0)
             {
                 PowerMgmt.decPower();
             }
-            else if (crsf.ParameterUpdateData[1] == 1)
+            else if (value == 1)
             {
                 PowerMgmt.incPower();
             }
             crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
-
+            DEBUG_PRINT("Power: ");
+            DEBUG_PRINTLN(PowerMgmt.currPower());
             break;
 
         case 4:
@@ -264,9 +259,6 @@ static void ICACHE_RAM_ATTR HandleUpdateParameter()
             break;
     }
 
-    UpdateParamReq = false;
-    //DEBUG_PRINTLN("Power");
-    //DEBUG_PRINTLN(PowerMgmt.currPower());
     crsf.sendLUAresponseToRadio((ExpressLRS_currAirRate->enum_rate + 2),
                                 ExpressLRS_currAirRate->TLMinterval + 1,
                                 PowerMgmt.currPower() + 2,
@@ -323,15 +315,15 @@ void setup()
 
     Radio.RXdoneCallback1 = &ProcessTLMpacket;
 
-    Radio.TXdoneCallback1 = &HandleFHSS;
+    //Radio.TXdoneCallback1 = &HandleFHSS_TX;
     Radio.TXdoneCallback2 = &HandleTLM;
-    Radio.TXdoneCallback3 = &HandleUpdateParameter;
-    //Radio.TXdoneCallback4 = &NULL;
+    //Radio.TXdoneCallback3 = ;
+    //Radio.TXdoneCallback4 = ;
 
     PowerMgmt.defaultPower();
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
-    SetRFLinkRate(RATE_DEFAULT);
+    SetRFLinkRate(RATE_DEFAULT, 1);
 
     crsf.Begin();
 }

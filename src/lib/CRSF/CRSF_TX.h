@@ -25,20 +25,20 @@ public:
     {
         switch (interval)
         {
-        case 5000: // 200Hz
-            LinkStatistics.rf_Mode = 3;
-            break;
-        case 10000: // 100Hz
-            LinkStatistics.rf_Mode = 2;
-            break;
-        case 20000: // 50Hz
-            LinkStatistics.rf_Mode = 1;
-            break;
-        case 40000:  // 25Hz
-        case 250000: // 4Hz
-        default:
-            LinkStatistics.rf_Mode = 0;
-            break;
+            case 5000: // 200Hz
+                LinkStatistics.rf_Mode = 3;
+                break;
+            case 10000: // 100Hz
+                LinkStatistics.rf_Mode = 2;
+                break;
+            case 20000: // 50Hz
+                LinkStatistics.rf_Mode = 1;
+                break;
+            case 40000:  // 25Hz
+            case 250000: // 4Hz
+            default:
+                LinkStatistics.rf_Mode = 0;
+                break;
         };
 #if (FEATURE_OPENTX_SYNC)
         RequestedRCpacketInterval = interval;
@@ -52,7 +52,6 @@ public:
     }
 
     ///// Variables /////
-    volatile uint8_t ParameterUpdateData[2] = {0}; // TODO move this away!
 
 private:
     bool p_slowBaudrate = false;

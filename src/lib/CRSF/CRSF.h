@@ -11,36 +11,36 @@
 #define N_SWITCHES 8
 #define N_CHANNELS 16 // (N_CONTROLS + N_SWITCHES)
 
-#define CRSF_RX_BAUDRATE 420000
-#define CRSF_OPENTX_BAUDRATE 400000
+#define CRSF_RX_BAUDRATE          420000
+#define CRSF_OPENTX_BAUDRATE      400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
-#define CRSF_NUM_CHANNELS 16             // Number of input channels
-#define CRSF_CHANNEL_VALUE_MIN 172
-#define CRSF_CHANNEL_VALUE_MID 992
-#define CRSF_CHANNEL_VALUE_MAX 1811
-#define CRSF_MAX_PACKET_LEN 64
+#define CRSF_NUM_CHANNELS         16     // Number of input channels
+#define CRSF_CHANNEL_VALUE_MIN    172
+#define CRSF_CHANNEL_VALUE_MID    992
+#define CRSF_CHANNEL_VALUE_MAX    1811
+#define CRSF_MAX_PACKET_LEN       64
 
 #define CRSF_SYNC_BYTE 0xC8
 
 #define RCframeLength sizeof(crsf_channels_t) // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
 //#define LinkStatisticsFrameLength 10 //
 #define LinkStatisticsFrameLength sizeof(crsfPayloadLinkstatistics_s)
-#define OpenTXsyncFrameLength 11                            //
-#define BattSensorFrameLength sizeof(crsf_sensor_battery_t) // 8
-#define VTXcontrolFrameLength 12                            //
-#define LUArespLength 6
+#define OpenTXsyncFrameLength     11                            //
+#define BattSensorFrameLength     sizeof(crsf_sensor_battery_t) // 8
+#define VTXcontrolFrameLength     12                            //
+#define LUArespLength             6
 
-#define CRSF_PAYLOAD_SIZE_MAX 62
-#define CRSF_FRAME_NOT_COUNTED_BYTES 2
-#define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
+#define CRSF_PAYLOAD_SIZE_MAX             62
+#define CRSF_FRAME_NOT_COUNTED_BYTES      2
+#define CRSF_FRAME_SIZE(payload_size)     ((payload_size) + 2) // See crsf_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
-#define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
+#define CRSF_FRAME_SIZE_MAX               (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 
 //////////////////////////////////////////////////////////////
 
-#define CRSF_MSP_REQ_PAYLOAD_SIZE 8
+#define CRSF_MSP_REQ_PAYLOAD_SIZE  8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
-#define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
+#define CRSF_MSP_MAX_PAYLOAD_SIZE  (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
 enum crsf_frame_type_e
 {
@@ -222,11 +222,13 @@ public:
     static void (*disconnected)();
     static void (*connected)();
 
-    static void (*RecvParameterUpdate)();
+    static void (*RecvParameterUpdate)(uint8_t const *msg, uint16_t len);
 
     // Protocol funcs
     void ICACHE_RAM_ATTR LinkStatisticsExtract(volatile uint8_t const *const data,
-                                               int8_t snr, uint8_t rssi, uint8_t lq);
+                                               int8_t snr,
+                                               uint8_t rssi,
+                                               uint8_t lq);
     void ICACHE_RAM_ATTR LinkStatisticsPack(uint8_t *const output);
 
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct

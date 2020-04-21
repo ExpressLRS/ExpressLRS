@@ -156,7 +156,7 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
 }
 #endif /* FEATURE_OPENTX_SYNC */
 
-void ICACHE_RAM_ATTR CRSF_TX::processPacket(uint8_t const *input)
+void CRSF_TX::processPacket(uint8_t const *input)
 {
     if (CRSFstate == false)
     {
@@ -171,29 +171,25 @@ void ICACHE_RAM_ATTR CRSF_TX::processPacket(uint8_t const *input)
 
     switch (*input++)
     {
-    case CRSF_FRAMETYPE_PARAMETER_WRITE:
-    {
-        //DEBUG_PRINTLN("Got Other Packet");
-        //DEBUG_PRINTLN("L");
-        if (input[0] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
-            input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        case CRSF_FRAMETYPE_PARAMETER_WRITE:
         {
-            ParameterUpdateData[0] = input[2];
-            ParameterUpdateData[1] = input[3];
-            RecvParameterUpdate();
+            if (input[0] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
+                input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+            {
+                RecvParameterUpdate(&input[2], 2);
+            }
         }
-    }
-    case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
-    {
-        //DEBUG_PRINT("X");
+        case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
+        {
+            //DEBUG_PRINT("X");
 #if (FEATURE_OPENTX_SYNC)
-        RCdataLastRecv = micros();
+            RCdataLastRecv = micros();
 #endif
-        (RCdataCallback1)((crsf_channels_t *)input); // run new RC data callback
-        break;
-    }
-    default:
-        break;
+            (RCdataCallback1)((crsf_channels_t *)input); // run new RC data callback
+            break;
+        }
+        default:
+            break;
     };
 }
 

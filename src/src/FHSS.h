@@ -15,6 +15,7 @@ extern const uint32_t FHSSfreqs[];
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value);
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex();
+void ICACHE_RAM_ATTR FHSSincCurrIndex();
 
 uint32_t ICACHE_RAM_ATTR GetInitialFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq();
