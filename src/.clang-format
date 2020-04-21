@@ -7,10 +7,16 @@ IndentWidth: 4
 TabWidth: 4
 UseTab: false
 BreakBeforeBraces: Allman
+#BreakBeforeBraces: Linux
 AllowShortIfStatementsOnASingleLine: false
 ColumnLimit: 0 #120
 AccessModifierOffset: -4
 IncludeBlocks: Preserve
 SortIncludes: false
 #IndentPPDirectives: AfterHash
+IndentCaseLabels: true
+AlignConsecutiveMacros: true
+BinPackArguments: false
+BinPackParameters: false
+Cpp11BracedListStyle: true
 ...
