@@ -33,7 +33,7 @@ typedef struct
 void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
+    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
     output[0] = PacketHeaderAddr;
 
     // find the next switch to send
@@ -97,30 +97,30 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
 
     switch (switchIndex)
     {
-    case 0:
-        PackedRCdataOut.ch4 = switchValue;
-        break;
-    case 1:
-        PackedRCdataOut.ch5 = switchValue;
-        break;
-    case 2:
-        PackedRCdataOut.ch6 = switchValue;
-        break;
-    case 3:
-        PackedRCdataOut.ch7 = switchValue;
-        break;
-    case 4:
-        PackedRCdataOut.ch8 = switchValue;
-        break;
-    case 5:
-        PackedRCdataOut.ch9 = switchValue;
-        break;
-    case 6:
-        PackedRCdataOut.ch10 = switchValue;
-        break;
-    case 7:
-        PackedRCdataOut.ch11 = switchValue;
-        break;
+        case 0:
+            PackedRCdataOut.ch4 = switchValue;
+            break;
+        case 1:
+            PackedRCdataOut.ch5 = switchValue;
+            break;
+        case 2:
+            PackedRCdataOut.ch6 = switchValue;
+            break;
+        case 3:
+            PackedRCdataOut.ch7 = switchValue;
+            break;
+        case 4:
+            PackedRCdataOut.ch8 = switchValue;
+            break;
+        case 5:
+            PackedRCdataOut.ch9 = switchValue;
+            break;
+        case 6:
+            PackedRCdataOut.ch10 = switchValue;
+            break;
+        case 7:
+            PackedRCdataOut.ch11 = switchValue;
+            break;
     }
 }
 
@@ -156,7 +156,7 @@ typedef struct
 void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
+    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
     output[0] = PacketHeaderAddr;
 
     // find the next switch to send
@@ -231,30 +231,30 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
 
     switch (switchIndex)
     {
-    case 0: // we should never get index 0 here since that is the low latency switch
-        DEBUG_PRINTLN("BAD switchIndex 0");
-        break;
-    case 1:
-        PackedRCdataOut.ch5 = switchValue;
-        break;
-    case 2:
-        PackedRCdataOut.ch6 = switchValue;
-        break;
-    case 3:
-        PackedRCdataOut.ch7 = switchValue;
-        break;
-    case 4:
-        PackedRCdataOut.ch8 = switchValue;
-        break;
-    case 5:
-        PackedRCdataOut.ch9 = switchValue;
-        break;
-    case 6:
-        PackedRCdataOut.ch10 = switchValue;
-        break;
-    case 7:
-        PackedRCdataOut.ch11 = switchValue;
-        break;
+        case 0: // we should never get index 0 here since that is the low latency switch
+            DEBUG_PRINTLN("BAD switchIndex 0");
+            break;
+        case 1:
+            PackedRCdataOut.ch5 = switchValue;
+            break;
+        case 2:
+            PackedRCdataOut.ch6 = switchValue;
+            break;
+        case 3:
+            PackedRCdataOut.ch7 = switchValue;
+            break;
+        case 4:
+            PackedRCdataOut.ch8 = switchValue;
+            break;
+        case 5:
+            PackedRCdataOut.ch9 = switchValue;
+            break;
+        case 6:
+            PackedRCdataOut.ch10 = switchValue;
+            break;
+        case 7:
+            PackedRCdataOut.ch11 = switchValue;
+            break;
     }
 }
 
@@ -287,7 +287,7 @@ typedef struct
 void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
 {
     uint32_t current_ms = millis();
-    uint8_t PacketHeaderAddr = (DeviceAddr << 2);
+    uint8_t PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr);
 
 #ifndef One_Bit_Switches
     if ((current_ms > SwitchPacketNextSend) || (p_auxChannelsChanged & 0xf))

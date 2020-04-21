@@ -124,7 +124,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
-    tx_buffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET; // address + tlm packet
 
     crsf.LinkStatisticsPack(&tx_buffer[1]);
 
@@ -196,8 +196,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
     if (inCRC != calculatedCRC)
     {
@@ -206,7 +204,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    if (packetAddr != DeviceAddr)
+    if (DEIVCE_ADDR_GET(Radio.RXdataBuffer[0]) != DeviceAddr)
     {
         //DEBUG_PRINTLN("Wrong device address on RF packet");
         DEBUG_PRINT("!ADDR");
@@ -217,66 +215,66 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     getRFlinkInfo();
 
-    switch (type)
+    switch (TYPE_GET(Radio.RXdataBuffer[0]))
     {
-    case RC_DATA_PACKET: //Standard RC Data Packet
-        if (connectionState == STATE_connected)
-        {
-            rc_ch.channels_extract(Radio.RXdataBuffer, crsf.ChannelsPacked);
-            crsf.sendRCFrameToFC();
-        }
-        break;
-
-#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-    case SWITCH_DATA_PACKET: // Switch Data Packet
-        if (connectionState == STATE_connected)
-        {
-            // extra layer of protection incase the crc and addr headers fail us.
-            if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) &&
-                (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]))
+        case RC_DATA_PACKET: //Standard RC Data Packet
+            if (connectionState == STATE_connected)
             {
                 rc_ch.channels_extract(Radio.RXdataBuffer, crsf.ChannelsPacked);
-                NonceRXlocal = Radio.RXdataBuffer[5];
-                FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
                 crsf.sendRCFrameToFC();
             }
-        }
-        break;
+            break;
+
+#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
+        case SWITCH_DATA_PACKET: // Switch Data Packet
+            if (connectionState == STATE_connected)
+            {
+                // extra layer of protection incase the crc and addr headers fail us.
+                if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) &&
+                    (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2]))
+                {
+                    rc_ch.channels_extract(Radio.RXdataBuffer, crsf.ChannelsPacked);
+                    NonceRXlocal = Radio.RXdataBuffer[5];
+                    FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
+                    crsf.sendRCFrameToFC();
+                }
+            }
+            break;
 #endif
 
-    case TLM_PACKET: //telemetry packet from master
-        // not implimented yet
-        break;
+        case TLM_PACKET: //telemetry packet from master
+            // not implimented yet
+            break;
 
-    case SYNC_PACKET: //sync packet from master
-        if (Radio.RXdataBuffer[4] == UID[3] &&
-            Radio.RXdataBuffer[5] == UID[4] &&
-            Radio.RXdataBuffer[6] == UID[5])
-        {
-            if (connectionState == STATE_disconnected)
+        case SYNC_PACKET: //sync packet from master
+            if (Radio.RXdataBuffer[4] == UID[3] &&
+                Radio.RXdataBuffer[5] == UID[4] &&
+                Radio.RXdataBuffer[6] == UID[5])
             {
-                TentativeConnection();
-            }
-            else if (connectionState == STATE_tentative)
-            {
-                if (NonceRXlocal == Radio.RXdataBuffer[2] &&
-                    FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+                if (connectionState == STATE_disconnected)
                 {
-                    GotConnection();
+                    TentativeConnection();
                 }
-                else if (2 < (tentative_cnt++))
+                else if (connectionState == STATE_tentative)
                 {
-                    LostConnection();
+                    if (NonceRXlocal == Radio.RXdataBuffer[2] &&
+                        FHSSgetCurrIndex() == Radio.RXdataBuffer[1])
+                    {
+                        GotConnection();
+                    }
+                    else if (2 < (tentative_cnt++))
+                    {
+                        LostConnection();
+                    }
                 }
+
+                FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+                NonceRXlocal = Radio.RXdataBuffer[2];
             }
+            break;
 
-            FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-            NonceRXlocal = Radio.RXdataBuffer[2];
-        }
-        break;
-
-    default: // code to be executed if n doesn't match any cases
-        break;
+        default: // code to be executed if n doesn't match any cases
+            break;
     }
 
     addPacketToLQ();
@@ -369,8 +367,7 @@ void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
      */
 
     Radio.StopContRX();
-    Radio.Config(config->bw, config->sf, config->cr,
-                 GetInitialFreq(), 0);
+    Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     TxTimer.updateInterval(config->interval);
     //LPF_Offset.init(0);

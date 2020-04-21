@@ -10,16 +10,20 @@
 //
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     /* 200Hz */
-    //{BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},  // airtime =  3.870ms, up-to 8bytes, no-crc
-    {BW_500_00_KHZ, SF_6, CR_4_6, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.896ms, up-to 10bytes, no-crc
-    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.380ms, up-to 8bytes, no-crc
-    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.380ms, up-to 8bytes, no-crc
-    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 10, RATE_200HZ, 1000, 1500}, // airtime =  4.640ms, up-to 8bytes, no-crc
+    //{BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},  // airtime: 3.87ms/8B, 4.51ms/11B
+    //{BW_500_00_KHZ, SF_6, CR_4_6, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime: 4.13ms/8B, 4.90ms/11B
+    {BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime: 4.380ms/8B
+    //{BW_500_00_KHZ, SF_6, CR_4_8, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime: 4.64ms/8B
+    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 10, RATE_200HZ, 1000, 1500}, // airtime: 4.64ms/8B
+    //{BW_500_00_KHZ, SF_6, CR_4_8, -112, 5000, 200, TLM_RATIO_1_64, 4, 10, RATE_200HZ, 1000, 1500}, // airtime: 4.90ms/8B
+
     /* 100Hz */
-    //{BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  10.560ms, up-to 11bytes
-    {BW_500_00_KHZ, SF_7, CR_4_6, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  9.792ms, up-to 11bytes
+    {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  8.768ms/9B
+    //{BW_500_00_KHZ, SF_7, CR_4_6, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  8.256ms/9B
+
     /* 50Hz */
-    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500}, // airtime = 18.560ms, up-to 9bytes
+    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500}, // airtime = 18.560ms, up-to 11bytes
+
 #if RATE_MAX > 3
     {BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
 #elif RATE_MAX > 4
@@ -42,8 +46,8 @@ volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate = NULL;
 uint8_t UID[6] = {MY_UID};
 #endif
 
-uint8_t CRCCaesarCipher = UID[4];
-uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
+uint8_t const CRCCaesarCipher = UID[4];
+uint8_t const DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily based on mac until listen before assigning method merged
 
 #if 0
 static uint8_t my_sync_word = UID[4]; //0 , SX127X_SYNC_WORD;
@@ -73,7 +77,7 @@ uint8_t getSyncWord(void)
 #endif
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
-#define MEDIAN_SIZE 20
+#define MEDIAN_SIZE          20
 
 int16_t MeasureNoiseFloor()
 {

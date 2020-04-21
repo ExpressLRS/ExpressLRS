@@ -126,8 +126,7 @@ public:
     ////////////////Configuration Functions/////////////
     void SetPins(int rst, int dio0, int dio1);
     uint8_t Begin(int txpin = -1, int rxpin = -1);
-    uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr,
-                   uint32_t freq = 0, uint8_t syncWord = 0);
+    uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq = 0, uint8_t syncWord = 0);
     // Don't call SX127xConfig directly from app! use Config instead
     uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
@@ -146,6 +145,10 @@ public:
 
     uint8_t SX127xBegin();
     uint8_t SetMode(uint8_t mode);
+    uint8_t GetMode(void)
+    {
+        return (p_RegOpMode & SX127X_CAD);
+    }
     uint8_t TX(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
 

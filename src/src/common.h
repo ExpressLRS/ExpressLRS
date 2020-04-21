@@ -17,7 +17,7 @@
 
 #define One_Bit_Switches
 
-#define BUTTON_RESET_INTERVAL_RX 4000u  // Hold button for 4 sec to reboot RX
+#define BUTTON_RESET_INTERVAL_RX  4000u // Hold button for 4 sec to reboot RX
 #define WEB_UPDATE_PRESS_INTERVAL 2000u // hold button for 2 sec to enable webupdate mode
 
 typedef enum
@@ -41,8 +41,13 @@ void led_set_state(bool state);
 void led_toggle(void);
 
 extern uint8_t UID[6];
-extern uint8_t CRCCaesarCipher;
-extern uint8_t DeviceAddr;
+extern uint8_t const CRCCaesarCipher;
+extern uint8_t const DeviceAddr;
+
+// These are used as message type header
+#define DEIVCE_ADDR_GET(_B)      ((_B)&0b11111100)
+#define DEIVCE_ADDR_GENERATE(_B) (_B)
+#define TYPE_GET(_B)             ((_B)&0b00000011)
 
 uint8_t getSyncWord(void);
 

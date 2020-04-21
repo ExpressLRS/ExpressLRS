@@ -599,26 +599,26 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
 
     switch (currBW)
     {
-    case BW_7_80_KHZ:
-        return 7.8E3;
-    case BW_10_40_KHZ:
-        return 10.4E3;
-    case BW_15_60_KHZ:
-        return 15.6E3;
-    case BW_20_80_KHZ:
-        return 20.8E3;
-    case BW_31_25_KHZ:
-        return 31.25E3;
-    case BW_41_70_KHZ:
-        return 41.667E3;
-    case BW_62_50_KHZ:
-        return 62.5E3;
-    case BW_125_00_KHZ:
-        return 125E3;
-    case BW_250_00_KHZ:
-        return 250E3;
-    case BW_500_00_KHZ:
-        return 500E3;
+        case BW_7_80_KHZ:
+            return 7.8E3;
+        case BW_10_40_KHZ:
+            return 10.4E3;
+        case BW_15_60_KHZ:
+            return 15.6E3;
+        case BW_20_80_KHZ:
+            return 20.8E3;
+        case BW_31_25_KHZ:
+            return 31.25E3;
+        case BW_41_70_KHZ:
+            return 41.667E3;
+        case BW_62_50_KHZ:
+            return 62.5E3;
+        case BW_125_00_KHZ:
+            return 125E3;
+        case BW_250_00_KHZ:
+            return 250E3;
+        case BW_500_00_KHZ:
+            return 500E3;
     }
 
     return -1;
@@ -629,26 +629,26 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // th
 
     switch (currBW)
     {
-    case BW_7_80_KHZ:
-        return 1026;
-    case BW_10_40_KHZ:
-        return 769;
-    case BW_15_60_KHZ:
-        return 513;
-    case BW_20_80_KHZ:
-        return 385;
-    case BW_31_25_KHZ:
-        return 256;
-    case BW_41_70_KHZ:
-        return 192;
-    case BW_62_50_KHZ:
-        return 128;
-    case BW_125_00_KHZ:
-        return 64;
-    case BW_250_00_KHZ:
-        return 32;
-    case BW_500_00_KHZ:
-        return 16;
+        case BW_7_80_KHZ:
+            return 1026;
+        case BW_10_40_KHZ:
+            return 769;
+        case BW_15_60_KHZ:
+            return 513;
+        case BW_20_80_KHZ:
+            return 385;
+        case BW_31_25_KHZ:
+            return 256;
+        case BW_41_70_KHZ:
+            return 192;
+        case BW_62_50_KHZ:
+            return 128;
+        case BW_125_00_KHZ:
+            return 64;
+        case BW_250_00_KHZ:
+            return 32;
+        case BW_500_00_KHZ:
+            return 16;
     }
 
     return -1;

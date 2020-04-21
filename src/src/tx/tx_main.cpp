@@ -12,8 +12,8 @@
 #include "rc_channels.h"
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
-#define LQ_CALCULATE_INTERVAL 500u
+#define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
+#define LQ_CALCULATE_INTERVAL             500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
@@ -34,7 +34,7 @@ volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint32_t recv_tlm_counter = 0;
 static volatile uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
-static volatile bool WaitRXresponse = false;
+static volatile uint8_t WaitTelemetry = false;
 
 //////////// LUA /////////
 static volatile bool UpdateParamReq = false;
@@ -44,48 +44,45 @@ static volatile bool UpdateParamReq = false;
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t inCRC = Radio.RXdataBuffer[7];
-    uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
+    uint8_t in_byte = Radio.RXdataBuffer[7];
 
-    WaitRXresponse = false;
+    WaitTelemetry = 0;
 
     //DEBUG_PRINTLN("TLMpacket0");
 
-    if (packetAddr != DeviceAddr)
-    {
-        DEBUG_PRINTLN("TLM device address error");
-        return;
-    }
-
-    if ((inCRC != calculatedCRC))
+    if (in_byte != calculatedCRC)
     {
         DEBUG_PRINTLN("TLM crc error");
         return;
     }
 
-    if (type != TLM_PACKET)
+    in_byte = Radio.RXdataBuffer[0];
+
+    if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
     {
-        DEBUG_PRINTLN("TLM type error");
-        DEBUG_PRINTLN(type);
+        DEBUG_PRINTLN("TLM device address error");
+        return;
     }
 
     connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
     LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
-    recv_tlm_counter++;
 
-    crsf.LinkStatisticsExtract(&Radio.RXdataBuffer[1],
-                               Radio.LastPacketSNR,
-                               Radio.LastPacketRSSI,
-                               downlink_linkQuality);
+    if (TYPE_GET(in_byte) == TLM_PACKET)
+    {
+        recv_tlm_counter++;
+        crsf.LinkStatisticsExtract(&Radio.RXdataBuffer[1],
+                                   Radio.LastPacketSNR,
+                                   Radio.LastPacketRSSI,
+                                   downlink_linkQuality);
+    }
 }
+
+///////////////////////////////////////
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 {
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
-    output[0] = PacketHeaderAddr;
+    output[0] = (DeviceAddr) + SYNC_PACKET;
     output[1] = FHSSgetCurrIndex();
     output[2] = Radio.NonceTX;
     output[3] = 0;
@@ -158,7 +155,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 
         PowerMgmt.pa_off();
         Radio.RXnb();
-        WaitRXresponse = true;
+        WaitTelemetry = 1;
     }
 }
 
@@ -167,7 +164,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     uint32_t current_ms;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
-    uint8_t crc;
 
     //DEBUG_PRINT("I");
 
@@ -181,9 +177,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
         if (modresult == 0)
         { // wait for tlm response
-            if (WaitRXresponse == true)
+            if (WaitTelemetry)
             {
-                WaitRXresponse = false;
+                WaitTelemetry = 0;
                 return;
             }
 
@@ -208,9 +204,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         rc_ch.channels_pack(tx_buffer);
     }
 
-    ///// Next, Calculate the CRC and put it into the buffer /////
-    crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
-    tx_buffer[7] = crc;
+    // Calculate the CRC
+    tx_buffer[7] = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
+
     PowerMgmt.pa_on();
     Radio.TXnb(tx_buffer, 8);
 }
@@ -229,43 +225,43 @@ static void ICACHE_RAM_ATTR HandleUpdateParameter()
 
     switch (crsf.ParameterUpdateData[0])
     {
-    case 0: // send all params
-        //DEBUG_PRINTLN("send all");
-        break;
+        case 0: // send all params
+            //DEBUG_PRINTLN("send all");
+            break;
 
-    case 1:
-        if (crsf.ParameterUpdateData[1] == 0)
-        {
-            /*uint8_t newRate =*/decRFLinkRate();
-        }
-        else if (crsf.ParameterUpdateData[1] == 1)
-        {
-            /*uint8_t newRate =*/incRFLinkRate();
-        }
-        DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
-        break;
+        case 1:
+            if (crsf.ParameterUpdateData[1] == 0)
+            {
+                /*uint8_t newRate =*/decRFLinkRate();
+            }
+            else if (crsf.ParameterUpdateData[1] == 1)
+            {
+                /*uint8_t newRate =*/incRFLinkRate();
+            }
+            DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
+            break;
 
-    case 2:
-        break;
+        case 2:
+            break;
 
-    case 3:
-        if (crsf.ParameterUpdateData[1] == 0)
-        {
-            PowerMgmt.decPower();
-        }
-        else if (crsf.ParameterUpdateData[1] == 1)
-        {
-            PowerMgmt.incPower();
-        }
-        crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+        case 3:
+            if (crsf.ParameterUpdateData[1] == 0)
+            {
+                PowerMgmt.decPower();
+            }
+            else if (crsf.ParameterUpdateData[1] == 1)
+            {
+                PowerMgmt.incPower();
+            }
+            crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
-        break;
+            break;
 
-    case 4:
-        break;
+        case 4:
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 
     UpdateParamReq = false;
