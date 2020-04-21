@@ -91,16 +91,14 @@ void ICACHE_RAM_ATTR HandleFHSS()
 {
     if (connectionState > STATE_disconnected) // don't hop if we lost
     {
-        uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval;
-        if (modresult != 0)
+        uint8_t modresult = (NonceRXlocal) % ExpressLRS_currAirRate->FHSShopInterval;
+        if (modresult == 0)
         {
-            return;
+            //DEBUG_PRINT("F");
+            linkQuality = getRFlinkQuality();
+            Radio.RXnb(FHSSgetNextFreq()); // 260us => 148us
         }
-
-        //DEBUG_PRINT("F");
-        linkQuality = getRFlinkQuality();
-        Radio.SetFrequency(FHSSgetNextFreq()); // 220us => 85us
-        Radio.RXnb();                          // 260us => 148us
+        NonceRXlocal++;
     }
 }
 
@@ -113,7 +111,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     // Check if tlm time
-    uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+    uint8_t modresult = (NonceRXlocal) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult != 0)
     {
         return;
@@ -130,13 +128,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
     tx_buffer[7] = crc;
-    Radio.TXnb(tx_buffer, 8);
+    Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
     addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-    DEBUG_PRINT("H");
+    //DEBUG_PRINT("H");
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
@@ -152,8 +150,6 @@ void ICACHE_RAM_ATTR HWtimerCallback()
         incrementLQArray();
         HandleSendTelemetryResponse();
     }
-
-    NonceRXlocal++;
 }
 
 void LostConnection()
@@ -193,7 +189,7 @@ void ICACHE_RAM_ATTR GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    DEBUG_PRINT("I");
+    //DEBUG_PRINT("I");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
 

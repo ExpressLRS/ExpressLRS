@@ -5,7 +5,7 @@
 #include "LoRaRadioLib.h"
 #include "FHSS.h"
 
-#define USE_RC_DATA_STRUCTS 1
+#define USE_RC_DATA_STRUCTS 0
 
 #if defined(SEQ_SWITCHES)
 

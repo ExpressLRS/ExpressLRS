@@ -24,10 +24,10 @@
 
 #ifdef DEBUG_SERIAL
 // Debug enabled
-#define DEBUG_PRINT(...) DEBUG_SERIAL.print(__VA_ARGS__)
+#define DEBUG_PRINT(...)   DEBUG_SERIAL.print(__VA_ARGS__)
 #define DEBUG_PRINTLN(...) DEBUG_SERIAL.println(__VA_ARGS__)
-#define DEBUG_PRINTF(...) DEBUG_SERIAL.printf(__VA_ARGS__)
-#define DEBUG_WRITE(...) DEBUG_SERIAL.write(__VA_ARGS__)
+#define DEBUG_PRINTF(...)  DEBUG_SERIAL.printf(__VA_ARGS__)
+#define DEBUG_WRITE(...)   DEBUG_SERIAL.write(__VA_ARGS__)
 #else
 // Debug disabled
 #define DEBUG_PRINT(...)

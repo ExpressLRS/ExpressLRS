@@ -68,13 +68,6 @@ void platform_loop(connectionState_e state)
             webUpdateLedFlashIntervalNext = now + WEB_UPDATE_LED_FLASH_INTERVAL;
         }
     }
-//#ifdef Auto_WiFi_On_Boot
-#if 0
-    else if (now < 16000 && now > 15000 && (state == STATE_disconnected))
-    {
-        beginWebsever();
-    }
-#endif /* Auto_WiFi_On_Boot */
     else
     {
 #ifdef GPIO_PIN_BUTTON
@@ -96,7 +89,7 @@ void platform_connection_state(connectionState_e state)
 void platform_set_led(bool state)
 {
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, (uint32_t)state);
+    digitalWrite(GPIO_PIN_LED, (uint32_t)(!state)); // Invert led
 #endif
 }
 
