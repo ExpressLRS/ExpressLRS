@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 extern int32_t volatile FreqCorrection;
-#define FreqCorrectionMax 100000
-#define FreqCorrectionMin -100000
+#define FreqCorrectionMax  100000
+#define FreqCorrectionMin  -100000
 #define FreqCorrectionStep 61 //min freq step is ~ 61hz
 
 // The number of FHSS frequencies in the table
@@ -19,4 +19,4 @@ uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex();
 uint32_t ICACHE_RAM_ATTR GetInitialFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq();
-void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence();
+void FHSSrandomiseFHSSsequence();

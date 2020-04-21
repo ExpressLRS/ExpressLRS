@@ -67,7 +67,8 @@ const uint32_t FHSSfreqs[] = {
 
 #else //FRSKY_FREQS
 // https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
-static uint32_t FHSSfreqs[] = { // FrSkyR9_freq_map_868
+static uint32_t FHSSfreqs[] = {
+    // FrSkyR9_freq_map_868
     859504640,
     860004352,
     860504064,
@@ -95,10 +96,9 @@ static uint32_t FHSSfreqs[] = { // FrSkyR9_freq_map_868
     871497728,
     871997440,
     872497152,
-
     // last two determined by FrSkyR9_step
-    0,
-    0};
+    /*0, 0*/
+};
 #endif
 
 #elif defined Regulatory_Domain_EU_433
@@ -177,7 +177,7 @@ uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 
 int32_t volatile FreqCorrection = 0;
 
-uint32_t freq_offset_uid = 0;
+uint32_t const freq_offset_uid = UID[4] + UID[5];
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
@@ -208,7 +208,7 @@ uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 // Set all of the flags in the array to true, except for the first one
 // which corresponds to the sync channel and is never available for normal
 // allocation.
-void ICACHE_RAM_ATTR resetIsAvailable(uint8_t *array)
+static void resetIsAvailable(uint8_t *array)
 {
     // channel 0 is the sync channel and is never considered available
     array[0] = 0;
@@ -235,13 +235,10 @@ Approach:
     if the index is not a repeat, assing it to the FHSSsequence array, clear the availability flag and decrement the available count
     if there are no available channels left, reset the flags array and the count
 */
-void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
+void FHSSrandomiseFHSSsequence()
 {
     DEBUG_PRINT("Number of FHSS frequencies =");
     DEBUG_PRINTLN(NR_FHSS_ENTRIES);
-
-    for (uint8_t i = 0; i < sizeof(UID); i++)
-        freq_offset_uid ^= UID[i];
 
     uint32_t macSeed = ((uint32_t)UID[2] << 24) +
                        ((uint32_t)UID[3] << 16) +
@@ -331,7 +328,7 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 
 /** Previous version of FHSSrandomiseFHSSsequence
 
-void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
+void FHSSrandomiseFHSSsequence()
 {
     DEBUG_PRINT("Number of FHSS frequencies =");
     DEBUG_PRINT(NR_FHSS_ENTRIES);

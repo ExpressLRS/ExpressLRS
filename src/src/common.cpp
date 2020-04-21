@@ -3,14 +3,23 @@
 #include "utils.h"
 #include <Arduino.h>
 
+//
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
-
+//
+// https://semtech.my.salesforce.com/sfc/p/#E0000000JelG/a/2R000000HUhK/6T9Vdb3_ldnElA8drIbPYjs1wBbhlWUXej8ZMXtZXOM
+//
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    //{BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},  // airtime =  4.512ms
-    {BW_500_00_KHZ, SF_6, CR_4_6, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.896ms, up-to 9bytes
+    /* 200Hz */
+    //{BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},  // airtime =  3.870ms, up-to 8bytes, no-crc
+    {BW_500_00_KHZ, SF_6, CR_4_6, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.896ms, up-to 10bytes, no-crc
+    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.380ms, up-to 8bytes, no-crc
+    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500}, // airtime =  4.380ms, up-to 8bytes, no-crc
+    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 10, RATE_200HZ, 1000, 1500}, // airtime =  4.640ms, up-to 8bytes, no-crc
+    /* 100Hz */
     //{BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  10.560ms, up-to 11bytes
     {BW_500_00_KHZ, SF_7, CR_4_6, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000}, // airtime =  9.792ms, up-to 11bytes
-    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500},  // airtime = 18.560ms, up-to 9bytes
+    /* 50Hz */
+    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, 2, 10, RATE_50HZ, 6000, 2500}, // airtime = 18.560ms, up-to 9bytes
 #if RATE_MAX > 3
     {BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
 #elif RATE_MAX > 4
@@ -28,9 +37,7 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate)
 volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate = NULL;
 
 #ifndef MY_UID
-//uint8_t UID[6] = {48, 174, 164, 200, 100, 50};
-//uint8_t UID[6] = {180, 230, 45, 152, 126, 65}; //sandro unique ID
-uint8_t UID[6] = {180, 230, 45, 152, 125, 173}; // Wez's unique ID
+#error "UID is mandatory!"
 #else
 uint8_t UID[6] = {MY_UID};
 #endif
@@ -38,7 +45,8 @@ uint8_t UID[6] = {MY_UID};
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
 
-static uint8_t my_sync_word = 0;
+#if 0
+static uint8_t my_sync_word = UID[4]; //0 , SX127X_SYNC_WORD;
 uint8_t getSyncWord(void)
 {
     if (my_sync_word)
@@ -54,6 +62,15 @@ uint8_t getSyncWord(void)
     my_sync_word = syncw;
     return syncw;
 }
+#else
+uint8_t getSyncWord(void)
+{
+    uint8_t syncw = UID[4];
+    if (syncw == SX127X_SYNC_WORD_LORAWAN)
+        syncw++;
+    return syncw;
+}
+#endif
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
