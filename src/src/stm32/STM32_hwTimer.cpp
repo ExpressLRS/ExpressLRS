@@ -14,7 +14,7 @@ void HwTimer::init()
 {
     noInterrupts();
     timer_tx.attachInterrupt(TimerCallback);
-    //timer_tx.setMode(2, TIMER_OUTPUT_COMPARE);
+    timer_tx.setMode(2, TIMER_OUTPUT_COMPARE);
     setTime(HWtimerInterval >> 1);
     timer_tx.resume();
     interrupts();
