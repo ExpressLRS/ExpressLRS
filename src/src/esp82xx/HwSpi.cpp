@@ -14,7 +14,7 @@ void HwSpi::platform_init(void)
     SPIClass::begin();
     setBitOrder(MSBFIRST);
     setDataMode(SPI_MODE0);
-    setFrequency(10000000);
+    setFrequency(SX127X_SPI_SPEED);
 }
 
 void HwSpi::write(uint8_t data)

@@ -3,10 +3,10 @@
 #include "debug.h"
 #include <string.h>
 
-void ICACHE_RAM_ATTR CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
+void CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
-    _dev->write(buff, size);
+    //_dev->write(buff, size);
 }
 
 void CRSF_RX::LinkStatisticsSend()
@@ -22,7 +22,7 @@ void CRSF_RX::LinkStatisticsSend()
     sendFrameToFC(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC()
+void CRSF_RX::sendRCFrameToFC()
 {
     uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(RCframeLength)] = {0};
 

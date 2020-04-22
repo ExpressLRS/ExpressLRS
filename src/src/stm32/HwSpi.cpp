@@ -11,7 +11,6 @@ HwSpi::HwSpi() : SPIClass()
 
 void HwSpi::platform_init(void)
 {
-    //SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
     setMOSI(MOSI);
     setMISO(MISO);
     setSCLK(SCK);

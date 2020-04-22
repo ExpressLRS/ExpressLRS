@@ -25,7 +25,7 @@ RcChannels rc_ch;
 
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
-static volatile bool alreadyFHSS = false;
+//static volatile bool alreadyFHSS = false;
 static volatile uint32_t tlm_check_ratio = 0;
 static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
@@ -92,12 +92,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-uint8_t ICACHE_RAM_ATTR HandleFHSS()
+void ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresult = NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval;
     if (connectionState > STATE_disconnected) // don't hop if we lost
     {
-        if (modresult == 0)
+        if ((NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval) == 0)
         {
             //DEBUG_PRINT("F");
             linkQuality = getRFlinkQuality();
@@ -105,7 +104,6 @@ uint8_t ICACHE_RAM_ATTR HandleFHSS()
         }
         NonceRXlocal++;
     }
-    return modresult;
 }
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
@@ -128,9 +126,11 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 {
     //DEBUG_PRINT("H");
-    if (!alreadyFHSS)
+    //if (!alreadyFHSS)
+    {
         HandleFHSS();
-    alreadyFHSS = false;
+    }
+    //alreadyFHSS = false;
 
     // Check if connected before sending tlm resp
     if (STATE_disconnected < connectionState)
@@ -178,13 +178,56 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
+void process_rx_packet(void)
+{
+    getRFlinkInfo();
+
+    switch (TYPE_GET(rx_buffer[0]))
+    {
+        case RC_DATA_PACKET: //Standard RC Data Packet
+            if (connectionState == STATE_connected)
+            {
+                rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
+                crsf.sendRCFrameToFC();
+            }
+            break;
+
+#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
+        case SWITCH_DATA_PACKET: // Switch Data Packet
+            // extra layer of protection incase the crc and addr headers fail us.
+            if ((rx_buffer[3] == rx_buffer[1]) &&
+                (rx_buffer[4] == rx_buffer[2]))
+            {
+                if (connectionState == STATE_connected)
+                {
+                    rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
+                    crsf.sendRCFrameToFC();
+                }
+                NonceRXlocal = rx_buffer[5];
+                FHSSsetCurrIndex(rx_buffer[6]);
+            }
+            break;
+#endif
+
+        case TLM_PACKET: // telemetry packet
+            break;
+
+        case SYNC_PACKET: // sync packet is handled in rx isr
+        default:          // code to be executed if n doesn't match any cases
+            break;
+    }
+
+    LastValidPacket = millis();
+    rx_buffer_handle = 0;
+}
+
 void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
 {
     //DEBUG_PRINT("I");
+    uint32_t current_us = micros();
 
     volatile_memcpy(rx_buffer, buff, sizeof(rx_buffer));
 
-    uint32_t current_us;
     uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
     uint8_t address = rx_buffer[0];
 
@@ -202,78 +245,48 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
         return;
     }
 
-    getRFlinkInfo();
-
-    switch (TYPE_GET(address))
-    {
-        case RC_DATA_PACKET: //Standard RC Data Packet
-            rx_buffer_handle = 1;
-            break;
-
-#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-        case SWITCH_DATA_PACKET: // Switch Data Packet
-            // extra layer of protection incase the crc and addr headers fail us.
-            if ((rx_buffer[3] == rx_buffer[1]) &&
-                (rx_buffer[4] == rx_buffer[2]))
-            {
-                rx_buffer_handle = 1;
-                NonceRXlocal = rx_buffer[5];
-                FHSSsetCurrIndex(rx_buffer[6]);
-            }
-            break;
-#endif
-
-        case TLM_PACKET: //telemetry packet from master
-            rx_buffer_handle = 1;
-            break;
-
-        case SYNC_PACKET: //sync packet from master
-            if (rx_buffer[4] == UID[3] &&
-                rx_buffer[5] == UID[4] &&
-                rx_buffer[6] == UID[5])
-            {
-                if (connectionState == STATE_disconnected)
-                {
-                    TentativeConnection();
-                }
-                else if (connectionState == STATE_tentative)
-                {
-                    if (NonceRXlocal == rx_buffer[2] &&
-                        FHSSgetCurrIndex() == rx_buffer[1])
-                    {
-                        GotConnection();
-                    }
-                    else if (2 < (tentative_cnt++))
-                    {
-                        LostConnection();
-                    }
-                }
-
-                FHSSsetCurrIndex(rx_buffer[1]);
-                NonceRXlocal = rx_buffer[2];
-            }
-            break;
-
-        default: // code to be executed if n doesn't match any cases
-            break;
-    }
-
-    addPacketToLQ();
-
-    current_us = micros();
     //TimerAdjustment(Radio.LastPacketIsrMicros);
     TimerAdjustment(current_us);
+    addPacketToLQ();
 
-    LastValidPacket = current_us / 1000U;
-    alreadyFHSS = true;
-
-#define NO_FREQ_CORRECTION 0
-#if !NO_FREQ_CORRECTION
-    // Do freq correction after FHSS
-    if (HandleFHSS() == 1)
+    if (TYPE_GET(address) == SYNC_PACKET)
     {
+        if (rx_buffer[4] == UID[3] &&
+            rx_buffer[5] == UID[4] &&
+            rx_buffer[6] == UID[5])
+        {
+            if (connectionState == STATE_disconnected)
+            {
+                TentativeConnection();
+            }
+            else if (connectionState == STATE_tentative)
+            {
+                if (NonceRXlocal == rx_buffer[2] &&
+                    FHSSgetCurrIndex() == rx_buffer[1])
+                {
+                    GotConnection();
+                }
+                else if (2 < (tentative_cnt++))
+                {
+                    LostConnection();
+                }
+            }
+
+            FHSSsetCurrIndex(rx_buffer[1]);
+            NonceRXlocal = rx_buffer[2];
+        }
+    }
+    else
+        rx_buffer_handle = 1;
+
+    // Do freq correction before FHSS
+    if ((connectionState > STATE_disconnected) &&
+        ((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0)
+    {
+        int32_t freqerror = Radio.GetFrequencyError();
+
 #if !NEW_FREQ_CORR
-        int32_t freqerror = LPF_FreqError.update(Radio.GetFrequencyError()); // get freq error = 90us
+        freqerror = LPF_FreqError.update(freqerror); // get freq error = 90us
         //DEBUG_PRINT(freqerror);
         //DEBUG_PRINT(" : ");
 
@@ -305,18 +318,30 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
         Radio.setPPMoffsetReg(FreqCorrection);
 #else
         // Do freq error correction
-        int32_t freqerror = Radio.GetFrequencyError();
         //freqerror = LPF_FreqError.update(freqerror);
-        if ((freqerror < (-FreqCorrectionStep)) ||
-            (FreqCorrectionStep < freqerror))
+        DEBUG_PRINT(freqerror);
+        DEBUG_PRINT(" : ");
+
+        if (abs(freqerror) > 500)
         {
+#if 1
             FreqCorrection += freqerror;
             Radio.setPPMoffsetReg(freqerror, 0);
+#else
+            FreqCorrection += freqerror;
+            if (FreqCorrection < FreqCorrectionMin)
+                FreqCorrection = FreqCorrectionMin;
+            else if (FreqCorrection > FreqCorrectionMax)
+                FreqCorrection = FreqCorrectionMax;
+#endif
         }
 #endif
-        //DEBUG_PRINTLN(FreqCorrection);
+        DEBUG_PRINTLN(FreqCorrection - (UID[4] + UID[5]));
     }
-#endif // !NO_FREQ_CORRECTION
+
+    //alreadyFHSS = true;
+    //HandleFHSS();
+
     //DEBUG_PRINT("E");
 }
 
@@ -429,6 +454,9 @@ void loop()
 {
     uint32_t now = millis();
 
+    if (rx_buffer_handle)
+        process_rx_packet();
+
     if (connectionState == STATE_disconnected)
     {
         if (now > RFmodeNextCycle)
@@ -453,6 +481,7 @@ void loop()
         }
         else if (connectionState == STATE_connected)
         {
+#if 0
             if (rx_buffer_handle)
             {
                 rx_buffer_handle = 0;
@@ -473,6 +502,7 @@ void loop()
                         break;
                 }
             }
+#endif
 
             if (now > SendLinkStatstoFCintervalNextSend)
             {

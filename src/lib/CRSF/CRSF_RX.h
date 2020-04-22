@@ -11,14 +11,14 @@ public:
 
     void handleUartIn(void);
 
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
+    void sendRCFrameToFC();
     void LinkStatisticsSend();
 
     // Received channel data
     crsf_channels_t ChannelsPacked = {0};
 
 private:
-    void ICACHE_RAM_ATTR sendFrameToFC(uint8_t *buff, uint8_t size);
+    void sendFrameToFC(uint8_t *buff, uint8_t size);
     void processPacket(uint8_t const *data);
 };
 
