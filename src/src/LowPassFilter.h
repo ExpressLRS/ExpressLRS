@@ -6,8 +6,8 @@
 class LPF
 {
 public:
-    int32_t SmoothDataINT;
-    int32_t SmoothDataFP;
+    int32_t SmoothDataINT = 0;
+    int32_t SmoothDataFP = 0;
     int Beta = 3;     // Length = 16
     int FP_Shift = 3; //Number of fractional bits
 
@@ -44,9 +44,11 @@ public:
 
     void init(int32_t Indata)
     {
-        for (int i = 0; i < 255; i++)
+        /*for (int i = 0; i < 255; i++)
         {
             this->update(Indata);
-        }
+        }*/
+        SmoothDataINT = Indata;
+        SmoothDataFP = Indata;
     }
 };

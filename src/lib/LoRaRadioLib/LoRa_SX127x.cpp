@@ -83,7 +83,6 @@ void SX127xDriver::SetPins(int rst, int dio0, int dio1)
 
 uint8_t SX127xDriver::Begin(int txpin, int rxpin)
 {
-    DEBUG_PRINTLN("Driver Begin");
     uint8_t status;
 
     pinMode(SX127x_dio0, INPUT);

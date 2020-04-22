@@ -195,7 +195,7 @@ void CRSF_TX::processPacket(uint8_t const *input)
 
 void CRSF_TX::handleUartIn(void) // Merge with RX version...
 {
-    uint8_t split_cnt = 0;
+    //uint8_t split_cnt = 0;
 
 #if (FEATURE_OPENTX_SYNC)
     sendSyncPacketToRadio();

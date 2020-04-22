@@ -158,8 +158,7 @@ void ICACHE_RAM_ATTR LostConnection()
     }
 
     connectionState = STATE_disconnected; //set lost connection
-    LPF_FreqError.init(0);
-    scanIndex = 0;
+    scanIndex = RATE_DEFAULT;
 
     led_set_state(1);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
@@ -376,26 +375,25 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     DEBUG_PRINTLN(rate);
     //DEBUG_PRINTLN(config->interval);
 
+    TxTimer.stop();
+    Radio.StopContRX();
+
     tlm_check_ratio = 0;
     if (TLM_RATIO_NO_TLM < config->TLMinterval)
     {
         tlm_check_ratio = TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval) - 1;
     }
 
-    /* TODO:
-     * 1. timer stop and start!
-     * 2. reset LPF_Offset, LPF_FreqError, LPF_UplinkRSSI,
-     * 3. reset
-     */
-
-    Radio.StopContRX();
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     TxTimer.updateInterval(config->interval);
-    //LPF_Offset.init(0);
+    LPF_Offset.init(0);
+    LPF_FreqError.init(0);
+    LPF_UplinkRSSI.init(0);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.rf_Mode = RATE_MAX - config->enum_rate;
     Radio.RXnb();
+    TxTimer.init();
 }
 
 void tx_done_cb(void)
@@ -427,13 +425,11 @@ void setup()
 #error No regulatory domain defined, please define one in common.h
 #endif
 
+    FHSSrandomiseFHSSsequence();
+
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin();
-
-    FHSSrandomiseFHSSsequence();
-    //Radio.SetFrequency(GetInitialFreq());
-
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
     int16_t RFnoiseFloor = MeasureNoiseFloor();
@@ -442,22 +438,20 @@ void setup()
     DEBUG_PRINTLN("dBm");
     (void)RFnoiseFloor;
 
+    // Set callback to RX & TX data
     Radio.RXdoneCallback1 = &ProcessRFPacket;
-
     Radio.TXdoneCallback1 = &tx_done_cb;
-
+    // Set call back for timer ISR
     TxTimer.callbackTock = &HWtimerCallback;
-    TxTimer.init();
-    //TxTimer.start(); // start tlm timer
-
+    // Init CRC aka LQ array
     LQreset();
+    // Init first scan index
     scanIndex = RATE_DEFAULT;
-    SetRFLinkRate(RATE_DEFAULT);
-    RfModeNextCycleCalc();
-
+    // Initialize CRSF protocol handler
     crsf.Begin();
 }
 
+static uint32_t led_toggle_ms = 0;
 void loop()
 {
     uint32_t now = millis();
@@ -470,14 +464,18 @@ void loop()
         if (now > RFmodeNextCycle)
         {
             //Radio.SetFrequency(GetInitialFreq());
-            SetRFLinkRate(((++scanIndex) % RATE_MAX)); //switch between rates
+            SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
+            scanIndex++;
             LQreset();
-            led_toggle();
-
             if (RATE_MAX < scanIndex)
                 platform_connection_state(STATE_search_iteration_done);
 
             RfModeNextCycleCalc();
+        }
+        else if (now > led_toggle_ms)
+        {
+            led_toggle();
+            led_toggle_ms = now + 150;
         }
     }
     else if (connectionState > STATE_disconnected)
@@ -489,29 +487,6 @@ void loop()
         }
         else if (connectionState == STATE_connected)
         {
-#if 0
-            if (rx_buffer_handle)
-            {
-                rx_buffer_handle = 0;
-                switch (TYPE_GET(rx_buffer[0]))
-                {
-                    case RC_DATA_PACKET:     // Standard RC Data Packet
-                    case SWITCH_DATA_PACKET: // Switch Data Packet
-                        rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
-                        crsf.sendRCFrameToFC();
-                        break;
-
-                    case TLM_PACKET:
-                        // not implimented yet
-                        break;
-
-                    case SYNC_PACKET: // sync packet is handled in ISR
-                    default:
-                        break;
-                }
-            }
-#endif
-
             if (now > SendLinkStatstoFCintervalNextSend)
             {
                 crsf.LinkStatisticsSend();
