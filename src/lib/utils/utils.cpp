@@ -1,5 +1,4 @@
 #include "utils.h"
-//#include "debug.h"
 
 uint32_t seed = 0;
 
@@ -20,7 +19,7 @@ void rngSeed(uint32_t newSeed)
     seed = newSeed;
 }
 
-// returns 0<x<max where max <= 256
+// returns 0 <= x < max where max <= 256
 // (actual upper limit is higher, but there is one and I haven't
 //  thought carefully about what it is)
 uint32_t rngN(uint32_t max)
@@ -54,7 +53,7 @@ uint32_t rng0to2(void)
     return randomNumber;
 }
 
-unsigned int
+unsigned int ICACHE_RAM_ATTR
 volatile_memcpy(volatile void *d, volatile void *s, unsigned int n)
 {
     volatile unsigned char *dst = (unsigned char *)d;

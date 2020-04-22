@@ -9,15 +9,13 @@
 
 #define DEBUG
 
-static void nullCallback(void){};
+void (*SX127xDriver::RXdoneCallback1)(volatile uint8_t *) = SX127xDriver::rx_nullCallback;
+//void (*SX127xDriver::RXdoneCallback2)() = SX127xDriver::rx_nullCallback;
 
-void (*SX127xDriver::RXdoneCallback1)() = &nullCallback;
-void (*SX127xDriver::RXdoneCallback2)() = &nullCallback;
-
-void (*SX127xDriver::TXdoneCallback1)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback2)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback3)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
+void (*SX127xDriver::TXdoneCallback1)() = SX127xDriver::tx_nullCallback;
+void (*SX127xDriver::TXdoneCallback2)() = SX127xDriver::tx_nullCallback;
+void (*SX127xDriver::TXdoneCallback3)() = SX127xDriver::tx_nullCallback;
+void (*SX127xDriver::TXdoneCallback4)() = SX127xDriver::tx_nullCallback;
 
 /////////////////////////////////////////////////////////////////
 
@@ -69,7 +67,7 @@ SX127xDriver::SX127xDriver()
     currPWR = 0b0000;
     //maxPWR = 0b1111;
 
-    LastPacketIsrMicros = 0;
+    //LastPacketIsrMicros = 0;
     LastPacketRSSI = LastPacketRssiRaw = 0;
     LastPacketSNR = 0;
     NonceTX = 0;
@@ -294,12 +292,10 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TX(uint8_t *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-    LastPacketIsrMicros = micros();
+    //LastPacketIsrMicros = micros();
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
-
-    ClearIRQFlags();
 
     NonceTX++; // keep this before callbacks!
     TXdoneCallback1();
@@ -335,18 +331,20 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, 
     return (ERR_NONE);
 }
 
-///////////////////////////////////RX Functions Non-Blocking///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// RX functions ///////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-    LastPacketIsrMicros = micros();
+    //LastPacketIsrMicros = micros();
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, (uint8_t *)RXdataBuffer);
     GetLastPacketRSSI();
     GetLastPacketSNR();
     NonceRX++;
+    RXdoneCallback1(RXdataBuffer);
+    //RXdoneCallback2();
     ClearIRQFlags();
-    RXdoneCallback1();
-    RXdoneCallback2();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
@@ -491,6 +489,10 @@ uint8_t SX127xDriver::RunCAD()
 
     return (CHANNEL_FREE);
 }
+
+////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// config functions //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 { //if radio is not already in the required mode set it to the requested mode

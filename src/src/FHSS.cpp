@@ -193,6 +193,11 @@ void ICACHE_RAM_ATTR FHSSincCurrIndex()
     FHSSptr++;
 }
 
+uint8_t ICACHE_RAM_ATTR FHSSgetCurrSequenceIndex()
+{
+    return FHSSsequence[FHSSptr];
+}
+
 uint32_t ICACHE_RAM_ATTR GetInitialFreq()
 {
     return FHSSfreqs[0] - FreqCorrection;

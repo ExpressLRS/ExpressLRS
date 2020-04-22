@@ -77,8 +77,10 @@ public:
     SX127xDriver();
 
     ///////Callback Function Pointers/////
-    static void (*RXdoneCallback1)(); //function pointer for callback
-    static void (*RXdoneCallback2)(); //function pointer for callback
+    static void rx_nullCallback(volatile uint8_t *){};
+    static void tx_nullCallback(){};
+    static void (*RXdoneCallback1)(volatile uint8_t *buff); //function pointer for callback
+    //static void (*RXdoneCallback2)(); //function pointer for callback
     static void (*TXdoneCallback1)(); //function pointer for callback
     static void (*TXdoneCallback2)(); //function pointer for callback
     static void (*TXdoneCallback3)(); //function pointer for callback
@@ -115,7 +117,7 @@ public:
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
-    volatile uint32_t LastPacketIsrMicros;
+    //volatile uint32_t LastPacketIsrMicros;
     volatile uint8_t LastPacketRssiRaw;
     volatile int8_t LastPacketRSSI;
     volatile int8_t LastPacketSNR;

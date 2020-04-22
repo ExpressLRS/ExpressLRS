@@ -21,8 +21,8 @@ public:
 
     void ICACHE_RAM_ATTR callback();
 
-    void (*callbackTick)();
-    void (*callbackTock)();
+    void (*callbackTick)(uint32_t us);
+    void (*callbackTock)(uint32_t us);
 
 private:
     volatile uint32_t HWtimerInterval;

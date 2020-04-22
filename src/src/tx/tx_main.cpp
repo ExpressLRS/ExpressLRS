@@ -35,29 +35,27 @@ volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint32_t recv_tlm_counter = 0;
 static volatile uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
+static volatile uint32_t tlm_check_ratio = 0;
 
 //////////// LUA /////////
 
 ///////////////////////////////////////
 
-static void ICACHE_RAM_ATTR ProcessTLMpacket()
+static void ICACHE_RAM_ATTR ProcessTLMpacket(volatile uint8_t *buff)
 {
-    uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t in_byte = Radio.RXdataBuffer[7];
+    uint8_t calculatedCRC = CalcCRC(buff, 7) + CRCCaesarCipher;
+    uint8_t in_byte = buff[0];
 
-    //DEBUG_PRINTLN("TLMpacket0");
+    //DEBUG_PRINT("R");
 
-    if (in_byte != calculatedCRC)
+    if (buff[7] != calculatedCRC)
     {
-        DEBUG_PRINTLN("TLM crc error");
+        DEBUG_PRINT("!C");
         return;
     }
-
-    in_byte = Radio.RXdataBuffer[0];
-
-    if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
+    else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
     {
-        DEBUG_PRINTLN("TLM device address error");
+        DEBUG_PRINT("!A");
         return;
     }
 
@@ -68,69 +66,40 @@ static void ICACHE_RAM_ATTR ProcessTLMpacket()
     if (TYPE_GET(in_byte) == TLM_PACKET)
     {
         recv_tlm_counter++;
-        crsf.LinkStatisticsExtract(&Radio.RXdataBuffer[1],
+        crsf.LinkStatisticsExtract(&buff[1],
                                    Radio.LastPacketSNR,
                                    Radio.LastPacketRSSI,
                                    downlink_linkQuality);
     }
 }
 
-///////////////////////////////////////
-
-static void SetRFLinkRate(uint8_t rate, uint8_t init = 0) // Set speed of RF link (hz)
-{
-    // TODO: Protect this by disabling timer/isr...
-
-    const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
-    if (config == ExpressLRS_currAirRate)
-        return; // No need to modify, rate is same
-
-    if (!init)
-    {
-        // Stop timer and put radio into sleep
-        TxTimer.stop();
-        Radio.StopContRX();
-    }
-
-    ExpressLRS_currAirRate = config;
-    TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
-
-    Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
-    Radio.SetPreambleLength(config->PreambleLen);
-    crsf.setRcPacketRate(config->interval);
-    crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
-
-    // Set connected if telemetry is not used
-    connectionState = (TLM_RATIO_NO_TLM == config->TLMinterval) ? STATE_connected : STATE_disconnected;
-    platform_connection_state(connectionState);
-
-    if (!init)
-        TxTimer.start();
-}
-
-static void ICACHE_RAM_ATTR HandleFHSS_TX()
-{
-    // Called after successful TX
-    uint8_t modresult = (_rf_rxtx_counter) % ExpressLRS_currAirRate->FHSShopInterval;
-    if (modresult == 0) // if it time to hop, do so.
-    {
-        FHSSincCurrIndex();
-    }
-    _rf_rxtx_counter++;
-}
-
 static void ICACHE_RAM_ATTR HandleTLM()
 {
     // Called after successful TX
-    if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
+    //if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
-        uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        if (modresult == 0)
+        //uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+        //if (modresult == 0)
+        if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
         {
+            // receive tlm package
             PowerMgmt.pa_off();
             Radio.RXnb(FHSSgetCurrFreq());
         }
     }
+}
+
+///////////////////////////////////////
+
+static void ICACHE_RAM_ATTR HandleFHSS_TX()
+{
+    // Called from HW ISR context
+    if ((_rf_rxtx_counter % ExpressLRS_currAirRate->FHSShopInterval) == 0)
+    {
+        // it is time to hop
+        FHSSincCurrIndex();
+    }
+    _rf_rxtx_counter++;
 }
 
 static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
@@ -144,32 +113,34 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
     output[6] = UID[5];
 }
 
-static void ICACHE_RAM_ATTR SendRCdataToRF()
+static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
-    uint32_t current_ms;
+    uint32_t current_ms = current_us / 1000U;
+    uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
     //DEBUG_PRINT("I");
 
-    crsf.UpdateOpenTxSyncOffset(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+    crsf.UpdateOpenTxSyncOffset(micros()); // tells the crsf that we want to send data now - this allows opentx packet syncing
 
     /////// This Part Handles the Telemetry RX ///////
-    if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
+    //if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
     {
-        uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        if (modresult == 0)
+        //uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+        //if (modresult == 0)
+        if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
         {
-            // Skip TX because TLM RX is ongoing and increate TX cnt to keep sync
+            // Skip TX because TLM RX is ongoing
             goto exit_rx_send;
         }
     }
 
-    current_ms = millis();
+    freq = FHSSgetCurrFreq();
 
     //only send sync when its time and only on channel 0;
-    if ((current_ms > SyncPacketNextSend) && (Radio.currFreq == GetInitialFreq()))
+    if ((freq == GetInitialFreq()) && (current_ms > SyncPacketNextSend))
     {
         GenerateSyncPacketData(tx_buffer);
         SyncPacketNextSend =
@@ -186,11 +157,13 @@ static void ICACHE_RAM_ATTR SendRCdataToRF()
     // Enable PA
     PowerMgmt.pa_on();
     // Send data to rf
-    Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
+    Radio.TXnb(tx_buffer, 8, freq);
 exit_rx_send:
     // Increase TX counter
     HandleFHSS_TX();
 }
+
+///////////////////////////////////////
 
 static void decRFLinkRate(void)
 {
@@ -265,6 +238,51 @@ static void ParamUpdateReq(uint8_t const *msg, uint16_t len)
                                 4);
 }
 
+///////////////////////////////////////
+
+static void SetRFLinkRate(uint8_t rate, uint8_t init = 0) // Set speed of RF link (hz)
+{
+    // TODO: Protect this by disabling timer/isr...
+
+    const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
+    if (config == ExpressLRS_currAirRate)
+        return; // No need to modify, rate is same
+
+    if (!init)
+    {
+        // Stop timer and put radio into sleep
+        TxTimer.stop();
+        Radio.StopContRX();
+    }
+
+    ExpressLRS_currAirRate = config;
+    TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
+
+    Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
+    Radio.SetPreambleLength(config->PreambleLen);
+    crsf.setRcPacketRate(config->interval);
+    crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
+    if (TLM_RATIO_NO_TLM == config->TLMinterval)
+    {
+        Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
+        Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
+        // Set connected if telemetry is not used
+        connectionState = STATE_connected;
+        tlm_check_ratio = 0;
+    }
+    else
+    {
+        Radio.RXdoneCallback1 = ProcessTLMpacket;
+        Radio.TXdoneCallback1 = HandleTLM;
+        connectionState = STATE_disconnected;
+        tlm_check_ratio = TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval) - 1;
+    }
+    platform_connection_state(connectionState);
+
+    if (!init)
+        TxTimer.start();
+}
+
 static void hw_timer_init(void)
 {
     TxTimer.init();
@@ -281,7 +299,7 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 
 void setup()
 {
-    CrsfSerial.Begin(CRSF_OPENTX_BAUDRATE);
+    CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
 
     platform_setup();
 
@@ -313,10 +331,9 @@ void setup()
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
-    Radio.RXdoneCallback1 = &ProcessTLMpacket;
-
-    //Radio.TXdoneCallback1 = &HandleFHSS_TX;
-    Radio.TXdoneCallback2 = &HandleTLM;
+    //Radio.RXdoneCallback1 = &ProcessTLMpacket;
+    //Radio.TXdoneCallback1 = HandleTLM;
+    //Radio.TXdoneCallback2 = ;
     //Radio.TXdoneCallback3 = ;
     //Radio.TXdoneCallback4 = ;
 
@@ -345,18 +362,18 @@ void loop()
             PacketRateNextCheck = current_ms + LQ_CALCULATE_INTERVAL;
 
 #if 0
-        // TODO: this is not ok... need improvements
-        float targetFrameRate = ExpressLRS_currAirRate->rate; // 200
-        if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
-            targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
-        float PacketRate = recv_tlm_counter;
-        PacketRate /= LQ_CALCULATE_INTERVAL; // num tlm packets
-        downlink_linkQuality = int(((PacketRate / targetFrameRate) * 100000.0));
-        if (downlink_linkQuality > 99)
-        {
-            downlink_linkQuality = 99;
-        }
-        recv_tlm_counter = 0;
+            // TODO: this is not ok... need improvements
+            float targetFrameRate = ExpressLRS_currAirRate->rate; // 200
+            if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
+                targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
+            float PacketRate = recv_tlm_counter;
+            PacketRate /= LQ_CALCULATE_INTERVAL; // num tlm packets
+            downlink_linkQuality = int(((PacketRate / targetFrameRate) * 100000.0));
+            if (downlink_linkQuality > 99)
+            {
+                downlink_linkQuality = 99;
+            }
+            recv_tlm_counter = 0;
 #else
             // Calc LQ based on good tlm packets and receptions done
             uint8_t rx_cnt = Radio.NonceRX;

@@ -228,12 +228,12 @@ void CRSF_TX::uart_wdt(void)
 
         if (BadPktsCount >= GoodPktsCount)
         {
-            DEBUG_PRINTLN("  Too many bad UART RX packets!");
+            //DEBUG_PRINTLN("  Too many bad UART RX packets!");
 
             if (CRSFstate == true)
             {
                 SerialOutFIFO.flush();
-                //DEBUG_PRINTLN("UART WDT: Disconnected");
+                DEBUG_PRINT("CRSF UART Disconnect. ");
                 disconnected();
                 CRSFstate = false;
 #if (FEATURE_OPENTX_SYNC)
@@ -247,13 +247,13 @@ void CRSF_TX::uart_wdt(void)
 
             if (p_slowBaudrate)
             {
-                _dev->Begin(CRSF_OPENTX_BAUDRATE);
-                DEBUG_PRINTLN("UART WDT: Switch to 400000 baud");
+                _dev->Begin(CRSF_TX_BAUDRATE_FAST);
+                DEBUG_PRINTLN("Switch to 400000 baud");
             }
             else
             {
-                _dev->Begin(CRSF_OPENTX_SLOW_BAUDRATE);
-                DEBUG_PRINTLN("UART WDT: Switch to 115000 baud");
+                _dev->Begin(CRSF_TX_BAUDRATE_SLOW);
+                DEBUG_PRINTLN("Switch to 115000 baud");
             }
             p_slowBaudrate = !p_slowBaudrate;
         }

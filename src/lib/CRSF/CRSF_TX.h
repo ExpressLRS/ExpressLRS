@@ -25,6 +25,9 @@ public:
     {
         switch (interval)
         {
+            case 4000: // 250Hz
+                LinkStatistics.rf_Mode = 4;
+                break;
             case 5000: // 200Hz
                 LinkStatistics.rf_Mode = 3;
                 break;
@@ -44,10 +47,11 @@ public:
         RequestedRCpacketInterval = interval;
 #endif
     }
-    void ICACHE_RAM_ATTR UpdateOpenTxSyncOffset() // called from timer
+
+    void ICACHE_RAM_ATTR UpdateOpenTxSyncOffset(uint32_t current_us) // called from timer
     {
 #if (FEATURE_OPENTX_SYNC)
-        OpenTXsyncOffset = micros() - RCdataLastRecv;
+        OpenTXsyncOffset = current_us - RCdataLastRecv;
 #endif
     }
 

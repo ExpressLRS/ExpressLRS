@@ -14,8 +14,6 @@ void (*CRSF::RecvParameterUpdate)(uint8_t const *msg, uint16_t len) = &paramNull
 
 void CRSF::Begin()
 {
-    DEBUG_PRINTLN("CRSF UART LISTEN TASK STARTED");
-
     CRSFstate = false;
     GoodPktsCount = 0;
     BadPktsCount = 0;
@@ -150,8 +148,8 @@ uint8_t *CRSF::HandleUartIn(uint8_t inChar)
                     }
                     DEBUG_PRINTLN();
 #elif defined(DEBUG_SERIAL)
-                    DEBUG_SERIAL.print('C');
-                    DEBUG_SERIAL.write((uint8_t *)&SerialInBuffer[SerialInPacketStart - 2], SerialInPacketLen + 2);
+                    DEBUG_SERIAL.print("!C");
+                    //DEBUG_SERIAL.write((uint8_t *)&SerialInBuffer[SerialInPacketStart - 2], SerialInPacketLen + 2);
 #endif
                     BadPktsCount++;
                 }

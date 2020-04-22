@@ -39,39 +39,39 @@ void CRSF_RX::processPacket(uint8_t const *data)
 {
     switch (data[0])
     {
-    case CRSF_FRAMETYPE_COMMAND:
-    {
-        if (data[1] == 0x62 && data[2] == 0x6c)
+        case CRSF_FRAMETYPE_COMMAND:
         {
-            DEBUG_PRINTLN("Jumping to Bootloader...");
-            delay(200);
-            platform_restart();
+            if (data[1] == 0x62 && data[2] == 0x6c)
+            {
+                DEBUG_PRINTLN("Jumping to Bootloader...");
+                delay(200);
+                platform_restart();
+            }
+            break;
         }
-        break;
-    }
 
-    case CRSF_FRAMETYPE_BATTERY_SENSOR:
-    {
-        TLMbattSensor.voltage = data[1];
-        TLMbattSensor.voltage <<= 8;
-        TLMbattSensor.voltage = data[2];
+        case CRSF_FRAMETYPE_BATTERY_SENSOR:
+        {
+            TLMbattSensor.voltage = data[1];
+            TLMbattSensor.voltage <<= 8;
+            TLMbattSensor.voltage = data[2];
 
-        TLMbattSensor.current = data[3];
-        TLMbattSensor.current <<= 8;
-        TLMbattSensor.current = data[4];
+            TLMbattSensor.current = data[3];
+            TLMbattSensor.current <<= 8;
+            TLMbattSensor.current = data[4];
 
-        TLMbattSensor.capacity = data[5];
-        TLMbattSensor.capacity <<= 8;
-        TLMbattSensor.capacity = data[6];
-        TLMbattSensor.capacity <<= 8;
-        TLMbattSensor.capacity = data[7];
+            TLMbattSensor.capacity = data[5];
+            TLMbattSensor.capacity <<= 8;
+            TLMbattSensor.capacity = data[6];
+            TLMbattSensor.capacity <<= 8;
+            TLMbattSensor.capacity = data[7];
 
-        TLMbattSensor.remaining = 0;
-        break;
-    }
+            TLMbattSensor.remaining = 0;
+            break;
+        }
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 

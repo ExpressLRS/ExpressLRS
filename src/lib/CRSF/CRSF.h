@@ -11,23 +11,22 @@
 #define N_SWITCHES 8
 #define N_CHANNELS 16 // (N_CONTROLS + N_SWITCHES)
 
-#define CRSF_RX_BAUDRATE          420000
-#define CRSF_OPENTX_BAUDRATE      400000
-#define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
-#define CRSF_NUM_CHANNELS         16     // Number of input channels
-#define CRSF_CHANNEL_VALUE_MIN    172
-#define CRSF_CHANNEL_VALUE_MID    992
-#define CRSF_CHANNEL_VALUE_MAX    1811
-#define CRSF_MAX_PACKET_LEN       64
+#define CRSF_RX_BAUDRATE       420000
+#define CRSF_TX_BAUDRATE_FAST  400000
+#define CRSF_TX_BAUDRATE_SLOW  115200 // Used for QX7 not supporting 400kbps
+#define CRSF_NUM_CHANNELS      16     // Number of input channels
+#define CRSF_CHANNEL_VALUE_MIN 172
+#define CRSF_CHANNEL_VALUE_MID 992
+#define CRSF_CHANNEL_VALUE_MAX 1811
+#define CRSF_MAX_PACKET_LEN    64
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define RCframeLength sizeof(crsf_channels_t) // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
-//#define LinkStatisticsFrameLength 10 //
-#define LinkStatisticsFrameLength sizeof(crsfPayloadLinkstatistics_s)
-#define OpenTXsyncFrameLength     11                            //
-#define BattSensorFrameLength     sizeof(crsf_sensor_battery_t) // 8
-#define VTXcontrolFrameLength     12                            //
+#define RCframeLength             sizeof(crsf_channels_t)             // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
+#define LinkStatisticsFrameLength sizeof(crsfPayloadLinkstatistics_s) // 10
+#define OpenTXsyncFrameLength     11                                  //
+#define BattSensorFrameLength     sizeof(crsf_sensor_battery_t)       // 8
+#define VTXcontrolFrameLength     12                                  //
 #define LUArespLength             6
 
 #define CRSF_PAYLOAD_SIZE_MAX             62
@@ -185,10 +184,10 @@ typedef struct crsfPayloadLinkstatistics_s
 
 /////inline and utility functions//////
 
-#define CRSF_to_US(val) MAP_U16((val), 172, 1811, 988, 2012)
+#define CRSF_to_US(val) MAP_U16((val), CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 988, 2012)
 
-#define UINT10_to_CRSF(val) MAP_U16((val), 0, 1024, 172, 1811)
-#define CRSF_to_UINT10(val) MAP_U16((val), 172, 1811, 0, 1023)
+#define UINT10_to_CRSF(val) MAP_U16((val), 0, 1024, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX)
+#define CRSF_to_UINT10(val) MAP_U16((val), CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023)
 
 //#define CRSF_to_SWITCH3b(val) MAP_U16((val), 188, 1795, 0, 7)
 //#define SWITCH3b_to_CRSF(val) MAP_U16((val), 0, 7, 188, 1795)

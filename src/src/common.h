@@ -72,13 +72,14 @@ typedef enum
 
 enum
 {
-    RATE_200HZ = 0,
-    RATE_100HZ = 1,
-    RATE_50HZ = 2,
-    //RATE_25HZ = 3,
-    //RATE_4HZ = 4
-    RATE_MAX = 3
-}; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    //RATE_250HZ,
+    RATE_200HZ,
+    RATE_100HZ,
+    RATE_50HZ,
+    //RATE_25HZ,
+    //RATE_4HZ,
+    RATE_MAX
+};
 
 #define RATE_DEFAULT RATE_200HZ
 
@@ -87,13 +88,13 @@ typedef struct expresslrs_mod_settings_s
     Bandwidth bw;
     SpreadingFactor sf;
     CodingRate cr;
-    int32_t sensitivity;     //expected RF sensitivity based on
-    uint32_t interval;       //interval in us seconds that corresponds to that frequnecy
+    int32_t sensitivity;     // expected RF sensitivity based on
+    uint32_t interval;       // interval in us seconds that corresponds to that frequnecy
     uint8_t rate;            // rate in hz
     uint8_t TLMinterval;     // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint8_t PreambleLen;     //
-    uint8_t enum_rate;       // Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy.
+    uint8_t PreambleLen;
+    uint8_t enum_rate;
     uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;

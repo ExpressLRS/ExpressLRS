@@ -3,7 +3,7 @@
 
 /* HW specific code can be found from <mcu type>/ folder */
 
-static void nullCallback(){};
+static void nullCallback(uint32_t){};
 
 HwTimer::HwTimer()
 {
@@ -59,12 +59,12 @@ void ICACHE_RAM_ATTR HwTimer::callback()
         }
 
         LastCallbackMicrosTick = us;
-        callbackTick();
+        callbackTick(us);
     }
     else
     {
         LastCallbackMicrosTock = us;
-        callbackTock();
+        callbackTock(us);
     }
     TickTock ^= 1;
 }
