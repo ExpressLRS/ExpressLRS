@@ -201,7 +201,7 @@ void CRSF_TX::handleUartIn(void) // Merge with RX version...
     sendSyncPacketToRadio();
 #endif
 
-    while (_dev->available() && ((++split_cnt & 0x7) > 0))
+    while (_dev->available() /*&& ((++split_cnt & 0x7) > 0)*/)
     {
         uint8_t *ptr = HandleUartIn(_dev->read());
         if (ptr)

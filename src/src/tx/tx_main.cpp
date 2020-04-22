@@ -25,6 +25,8 @@ CRSF_TX crsf(CrsfSerial);
 RcChannels rc_ch;
 POWERMGNT PowerMgmt;
 static volatile uint32_t _rf_rxtx_counter = 0;
+static volatile uint8_t rx_buffer[8];
+static volatile uint8_t rx_buffer_handle = 0;
 
 /////////// SYNC PACKET ////////
 static uint32_t SyncPacketNextSend = 0;
@@ -43,51 +45,21 @@ static volatile uint32_t tlm_check_ratio = 0;
 
 ///////////////////////////////////////
 
-static void ICACHE_RAM_ATTR ProcessTLMpacket(volatile uint8_t *buff)
+static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff)
 {
-    uint8_t calculatedCRC = CalcCRC(buff, 7) + CRCCaesarCipher;
-    uint8_t in_byte = buff[0];
+    volatile_memcpy(rx_buffer, buff, sizeof(rx_buffer));
+    rx_buffer_handle = 1;
 
     //DEBUG_PRINT("R");
-
-    if (buff[7] != calculatedCRC)
-    {
-        DEBUG_PRINT("!C");
-        return;
-    }
-    else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
-    {
-        DEBUG_PRINT("!A");
-        return;
-    }
-
-    connectionState = STATE_connected;
-    platform_connection_state(STATE_connected);
-    LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
-
-    if (TYPE_GET(in_byte) == TLM_PACKET)
-    {
-        recv_tlm_counter++;
-        crsf.LinkStatisticsExtract(&buff[1],
-                                   Radio.LastPacketSNR,
-                                   Radio.LastPacketRSSI,
-                                   downlink_linkQuality);
-    }
 }
 
 static void ICACHE_RAM_ATTR HandleTLM()
 {
-    // Called after successful TX
-    //if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
+    if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
     {
-        //uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        //if (modresult == 0)
-        if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
-        {
-            // receive tlm package
-            PowerMgmt.pa_off();
-            Radio.RXnb(FHSSgetCurrFreq());
-        }
+        // receive tlm package
+        PowerMgmt.pa_off();
+        Radio.RXnb(FHSSgetCurrFreq());
     }
 }
 
@@ -125,18 +97,13 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 
     //DEBUG_PRINT("I");
 
-    crsf.UpdateOpenTxSyncOffset(micros()); // tells the crsf that we want to send data now - this allows opentx packet syncing
+    crsf.UpdateOpenTxSyncOffset(current_us); // tells the crsf that we want to send data now - this allows opentx packet syncing
 
-    /////// This Part Handles the Telemetry RX ///////
-    //if (ExpressLRS_currAirRate->TLMinterval > TLM_RATIO_NO_TLM)
+    // Check if telemetry RX ongoing
+    if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
     {
-        //uint8_t modresult = (_rf_rxtx_counter) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
-        //if (modresult == 0)
-        if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
-        {
-            // Skip TX because TLM RX is ongoing
-            goto exit_rx_send;
-        }
+        // Skip TX because TLM RX is ongoing
+        goto exit_rx_send;
     }
 
     freq = FHSSgetCurrFreq();
@@ -151,7 +118,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     }
     else
     {
-        rc_ch.channels_pack(tx_buffer);
+        rc_ch.get_packed_data(tx_buffer);
     }
 
     // Calculate the CRC
@@ -333,12 +300,6 @@ void setup()
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
-    //Radio.RXdoneCallback1 = &ProcessTLMpacket;
-    //Radio.TXdoneCallback1 = HandleTLM;
-    //Radio.TXdoneCallback2 = ;
-    //Radio.TXdoneCallback3 = ;
-    //Radio.TXdoneCallback4 = ;
-
     PowerMgmt.defaultPower();
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
@@ -349,6 +310,37 @@ void setup()
 
 void loop()
 {
+    if (rx_buffer_handle)
+    {
+        rx_buffer_handle = 0;
+        uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
+        uint8_t in_byte = rx_buffer[0];
+
+        if (rx_buffer[7] != calculatedCRC)
+        {
+            DEBUG_PRINT("!C");
+            return;
+        }
+        else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
+        {
+            DEBUG_PRINT("!A");
+            return;
+        }
+
+        connectionState = STATE_connected;
+        platform_connection_state(STATE_connected);
+        LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
+
+        if (TYPE_GET(in_byte) == TLM_PACKET)
+        {
+            recv_tlm_counter++;
+            crsf.LinkStatisticsExtract(&rx_buffer[1],
+                                       Radio.LastPacketSNR,
+                                       Radio.LastPacketRSSI,
+                                       downlink_linkQuality);
+        }
+    }
+
     if (TLM_RATIO_NO_TLM < ExpressLRS_currAirRate->TLMinterval)
     {
         uint32_t current_ms = millis();

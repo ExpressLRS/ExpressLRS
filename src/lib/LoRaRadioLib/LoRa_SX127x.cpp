@@ -9,8 +9,8 @@
 
 #define DEBUG
 
-void (*SX127xDriver::RXdoneCallback1)(volatile uint8_t *) = SX127xDriver::rx_nullCallback;
-//void (*SX127xDriver::RXdoneCallback2)() = SX127xDriver::rx_nullCallback;
+void (*SX127xDriver::RXdoneCallback1)(uint8_t *) = SX127xDriver::rx_nullCallback;
+//void (*SX127xDriver::RXdoneCallback2)(uint8_t *) = SX127xDriver::rx_nullCallback;
 
 void (*SX127xDriver::TXdoneCallback1)() = SX127xDriver::tx_nullCallback;
 void (*SX127xDriver::TXdoneCallback2)() = SX127xDriver::tx_nullCallback;
@@ -54,7 +54,7 @@ SX127xDriver::SX127xDriver()
     SX127x_dio1 = 0xff;
     SX127x_RST = -1;
 
-    TXbuffLen = RXbuffLen = 8;
+    RXbuffLen = 8;
 
     headerExplMode = false;
     RFmodule = RFMOD_SX1276;

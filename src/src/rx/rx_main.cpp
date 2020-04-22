@@ -178,7 +178,7 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacket(volatile uint8_t *buff)
+void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
 {
     //DEBUG_PRINT("I");
 
@@ -201,8 +201,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket(volatile uint8_t *buff)
         DEBUG_PRINT("!A");
         return;
     }
-
-    rx_buffer_handle = 1;
 
     getRFlinkInfo();
 
@@ -269,6 +267,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket(volatile uint8_t *buff)
     LastValidPacket = current_us / 1000U;
     alreadyFHSS = true;
 
+#define NO_FREQ_CORRECTION 0
+#if !NO_FREQ_CORRECTION
     // Do freq correction after FHSS
     if (HandleFHSS() == 1)
     {
@@ -316,6 +316,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(volatile uint8_t *buff)
 #endif
         //DEBUG_PRINTLN(FreqCorrection);
     }
+#endif // !NO_FREQ_CORRECTION
     //DEBUG_PRINT("E");
 }
 
@@ -366,7 +367,7 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 
 void tx_done_cb(void)
 {
-    Radio.RXnb();
+    Radio.RXnb(FHSSgetCurrFreq());
 }
 
 void setup()
@@ -454,6 +455,7 @@ void loop()
         {
             if (rx_buffer_handle)
             {
+                rx_buffer_handle = 0;
                 switch (TYPE_GET(rx_buffer[0]))
                 {
                     case RC_DATA_PACKET:     // Standard RC Data Packet

@@ -29,18 +29,18 @@ typedef struct
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  */
-//void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
+//void GenerateChannelDataSeqSwitch()
+void RcChannels::channels_pack()
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
-    output[0] = PacketHeaderAddr;
+    packed_buffer[0] = PacketHeaderAddr;
 
     // find the next switch to send
     uint8_t ch_idx = getNextSwitchIndex() & 0b111;
 
 #if USE_RC_DATA_STRUCTS
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&output[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
     // The analog channels
     rcdata->rc1 = (ChannelDataIn[0]);
     rcdata->rc2 = (ChannelDataIn[1]);
@@ -50,27 +50,27 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
     rcdata->aux_n_idx = ch_idx;
     rcdata->aux_n = currentSwitches[ch_idx] & 0b11;
 #else
-    output[1] = ((ChannelDataIn[0]) >> 3);
-    output[2] = ((ChannelDataIn[1]) >> 3);
-    output[3] = ((ChannelDataIn[2]) >> 3);
-    output[4] = ((ChannelDataIn[3]) >> 3);
-    output[5] = ((ChannelDataIn[0] & 0b00000111) << 5) +
-                ((ChannelDataIn[1] & 0b111) << 2) +
-                ((ChannelDataIn[2] & 0b110) >> 1);
-    output[6] = ((ChannelDataIn[2] & 0b001) << 7) +
-                ((ChannelDataIn[3] & 0b110) << 4);
+    packed_buffer[1] = ((ChannelDataIn[0]) >> 3);
+    packed_buffer[2] = ((ChannelDataIn[1]) >> 3);
+    packed_buffer[3] = ((ChannelDataIn[2]) >> 3);
+    packed_buffer[4] = ((ChannelDataIn[3]) >> 3);
+    packed_buffer[5] = ((ChannelDataIn[0] & 0b00000111) << 5) +
+                       ((ChannelDataIn[1] & 0b111) << 2) +
+                       ((ChannelDataIn[2] & 0b110) >> 1);
+    packed_buffer[6] = ((ChannelDataIn[2] & 0b001) << 7) +
+                       ((ChannelDataIn[3] & 0b110) << 4);
 
     // put the bits into buf[6]
-    output[6] += (ch_idx << 2) + (currentSwitches[ch_idx] & 0b11);
+    packed_buffer[6] += (ch_idx << 2) + (currentSwitches[ch_idx] & 0b11);
 #endif
 }
 
 /**
  * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
  */
-//void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches()
-void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
-                                                  crsf_channels_t &PackedRCdataOut)
+//void UnpackChannelDataSeqSwitches()
+void RcChannels::channels_extract(volatile uint8_t const *const input,
+                                  crsf_channels_t &PackedRCdataOut)
 {
     uint16_t switchValue;
     uint8_t switchIndex;
@@ -152,18 +152,18 @@ typedef struct
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  */
-//void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
+//void GenerateChannelDataHybridSwitch8()
+void RcChannels::channels_pack()
 {
     uint8_t PacketHeaderAddr;
     PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
-    output[0] = PacketHeaderAddr;
+    packed_buffer[0] = PacketHeaderAddr;
 
     // find the next switch to send
     uint8_t ch_idx = getNextSwitchIndex() & 0b111; // mask for paranoia
 
 #if USE_RC_DATA_STRUCTS
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&output[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
     // The analog channels
     rcdata->rc1 = (ChannelDataIn[0] >> 1);
     rcdata->rc2 = (ChannelDataIn[1] >> 1);
@@ -175,21 +175,21 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
     rcdata->aux_n_idx = ch_idx;
     rcdata->aux_n = currentSwitches[ch_idx] & 0b11;
 #else
-    output[1] = ((ChannelDataIn[0]) >> 3);
-    output[2] = ((ChannelDataIn[1]) >> 3);
-    output[3] = ((ChannelDataIn[2]) >> 3);
-    output[4] = ((ChannelDataIn[3]) >> 3);
-    output[5] = ((ChannelDataIn[0] & 0b110) << 5) +
-                ((ChannelDataIn[1] & 0b110) << 3) +
-                ((ChannelDataIn[2] & 0b110) << 1) +
-                ((ChannelDataIn[3] & 0b110) >> 1);
+    packed_buffer[1] = ((ChannelDataIn[0]) >> 3);
+    packed_buffer[2] = ((ChannelDataIn[1]) >> 3);
+    packed_buffer[3] = ((ChannelDataIn[2]) >> 3);
+    packed_buffer[4] = ((ChannelDataIn[3]) >> 3);
+    packed_buffer[5] = ((ChannelDataIn[0] & 0b110) << 5) +
+                       ((ChannelDataIn[1] & 0b110) << 3) +
+                       ((ChannelDataIn[2] & 0b110) << 1) +
+                       ((ChannelDataIn[3] & 0b110) >> 1);
 
     // switch 0 is sent on every packet - intended for low latency arm/disarm
-    output[6] = (currentSwitches[0] & 0b11) << 5; // note this leaves the top bit of byte 6 unused
+    packed_buffer[6] = (currentSwitches[0] & 0b11) << 5; // note this leaves the top bit of byte 6 unused
 
     // put the bits into buf[6]. i is in the range 1 through 7 so takes 3 bits
     // currentSwitches[i] is in the range 0 through 2, takes 2 bits.
-    output[6] += (ch_idx << 2) + (currentSwitches[ch_idx] & 0b11); // mask for paranoia
+    packed_buffer[6] += (ch_idx << 2) + (currentSwitches[ch_idx] & 0b11); // mask for paranoia
 #endif
 }
 
@@ -198,9 +198,9 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
  * 2 bits for the low latency switch[0]
  * 3 bits for the round-robin switch index and 2 bits for the value
  */
-//void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8()
-void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
-                                                  crsf_channels_t &PackedRCdataOut)
+//void UnpackChannelDataHybridSwitches8()
+void RcChannels::channels_extract(volatile uint8_t const *const input,
+                                  crsf_channels_t &PackedRCdataOut)
 {
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
@@ -283,8 +283,8 @@ typedef struct
     unsigned aux4 : 1;
 } PACKED RcDataPacket_s;
 
-//void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
+//void Generate4ChannelData_11bit()
+void RcChannels::channels_pack()
 {
     uint32_t current_ms = millis();
     uint8_t PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr);
@@ -295,32 +295,32 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
         SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
         p_auxChannelsChanged = 0;
 
-        output[0] = PacketHeaderAddr + SWITCH_DATA_PACKET;
+        packed_buffer[0] = PacketHeaderAddr + SWITCH_DATA_PACKET;
 #if USE_RC_DATA_STRUCTS
-        SwitchPacket_s *rcdata = (SwitchPacket_s *)&output[1];
+        SwitchPacket_s *rcdata = (SwitchPacket_s *)&packed_buffer[1];
         rcdata->aux1 = (CRSF_to_UINT10(ChannelDataIn[4]) >> 6);
         rcdata->aux2 = (CRSF_to_UINT10(ChannelDataIn[5]) >> 6);
         rcdata->aux3 = (CRSF_to_UINT10(ChannelDataIn[6]) >> 6);
         rcdata->aux4 = (CRSF_to_UINT10(ChannelDataIn[7]) >> 6);
 #else
-        output[1] = ((CRSF_to_UINT10(ChannelDataIn[4]) & 0b1110000000) >> 2) +
-                    ((CRSF_to_UINT10(ChannelDataIn[5]) & 0b1110000000) >> 5) +
-                    ((CRSF_to_UINT10(ChannelDataIn[6]) & 0b1100000000) >> 8);
-        output[2] = (CRSF_to_UINT10(ChannelDataIn[6]) & 0b0010000000) +
-                    ((CRSF_to_UINT10(ChannelDataIn[7]) & 0b1110000000) >> 3);
+        packed_buffer[1] = ((CRSF_to_UINT10(ChannelDataIn[4]) & 0b1110000000) >> 2) +
+                           ((CRSF_to_UINT10(ChannelDataIn[5]) & 0b1110000000) >> 5) +
+                           ((CRSF_to_UINT10(ChannelDataIn[6]) & 0b1100000000) >> 8);
+        packed_buffer[2] = (CRSF_to_UINT10(ChannelDataIn[6]) & 0b0010000000) +
+                           ((CRSF_to_UINT10(ChannelDataIn[7]) & 0b1110000000) >> 3);
 #endif
-        output[3] = output[1];
-        output[4] = output[2];
-        output[5] = Radio.NonceTX;
-        output[6] = FHSSgetCurrIndex();
+        packed_buffer[3] = packed_buffer[1];
+        packed_buffer[4] = packed_buffer[2];
+        packed_buffer[5] = Radio.NonceTX;
+        packed_buffer[6] = FHSSgetCurrIndex();
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
 #endif // !One_Bit_Switches
     {
-        output[0] = PacketHeaderAddr + RC_DATA_PACKET;
+        packed_buffer[0] = PacketHeaderAddr + RC_DATA_PACKET;
 
 #if USE_RC_DATA_STRUCTS
-        RcDataPacket_s *rcdata = (RcDataPacket_s *)&output[1];
+        RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
         rcdata->rc1 = ChannelDataIn[0];
         rcdata->rc2 = ChannelDataIn[1];
         rcdata->rc3 = ChannelDataIn[2];
@@ -332,28 +332,28 @@ void ICACHE_RAM_ATTR RcChannels::channels_pack(uint8_t *const output)
         rcdata->aux4 = CRSF_to_BIT(ChannelDataIn[7]);
 #endif // One_Bit_Switches
 #else
-        output[1] = ((ChannelDataIn[0]) >> 3);
-        output[2] = ((ChannelDataIn[1]) >> 3);
-        output[3] = ((ChannelDataIn[2]) >> 3);
-        output[4] = ((ChannelDataIn[3]) >> 3);
-        output[5] = ((ChannelDataIn[0] & 0b111) << 5) +
-                    ((ChannelDataIn[1] & 0b111) << 2) +
-                    ((ChannelDataIn[2] & 0b110) >> 1);
-        output[6] = ((ChannelDataIn[2] & 0b001) << 7) +
-                    ((ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
+        packed_buffer[1] = ((ChannelDataIn[0]) >> 3);
+        packed_buffer[2] = ((ChannelDataIn[1]) >> 3);
+        packed_buffer[3] = ((ChannelDataIn[2]) >> 3);
+        packed_buffer[4] = ((ChannelDataIn[3]) >> 3);
+        packed_buffer[5] = ((ChannelDataIn[0] & 0b111) << 5) +
+                           ((ChannelDataIn[1] & 0b111) << 2) +
+                           ((ChannelDataIn[2] & 0b110) >> 1);
+        packed_buffer[6] = ((ChannelDataIn[2] & 0b001) << 7) +
+                           ((ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
-        output[6] += CRSF_to_BIT(ChannelDataIn[4]) << 3;
-        output[6] += CRSF_to_BIT(ChannelDataIn[5]) << 2;
-        output[6] += CRSF_to_BIT(ChannelDataIn[6]) << 1;
-        output[6] += CRSF_to_BIT(ChannelDataIn[7]) << 0;
+        packed_buffer[6] += CRSF_to_BIT(ChannelDataIn[4]) << 3;
+        packed_buffer[6] += CRSF_to_BIT(ChannelDataIn[5]) << 2;
+        packed_buffer[6] += CRSF_to_BIT(ChannelDataIn[6]) << 1;
+        packed_buffer[6] += CRSF_to_BIT(ChannelDataIn[7]) << 0;
 #endif
 #endif
     }
 }
 
-//void ICACHE_RAM_ATTR UnpackChannelData_11bit()
-void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
-                                                  crsf_channels_t &PackedRCdataOut)
+//void  UnpackChannelData_11bit()
+void RcChannels::channels_extract(volatile uint8_t const *const input,
+                                  crsf_channels_t &PackedRCdataOut)
 {
     uint8_t type = input[0] & 0b11;
     if (type == RC_DATA_PACKET)
@@ -401,7 +401,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
 }
 #endif
 
-void ICACHE_RAM_ATTR RcChannels::processChannels(crsf_channels_t const *const rcChannels)
+void RcChannels::processChannels(crsf_channels_t const *const rcChannels)
 {
     uint8_t switch_state;
 
@@ -440,6 +440,8 @@ void ICACHE_RAM_ATTR RcChannels::processChannels(crsf_channels_t const *const rc
             p_auxChannelsChanged |= (0x1 << i);
         currentSwitches[i] = switch_state;
     }
+
+    channels_pack();
 }
 
 /**

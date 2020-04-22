@@ -26,14 +26,19 @@ public:
     RcChannels() {}
 
     // TX related
-    void ICACHE_RAM_ATTR processChannels(crsf_channels_t const *const channels);
-    void ICACHE_RAM_ATTR channels_pack(uint8_t *const output);
+    void processChannels(crsf_channels_t const *const channels);
+    void ICACHE_RAM_ATTR get_packed_data(uint8_t *const output)
+    {
+        for (uint8_t i = 0; i < sizeof(packed_buffer); i++)
+            output[i] = packed_buffer[i];
+    }
 
     // RX related
-    void ICACHE_RAM_ATTR channels_extract(volatile uint8_t const *const input,
-                                          crsf_channels_t &output);
+    void channels_extract(volatile uint8_t const *const input,
+                          crsf_channels_t &output);
 
 private:
+    void channels_pack(void);
     // Switches / AUX channel handling
     uint8_t ICACHE_RAM_ATTR getNextSwitchIndex(void);
 
@@ -43,6 +48,7 @@ private:
 #if !OPTIMIZED_SEARCH
     volatile uint8_t sentSwitches[N_SWITCHES] = {0};
 #endif
+    volatile uint8_t packed_buffer[8];
 
     volatile uint16_t p_auxChannelsChanged = 0; // bitmap of changed switches
     // which switch should be sent in the next rc packet

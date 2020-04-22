@@ -77,10 +77,10 @@ public:
     SX127xDriver();
 
     ///////Callback Function Pointers/////
-    static void rx_nullCallback(volatile uint8_t *){};
+    static void rx_nullCallback(uint8_t *){};
     static void tx_nullCallback(){};
-    static void (*RXdoneCallback1)(volatile uint8_t *buff); //function pointer for callback
-    //static void (*RXdoneCallback2)(); //function pointer for callback
+    static void (*RXdoneCallback1)(uint8_t *buff); //function pointer for callback
+    //static void (*RXdoneCallback2)(uint8_t *buff); //function pointer for callback
     static void (*TXdoneCallback1)(); //function pointer for callback
     static void (*TXdoneCallback2)(); //function pointer for callback
     static void (*TXdoneCallback3)(); //function pointer for callback
@@ -97,12 +97,6 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    //volatile uint8_t TXdataBuffer[16];
-    volatile uint32_t __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
-    //volatile uint8_t RXdataBuffer[16];
-    volatile uint8_t *RXdataBuffer = (uint8_t *)&__RXdataBuffer;
-
-    volatile uint8_t TXbuffLen;
     volatile uint8_t RXbuffLen;
 
     volatile bool headerExplMode;
@@ -182,6 +176,9 @@ private:
     //volatile uint8_t p_RegDioMapping1 = 0;
     //volatile uint8_t p_RegDioMapping2 = 0;
     volatile uint8_t p_ppm_off = 0;
+
+    uint32_t __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
+    uint8_t *RXdataBuffer = (uint8_t *)&__RXdataBuffer;
 
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);
