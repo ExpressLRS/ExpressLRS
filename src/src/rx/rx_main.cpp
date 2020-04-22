@@ -17,6 +17,7 @@ static void SetRFLinkRate(uint8_t rate);
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define FHSS_ONLY_TIMER                0
 
 ///////////////////
 
@@ -25,7 +26,9 @@ RcChannels rc_ch;
 
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
-//static volatile bool alreadyFHSS = false;
+#if !FHSS_ONLY_TIMER
+static volatile bool alreadyFHSS = false;
+#endif
 static volatile uint32_t tlm_check_ratio = 0;
 static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
@@ -126,11 +129,15 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 {
     //DEBUG_PRINT("H");
-    //if (!alreadyFHSS)
+#if !FHSS_ONLY_TIMER
+    if (!alreadyFHSS)
+#endif
     {
         HandleFHSS();
     }
-    //alreadyFHSS = false;
+#if !FHSS_ONLY_TIMER
+    alreadyFHSS = false;
+#endif
 
     // Check if connected before sending tlm resp
     if (STATE_disconnected < connectionState)
@@ -339,9 +346,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
         DEBUG_PRINTLN(FreqCorrection - (UID[4] + UID[5]));
     }
 
-    //alreadyFHSS = true;
-    //HandleFHSS();
-
+#if !FHSS_ONLY_TIMER
+    alreadyFHSS = true;
+    HandleFHSS();
+#endif
     //DEBUG_PRINT("E");
 }
 
