@@ -11,6 +11,8 @@
 #include "debug.h"
 #include "rc_channels.h"
 
+static void SetRFLinkRate(uint8_t rate, uint8_t init = 0);
+
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL             500u
@@ -240,7 +242,7 @@ static void ParamUpdateReq(uint8_t const *msg, uint16_t len)
 
 ///////////////////////////////////////
 
-static void SetRFLinkRate(uint8_t rate, uint8_t init = 0) // Set speed of RF link (hz)
+static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (hz)
 {
     // TODO: Protect this by disabling timer/isr...
 

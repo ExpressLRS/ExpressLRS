@@ -13,6 +13,8 @@
 #include "helpers.h"
 #include "rc_channels.h"
 
+static void SetRFLinkRate(uint8_t rate);
+
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 
@@ -329,7 +331,7 @@ void forced_stop(void)
     TxTimer.stop();
 }
 
-void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
+static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
     if (config == ExpressLRS_currAirRate)
