@@ -23,3 +23,10 @@ unsigned int ICACHE_RAM_ATTR
 volatile_memcpy(volatile void *d, volatile void *s, unsigned int n);
 
 extern void platform_restart(void);
+
+template <class t>
+inline t min(t a, t b) { return a < b ? a : b; }
+template <class t>
+inline t max(t a, t b) { return a > b ? a : b; }
+template <class t>
+inline t limit(t mi, t x, t ma) { return min(max(mi, x), ma); }

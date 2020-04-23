@@ -5,11 +5,7 @@
 #include "helpers.h"
 #include "crc.h"
 #include "platform.h"
-
-// current and sent switch values
-#define N_CONTROLS 4
-#define N_SWITCHES 8
-#define N_CHANNELS 16 // (N_CONTROLS + N_SWITCHES)
+#include "utils.h"
 
 #define CRSF_RX_BAUDRATE       420000
 #define CRSF_TX_BAUDRATE_FAST  400000
@@ -189,23 +185,17 @@ typedef struct crsfPayloadLinkstatistics_s
 #define UINT10_to_CRSF(val) MAP_U16((val), 0, 1024, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX)
 #define CRSF_to_UINT10(val) MAP_U16((val), CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023)
 
-//#define CRSF_to_SWITCH3b(val) MAP_U16((val), 188, 1795, 0, 7)
-//#define SWITCH3b_to_CRSF(val) MAP_U16((val), 0, 7, 188, 1795)
-#define CRSF_to_SWITCH3b(val) ((val) / 229)     // 229 = (1795-188)/7
-#define SWITCH3b_to_CRSF(val) ((val)*229 + 188) // 229 = (1795-188)/7
+// 234 = (1811-172) / 7
+#define CRSF_to_SWITCH3b(val) ((val) / 234)
+#define SWITCH3b_to_CRSF(val) ((val)*234 + CRSF_CHANNEL_VALUE_MIN)
 
-// 2b switches use 0, 1 and 2 as values to represent low, middle and high
-//#define CRSF_to_SWITCH2b(val) MAP((val), 188, 1795, 0, 2)
-//#define SWITCH2b_to_CRSF(val) MAP((val), 0, 2, 188, 1795)
-#define CRSF_to_SWITCH2b(val) ((val) / 803)     // 803 = ((1795-188)/2)
-#define SWITCH2b_to_CRSF(val) ((val)*803 + 188) // 803 = (1795-188)/2
+// 3 state aka 2b switches use 0, 1 and 2 as values to represent low, middle and high
+// 819 = (1811-172) / 2
+#define CRSF_to_SWITCH2b(val) ((val) / 819)
+#define SWITCH2b_to_CRSF(val) ((val)*819 + CRSF_CHANNEL_VALUE_MIN)
 
 #define CRSF_to_BIT(val) (((val) > 1000) ? 1 : 0)
-#define BIT_to_CRSF(val) ((val) ? 1795 : 188)
-
-#if (N_SWITCHES > (N_CHANNELS - N_CONTROLS))
-#error "CRSF Channels Config is not OK"
-#endif
+#define BIT_to_CRSF(val) ((val) ? CRSF_CHANNEL_VALUE_MAX : CRSF_CHANNEL_VALUE_MIN)
 
 class CRSF
 {

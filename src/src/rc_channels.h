@@ -5,7 +5,10 @@
 #include "CRSF.h" // N_SWITCHES
 #include <stdint.h>
 
-#define OPTIMIZED_SEARCH 1
+// current and sent switch values
+#define N_CONTROLS 4
+#define N_SWITCHES 8
+#define N_CHANNELS 16 // (N_CONTROLS + N_SWITCHES)
 
 // expresslrs packet header types
 // 00 -> standard 4 channel data packet
@@ -34,8 +37,8 @@ public:
     }
 
     // RX related
-    void channels_extract(volatile uint8_t const *const input,
-                          crsf_channels_t &output);
+    void ICACHE_RAM_ATTR channels_extract(volatile uint8_t const *const input,
+                                          crsf_channels_t &output);
 
 private:
     void channels_pack(void);
@@ -45,9 +48,6 @@ private:
     // Channel processing data
     volatile uint16_t ChannelDataIn[N_CHANNELS] = {0};  // range: 0...2048
     volatile uint8_t currentSwitches[N_SWITCHES] = {0}; // range: 0,1,2
-#if !OPTIMIZED_SEARCH
-    volatile uint8_t sentSwitches[N_SWITCHES] = {0};
-#endif
 
     // esp requires aligned buffer
     volatile uint8_t packed_buffer[8] __attribute__((aligned(32)));
