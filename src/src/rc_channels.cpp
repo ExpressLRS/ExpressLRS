@@ -41,7 +41,7 @@ void RcChannels::channels_pack()
 
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
-    // The analog channels
+    // The analog channels, ch4 scaled to 10bits
     rcdata->rc1 = (ChannelDataIn[0]);
     rcdata->rc2 = (ChannelDataIn[1]);
     rcdata->rc3 = (ChannelDataIn[2]);
@@ -81,7 +81,7 @@ void RcChannels::channels_extract(volatile uint8_t const *const input,
     PackedRCdataOut.ch0 = rcdata->rc1;
     PackedRCdataOut.ch0 = rcdata->rc2;
     PackedRCdataOut.ch0 = rcdata->rc3;
-    PackedRCdataOut.ch0 = rcdata->rc4;
+    PackedRCdataOut.ch0 = ((uin16_t)rcdata->rc4 << 1);
     // The round-robin switch
     switchIndex = rcdata->aux_n_idx;
     switchValue = SWITCH2b_to_CRSF(rcdata->aux_n);
@@ -164,7 +164,7 @@ void RcChannels::channels_pack()
 
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
-    // The analog channels
+    // The analog channels, scale down to 10bits
     rcdata->rc1 = (ChannelDataIn[0] >> 1);
     rcdata->rc2 = (ChannelDataIn[1] >> 1);
     rcdata->rc3 = (ChannelDataIn[2] >> 1);
@@ -204,11 +204,11 @@ void RcChannels::channels_extract(volatile uint8_t const *const input,
 {
 #if USE_RC_DATA_STRUCTS
     RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
-    // The analog channels
-    PackedRCdataOut.ch0 = rcdata->rc1;
-    PackedRCdataOut.ch1 = rcdata->rc2;
-    PackedRCdataOut.ch2 = rcdata->rc3;
-    PackedRCdataOut.ch3 = rcdata->rc4;
+    // The analog channels, scaled back to 11bits
+    PackedRCdataOut.ch0 = ((uin16_t)rcdata->rc1 << 1);
+    PackedRCdataOut.ch1 = ((uin16_t)rcdata->rc2 << 1);
+    PackedRCdataOut.ch2 = ((uin16_t)rcdata->rc3 << 1);
+    PackedRCdataOut.ch3 = ((uin16_t)rcdata->rc4 << 1);
     // The low latency switch
     PackedRCdataOut.ch4 = SWITCH2b_to_CRSF(rcdata->aux1);
     // The round-robin switch

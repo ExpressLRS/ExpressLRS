@@ -284,7 +284,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
     {
         int32_t freqerror = Radio.GetFrequencyError();
 
-#if !NEW_FREQ_CORR
+#if 0 && !NEW_FREQ_CORR
         freqerror = LPF_FreqError.update(freqerror); // get freq error = 90us
         //DEBUG_PRINT(freqerror);
         //DEBUG_PRINT(" : ");
@@ -318,8 +318,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 
 #else
         //freqerror = LPF_FreqError.update(freqerror);
-        DEBUG_PRINT(freqerror);
-        DEBUG_PRINT(" : ");
+        //DEBUG_PRINT(freqerror);
+        //DEBUG_PRINT(" : ");
 
         if (abs(freqerror) > 500)
         {
@@ -335,7 +335,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 #endif
         }
 #endif
-        DEBUG_PRINTLN(FreqCorrection - (UID[4] + UID[5]));
+        //DEBUG_PRINTLN(FreqCorrection - (UID[4] + UID[5]));
     }
 
 #if !FHSS_ONLY_TIMER
