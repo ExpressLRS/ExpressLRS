@@ -18,6 +18,7 @@ static void SetRFLinkRate(uint8_t rate);
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define FHSS_ONLY_TIMER                0
+#define RC_DATA_FROM_ISR               1
 
 ///////////////////
 
@@ -49,7 +50,7 @@ static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERV
 ///////////// Variables for Sync Behaviour ////////////////////
 static uint32_t RFmodeNextCycle = 0;
 static volatile uint8_t scanIndex = 0;
-static volatile uint8_t tentative_cnt = 0;
+static uint8_t tentative_cnt = 0;
 
 ///////////////////////////////////////
 
@@ -69,8 +70,8 @@ static inline void TimerAdjustment(uint32_t us)
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.LastPacketRSSI;
-    crsf.ChannelsPacked.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
-    crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
+    //crsf.ChannelsPacked.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
+    //crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
 #if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
@@ -176,6 +177,7 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
+#if !RC_DATA_FROM_ISR
 void process_rx_packet(void)
 {
     switch (TYPE_GET(rx_buffer[0]))
@@ -216,6 +218,7 @@ void process_rx_packet(void)
 
     getRFlinkInfo();
 }
+#endif // !RC_DATA_FROM_ISR
 
 void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 {
@@ -243,40 +246,77 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 
     //TimerAdjustment(Radio.LastPacketIsrMicros);
     TimerAdjustment(current_us);
+    LastValidPacket = current_us / 1000; //us gives 1.18 hours, millis();
+
+    switch (TYPE_GET(address))
+    {
+        case SYNC_PACKET:
+        {
+            if (rx_buffer[4] == UID[3] &&
+                rx_buffer[5] == UID[4] &&
+                rx_buffer[6] == UID[5])
+            {
+                if (connectionState == STATE_disconnected)
+                {
+                    TentativeConnection();
+                }
+                else if (connectionState == STATE_tentative)
+                {
+                    if (NonceRXlocal == rx_buffer[2] &&
+                        FHSSgetCurrIndex() == rx_buffer[1])
+                    {
+                        GotConnection();
+                    }
+                    else if (2 < (tentative_cnt++))
+                    {
+                        LostConnection();
+                    }
+                }
+
+                FHSSsetCurrIndex(rx_buffer[1]);
+                NonceRXlocal = rx_buffer[2];
+            }
+            break;
+        }
+#if RC_DATA_FROM_ISR
+        case RC_DATA_PACKET: //Standard RC Data Packet
+            if (connectionState == STATE_connected)
+            {
+                rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
+                crsf.sendRCFrameToFC();
+            }
+            break;
+
+#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
+        case SWITCH_DATA_PACKET: // Switch Data Packet
+            // extra layer of protection incase the crc and addr headers fail us.
+            if ((rx_buffer[3] == rx_buffer[1]) &&
+                (rx_buffer[4] == rx_buffer[2]))
+            {
+                if (connectionState == STATE_connected)
+                {
+                    rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
+                    crsf.sendRCFrameToFC();
+                }
+                //NonceRXlocal = rx_buffer[5];
+                //FHSSsetCurrIndex(rx_buffer[6]);
+            }
+            break;
+#endif
+
+        case TLM_PACKET: // telemetry packet
+            break;
+#endif // RC_DATA_FROM_ISR
+
+        default:
+#if !RC_DATA_FROM_ISR
+            rx_buffer_handle = 1;
+#endif // !RC_DATA_FROM_ISR
+            break;
+    }
 
     LQ_setPacketState(1);
-
-    if (TYPE_GET(address) == SYNC_PACKET)
-    {
-        if (rx_buffer[4] == UID[3] &&
-            rx_buffer[5] == UID[4] &&
-            rx_buffer[6] == UID[5])
-        {
-            if (connectionState == STATE_disconnected)
-            {
-                TentativeConnection();
-            }
-            else if (connectionState == STATE_tentative)
-            {
-                if (NonceRXlocal == rx_buffer[2] &&
-                    FHSSgetCurrIndex() == rx_buffer[1])
-                {
-                    GotConnection();
-                }
-                else if (2 < (tentative_cnt++))
-                {
-                    LostConnection();
-                }
-            }
-
-            FHSSsetCurrIndex(rx_buffer[1]);
-            NonceRXlocal = rx_buffer[2];
-        }
-    }
-    else
-    {
-        rx_buffer_handle = 1;
-    }
+    getRFlinkInfo();
 
     // Do freq correction before FHSS
     if ((connectionState > STATE_disconnected) &&
@@ -445,6 +485,7 @@ void loop()
 {
     uint32_t now = millis();
 
+#if !RC_DATA_FROM_ISR
     if (rx_buffer_handle)
     {
         process_rx_packet();
@@ -452,6 +493,7 @@ void loop()
         rx_buffer_handle = 0;
         goto exit_loop;
     }
+#endif // !RC_DATA_FROM_ISR
 
     if (connectionState == STATE_disconnected)
     {
@@ -493,6 +535,8 @@ void loop()
 
     platform_loop(connectionState);
 
+#if !RC_DATA_FROM_ISR
 exit_loop:
+#endif
     platform_wd_feed();
 }
