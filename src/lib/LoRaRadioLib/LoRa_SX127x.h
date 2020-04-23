@@ -160,6 +160,7 @@ public:
     uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned();
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
+    void ICACHE_RAM_ATTR GetLastRssiSnr();
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
@@ -173,9 +174,9 @@ public:
 
 private:
     volatile uint8_t p_RegOpMode = 0;
-    //volatile uint8_t p_RegDioMapping1 = 0;
-    //volatile uint8_t p_RegDioMapping2 = 0;
     volatile uint8_t p_ppm_off = 0;
+    //volatile uint8_t p_isr_mask = 0;
+    volatile uint8_t p_last_payload_len = 0;
 
     uint32_t __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
     uint8_t *RXdataBuffer = (uint8_t *)&__RXdataBuffer;
@@ -183,6 +184,7 @@ private:
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);
     void ICACHE_RAM_ATTR reg_dio1_tx_done(void);
+    void ICACHE_RAM_ATTR reg_dio1_isr_mask_write(uint8_t mask);
 };
 
 extern SX127xDriver Radio;
