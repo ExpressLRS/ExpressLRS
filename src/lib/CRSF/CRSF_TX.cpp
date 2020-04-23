@@ -22,7 +22,7 @@ void ICACHE_RAM_ATTR CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
     SerialOutFIFO.pushBytes(buff, size);
 }
 
-void ICACHE_RAM_ATTR CRSF_TX::LinkStatisticsSend(void)
+void CRSF_TX::LinkStatisticsSend(void)
 {
     if (!CRSFstate)
         return;
@@ -39,7 +39,7 @@ void ICACHE_RAM_ATTR CRSF_TX::LinkStatisticsSend(void)
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR CRSF_TX::sendSetVTXchannelToRadio(uint8_t band, uint8_t channel)
+void CRSF_TX::sendSetVTXchannelToRadio(uint8_t band, uint8_t channel)
 {
     if (!CRSFstate)
         return;
@@ -66,7 +66,7 @@ void ICACHE_RAM_ATTR CRSF_TX::sendSetVTXchannelToRadio(uint8_t band, uint8_t cha
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR CRSF_TX::sendLUAresponseToRadio(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
+void CRSF_TX::sendLUAresponseToRadio(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
 {
     if (!CRSFstate)
         return;
@@ -88,7 +88,7 @@ void ICACHE_RAM_ATTR CRSF_TX::sendLUAresponseToRadio(uint8_t val1, uint8_t val2,
     CrsfFramePushToFifo(outBuffer, sizeof(outBuffer));
 }
 
-void ICACHE_RAM_ATTR CRSF_TX::BatterySensorSend(void)
+void CRSF_TX::BatterySensorSend(void)
 {
     if (!CRSFstate)
         return;
@@ -193,15 +193,17 @@ void CRSF_TX::processPacket(uint8_t const *input)
     };
 }
 
-void CRSF_TX::handleUartIn(void) // Merge with RX version...
+void CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX version...
 {
-    //uint8_t split_cnt = 0;
+    uint8_t split_cnt = 0;
+    if (rx_data_rcvd)
+        return;
 
 #if (FEATURE_OPENTX_SYNC)
     sendSyncPacketToRadio();
 #endif
 
-    while (_dev->available() /*&& ((++split_cnt & 0x7) > 0)*/)
+    while (rx_data_rcvd == 0 && _dev->available() && ((++split_cnt & 0x7) > 0))
     {
         uint8_t *ptr = HandleUartIn(_dev->read());
         if (ptr)
@@ -213,7 +215,8 @@ void CRSF_TX::handleUartIn(void) // Merge with RX version...
         platform_wd_feed();
     }
 
-    uart_wdt();
+    if (rx_data_rcvd == 0)
+        uart_wdt();
 }
 
 void CRSF_TX::uart_wdt(void)

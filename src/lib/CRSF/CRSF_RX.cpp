@@ -75,11 +75,11 @@ void CRSF_RX::processPacket(uint8_t const *data)
     }
 }
 
-void CRSF_RX::handleUartIn(void)
+void CRSF_RX::handleUartIn(volatile uint8_t &rx_data_rcvd)
 {
     uint8_t split_cnt = 0;
 
-    while (_dev->available() && ((++split_cnt & 0xF) > 0))
+    while (rx_data_rcvd == 0 && _dev->available() && ((++split_cnt & 0xF) > 0))
     {
         uint8_t *ptr = HandleUartIn(_dev->read());
         if (ptr)

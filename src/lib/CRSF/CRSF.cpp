@@ -25,10 +25,10 @@ void CRSF::Begin()
     _dev->flush_read();
 }
 
-void ICACHE_RAM_ATTR CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
-                                                 int8_t snr,
-                                                 uint8_t rssi,
-                                                 uint8_t lq)
+void CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
+                                 int8_t snr,
+                                 uint8_t rssi,
+                                 uint8_t lq)
 {
     // NOTE: input is only 6 bytes!!
 
@@ -77,7 +77,7 @@ void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(uint8_t *const output)
     output[5] = (TLMbattSensor.voltage & 0x00FF);
 }
 
-void ICACHE_RAM_ATTR CRSF::BatterySensorSend(void)
+void CRSF::BatterySensorSend(void)
 {
 }
 

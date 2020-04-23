@@ -32,18 +32,48 @@ static volatile uint8_t rx_buffer_handle = 0;
 static uint32_t SyncPacketNextSend = 0;
 
 /////////// CONNECTION /////////
-static volatile uint32_t LastPacketRecvMillis = 0;
+static uint32_t LastPacketRecvMillis = 0;
 volatile connectionState_e connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
-static volatile uint32_t recv_tlm_counter = 0;
-static volatile uint8_t downlink_linkQuality = 0;
+static uint32_t recv_tlm_counter = 0;
+static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
 static volatile uint32_t tlm_check_ratio = 0;
 
 //////////// LUA /////////
 
 ///////////////////////////////////////
+
+static void process_rx_buffer()
+{
+    uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
+    uint8_t in_byte = rx_buffer[0];
+
+    if (rx_buffer[7] != calculatedCRC)
+    {
+        DEBUG_PRINT("!C");
+        return;
+    }
+    else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
+    {
+        DEBUG_PRINT("!A");
+        return;
+    }
+
+    connectionState = STATE_connected;
+    platform_connection_state(STATE_connected);
+    LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
+
+    if (TYPE_GET(in_byte) == TLM_PACKET)
+    {
+        recv_tlm_counter++;
+        crsf.LinkStatisticsExtract(&rx_buffer[1],
+                                   Radio.LastPacketSNR,
+                                   Radio.LastPacketRSSI,
+                                   downlink_linkQuality);
+    }
+}
 
 static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff)
 {
@@ -268,6 +298,7 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 
 void setup()
 {
+    DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
 
     platform_setup();
@@ -279,26 +310,16 @@ void setup()
 
     TxTimer.callbackTock = &SendRCdataToRF;
 
+    FHSSrandomiseFHSSsequence();
+
+#if defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    Radio.RFmodule = RFMOD_SX1278;
+#else
+    Radio.RFmodule = RFMOD_SX1276;
+#endif
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
-
-    DEBUG_PRINTLN("ExpressLRS TX Module Booted...");
-
-    FHSSrandomiseFHSSsequence();
-
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915)
-#ifdef Regulatory_Domain_EU_868
-    DEBUG_PRINTLN("Setting 868MHz Mode");
-#else
-    DEBUG_PRINTLN("Setting 915MHz Mode");
-#endif
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
-
-#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-    DEBUG_PRINTLN("Setting 433MHz Mode");
-    Radio.RFmodule = RFMOD_SX1278; //define radio module here
-#endif
 
     PowerMgmt.defaultPower();
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
@@ -312,33 +333,9 @@ void loop()
 {
     if (rx_buffer_handle)
     {
+        process_rx_buffer();
         rx_buffer_handle = 0;
-        uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
-        uint8_t in_byte = rx_buffer[0];
-
-        if (rx_buffer[7] != calculatedCRC)
-        {
-            DEBUG_PRINT("!C");
-            return;
-        }
-        else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
-        {
-            DEBUG_PRINT("!A");
-            return;
-        }
-
-        connectionState = STATE_connected;
-        platform_connection_state(STATE_connected);
-        LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
-
-        if (TYPE_GET(in_byte) == TLM_PACKET)
-        {
-            recv_tlm_counter++;
-            crsf.LinkStatisticsExtract(&rx_buffer[1],
-                                       Radio.LastPacketSNR,
-                                       Radio.LastPacketRSSI,
-                                       downlink_linkQuality);
-        }
+        goto exit_loop;
     }
 
     if (TLM_RATIO_NO_TLM < ExpressLRS_currAirRate->TLMinterval)
@@ -383,8 +380,10 @@ void loop()
     }
 
     // Process CRSF packets from TX
-    crsf.handleUartIn();
+    crsf.handleUartIn(rx_buffer_handle);
 
     platform_loop(connectionState);
+
+exit_loop:
     platform_wd_feed();
 }

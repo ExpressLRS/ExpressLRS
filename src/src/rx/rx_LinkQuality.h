@@ -2,18 +2,18 @@ volatile uint8_t linkQuality = 0;
 volatile uint8_t linkQualityArray[100] = {0};
 volatile uint8_t linkQualityArrayIndex = 0;
 
-void ICACHE_RAM_ATTR incrementLQArray()
+void ICACHE_RAM_ATTR LQ_nextPacket()
 {
     linkQualityArrayIndex = (linkQualityArrayIndex + 1) % sizeof(linkQualityArray);
     linkQualityArray[linkQualityArrayIndex] = 0;
 }
 
-void ICACHE_RAM_ATTR addPacketToLQ()
+void ICACHE_RAM_ATTR LQ_setPacketState(uint8_t state = 1)
 {
-    linkQualityArray[linkQualityArrayIndex] = 1;
+    linkQualityArray[linkQualityArrayIndex] = state;
 }
 
-int ICACHE_RAM_ATTR getRFlinkQuality()
+int ICACHE_RAM_ATTR LQ_getlinkQuality()
 {
     int LQ = 0;
 
@@ -25,7 +25,7 @@ int ICACHE_RAM_ATTR getRFlinkQuality()
     return LQ;
 }
 
-int ICACHE_RAM_ATTR LQreset()
+int ICACHE_RAM_ATTR LQ_reset()
 {
     for (int i = 0; i < 100; i++)
     {

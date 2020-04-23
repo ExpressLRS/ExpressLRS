@@ -40,7 +40,7 @@ public:
 private:
     void channels_pack(void);
     // Switches / AUX channel handling
-    uint8_t ICACHE_RAM_ATTR getNextSwitchIndex(void);
+    uint8_t getNextSwitchIndex(void);
 
     // Channel processing data
     volatile uint16_t ChannelDataIn[N_CHANNELS] = {0};  // range: 0...2048
@@ -48,7 +48,9 @@ private:
 #if !OPTIMIZED_SEARCH
     volatile uint8_t sentSwitches[N_SWITCHES] = {0};
 #endif
-    volatile uint8_t packed_buffer[8];
+
+    // esp requires aligned buffer
+    volatile uint8_t packed_buffer[8] __attribute__((aligned(32)));
 
     volatile uint16_t p_auxChannelsChanged = 0; // bitmap of changed switches
     // which switch should be sent in the next rc packet

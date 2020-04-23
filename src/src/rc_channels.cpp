@@ -453,7 +453,7 @@ void RcChannels::processChannels(crsf_channels_t const *const rcChannels)
  * For hybrid switches, switch 0 is sent with every packet and the rest of the switches
  * are in the round-robin.
  */
-uint8_t ICACHE_RAM_ATTR RcChannels::getNextSwitchIndex()
+uint8_t RcChannels::getNextSwitchIndex()
 {
     int8_t i;
 #ifdef HYBRID_SWITCHES_8

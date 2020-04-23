@@ -13,6 +13,8 @@ extern const uint32_t NR_FHSS_ENTRIES;
 //#define NR_FHSS_ENTRIES (sizeof(FHSSfreqs) / sizeof(uint32_t))
 extern const uint32_t FHSSfreqs[];
 
+void ICACHE_RAM_ATTR FHSSresetFreqCorrection();
+
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value);
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex();
 void ICACHE_RAM_ATTR FHSSincCurrIndex();

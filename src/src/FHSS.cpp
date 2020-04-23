@@ -178,6 +178,11 @@ uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 #define FREQ_OFFSET_UID (UID[4] + UID[5])
 int32_t volatile FreqCorrection = FREQ_OFFSET_UID;
 
+void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
+{
+    FreqCorrection = FREQ_OFFSET_UID;
+}
+
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
     FHSSptr = value;
@@ -246,6 +251,16 @@ Approach:
 */
 void FHSSrandomiseFHSSsequence()
 {
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
+    DEBUG_PRINTLN("Setting 915MHz Mode");
+#elif defined Regulatory_Domain_EU_868
+    DEBUG_PRINTLN("Setting 868MHz Mode");
+#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    DEBUG_PRINTLN("Setting 433MHz Mode");
+#else
+#error No regulatory domain defined, please define one in common.h
+#endif
+
     DEBUG_PRINT("Number of FHSS frequencies =");
     DEBUG_PRINTLN(NR_FHSS_ENTRIES);
 

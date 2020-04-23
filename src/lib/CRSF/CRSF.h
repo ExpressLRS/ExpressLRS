@@ -224,10 +224,10 @@ public:
     static void (*RecvParameterUpdate)(uint8_t const *msg, uint16_t len);
 
     // Protocol funcs
-    void ICACHE_RAM_ATTR LinkStatisticsExtract(volatile uint8_t const *const data,
-                                               int8_t snr,
-                                               uint8_t rssi,
-                                               uint8_t lq);
+    void LinkStatisticsExtract(volatile uint8_t const *const data,
+                               int8_t snr,
+                               uint8_t rssi,
+                               uint8_t lq);
     void ICACHE_RAM_ATTR LinkStatisticsPack(uint8_t *const output);
 
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct
@@ -237,8 +237,8 @@ public:
 
 protected:
     uint8_t *HandleUartIn(uint8_t inChar);
-    virtual void ICACHE_RAM_ATTR LinkStatisticsSend(void) = 0;
-    virtual void ICACHE_RAM_ATTR BatterySensorSend(void);
+    virtual void LinkStatisticsSend(void) = 0;
+    virtual void BatterySensorSend(void);
 
     HwSerial *_dev = NULL;
 

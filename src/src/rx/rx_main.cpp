@@ -30,7 +30,7 @@ static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 static volatile bool alreadyFHSS = false;
 #endif
 static volatile uint32_t tlm_check_ratio = 0;
-static volatile uint8_t rx_buffer[8];
+static volatile uint8_t rx_buffer[8] __attribute__((aligned(32)));
 static volatile uint8_t rx_buffer_handle = 0;
 
 ///////////////////////////////////////////////
@@ -50,14 +50,6 @@ static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERV
 static uint32_t RFmodeNextCycle = 0;
 static volatile uint8_t scanIndex = 0;
 static volatile uint8_t tentative_cnt = 0;
-
-static inline void RfModeNextCycleCalc(void)
-{
-    RFmodeNextCycle = millis() +
-                      ExpressLRS_currAirRate->RFmodeCycleInterval +
-                      /* ((connectionState == STATE_tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0);*/
-                      ExpressLRS_currAirRate->RFmodeCycleAddtionalTime;
-}
 
 ///////////////////////////////////////
 
@@ -102,7 +94,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         if ((NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval) == 0)
         {
             //DEBUG_PRINT("F");
-            linkQuality = getRFlinkQuality();
+            linkQuality = LQ_getlinkQuality();
             Radio.RXnb(FHSSgetNextFreq()); // 260us => 148us => ??
         }
         NonceRXlocal++;
@@ -123,7 +115,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
     tx_buffer[7] = crc;
     Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
-    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQ_setPacketState(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
@@ -142,7 +134,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     // Check if connected before sending tlm resp
     if (STATE_disconnected < connectionState)
     {
-        incrementLQArray();
+        LQ_nextPacket();
         if (tlm_check_ratio && (NonceRXlocal & tlm_check_ratio) == 0)
         {
             HandleSendTelemetryResponse();
@@ -186,8 +178,6 @@ void ICACHE_RAM_ATTR GotConnection()
 
 void process_rx_packet(void)
 {
-    getRFlinkInfo();
-
     switch (TYPE_GET(rx_buffer[0]))
     {
         case RC_DATA_PACKET: //Standard RC Data Packet
@@ -209,8 +199,8 @@ void process_rx_packet(void)
                     rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
                     crsf.sendRCFrameToFC();
                 }
-                NonceRXlocal = rx_buffer[5];
-                FHSSsetCurrIndex(rx_buffer[6]);
+                //NonceRXlocal = rx_buffer[5];
+                //FHSSsetCurrIndex(rx_buffer[6]);
             }
             break;
 #endif
@@ -218,16 +208,16 @@ void process_rx_packet(void)
         case TLM_PACKET: // telemetry packet
             break;
 
-        case SYNC_PACKET: // sync packet is handled in rx isr
-        default:          // code to be executed if n doesn't match any cases
+        case SYNC_PACKET:
+            // sync packet is handled in rx isr
+        default:
             break;
     }
 
-    LastValidPacket = millis();
-    rx_buffer_handle = 0;
+    getRFlinkInfo();
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
+void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 {
     //DEBUG_PRINT("I");
     uint32_t current_us = micros();
@@ -253,7 +243,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
 
     //TimerAdjustment(Radio.LastPacketIsrMicros);
     TimerAdjustment(current_us);
-    addPacketToLQ();
+
+    LQ_setPacketState(1);
 
     if (TYPE_GET(address) == SYNC_PACKET)
     {
@@ -283,7 +274,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
         }
     }
     else
+    {
         rx_buffer_handle = 1;
+    }
 
     // Do freq correction before FHSS
     if ((connectionState > STATE_disconnected) &&
@@ -322,8 +315,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t *buff)
         }
 
         Radio.setPPMoffsetReg(FreqCorrection);
+
 #else
-        // Do freq error correction
         //freqerror = LPF_FreqError.update(freqerror);
         DEBUG_PRINT(freqerror);
         DEBUG_PRINT(" : ");
@@ -369,19 +362,26 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
     if (config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
+
+    // Stop ongoing actions before configuring next rate
+    TxTimer.stop();
+    Radio.StopContRX();
+
     ExpressLRS_currAirRate = config;
 
     DEBUG_PRINT("Set RF rate: ");
-    DEBUG_PRINTLN(rate);
-    //DEBUG_PRINTLN(config->interval);
+    DEBUG_PRINTLN(config->rate);
 
-    TxTimer.stop();
-    Radio.StopContRX();
+    // Init CRC aka LQ array
+    LQ_reset();
+    // Reset FHSS
+    FHSSresetFreqCorrection();
+    FHSSsetCurrIndex(0);
 
     tlm_check_ratio = 0;
     if (TLM_RATIO_NO_TLM < config->TLMinterval)
     {
-        tlm_check_ratio = TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval) - 1;
+        tlm_check_ratio = TLMratioEnumToValue(config->TLMinterval) - 1;
     }
 
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
@@ -403,48 +403,37 @@ void tx_done_cb(void)
 
 void setup()
 {
+    DEBUG_PRINTLN("ExpressLRS RX Module...");
     platform_setup();
 
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
 
-    DEBUG_PRINTLN("Module Booting...");
-
-#ifdef Regulatory_Domain_AU_915
-    DEBUG_PRINTLN("Setting 915MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#elif defined Regulatory_Domain_FCC_915
-    DEBUG_PRINTLN("Setting 915MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#elif defined Regulatory_Domain_EU_868
-    DEBUG_PRINTLN("Setting 868MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
-    DEBUG_PRINTLN("Setting 433MHz Mode");
-    Radio.RFmodule = RFMOD_SX1278; //define radio module here
-#else
-#error No regulatory domain defined, please define one in common.h
-#endif
-
     FHSSrandomiseFHSSsequence();
 
+    // Prepare radio
+#if defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    Radio.RFmodule = RFMOD_SX1278;
+#else
+    Radio.RFmodule = RFMOD_SX1276;
+#endif
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin();
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
+    Radio.RXdoneCallback1 = &ProcessRFPacketCallback;
+    Radio.TXdoneCallback1 = &tx_done_cb;
 
+    // Measure RF noise
+#ifdef DEBUG_SERIAL // TODO: Enable this when noize floor is used!
     int16_t RFnoiseFloor = MeasureNoiseFloor();
     DEBUG_PRINT("RF noise floor: ");
     DEBUG_PRINT(RFnoiseFloor);
     DEBUG_PRINTLN("dBm");
     (void)RFnoiseFloor;
+#endif
 
-    // Set callback to RX & TX data
-    Radio.RXdoneCallback1 = &ProcessRFPacket;
-    Radio.TXdoneCallback1 = &tx_done_cb;
     // Set call back for timer ISR
     TxTimer.callbackTock = &HWtimerCallback;
-    // Init CRC aka LQ array
-    LQreset();
     // Init first scan index
     scanIndex = RATE_DEFAULT;
     // Initialize CRSF protocol handler
@@ -457,20 +446,25 @@ void loop()
     uint32_t now = millis();
 
     if (rx_buffer_handle)
+    {
         process_rx_packet();
+        LastValidPacket = now;
+        rx_buffer_handle = 0;
+        goto exit_loop;
+    }
 
     if (connectionState == STATE_disconnected)
     {
         if (now > RFmodeNextCycle)
         {
-            //Radio.SetFrequency(GetInitialFreq());
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
             scanIndex++;
-            LQreset();
             if (RATE_MAX < scanIndex)
                 platform_connection_state(STATE_search_iteration_done);
 
-            RfModeNextCycleCalc();
+            RFmodeNextCycle = now +
+                              ExpressLRS_currAirRate->RFmodeCycleInterval +
+                              ExpressLRS_currAirRate->RFmodeCycleAddtionalTime;
         }
         else if (now > led_toggle_ms)
         {
@@ -495,8 +489,10 @@ void loop()
         }
     }
 
-    crsf.handleUartIn();
+    crsf.handleUartIn(rx_buffer_handle);
 
     platform_loop(connectionState);
+
+exit_loop:
     platform_wd_feed();
 }

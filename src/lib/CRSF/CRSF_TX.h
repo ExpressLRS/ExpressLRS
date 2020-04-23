@@ -12,13 +12,13 @@ public:
     void Begin(void);
 
     // Handle incoming data
-    void handleUartIn(void);
+    void handleUartIn(volatile uint8_t &rx_data_rcvd);
 
     // Send to RADIO
-    void ICACHE_RAM_ATTR LinkStatisticsSend(void);
-    void ICACHE_RAM_ATTR BatterySensorSend(void);
-    void ICACHE_RAM_ATTR sendLUAresponseToRadio(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
-    void ICACHE_RAM_ATTR sendSetVTXchannelToRadio(uint8_t band, uint8_t channel);
+    void LinkStatisticsSend(void);
+    void BatterySensorSend(void);
+    void sendLUAresponseToRadio(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
+    void sendSetVTXchannelToRadio(uint8_t band, uint8_t channel);
 
     // OpenTX Syncing
     void ICACHE_RAM_ATTR setRcPacketRate(uint32_t interval)

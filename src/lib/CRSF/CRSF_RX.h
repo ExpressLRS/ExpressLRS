@@ -9,7 +9,7 @@ public:
     CRSF_RX(HwSerial *dev) : CRSF(dev) {}
     CRSF_RX(HwSerial &dev) : CRSF(&dev) {}
 
-    void handleUartIn(void);
+    void handleUartIn(volatile uint8_t &rx_data_rcvd);
 
     void sendRCFrameToFC();
     void LinkStatisticsSend();
