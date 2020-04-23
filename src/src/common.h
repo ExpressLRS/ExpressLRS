@@ -72,7 +72,6 @@ typedef enum
 
 enum
 {
-    //RATE_250HZ,
     RATE_200HZ,
     RATE_100HZ,
     RATE_50HZ,
