@@ -221,8 +221,6 @@ public:
     static void (*disconnected)();
     static void (*connected)();
 
-    static void (*RecvParameterUpdate)(uint8_t const *msg, uint16_t len);
-
     // Protocol funcs
     void LinkStatisticsExtract(volatile uint8_t const *const data,
                                int8_t snr,
@@ -246,15 +244,15 @@ protected:
     uint32_t GoodPktsCount = 0;
     uint32_t BadPktsCount = 0;
 
+    // CRSF frame TX buffer
+    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)] __attribute__((aligned(32)));
+
 private:
     bool CRSFframeActive = false;
     uint8_t SerialInPacketStart = 0;
     uint8_t SerialInPacketLen = 0;               // length of the CRSF packet as measured
     uint8_t SerialInPacketPtr = 0;               // index where we are reading/writing
     uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
-
-    // TODO: Use this instead!
-    //volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1];
 };
 
 #endif

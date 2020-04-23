@@ -17,7 +17,7 @@ public:
     // Send to RADIO
     void LinkStatisticsSend(void);
     void BatterySensorSend(void);
-    void sendLUAresponseToRadio(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
+    void sendLUAresponseToRadio(uint8_t *data, uint8_t len);
     void sendSetVTXchannelToRadio(uint8_t band, uint8_t channel);
 
     // OpenTX Syncing
@@ -54,6 +54,8 @@ public:
         OpenTXsyncOffset = current_us - RCdataLastRecv;
 #endif
     }
+
+    static void (*ParamWriteCallback)(uint8_t const *msg, uint16_t len);
 
     ///// Variables /////
 

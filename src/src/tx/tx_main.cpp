@@ -180,7 +180,7 @@ static void incRFLinkRate(void)
     }
 }
 
-static void ParamUpdateReq(uint8_t const *msg, uint16_t len)
+static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 {
     // Called from UART handling loop (main loop)
 
@@ -231,10 +231,11 @@ static void ParamUpdateReq(uint8_t const *msg, uint16_t len)
             break;
     }
 
-    crsf.sendLUAresponseToRadio((ExpressLRS_currAirRate->enum_rate + 2),
-                                ExpressLRS_currAirRate->TLMinterval + 1,
-                                PowerMgmt.currPower() + 2,
-                                4);
+    uint8_t resp[4] = {(uint8_t)(ExpressLRS_currAirRate->enum_rate + 2),
+                       (uint8_t)(ExpressLRS_currAirRate->TLMinterval + 1),
+                       (uint8_t)(PowerMgmt.currPower() + 2),
+                       4u};
+    crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 }
 
 ///////////////////////////////////////
@@ -305,7 +306,7 @@ void setup()
 
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
     crsf.disconnected = hw_timer_stop;
-    crsf.RecvParameterUpdate = ParamUpdateReq;
+    crsf.ParamWriteCallback = ParamWriteHandler;
     crsf.RCdataCallback1 = rc_data_cb;
 
     TxTimer.callbackTock = &SendRCdataToRF;

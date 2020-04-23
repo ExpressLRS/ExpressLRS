@@ -3,14 +3,11 @@
 
 void nullCallback(void){};
 void rcNullCb(crsf_channels_t const *const) {}
-void paramNullCallback(uint8_t const *, uint16_t){};
 
 void (*CRSF::RCdataCallback1)(crsf_channels_t const *const) = &rcNullCb; // function is called whenever there is new RC data.
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
-
-void (*CRSF::RecvParameterUpdate)(uint8_t const *msg, uint16_t len) = &paramNullCallback; // called when recv parameter update req, ie from LUA
 
 void CRSF::Begin()
 {

@@ -11,7 +11,8 @@ void CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 
 void CRSF_RX::LinkStatisticsSend()
 {
-    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength)] = {0};
+    uint8_t len = CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength);
+    //uint8_t outBuffer[len] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
@@ -19,12 +20,13 @@ void CRSF_RX::LinkStatisticsSend()
 
     memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
-    sendFrameToFC(outBuffer, sizeof(outBuffer));
+    sendFrameToFC(outBuffer, len);
 }
 
 void CRSF_RX::sendRCFrameToFC()
 {
-    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(RCframeLength)] = {0};
+    uint8_t len = CRSF_EXT_FRAME_SIZE(RCframeLength);
+    //uint8_t outBuffer[len] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = CRSF_FRAME_SIZE(RCframeLength);
@@ -32,7 +34,7 @@ void CRSF_RX::sendRCFrameToFC()
 
     memcpy(&outBuffer[3], &ChannelsPacked, RCframeLength);
 
-    sendFrameToFC(outBuffer, sizeof(outBuffer));
+    sendFrameToFC(outBuffer, len);
 }
 
 void CRSF_RX::processPacket(uint8_t const *data)
