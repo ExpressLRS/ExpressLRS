@@ -24,12 +24,14 @@ public:
     virtual int read(void);
     virtual void flush(void);
     virtual uint32_t write(uint8_t);
-    virtual size_t write(const uint8_t *buff, size_t len);
-    //virtual uint32_t write(uint8_t *, uint8_t len);
+    virtual uint32_t write(const uint8_t *buff, uint32_t len);
 
-    void HAL_HalfDuplex_EnableReceiver(void *) {}
-    void HAL_HalfDuplex_EnableTransmitter(void *) {}
+    void HAL_HalfDuplex_EnableReceiver(void *);
+    void HAL_HalfDuplex_EnableTransmitter(void *);
 
 protected:
     Serial_t _serial;
+    uint32_t rx_pin;
+    uint32_t tx_pin;
+    int32_t irq;
 };

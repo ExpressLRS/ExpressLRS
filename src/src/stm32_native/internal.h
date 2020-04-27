@@ -19,15 +19,16 @@
 extern GPIO_TypeDef *const digital_regs[];
 
 #define GPIO(PORT, NUM) (((PORT) - 'A') * 16 + (NUM))
-#define GPIO2PORT(PIN) ((PIN) / 16)
-#define GPIO2BIT(PIN) (1 << ((PIN) % 16))
+#define GPIO2PORT(PIN)  ((PIN) / 16)
+#define GPIO2BIT(PIN)   (1U << GPIO2IDX(PIN))
+#define GPIO2IDX(PIN)   ((PIN) % 16)
 
-#define GPIO_INPUT 0
-#define GPIO_OUTPUT 1
+#define GPIO_INPUT        0
+#define GPIO_OUTPUT       1
 #define GPIO_INPUT_PULLUP 4
-#define GPIO_OPEN_DRAIN 0x100
+#define GPIO_OPEN_DRAIN   0x100
 #define GPIO_FUNCTION(fn) (2 | ((fn) << 4))
-#define GPIO_ANALOG 3
+#define GPIO_ANALOG       3
 
 void enable_pclock(uint32_t periph_base);
 int is_enabled_pclock(uint32_t periph_base);

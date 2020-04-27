@@ -29,6 +29,7 @@
  */
 #include "FIFO.h"
 #include "debug.h"
+#include "platform.h"
 
 FIFO::FIFO()
 {

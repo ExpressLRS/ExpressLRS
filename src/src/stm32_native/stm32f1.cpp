@@ -12,10 +12,10 @@
 
 // Copied from STM32F1xx CMSIS header file since platform.io includes wrong file!
 #define FLASH_ACR_LATENCY_Pos (0U)
-#define RCC_CFGR_PLLSRC_Pos (16U)
-#define RCC_CFGR_PLLMULL_Pos (18U)
-#define RCC_CFGR_SWS_Pos (2U)
-#define RCC_CFGR_SWS_Msk (0x3UL << RCC_CFGR_SWS_Pos) /*!< 0x0000000C */
+#define RCC_CFGR_PLLSRC_Pos   (16U)
+#define RCC_CFGR_PLLMULL_Pos  (18U)
+#define RCC_CFGR_SWS_Pos      (2U)
+#define RCC_CFGR_SWS_Msk      (0x3UL << RCC_CFGR_SWS_Pos) /*!< 0x0000000C */
 
 #define CONFIG_CLOCK_FREQ 72000000 // 72MHz
 #ifdef HSE_VALUE
@@ -24,7 +24,7 @@
 #define CONFIG_CLOCK_REF_FREQ 12000000U // 12MHz
 #endif
 #define CONFIG_STM32_CLOCK_REF_INTERNAL 0
-#define FREQ_PERIPH (CONFIG_CLOCK_FREQ / 2)
+#define FREQ_PERIPH                     (CONFIG_CLOCK_FREQ / 2)
 
 // Enable a peripheral clock
 void enable_pclock(uint32_t periph_base)
@@ -185,8 +185,105 @@ clock_setup(void)
         ;
 }
 
+static __IO uint64_t us_counter = 0;
+
+// IRQ handler
+void SysTick_Handler(void)
+{
+    us_counter++;
+    //irq_disable();
+    //uint32_t diff = timer_dispatch_many();
+    //timer_set_diff(diff);
+    //irq_enable();
+}
+
+// Return the number of clock ticks for a given number of microseconds
+uint32_t timer_from_us(uint32_t us)
+{
+    return us * (CONFIG_CLOCK_FREQ / 1000000);
+}
+
+uint32_t us_from_timer(uint32_t tmr)
+{
+    return tmr / (CONFIG_CLOCK_FREQ / 1000000);
+}
+
+// Return true if time1 is before time2.  Always use this function to
+// compare times as regular C comparisons can fail if the counter
+// rolls over.
+uint8_t timer_is_before(uint32_t time1, uint32_t time2)
+{
+    return (int32_t)(time1 - time2) < 0;
+}
+
+// Set the next irq time
+void timer_set_diff(uint32_t value)
+{
+    SysTick->LOAD = value;
+    SysTick->VAL = 0;
+    SysTick->LOAD = 0;
+}
+
+// Return the current time (in absolute clock ticks).
+uint32_t timer_read_time(void)
+{
+    return DWT->CYCCNT;
+}
+
+void timer_kick(void)
+{
+    SysTick->LOAD = 0;
+    SysTick->VAL = 0;
+    SCB->ICSR = SCB_ICSR_PENDSTSET_Msk;
+}
+
+static void timer_init(void)
+{
+    // Enable Debug Watchpoint and Trace (DWT) for its 32bit timer
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    DWT->CYCCNT = 0;
+
+    // Enable SysTick
+    NVIC_SetPriority(SysTick_IRQn, 2);
+    SysTick->LOAD = timer_from_us(1); //(uint32_t)(SystemCoreClock / (1000UL - 1UL));
+    SysTick->VAL = 0UL;
+    SysTick->CTRL = (SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk);
+    //timer_kick();
+}
+
+uint32_t micros(void)
+{
+    return (uint32_t)us_counter;
+}
+
+uint32_t millis(void)
+{
+    return us_counter / 1000;
+}
+
+void delay(uint32_t ms)
+{
+    ms += millis();
+    while (millis() < ms)
+        ;
+}
+
+void delayMicroseconds(uint32_t usecs)
+{
+    if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk))
+    {
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    }
+
+    uint32_t end = timer_read_time() + timer_from_us(usecs);
+    while (timer_is_before(timer_read_time(), end))
+        ;
+}
+
 // Main entry point - called from armcm_boot.c:ResetHandler()
-void armcm_main(void)
+int main(void)
 {
     // Run SystemInit() and then restore VTOR
     SystemInit();
@@ -199,11 +296,14 @@ void armcm_main(void)
     enable_pclock(AFIO_BASE);
     AFIO->MAPR = AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
-    /*
+    timer_init();
+
+    extern void setup();
+    extern void loop();
+
     setup();
     for (;;)
         loop();
-    */
 }
 
 #endif

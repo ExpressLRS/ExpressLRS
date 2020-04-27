@@ -34,14 +34,14 @@
 #include "platform.h"
 #include <stdint.h>
 
-#define FIFO_SIZE 512
+#define FIFO_SIZE 256
 
 class FIFO
 {
 private:
-    int head;
-    int tail;
-    int numElements;
+    volatile int head;
+    volatile int tail;
+    volatile int numElements;
     volatile uint8_t buffer[FIFO_SIZE] = {0};
 
 public:
