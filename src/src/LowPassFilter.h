@@ -44,11 +44,11 @@ public:
 
     void init(int32_t Indata)
     {
-        /*for (int i = 0; i < 255; i++)
+        for (int i = 0; i < 255; i++)
         {
             this->update(Indata);
-        }*/
-        SmoothDataINT = Indata;
-        SmoothDataFP = Indata;
+        }
+        //SmoothDataINT = Indata;
+        //SmoothDataFP = Indata;
     }
 };
