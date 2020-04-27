@@ -63,6 +63,14 @@ enum
     TLM_RATIO_1_2 = 7
 };
 
+enum
+{
+    FHSS_1 = 1,
+    FHSS_2 = 2,
+    FHSS_4 = 4,
+    FHSS_8 = 8,
+};
+
 typedef enum
 {
     RF_DOWNLINK_INFO = 0,
