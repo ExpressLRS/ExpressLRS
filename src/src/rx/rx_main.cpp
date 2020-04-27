@@ -36,7 +36,7 @@ static volatile int32_t rx_freqerror = 0;
 ///////////////////////////////////////////////
 ////////////////  Filters  ////////////////////
 static LPF LPF_Offset(3);
-static LPF LPF_FreqError(3);
+static LPF LPF_FreqError(4);
 static LPF LPF_UplinkRSSI(5);
 
 //////////////////////////////////////////////////////////////
@@ -97,7 +97,8 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
     else if (freqerror > MAX_ERROR)
         freqerror = MAX_ERROR;
 #endif
-    //if (connectionState == STATE_connected)
+    //if (connectionState == STATE_tentative)
+    //    LPF_FreqError.init(freqerror);
     freqerror = LPF_FreqError.update(freqerror);
 
 #if PRINT_FREQ_ERROR
@@ -105,7 +106,7 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
     DEBUG_PRINT(freqerror);
 #endif
 
-    if (abs(freqerror) > 150)
+    if (abs(freqerror) > 120)
     {
         FreqCorrection += freqerror;
         Radio.setPPMoffsetReg(freqerror, 0);
@@ -124,6 +125,8 @@ uint8_t ICACHE_RAM_ATTR HandleFHSS()
     uint8_t fhss = 0;
     if (connectionState > STATE_disconnected) // don't hop if we lost
     {
+        //if ((NonceRXlocal & 1) == 0)
+        //RadioFreqErrorCorr();
         if ((NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval) == 0)
         {
             //DEBUG_PRINT("F");
@@ -183,8 +186,8 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     }
 
     fhss_config_rx |= HandleFHSS();
-    if (fhss_config_rx)
-        /*fhss_config_rx = */ RadioFreqErrorCorr();
+    if (fhss_config_rx || connectionState == STATE_connected)
+        fhss_config_rx |= RadioFreqErrorCorr();
 #if PRINT_TIMER
     DEBUG_PRINT(" nonce ");
     DEBUG_PRINT(NonceRXlocal);
@@ -230,6 +233,11 @@ void ICACHE_RAM_ATTR LostConnection()
 void ICACHE_RAM_ATTR TentativeConnection()
 {
     TxTimer.start(); // Start local sync timer
+
+    /* Do initial freq correction */
+    FreqCorrection += rx_freqerror;
+    Radio.setPPMoffsetReg(rx_freqerror, 0);
+    rx_freqerror = 0;
 
     tentative_cnt = 0;
     connectionState = STATE_tentative;
@@ -313,6 +321,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
         return;
     }
 
+    rx_freqerror = Radio.GetFrequencyError();
+
     rx_last_valid_us = current_us;
 
     //LastValidPacket = current_us / 1000; //us gives 1.18 hours, millis();
@@ -388,9 +398,6 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 
     LQ_setPacketState(1);
     getRFlinkInfo();
-
-    //RadioFreqErrorCorr();
-    rx_freqerror = Radio.GetFrequencyError();
 
     //DEBUG_PRINT("E");
 }
@@ -522,10 +529,10 @@ void loop()
 
             RFmodeNextCycle = now;
         }
-        else if (now > led_toggle_ms)
+        else if (150 < (now - led_toggle_ms))
         {
             led_toggle();
-            led_toggle_ms = now + 150;
+            led_toggle_ms = now;
         }
     }
     else if (connectionState > STATE_disconnected)
