@@ -24,7 +24,7 @@ void HwTimer::init()
         timer = timerBegin(0, (APB_CLK_FREQ / 1000000), true); // us timer
         timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
     }
-    stop(timer);
+    stop();
     setTime(HWtimerInterval);
     timerAlarmEnable(timer);
 }
@@ -56,10 +56,13 @@ void ICACHE_RAM_ATTR HwTimer::pause()
         timerAlarmDisable(timer);
 }
 
-void ICACHE_RAM_ATTR HwTimer::reset()
+void ICACHE_RAM_ATTR HwTimer::reset(int32_t offset)
 {
     if (timer && running)
+    {
         timerWrite(timer, 0);
+        setTime(HWtimerInterval - offset);
+    }
 }
 
 void ICACHE_RAM_ATTR HwTimer::setTime(uint32_t time)
