@@ -39,10 +39,6 @@ void ICACHE_RAM_ATTR HwTimer::start()
 
 void ICACHE_RAM_ATTR HwTimer::stop()
 {
-    /* are these rly needed?? */
-    detachInterrupt(GPIO_PIN_DIO0);
-    Radio.ClearIRQFlags();
-
     running = false;
 
     if (timer)
