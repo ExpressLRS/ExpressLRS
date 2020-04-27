@@ -3,6 +3,8 @@
 #include "utils.h"
 #include <Arduino.h>
 
+volatile uint8_t current_rate_config = RATE_DEFAULT;
+
 //
 // https://semtech.my.salesforce.com/sfc/p/#E0000000JelG/a/2R000000HUhK/6T9Vdb3_ldnElA8drIbPYjs1wBbhlWUXej8ZMXtZXOM
 //

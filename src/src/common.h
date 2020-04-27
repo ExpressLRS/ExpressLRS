@@ -109,6 +109,7 @@ typedef struct expresslrs_mod_settings_s
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 
 extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+extern volatile uint8_t current_rate_config;
 
 int16_t MeasureNoiseFloor();
 uint16_t TLMratioEnumToValue(uint8_t enumval);

@@ -325,7 +325,7 @@ void setup()
     PowerMgmt.defaultPower();
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
-    SetRFLinkRate(RATE_DEFAULT, 1);
+    SetRFLinkRate(current_rate_config, 1);
 
     crsf.Begin();
 }

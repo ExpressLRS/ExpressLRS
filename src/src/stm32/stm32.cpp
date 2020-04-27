@@ -1,6 +1,7 @@
 #include "targets.h"
 #include "debug.h"
 #include "common.h"
+#include "eeprom.h"
 #include <Arduino.h>
 
 #ifdef GPIO_PIN_BUTTON
@@ -49,7 +50,7 @@ void platform_setup(void)
     }
 #endif
 
-/*************** CONFIGURE LEDs *******************/
+    /*************** CONFIGURE LEDs *******************/
 #ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
     digitalWrite(GPIO_PIN_LED, LOW);
@@ -59,7 +60,7 @@ void platform_setup(void)
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
 #endif
 
-/*************** CONFIGURE BUTTON *******************/
+    /*************** CONFIGURE BUTTON *******************/
 #ifdef GPIO_PIN_BUTTON
     //button.set_press_delay_short();
     //button.buttonShortPress = button_event_short;
@@ -69,10 +70,10 @@ void platform_setup(void)
     button.init(GPIO_PIN_BUTTON, true);
 #endif
 
-/*************** CONFIGURE TX *******************/
 #if defined(TARGET_R9M_TX)
-    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100,
-               GPIO_PIN_RFswitch_CONTROL,
+    /*************** CONFIGURE TX *******************/
+
+    r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100, GPIO_PIN_RFswitch_CONTROL,
                GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
     //r9dac.setPower(R9_PWR_50mW);
 
@@ -98,8 +99,20 @@ void platform_setup(void)
 #endif // JUST_BEEP_ONCE
 #endif // GPIO_PIN_BUZZER
 
-/*************** CONFIGURE RX *******************/
+    /**** SWTICHES ****/
+#if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
+    pinMode(GPIO_PIN_DIP1, INPUT);
+    pinMode(GPIO_PIN_DIP2, INPUT);
+    uint8_t mode = !!digitalRead(GPIO_PIN_DIP1);
+    mode <<= 1;
+    mode |= !!digitalRead(GPIO_PIN_DIP2);
+    if (mode < RATE_MAX)
+        current_rate_config = mode;
+#endif
+
 #elif defined(TARGET_R9M_RX)
+    /*************** CONFIGURE RX *******************/
+
 #endif /* TARGET_R9M_RX */
 }
 
