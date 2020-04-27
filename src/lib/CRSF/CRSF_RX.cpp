@@ -6,7 +6,9 @@
 void CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
+#if !NO_DATA_TO_FC
     _dev->write(buff, size);
+#endif
 }
 
 void CRSF_RX::LinkStatisticsSend()

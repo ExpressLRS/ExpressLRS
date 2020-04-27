@@ -28,6 +28,9 @@
 #define DEBUG_PRINTLN(...) DEBUG_SERIAL.println(__VA_ARGS__)
 #define DEBUG_PRINTF(...)  DEBUG_SERIAL.printf(__VA_ARGS__)
 #define DEBUG_WRITE(...)   DEBUG_SERIAL.write(__VA_ARGS__)
+
+#define NO_DATA_TO_FC 1
+
 #else
 // Debug disabled
 #define DEBUG_PRINT(...)
