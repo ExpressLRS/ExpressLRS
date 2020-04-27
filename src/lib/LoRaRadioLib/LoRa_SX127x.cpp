@@ -292,7 +292,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TX(uint8_t *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-    //LastPacketIsrMicros = micros();
+    LastPacketIsrMicros = micros();
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
@@ -342,7 +342,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, 
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-    //LastPacketIsrMicros = micros();
+    LastPacketIsrMicros = micros();
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, (uint8_t *)RXdataBuffer);
     //GetLastPacketRSSI();
     //GetLastPacketSNR();
@@ -671,6 +671,8 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t error_hz, uint32_t fr
         return;
     // Calc new PPM
     error_hz /= (frf / 1E6);
+    error_hz *= 95;
+    error_hz /= 100;
 
     uint8_t regValue = (uint8_t)error_hz;
     if (regValue == p_ppm_off)

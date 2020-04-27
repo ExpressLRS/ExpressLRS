@@ -24,45 +24,50 @@ void HwTimer::init()
         timer = timerBegin(0, (APB_CLK_FREQ / 1000000), true); // us timer
         timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
     }
-    timerStop(timer);
-    setTime(HWtimerInterval >> 1);
+    stop(timer);
+    setTime(HWtimerInterval);
     timerAlarmEnable(timer);
+}
+
+void ICACHE_RAM_ATTR HwTimer::start()
+{
+    if (!timer)
+        init();
+    running = true;
     timerStart(timer);
 }
 
-void HwTimer::start()
-{
-    if (timer)
-        timerStart(timer);
-    else
-        init();
-}
-
-void HwTimer::stop()
+void ICACHE_RAM_ATTR HwTimer::stop()
 {
     /* are these rly needed?? */
     detachInterrupt(GPIO_PIN_DIO0);
     Radio.ClearIRQFlags();
 
-    /*if (timer)
-    {
-        timerEnd(timer);
-        timer = NULL;
-    }*/
+    running = false;
+
     if (timer)
         timerStop(timer);
 }
 
-void HwTimer::pause()
+void ICACHE_RAM_ATTR HwTimer::pause()
 {
+    running = false;
     if (timer)
         timerAlarmDisable(timer);
 }
 
-void HwTimer::setTime(uint32_t time)
+void ICACHE_RAM_ATTR HwTimer::reset()
+{
+    if (timer && running)
+        timerWrite(timer, 0);
+}
+
+void ICACHE_RAM_ATTR HwTimer::setTime(uint32_t time)
 {
     if (timer)
     {
+        if (!time)
+            time = HWtimerInterval;
         timerAlarmWrite(timer, time, true);
     }
 }

@@ -1,4 +1,5 @@
 #include "HwTimer.h"
+#include "debug.h"
 #include <Arduino.h>
 
 HwTimer TxTimer;
@@ -13,29 +14,48 @@ static void TimerCallback(HardwareTimer *)
 void HwTimer::init()
 {
     noInterrupts();
+    stop();
     timer_tx.attachInterrupt(TimerCallback);
     timer_tx.setMode(2, TIMER_OUTPUT_COMPARE);
-    setTime(HWtimerInterval >> 1);
-    timer_tx.resume();
+    //setTime(HWtimerInterval);
     interrupts();
 }
 
 void HwTimer::start()
 {
+    running = true;
+    setTime(HWtimerInterval);
     timer_tx.resume();
 }
 
 void HwTimer::stop()
 {
+    running = false;
     timer_tx.pause();
 }
 
 void HwTimer::pause()
 {
+    running = false;
     timer_tx.pause();
+}
+
+void HwTimer::reset(int32_t offset)
+{
+    if (running)
+    {
+        timer_tx.setCount(1, TICK_FORMAT);
+        setTime(HWtimerInterval - offset);
+    }
 }
 
 void HwTimer::setTime(uint32_t time)
 {
+    if (!time)
+        time = HWtimerInterval;
     timer_tx.setOverflow(time, MICROSEC_FORMAT);
+#if PRINT_TIMER
+    DEBUG_PRINT(" set: ");
+    DEBUG_PRINT(time);
+#endif
 }

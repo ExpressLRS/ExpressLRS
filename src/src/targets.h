@@ -6,6 +6,8 @@
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
+#define TIMER_OFFSET 200
+
 #define SX127X_SPI_SPEED 10000000
 
 /******************************************************************************************/
@@ -109,8 +111,6 @@
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_BUTTON      2
-//#define timerOffset -3
-#define timerOffset 5
 #endif
 
 /******************************************************************************************/
@@ -140,7 +140,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED         PC1  // Red
 #define GPIO_PIN_LED_GREEN   PB3  // Green - Currently unused
 #define GPIO_PIN_BUTTON      PC13 // pullup e.g. LOW when pressed
-#define timerOffset          5
 
 #define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
 #define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2

@@ -99,7 +99,8 @@ if(alreadyInBootloader == False):
 
         s.flush()
         s.write(BootloaderInitSeq1)
-        time.sleep(1)
+        s.flush()
+        time.sleep(.7)
         s.write(BootloaderInitSeq2)
 
         lines = []

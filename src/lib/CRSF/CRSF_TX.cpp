@@ -15,7 +15,7 @@ FIFO SerialOutFIFO;
 void CRSF_TX::Begin(void)
 {
     CRSF::Begin();
-    p_UartNextCheck = millis() + UARTwdtInterval * 2;
+    p_UartNextCheck = millis(); //  +UARTwdtInterval * 2;
 }
 
 void ICACHE_RAM_ATTR CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
@@ -124,7 +124,7 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
         uint32_t current = millis();
         //DEBUG_PRINT(OpenTXsyncOffset);
 
-        if (current >= OpenTXsynNextSend)
+        if (OpenTXsyncPakcetInterval <= (current - OpenTXsynNextSend))
         {
             uint32_t packetRate = RequestedRCpacketInterval;
             packetRate *= 10; //convert from us to right format
@@ -155,7 +155,7 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
 
             CrsfFramePushToFifo(outBuffer, len);
 
-            OpenTXsynNextSend = current + OpenTXsyncPakcetInterval;
+            OpenTXsynNextSend = current;
             platform_wd_feed();
         }
     }
@@ -169,7 +169,7 @@ void CRSF_TX::processPacket(uint8_t const *input)
         CRSFstate = true;
 #if (FEATURE_OPENTX_SYNC)
         RCdataLastRecv = 0;
-        OpenTXsynNextSend = millis() + 60;
+        OpenTXsynNextSend = millis(); //+60;
 #endif
         DEBUG_PRINTLN("CRSF UART Connected");
         connected();
@@ -228,7 +228,7 @@ void CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX vers
 void CRSF_TX::uart_wdt(void)
 {
     uint32_t now = millis();
-    if (now > p_UartNextCheck)
+    if (UARTwdtInterval < (now - p_UartNextCheck))
     {
         DEBUG_PRINT("UART RX packets! Bad:Good ");
         DEBUG_PRINT(BadPktsCount);
@@ -267,7 +267,7 @@ void CRSF_TX::uart_wdt(void)
             p_slowBaudrate = !p_slowBaudrate;
         }
 
-        p_UartNextCheck = now + UARTwdtInterval;
+        p_UartNextCheck = now;
         BadPktsCount = 0;
         GoodPktsCount = 0;
     }

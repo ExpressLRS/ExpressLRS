@@ -63,7 +63,7 @@ static void process_rx_buffer()
 
     connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
-    LastPacketRecvMillis = (millis() + RX_CONNECTION_LOST_TIMEOUT);
+    LastPacketRecvMillis = millis();
 
     if (TYPE_GET(in_byte) == TLM_PACKET)
     {
@@ -121,6 +121,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
     uint32_t current_ms = current_us / 1000U;
+    uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
@@ -139,12 +140,10 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     freq = FHSSgetCurrFreq();
 
     //only send sync when its time and only on channel 0;
-    if ((freq == GetInitialFreq()) && (current_ms > SyncPacketNextSend))
+    if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_ms - SyncPacketNextSend)))
     {
         GenerateSyncPacketData(tx_buffer);
-        SyncPacketNextSend =
-            current_ms +
-            ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
+        SyncPacketNextSend = current_ms;
     }
     else
     {
@@ -286,6 +285,7 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
 static void hw_timer_init(void)
 {
     TxTimer.init();
+    TxTimer.start();
 }
 static void hw_timer_stop(void)
 {
@@ -344,14 +344,14 @@ void loop()
         uint32_t current_ms = millis();
 
         if (connectionState > STATE_disconnected &&
-            current_ms > LastPacketRecvMillis)
+            RX_CONNECTION_LOST_TIMEOUT < (current_ms - LastPacketRecvMillis))
         {
             connectionState = STATE_disconnected;
             platform_connection_state(STATE_disconnected);
         }
-        else if (current_ms >= PacketRateNextCheck)
+        else if (LQ_CALCULATE_INTERVAL <= (current_ms - PacketRateNextCheck))
         {
-            PacketRateNextCheck = current_ms + LQ_CALCULATE_INTERVAL;
+            PacketRateNextCheck = current_ms;
 
 #if 0
             // TODO: this is not ok... need improvements
