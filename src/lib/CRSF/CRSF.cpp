@@ -389,53 +389,30 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             // TODO: This currently only supports single MSP packets per cmd
             // To support longer packets we need to re-write this to allow packet splitting
 
-            // Encapsulated MSP section
-            encapsulatedMspPacket_t encapsulatedMspPacket;
-            encapsulatedMspPacket.reset();
-            encapsulatedMspPacket.setVersion(TELEMETRY_MSP_VERSION);
-            encapsulatedMspPacket.setStartingFlag(true);
-            encapsulatedMspPacket.setSeqNumber(0);
-            encapsulatedMspPacket.function = packet->function;
-            // Copy the payload from the mspPacket_t into the encapsulatedMspPacket_t
-            for (uint8_t i = 0; i < packet->payloadSize; ++i) {
-                if (!encapsulatedMspPacket.addByte(packet->payload[i])) {
-                    // Payload won't fit - bail out without sending anything
-                    Serial.println("Failed to send encapsulated MSP packet");
-                    return;
-                }
-            }
-            encapsulatedMspPacket.calcCRC();
+            uint8_t outBuffer[ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES] = {0};
 
-            // CRSF extended header section
-            crsf_ext_header_t crsfHeader;
-            crsfHeader.device_addr = CRSF_ADDRESS_BROADCAST;
-            crsfHeader.frame_size = encapsulatedMspPacket.getTotalSize() + CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
-            if (packet->type == MSP_PACKET_COMMAND) {
-                crsfHeader.type = CRSF_FRAMETYPE_MSP_WRITE;
-            }
-            else {
-                crsfHeader.type = CRSF_FRAMETYPE_MSP_REQ;
-            }
-            crsfHeader.dest_addr = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-            crsfHeader.orig_addr = CRSF_ADDRESS_RADIO_TRANSMITTER;
+            // CRSF extended frame header
+            outBuffer[0] = CRSF_ADDRESS_BROADCAST; // address
+            outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
+            outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE; // packet type
+            outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER; // destination
+            outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER; // origin
             
-            // Copy the header and msp packet into output buffer, ordered as:
-            // [crsf_ext_header_t, encapsulatedMspPacket_t, crsfCrc]
-            uint8_t outBufferAddr;
-            uint8_t outBufferTotalSize = encapsulatedMspPacket.getTotalSize() + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + crsfHeader.frame_size + CRSF_FRAME_CRC_SIZE;
-            uint8_t outBuffer[outBufferTotalSize];
+            // Encapsulated MSP payload
+            outBuffer[5] = 0x30; // header
+            outBuffer[6] = packet->payloadSize; // mspPayloadSize
+            outBuffer[7] = packet->function; // packet->cmd
+            for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i) {
+                // copy packet payload into outBuffer and pad with zeros where required
+                outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
+            }
+            // Encapsulated MSP crc
+            outBuffer[12] =  CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
 
-            outBufferAddr = 0;
-            memcpy(outBuffer, (byte*)&crsfHeader, sizeof(crsf_ext_header_t));
-            outBufferAddr += sizeof(crsf_ext_header_t);
-            memcpy(outBuffer + outBufferAddr, (byte*)&encapsulatedMspPacket, encapsulatedMspPacket.getTotalSize());
-            outBufferAddr += encapsulatedMspPacket.getTotalSize();
+            // CRSF frame crc
+            outBuffer[13] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
 
-            uint8_t crsfCrc = CalcCRC(&outBuffer[sizeof(crsfHeader.device_addr) + sizeof(crsfHeader.frame_size)], crsfHeader.frame_size);
-
-            outBuffer[outBufferAddr] = crsfCrc;
-
-            this->_dev->write(outBuffer, outBufferTotalSize);
+            this->_dev->write(outBuffer, ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES);
         }
 #endif
 

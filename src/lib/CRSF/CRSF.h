@@ -324,6 +324,15 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
     return crc;
 }
 
+static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
+{
+    uint8_t crc = 0;
+    for (uint8_t i = 0; i < length; ++i) {
+        crc = crc ^ *data++;
+    }
+    return crc;
+}
+
 class CRSF
 {
 

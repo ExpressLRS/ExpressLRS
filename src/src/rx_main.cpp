@@ -224,8 +224,6 @@ void ICACHE_RAM_ATTR GotConnection()
 #endif
 }
 
-uint32_t mspLastSent = 0;
-
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
 {
     crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
@@ -237,23 +235,6 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
     crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
-
-    uint32_t diff = millis() - mspLastSent;
-
-    if ((Radio.RXdataBuffer[6] & 0b00001000) && (diff > 1000)) {
-        // Build an MSP packet
-        mspPacket_t packet;
-        packet.reset();
-        packet.makeCommand();
-        packet.flags = 0;
-        packet.function = 0x59;
-        packet.addByte(0x18);
-        packet.addByte(0x00);
-        packet.addByte(0x01);
-        packet.addByte(0x00);
-        crsf.sendMSPFrameToFC(&packet);
-        mspLastSent = millis();
-    }
 #endif
 }
 

@@ -41,6 +41,9 @@ void test_encapsulated_msp_send(void)
     // Ask the CRSF class to send the encapsulated packet to the stream
     crsf.sendMSPFrameToFC(&packet);
 
+    // Assert that the correct number of total bytes were sent to the stream
+    TEST_ASSERT_EQUAL(14, buf.length());
+
     // Assert that each byte sent to the stream matches expected
     TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, buf[0]);          // device_addr
     TEST_ASSERT_EQUAL(12, buf[1]);                              // frame_size
@@ -55,7 +58,7 @@ void test_encapsulated_msp_send(void)
     TEST_ASSERT_EQUAL(0x01, buf[10]);                           // newFrequency b2
     TEST_ASSERT_EQUAL(0x00, buf[11]);                           // pitmode
     TEST_ASSERT_EQUAL(0x44, buf[12]);                           // msp crc
-    TEST_ASSERT_EQUAL(0x67, buf[13]);                           // crsf crc
+    TEST_ASSERT_EQUAL(0x6A, buf[13]);                           // crsf crc
 }
 
 void test_encapsulated_msp_send_too_long(void)
