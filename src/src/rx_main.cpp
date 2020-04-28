@@ -456,7 +456,6 @@ void setup()
 
 #ifdef PLATFORM_ESP8266
     Serial.begin(420000);
-    // Serial.begin(115200);
 
 #endif
     // Serial.begin(230400); // for linux debugging
