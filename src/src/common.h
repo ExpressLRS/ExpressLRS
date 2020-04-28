@@ -80,7 +80,8 @@ enum
     RATE_MAX
 };
 
-#define RATE_DEFAULT RATE_200HZ
+#define RATE_GET_OSD_NUM(_x) ((RATE_MAX + 1) - (_x))
+#define RATE_DEFAULT         RATE_200HZ
 
 typedef struct expresslrs_mod_settings_s
 {

@@ -45,14 +45,14 @@ public:
     PowerLevels_e incPower();
     PowerLevels_e decPower();
     PowerLevels_e currPower();
-    void defaultPower();
+    void defaultPower(PowerLevels_e power = DefaultPowerEnum);
 
-    uint8_t power_to_radio_enum(PowerLevels_e val = PWR_UNKNOWN)
+    uint8_t power_to_radio_enum(PowerLevels_e power = PWR_UNKNOWN)
     {
-        if (val == PWR_UNKNOWN)
-            val = CurrentPower;
+        if (power == PWR_UNKNOWN)
+            power = CurrentPower;
         // ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 250mW )
-        switch (val)
+        switch (power)
         {
             case PWR_10mW:
                 return 1;

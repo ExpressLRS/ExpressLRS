@@ -35,9 +35,11 @@ PowerLevels_e POWERMGNT::currPower()
     return CurrentPower;
 }
 
-void POWERMGNT::defaultPower()
+void POWERMGNT::defaultPower(PowerLevels_e power)
 {
-    setPower(DefaultPowerEnum);
+    if (power == PWR_UNKNOWN)
+        power = DefaultPowerEnum;
+    setPower(power);
 }
 
 void POWERMGNT::setPower(PowerLevels_e Power)

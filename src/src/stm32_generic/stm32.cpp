@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "common.h"
 #include <Arduino.h>
+#include <EEPROM.h>
 
 #ifdef GPIO_PIN_BUTTON
 #include "button.h"
@@ -25,6 +26,34 @@ void button_event_long(uint32_t ms)
         platform_restart();
 #endif /* TARGET_R9M_RX */
 }
+#endif // GPIO_PIN_BUTTON
+
+#ifdef GPIO_PIN_LED
+#define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, (_x))
+#else
+#define LED_STATE_RED(_x)
+#endif
+
+#ifdef GPIO_PIN_LED_GREEN
+#define LED_STATE_GREEN(_x) digitalWrite(GPIO_PIN_LED_GREEN, (_x))
+#else
+#define LED_STATE_GREEN(_x)
+#endif
+
+#ifdef GPIO_PIN_BUZZER
+static inline void PLAY_SOUND(uint32_t wait = 244, uint32_t cnt = 50)
+{
+    for (uint32_t x = 0; x < cnt; x++)
+    {
+        // 1 / 2048Hz = 488uS, or 244uS high and 244uS low to create 50% duty cycle
+        digitalWrite(GPIO_PIN_BUZZER, HIGH);
+        delayMicroseconds(wait);
+        digitalWrite(GPIO_PIN_BUZZER, LOW);
+        delayMicroseconds(wait);
+    }
+}
+#else
+#define PLAY_SOUND(_x, _y)
 #endif
 
 #if defined(TARGET_R9M_TX)
@@ -34,8 +63,33 @@ R9DAC r9dac;
 #elif defined(TARGET_R9M_RX)
 #endif /* TARGET_R9M_RX */
 
+/******************* CONFIG *********************/
+int8_t platform_config_load(struct platform_config &config)
+{
+    EEPROM.get(0, config);
+    //config.key = EEPROM.read(offsetof(struct platform_config, key));
+    //config.mode = EEPROM.read(offsetof(struct platform_config, mode));
+    //config.power = EEPROM.read(offsetof(struct platform_config, power));
+    return (config.key == ELRS_EEPROM_KEY) ? 0 : -1;
+}
+
+int8_t platform_config_save(struct platform_config &config)
+{
+    if (config.key != ELRS_EEPROM_KEY)
+        return -1;
+
+    EEPROM.put(0, config);
+    //EEPROM.write(offsetof(struct platform_config, key), config.key);
+    //EEPROM.write(offsetof(struct platform_config, mode), config.mode);
+    //EEPROM.write(offsetof(struct platform_config, power), config.power);
+    return 0;
+}
+
+/******************* SETUP *********************/
 void platform_setup(void)
 {
+    EEPROM.begin();
+
 #if defined(DEBUG_SERIAL)
     if ((void *)&DEBUG_SERIAL != (void *)&CrsfSerial)
     {
@@ -50,14 +104,27 @@ void platform_setup(void)
     }
 #endif
 
+    /**** SWTICHES ****/
+#if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
+    pinMode(GPIO_PIN_DIP1, INPUT_PULLUP);
+    pinMode(GPIO_PIN_DIP2, INPUT_PULLUP);
+    uint8_t mode = digitalRead(GPIO_PIN_DIP1) ? 0u : 1u;
+    mode <<= 1;
+    mode |= digitalRead(GPIO_PIN_DIP2) ? 0u : 1u;
+    if (mode < RATE_MAX)
+    {
+        current_rate_config = mode;
+    }
+#endif
+
     /*************** CONFIGURE LEDs *******************/
 #ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED, LOW);
+    LED_STATE_RED(LOW);
 #endif
 #ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    LED_STATE_GREEN(LOW);
 #endif
 
 #ifdef GPIO_PIN_BUTTON
@@ -76,13 +143,12 @@ void platform_setup(void)
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100, GPIO_PIN_RFswitch_CONTROL,
                GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
 
-#if 0
 #ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 
-#define JUST_BEEP_ONCE 1
+#define STARTUP_BEEPS 0
 
-#ifndef JUST_BEEP_ONCE
+#if STARTUP_BEEPS
     // Annoying startup beeps
     const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
     const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
@@ -93,28 +159,25 @@ void platform_setup(void)
         delay(beepDurations[i]);
         noTone(GPIO_PIN_BUZZER);
     }
-#else  // JUST_BEEP_ONCE
-    //tone(GPIO_PIN_BUZZER, 400, 200);
-    tone(GPIO_PIN_BUZZER, 200, 50);
-#endif // JUST_BEEP_ONCE
+#endif // STARTUP_BEEPS
 #endif // GPIO_PIN_BUZZER
-#endif
-
-    /**** SWTICHES ****/
-#if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
-    pinMode(GPIO_PIN_DIP1, INPUT);
-    pinMode(GPIO_PIN_DIP2, INPUT);
-    uint8_t mode = !!digitalRead(GPIO_PIN_DIP1);
-    mode <<= 1;
-    mode |= !!digitalRead(GPIO_PIN_DIP2);
-    if (mode < RATE_MAX)
-        current_rate_config = mode;
-#endif
 
 #elif defined(TARGET_R9M_RX)
     /*************** CONFIGURE RX *******************/
 
 #endif /* TARGET_R9M_RX */
+}
+
+void platform_mode_notify(void)
+{
+    for (int i = 0; i < RATE_GET_OSD_NUM(current_rate_config); i++)
+    {
+        delay(300);
+        LED_STATE_GREEN(HIGH);
+        PLAY_SOUND(244, 50);
+        delay(50);
+        LED_STATE_GREEN(LOW);
+    }
 }
 
 void platform_loop(int state)
@@ -133,9 +196,7 @@ void platform_loop(int state)
 void platform_connection_state(int state)
 {
     bool connected = (state == STATE_connected);
-#ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, (connected ? HIGH : LOW));
-#endif
+    LED_STATE_GREEN(connected ? HIGH : LOW);
 #if defined(TARGET_R9M_TX)
     platform_set_led(!connected);
 #endif
@@ -143,9 +204,7 @@ void platform_connection_state(int state)
 
 void platform_set_led(bool state)
 {
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, (uint32_t)state);
-#endif
+    LED_STATE_RED((uint32_t)state);
 }
 
 void platform_restart(void)

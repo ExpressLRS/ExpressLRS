@@ -181,14 +181,12 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_GREEN   PA12 // Green LED
 #define GPIO_PIN_LED         GPIO_PIN_LED_RED
 //#define GPIO_PIN_BUTTON PA8       // pullup e.g. LOW when pressed
-#define GPIO_PIN_BUZZER PB1
+#define GPIO_PIN_BUZZER PB1  // confirmed
 #define GPIO_PIN_DIP1   PA12 // dip switch 1
 #define GPIO_PIN_DIP2   PA11 // dip switch 2
 
 //#define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
 //#define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2
-
-#define GPIO_PIN_BUZZER PB1 // confirmed
 
 #define BUFFER_OE     PA5  //CONFIRMED
 #define SPORT         PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted

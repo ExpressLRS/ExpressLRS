@@ -3,6 +3,7 @@
 #include "common.h"
 #include <Arduino.h>
 //#include "LED.h"
+#include <EEPROM.h>
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -25,10 +26,32 @@ void feedTheDog(void)
     TIMERG1.wdt_wprotect = 0;                   // write protect
 }
 
+/******************* CONFIG *********************/
+int8_t platform_config_load(struct platform_config &config)
+{
+    config.key = EEPROM.readUInt(offsetof(struct platform_config, key));
+    config.mode = EEPROM.readUInt(offsetof(struct platform_config, mode));
+    config.power = EEPROM.readUInt(offsetof(struct platform_config, power));
+    return (config.key == ELRS_EEPROM_KEY) ? 0 : -1;
+}
+
+int8_t platform_config_save(struct platform_config &config)
+{
+    if (config.key != ELRS_EEPROM_KEY)
+        return -1;
+    EEPROM.writeUInt(offsetof(struct platform_config, key), config.key);
+    EEPROM.writeUInt(offsetof(struct platform_config, mode), config.mode);
+    EEPROM.writeUInt(offsetof(struct platform_config, power), config.power);
+    return EEPROM.commit() ? 0 : -1;
+}
+
+/******************* SETUP *********************/
 void platform_setup(void)
 {
     disableCore0WDT();
     disableCore1WDT();
+
+    EEPROM.begin(sizeof(struct platform_config));
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
     pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
@@ -67,6 +90,10 @@ void platform_setup(void)
     DEBUG_PRINTLN("};");
     DEBUG_PRINTLN("");
 #endif
+}
+
+void platform_mode_notify(void)
+{
 }
 
 void platform_loop(int state)

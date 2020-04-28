@@ -28,6 +28,8 @@ static volatile uint32_t _rf_rxtx_counter = 0;
 static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
 
+struct platform_config config;
+
 /////////// SYNC PACKET ////////
 static uint32_t SyncPacketNextSend = 0;
 
@@ -235,6 +237,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
                        (uint8_t)(PowerMgmt.currPower() + 2),
                        4u};
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
+
+    config.key = ELRS_EEPROM_KEY;
+    config.mode = ExpressLRS_currAirRate->enum_rate;
+    config.power = PowerMgmt.currPower();
+    platform_config_save(config);
 }
 
 ///////////////////////////////////////
@@ -299,10 +306,17 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 
 void setup()
 {
+    PowerLevels_e power = PWR_UNKNOWN;
     DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
 
     platform_setup();
+    if (platform_config_load(config) == 0)
+    {
+        current_rate_config = config.mode % RATE_MAX;
+        power = (PowerLevels_e)(config.power % PWR_UNKNOWN);
+    }
+    platform_mode_notify();
 
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
     crsf.disconnected = hw_timer_stop;
@@ -322,7 +336,7 @@ void setup()
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
 
-    PowerMgmt.defaultPower();
+    PowerMgmt.defaultPower(power);
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
