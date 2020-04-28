@@ -5,12 +5,13 @@
 #ifdef TARGET_R9M_TX
 #define MaxPower         PWR_1000mW // was PWR_2000mW
 #define DefaultPowerEnum PWR_50mW   // was PWR_100mW
-#elif defined(TARGET_100mW_MODULE)
-#define MaxPower         PWR_50mW // 2
-#define DefaultPowerEnum PWR_50mW // 2
 #elif defined(TARGET_1000mW_MODULE)
 #define MaxPower         PWR_250mW // 4
 #define DefaultPowerEnum PWR_50mW  // 2
+#else
+// TARGET_100mW_MODULE
+#define MaxPower         PWR_50mW // 2
+#define DefaultPowerEnum PWR_50mW // 2
 #endif
 
 typedef enum

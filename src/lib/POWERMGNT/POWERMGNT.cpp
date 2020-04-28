@@ -50,22 +50,6 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     Radio.SetOutputPower(0b1000);
     r9dac.setPower(Power);
 
-#elif defined(TARGET_100mW_MODULE)
-    switch (Power)
-    {
-        case PWR_10mW:
-            Radio.SetOutputPower(0b1000);
-            break;
-        case PWR_25mW:
-            Radio.SetOutputPower(0b1100);
-            break;
-        case PWR_50mW:
-            Radio.SetOutputPower(0b1111);
-            break;
-        default:
-            Power = CurrentPower;
-            break;
-    }
 #elif defined(TARGET_1000mW_MODULE)
     switch (Power)
     {
@@ -89,6 +73,24 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         default:
             Radio.SetOutputPower(0b0010);
             CurrentPower = PWR_50mW;
+            break;
+    }
+
+#else
+    // TARGET_100mW_MODULE
+    switch (Power)
+    {
+        case PWR_10mW:
+            Radio.SetOutputPower(0b1000);
+            break;
+        case PWR_25mW:
+            Radio.SetOutputPower(0b1100);
+            break;
+        case PWR_50mW:
+            Radio.SetOutputPower(0b1111);
+            break;
+        default:
+            Power = CurrentPower;
             break;
     }
 #endif

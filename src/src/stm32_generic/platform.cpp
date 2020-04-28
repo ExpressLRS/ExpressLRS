@@ -1,7 +1,7 @@
+#include "platform.h"
 #include "targets.h"
 #include "debug.h"
 #include "common.h"
-#include "eeprom.h"
 #include <Arduino.h>
 
 #ifdef GPIO_PIN_BUTTON
@@ -60,8 +60,8 @@ void platform_setup(void)
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
 #endif
 
-    /*************** CONFIGURE BUTTON *******************/
 #ifdef GPIO_PIN_BUTTON
+    /*************** CONFIGURE BUTTON *******************/
     //button.set_press_delay_short();
     //button.buttonShortPress = button_event_short;
     button.buttonLongPress = button_event_long;
@@ -75,8 +75,8 @@ void platform_setup(void)
 
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100, GPIO_PIN_RFswitch_CONTROL,
                GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
-    //r9dac.setPower(R9_PWR_50mW);
 
+#if 0
 #ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 
@@ -98,6 +98,7 @@ void platform_setup(void)
     tone(GPIO_PIN_BUZZER, 200, 50);
 #endif // JUST_BEEP_ONCE
 #endif // GPIO_PIN_BUZZER
+#endif
 
     /**** SWTICHES ****/
 #if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
@@ -149,7 +150,7 @@ void platform_set_led(bool state)
 
 void platform_restart(void)
 {
-    HAL_NVIC_SystemReset();
+    NVIC_SystemReset();
 }
 
 void platform_wd_feed(void)
