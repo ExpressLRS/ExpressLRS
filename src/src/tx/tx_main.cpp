@@ -267,7 +267,7 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
-    crsf.LinkStatistics.rf_Mode = RATE_MAX - ExpressLRS_currAirRate->enum_rate; // 4 ??
+    crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate);
     if (TLM_RATIO_NO_TLM == config->TLMinterval)
     {
         Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;

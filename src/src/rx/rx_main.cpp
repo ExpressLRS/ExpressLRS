@@ -452,7 +452,7 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     LPF_FreqError.init(0);
     LPF_UplinkRSSI.init(0);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.rf_Mode = RATE_MAX - config->enum_rate;
+    crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate); //RATE_MAX - config->enum_rate;
     Radio.NonceRX = 0;
     Radio.RXnb();
     TxTimer.init();

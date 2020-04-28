@@ -23,26 +23,6 @@ public:
     // OpenTX Syncing
     void ICACHE_RAM_ATTR setRcPacketRate(uint32_t interval)
     {
-        switch (interval)
-        {
-            case 4000: // 250Hz
-                LinkStatistics.rf_Mode = 4;
-                break;
-            case 5000: // 200Hz
-                LinkStatistics.rf_Mode = 3;
-                break;
-            case 10000: // 100Hz
-                LinkStatistics.rf_Mode = 2;
-                break;
-            case 20000: // 50Hz
-                LinkStatistics.rf_Mode = 1;
-                break;
-            case 40000:  // 25Hz
-            case 250000: // 4Hz
-            default:
-                LinkStatistics.rf_Mode = 0;
-                break;
-        };
 #if (FEATURE_OPENTX_SYNC)
         RequestedRCpacketInterval = interval;
 #endif
