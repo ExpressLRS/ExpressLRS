@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
+uint8_t rate_config_dips = 0xff;
+
 #ifdef GPIO_PIN_BUTTON
 #include "button.h"
 Button button;
@@ -67,9 +69,8 @@ R9DAC r9dac;
 int8_t platform_config_load(struct platform_config &config)
 {
     EEPROM.get(0, config);
-    //config.key = EEPROM.read(offsetof(struct platform_config, key));
-    //config.mode = EEPROM.read(offsetof(struct platform_config, mode));
-    //config.power = EEPROM.read(offsetof(struct platform_config, power));
+    if (rate_config_dips < RATE_MAX)
+        config.mode = rate_config_dips;
     return (config.key == ELRS_EEPROM_KEY) ? 0 : -1;
 }
 
@@ -77,11 +78,7 @@ int8_t platform_config_save(struct platform_config &config)
 {
     if (config.key != ELRS_EEPROM_KEY)
         return -1;
-
     EEPROM.put(0, config);
-    //EEPROM.write(offsetof(struct platform_config, key), config.key);
-    //EEPROM.write(offsetof(struct platform_config, mode), config.mode);
-    //EEPROM.write(offsetof(struct platform_config, power), config.power);
     return 0;
 }
 
@@ -108,12 +105,12 @@ void platform_setup(void)
 #if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
     pinMode(GPIO_PIN_DIP1, INPUT_PULLUP);
     pinMode(GPIO_PIN_DIP2, INPUT_PULLUP);
-    uint8_t mode = digitalRead(GPIO_PIN_DIP1) ? 0u : 1u;
-    mode <<= 1;
-    mode |= digitalRead(GPIO_PIN_DIP2) ? 0u : 1u;
-    if (mode < RATE_MAX)
+    rate_config_dips = digitalRead(GPIO_PIN_DIP1) ? 0u : 1u;
+    rate_config_dips <<= 1;
+    rate_config_dips |= digitalRead(GPIO_PIN_DIP2) ? 0u : 1u;
+    if (rate_config_dips < RATE_MAX)
     {
-        current_rate_config = mode;
+        current_rate_config = rate_config_dips;
     }
 #endif
 

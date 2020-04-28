@@ -189,6 +189,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
         return;
 
     uint8_t value = msg[1];
+    uint8_t modified = 0;
 
     switch (msg[0])
     {
@@ -196,6 +197,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 1:
+            modified = ExpressLRS_currAirRate->enum_rate;
             if (value == 0)
             {
                 decRFLinkRate();
@@ -206,12 +208,14 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             }
             DEBUG_PRINT("Rate: ");
             DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
+            modified = modified != ExpressLRS_currAirRate->enum_rate;
             break;
 
         case 2:
             break;
 
         case 3:
+            modified = PowerMgmt.currPower();
             if (value == 0)
             {
                 PowerMgmt.decPower();
@@ -223,6 +227,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
+            modified = modified != PowerMgmt.currPower();
             break;
 
         case 4:
@@ -241,7 +246,8 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
     config.key = ELRS_EEPROM_KEY;
     config.mode = ExpressLRS_currAirRate->enum_rate;
     config.power = PowerMgmt.currPower();
-    platform_config_save(config);
+    if (modified)
+        platform_config_save(config);
 }
 
 ///////////////////////////////////////
