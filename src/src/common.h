@@ -8,7 +8,6 @@
 // #define Regulatory_Domain_EU_433
 // #define Regulatory_Domain_FCC_915
 
-#include "FHSS.h"
 #include "LoRaRadioLib.h"
 #include <stdint.h>
 
@@ -29,13 +28,6 @@ typedef enum
     STATE_connected = 2,
 } connectionState_e;
 extern volatile connectionState_e connectionState;
-
-void platform_setup(void);
-void platform_loop(connectionState_e state);
-void platform_connection_state(connectionState_e state);
-void platform_set_led(bool state);
-void platform_restart(void);
-void platform_wd_feed(void);
 
 void led_set_state(bool state);
 void led_toggle(void);

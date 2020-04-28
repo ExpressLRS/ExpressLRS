@@ -117,7 +117,7 @@ void platform_setup(void)
 #endif /* TARGET_R9M_RX */
 }
 
-void platform_loop(connectionState_e state)
+void platform_loop(int state)
 {
     (void)state;
 #ifdef GPIO_PIN_BUTTON
@@ -130,7 +130,7 @@ void platform_loop(connectionState_e state)
 #endif /* TARGET_R9M_RX */
 }
 
-void platform_connection_state(connectionState_e state)
+void platform_connection_state(int state)
 {
     bool connected = (state == STATE_connected);
 #ifdef GPIO_PIN_LED_GREEN

@@ -53,7 +53,7 @@ void platform_setup(void)
 #endif
 }
 
-void platform_loop(connectionState_e state)
+void platform_loop(int state)
 {
     uint32_t now = millis();
     if (state == STATE_fw_upgrade)
@@ -76,7 +76,7 @@ void platform_loop(connectionState_e state)
     }
 }
 
-void platform_connection_state(connectionState_e state)
+void platform_connection_state(int state)
 {
 #ifdef Auto_WiFi_On_Boot
     if (state == STATE_search_iteration_done && millis() < 30000)

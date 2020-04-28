@@ -1,6 +1,7 @@
 #include "common.h"
-#include "LoRaRadioLib.h"
+#include "platform.h"
 #include "utils.h"
+#include "FHSS.h"
 #include <Arduino.h>
 
 volatile uint8_t current_rate_config = RATE_DEFAULT;

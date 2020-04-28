@@ -22,8 +22,6 @@ uint32_t rngN(uint32_t upper);
 unsigned int ICACHE_RAM_ATTR
 volatile_memcpy(volatile void *d, volatile void *s, unsigned int n);
 
-extern void platform_restart(void);
-
 template <class t>
 inline t min(t a, t b) { return a < b ? a : b; }
 template <class t>

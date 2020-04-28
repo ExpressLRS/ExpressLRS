@@ -1,10 +1,7 @@
 #include "CRSF_TX.h"
 #include "debug.h"
 #include "FIFO.h"
-//#include "common.h"
 #include <string.h>
-
-extern void platform_wd_feed(void);
 
 void paramNullCallback(uint8_t const *, uint16_t){};
 void (*CRSF_TX::ParamWriteCallback)(uint8_t const *msg, uint16_t len) = &paramNullCallback;

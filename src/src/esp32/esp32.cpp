@@ -69,12 +69,12 @@ void platform_setup(void)
 #endif
 }
 
-void platform_loop(connectionState_e state)
+void platform_loop(int state)
 {
     (void)state;
 }
 
-void platform_connection_state(connectionState_e state)
+void platform_connection_state(int state)
 {
     (void)state;
 }
