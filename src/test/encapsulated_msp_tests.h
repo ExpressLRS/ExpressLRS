@@ -58,7 +58,7 @@ void test_encapsulated_msp_send(void)
     TEST_ASSERT_EQUAL(0x01, buf[10]);                           // newFrequency b2
     TEST_ASSERT_EQUAL(0x00, buf[11]);                           // pitmode
     TEST_ASSERT_EQUAL(0x44, buf[12]);                           // msp crc
-    TEST_ASSERT_EQUAL(0x6A, buf[13]);                           // crsf crc
+    TEST_ASSERT_EQUAL(0x5E, buf[13]);                           // crsf crc
 }
 
 void test_encapsulated_msp_send_too_long(void)
