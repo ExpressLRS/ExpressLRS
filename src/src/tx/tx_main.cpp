@@ -297,11 +297,13 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
 
 static void hw_timer_init(void)
 {
+    platform_set_led(1);
     TxTimer.init();
     TxTimer.start();
 }
 static void hw_timer_stop(void)
 {
+    platform_set_led(0);
     TxTimer.stop();
 }
 

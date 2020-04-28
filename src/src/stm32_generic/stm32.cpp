@@ -195,7 +195,7 @@ void platform_connection_state(int state)
     bool connected = (state == STATE_connected);
     LED_STATE_GREEN(connected ? HIGH : LOW);
 #if defined(TARGET_R9M_TX)
-    platform_set_led(!connected);
+    //platform_set_led(!connected);
 #endif
 }
 
