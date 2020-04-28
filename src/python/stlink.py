@@ -26,11 +26,12 @@ def get_commands(env, firmware):
                 else:
                     offset = int(offset, 10)
                 app_start = flash_start + offset
-
+    env_dir = env['PROJECT_PACKAGES_DIR']
     if "windows" in platform_name:
         TOOL = os.path.join(
-            env['PROJECT_PACKAGES_DIR'],
+            env_dir,
             "tool-stm32duino", "stlink", "ST-LINK_CLI.exe")
+        TOOL = '"%s"' % TOOL
         if bootloader is not None:
             BL_CMD = [TOOL, "-c SWD SWCLK=8 -P",
                 bootloader, hex(flash_start)]
@@ -38,7 +39,7 @@ def get_commands(env, firmware):
             firmware, hex(app_start), "-RST"]
     elif "linux" in platform_name:
         TOOL = os.path.join(
-            env['PROJECT_PACKAGES_DIR'],
+            env_dir,
             "tool-stm32duino", "stlink", "st-flash")
         if bootloader is not None:
             BL_CMD = [TOOL, "write", bootloader, hex(flash_start)]
