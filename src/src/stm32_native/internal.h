@@ -16,6 +16,8 @@
 #include "stm32f4xx.h"
 #endif
 
+#define barrier() __asm__ __volatile__("": : :"memory")
+
 extern GPIO_TypeDef *const digital_regs[];
 
 #define GPIO(PORT, NUM) (((PORT) - 'A') * 16 + (NUM))

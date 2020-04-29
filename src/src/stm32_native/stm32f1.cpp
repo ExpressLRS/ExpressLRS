@@ -6,8 +6,10 @@
 // This file may be distributed under the terms of the GNU GPLv3 license.
 
 #if defined(STM32F1xx)
-
+#include "Arduino.h"
 #include "internal.h"
+#include "gpio.h"
+#include "targets.h"
 #include "irq.h"
 
 // Copied from STM32F1xx CMSIS header file since platform.io includes wrong file!
@@ -285,9 +287,40 @@ void delayMicroseconds(uint32_t usecs)
 // Main entry point - called from armcm_boot.c:ResetHandler()
 int main(void)
 {
+    extern void setup();
+    extern void loop();
+
+    setup();
+    for (;;)
+        loop();
+}
+
+// Force init to be called *first*, i.e. before static object allocation.
+// Otherwise, statically allocated objects that need HAL may fail.
+__attribute__((constructor(101))) void premain()
+{
+
+  // Required by FreeRTOS, see http://www.freertos.org/RTOS-Cortex-M3-M4.html
+#ifdef NVIC_PRIORITYGROUP_4
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+#endif
+#if (__CORTEX_M == 0x07U)
+  // Defined in CMSIS core_cm7.h
+#ifndef I_CACHE_DISABLED
+  SCB_EnableICache();
+#endif
+#ifndef D_CACHE_DISABLED
+  SCB_EnableDCache();
+#endif
+#endif
+
+  //init();
     // Run SystemInit() and then restore VTOR
     SystemInit();
     //SCB->VTOR = (uint32_t)VectorTable;
+    //SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;
+    SystemCoreClockUpdate();
+    //NVIC_SetPriorityGrouping(0x00000003U);
 
     // Setup clocks
     clock_setup();
@@ -297,13 +330,41 @@ int main(void)
     AFIO->MAPR = AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
     timer_init();
+}
 
-    extern void setup();
-    extern void loop();
 
-    setup();
+
+extern uint32_t _data_start, _data_end, _data_flash;
+extern uint32_t _bss_start, _bss_end, _stack_start;
+
+// Initial code entry point - invoked by the processor after a reset
+void ResetHandler(void)
+{
+    // Copy global variables from flash to ram
+    //uint32_t count = (&_data_end - &_data_start) * 4;
+    //__builtin_memcpy(&_data_start, &_data_flash, count);
+
+    // Clear the bss segment
+    //__builtin_memset(&_bss_start, 0, (&_bss_end - &_bss_start) * 4);
+
+    //barrier();
+
+    // Initializing the C library isn't needed...
+    //__libc_init_array();
+
+    // Run the main board specific code
+    main();
+
+    // The armcm_main() call should not return
     for (;;)
-        loop();
+        ;
+}
+
+// Code called for any undefined interrupts
+void DefaultHandler(void)
+{
+    for (;;)
+        ;
 }
 
 #endif

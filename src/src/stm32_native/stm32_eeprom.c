@@ -335,8 +335,9 @@ static void flash_program(uint32_t Address, uint32_t Data)
   */
 uint8_t eeprom_read_byte(const uint32_t pos)
 {
-    eeprom_buffer_fill();
-    return eeprom_buffered_read_byte(pos);
+    return 0; // TODO: fix me!
+    //eeprom_buffer_fill();
+    //return eeprom_buffered_read_byte(pos);
 }
 
 /**
@@ -347,8 +348,9 @@ uint8_t eeprom_read_byte(const uint32_t pos)
   */
 void eeprom_write_byte(uint32_t pos, uint8_t value)
 {
-    eeprom_buffered_write_byte(pos, value);
-    eeprom_buffer_flush();
+    return; // TODO: fix me!
+    //eeprom_buffered_write_byte(pos, value);
+    //eeprom_buffer_flush();
 }
 
 /**
