@@ -27,6 +27,7 @@ POWERMGNT PowerMgmt;
 static volatile uint32_t _rf_rxtx_counter = 0;
 static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
+static volatile uint8_t red_led_state = 0;
 
 struct platform_config config;
 
@@ -65,6 +66,7 @@ static void process_rx_buffer()
 
     connectionState = STATE_connected;
     platform_connection_state(STATE_connected);
+    platform_set_led(0);
     LastPacketRecvMillis = millis();
 
     if (TYPE_GET(in_byte) == TLM_PACKET)
@@ -297,12 +299,14 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
 
 static void hw_timer_init(void)
 {
+    red_led_state = 1;
     platform_set_led(1);
     TxTimer.init();
     TxTimer.start();
 }
 static void hw_timer_stop(void)
 {
+    red_led_state = 0;
     platform_set_led(0);
     TxTimer.stop();
 }
@@ -370,6 +374,7 @@ void loop()
         {
             connectionState = STATE_disconnected;
             platform_connection_state(STATE_disconnected);
+            platform_set_led(red_led_state);
         }
         else if (LQ_CALCULATE_INTERVAL <= (current_ms - PacketRateNextCheck))
         {
