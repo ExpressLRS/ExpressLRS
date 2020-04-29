@@ -19,7 +19,7 @@ HwSerial::HwSerial(int uart_nr, int32_t pin) : HardwareSerial(uart_nr)
 
 void HwSerial::Begin(uint32_t baud, uint32_t config)
 {
-    HardwareSerial::begin(baud, config);
+    HardwareSerial::begin(baud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, true);
     enable_receiver();
 }
 

@@ -1,6 +1,8 @@
 #include "HwSerial.h"
 #include "FIFO.h"
 
+static uint8_t OutData[128] __attribute__((aligned(32)));
+
 size_t HwSerial::write(FIFO &fifo)
 {
     size_t ret = 0;
@@ -10,7 +12,6 @@ size_t HwSerial::write(FIFO &fifo)
         if (fifo.size() >= peekVal)
         {
             uint8_t OutPktLen = fifo.pop();
-            uint8_t OutData[OutPktLen];
 
             fifo.popBytes(OutData, OutPktLen);
             ret = HwSerial::write(OutData, OutPktLen);
