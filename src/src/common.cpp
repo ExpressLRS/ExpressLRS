@@ -37,11 +37,11 @@ volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate = NULL;
 #ifndef MY_UID
 #error "UID is mandatory!"
 #else
-uint8_t UID[6] = {MY_UID};
+uint8_t const DRAM_ATTR UID[6] = {MY_UID};
 #endif
 
-uint8_t const CRCCaesarCipher = UID[4];
-uint8_t const DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily based on mac until listen before assigning method merged
+uint8_t const DRAM_ATTR CRCCaesarCipher = UID[4];
+uint8_t const DRAM_ATTR DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily based on mac until listen before assigning method merged
 
 #if 0
 static uint8_t my_sync_word = UID[4]; //0 , SX127X_SYNC_WORD;
@@ -71,26 +71,6 @@ uint8_t getSyncWord(void)
 #endif
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
-
-int16_t MeasureNoiseFloor()
-{
-    int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
-    int32_t returnval = 0;
-
-    for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
-    {
-        FHSSsetCurrIndex(freq);
-        Radio.SetMode(SX127X_CAD);
-
-        for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
-        {
-            returnval += Radio.GetCurrRSSI();
-            delay(5);
-        }
-    }
-    returnval /= NUM_READS;
-    return (returnval);
-}
 
 uint16_t TLMratioEnumToValue(uint8_t enumval)
 {

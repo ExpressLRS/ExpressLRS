@@ -1,8 +1,6 @@
 #include "rc_channels.h"
 #include "common.h"
 #include "helpers.h"
-
-#include "LoRaRadioLib.h"
 #include "FHSS.h"
 
 #if (N_SWITCHES > (N_CHANNELS - N_CONTROLS))
@@ -222,6 +220,8 @@ typedef struct
     unsigned aux4 : 1;
 } PACKED RcDataPacket_s;
 
+extern volatile uint32_t DRAM_ATTR _rf_rxtx_counter;
+
 void RcChannels::channels_pack()
 {
     uint32_t current_ms = millis();
@@ -241,7 +241,7 @@ void RcChannels::channels_pack()
         rcdata->aux4 = (CRSF_to_UINT10(ChannelDataIn[7]) >> 6);
         packed_buffer[3] = packed_buffer[1];
         packed_buffer[4] = packed_buffer[2];
-        packed_buffer[5] = Radio.NonceTX;
+        packed_buffer[5] = _rf_rxtx_counter;
         packed_buffer[6] = FHSSgetCurrIndex();
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
@@ -281,7 +281,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
         PackedRCdataOut.ch7 = BIT_to_CRSF(rcdata->aux4);
 #endif // One_Bit_Switches
     }
-    else
+    else if (type == SWITCH_DATA_PACKET)
     {
         SwitchPacket_s *rcdata = (SwitchPacket_s *)&input[1];
         PackedRCdataOut.ch4 = SWITCH3b_to_CRSF(rcdata->aux1);

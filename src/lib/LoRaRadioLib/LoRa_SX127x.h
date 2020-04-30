@@ -72,9 +72,8 @@ typedef enum
 
 class SX127xDriver
 {
-
 public:
-    SX127xDriver();
+    SX127xDriver(int rst = -1, int dio0 = -1, int dio1 = -1, int txpin = -1, int rxpin = -1);
 
     ///////Callback Function Pointers/////
     static void rx_nullCallback(uint8_t *){};
@@ -147,6 +146,7 @@ public:
     }
 
     /////////////////Utility Funcitons//////////////////
+    int16_t MeasureNoiseFloor(uint32_t num_meas, uint32_t freq);
     void ICACHE_RAM_ATTR ClearIRQFlags();
 
     //////////////TX related Functions/////////////////

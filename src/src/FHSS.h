@@ -1,17 +1,13 @@
-#pragma once
+#ifndef __FHSS_H
+#define __FHSS_H
 
 #include "platform.h"
 #include <stdint.h>
 
-extern int32_t volatile FreqCorrection;
+extern int_fast32_t volatile DRAM_ATTR FreqCorrection;
 #define FreqCorrectionMax  100000
 #define FreqCorrectionMin  -100000
 #define FreqCorrectionStep 61 //min freq step is ~ 61hz
-
-// The number of FHSS frequencies in the table
-extern const uint32_t NR_FHSS_ENTRIES;
-//#define NR_FHSS_ENTRIES (sizeof(FHSSfreqs) / sizeof(uint32_t))
-extern const uint32_t FHSSfreqs[];
 
 void ICACHE_RAM_ATTR FHSSresetFreqCorrection();
 
@@ -24,3 +20,5 @@ uint32_t ICACHE_RAM_ATTR GetInitialFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq();
 void FHSSrandomiseFHSSsequence();
+
+#endif // __FHSS_H

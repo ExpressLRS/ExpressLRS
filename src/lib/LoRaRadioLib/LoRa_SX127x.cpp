@@ -46,13 +46,13 @@ static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio1(void)
 
 //////////////////////////////////////////////
 
-SX127xDriver::SX127xDriver()
+SX127xDriver::SX127xDriver(int rst, int dio0, int dio1, int txpin, int rxpin)
 {
-    _RXenablePin = -1;
-    _TXenablePin = -1;
-    SX127x_dio0 = 0xff;
-    SX127x_dio1 = 0xff;
-    SX127x_RST = -1;
+    _RXenablePin = rxpin;
+    _TXenablePin = txpin;
+    SX127x_dio0 = dio0;
+    SX127x_dio1 = dio1;
+    SX127x_RST = rst;
 
     RXbuffLen = 8;
 
@@ -150,6 +150,10 @@ uint8_t SX127xDriver::SetSyncWord(uint8_t syncWord)
 
 uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
 {
+    Power &= 0xF; // 4bits
+    if (currPWR == Power)
+        return ERR_NONE;
+
     //todo make function turn on PA_BOOST ect
     writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
 
@@ -242,6 +246,20 @@ uint8_t SX127xDriver::SX127xBegin()
         return (ERR_CHIP_NOT_FOUND);
     }
     return (ERR_NONE);
+}
+
+int16_t SX127xDriver::MeasureNoiseFloor(uint32_t num_meas, uint32_t freq)
+{
+    SetFrequency(freq, SX127X_CAD);
+
+    int32_t noise = 0;
+    for (uint32_t iter = 0; iter < num_meas; iter++)
+    {
+        noise += GetCurrRSSI();
+        delay(5);
+    }
+    noise /= num_meas;
+    return noise;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

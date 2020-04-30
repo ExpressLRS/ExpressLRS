@@ -37,11 +37,13 @@ typedef enum
 class POWERMGNT
 {
 private:
+    SX127xDriver & p_radio;
     PowerLevels_e CurrentPower;
     void setPower(PowerLevels_e Power);
 
 public:
-    POWERMGNT();
+    POWERMGNT(SX127xDriver &radio);
+    void Begin();
     PowerLevels_e incPower();
     PowerLevels_e decPower();
     PowerLevels_e currPower();

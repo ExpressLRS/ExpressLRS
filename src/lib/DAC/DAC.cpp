@@ -2,12 +2,8 @@
 #ifdef TARGET_R9M_TX
 
 #include "DAC.h"
-#include "LoRaRadioLib.h"
 #include "helpers.h"
-
 #include <Wire.h>
-
-extern SX127xDriver Radio;
 
 #define VCC 3300
 
@@ -92,7 +88,6 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
-    Radio.SetOutputPower(0b0000);
     Wire.beginTransmission(ADDR);
     Wire.write(RegH);
     Wire.write(RegL);

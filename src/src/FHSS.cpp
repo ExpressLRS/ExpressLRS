@@ -6,13 +6,13 @@
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433
-const uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     433420000,
     433920000,
     434420000};
 
 #elif defined Regulatory_Domain_AU_915
-const uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     915500000,
     916100000,
     916700000,
@@ -50,7 +50,7 @@ const uint32_t FHSSfreqs[] = {
  * 868MHz ISM band traffic too much.
  */
 #if !FRSKY_FREQS
-const uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     863275000, // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
     863800000,
     864325000,
@@ -67,7 +67,7 @@ const uint32_t FHSSfreqs[] = {
 
 #else //FRSKY_FREQS
 // https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
-static uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     // FrSkyR9_freq_map_868
     859504640,
     860004352,
@@ -106,7 +106,7 @@ static uint32_t FHSSfreqs[] = {
  * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
  * of the spectrum, nothing else. As such, these are likely illegal to use.
  */
-const uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     433100000,
     433925000,
     434450000};
@@ -114,7 +114,7 @@ const uint32_t FHSSfreqs[] = {
 #elif defined Regulatory_Domain_FCC_915
 /* Very definitely not fully checked. An initial pass at increasing the hops
 */
-const uint32_t FHSSfreqs[] = {
+static uint32_t DRAM_ATTR FHSSfreqs[] = {
     903500000,
     904100000,
     904700000,
@@ -169,14 +169,12 @@ const uint32_t FHSSfreqs[] = {
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-const uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(uint32_t));
-
 #define NR_SEQUENCE_ENTRIES 256
-uint8_t volatile FHSSptr = 0;
-uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
+uint_fast8_t volatile DRAM_ATTR FHSSptr = 0;
+uint8_t DRAM_ATTR FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
 
 #define FREQ_OFFSET_UID (UID[4] + UID[5])
-int32_t volatile FreqCorrection = FREQ_OFFSET_UID;
+int_fast32_t volatile DRAM_ATTR FreqCorrection = FREQ_OFFSET_UID;
 
 void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
 {
@@ -185,7 +183,7 @@ void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
-    FHSSptr = value;
+    FHSSptr = value % sizeof(FHSSsequence);
 }
 
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
@@ -195,7 +193,7 @@ uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 
 void ICACHE_RAM_ATTR FHSSincCurrIndex()
 {
-    FHSSptr++;
+    FHSSptr = (FHSSptr + 1) % sizeof(FHSSsequence);
 }
 
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrSequenceIndex()
@@ -215,20 +213,20 @@ uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
 
 uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 {
-    FHSSptr++;
+    FHSSincCurrIndex();
     return FHSSgetCurrFreq();
 }
 
 // Set all of the flags in the array to true, except for the first one
 // which corresponds to the sync channel and is never available for normal
 // allocation.
-static void resetIsAvailable(uint8_t *array)
+static void resetIsAvailable(uint8_t * const array, uint32_t size)
 {
     // channel 0 is the sync channel and is never considered available
     array[0] = 0;
 
     // all other entires to 1
-    for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
+    for (uint32_t i = 1; i < size; i++)
         array[i] = 1;
 }
 
@@ -251,6 +249,8 @@ Approach:
 */
 void FHSSrandomiseFHSSsequence()
 {
+    const uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(FHSSfreqs[0]));
+
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
     DEBUG_PRINTLN("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_EU_868
@@ -272,7 +272,7 @@ void FHSSrandomiseFHSSsequence()
 
     uint8_t isAvailable[NR_FHSS_ENTRIES];
 
-    resetIsAvailable(isAvailable);
+    resetIsAvailable(isAvailable, sizeof(isAvailable));
 
     // Fill the FHSSsequence with channel indices
     // The 0 index is special - the 'sync' channel. The sync channel appears every
@@ -284,7 +284,7 @@ void FHSSrandomiseFHSSsequence()
     unsigned int prev = 0;           // needed to prevent repeats of the same index
 
     // for each slot in the sequence table
-    for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++)
+    for (uint32_t i = 0; i < sizeof(FHSSsequence); i++)
     {
         if (i % SYNC_INTERVAL == 0)
         {
@@ -331,7 +331,7 @@ void FHSSrandomiseFHSSsequence()
             if (nLeft == 0)
             {
                 // we've assigned all of the channels, so reset for next cycle
-                resetIsAvailable(isAvailable);
+                resetIsAvailable(isAvailable, sizeof(isAvailable));
                 nLeft = NR_FHSS_ENTRIES - 1;
             }
         }

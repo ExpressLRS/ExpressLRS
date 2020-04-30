@@ -23,6 +23,8 @@ void HwTimer::init()
 
 void HwTimer::start()
 {
+    if (running)
+        return;
     running = true;
     setTime(HWtimerInterval);
     timer_tx.resume();

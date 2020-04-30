@@ -2,8 +2,8 @@
 
 #ifdef TARGET_R9M_TX
 
-#include <stdint.h>
 #include "POWERMGNT.h"
+#include <stdint.h>
 
 class R9DAC
 {
@@ -55,8 +55,7 @@ private:
     int8_t pin_RFswitch;
     int8_t pin_RFamp;
 
-    const r9dac_lut_s &
-    get_lut(PowerLevels_e &power);
+    const r9dac_lut_s & get_lut(PowerLevels_e &power);
 
 public:
     R9DAC();

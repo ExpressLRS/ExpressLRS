@@ -32,9 +32,9 @@ extern volatile connectionState_e connectionState;
 void led_set_state(bool state);
 void led_toggle(void);
 
-extern uint8_t UID[6];
-extern uint8_t const CRCCaesarCipher;
-extern uint8_t const DeviceAddr;
+extern uint8_t const DRAM_ATTR UID[6];
+extern uint8_t const DRAM_ATTR CRCCaesarCipher;
+extern uint8_t const DRAM_ATTR DeviceAddr;
 
 // These are used as message type header
 #define DEIVCE_ADDR_GET(_B)      ((_B)&0b11111100)
@@ -104,7 +104,6 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 extern volatile uint8_t current_rate_config;
 
-int16_t MeasureNoiseFloor();
 uint16_t TLMratioEnumToValue(uint8_t enumval);
 
 void forced_start(void);

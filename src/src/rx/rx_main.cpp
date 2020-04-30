@@ -379,8 +379,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
                     rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
                     crsf.sendRCFrameToFC();
                 }
-                //NonceRXlocal = rx_buffer[5];
-                //FHSSsetCurrIndex(rx_buffer[6]);
+                NonceRXlocal = rx_buffer[5];
+                FHSSsetCurrIndex(rx_buffer[6]);
             }
             break;
 #endif
@@ -488,7 +488,7 @@ void setup()
 
     // Measure RF noise
 #ifdef DEBUG_SERIAL // TODO: Enable this when noize floor is used!
-    int16_t RFnoiseFloor = MeasureNoiseFloor();
+    int16_t RFnoiseFloor = Radio.MeasureNoiseFloor(10, GetInitialFreq());
     DEBUG_PRINT("RF noise floor: ");
     DEBUG_PRINT(RFnoiseFloor);
     DEBUG_PRINTLN("dBm");

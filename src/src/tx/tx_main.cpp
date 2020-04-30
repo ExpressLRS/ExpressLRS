@@ -11,7 +11,7 @@
 #include "debug.h"
 #include "rc_channels.h"
 
-static void SetRFLinkRate(uint8_t rate, uint8_t init = 0);
+static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
@@ -23,8 +23,8 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 /// define some libs to use ///
 CRSF_TX crsf(CrsfSerial);
 RcChannels rc_ch;
-POWERMGNT PowerMgmt;
-static volatile uint32_t _rf_rxtx_counter = 0;
+POWERMGNT PowerMgmt(Radio);
+/*static*/ volatile uint32_t DRAM_ATTR _rf_rxtx_counter = 0;
 static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
 static volatile uint8_t red_led_state = 0;
@@ -32,17 +32,17 @@ static volatile uint8_t red_led_state = 0;
 struct platform_config config;
 
 /////////// SYNC PACKET ////////
-static uint32_t SyncPacketNextSend = 0;
+static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
 
 /////////// CONNECTION /////////
 static uint32_t LastPacketRecvMillis = 0;
-volatile connectionState_e connectionState = STATE_disconnected;
+volatile connectionState_e DRAM_ATTR connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
 static uint32_t recv_tlm_counter = 0;
 static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
-static volatile uint32_t tlm_check_ratio = 0;
+static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
 
 //////////// LUA /////////
 
@@ -167,26 +167,27 @@ exit_rx_send:
 
 ///////////////////////////////////////
 
-static void decRFLinkRate(void)
+static uint8_t decRFLinkRate(void)
 {
     if (ExpressLRS_currAirRate->enum_rate < (RATE_MAX - 1))
     {
-        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
+        return SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
     }
+    return 0;
 }
 
-static void incRFLinkRate(void)
+static uint8_t incRFLinkRate(void)
 {
     if (ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
     {
-        SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
+        return SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
     }
+    return 0;
 }
 
 static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 {
     // Called from UART handling loop (main loop)
-
     if (len != 2)
         return;
 
@@ -199,18 +200,16 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 1:
-            modified = ExpressLRS_currAirRate->enum_rate;
             if (value == 0)
             {
-                decRFLinkRate();
+                modified |= decRFLinkRate() ? (1 << 1) : 0;
             }
             else if (value == 1)
             {
-                incRFLinkRate();
+                modified |= incRFLinkRate() ? (1 << 1) : 0;
             }
             DEBUG_PRINT("Rate: ");
             DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
-            modified = modified != ExpressLRS_currAirRate->enum_rate;
             break;
 
         case 2:
@@ -229,7 +228,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
-            modified = modified != PowerMgmt.currPower();
+            modified = modified != PowerMgmt.currPower() ? (1 << 3) : 0;
             break;
 
         case 4:
@@ -245,22 +244,28 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
                        4u};
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 
-    config.key = ELRS_EEPROM_KEY;
-    config.mode = ExpressLRS_currAirRate->enum_rate;
-    config.power = PowerMgmt.currPower();
-    if (modified)
+    if (modified) {
+        // Save modified values
+        config.key = ELRS_EEPROM_KEY;
+        config.mode = ExpressLRS_currAirRate->enum_rate;
+        config.power = PowerMgmt.currPower();
         platform_config_save(config);
+
+        // and start timer if rate was changed
+        if (modified & (1 << 1))
+            TxTimer.start();
+    }
 }
 
 ///////////////////////////////////////
 
-static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (hz)
+static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (hz)
 {
     // TODO: Protect this by disabling timer/isr...
 
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
     if (config == ExpressLRS_currAirRate)
-        return; // No need to modify, rate is same
+        return 0; // No need to modify, rate is same
 
     if (!init)
     {
@@ -272,6 +277,7 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
 
+    FHSSsetCurrIndex(0);
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
@@ -293,8 +299,9 @@ static void SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link (h
     }
     platform_connection_state(connectionState);
 
-    if (!init)
-        TxTimer.start();
+    //if (!init)
+    //    TxTimer.start();
+    return 1;
 }
 
 static void hw_timer_init(void)
@@ -348,10 +355,12 @@ void setup()
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
 
+    PowerMgmt.Begin();
     PowerMgmt.defaultPower(power);
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
+    TxTimer.start();
 
     crsf.Begin();
 }
