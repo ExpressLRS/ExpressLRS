@@ -59,17 +59,12 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     int8_t LastRSSI = Radio.LastPacketRSSI;
     //crsf.ChannelsPacked.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
     //crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
-#if 1
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
-#else
-    uint8_t rssi = LPF_UplinkRSSI.update(Radio.LastPacketRssiRaw);
-    crsf.LinkStatistics.uplink_RSSI_1 = (rssi > 127) ? 127 : rssi;
-#endif
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);

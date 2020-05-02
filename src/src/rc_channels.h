@@ -3,6 +3,7 @@
 
 #include "platform.h"
 #include "CRSF.h" // N_SWITCHES
+#include "msp.h"
 #include <stdint.h>
 
 // current and sent switch values
@@ -40,6 +41,12 @@ public:
     void ICACHE_RAM_ATTR channels_extract(volatile uint8_t const *const input,
                                           crsf_channels_t &output);
 
+    // TLM pkt (e,g, MSP)
+    void ICACHE_RAM_ATTR tlm_process_input( uint8_t const *const input);
+    void ICACHE_RAM_ATTR tlm_packed_get(uint8_t *const output);
+    void ICACHE_RAM_ATTR tlm_packed_extract(volatile uint8_t const *const input,
+                                            mspPacket_t& packet);
+
 private:
     void channels_pack(void);
     // Switches / AUX channel handling
@@ -60,6 +67,9 @@ private:
     uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet will be send
 #define SWITCH_PACKET_SEND_INTERVAL 200u
 #endif
+
+    /* MSP data */
+    mspPacket_t packet;
 };
 
 #endif /* __RC_CHANNELS_H */

@@ -6,6 +6,7 @@
 #include "crc.h"
 #include "platform.h"
 #include "utils.h"
+#include "msp.h"
 
 #define CRSF_RX_BAUDRATE       420000
 #define CRSF_TX_BAUDRATE_FAST  400000
@@ -27,15 +28,13 @@
 
 #define CRSF_PAYLOAD_SIZE_MAX             62
 #define CRSF_FRAME_NOT_COUNTED_BYTES      2
-#define CRSF_FRAME_SIZE(payload_size)     ((payload_size) + 2) // See crsf_header_t.frame_size
-#define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
+#define CRSF_MSP_FRAME_NOT_COUNTED_BYTES  6 // dest, orig, hdr, size, cmd, crc
+#define CRSF_FRAME_SIZE(payload_size)     ((payload_size) + CRSF_FRAME_NOT_COUNTED_BYTES) // See crsf_header_t.frame_size
+#define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + CRSF_FRAME_NOT_COUNTED_BYTES)
+#define CRSF_MSP_FRAME_SIZE(payload_size) ((payload_size) + CRSF_MSP_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_FRAME_SIZE_MAX               (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 
 //////////////////////////////////////////////////////////////
-
-#define CRSF_MSP_REQ_PAYLOAD_SIZE  8
-#define CRSF_MSP_RESP_PAYLOAD_SIZE 58
-#define CRSF_MSP_MAX_PAYLOAD_SIZE  (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
 enum crsf_frame_type_e
 {
@@ -235,7 +234,7 @@ protected:
     uint32_t BadPktsCount = 0;
 
     // CRSF frame TX buffer
-    uint8_t outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)] __attribute__((aligned(32)));
+    uint8_t DRAM_ATTR outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)] __attribute__((aligned(32)));
 
 private:
     bool CRSFframeActive = false;

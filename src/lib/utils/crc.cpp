@@ -39,6 +39,16 @@ uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t const *data, int length)
     return crc;
 }
 
+uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
+{
+    uint8_t crc = 0;
+    while (length--) {
+        crc = crc ^ *data++;
+    }
+    return crc;
+}
+
+
 #if (CRSF_CMD_CRC)
 const uint8_t crc8tabcmd[256] =
     {0x00, 0xBA, 0xCE, 0x74, 0x26, 0x9C, 0xE8, 0x52, 0x4C, 0xF6, 0x82, 0x38, 0x6A, 0xD0, 0xA4, 0x1E,

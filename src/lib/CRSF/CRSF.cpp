@@ -57,7 +57,6 @@ void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(uint8_t *const output)
     // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
     // rssi we send is for display only.
     // OpenTX treats the rssi values as signed.
-#if 1
     uint8_t openTxRSSI = LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
     if (openTxRSSI > 127)
@@ -65,9 +64,6 @@ void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(uint8_t *const output)
     // convert to 8 bit signed value in the negative range (-128 to 0)
     openTxRSSI = 255 - openTxRSSI;
     output[1] = openTxRSSI;
-#else
-    output[1] = LinkStatistics.uplink_RSSI_1;
-#endif
     output[2] = (TLMbattSensor.voltage & 0xFF00) >> 8;
     output[3] = LinkStatistics.uplink_SNR;
     output[4] = LinkStatistics.uplink_Link_quality;
