@@ -377,3 +377,58 @@ uint8_t RcChannels::getNextSwitchIndex()
 
     return i;
 }
+
+typedef union {
+    struct {
+        uint16_t func;
+        uint16_t payloadSize;
+        uint8_t flags;
+        uint8_t data1;
+    } hdr;
+    struct {
+        uint8_t data[6];
+    } payload;
+} TlmDataPacket_s;
+
+uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
+                                             mspPacket_t& packet)
+{
+    uint8_t PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET;
+    TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)&output[1];
+    output[0] = PacketHeaderAddr;
+
+    if (!packet.payloadIterator)
+    {
+        /* Send header and first byte */
+        tlm_ptr->hdr.flags = packet.flags;
+        tlm_ptr->hdr.func = packet.function;
+        tlm_ptr->hdr.payloadSize = packet.payloadSize;
+        tlm_ptr->hdr.data1 = packet.readByte();
+    }
+    else
+    {
+        for (uint8_t iter = 0; iter < sizeof(tlm_ptr->payload.data); iter++)
+            tlm_ptr->payload.data[iter] = packet.readByte();
+    }
+    return packet.iterated();
+}
+
+uint8_t ICACHE_RAM_ATTR RcChannels::tlm_receive(volatile uint8_t const *const input,
+                                                mspPacket_t& packet)
+{
+    TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)&input[1];
+    if (!packet.payloadSize)
+    {
+        // Fill header
+        packet.flags = tlm_ptr->hdr.flags;
+        packet.function = tlm_ptr->hdr.func;
+        packet.payloadSize = tlm_ptr->hdr.payloadSize;
+        packet.addByte(tlm_ptr->hdr.data1);
+    }
+    else
+    {
+        for (uint8_t iter = 0; iter < sizeof(tlm_ptr->payload.data); iter++)
+            packet.addByte(tlm_ptr->payload.data[iter]);
+    }
+    return packet.iterated();
+}

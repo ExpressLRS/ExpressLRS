@@ -44,6 +44,7 @@ static LPF LPF_UplinkRSSI(5);
 
 static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
+static mspPacket_t msp_packet;
 
 ///////////////////////////////////////////////////////////////
 ///////////// Variables for Sync Behaviour ////////////////////
@@ -381,6 +382,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 #endif
 
         case TLM_PACKET: // telemetry packet
+            if (rc_ch.tlm_receive(rx_buffer, msp_packet))
+            {
+                crsf.sendMSPFrameToFC(msp_packet);
+                msp_packet.reset();
+            }
             break;
 #endif // RC_DATA_FROM_ISR
 
@@ -461,6 +467,8 @@ void tx_done_cb(void)
 
 void setup()
 {
+    msp_packet.reset();
+
     DEBUG_PRINTLN("ExpressLRS RX Module...");
     platform_setup();
 

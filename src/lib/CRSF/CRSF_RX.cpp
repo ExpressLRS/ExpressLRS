@@ -62,7 +62,7 @@ void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t& packet)
         outBuffer[i] = packet.payload[i];
     }
     // Encapsulated MSP crc
-    outBuffer[i] =  CalcCRCMsp(&outBuffer[6], (packet.payloadSize + 1 /*func*/));
+    outBuffer[i] =  CalcCRCMsp(&outBuffer[6], (packet.payloadSize + 1 /*func*/)); // was out[12]
 
     sendFrameToFC(outBuffer, len);
 }

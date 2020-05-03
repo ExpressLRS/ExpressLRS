@@ -41,11 +41,11 @@ public:
     void ICACHE_RAM_ATTR channels_extract(volatile uint8_t const *const input,
                                           crsf_channels_t &output);
 
-    // TLM pkt (e,g, MSP)
-    void ICACHE_RAM_ATTR tlm_process_input( uint8_t const *const input);
-    void ICACHE_RAM_ATTR tlm_packed_get(uint8_t *const output);
-    void ICACHE_RAM_ATTR tlm_packed_extract(volatile uint8_t const *const input,
-                                            mspPacket_t& packet);
+    // TLM pkt
+    uint8_t ICACHE_RAM_ATTR tlm_send(uint8_t *const output,
+                                     mspPacket_t& packet);
+    uint8_t ICACHE_RAM_ATTR tlm_receive(volatile uint8_t const *const input,
+                                        mspPacket_t& packet);
 
 private:
     void channels_pack(void);
@@ -67,9 +67,6 @@ private:
     uint32_t SwitchPacketNextSend = 0; //time in ms when the next switch data packet will be send
 #define SWITCH_PACKET_SEND_INTERVAL 200u
 #endif
-
-    /* MSP data */
-    mspPacket_t packet;
 };
 
 #endif /* __RC_CHANNELS_H */

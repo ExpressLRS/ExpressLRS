@@ -43,6 +43,8 @@ static uint32_t recv_tlm_counter = 0;
 static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
 static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
+static mspPacket_t msp_packet;
+static volatile uint_fast8_t tlm_send = 0;
 
 //////////// LUA /////////
 
@@ -148,6 +150,14 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     {
         GenerateSyncPacketData(tx_buffer);
         SyncPacketNextSend = current_ms;
+    }
+    else if (tlm_send)
+    {
+        if (rc_ch.tlm_send(tx_buffer, msp_packet))
+        {
+            msp_packet.reset();
+            tlm_send = 0;
+        }
     }
     else
     {
@@ -323,9 +333,17 @@ static void rc_data_cb(crsf_channels_t const *const channels)
     rc_ch.processChannels(channels);
 }
 
+static void msp_data_cb(uint8_t const *const input)
+{
+    // process msp packet from radio
+
+}
+
 void setup()
 {
     PowerLevels_e power = PWR_UNKNOWN;
+    msp_packet.reset();
+
     DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
 
@@ -341,6 +359,7 @@ void setup()
     crsf.disconnected = hw_timer_stop;
     crsf.ParamWriteCallback = ParamWriteHandler;
     crsf.RCdataCallback1 = rc_data_cb;
+    crsf.MspCallback = msp_data_cb;
 
     TxTimer.callbackTock = &SendRCdataToRF;
 

@@ -35,7 +35,9 @@ public:
 #endif
     }
 
+    ///// Callbacks /////
     static void (*ParamWriteCallback)(uint8_t const *msg, uint16_t len);
+    static void (*MspCallback)(uint8_t const *const input);
 
     ///// Variables /////
 

@@ -6,6 +6,9 @@
 void paramNullCallback(uint8_t const *, uint16_t){};
 void (*CRSF_TX::ParamWriteCallback)(uint8_t const *msg, uint16_t len) = &paramNullCallback;
 
+void MspNullCallback(uint8_t const *const){};
+void (*CRSF_TX::MspCallback)(uint8_t const *const input) = MspNullCallback;
+
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 
@@ -181,6 +184,15 @@ void CRSF_TX::processPacket(uint8_t const *input)
             {
                 ParamWriteCallback(&input[2], 2);
             }
+        }
+        case CRSF_FRAMETYPE_MSP_WRITE:
+        {
+            if (input[0] == CRSF_ADDRESS_FLIGHT_CONTROLLER &&
+                input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+            {
+                MspCallback(&input[2]);
+            }
+            break;
         }
         case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
         {
