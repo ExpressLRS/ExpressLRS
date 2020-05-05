@@ -17,8 +17,8 @@ static void SetRFLinkRate(uint8_t rate);
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
-#define RC_DATA_FROM_ISR               1
-#define PRINT_FREQ_ERROR               0
+#define RC_DATA_FROM_ISR 1
+#define PRINT_FREQ_ERROR 0
 
 ///////////////////
 
@@ -28,7 +28,7 @@ RcChannels rc_ch;
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 static volatile uint32_t tlm_check_ratio = 0;
-static volatile uint8_t rx_buffer[8] __attribute__((aligned(32)));
+static volatile uint8_t DRAM_ATTR rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
 static volatile uint32_t rx_last_valid_us = 0; //Time the last valid packet was recv
 static volatile int32_t rx_freqerror = 0;

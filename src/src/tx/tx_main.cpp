@@ -14,8 +14,8 @@
 static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
-#define LQ_CALCULATE_INTERVAL             500u
+#define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
+#define LQ_CALCULATE_INTERVAL 500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
@@ -153,6 +153,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     }
     else if (tlm_send)
     {
+        /* send tlm packet if needed */
         if (rc_ch.tlm_send(tx_buffer, msp_packet))
         {
             msp_packet.reset();
@@ -210,6 +211,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 1:
+            // air rate
             if (value == 0)
             {
                 modified |= decRFLinkRate() ? (1 << 1) : 0;
@@ -223,9 +225,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 2:
+            // TLMinterval
             break;
 
         case 3:
+            // MaxPower
             modified = PowerMgmt.currPower();
             if (value == 0)
             {
@@ -242,7 +246,35 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 4:
+            // RFFreq
             break;
+
+#if 1
+        case 5:
+        {
+            uint8_t power = msg[3];
+            uint8_t crc = 0;
+            uint16_t freq = (uint16_t)msg[1] * 8 + msg[2]; // band * 8 + channel
+            uint8_t vtx_cmd[] = {(uint8_t)(freq >> 8), (uint8_t)freq, power, (power == 0)};
+            uint8_t size = sizeof(vtx_cmd);
+            // VTX settings
+            msp_packet.reset();
+            //msp_packet.makeCommand();
+            msp_packet.flags = MSP_VERSION | MSP_STARTFLAG;
+            msp_packet.payloadSize = size + 1;
+            crc = CalcCRCxor((uint8_t)msp_packet.payloadSize, crc);
+            msp_packet.function = MSP_VTX_SET_CONFIG;
+            crc = CalcCRCxor((uint8_t)msp_packet.function, crc);
+            for (uint8_t iter = 0; iter < size; iter++)
+            {
+                msp_packet.addByte(vtx_cmd[iter]);
+                crc = CalcCRCxor((uint8_t)vtx_cmd[iter], crc);
+            }
+            msp_packet.addByte(crc);
+            tlm_send = 1; // rdy for sending
+            break;
+        }
+#endif
 
         default:
             break;
@@ -254,7 +286,8 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
                        4u};
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 
-    if (modified) {
+    if (modified)
+    {
         // Save modified values
         config.key = ELRS_EEPROM_KEY;
         config.mode = ExpressLRS_currAirRate->enum_rate;
@@ -333,10 +366,24 @@ static void rc_data_cb(crsf_channels_t const *const channels)
     rc_ch.processChannels(channels);
 }
 
+/* OpenTX sends v1 MSPs */
 static void msp_data_cb(uint8_t const *const input)
 {
-    // process msp packet from radio
+    /* process MSP packet from radio
+     *  [0] header: seq&0xF,
+     *  [1] payload size
+     *  [2] function
+     *  [3...] payload + crc
+     */
+    mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
+    msp_packet.reset(hdr);
+    msp_packet.type = MSP_PACKET_V1_CMD;
+    if (hdr->payloadSize)
+        volatile_memcpy(msp_packet.payload,
+                        hdr->payload,
+                        hdr->payloadSize);
 
+    tlm_send = 1; // rdy for sending
 }
 
 void setup()

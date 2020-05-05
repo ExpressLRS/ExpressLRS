@@ -37,7 +37,7 @@ void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC()
     sendFrameToFC(outBuffer, len);
 }
 
-void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t& packet)
+void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t &packet)
 {
     // TODO: This currently only supports single MSP packets per cmd
     // To support longer packets we need to re-write this to allow packet splitting
@@ -47,22 +47,23 @@ void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t& packet)
     uint8_t len = CRSF_EXT_FRAME_SIZE(msp_len); // total len
 
     // CRSF extended frame header
-    outBuffer[0] = CRSF_ADDRESS_BROADCAST; // address
-    outBuffer[1] = CRSF_FRAME_SIZE(msp_len); // CRSF frame len
-    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE; // packet type
+    outBuffer[0] = CRSF_ADDRESS_BROADCAST;         // address
+    outBuffer[1] = CRSF_FRAME_SIZE(msp_len);       // CRSF frame len
+    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;       // packet type
     outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER; // destination
     outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER; // origin
 
     // Encapsulated MSP payload
-    outBuffer[5] = 0x30; // header
+    outBuffer[5] = packet.flags;       // 0x30, header
     outBuffer[6] = packet.payloadSize; // mspPayloadSize
     outBuffer[7] = packet.function;
-    for (i = 8; i < (packet.payloadSize + 8); ++i) {
+    for (i = 8; i < (packet.payloadSize + 8); i++)
+    {
         // copy packet payload into outBuffer and pad with zeros where required
         outBuffer[i] = packet.payload[i];
     }
-    // Encapsulated MSP crc
-    outBuffer[i] =  CalcCRCMsp(&outBuffer[6], (packet.payloadSize + 1 /*func*/)); // was out[12]
+    // Encapsulated MSP crc - bypass CRC to received to protect possible transfer failures
+    //outBuffer[i] = CalcCRCxor(&outBuffer[6], (packet.payloadSize + 1)); // was out[12]
 
     sendFrameToFC(outBuffer, len);
 }

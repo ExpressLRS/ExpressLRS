@@ -3,6 +3,7 @@
 
 #include "DAC.h"
 #include "helpers.h"
+#include "LoRaRadioLib.h"
 #include <Wire.h>
 
 #define VCC 3300
@@ -18,8 +19,7 @@ R9DAC::R9DAC()
     DAC_State = UNKNOWN;
 }
 
-void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr,
-                 int8_t pin_switch, int8_t pin_amp)
+void R9DAC::init(uint8_t sda, uint8_t scl, uint8_t addr, int8_t pin_switch, int8_t pin_amp)
 {
     ADDR = addr;
     if (0 <= pin_switch)
@@ -105,32 +105,32 @@ const R9DAC::r9dac_lut_s &R9DAC::get_lut(PowerLevels_e &power)
     uint8_t index;
     switch (power)
     {
-    case PWR_25mW:
-        index = R9_PWR_25mW;
-        break;
-    case PWR_50mW:
-        index = R9_PWR_50mW;
-        break;
-    case PWR_100mW:
-        index = R9_PWR_100mW;
-        break;
-    case PWR_250mW:
-        index = R9_PWR_250mW;
-        break;
-    case PWR_500mW:
-        index = R9_PWR_500mW;
-        break;
-    case PWR_1000mW:
-        index = R9_PWR_1000mW;
-        break;
-    case PWR_2000mW:
-        index = R9_PWR_2000mW;
-        break;
-    case PWR_10mW:
-    default:
-        index = R9_PWR_10mW;
-        power = PWR_10mW;
-        break;
+        case PWR_25mW:
+            index = R9_PWR_25mW;
+            break;
+        case PWR_50mW:
+            index = R9_PWR_50mW;
+            break;
+        case PWR_100mW:
+            index = R9_PWR_100mW;
+            break;
+        case PWR_250mW:
+            index = R9_PWR_250mW;
+            break;
+        case PWR_500mW:
+            index = R9_PWR_500mW;
+            break;
+        case PWR_1000mW:
+            index = R9_PWR_1000mW;
+            break;
+        case PWR_2000mW:
+            index = R9_PWR_2000mW;
+            break;
+        case PWR_10mW:
+        default:
+            index = R9_PWR_10mW;
+            power = PWR_10mW;
+            break;
     };
 
     return LUT[index];

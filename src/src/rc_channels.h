@@ -43,9 +43,9 @@ public:
 
     // TLM pkt
     uint8_t ICACHE_RAM_ATTR tlm_send(uint8_t *const output,
-                                     mspPacket_t& packet);
+                                     mspPacket_t &packet);
     uint8_t ICACHE_RAM_ATTR tlm_receive(volatile uint8_t const *const input,
-                                        mspPacket_t& packet);
+                                        mspPacket_t &packet);
 
 private:
     void channels_pack(void);
@@ -57,7 +57,7 @@ private:
     volatile uint8_t currentSwitches[N_SWITCHES] = {0}; // range: 0,1,2
 
     // esp requires aligned buffer
-    volatile uint8_t packed_buffer[8] __attribute__((aligned(32)));
+    volatile uint8_t WORD_ALIGNED_ATTR packed_buffer[8];
 
     volatile uint16_t p_auxChannelsChanged = 0; // bitmap of changed switches
     // which switch should be sent in the next rc packet

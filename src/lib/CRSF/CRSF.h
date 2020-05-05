@@ -8,31 +8,31 @@
 #include "utils.h"
 #include "msp.h"
 
-#define CRSF_RX_BAUDRATE       420000
-#define CRSF_TX_BAUDRATE_FAST  400000
-#define CRSF_TX_BAUDRATE_SLOW  115200 // Used for QX7 not supporting 400kbps
-#define CRSF_NUM_CHANNELS      16     // Number of input channels
+#define CRSF_RX_BAUDRATE 420000
+#define CRSF_TX_BAUDRATE_FAST 400000
+#define CRSF_TX_BAUDRATE_SLOW 115200 // Used for QX7 not supporting 400kbps
+#define CRSF_NUM_CHANNELS 16         // Number of input channels
 #define CRSF_CHANNEL_VALUE_MIN 172
 #define CRSF_CHANNEL_VALUE_MID 992
 #define CRSF_CHANNEL_VALUE_MAX 1811
-#define CRSF_MAX_PACKET_LEN    64
+#define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define RCframeLength             sizeof(crsf_channels_t)             // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
+#define RCframeLength sizeof(crsf_channels_t)                         // 22, length of the RC data packed bytes frame. 16 channels in 11 bits each.
 #define LinkStatisticsFrameLength sizeof(crsfPayloadLinkstatistics_s) // 10
-#define OpenTXsyncFrameLength     11                                  //
-#define BattSensorFrameLength     sizeof(crsf_sensor_battery_t)       // 8
-#define VTXcontrolFrameLength     12                                  //
-#define LUArespLength             6
+#define OpenTXsyncFrameLength 11                                      //
+#define BattSensorFrameLength sizeof(crsf_sensor_battery_t)           // 8
+#define VTXcontrolFrameLength 12                                      //
+#define LUArespLength 6
 
-#define CRSF_PAYLOAD_SIZE_MAX             62
-#define CRSF_FRAME_NOT_COUNTED_BYTES      2
-#define CRSF_MSP_FRAME_NOT_COUNTED_BYTES  6 // dest, orig, hdr, size, cmd, crc
-#define CRSF_FRAME_SIZE(payload_size)     ((payload_size) + CRSF_FRAME_NOT_COUNTED_BYTES) // See crsf_header_t.frame_size
+#define CRSF_PAYLOAD_SIZE_MAX 62
+#define CRSF_FRAME_NOT_COUNTED_BYTES 2
+#define CRSF_MSP_FRAME_NOT_COUNTED_BYTES 6                                            // dest, orig, hdr, size, cmd, crc
+#define CRSF_FRAME_SIZE(payload_size) ((payload_size) + CRSF_FRAME_NOT_COUNTED_BYTES) // See crsf_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + CRSF_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_MSP_FRAME_SIZE(payload_size) ((payload_size) + CRSF_MSP_FRAME_NOT_COUNTED_BYTES)
-#define CRSF_FRAME_SIZE_MAX               (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
+#define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 
 //////////////////////////////////////////////////////////////
 
@@ -234,7 +234,7 @@ protected:
     uint32_t BadPktsCount = 0;
 
     // CRSF frame TX buffer
-    uint8_t DRAM_ATTR outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)] __attribute__((aligned(32)));
+    uint8_t WORD_ALIGNED_ATTR outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)];
 
 private:
     bool CRSFframeActive = false;

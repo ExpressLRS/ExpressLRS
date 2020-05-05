@@ -39,13 +39,17 @@ uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t const *data, int length)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
+uint8_t ICACHE_RAM_ATTR CalcCRCxor(uint8_t *data, int length, uint8_t crc)
 {
-    uint8_t crc = 0;
     while (length--) {
         crc = crc ^ *data++;
     }
     return crc;
+}
+
+uint8_t ICACHE_RAM_ATTR CalcCRCxor(uint8_t data, uint8_t crc)
+{
+    return crc ^ data;
 }
 
 

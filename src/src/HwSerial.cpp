@@ -1,7 +1,7 @@
 #include "HwSerial.h"
 #include "FIFO.h"
 
-static uint8_t OutData[128] __attribute__((aligned(32)));
+static uint8_t DRAM_ATTR OutData[128];
 
 size_t HwSerial::write(FIFO &fifo)
 {

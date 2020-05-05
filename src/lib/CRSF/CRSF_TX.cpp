@@ -175,32 +175,32 @@ void CRSF_TX::processPacket(uint8_t const *input)
         connected();
     }
 
-    switch (*input++)
+    switch (input[0]) // check CRSF command
     {
-        case CRSF_FRAMETYPE_PARAMETER_WRITE:
-        {
-            if (input[0] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
-                input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
-            {
-                ParamWriteCallback(&input[2], 2);
-            }
-        }
-        case CRSF_FRAMETYPE_MSP_WRITE:
-        {
-            if (input[0] == CRSF_ADDRESS_FLIGHT_CONTROLLER &&
-                input[1] == CRSF_ADDRESS_RADIO_TRANSMITTER)
-            {
-                MspCallback(&input[2]);
-            }
-            break;
-        }
         case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
         {
-            //DEBUG_PRINT("X");
 #if (FEATURE_OPENTX_SYNC)
             RCdataLastRecv = micros();
 #endif
-            (RCdataCallback1)((crsf_channels_t *)input); // run new RC data callback
+            (RCdataCallback1)((crsf_channels_t *)&input[1]); // run new RC data callback
+            break;
+        }
+        case CRSF_FRAMETYPE_PARAMETER_WRITE:
+        {
+            if (input[1] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
+                input[2] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+            {
+                ParamWriteCallback(&input[3], 2);
+            }
+        }
+        case CRSF_FRAMETYPE_MSP_REQ:
+        case CRSF_FRAMETYPE_MSP_WRITE:
+        {
+            if (input[1] == CRSF_ADDRESS_FLIGHT_CONTROLLER &&
+                input[2] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+            {
+                MspCallback(&input[3]); // pointer to MSP packet
+            }
             break;
         }
         default:
