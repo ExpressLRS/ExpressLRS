@@ -2,6 +2,7 @@
 
 #include "platform.h"
 #include "helpers.h"
+#include <HardwareSerial.h>
 #include <Arduino.h>
 
 // TODO: MSP_PORT_INBUF_SIZE should be changed to
@@ -157,7 +158,7 @@ public:
     bool processReceivedByte(uint8_t c);
     mspPacket_t *getReceivedPacket();
     void markPacketReceived();
-    bool sendPacket(mspPacket_t *packet, Stream *port);
+    bool sendPacket(mspPacket_t *packet, HardwareSerial *port);
 
 private:
     mspPacket_t m_packet;

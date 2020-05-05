@@ -1,6 +1,7 @@
 #include "msp.h"
 #include "crc.h"
 #include "platform.h"
+#include "debug.h"
 
 /* ==========================================
 MSP V2 Message Structure:
@@ -189,10 +190,10 @@ bool MSP::processReceivedByte(uint8_t c)
             }
             else
             {
-                Serial.print("CRC failure on MSP packet - Got ");
-                Serial.print(c);
-                Serial.print(" Expected ");
-                Serial.println(m_crc);
+                DEBUG_PRINT("CRC failure on MSP packet - Got ");
+                DEBUG_PRINT(c);
+                DEBUG_PRINT(" Expected ");
+                DEBUG_PRINTLN(m_crc);
                 m_inputState = MSP_IDLE;
             }
             break;
@@ -220,7 +221,7 @@ void MSP::markPacketReceived()
     m_inputState = MSP_IDLE;
 }
 
-bool MSP::sendPacket(mspPacket_t *packet, Stream *port)
+bool MSP::sendPacket(mspPacket_t *packet, HardwareSerial *port)
 {
     // Sanity check the packet before sending
     if (packet->type == MSP_PACKET_UNKNOWN)
