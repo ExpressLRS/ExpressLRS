@@ -28,14 +28,13 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 #endif
 
 #ifdef PLATFORM_STM32
-  //SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
   SPI.setMOSI(GPIO_PIN_MOSI);
   SPI.setMISO(GPIO_PIN_MISO);
   SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.begin();
-  SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz //not correct for SPI2
+  SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 
 #endif
 }
@@ -62,11 +61,6 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t
 #else
   SPI.write(OutByte);
 #endif
-
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //   inBytes[i] = SPI.transfer(reg);
-  // }
 
   SPI.transfer(inBytes, numBytes);
 
@@ -106,10 +100,6 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, volatil
   SPI.write(OutByte);
 #endif
 
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //    inBytes[i] = SPI.transfer(reg);
-  // }
   SPI.transfer((uint8_t *)inBytes, numBytes);
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
@@ -143,11 +133,6 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *i
 #else
   SPI.write(reg | SPI_READ);
 #endif
-
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //   inBytes[i] = SPI.transfer(reg);
-  // }
 
   SPI.transfer((uint8_t *)inBytes, numBytes);
 

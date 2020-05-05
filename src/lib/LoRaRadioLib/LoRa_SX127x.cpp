@@ -10,8 +10,7 @@
 #include "../../src/targets.h"
 
 #define DEBUG
-
-uint32_t volatile SX127xDriver::PacketCount = 0;
+#define SX127x_DEBUG_TIMINGS
 
 void inline SX127xDriver::nullCallback(void){};
 
@@ -83,9 +82,7 @@ uint8_t SX127xDriver::maxPWR = 0b1111;
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
 
-ContinousMode SX127xDriver::ContMode = CONT_OFF;
 RFmodule_ SX127xDriver::RFmodule = RFMOD_SX1276;
-RadioState_ SX127xDriver::RadioState = RADIO_IDLE;
 
 enum InterruptAssignment_
 {
@@ -109,7 +106,7 @@ uint8_t SX127xDriver::Begin()
   delay(100);
 
 #if defined(PLATFORM_ESP32)
-  if (HighPowerModule)
+  if (SX127xDriver::HighPowerModule)
   {
     pinMode(SX127xDriver::_TXenablePin, OUTPUT);
     pinMode(SX127xDriver::_RXenablePin, OUTPUT);
@@ -238,9 +235,12 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 
   uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
-  status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
-  status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
-  status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
+  uint8_t buff[3] = {(uint8_t)((FRQ >> 16) & 0xFF), (uint8_t)((FRQ >> 8) & 0xFF), (uint8_t)(FRQ & 0xFF)}; //check speedup 
+  writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
+
+  //status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
+  //status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
+  //status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
 
   // set carrier frequency  CHANGED
   // uint32_t base = 2;
@@ -360,7 +360,7 @@ uint8_t SX127xDriver::SX127xBegin()
   return (ERR_NONE);
 }
 
-uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
+uint8_t SX127xDriver::TXsingle(uint8_t *data, uint8_t length)
 {
   detachInterrupt(SX127xDriver::SX127x_dio0);
   InterruptAssignment = NONE;
@@ -410,12 +410,14 @@ uint8_t SX127xDriver::TX(uint8_t *data, uint8_t length)
   NonceTX++;
   ClearIRQFlags();
 
-  return (ERR_NONE);
-
 #if defined(PLATFORM_ESP32)
-  digitalWrite(_RXenablePin, LOW);
-  digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
+  if (SX127xDriver::HighPowerModule)
+  {
+    digitalWrite(_RXenablePin, LOW);
+    digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
+  }
 #endif
+  return (ERR_NONE);
 }
 
 ///////////////////////////////////Functions for Hardware Timer/////////////////////////////////////////
@@ -479,15 +481,12 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 
   //Serial.println("TX done ISR");
 #if defined(PLATFORM_ESP32)
-
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
   //detachInterrupt(dio0);
 #endif
   ClearIRQFlags();
 
   //CalcOnAirTime();
-
-  RadioState = RADIO_IDLE;
   NonceTX++;
   TXdoneCallback1();
   TXdoneCallback2();
@@ -526,7 +525,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 #endif
 
   SetMode(SX127X_TX);
-  PacketCount = PacketCount + 1;
 
   return (ERR_NONE);
 }
@@ -610,11 +608,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
       ClearIRQFlags();
       return (ERR_RX_TIMEOUT);
     }
-    // if (digitalRead(SX127x_dio1) || millis() > (StartTime + timeout))
-    //{
-
-    //SetMode(SX127X_STANDBY);
-    //}
   }
 
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, length, data);
@@ -622,6 +615,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
   SX127xDriver::LastPacketSNR = SX127xDriver::GetLastPacketSNR();
 
   ClearIRQFlags();
+  SetMode(SX127X_STANDBY);
 
   NonceRX++;
 
@@ -666,6 +660,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
   SX127xDriver::LastPacketSNR = SX127xDriver::GetLastPacketSNR();
 
   ClearIRQFlags();
+  SetMode(SX127X_STANDBY);
   NonceRX++;
 
   return (ERR_NONE);

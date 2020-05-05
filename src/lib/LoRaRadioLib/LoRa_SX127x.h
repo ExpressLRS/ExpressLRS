@@ -72,17 +72,6 @@ typedef enum
     RFMOD_SX1278,
     RFMOD_SX1276
 } RFmodule_;
-typedef enum
-{
-    CONT_OFF,
-    CONT_TX,
-    CONT_RX
-} ContinousMode;
-typedef enum
-{
-    RADIO_IDLE,
-    RADIO_BUSY
-} RadioState_;
 
 class SX127xDriver
 {
@@ -131,8 +120,6 @@ public:
     static volatile uint8_t TXbuffLen;
     static volatile uint8_t RXbuffLen;
 
-    static volatile uint32_t PacketCount;
-
     static volatile bool headerExplMode;
 
     static volatile uint32_t TimerInterval; //20ms default for now.
@@ -140,7 +127,6 @@ public:
     static uint32_t currFreq;
     static uint8_t _syncWord;
 
-    static ContinousMode ContMode;
     static RFmodule_ RFmodule;
     static Bandwidth currBW;
     static SpreadingFactor currSF;
@@ -148,7 +134,6 @@ public:
     static uint8_t currPWR;
     static uint8_t maxPWR;
     static RadioOPmodes _opmode;
-    static RadioState_ RadioState;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -184,7 +169,7 @@ public:
 
     static uint8_t SX127xBegin();
     static uint8_t SetMode(uint8_t mode);
-    static uint8_t TX(uint8_t *data, uint8_t length);
+    static uint8_t TXsingle(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
 
     /////////////////Utility Funcitons//////////////////
