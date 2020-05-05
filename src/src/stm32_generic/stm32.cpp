@@ -68,17 +68,34 @@ R9DAC r9dac;
 /******************* CONFIG *********************/
 int8_t platform_config_load(struct platform_config &config)
 {
-    EEPROM.get(0, config);
+#if STORE_TO_FLASH
+    int8_t res = -1;
+    struct platform_config temp;
+    EEPROM.get(0, temp);
+    if (temp.key == ELRS_EEPROM_KEY)
+    {
+        /* load ok, copy values */
+        config.key = temp.key;
+        config.mode = temp.mode;
+        config.power = temp.power;
+        res = 0;
+    }
+#else
+    int8_t res = 0;
+    config.key = ELRS_EEPROM_KEY;
+#endif
     if (rate_config_dips < RATE_MAX)
         config.mode = rate_config_dips;
-    return (config.key == ELRS_EEPROM_KEY) ? 0 : -1;
+    return res;
 }
 
 int8_t platform_config_save(struct platform_config &config)
 {
     if (config.key != ELRS_EEPROM_KEY)
         return -1;
+#if STORE_TO_FLASH
     EEPROM.put(0, config);
+#endif
     return 0;
 }
 

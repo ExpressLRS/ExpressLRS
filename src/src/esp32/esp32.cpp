@@ -29,20 +29,40 @@ void feedTheDog(void)
 /******************* CONFIG *********************/
 int8_t platform_config_load(struct platform_config &config)
 {
-    config.key = EEPROM.readUInt(offsetof(struct platform_config, key));
-    config.mode = EEPROM.readUInt(offsetof(struct platform_config, mode));
-    config.power = EEPROM.readUInt(offsetof(struct platform_config, power));
-    return (config.key == ELRS_EEPROM_KEY) ? 0 : -1;
+#if STORE_TO_FLASH
+    struct platform_config temp;
+
+    temp.key = EEPROM.readUInt(offsetof(struct platform_config, key));
+    temp.mode = EEPROM.readUInt(offsetof(struct platform_config, mode));
+    temp.power = EEPROM.readUInt(offsetof(struct platform_config, power));
+
+    if (temp.key == ELRS_EEPROM_KEY)
+    {
+        /* load ok, copy values */
+        config.key = temp.key;
+        config.mode = temp.mode;
+        config.power = temp.power;
+        return 0;
+    }
+    return -1;
+#else
+    config.key = ELRS_EEPROM_KEY;
+    return 0;
+#endif
 }
 
 int8_t platform_config_save(struct platform_config &config)
 {
     if (config.key != ELRS_EEPROM_KEY)
         return -1;
+#if STORE_TO_FLASH
     EEPROM.writeUInt(offsetof(struct platform_config, key), config.key);
     EEPROM.writeUInt(offsetof(struct platform_config, mode), config.mode);
     EEPROM.writeUInt(offsetof(struct platform_config, power), config.power);
     return EEPROM.commit() ? 0 : -1;
+#else
+    return 0;
+#endif
 }
 
 /******************* SETUP *********************/

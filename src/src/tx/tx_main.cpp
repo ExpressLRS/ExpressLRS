@@ -29,7 +29,11 @@ static volatile uint8_t rx_buffer[8];
 static volatile uint8_t rx_buffer_handle = 0;
 static volatile uint8_t red_led_state = 0;
 
-struct platform_config config;
+struct platform_config pl_config = {
+    .key = 0,
+    .mode = RATE_DEFAULT,
+    .power = DefaultPowerEnum,
+};
 
 /////////// SYNC PACKET ////////
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
@@ -289,10 +293,10 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
     if (modified)
     {
         // Save modified values
-        config.key = ELRS_EEPROM_KEY;
-        config.mode = ExpressLRS_currAirRate->enum_rate;
-        config.power = PowerMgmt.currPower();
-        platform_config_save(config);
+        pl_config.key = ELRS_EEPROM_KEY;
+        pl_config.mode = ExpressLRS_currAirRate->enum_rate;
+        pl_config.power = PowerMgmt.currPower();
+        platform_config_save(pl_config);
 
         // and start timer if rate was changed
         if (modified & (1 << 1))
@@ -388,18 +392,16 @@ static void msp_data_cb(uint8_t const *const input)
 
 void setup()
 {
-    PowerLevels_e power = PWR_UNKNOWN;
+    PowerLevels_e power;
     msp_packet.reset();
 
     DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
 
     platform_setup();
-    if (platform_config_load(config) == 0)
-    {
-        current_rate_config = config.mode % RATE_MAX;
-        power = (PowerLevels_e)(config.power % PWR_UNKNOWN);
-    }
+    platform_config_load(pl_config);
+    current_rate_config = pl_config.mode % RATE_MAX;
+    power = (PowerLevels_e)(pl_config.power % PWR_UNKNOWN);
     platform_mode_notify();
 
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection

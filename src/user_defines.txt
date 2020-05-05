@@ -16,6 +16,11 @@
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
 
+### CRSFshot sync
+-DFEATURE_OPENTX_SYNC=1
+
+### Flash used
+-DSTORE_TO_FLASH=1
 
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 
