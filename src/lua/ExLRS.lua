@@ -164,20 +164,20 @@ local function processResp()
     while tries<MAX_TRIES
     do
         local command, data = crossfireTelemetryPop()
-	if (data == nil) then
-	    return
-	else
+    if (data == nil) then
+        return
+    else
             if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
                 AirRate.selected = data[3]
                 TLMinterval.selected = data[4]
                 MaxPower.selected = data[5]
                 RFfreq.selected = data[6]
-				if (gotFirstResp == false) then
-					gotFirstResp = true -- detect when first contact is made with TX module 
-				end
+                if (gotFirstResp == false) then
+                    gotFirstResp = true -- detect when first contact is made with TX module
+                end
             end
         end
-	tries = tries+1
+    tries = tries+1
     end
 end
 
@@ -247,10 +247,10 @@ end
 local function init_func()
     -- first push so that we get the current values. Didn't seem to work.
     crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-	--crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-	--crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+    --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
     processResp()
-	--if LCD_W == 480 then
+    --if LCD_W == 480 then
     --    refreshHorus()
    -- else
    --     refreshTaranis()
@@ -258,8 +258,8 @@ local function init_func()
 end
 
 local function bg_func(event)
-    --if refresh < 25 then 
-        --refresh = refresh + 1 
+    --if refresh < 25 then
+        --refresh = refresh + 1
     --end
 end
 --[[
@@ -277,70 +277,70 @@ end
 local function run_func(event)
 
     local pushed = false
-	
-	processResp() -- first check if we have data from the module
-	
-	if gotFirstResp == false then
-		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
-	end
+
+    processResp() -- first check if we have data from the module
+
+    if gotFirstResp == false then
+        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
+    end
 
     -- now process key events
-    if event == EVT_ROT_LEFT or 
-       event == EVT_MINUS_BREAK or 
+    if event == EVT_ROT_LEFT or
+       event == EVT_MINUS_BREAK or
        event == EVT_DOWN_BREAK then
         if selection.state == false then
             decrease(selection)
-			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+            crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
         else
             if selection.selected == 1 then
-	        -- AirRate
-		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x00})
-		pushed = true
-	    elseif selection.selected == 2 then
-	        -- TLMinterval
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x00})
-		pushed = true
-	    elseif selection.selected == 3 then
-	        -- MaxPower
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x00})
-		pushed = true
-	    elseif selection.selected == 4 then
-	        -- RFFreq
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x00})
-		pushed = true
+                -- AirRate
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x00})
+                pushed = true
+            elseif selection.selected == 2 then
+                -- TLMinterval
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x00})
+                pushed = true
+            elseif selection.selected == 3 then
+                -- MaxPower
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x00})
+                pushed = true
+            elseif selection.selected == 4 then
+                -- RFFreq
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x00})
+                pushed = true
             end
-	end
-    elseif event == EVT_ROT_RIGHT or 
-           event == EVT_PLUS_BREAK or 
-	   event == EVT_UP_BREAK then
+        end
+    elseif event == EVT_ROT_RIGHT or
+           event == EVT_PLUS_BREAK or
+           event == EVT_UP_BREAK then
         if selection.state == false then
             increase(selection)
-			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
+            crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
         else
             if selection.selected == 1 then
-	        -- AirRate
-		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x01})
-		pushed = true
-	    elseif selection.selected == 2 then
-	        -- TLMinterval
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x01})
-		pushed = true
-	    elseif selection.selected == 3 then
-	        -- MaxPower
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x01})
-		pushed = true
-	    elseif selection.selected == 4 then
-	        -- RFFreq
-	        crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x01})
-		pushed = true
+                -- AirRate
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x01, 0x01})
+                pushed = true
+            elseif selection.selected == 2 then
+                -- TLMinterval
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x02, 0x01})
+                pushed = true
+            elseif selection.selected == 3 then
+                -- MaxPower
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x03, 0x01})
+                pushed = true
+            elseif selection.selected == 4 then
+                -- RFFreq
+                crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x04, 0x01})
+                pushed = true
             end
-	end
+        end
     elseif event == EVT_ENTER_BREAK then
         selection.state = not selection.state
 
     elseif event == EVT_EXIT_BREAK and selection.state then
         -- I was hoping to find the T16 RTN button as an alternate way of deselecting
-	-- a field, but no luck so far
+    -- a field, but no luck so far
         selection.state = false
     end
 
