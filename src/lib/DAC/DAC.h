@@ -55,12 +55,11 @@ private:
     int8_t pin_RFswitch;
     int8_t pin_RFamp;
 
-    const r9dac_lut_s & get_lut(PowerLevels_e &power);
+    uint8_t get_lut_index(PowerLevels_e &power);
 
 public:
     R9DAC();
-    void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_,
-              int8_t pin_switch = -1, int8_t pin_amp = -1);
+    void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_, int8_t pin_switch = -1, int8_t pin_amp = -1);
     void standby();
     void resume();
     void setVoltageMV(uint32_t voltsMV);

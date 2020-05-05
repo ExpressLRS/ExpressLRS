@@ -84,6 +84,9 @@ void R9DAC::setVoltageMV(uint32_t voltsMV)
 
 void R9DAC::setVoltageRegDirect(uint8_t voltReg)
 {
+    if (voltReg == CurrVoltageRegVal)
+        return;
+
     CurrVoltageRegVal = voltReg;
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
@@ -96,11 +99,11 @@ void R9DAC::setVoltageRegDirect(uint8_t voltReg)
 
 void R9DAC::setPower(PowerLevels_e &power)
 {
-    uint32_t reqVolt = get_lut(power).volts;
+    uint32_t reqVolt = LUT[get_lut_index(power)].volts;
     setVoltageMV(reqVolt);
 }
 
-const R9DAC::r9dac_lut_s &R9DAC::get_lut(PowerLevels_e &power)
+uint8_t R9DAC::get_lut_index(PowerLevels_e &power)
 {
     uint8_t index;
     switch (power)
@@ -133,7 +136,7 @@ const R9DAC::r9dac_lut_s &R9DAC::get_lut(PowerLevels_e &power)
             break;
     };
 
-    return LUT[index];
+    return index;
 }
 
 #endif
