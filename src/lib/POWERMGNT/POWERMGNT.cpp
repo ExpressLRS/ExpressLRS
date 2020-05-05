@@ -5,8 +5,7 @@
 extern R9DAC r9dac;
 #endif
 
-POWERMGNT::POWERMGNT(SX127xDriver &radio) :
-    p_radio(radio), CurrentPower(PWR_UNKNOWN)
+POWERMGNT::POWERMGNT(SX127xDriver &radio) : p_radio(radio), CurrentPower(PWR_UNKNOWN)
 {
 }
 
@@ -44,7 +43,7 @@ PowerLevels_e POWERMGNT::currPower()
 void POWERMGNT::defaultPower(PowerLevels_e power)
 {
     if (power == PWR_UNKNOWN)
-        power = DefaultPowerEnum;
+        power = TX_POWER_DEFAULT;
     setPower(power);
 }
 

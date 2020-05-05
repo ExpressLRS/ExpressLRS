@@ -32,7 +32,7 @@ static volatile uint8_t red_led_state = 0;
 struct platform_config pl_config = {
     .key = 0,
     .mode = RATE_DEFAULT,
-    .power = DefaultPowerEnum,
+    .power = TX_POWER_DEFAULT,
 };
 
 /////////// SYNC PACKET ////////
@@ -233,7 +233,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 3:
-            // MaxPower
+            // TXPower
             modified = PowerMgmt.currPower();
             if (value == 0)
             {

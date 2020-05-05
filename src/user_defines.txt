@@ -22,6 +22,19 @@
 ### Flash used
 -DSTORE_TO_FLASH=1
 
+### Default power
+# Note: Power will be clipped to max power!
+# use only one of these values:
+#    PWR_10mW
+#    PWR_25mW
+#    PWR_50mW
+#    PWR_100mW
+#    PWR_250mW
+#    PWR_500mW
+#    PWR_1000mW
+#    PWR_2000mW
+-DTX_POWER_DEFAULT=PWR_50mW
+
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 
 # Sequential switches

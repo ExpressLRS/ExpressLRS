@@ -3,15 +3,17 @@
 #include "LoRaRadioLib.h"
 
 #ifdef TARGET_R9M_TX
-#define MaxPower         PWR_1000mW // was PWR_2000mW
-#define DefaultPowerEnum PWR_50mW   // was PWR_100mW
+#define MaxPower PWR_1000mW // was PWR_2000mW
 #elif defined(TARGET_1000mW_MODULE)
-#define MaxPower         PWR_250mW // 4
-#define DefaultPowerEnum PWR_50mW  // 2
+#define MaxPower PWR_250mW // 4
 #else
 // TARGET_100mW_MODULE
-#define MaxPower         PWR_50mW // 2
-#define DefaultPowerEnum PWR_50mW // 2
+#define MaxPower PWR_50mW // 2
+#endif
+
+#ifndef TX_POWER_DEFAULT
+/* Just in case, this should be defined in user_defines.txt file */
+#define TX_POWER_DEFAULT PWR_50mW
 #endif
 
 typedef enum
@@ -37,7 +39,7 @@ typedef enum
 class POWERMGNT
 {
 private:
-    SX127xDriver & p_radio;
+    SX127xDriver &p_radio;
     PowerLevels_e CurrentPower;
     void setPower(PowerLevels_e Power);
 
@@ -47,7 +49,7 @@ public:
     PowerLevels_e incPower();
     PowerLevels_e decPower();
     PowerLevels_e currPower();
-    void defaultPower(PowerLevels_e power = DefaultPowerEnum);
+    void defaultPower(PowerLevels_e power = TX_POWER_DEFAULT);
 
     uint8_t power_to_radio_enum(PowerLevels_e power = PWR_UNKNOWN)
     {
