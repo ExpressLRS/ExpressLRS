@@ -64,7 +64,7 @@ SX127xDriver::SX127xDriver(int rst, int dio0, int dio1, int txpin, int rxpin)
     currCR = CR_4_7;
     _syncWord = SX127X_SYNC_WORD;
     currFreq = 123456789;
-    currPWR = 0b0000;
+    currPWR = 0xf0; // define to max for forced init. was: 0b0000;
     //maxPWR = 0b1111;
 
     //LastPacketIsrMicros = 0;
@@ -154,8 +154,8 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
     if (currPWR == Power)
         return ERR_NONE;
 
-    //todo make function turn on PA_BOOST ect
     writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
+    writeRegister(SX1278_REG_PA_DAC, (0x80 | ((Power == 0xf) ? SX127X_PA_BOOST_ON : SX127X_PA_BOOST_OFF)));
 
     currPWR = Power;
 
@@ -170,7 +170,6 @@ uint8_t SX127xDriver::SetPreambleLength(uint16_t PreambleLen)
     uint8_t len[2] = {(uint8_t)(PreambleLen >> 16), (uint8_t)(PreambleLen & 0xff)};
     writeRegisterBurstStr(SX127X_REG_PREAMBLE_MSB, len, sizeof(len));
     //SetMode(SX127X_STANDBY);
-    //writeRegister(SX127X_REG_PREAMBLE_LSB, (uint8_t)PreambleLen);
     return (ERR_NONE);
 }
 
@@ -562,13 +561,8 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
 
     // output power configuration
     SetOutputPower(currPWR);
-    status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | 23, 5, 0); //200ma
+    writeRegister(SX127X_REG_OCP, SX127X_OCP_ON | 23); //200ma
     //writeRegister(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);
-
-    if (status != ERR_NONE)
-    {
-        return (status);
-    }
 
     // turn off frequency hopping
     writeRegister(SX127X_REG_HOP_PERIOD, SX127X_HOP_PERIOD_OFF);
