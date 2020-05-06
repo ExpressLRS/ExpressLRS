@@ -38,9 +38,8 @@ struct platform_config pl_config = {
 };
 
 /////////// SYNC PACKET ////////
-#if !SYNC_PACKET_INTERVAL
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
-#else
+#if SYNC_PACKET_INTERVAL
 static volatile uint32_t DRAM_ATTR sync_check_ratio = 0xff;
 #endif
 
@@ -150,10 +149,9 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
-#if !SYNC_PACKET_INTERVAL
     uint32_t current_ms = current_us / 1000U;
-    uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
-#endif
+    //uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
+    uint32_t sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
@@ -171,19 +169,11 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 
     freq = FHSSgetCurrFreq();
 
-#if !SYNC_PACKET_INTERVAL
     //only send sync when its time and only on channel 0;
     if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_ms - SyncPacketNextSend)))
-#else
-    // Check if it is  time to send a sync packet
-    // Note: give a time for RC frames after possible TLM frame
-    if ((_rf_rxtx_counter & sync_check_ratio) == 4)
-#endif
     {
         GenerateSyncPacketData(tx_buffer);
-#if !SYNC_PACKET_INTERVAL
         SyncPacketNextSend = current_ms;
-#endif
     }
     else if (tlm_send)
     {

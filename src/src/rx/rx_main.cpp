@@ -362,6 +362,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
                         LostConnection();
                     }
                 }
+                else
+                {
+                    // Send last command to FC if connected to keep it running
+                    crsf.sendRCFrameToFC();
+                }
 
                 FHSSsetCurrIndex(rx_buffer[1]);
                 NonceRXlocal = rx_buffer[2];
