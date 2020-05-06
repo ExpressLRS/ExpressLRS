@@ -324,11 +324,12 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     rngSeed(macSeed)
 
     uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
+    header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u;\n" % (uid_compare, DOMAIN, rand_version, use_local_rand)
     write_out = False
     try:
         with open(os.path.join('src', 'fhss_freqs.h'), "r") as _f:
             first = _f.readline()
-            write_out = (uid_compare + ";") not in first or (DOMAIN + ";") not in first
+            write_out = first != header
             _f.close()
     except IOError:
         write_out = True
@@ -336,7 +337,7 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     if write_out:
         print("write...")
         with open(os.path.join('src', 'fhss_freqs.h'), "w+") as _f:
-            _f.write("// MY_UID=%s; DOMAIN=%s; " % (uid_compare, DOMAIN))
+            _f.write(header)
             _f.write(FHSS_FREQS_HEAD)
 
             _f.write("#define FREQ_OFFSET_UID (%u)\n" % FREQ_OFFSET_UID)
