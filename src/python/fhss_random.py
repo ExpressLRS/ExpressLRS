@@ -1,0 +1,291 @@
+import random
+import os
+
+NR_SEQUENCE_ENTRIES = 256
+
+
+FHSS_FREQS_HEAD = '''
+#ifndef FHSS_FREQS_H_
+#define FHSS_FREQS_H_
+
+#include "platform.h"
+#include <stdint.h>
+
+'''
+
+FHSS_FREQS_TAIL = '''
+#endif /* FHSS_FREQS_H_ */
+'''
+
+
+def check_fhss_freqs_h(DOMAIN, MY_UID):
+
+    MY_UID = [int(val, 16) for val in MY_UID.replace("-DMY_UID=", "").split(",")]
+    DOMAIN = DOMAIN.replace("-D", "")
+
+    FREQ_OFFSET_UID = (MY_UID[4] + MY_UID[5])
+
+    # Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
+    if DOMAIN == "Regulatory_Domain_AU_433":
+        FHSSfreqs = [
+            433420000,
+            433920000,
+            434420000
+        ]
+
+    elif DOMAIN == "Regulatory_Domain_AU_915":
+        FHSSfreqs = [
+            915500000,
+            916100000,
+            916700000,
+            917300000,
+
+            917900000,
+            918500000,
+            919100000,
+            919700000,
+
+            920300000,
+            920900000,
+            921500000,
+            922100000,
+
+            922700000,
+            923300000,
+            923900000,
+            924500000,
+
+            925100000,
+            925700000,
+            926300000,
+            926900000
+        ]
+
+    elif DOMAIN == "Regulatory_Domain_EU_868":
+        '''
+        s/* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
+        * Note: these frequencies fall in the license free H-band, but in combination with 500kHz
+        * LoRa modem bandwidth used by ExpressLRS (EU allows up to 125kHz modulation BW only) they
+        * will never pass RED certification and they are ILLEGAL to use.
+        *
+        * Therefore we simply maximize the usage of available spectrum so laboratory testing of the software won't disturb existing
+        * 868MHz ISM band traffic too much.
+        */
+        '''
+        FHSSfreqs = [
+            863275000, # band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
+            863800000,
+            864325000,
+            864850000,
+            865375000, # Band H2, 865 - 868.6MHz, 1.0% dutycycle or CSMA, 25mW EIRP
+            865900000,
+            866425000,
+            866950000,
+            867475000,
+            868000000,
+            868525000, # Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
+            869050000,
+            869575000,
+        ]
+
+    elif DOMAIN == "Regulatory_Domain_EU_868_R9":
+            # https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
+            FHSSfreqs = [
+                # FrSkyR9_freq_map_868
+                859504640,
+                860004352,
+                860504064,
+                861003776,
+                861503488,
+                862003200,
+                862502912,
+                863002624,
+                863502336,
+                864002048,
+                864501760,
+                865001472,
+                865501184,
+                866000896,
+                866500608,
+                867000320,
+                867500032,
+                867999744,
+                868499456,
+                868999168,
+                869498880,
+                869998592,
+                870498304,
+                870998016,
+                871497728,
+                871997440,
+                872497152,
+                # last two determined by FrSkyR9_step
+                #0, 0
+            ]
+
+    elif DOMAIN == "Regulatory_Domain_EU_433":
+        '''
+         Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
+         Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
+               of the spectrum, nothing else. As such, these are likely illegal to use.
+        '''
+        FHSSfreqs = [
+            433100000,
+            433925000,
+            434450000
+        ]
+
+    elif DOMAIN == "Regulatory_Domain_FCC_915":
+        # Very definitely not fully checked. An initial pass at increasing the hops
+        FHSSfreqs = [
+            903500000,
+            904100000,
+            904700000,
+            905300000,
+
+            905900000,
+            906500000,
+            907100000,
+            907700000,
+
+            908300000,
+            908900000,
+            909500000,
+            910100000,
+
+            910700000,
+            911300000,
+            911900000,
+            912500000,
+
+            913100000,
+            913700000,
+            914300000,
+            914900000,
+
+            915500000, # as per AU..
+            916100000,
+            916700000,
+            917300000,
+
+            917900000,
+            918500000,
+            919100000,
+            919700000,
+
+            920300000,
+            920900000,
+            921500000,
+            922100000,
+
+            922700000,
+            923300000,
+            923900000,
+            924500000,
+
+            925100000,
+            925700000,
+            926300000,
+            926900000
+        ]
+
+    else:
+        raise Exception("[error] No regulatory domain defined, please define one in common.h")
+        return
+
+    num_of_fhss = len(FHSSfreqs)
+    print("Number of FHSS frequencies = %u" % num_of_fhss)
+
+    macSeed = (MY_UID[2] << 24) + (MY_UID[3] << 16) + (MY_UID[4] << 8) + MY_UID[5];
+    random.seed(macSeed)
+
+    def print_fhss(vals):
+        buffer = []
+        print_lst = []
+        i = 0
+        for val in vals:
+            print_lst.append("%2u" % val);
+
+            if ((i + 1) % 16 == 0):
+                buffer.append(", ".join(print_lst))
+                print(" ".join(print_lst));
+                print_lst = []
+            i += 1
+        if print_lst:
+            buffer.append(", ".join(print_lst))
+            print(" ".join(print_lst));
+
+        for iter in range(num_of_fhss):
+            print("  index %2d: %3u" % (iter, vals.count(iter)))
+        return buffer
+
+
+    def FHSSrandomiseFHSSsequence_v2():
+        vals = [-1] * NR_SEQUENCE_ENTRIES
+        index = -1
+        for iter in range(NR_SEQUENCE_ENTRIES):
+            # dont use same value if it is close to last three
+            skip = [vals[iter - 3], vals[iter - 2], vals[iter - 1]]
+            while (index in skip or
+                   ((index - 1) % NR_SEQUENCE_ENTRIES) in skip or
+                   ((index + 1) % NR_SEQUENCE_ENTRIES) in skip):
+                index = random.randrange(0, num_of_fhss, 1)
+            vals[iter] = index
+        return vals
+
+
+    uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
+    write_out = False
+    try:
+        with open(os.path.join('src', 'fhss_freqs.h'), "r") as _f:
+            first = _f.readline()
+            write_out = (uid_compare + ";") not in first or (DOMAIN + ";") not in first
+            _f.close()
+    except IOError:
+        write_out = True
+
+    if write_out:
+        print("write...")
+        with open(os.path.join('src', 'fhss_freqs.h'), "w+") as _f:
+            _f.write("// MY_UID=%s; DOMAIN=%s; " % (uid_compare, DOMAIN))
+            _f.write(FHSS_FREQS_HEAD)
+
+            _f.write("#define FREQ_OFFSET_UID (%u)\n" % FREQ_OFFSET_UID)
+            _f.write("#define NR_SEQUENCE_ENTRIES %u\n\n" % NR_SEQUENCE_ENTRIES)
+
+            _f.write("/* Note: UID offset included */\n")
+            _f.write('static uint32_t DRAM_ATTR FHSSfreqs[%u] = {\n' % num_of_fhss)
+            freqs = ["    %u" % (freq + FREQ_OFFSET_UID) for freq in FHSSfreqs]
+            _f.write(",\n".join(freqs))
+            _f.write("\n};\n\n")
+
+            _f.write('uint8_t DRAM_ATTR FHSSsequence[NR_SEQUENCE_ENTRIES] = {\n')
+            FHSSsequence = FHSSrandomiseFHSSsequence_v2()
+            hops = print_fhss(FHSSsequence)
+            for line in hops:
+                _f.write("    %s,\n" % line)
+            _f.write("};\n")
+            _f.write('/*\n Usage per freq:\n')
+            for iter in range(num_of_fhss):
+                _f.write("    index %2d: %3u\n" % (iter, FHSSsequence.count(iter)))
+            _f.write('*/\n')
+            _f.write(FHSS_FREQS_TAIL)
+            _f.close()
+
+
+def check_env_and_parse(build_flags):
+    my_domain = ""
+    my_uid = ""
+    for flag in build_flags:
+        if "Regulatory_Domain" in flag:
+            my_domain = flag
+        elif "MY_UID" in flag:
+            my_uid = flag
+
+    if my_domain and my_uid:
+        check_fhss_freqs_h(my_domain, my_uid)
+    else:
+        raise Exception("Domain and UI are missing!")
+
+#debug:
+#check_fhss_freqs_h("-DRegulatory_Domain_EU_868", "-DMY_UID=0xB8,0x27,0xEB,0x61,0x1D,0x38")

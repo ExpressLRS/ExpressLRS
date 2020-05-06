@@ -1,13 +1,5 @@
 #pragma once
 
-// define exacly one frequency band of operation here
-
-// #define Regulatory_Domain_AU_915
-// #define Regulatory_Domain_EU_868
-// #define Regulatory_Domain_AU_433
-// #define Regulatory_Domain_EU_433
-// #define Regulatory_Domain_FCC_915
-
 #include "LoRaRadioLib.h"
 #include <stdint.h>
 
@@ -16,7 +8,7 @@
 
 #define One_Bit_Switches
 
-#define BUTTON_RESET_INTERVAL_RX  4000u // Hold button for 4 sec to reboot RX
+#define BUTTON_RESET_INTERVAL_RX 4000u  // Hold button for 4 sec to reboot RX
 #define WEB_UPDATE_PRESS_INTERVAL 2000u // hold button for 2 sec to enable webupdate mode
 
 typedef enum
@@ -37,9 +29,9 @@ extern uint8_t const DRAM_ATTR CRCCaesarCipher;
 extern uint8_t const DRAM_ATTR DeviceAddr;
 
 // These are used as message type header
-#define DEIVCE_ADDR_GET(_B)      ((_B)&0b11111100)
+#define DEIVCE_ADDR_GET(_B) ((_B)&0b11111100)
 #define DEIVCE_ADDR_GENERATE(_B) (_B)
-#define TYPE_GET(_B)             ((_B)&0b00000011)
+#define TYPE_GET(_B) ((_B)&0b00000011)
 
 uint8_t getSyncWord(void);
 
@@ -81,7 +73,7 @@ enum
 };
 
 #define RATE_GET_OSD_NUM(_x) ((RATE_MAX + 1) - (_x))
-#define RATE_DEFAULT         RATE_200HZ
+#define RATE_DEFAULT RATE_200HZ
 
 typedef struct expresslrs_mod_settings_s
 {

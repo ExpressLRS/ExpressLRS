@@ -16,8 +16,11 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL 500u
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u  // how often to send the switch data packet (ms) when there is no response from RX
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u // how often to send the switch data packet (ms) when there we have a connection
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
+
+#define SYNC_PACKET_INTERVAL 0x1F // 0x0F (1/16), 0x1F (1/32), 0x3F (1/64)
+
 ///////////////////
 
 /// define some libs to use ///
@@ -36,7 +39,9 @@ struct platform_config pl_config = {
 };
 
 /////////// SYNC PACKET ////////
+#if !SYNC_PACKET_INTERVAL
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
+#endif
 
 /////////// CONNECTION /////////
 static uint32_t LastPacketRecvMillis = 0;
@@ -130,8 +135,10 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
+#if !SYNC_PACKET_INTERVAL
     uint32_t current_ms = current_us / 1000U;
     uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
+#endif
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
@@ -149,11 +156,19 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 
     freq = FHSSgetCurrFreq();
 
+#if !SYNC_PACKET_INTERVAL
     //only send sync when its time and only on channel 0;
     if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_ms - SyncPacketNextSend)))
+#else
+    // Check if it is  time to send a sync packet
+    // Note: give a time for RC frames after possible TLM frame
+    if ((_rf_rxtx_counter & SYNC_PACKET_INTERVAL) == 4)
+#endif
     {
         GenerateSyncPacketData(tx_buffer);
+#if !SYNC_PACKET_INTERVAL
         SyncPacketNextSend = current_ms;
+#endif
     }
     else if (tlm_send)
     {
@@ -412,7 +427,7 @@ void setup()
 
     TxTimer.callbackTock = &SendRCdataToRF;
 
-    FHSSrandomiseFHSSsequence();
+    //FHSSrandomiseFHSSsequence();
 
 #if defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     Radio.RFmodule = RFMOD_SX1278;

@@ -4,181 +4,14 @@
 #include "common.h"
 #include "utils.h"
 
-// Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
-#ifdef Regulatory_Domain_AU_433
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    433420000,
-    433920000,
-    434420000};
+#include "fhss_freqs.h"
 
-#elif defined Regulatory_Domain_AU_915
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    915500000,
-    916100000,
-    916700000,
-    917300000,
-
-    917900000,
-    918500000,
-    919100000,
-    919700000,
-
-    920300000,
-    920900000,
-    921500000,
-    922100000,
-
-    922700000,
-    923300000,
-    923900000,
-    924500000,
-
-    925100000,
-    925700000,
-    926300000,
-    926900000};
-
-#elif defined Regulatory_Domain_EU_868
-#define FRSKY_FREQS 0
-
-/* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
- * Note: these frequencies fall in the license free H-band, but in combination with 500kHz
- * LoRa modem bandwidth used by ExpressLRS (EU allows up to 125kHz modulation BW only) they
- * will never pass RED certification and they are ILLEGAL to use.
- *
- * Therefore we simply maximize the usage of available spectrum so laboratory testing of the software won't disturb existing
- * 868MHz ISM band traffic too much.
- */
-#if !FRSKY_FREQS
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    863275000, // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
-    863800000,
-    864325000,
-    864850000,
-    865375000, // Band H2, 865 - 868.6MHz, 1.0% dutycycle or CSMA, 25mW EIRP
-    865900000,
-    866425000,
-    866950000,
-    867475000,
-    868000000,
-    868525000, // Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
-    869050000,
-    869575000};
-
-#else //FRSKY_FREQS
-// https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    // FrSkyR9_freq_map_868
-    859504640,
-    860004352,
-    860504064,
-    861003776,
-    861503488,
-    862003200,
-    862502912,
-    863002624,
-    863502336,
-    864002048,
-    864501760,
-    865001472,
-    865501184,
-    866000896,
-    866500608,
-    867000320,
-    867500032,
-    867999744,
-    868499456,
-    868999168,
-    869498880,
-    869998592,
-    870498304,
-    870998016,
-    871497728,
-    871997440,
-    872497152,
-    // last two determined by FrSkyR9_step
-    /*0, 0*/
-};
-#endif
-
-#elif defined Regulatory_Domain_EU_433
-/* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
- * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
- * of the spectrum, nothing else. As such, these are likely illegal to use.
- */
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    433100000,
-    433925000,
-    434450000};
-
-#elif defined Regulatory_Domain_FCC_915
-/* Very definitely not fully checked. An initial pass at increasing the hops
-*/
-static uint32_t DRAM_ATTR FHSSfreqs[] = {
-    903500000,
-    904100000,
-    904700000,
-    905300000,
-
-    905900000,
-    906500000,
-    907100000,
-    907700000,
-
-    908300000,
-    908900000,
-    909500000,
-    910100000,
-
-    910700000,
-    911300000,
-    911900000,
-    912500000,
-
-    913100000,
-    913700000,
-    914300000,
-    914900000,
-
-    915500000, // as per AU..
-    916100000,
-    916700000,
-    917300000,
-
-    917900000,
-    918500000,
-    919100000,
-    919700000,
-
-    920300000,
-    920900000,
-    921500000,
-    922100000,
-
-    922700000,
-    923300000,
-    923900000,
-    924500000,
-
-    925100000,
-    925700000,
-    926300000,
-    926900000};
-
-#else
-#error No regulatory domain defined, please define one in common.h
-#endif
-
-#define NR_SEQUENCE_ENTRIES 256
 uint_fast8_t volatile DRAM_ATTR FHSSptr = 0;
-uint8_t DRAM_ATTR FHSSsequence[NR_SEQUENCE_ENTRIES] = {0};
-
-#define FREQ_OFFSET_UID (UID[4] + UID[5])
-int_fast32_t volatile DRAM_ATTR FreqCorrection = FREQ_OFFSET_UID;
+int_fast32_t volatile DRAM_ATTR FreqCorrection = 0;
 
 void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
 {
-    FreqCorrection = FREQ_OFFSET_UID;
+    FreqCorrection = 0;
 }
 
 void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
@@ -220,7 +53,7 @@ uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 // Set all of the flags in the array to true, except for the first one
 // which corresponds to the sync channel and is never available for normal
 // allocation.
-static void resetIsAvailable(uint8_t * const array, uint32_t size)
+static void resetIsAvailable(uint8_t *const array, uint32_t size)
 {
     // channel 0 is the sync channel and is never considered available
     array[0] = 0;
@@ -253,7 +86,7 @@ void FHSSrandomiseFHSSsequence()
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
     DEBUG_PRINTLN("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_EU_868
+#elif defined Regulatory_Domain_EU_868 || defined Regulatory_Domain_EU_868_R9
     DEBUG_PRINTLN("Setting 868MHz Mode");
 #elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     DEBUG_PRINTLN("Setting 433MHz Mode");

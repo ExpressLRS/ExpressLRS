@@ -474,7 +474,7 @@ void setup()
 
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
 
-    FHSSrandomiseFHSSsequence();
+    //FHSSrandomiseFHSSsequence();
 
     // Prepare radio
 #if defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)

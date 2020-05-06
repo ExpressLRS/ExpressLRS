@@ -1,5 +1,6 @@
 Import("env")
 import os
+import fhss_random
 
 def parse_flags(path):
     build_flags = env['BUILD_FLAGS']
@@ -18,5 +19,7 @@ def parse_flags(path):
         print("File '%s' does not exist" % path)
 
 parse_flags("user_defines.txt")
+
+fhss_random.check_env_and_parse(env['BUILD_FLAGS'])
 
 print("build flags: %s" % env['BUILD_FLAGS'])
