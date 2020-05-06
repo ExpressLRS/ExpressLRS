@@ -19,7 +19,7 @@ FHSS_FREQS_TAIL = '''
 
 RNG_MAX = 0x7FFF
 seed = 0
-use_local_rand = True
+use_local_rand = 1
 rand_version = 1
 
 # returns values between 0 and 0x7FFF
@@ -38,7 +38,7 @@ def rngSeed(newSeed):
         global seed
         seed = newSeed
     else:
-        random.seed(macSeed)
+        random.seed(newSeed)
 
 # returns 0 <= x < max where max <= 256
 # (actual upper limit is higher, but there is one and I haven't
@@ -47,9 +47,8 @@ def rngN(max):
     if use_local_rand:
         x = rng()
         result = (x * max) / RNG_MAX
-        return result
-    else:
-        random.randrange(0, max, 1)
+        return int(result)
+    return random.randrange(0, max, 1)
 
 
 def print_fhss(vals, num_of_fhss):
@@ -114,7 +113,7 @@ def FHSSrandomiseFHSSsequence_v1(num_of_fhss):
 
                 if (index == num_of_fhss):
                     # This should never happen
-                    print("FAILED to find the available entry!\n");
+                    print("FAILED to find the available entry for '%s'!" % c)
                     # What to do? We don't want to hang as that will stop us getting to the wifi hotspot
                     # Use the sync channel
                     index = 0
@@ -214,39 +213,39 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
         ]
 
     elif DOMAIN == "Regulatory_Domain_EU_868_R9":
-            # https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
-            FHSSfreqs = [
-                # FrSkyR9_freq_map_868
-                859504640,
-                860004352,
-                860504064,
-                861003776,
-                861503488,
-                862003200,
-                862502912,
-                863002624,
-                863502336,
-                864002048,
-                864501760,
-                865001472,
-                865501184,
-                866000896,
-                866500608,
-                867000320,
-                867500032,
-                867999744,
-                868499456,
-                868999168,
-                869498880,
-                869998592,
-                870498304,
-                870998016,
-                871497728,
-                871997440,
-                872497152,
-                # last two determined by FrSkyR9_step
-                #0, 0
-            ]
+        # https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/4ae30dc3b049f18147d6e278817f7a5f425c2fb0/Multiprotocol/FrSkyR9_sx1276.ino#L43
+        FHSSfreqs = [
+            # FrSkyR9_freq_map_868
+            859504640,
+            860004352,
+            860504064,
+            861003776,
+            861503488,
+            862003200,
+            862502912,
+            863002624,
+            863502336,
+            864002048,
+            864501760,
+            865001472,
+            865501184,
+            866000896,
+            866500608,
+            867000320,
+            867500032,
+            867999744,
+            868499456,
+            868999168,
+            869498880,
+            869998592,
+            870498304,
+            870998016,
+            871497728,
+            871997440,
+            872497152,
+            # last two determined by FrSkyR9_step
+            #0, 0
+        ]
 
     elif DOMAIN == "Regulatory_Domain_EU_433":
         '''
