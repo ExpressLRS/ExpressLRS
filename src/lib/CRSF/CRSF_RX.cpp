@@ -14,27 +14,29 @@ void ICACHE_RAM_ATTR CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 void CRSF_RX::LinkStatisticsSend()
 {
     uint8_t len = CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength);
+    uint8_t out[len]; // 10 + 2 + 2 bytes
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    out[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    out[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
+    out[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(&out[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
-    sendFrameToFC(outBuffer, len);
+    sendFrameToFC(out, len);
 }
 
 void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC()
 {
     uint8_t len = CRSF_EXT_FRAME_SIZE(RCframeLength);
+    uint8_t out[len]; // 22 + 2 + 2 bytes
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = CRSF_FRAME_SIZE(RCframeLength);
-    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+    out[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    out[1] = CRSF_FRAME_SIZE(RCframeLength);
+    out[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    memcpy(&outBuffer[3], &ChannelsPacked, RCframeLength);
+    memcpy(&out[3], &ChannelsPacked, RCframeLength);
 
-    sendFrameToFC(outBuffer, len);
+    sendFrameToFC(out, len);
 }
 
 void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t &packet)

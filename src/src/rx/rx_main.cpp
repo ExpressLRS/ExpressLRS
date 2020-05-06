@@ -17,7 +17,6 @@ static void SetRFLinkRate(uint8_t rate);
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
-#define RC_DATA_FROM_ISR 1
 #define PRINT_FREQ_ERROR 0
 
 ///////////////////
@@ -29,7 +28,6 @@ volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 static volatile uint32_t tlm_check_ratio = 0;
 static volatile uint8_t DRAM_ATTR rx_buffer[8];
-static volatile uint8_t rx_buffer_handle = 0;
 static volatile uint32_t rx_last_valid_us = 0; //Time the last valid packet was recv
 static volatile int32_t rx_freqerror = 0;
 
@@ -264,49 +262,6 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
-#if !RC_DATA_FROM_ISR
-void process_rx_packet(void)
-{
-    switch (TYPE_GET(rx_buffer[0]))
-    {
-        case RC_DATA_PACKET: //Standard RC Data Packet
-            if (connectionState == STATE_connected)
-            {
-                rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
-                crsf.sendRCFrameToFC();
-            }
-            break;
-
-#if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-        case SWITCH_DATA_PACKET: // Switch Data Packet
-            // extra layer of protection incase the crc and addr headers fail us.
-            if ((rx_buffer[3] == rx_buffer[1]) &&
-                (rx_buffer[4] == rx_buffer[2]))
-            {
-                if (connectionState == STATE_connected)
-                {
-                    rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
-                    crsf.sendRCFrameToFC();
-                }
-                //NonceRXlocal = rx_buffer[5];
-                //FHSSsetCurrIndex(rx_buffer[6]);
-            }
-            break;
-#endif
-
-        case TLM_PACKET: // telemetry packet
-            break;
-
-        case SYNC_PACKET:
-            // sync packet is handled in rx isr
-        default:
-            break;
-    }
-
-    getRFlinkInfo();
-}
-#endif // !RC_DATA_FROM_ISR
-
 void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 {
     //DEBUG_PRINT("I");
@@ -374,7 +329,6 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
             }
             break;
         }
-#if RC_DATA_FROM_ISR
         case RC_DATA_PACKET: //Standard RC Data Packet
             if (connectionState == STATE_connected)
             {
@@ -407,12 +361,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
                 msp_packet_rx.reset();
             }
             break;
-#endif // RC_DATA_FROM_ISR
 
         default:
-#if !RC_DATA_FROM_ISR
-            rx_buffer_handle = 1;
-#endif // !RC_DATA_FROM_ISR
             break;
     }
 
@@ -554,16 +504,7 @@ static uint32_t led_toggle_ms = 0;
 void loop()
 {
     uint32_t now = millis();
-
-#if !RC_DATA_FROM_ISR
-    if (rx_buffer_handle)
-    {
-        process_rx_packet();
-        LastValidPacket = now;
-        rx_buffer_handle = 0;
-        goto exit_loop;
-    }
-#endif // !RC_DATA_FROM_ISR
+    uint8_t rx_buffer_handle = 0;
 
     if (connectionState == STATE_disconnected)
     {
@@ -603,8 +544,5 @@ void loop()
 
     platform_loop(connectionState);
 
-#if !RC_DATA_FROM_ISR
-exit_loop:
-#endif
     platform_wd_feed();
 }
