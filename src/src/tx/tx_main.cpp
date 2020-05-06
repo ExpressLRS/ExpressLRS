@@ -80,14 +80,26 @@ static void process_rx_buffer()
     platform_connection_state(STATE_connected);
     platform_set_led(0);
     LastPacketRecvMillis = millis();
+    recv_tlm_counter++;
 
-    if (TYPE_GET(in_byte) == TLM_PACKET)
+    switch (TYPE_GET(in_byte))
     {
-        recv_tlm_counter++;
-        crsf.LinkStatisticsExtract(&rx_buffer[1],
-                                   Radio.LastPacketSNR,
-                                   Radio.LastPacketRSSI,
-                                   downlink_linkQuality);
+        case DL_PACKET_TLM_MSP:
+        {
+            break;
+        }
+        case DL_PACKET_TLM_LINK:
+        {
+            crsf.LinkStatisticsExtract(&rx_buffer[1],
+                                       Radio.LastPacketSNR,
+                                       Radio.LastPacketRSSI,
+                                       downlink_linkQuality);
+            break;
+        }
+        case DL_PACKET_FREE1:
+        case DL_PACKET_FREE2:
+        default:
+            break;
     }
 }
 

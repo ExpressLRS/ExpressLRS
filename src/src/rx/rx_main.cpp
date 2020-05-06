@@ -142,7 +142,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
-    tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET; // address + tlm packet
+    tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
 
     crsf.LinkStatisticsPack(&tx_buffer[1]);
 
