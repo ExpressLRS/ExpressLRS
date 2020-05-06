@@ -21,9 +21,6 @@ typedef enum
 } connectionState_e;
 extern volatile connectionState_e connectionState;
 
-void led_set_state(bool state);
-void led_toggle(void);
-
 extern uint8_t const DRAM_ATTR UID[6];
 extern uint8_t const DRAM_ATTR CRCCaesarCipher;
 extern uint8_t const DRAM_ATTR DeviceAddr;

@@ -21,7 +21,7 @@ enum
     RC_DATA_PACKET = 0b00,
     SWITCH_DATA_PACKET = 0b01,
     SYNC_PACKET = 0b10,
-    TLM_PACKET = 0b11,
+    UL_PACKET_MSP = 0b11,
 };
 
 enum

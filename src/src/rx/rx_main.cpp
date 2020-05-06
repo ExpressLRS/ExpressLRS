@@ -27,7 +27,6 @@ RcChannels rc_ch;
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 static volatile uint32_t tlm_check_ratio = 0;
-static volatile uint8_t DRAM_ATTR rx_buffer[8];
 static volatile uint32_t rx_last_valid_us = 0; //Time the last valid packet was recv
 static volatile int32_t rx_freqerror = 0;
 
@@ -52,6 +51,20 @@ static uint32_t RFmodeNextCycle = 0;
 static uint32_t RFmodeCycleDelay = 0;
 static volatile uint8_t scanIndex = 0;
 static uint8_t tentative_cnt = 0;
+
+///////////////////////////////////////
+
+static bool ledState = false;
+inline void led_set_state(bool state)
+{
+    ledState = state;
+    platform_set_led(state);
+}
+
+inline void led_toggle(void)
+{
+    led_set_state(!ledState);
+}
 
 ///////////////////////////////////////
 
@@ -262,15 +275,13 @@ void ICACHE_RAM_ATTR GotConnection()
     platform_connection_state(connectionState);
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
+void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 {
     //DEBUG_PRINT("I");
-    uint32_t current_us = Radio.LastPacketIsrMicros; //micros();
-
-    volatile_memcpy(rx_buffer, buff, sizeof(rx_buffer));
-
-    uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
-    uint8_t address = rx_buffer[0];
+    const connectionState_e _conn_state = connectionState;
+    const uint32_t current_us = Radio.LastPacketIsrMicros;
+    const uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
+    const uint8_t address = rx_buffer[0];
 
     if (rx_buffer[7] != calculatedCRC)
     {
@@ -301,11 +312,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
                 rx_buffer[5] == UID[4] &&
                 rx_buffer[6] == UID[5])
             {
-                if (connectionState == STATE_disconnected)
+                if (_conn_state == STATE_disconnected)
                 {
                     TentativeConnection();
                 }
-                else if (connectionState == STATE_tentative)
+                else if (_conn_state == STATE_tentative)
                 {
                     if (NonceRXlocal == rx_buffer[2] &&
                         FHSSgetCurrIndex() == rx_buffer[1])
@@ -325,12 +336,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 
                 FHSSsetCurrIndex(rx_buffer[1]);
                 NonceRXlocal = rx_buffer[2];
-                //TxTimer.reset();
             }
             break;
         }
         case RC_DATA_PACKET: //Standard RC Data Packet
-            if (connectionState == STATE_connected)
+            if (_conn_state == STATE_connected)
             {
                 rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
                 crsf.sendRCFrameToFC();
@@ -343,7 +353,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
             if ((rx_buffer[3] == rx_buffer[1]) &&
                 (rx_buffer[4] == rx_buffer[2]))
             {
-                if (connectionState == STATE_connected)
+                if (_conn_state == STATE_connected)
                 {
                     rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
                     crsf.sendRCFrameToFC();
@@ -354,9 +364,10 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
             break;
 #endif
 
-        case TLM_PACKET: // telemetry packet
+        case UL_PACKET_MSP:
             if (rc_ch.tlm_receive(rx_buffer, msp_packet_rx))
             {
+                // TODO: Check if packet is for receiver
                 crsf.sendMSPFrameToFC(msp_packet_rx);
                 msp_packet_rx.reset();
             }

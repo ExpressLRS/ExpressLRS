@@ -234,9 +234,6 @@ protected:
     uint32_t GoodPktsCount = 0;
     uint32_t BadPktsCount = 0;
 
-    // CRSF frame TX buffer
-    uint8_t WORD_ALIGNED_ATTR outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)];
-
 private:
     bool CRSFframeActive = false;
     uint8_t SerialInPacketStart = 0;
@@ -244,5 +241,8 @@ private:
     uint8_t SerialInPacketPtr = 0;               // index where we are reading/writing
     uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 };
+
+// CRSF frame TX buffer
+extern uint8_t DMA_ATTR outBuffer[];
 
 #endif

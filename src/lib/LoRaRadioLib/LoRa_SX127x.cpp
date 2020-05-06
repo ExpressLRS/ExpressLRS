@@ -357,6 +357,10 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, 
 /////////////////////////////////// RX functions ///////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
+//uint32_t DRAM_ATTR __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
+//uint8_t * DRAM_ATTR RXdataBuffer = (uint8_t *)&__RXdataBuffer;
+static uint8_t DMA_ATTR RXdataBuffer[16];
+
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
     LastPacketIsrMicros = micros();

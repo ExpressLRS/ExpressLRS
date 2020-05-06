@@ -179,7 +179,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     else if (tlm_send)
     {
         /* send tlm packet if needed */
-        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET;
+        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_MSP;
 
         if (rc_ch.tlm_send(tx_buffer, msp_packet_tx))
         {

@@ -178,9 +178,6 @@ private:
     //volatile uint8_t p_isr_mask = 0;
     volatile uint8_t p_last_payload_len = 0;
 
-    uint32_t __RXdataBuffer[16 / 4]; // ESP requires aligned buffer
-    uint8_t *RXdataBuffer = (uint8_t *)&__RXdataBuffer;
-
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);
     void ICACHE_RAM_ATTR reg_dio1_tx_done(void);

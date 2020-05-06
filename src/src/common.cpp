@@ -49,8 +49,7 @@ uint8_t getSyncWord(void)
 {
     if (my_sync_word)
         return my_sync_word;
-    uint8_t i,
-        u, syncw = 0;
+    uint8_t i, u, syncw = 0;
     for (u = 0; u < 10 && (syncw < 0x10 || syncw == SX127X_SYNC_WORD_LORAWAN); u++)
     {
         syncw = SX127X_SYNC_WORD + u;
@@ -105,16 +104,4 @@ uint16_t TLMratioEnumToValue(uint8_t enumval)
 #else
     return (256u >> (enumval));
 #endif
-}
-
-static bool ledState = false;
-void led_set_state(bool state)
-{
-    ledState = state;
-    platform_set_led(state);
-}
-
-void led_toggle(void)
-{
-    led_set_state(!ledState);
 }
