@@ -6,9 +6,6 @@
 void paramNullCallback(uint8_t const *, uint16_t){};
 void (*CRSF_TX::ParamWriteCallback)(uint8_t const *msg, uint16_t len) = &paramNullCallback;
 
-void MspNullCallback(uint8_t const *const){};
-void (*CRSF_TX::MspCallback)(uint8_t const *const input) = MspNullCallback;
-
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 
@@ -88,6 +85,35 @@ void CRSF_TX::sendLUAresponseToRadio(uint8_t *data, uint8_t size)
 
     for (uint8_t i = 0; i < size; i++)
         outBuffer[5 + i] = data[i];
+
+    CrsfFramePushToFifo(outBuffer, len);
+}
+
+void CRSF_TX::sendMspPacketToRadio(mspPacket_t &msp)
+{
+    if (!CRSFstate)
+        return;
+
+    uint8_t msp_len = CRSF_MSP_FRAME_SIZE(msp.payloadSize);
+    uint8_t len = CRSF_EXT_FRAME_SIZE(msp_len);
+
+    // CRSF MSP packet
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = CRSF_FRAME_SIZE(msp_len);
+    outBuffer[2] = CRSF_FRAMETYPE_MSP_RESP;
+
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+
+    // Encapsulated MSP payload
+    outBuffer[5] = msp.flags;       // 0x30, header
+    outBuffer[6] = msp.payloadSize; // mspPayloadSize
+    outBuffer[7] = msp.function;
+    for (uint16_t i = 8; i < (msp.payloadSize + 8); i++)
+    {
+        // copy packet payload into outBuffer and pad with zeros where required
+        outBuffer[i] = msp.payload[i];
+    }
 
     CrsfFramePushToFifo(outBuffer, len);
 }

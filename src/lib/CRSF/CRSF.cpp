@@ -1,11 +1,13 @@
 #include "CRSF.h"
 #include "debug.h"
 
-void nullCallback(void){};
 void rcNullCb(crsf_channels_t const *const) {}
-
 void (*CRSF::RCdataCallback1)(crsf_channels_t const *const) = &rcNullCb; // function is called whenever there is new RC data.
 
+void MspNullCallback(uint8_t const *const){};
+void (*CRSF::MspCallback)(uint8_t const *const input) = MspNullCallback;
+
+void nullCallback(void){};
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
 

@@ -103,6 +103,16 @@ void CRSF_RX::processPacket(uint8_t const *data)
             break;
         }
 
+        case CRSF_FRAMETYPE_MSP_RESP:
+        {
+            if (data[1] == CRSF_ADDRESS_RADIO_TRANSMITTER &&
+                data[2] == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+            {
+                MspCallback(&data[3]); // pointer to MSP packet
+            }
+            break;
+        }
+
         default:
             break;
     }

@@ -379,23 +379,23 @@ uint8_t RcChannels::getNextSwitchIndex()
 }
 
 typedef union {
-    struct {
+    struct
+    {
         uint16_t func;
         uint16_t payloadSize;
         uint8_t flags;
         uint8_t data1;
     } hdr;
-    struct {
+    struct
+    {
         uint8_t data[6];
     } payload;
 } TlmDataPacket_s;
 
 uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
-                                             mspPacket_t& packet)
+                                             mspPacket_t &packet)
 {
-    uint8_t PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET;
     TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)&output[1];
-    output[0] = PacketHeaderAddr;
 
     if (!packet.payloadIterator)
     {
@@ -414,7 +414,7 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
 }
 
 uint8_t ICACHE_RAM_ATTR RcChannels::tlm_receive(volatile uint8_t const *const input,
-                                                mspPacket_t& packet)
+                                                mspPacket_t &packet)
 {
     TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)&input[1];
     if (!packet.payloadSize)

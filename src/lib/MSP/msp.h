@@ -9,7 +9,8 @@
 // dynamically allocate array length based on the payload size
 // Hardcoding payload size to 8 bytes for now, since MSP is
 // limited to a 4 byte payload on the BF side
-#define MSP_PORT_INBUF_SIZE 16 // was 8
+//#define MSP_PORT_INBUF_SIZE 16 // was 8
+#define MSP_PORT_INBUF_SIZE 256
 
 #define CHECK_PACKET_PARSING() \
     if (packet->error)         \
@@ -81,7 +82,7 @@ typedef struct
 
     uint8_t ICACHE_RAM_ATTR iterated()
     {
-        return (payloadSize <= payloadIterator);
+        return (0 < payloadSize && payloadSize <= payloadIterator);
     }
 
     void ICACHE_RAM_ATTR reset()

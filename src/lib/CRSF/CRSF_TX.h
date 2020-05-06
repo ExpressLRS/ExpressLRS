@@ -18,6 +18,7 @@ public:
     void LinkStatisticsSend(void);
     void BatterySensorSend(void);
     void sendLUAresponseToRadio(uint8_t *data, uint8_t len);
+    void sendMspPacketToRadio(mspPacket_t &msp);
     void sendSetVTXchannelToRadio(uint8_t band, uint8_t channel);
 
     // OpenTX Syncing
@@ -37,7 +38,6 @@ public:
 
     ///// Callbacks /////
     static void (*ParamWriteCallback)(uint8_t const *msg, uint16_t len);
-    static void (*MspCallback)(uint8_t const *const input);
 
     ///// Variables /////
 

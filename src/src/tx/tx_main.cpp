@@ -53,7 +53,8 @@ static uint32_t recv_tlm_counter = 0;
 static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
 static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
-static mspPacket_t msp_packet;
+static mspPacket_t msp_packet_tx;
+static mspPacket_t msp_packet_rx;
 static volatile uint_fast8_t tlm_send = 0;
 
 //////////// LUA /////////
@@ -86,6 +87,7 @@ static void process_rx_buffer()
     {
         case DL_PACKET_TLM_MSP:
         {
+            rc_ch.tlm_receive(rx_buffer, msp_packet_rx);
             break;
         }
         case DL_PACKET_TLM_LINK:
@@ -186,9 +188,11 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     else if (tlm_send)
     {
         /* send tlm packet if needed */
-        if (rc_ch.tlm_send(tx_buffer, msp_packet))
+        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + TLM_PACKET;
+
+        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx))
         {
-            msp_packet.reset();
+            msp_packet_tx.reset();
             tlm_send = 0;
         }
     }
@@ -290,19 +294,19 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             uint8_t vtx_cmd[] = {(uint8_t)(freq >> 8), (uint8_t)freq, power, (power == 0)};
             uint8_t size = sizeof(vtx_cmd);
             // VTX settings
-            msp_packet.reset();
-            //msp_packet.makeCommand();
-            msp_packet.flags = MSP_VERSION | MSP_STARTFLAG;
-            msp_packet.payloadSize = size + 1;
-            crc = CalcCRCxor((uint8_t)msp_packet.payloadSize, crc);
-            msp_packet.function = MSP_VTX_SET_CONFIG;
-            crc = CalcCRCxor((uint8_t)msp_packet.function, crc);
+            msp_packet_tx.reset();
+            //msp_packet_tx.makeCommand();
+            msp_packet_tx.flags = MSP_VERSION | MSP_STARTFLAG;
+            msp_packet_tx.payloadSize = size + 1;
+            crc = CalcCRCxor((uint8_t)msp_packet_tx.payloadSize, crc);
+            msp_packet_tx.function = MSP_VTX_SET_CONFIG;
+            crc = CalcCRCxor((uint8_t)msp_packet_tx.function, crc);
             for (uint8_t iter = 0; iter < size; iter++)
             {
-                msp_packet.addByte(vtx_cmd[iter]);
+                msp_packet_tx.addByte(vtx_cmd[iter]);
                 crc = CalcCRCxor((uint8_t)vtx_cmd[iter], crc);
             }
-            msp_packet.addByte(crc);
+            msp_packet_tx.addByte(crc);
             tlm_send = 1; // rdy for sending
             break;
         }
@@ -404,6 +408,9 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 /* OpenTX sends v1 MSPs */
 static void msp_data_cb(uint8_t const *const input)
 {
+    if (tlm_send)
+        return;
+
     /* process MSP packet from radio
      *  [0] header: seq&0xF,
      *  [1] payload size
@@ -411,10 +418,10 @@ static void msp_data_cb(uint8_t const *const input)
      *  [3...] payload + crc
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
-    msp_packet.reset(hdr);
-    msp_packet.type = MSP_PACKET_V1_CMD;
+    msp_packet_tx.reset(hdr);
+    msp_packet_tx.type = MSP_PACKET_V1_CMD;
     if (hdr->payloadSize)
-        volatile_memcpy(msp_packet.payload,
+        volatile_memcpy(msp_packet_tx.payload,
                         hdr->payload,
                         hdr->payloadSize);
 
@@ -424,7 +431,8 @@ static void msp_data_cb(uint8_t const *const input)
 void setup()
 {
     PowerLevels_e power;
-    msp_packet.reset();
+    msp_packet_tx.reset();
+    msp_packet_rx.reset();
 
     DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);
@@ -513,6 +521,12 @@ void loop()
                 downlink_linkQuality = 0;
 #endif
         }
+    }
+
+    if (msp_packet_rx.iterated())
+    {
+        crsf.sendMspPacketToRadio(msp_packet_rx);
+        msp_packet_rx.reset();
     }
 
     // Process CRSF packets from TX

@@ -206,6 +206,7 @@ public:
 
     ///// Callbacks /////
     static void (*RCdataCallback1)(crsf_channels_t const *const channels); //function pointer for new RC data callback
+    static void (*MspCallback)(uint8_t const *const input);
 
     static void (*disconnected)();
     static void (*connected)();

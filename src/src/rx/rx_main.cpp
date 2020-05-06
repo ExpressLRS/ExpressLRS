@@ -44,7 +44,9 @@ static LPF LPF_UplinkRSSI(5);
 
 static volatile uint32_t LastValidPacket = 0; //Time the last valid packet was recv
 static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERVAL;
-static mspPacket_t msp_packet;
+static mspPacket_t msp_packet_rx;
+static mspPacket_t msp_packet_tx;
+static volatile uint_fast8_t tlm_msp_send = 0;
 
 ///////////////////////////////////////////////////////////////
 ///////////// Variables for Sync Behaviour ////////////////////
@@ -142,10 +144,22 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
-    tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
+    if (tlm_msp_send)
+    {
+        /* send msp packet if needed */
+        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_MSP;
 
-    crsf.LinkStatisticsPack(&tx_buffer[1]);
-
+        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx))
+        {
+            msp_packet_tx.reset();
+            tlm_msp_send = 0;
+        }
+    }
+    else
+    {
+        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
+        crsf.LinkStatisticsPack(&tx_buffer[1]);
+    }
     uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
     tx_buffer[7] = crc;
     Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
@@ -382,10 +396,10 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *buff)
 #endif
 
         case TLM_PACKET: // telemetry packet
-            if (rc_ch.tlm_receive(rx_buffer, msp_packet))
+            if (rc_ch.tlm_receive(rx_buffer, msp_packet_rx))
             {
-                crsf.sendMSPFrameToFC(msp_packet);
-                msp_packet.reset();
+                crsf.sendMSPFrameToFC(msp_packet_rx);
+                msp_packet_rx.reset();
             }
             break;
 #endif // RC_DATA_FROM_ISR
@@ -465,9 +479,33 @@ void tx_done_cb(void)
     Radio.RXnb(FHSSgetCurrFreq()); // ~67us
 }
 
+/* FC sends v1 MSPs */
+static void msp_data_cb(uint8_t const *const input)
+{
+    if (tlm_msp_send)
+        return;
+
+    /* process MSP packet from flight controller
+     *  [0] header: seq&0xF,
+     *  [1] payload size
+     *  [2] function
+     *  [3...] payload + crc
+     */
+    mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
+    msp_packet_tx.reset(hdr);
+    msp_packet_tx.type = MSP_PACKET_V1_CMD;
+    if (hdr->payloadSize)
+        volatile_memcpy(msp_packet_tx.payload,
+                        hdr->payload,
+                        hdr->payloadSize);
+
+    tlm_msp_send = 1; // rdy for sending
+}
+
 void setup()
 {
-    msp_packet.reset();
+    msp_packet_rx.reset();
+    msp_packet_tx.reset();
 
     DEBUG_PRINTLN("ExpressLRS RX Module...");
     platform_setup();
@@ -503,6 +541,7 @@ void setup()
     // Init first scan index
     scanIndex = RATE_DEFAULT;
     // Initialize CRSF protocol handler
+    crsf.MspCallback = msp_data_cb;
     crsf.Begin();
 }
 
