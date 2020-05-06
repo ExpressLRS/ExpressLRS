@@ -22,6 +22,12 @@ seed = 0
 use_local_rand = 1
 rand_version = 1
 
+# Fill the FHSSsequence with channel indices
+# The 0 index is special - the 'sync' channel. The sync channel appears every
+# syncInterval hops. The other channels are randomly distributed between the
+# sync channels
+SYNC_INTERVAL = 16
+
 # returns values between 0 and 0x7FFF
 # NB rngN depends on this output range, so if we change the
 # behaviour rngN will need updating
@@ -73,11 +79,6 @@ def print_fhss(vals, num_of_fhss):
 
 
 def FHSSrandomiseFHSSsequence_v1(num_of_fhss):
-    # Fill the FHSSsequence with channel indices
-    # The 0 index is special - the 'sync' channel. The sync channel appears every
-    # syncInterval hops. The other channels are randomly distributed between the
-    # sync channels
-    SYNC_INTERVAL = None #20
 
     def resetIsAvailable():
         l = [1] * num_of_fhss
@@ -324,7 +325,8 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     rngSeed(macSeed)
 
     uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
-    header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u;\n" % (uid_compare, DOMAIN, rand_version, use_local_rand)
+    header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u; SYNC_INTERVAL=%s\n" % (
+        uid_compare, DOMAIN, rand_version, use_local_rand, SYNC_INTERVAL)
     write_out = False
     try:
         with open(os.path.join('src', 'fhss_freqs.h'), "r") as _f:

@@ -16,8 +16,9 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL 500u
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150u // 250u
+//#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350u
 
 #define SYNC_PACKET_INTERVAL 1
 ///////////////////
@@ -150,8 +151,8 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
     uint32_t current_ms = current_us / 1000U;
-    //uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
-    uint32_t sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
+    uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
+    //uint32_t sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
