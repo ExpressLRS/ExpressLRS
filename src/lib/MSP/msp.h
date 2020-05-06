@@ -80,12 +80,12 @@ typedef struct
     uint8_t volatile flags;
     bool volatile error;
 
-    uint8_t ICACHE_RAM_ATTR iterated()
+    inline uint8_t iterated()
     {
         return (0 < payloadSize && payloadSize <= payloadIterator);
     }
 
-    void ICACHE_RAM_ATTR reset()
+    inline void ICACHE_RAM_ATTR reset()
     {
         type = MSP_PACKET_UNKNOWN;
         flags = 0;
@@ -123,18 +123,18 @@ typedef struct
         payload[payloadIterator++] = b;
     }
 
-    void ICACHE_RAM_ATTR setIteratorToSize()
+    inline void ICACHE_RAM_ATTR setIteratorToSize()
     {
         payloadSize = payloadIterator;
         payloadIterator = 0;
     }
 
-    void ICACHE_RAM_ATTR makeResponse()
+    inline void ICACHE_RAM_ATTR makeResponse()
     {
         type = MSP_PACKET_RESPONSE;
     }
 
-    void ICACHE_RAM_ATTR makeCommand()
+    inline void ICACHE_RAM_ATTR makeCommand()
     {
         type = MSP_PACKET_COMMAND;
     }
