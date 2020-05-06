@@ -17,6 +17,131 @@ FHSS_FREQS_TAIL = '''
 #endif /* FHSS_FREQS_H_ */
 '''
 
+RNG_MAX = 0x7FFF
+seed = 0
+use_local_rand = True
+rand_version = 1
+
+# returns values between 0 and 0x7FFF
+# NB rngN depends on this output range, so if we change the
+# behaviour rngN will need updating
+def rng():
+    global seed
+    m = 2147483648
+    a = 214013
+    c = 2531011
+    seed = (a * seed + c) % m
+    return seed >> 16
+
+def rngSeed(newSeed):
+    if use_local_rand:
+        global seed
+        seed = newSeed
+    else:
+        random.seed(macSeed)
+
+# returns 0 <= x < max where max <= 256
+# (actual upper limit is higher, but there is one and I haven't
+#  thought carefully about what it is)
+def rngN(max):
+    if use_local_rand:
+        x = rng()
+        result = (x * max) / RNG_MAX
+        return result
+    else:
+        random.randrange(0, max, 1)
+
+
+def print_fhss(vals, num_of_fhss):
+    buffer = []
+    print_lst = []
+    i = 0
+    for val in vals:
+        print_lst.append("%2u" % val);
+
+        if ((i + 1) % 16 == 0):
+            buffer.append(", ".join(print_lst))
+            print(" ".join(print_lst));
+            print_lst = []
+        i += 1
+    if print_lst:
+        buffer.append(", ".join(print_lst))
+        print(" ".join(print_lst));
+
+    for iter in range(num_of_fhss):
+        print("  index %2d: %3u" % (iter, vals.count(iter)))
+    return buffer
+
+
+def FHSSrandomiseFHSSsequence_v1(num_of_fhss):
+    # Fill the FHSSsequence with channel indices
+    # The 0 index is special - the 'sync' channel. The sync channel appears every
+    # syncInterval hops. The other channels are randomly distributed between the
+    # sync channels
+    SYNC_INTERVAL = None #20
+
+    def resetIsAvailable():
+        l = [1] * num_of_fhss
+        if SYNC_INTERVAL is not None:
+            l[0] = 0
+        return l
+
+    isAvailable = resetIsAvailable()
+    FHSSsequence = [0] * NR_SEQUENCE_ENTRIES
+    prev = 0 # needed to prevent repeats of the same index
+
+    # for each slot in the sequence table
+    for i in range(NR_SEQUENCE_ENTRIES):
+        if SYNC_INTERVAL is not None and ((i % SYNC_INTERVAL) == 0):
+            # assign sync channel 0
+            FHSSsequence[i] = 0
+            prev = 0
+        else:
+            # pick one of the available channels. May need to loop to avoid repeats
+            index = prev
+            while (index == prev): # can't use index if it repeats the previous value
+                c = rngN(isAvailable.count(1)) # returnc 0<c<nLeft
+                # find the c'th entry in the isAvailable array
+                # can skip 0 as that's the sync channel and is never available for normal allocation
+                index = 1 if SYNC_INTERVAL is not None else 0
+                found = 0
+                while (index < num_of_fhss):
+                    if (isAvailable[index]):
+                        if (found == c):
+                            break
+                        found += 1
+                    index += 1
+
+                if (index == num_of_fhss):
+                    # This should never happen
+                    print("FAILED to find the available entry!\n");
+                    # What to do? We don't want to hang as that will stop us getting to the wifi hotspot
+                    # Use the sync channel
+                    index = 0
+                    break
+
+            FHSSsequence[i] = index  # assign the value to the sequence array
+            isAvailable[index] = 0   # clear the flag
+            prev = index             # remember for next iteration
+            if (isAvailable.count(1) == 0):
+                # we've assigned all of the channels, so reset for next cycle
+                isAvailable = resetIsAvailable()
+    return FHSSsequence
+
+
+def FHSSrandomiseFHSSsequence_v2(num_of_fhss):
+    vals = [-1] * NR_SEQUENCE_ENTRIES
+    index = -1
+    for iter in range(NR_SEQUENCE_ENTRIES):
+        # dont use same value if it is close to last three
+        skip = [vals[iter - 3], vals[iter - 2], vals[iter - 1]]
+        while (index in skip or
+                ((index - 1) % NR_SEQUENCE_ENTRIES) in skip or
+                ((index + 1) % NR_SEQUENCE_ENTRIES) in skip):
+            index = rngN(num_of_fhss)
+        vals[iter] = index
+    return vals
+
 
 def check_fhss_freqs_h(DOMAIN, MY_UID):
 
@@ -196,43 +321,8 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     num_of_fhss = len(FHSSfreqs)
     print("Number of FHSS frequencies = %u" % num_of_fhss)
 
-    macSeed = (MY_UID[2] << 24) + (MY_UID[3] << 16) + (MY_UID[4] << 8) + MY_UID[5];
-    random.seed(macSeed)
-
-    def print_fhss(vals):
-        buffer = []
-        print_lst = []
-        i = 0
-        for val in vals:
-            print_lst.append("%2u" % val);
-
-            if ((i + 1) % 16 == 0):
-                buffer.append(", ".join(print_lst))
-                print(" ".join(print_lst));
-                print_lst = []
-            i += 1
-        if print_lst:
-            buffer.append(", ".join(print_lst))
-            print(" ".join(print_lst));
-
-        for iter in range(num_of_fhss):
-            print("  index %2d: %3u" % (iter, vals.count(iter)))
-        return buffer
-
-
-    def FHSSrandomiseFHSSsequence_v2():
-        vals = [-1] * NR_SEQUENCE_ENTRIES
-        index = -1
-        for iter in range(NR_SEQUENCE_ENTRIES):
-            # dont use same value if it is close to last three
-            skip = [vals[iter - 3], vals[iter - 2], vals[iter - 1]]
-            while (index in skip or
-                   ((index - 1) % NR_SEQUENCE_ENTRIES) in skip or
-                   ((index + 1) % NR_SEQUENCE_ENTRIES) in skip):
-                index = random.randrange(0, num_of_fhss, 1)
-            vals[iter] = index
-        return vals
-
+    macSeed = (MY_UID[2] << 24) + (MY_UID[3] << 16) + (MY_UID[4] << 8) + MY_UID[5]
+    rngSeed(macSeed)
 
     uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
     write_out = False
@@ -260,8 +350,11 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
             _f.write("\n};\n\n")
 
             _f.write('uint8_t DRAM_ATTR FHSSsequence[NR_SEQUENCE_ENTRIES] = {\n')
-            FHSSsequence = FHSSrandomiseFHSSsequence_v2()
-            hops = print_fhss(FHSSsequence)
+            if rand_version == 1:
+                FHSSsequence = FHSSrandomiseFHSSsequence_v1(num_of_fhss)
+            elif rand_version == 2:
+                FHSSsequence = FHSSrandomiseFHSSsequence_v2(num_of_fhss)
+            hops = print_fhss(FHSSsequence, num_of_fhss)
             for line in hops:
                 _f.write("    %s,\n" % line)
             _f.write("};\n")
