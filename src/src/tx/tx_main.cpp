@@ -19,8 +19,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250u
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
 
-#define SYNC_PACKET_INTERVAL 0x1F // 0x0F (1/16), 0x1F (1/32), 0x3F (1/64)
-
+#define SYNC_PACKET_INTERVAL 1
 ///////////////////
 
 /// define some libs to use ///
@@ -41,6 +40,8 @@ struct platform_config pl_config = {
 /////////// SYNC PACKET ////////
 #if !SYNC_PACKET_INTERVAL
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
+#else
+static volatile uint32_t DRAM_ATTR sync_check_ratio = 0xff;
 #endif
 
 /////////// CONNECTION /////////
@@ -162,7 +163,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 #else
     // Check if it is  time to send a sync packet
     // Note: give a time for RC frames after possible TLM frame
-    if ((_rf_rxtx_counter & SYNC_PACKET_INTERVAL) == 4)
+    if ((_rf_rxtx_counter & sync_check_ratio) == 4)
 #endif
     {
         GenerateSyncPacketData(tx_buffer);
@@ -359,6 +360,9 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         connectionState = STATE_disconnected;
         tlm_check_ratio = TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval) - 1;
     }
+#if SYNC_PACKET_INTERVAL
+    sync_check_ratio = ExpressLRS_currAirRate->sync_interval;
+#endif
     platform_connection_state(connectionState);
 
     //if (!init)

@@ -55,6 +55,15 @@ enum
     FHSS_8 = 8,
 };
 
+enum
+{
+    // Note: modulo bitmask!
+    SYNC_64 = 0x3f,
+    SYNC_32 = 0x1f,
+    SYNC_16 = 0xf,
+    SYNC_8 = 0x7,
+};
+
 typedef enum
 {
     RF_DOWNLINK_INFO = 0,
@@ -87,6 +96,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy.
     uint8_t PreambleLen;
     uint8_t enum_rate;
+    uint8_t sync_interval;
     uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;
