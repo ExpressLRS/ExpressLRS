@@ -300,7 +300,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     rx_freqerror = Radio.GetFrequencyError();
 
     rx_last_valid_us = current_us;
-    LastValidPacket = current_us;
+    LastValidPacket = millis();
 
     switch (TYPE_GET(address))
     {
@@ -535,7 +535,7 @@ void loop()
     else if (connectionState > STATE_disconnected)
     {
         // check if we lost conn.
-        if (ExpressLRS_currAirRate->RFmodeCycleAddtionalTime < (int32_t)(micros() - LastValidPacket))
+        if (ExpressLRS_currAirRate->RFmodeCycleAddtionalTime < (int32_t)(now - LastValidPacket))
         {
             LostConnection();
         }
