@@ -572,22 +572,22 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     writeRegister(SX127X_REG_HOP_PERIOD, SX127X_HOP_PERIOD_OFF);
 
     // basic setting (bw, cr, sf, header mode and CRC)
-    uint8_t cfg2 = (sf | SX127X_TX_MODE_SINGLE | SX127X_RX_CRC_MODE_OFF);
-    status = setRegValue(SX127X_REG_MODEM_CONFIG_2, cfg2, 7, 2);
+    uint8_t cfg2 = (sf | SX127X_TX_MODE_SINGLE | SX127X_RX_CRC_MODE_OFF); // RX timeout MSB = 0b00
+    //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, cfg2, 7, 2);
+    //if (status != ERR_NONE)
+    //{
+    //    return (status);
+    //}
+    writeRegister(SX127X_REG_MODEM_CONFIG_2, cfg2);
     if (sf == SX127X_SF_6)
     {
-        status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
+        writeRegister(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
     }
     else
     {
-        status = setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
+        writeRegister(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12);
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
-    }
-
-    if (status != ERR_NONE)
-    {
-        return (status);
     }
 
     // set the sync word
@@ -686,9 +686,8 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t error_hz, uint32_t fr
     if (!frf)
         return;
     // Calc new PPM
-    error_hz /= (frf / 1E6);
     error_hz *= 95;
-    error_hz /= 100;
+    error_hz /= (frf / 1E4);
 
     uint8_t regValue = (uint8_t)error_hz;
     if (regValue == p_ppm_off)
