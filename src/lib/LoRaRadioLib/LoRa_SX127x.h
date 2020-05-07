@@ -16,16 +16,17 @@
 
 typedef enum
 {
-    CURR_OPMODE_FSK_OOK = 0b00000000,
-    CURR_OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
-    CURR_OPMODE_SLEEP = 0b00000000,
-    CURR_OPMODE_STANDBY = 0b00000001,
-    CURR_OPMODE_FSTX = 0b00000010,
-    CURR_OPMODE_TX = 0b00000011,
-    CURR_OPMODE_FSRX = 0b00000100,
-    CURR_OPMODE_RXCONTINUOUS = 0b00000101,
-    CURR_OPMODE_RXSINGLE = 0b00000110,
-    CURR_OPMODE_CAD = 0b00000111
+    OPMODE_FSK_OOK = 0b00000000,
+    OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
+    OPMODE_SLEEP = 0b00000000,
+    OPMODE_STANDBY = 0b00000001,
+    OPMODE_FSTX = 0b00000010,
+    OPMODE_TX = 0b00000011,
+    OPMODE_FSRX = 0b00000100,
+    OPMODE_RXCONTINUOUS = 0b00000101,
+    OPMODE_RXSINGLE = 0b00000110,
+    OPMODE_CAD = 0b00000111,
+    OPMODE_UNDEF = 0b11111111
 } RadioOPmodes;
 
 typedef enum
@@ -108,9 +109,6 @@ public:
     static uint8_t SX127x_MISO;
     static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
-
-    static bool HighPowerModule;
-
     /////////////////////////////
 
     ///////////Radio Variables////////
@@ -133,7 +131,7 @@ public:
     static CodingRate currCR;
     static uint8_t currPWR;
     static uint8_t maxPWR;
-    static RadioOPmodes _opmode;
+    static RadioOPmodes currOpmode;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -142,18 +140,25 @@ public:
     static float PacketLossRate;
     static volatile uint8_t NonceTX;
     static volatile uint8_t NonceRX;
+    static uint32_t TotalTime;
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;
     static uint32_t TXspiTime;
     static uint32_t HeadRoom;
-    static uint32_t LastTXdoneMicros;
     static uint32_t TXdoneMicros;
     /////////////////////////////////
+
+    //// Local Variables //// Copy of values for SPI speed optimisation
+    static uint8_t CURR_REG_PAYLOAD_LENGTH;
+    static uint8_t CURR_REG_DIO_MAPPING_1;
+    static uint8_t CURR_REG_FIFO_ADDR_PTR;
+
 
     ////////////////Configuration Functions/////////////
     static uint8_t Begin();
     static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
     static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
+    static void ConfigLoraDefaults();
 
     static uint8_t SetBandwidth(Bandwidth bw);
     static uint32_t getCurrBandwidth();

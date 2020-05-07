@@ -12,6 +12,4 @@ void DEBUG_PrintRadioPacketStats()
     Serial.println(Radio.TimeOnAir);
     Serial.print("HeadRoom: ");
     Serial.println(Radio.HeadRoom);
-    Serial.print("PacketCount(HZ): ");
-    Serial.println(Radio.PacketCount);
 }

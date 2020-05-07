@@ -149,29 +149,21 @@
 #define SX127X_MASK_IRQ_FLAG_CAD_DETECTED             0b11111110  //  0     0     valid LoRa signal detected during CAD operation
 
 // SX127X_REG_FIFO_TX_BASE_ADDR
-#define SX127X_FIFO_TX_BASE_ADDR_MAX                  0b00000000  //  7     0     allocate the entire FIFO buffer for TX only
+#define SX127X_FIFO_TX_BASE_ADDR_MAX                  0b01111111  //  7     0     Split the FIFO buffer between RX and TX
 
 // SX127X_REG_FIFO_RX_BASE_ADDR
-#define SX127X_FIFO_RX_BASE_ADDR_MAX                  0b00000000  //  7     0     allocate the entire FIFO buffer for RX only
+#define SX127X_FIFO_RX_BASE_ADDR_MAX                  0b10000000  //  7     0     Split the FIFO buffer between RX and TX
 
 // SX127X_REG_SYNC_WORD
 #define SX127X_SYNC_WORD                              0xC8        //  200   0     default ExpressLRS sync word - 200Hz
 // #define SX127X_SYNC_WORD                              0x12        //  18    0     default LoRa sync word
 #define SX127X_SYNC_WORD_LORAWAN                      0x34        //  52    0     sync word reserved for LoRaWAN networks
 
-#define IRQpin 26
-
 ///Added by Sandro
 #define SX127x_TXCONTINUOUSMODE_MASK     0xF7
 #define SX127x_TXCONTINUOUSMODE_ON       0x08
 #define SX127x_TXCONTINUOUSMODE_OFF      0x00
 #define SX127x_PPMOFFSET                 0x27
-
-
-
-
-
-
 
 ///// SX1278 Regs /////
 //SX1278 specific register map

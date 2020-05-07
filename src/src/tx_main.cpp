@@ -89,10 +89,10 @@ void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
 // MSP packet handling function defs
-void ProcessMSPPacket(mspPacket_t* packet);
-void OnRFModePacket(mspPacket_t* packet);
-void OnTxPowerPacket(mspPacket_t* packet);
-void OnTLMRatePacket(mspPacket_t* packet);
+void ProcessMSPPacket(mspPacket_t *packet);
+void OnRFModePacket(mspPacket_t *packet);
+void OnTxPowerPacket(mspPacket_t *packet);
+void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
@@ -343,11 +343,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    #if defined HYBRID_SWITCHES_8
+#if defined HYBRID_SWITCHES_8
     GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-    #elif defined SEQ_SWITCHES
+#elif defined SEQ_SWITCHES
     GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-    #else
+#else
     if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
     {
       Channels5to8Changed = false;
@@ -358,7 +358,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       Generate4ChannelData_11bit();
     }
-    #endif
+#endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
@@ -456,6 +456,20 @@ void DetectOtherRadios()
   // }
 }
 
+void printDebug(void *pvParameters)
+{
+  for (;;)
+  {
+    Serial.print("SPItime: ");
+    Serial.println(Radio.TXspiTime);
+    Serial.print("AirTime: ");
+    Serial.println(Radio.TimeOnAir);
+    Serial.print("HeadRoom: ");
+    Serial.println(Radio.HeadRoom);
+    vTaskDelay(500);
+  }
+}
+
 void setup()
 {
 
@@ -466,7 +480,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  Serial2.begin(400000);
+  //Serial2.begin(400000);
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -572,11 +586,16 @@ void setup()
 #endif
 
   POWERMGNT.defaultPower();
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
+  //Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
   Radio.Begin();
+  Radio.SetFrequency(GetInitialFreq());
   crsf.Begin();
 
   SetRFLinkRate(RATE_200HZ);
+
+  xTaskCreate(printDebug, "printdebug", 1024, (void *)1, tskIDLE_PRIORITY, NULL);
+  POWERMGNT.setPower(PWR_10mW);
+  Radio.StartTimerTask();
 }
 
 void loop()
@@ -622,14 +641,17 @@ void loop()
 #endif
 
 #ifdef PLATFORM_ESP32
-  if (Serial2.available()) {
+  if (Serial2.available())
+  {
     uint8_t c = Serial2.read();
 #else
-  if (Serial.available()) {
+  if (Serial.available())
+  {
     uint8_t c = Serial.read();
 #endif
 
-    if (msp.processReceivedByte(c)) {
+    if (msp.processReceivedByte(c))
+    {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
@@ -642,13 +664,14 @@ void ICACHE_RAM_ATTR TimerExpired()
   SendRCdataToRF();
 }
 
-void OnRFModePacket(mspPacket_t* packet)
+void OnRFModePacket(mspPacket_t *packet)
 {
   // Parse the RF mode
   uint8_t rfMode = packet->readByte();
   CHECK_PACKET_PARSING();
 
-  switch (rfMode) {
+  switch (rfMode)
+  {
   case RATE_200HZ:
     SetRFLinkRate(RATE_200HZ);
     break;
@@ -664,13 +687,14 @@ void OnRFModePacket(mspPacket_t* packet)
   }
 }
 
-void OnTxPowerPacket(mspPacket_t* packet)
+void OnTxPowerPacket(mspPacket_t *packet)
 {
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
 
-  switch (txPower) {
+  switch (txPower)
+  {
   case PWR_10mW:
     POWERMGNT.setPower(PWR_10mW);
     break;
@@ -701,7 +725,7 @@ void OnTxPowerPacket(mspPacket_t* packet)
   }
 }
 
-void OnTLMRatePacket(mspPacket_t* packet)
+void OnTLMRatePacket(mspPacket_t *packet)
 {
   // Parse the TLM rate
   uint8_t tlmRate = packet->readByte();
@@ -719,15 +743,17 @@ void OnTLMRatePacket(mspPacket_t* packet)
   // }
 }
 
-void ProcessMSPPacket(mspPacket_t* packet)
+void ProcessMSPPacket(mspPacket_t *packet)
 {
   // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC) {
+  if (packet->function == MSP_ELRS_FUNC)
+  {
     uint8_t opcode = packet->readByte();
 
     CHECK_PACKET_PARSING();
 
-    switch (opcode) {
+    switch (opcode)
+    {
     case MSP_ELRS_RF_MODE:
       OnRFModePacket(packet);
       break;

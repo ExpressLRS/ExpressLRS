@@ -35,7 +35,6 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
   SPI.setDataMode(SPI_MODE0);
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
-
 #endif
 }
 
@@ -208,20 +207,20 @@ void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t n
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
 }
 
-void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *data, uint8_t numBytes)
-{
-  digitalWrite(SX127xDriver::SX127x_nss, LOW);
+// void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *data, uint8_t numBytes)
+// {
+//   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
-#ifdef PLATFORM_STM32
-  SPI.transfer(reg | SPI_WRITE);
-  SPI.transfer((uint8_t *)data, numBytes);
-#else
-  SPI.write(reg | SPI_WRITE);
-  SPI.writeBytes((uint8_t *)data, numBytes);
-#endif
+// #ifdef PLATFORM_STM32
+//   SPI.transfer(reg | SPI_WRITE);
+//   SPI.transfer((uint8_t *)data, numBytes);
+// #else
+//   SPI.write(reg | SPI_WRITE);
+//   SPI.writeBytes((uint8_t *)data, numBytes);
+// #endif
 
-  digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-}
+//   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
+// }
 
 void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 {
@@ -236,13 +235,4 @@ void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 #endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-
-  // if (DebugVerbosity >= DEBUG_4)
-  // {
-  //   Serial.print("SPI: Write ");
-  //   Serial.print("REG: ");
-  //   Serial.print(reg, HEX);
-  //   Serial.print(" VAL: ");
-  //   Serial.println(data, HEX);
-  // }
 }

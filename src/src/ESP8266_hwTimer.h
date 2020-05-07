@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "../../src/targets.h"
 
-#define TimerIntervalUSDefault 20000
+#define TimerIntervalUSDefault 5000
 
 extern "C"
 {
