@@ -127,7 +127,6 @@ public:
 
     uint8_t SetBandwidth(Bandwidth bw);
     uint32_t getCurrBandwidth();
-    uint32_t getCurrBandwidthNormalisedShifted();
     uint8_t SetSyncWord(uint8_t syncWord);
     uint8_t SetOutputPower(uint8_t Power);
     uint8_t SetPreambleLength(uint16_t PreambleLen);
@@ -135,8 +134,7 @@ public:
     uint8_t SetCodingRate(CodingRate cr);
     uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq, uint8_t mode = SX127X_STANDBY);
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
-    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t offset);
-    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t error_hz, uint32_t frf);
+    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t error_hz, uint32_t frf = 0);
 
     uint8_t SX127xBegin();
     uint8_t SetMode(uint8_t mode);

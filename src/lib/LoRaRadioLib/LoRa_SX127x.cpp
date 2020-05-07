@@ -629,56 +629,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidth()
     return -1;
 }
 
-uint32_t ICACHE_RAM_ATTR SX127xDriver::getCurrBandwidthNormalisedShifted() // this is basically just used for speedier calc of the freq offset, pre compiled for 32mhz xtal
-{
-
-    switch (currBW)
-    {
-        case BW_7_80_KHZ:
-            return 1026;
-        case BW_10_40_KHZ:
-            return 769;
-        case BW_15_60_KHZ:
-            return 513;
-        case BW_20_80_KHZ:
-            return 385;
-        case BW_31_25_KHZ:
-            return 256;
-        case BW_41_70_KHZ:
-            return 192;
-        case BW_62_50_KHZ:
-            return 128;
-        case BW_125_00_KHZ:
-            return 64;
-        case BW_250_00_KHZ:
-            return 32;
-        case BW_500_00_KHZ:
-            return 16;
-    }
-
-    return -1;
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
-{
-    //int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)currFreq / 1000000)) << 8);
-    offset <<= 8;
-    offset *= 243;
-    offset /= ((currFreq / 1000000) << 8);
-    offset >>= 8;
-
-    uint8_t regValue = offset & 0b01111111;
-
-    if (offset < 0)
-    {
-        regValue |= 0b10000000; //set neg bit for 2s complement
-    }
-    if (regValue == p_ppm_off)
-        return;
-    p_ppm_off = regValue;
-    writeRegister(SX127x_PPMOFFSET, regValue);
-}
-
 void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t error_hz, uint32_t frf)
 {
     if (!frf) // use locally stored value if not defined
@@ -717,12 +667,6 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
         intFreqError -= 524288;
     }
 
-#if !NEW_FREQ_CORR
-    // bit shift hackery so we don't have to use floaty bois; the >> 3 is intentional
-    // and is a simplification of the formula on page 114 of sx1276 datasheet
-    intFreqError = (intFreqError >> 3) * (getCurrBandwidthNormalisedShifted());
-    intFreqError >>= 4;
-#else
     // Calculate Hz error where XTAL is 32MHz
     int64_t tmp_f = intFreqError;
     tmp_f <<= 11;
@@ -730,7 +674,7 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
     tmp_f /= 1953125000;
     intFreqError = tmp_f;
     //intFreqError = ((tmp_f << 11) * getCurrBandwidth()) / 1953125000;
-#endif
+
     return intFreqError;
 }
 
