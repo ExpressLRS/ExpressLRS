@@ -401,7 +401,8 @@ void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 
 void SX127xDriver::ConfigLoraDefaults()
 {
-  writeRegister(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE | SX127X_DIO0_RX_DONE);
+  Serial.print("Set lora defaults");
+  setRegValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
   writeRegister(SX127X_REG_PAYLOAD_LENGTH, CURR_REG_PAYLOAD_LENGTH);
   writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
@@ -437,13 +438,14 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 #ifdef SX127x_DEBUG_TIMINGS
   SX127xDriver::TXstartMicros = micros();
 #endif
-  ClearIRQFlags();
   SetMode(SX127X_STANDBY);
 
   if (InterruptAssignment != TX_DONE)
   {
     attachInterrupt(digitalPinToInterrupt(SX127x_dio0), TXnbISR, RISING);
+    //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6); // not needed due to hack in ConfigLoraDefaults()
     InterruptAssignment = TX_DONE;
+    ClearIRQFlags();
   }
 
   if (!(length == CURR_REG_PAYLOAD_LENGTH))
@@ -452,9 +454,6 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
     CURR_REG_PAYLOAD_LENGTH = length;
   }
 
-  //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
-  //setRegValue(SX127X_REG_PAYLOAD_LENGTH, length);
-  //setRegValue(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, (uint8_t *)data, length);
 
@@ -507,22 +506,23 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   if (InterruptAssignment != RX_DONE)
   {
     attachInterrupt(digitalPinToInterrupt(SX127x_dio0), RXnbISR, RISING);
+    //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE, 7, 6);
     InterruptAssignment = RX_DONE;
+    ClearIRQFlags();
   }
-
-  ClearIRQFlags();
 
   if (headerExplMode == false)
   {
-    setRegValue(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
+    if (!(RXbuffLen == CURR_REG_PAYLOAD_LENGTH))
+    {
+      setRegValue(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
+      CURR_REG_PAYLOAD_LENGTH = RXbuffLen;
+    }
   }
 
-  setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE | SX127X_DIO1_RX_TIMEOUT, 7, 4);
-
-  setRegValue(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
-
   SetMode(SX127X_RXCONTINUOUS);
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

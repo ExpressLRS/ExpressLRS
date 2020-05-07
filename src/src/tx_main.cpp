@@ -104,7 +104,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
-  //Serial.println("TLMpacket0");
+  Serial.println("TLMpacket0_________________________________");
 
   if (packetAddr != DeviceAddr)
   {
