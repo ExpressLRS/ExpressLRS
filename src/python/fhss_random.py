@@ -1,6 +1,9 @@
 import random
 import os
 
+DEBUG = 0
+
+CALC_MY_STEMP = 0
 NR_SEQUENCE_ENTRIES = 256
 
 
@@ -40,11 +43,9 @@ def rng():
     return seed >> 16
 
 def rngSeed(newSeed):
-    if use_local_rand:
-        global seed
-        seed = newSeed
-    else:
-        random.seed(newSeed)
+    global seed
+    seed = newSeed
+    random.seed(newSeed)
 
 # returns 0 <= x < max where max <= 256
 # (actual upper limit is higher, but there is one and I haven't
@@ -148,7 +149,7 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     MY_UID = [int(val, 16) for val in MY_UID.replace("-DMY_UID=", "").split(",")]
     DOMAIN = DOMAIN.replace("-D", "")
 
-    FREQ_OFFSET_UID = (MY_UID[4] + MY_UID[5])
+    FREQ_OFFSET_UID = sum(MY_UID[3:]) #(MY_UID[3] + MY_UID[4] + MY_UID[5])
 
     # Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
     if DOMAIN == "Regulatory_Domain_AU_433":
@@ -336,14 +337,21 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     except IOError:
         write_out = True
 
-    if write_out:
+    if write_out or DEBUG:
         print("write...")
         with open(os.path.join('src', 'fhss_freqs.h'), "w+") as _f:
             _f.write(header)
             _f.write(FHSS_FREQS_HEAD)
 
             _f.write("#define FREQ_OFFSET_UID (%u)\n" % FREQ_OFFSET_UID)
-            _f.write("#define NR_SEQUENCE_ENTRIES %u\n\n" % NR_SEQUENCE_ENTRIES)
+            _f.write("#define NR_SEQUENCE_ENTRIES (%u)\n" % NR_SEQUENCE_ENTRIES)
+
+            my_step = 0
+            if CALC_MY_STEMP:
+                my_step = sum(MY_UID[3:])
+                my_step %= 8
+            my_step |= 1
+            _f.write("#define FHSS_MY_STEP (%u)\n\n" % (my_step))
 
             _f.write("/* Note: UID offset included */\n")
             _f.write('static uint32_t DRAM_ATTR FHSSfreqs[%u] = {\n' % num_of_fhss)
@@ -356,6 +364,8 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
                 FHSSsequence = FHSSrandomiseFHSSsequence_v1(num_of_fhss)
             elif rand_version == 2:
                 FHSSsequence = FHSSrandomiseFHSSsequence_v2(num_of_fhss)
+            else:
+                raise Exception("Unknown FHSS rand version!")
             hops = print_fhss(FHSSsequence, num_of_fhss)
             for line in hops:
                 _f.write("    %s,\n" % line)
@@ -382,5 +392,5 @@ def check_env_and_parse(build_flags):
     else:
         raise Exception("Domain and UI are missing!")
 
-#debug:
-#check_fhss_freqs_h("-DRegulatory_Domain_EU_868", "-DMY_UID=0xB8,0x27,0xEB,0x61,0x1D,0x38")
+if DEBUG:
+    check_fhss_freqs_h("-DRegulatory_Domain_EU_868", "-DMY_UID=0xB8,0x27,0xEB,0x61,0x1D,0x38")

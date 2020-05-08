@@ -6,7 +6,17 @@
 
 #include "fhss_freqs.h"
 
+#ifndef FHSS_MY_STEP
+#define FHSS_MY_STEP 1
+#endif
+
+#if NR_SEQUENCE_ENTRIES <= 256
 uint_fast8_t volatile DRAM_ATTR FHSSptr = 0;
+#elif NR_SEQUENCE_ENTRIES <= 65536
+uint_fast16_t volatile DRAM_ATTR FHSSptr = 0;
+#else
+#error "FHSS sequence len invalid!"
+#endif
 int_fast32_t volatile DRAM_ATTR FreqCorrection = 0;
 
 void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
@@ -14,19 +24,19 @@ void ICACHE_RAM_ATTR FHSSresetFreqCorrection()
     FreqCorrection = 0;
 }
 
-void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
+void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint32_t value)
 { // set the current index of the FHSS pointer
     FHSSptr = value % sizeof(FHSSsequence);
 }
 
-uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
+uint32_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
 { // get the current index of the FHSS pointer
     return FHSSptr;
 }
 
 void ICACHE_RAM_ATTR FHSSincCurrIndex()
 {
-    FHSSptr = (FHSSptr + 1) % sizeof(FHSSsequence);
+    FHSSptr = (FHSSptr + FHSS_MY_STEP) % sizeof(FHSSsequence);
 }
 
 uint8_t ICACHE_RAM_ATTR FHSSgetCurrSequenceIndex()
