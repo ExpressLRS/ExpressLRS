@@ -17,6 +17,8 @@ void (*SX127xDriver::TXdoneCallback2)() = SX127xDriver::tx_nullCallback;
 void (*SX127xDriver::TXdoneCallback3)() = SX127xDriver::tx_nullCallback;
 void (*SX127xDriver::TXdoneCallback4)() = SX127xDriver::tx_nullCallback;
 
+static volatile uint8_t DMA_ATTR p_RegOpMode = 0;
+
 /////////////////////////////////////////////////////////////////
 
 enum isr_states
@@ -27,7 +29,7 @@ enum isr_states
     ISR_RCVD,
 };
 
-static volatile enum isr_states p_state_dio0_isr = NONE;
+static volatile enum isr_states DRAM_ATTR p_state_dio0_isr = NONE;
 static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio0(void)
 {
     if (p_state_dio0_isr == RX_DONE)
@@ -38,7 +40,7 @@ static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio0(void)
         p_state_dio0_isr = ISR_RCVD;
 }
 
-static volatile enum isr_states p_state_dio1_isr = NONE;
+static volatile enum isr_states DRAM_ATTR p_state_dio1_isr = NONE;
 static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio1(void)
 {
     p_state_dio1_isr = ISR_RCVD;
@@ -310,6 +312,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TX(uint8_t *data, uint8_t length)
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
     LastPacketIsrMicros = micros();
+    _change_mode_val(SX127X_STANDBY); // Standby mode is automatically set by IC, set it also locally
 
     if (-1 != _TXenablePin)
         digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
@@ -321,7 +324,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
     TXdoneCallback4();
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, uint32_t freq)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, uint32_t freq)
 {
     SetMode(SX127X_STANDBY);
     p_state_dio0_isr = TX_DONE;
@@ -345,12 +348,8 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, 
     writeRegisterBurstStr(SX127X_REG_FIFO, (uint8_t *)data, length);
 
     reg_dio1_isr_mask_write(SX127X_DIO0_TX_DONE);
-    //reg_dio1_tx_done();
-    //ClearIRQFlags();
 
     SetMode(SX127X_TX);
-
-    return (ERR_NONE);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -376,7 +375,8 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
-    SetMode(SX127X_SLEEP);
+    //SetMode(SX127X_SLEEP);
+    SetMode(SX127X_STANDBY);
     p_state_dio0_isr = NONE;
 }
 
@@ -515,14 +515,21 @@ uint8_t SX127xDriver::RunCAD()
 //////////////////////////////// config functions //////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
+inline __attribute__((always_inline)) void ICACHE_RAM_ATTR SX127xDriver::_change_mode_val(uint8_t mode)
+{
+    p_RegOpMode &= (~SX127X_CAD);
+    p_RegOpMode |= (mode & SX127X_CAD);
+}
+
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
 { //if radio is not already in the required mode set it to the requested mode
     mode &= SX127X_CAD;
 
     if (mode != (p_RegOpMode & SX127X_CAD))
     {
-        p_RegOpMode &= (~SX127X_CAD);
-        p_RegOpMode |= (mode & SX127X_CAD);
+        //p_RegOpMode &= (~SX127X_CAD);
+        //p_RegOpMode |= (mode & SX127X_CAD);
+        _change_mode_val(mode);
         writeRegister(SX127X_REG_OP_MODE, p_RegOpMode);
     }
     return (ERR_NONE);

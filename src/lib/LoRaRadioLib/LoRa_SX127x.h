@@ -6,29 +6,6 @@
 
 typedef enum
 {
-    CURR_OPMODE_FSK_OOK = 0b00000000,
-    CURR_OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
-    CURR_OPMODE_SLEEP = 0b00000000,
-    CURR_OPMODE_STANDBY = 0b00000001,
-    CURR_OPMODE_FSTX = 0b00000010,
-    CURR_OPMODE_TX = 0b00000011,
-    CURR_OPMODE_FSRX = 0b00000100,
-    CURR_OPMODE_RXCONTINUOUS = 0b00000101,
-    CURR_OPMODE_RXSINGLE = 0b00000110,
-    CURR_OPMODE_CAD = 0b00000111
-} RadioOPmodes;
-
-typedef enum
-{
-    CH_SX1272,
-    CH_SX1273,
-    CH_SX1276,
-    CH_SX1277,
-    CH_SX1278,
-    CH_SX1279
-} Chip;
-typedef enum
-{
     BW_7_80_KHZ = 0,
     BW_10_40_KHZ = 1,
     BW_15_60_KHZ = 2,
@@ -40,6 +17,7 @@ typedef enum
     BW_250_00_KHZ = 8,
     BW_500_00_KHZ = 9
 } Bandwidth;
+
 typedef enum
 {
     SF_6,
@@ -50,6 +28,7 @@ typedef enum
     SF_11,
     SF_12
 } SpreadingFactor;
+
 typedef enum
 {
     CR_4_5,
@@ -57,18 +36,12 @@ typedef enum
     CR_4_7,
     CR_4_8
 } CodingRate;
+
 typedef enum
 {
     RFMOD_SX1278,
     RFMOD_SX1276
 } RFmodule_;
-
-/*typedef enum
-{
-    RADIO_IDLE,
-    RADIO_BUSY
-} RadioState_;
-*/
 
 class SX127xDriver
 {
@@ -138,10 +111,6 @@ public:
 
     uint8_t SX127xBegin();
     uint8_t SetMode(uint8_t mode);
-    uint8_t GetMode(void)
-    {
-        return (p_RegOpMode & SX127X_CAD);
-    }
 
     /////////////////Utility Funcitons//////////////////
     int16_t MeasureNoiseFloor(uint32_t num_meas, uint32_t freq);
@@ -162,7 +131,7 @@ public:
     int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
-    uint8_t ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length, uint32_t freq = 0);
+    void ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length, uint32_t freq = 0);
     void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
 
     /////////////Non-blocking RX related Functions///////////////
@@ -171,11 +140,11 @@ public:
     void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
 private:
-    volatile uint8_t p_RegOpMode = 0;
     volatile uint8_t p_ppm_off = 0;
     //volatile uint8_t p_isr_mask = 0;
     volatile uint8_t p_last_payload_len = 0;
 
+    inline __attribute__((always_inline)) void ICACHE_RAM_ATTR _change_mode_val(uint8_t mode);
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);
     void ICACHE_RAM_ATTR reg_dio1_rx_done(void);
     void ICACHE_RAM_ATTR reg_dio1_tx_done(void);
