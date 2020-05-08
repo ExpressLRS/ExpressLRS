@@ -104,7 +104,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
 
-  Serial.println("TLMpacket0_________________________________");
+  //Serial.println("TLMpacket0");
 
   if (packetAddr != DeviceAddr)
   {
@@ -456,6 +456,7 @@ void DetectOtherRadios()
   // }
 }
 
+#ifdef PLATFORM_ESP32
 void printDebug(void *pvParameters)
 {
   for (;;)
@@ -469,6 +470,7 @@ void printDebug(void *pvParameters)
     vTaskDelay(500);
   }
 }
+#endif
 
 void setup()
 {
@@ -480,7 +482,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  //Serial2.begin(400000);
+  Serial2.begin(400000);
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -593,9 +595,12 @@ void setup()
 
   SetRFLinkRate(RATE_200HZ);
 
-  xTaskCreate(printDebug, "printdebug", 1024, (void *)1, tskIDLE_PRIORITY, NULL);
-  POWERMGNT.setPower(PWR_10mW);
-  Radio.StartTimerTask();
+// #ifdef PLATFORM_ESP32
+//   xTaskCreate(printDebug, "printdebug", 1024, (void *)1, tskIDLE_PRIORITY, NULL);
+//   POWERMGNT.setPower(PWR_10mW);
+//   Radio.StartTimerTask();
+// #endif
+
 }
 
 void loop()

@@ -16,16 +16,16 @@
 
 typedef enum
 {
-    OPMODE_FSK_OOK = 0b00000000,
-    OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
-    OPMODE_SLEEP = 0b00000000,
-    OPMODE_STANDBY = 0b00000001,
-    OPMODE_FSTX = 0b00000010,
-    OPMODE_TX = 0b00000011,
-    OPMODE_FSRX = 0b00000100,
-    OPMODE_RXCONTINUOUS = 0b00000101,
-    OPMODE_RXSINGLE = 0b00000110,
-    OPMODE_CAD = 0b00000111,
+    OPMODE_FSK_OOK = SX127X_FSK_OOK,
+    OPMODE_LORA = SX127X_LORA, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
+    OPMODE_SLEEP = SX127X_SLEEP,
+    OPMODE_STANDBY = SX127X_STANDBY,
+    OPMODE_FSTX = SX127X_FSTX,
+    OPMODE_TX = SX127X_TX,
+    OPMODE_FSRX = SX127X_FSRX,
+    OPMODE_RXCONTINUOUS = SX127X_RXCONTINUOUS,
+    OPMODE_RXSINGLE = SX127X_RXSINGLE,
+    OPMODE_CAD = SX127X_CAD,
     OPMODE_UNDEF = 0b11111111
 } RadioOPmodes;
 
@@ -112,8 +112,8 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static volatile uint8_t TXdataBuffer[256];
-    static volatile uint8_t RXdataBuffer[256];
+    static uint8_t TXdataBuffer[256];
+    static uint8_t RXdataBuffer[256];
 
     static volatile uint8_t TXbuffLen;
     static volatile uint8_t RXbuffLen;
@@ -173,7 +173,7 @@ public:
     static void setPPMoffsetReg(int32_t offset);
 
     static uint8_t SX127xBegin();
-    static uint8_t SetMode(uint8_t mode);
+    static uint8_t SetMode(RadioOPmodes mode);
     static uint8_t TXsingle(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
 
