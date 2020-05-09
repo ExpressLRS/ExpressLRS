@@ -350,16 +350,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
-    {
-      GenerateMSPData();
-      MSPPacketLastSent = millis();
-      MSPPacketSendCount--;
-    }
-    else // else we just have regular channel data which we send as 8 + 2 bits
-    {
-      Generate4ChannelData_11bit();
-    }
+    #if defined HYBRID_SWITCHES_8
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+    #elif defined SEQ_SWITCHES
+    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    #else
+    Generate4ChannelData_11bit();
+    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
