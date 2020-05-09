@@ -816,15 +816,14 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
 
 int32_t SX127xDriver::GetFrequencyError()
 {
+  uint8_t reg[3] = {0x0, 0x0, 0x0};
+  readRegisterBurst(SX127X_REG_FEI_MSB, sizeof(reg), reg);
 
-  uint8_t MSB_reg = readRegister(SX127X_REG_FEI_MSB) & 0b1111;
+  uint32_t RegFei = ((reg[0] & 0b0111) << 16) + (reg[1] << 8) + reg[2];
 
-  uint32_t RegFei = 0;
-  RegFei = ((MSB_reg) << 16) + (readRegister(SX127X_REG_FEI_MID) << 8) + (readRegister(SX127X_REG_FEI_LSB));
+  int32_t intFreqError = RegFei;
 
-  int32_t intFreqError = RegFei & 0b01111111111111111111;
-
-  if (MSB_reg & 0b1000)
+  if (reg[0] & 0b1000)
   {
     intFreqError -= 524288; // Sign bit is on
   }
