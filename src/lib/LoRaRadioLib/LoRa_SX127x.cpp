@@ -421,7 +421,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 #endif
 
   ClearIRQFlags();
-  SetMode(OPMODE_FSTX);
   NonceTX++;
   TXdoneCallback1();
   TXdoneCallback2();
@@ -474,6 +473,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, RXdataBuffer);
+  setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   SX127xDriver::LastPacketRSSI = SX127xDriver::GetLastPacketRSSI();
   SX127xDriver::LastPacketSNR = SX127xDriver::GetLastPacketSNR();
   NonceRX++;
