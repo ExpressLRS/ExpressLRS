@@ -78,17 +78,16 @@ typedef struct expresslrs_mod_settings_s
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;
 
-const expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
+expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
 
 //extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-extern const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-extern const expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+extern expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 extern int8_t ExpressLRS_currPower;
 extern int8_t ExpressLRS_prevPower;
 
-int16_t MeasureNoiseFloor(); //--todo, move this to radio lib
+int16_t MeasureNoiseFloor();        //--todo, move this to radio lib
 int16_t MeasureRSSI(int FHSSindex); //--todo, move this to radio lib
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
-

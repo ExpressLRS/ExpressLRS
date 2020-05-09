@@ -92,7 +92,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM;   // to match BF
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
@@ -100,6 +100,19 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
+}
+
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+{
+    expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+    Radio.StopContRX();
+    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+    ExpressLRS_currAirRate = mode;
+    hwTimer.updateInterval(mode->interval);
+    LPF_PacketInterval.init(mode->interval);
+    //LPF_Offset.init(0);
+    //InitHarwareTimer();
+    Radio.RXnb();
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -121,7 +134,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState != connected)
+    if ((connectionState != connected) || (ExpressLRS_currAirRate->TLMinterval == 0))
     {
         return; // don't bother sending tlm if disconnected
     }
@@ -140,10 +153,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI>127)
+    if (openTxRSSI > 127)
         openTxRSSI = 127;
     // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255-openTxRSSI;
+    openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
 
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
@@ -282,13 +295,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
+#if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(&Radio, &crsf);
-        #elif defined HYBRID_SWITCHES_8
+#elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(&Radio, &crsf);
-        #else
+#else
         UnpackChannelData_11bit();
-        #endif
+#endif
         crsf.sendRCFrameToFC();
         break;
 
@@ -320,12 +333,20 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 GotConnection();
             }
 
-            // if (ExpressLRS_currAirRate->enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
-            // {
-            //     Serial.println("update air rate");
-            //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
-            //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
-            // }
+            expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11000000) >> 6);
+
+            if (ExpressLRS_currAirRate->enum_rate != rateIn)
+            {
+                //Serial.println("update air rate");
+                SetRFLinkRate(rateIn);
+            }
+
+            uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00111000) >> 3);
+
+            if (ExpressLRS_currAirRate->TLMinterval != TLMrateIn)
+            {
+                ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+            }
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
             NonceRXlocal = Radio.RXdataBuffer[2];
@@ -428,19 +449,6 @@ void ICACHE_RAM_ATTR sampleButton()
     }
 
     buttonPrevValue = buttonValue;
-}
-
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
-{
-    const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-    Radio.StopContRX();
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
-    ExpressLRS_currAirRate = mode;
-    hwTimer.updateInterval(mode->interval);
-    LPF_PacketInterval.init(mode->interval);
-    //LPF_Offset.init(0);
-    //InitHarwareTimer();
-    Radio.RXnb();
 }
 
 void setup()
