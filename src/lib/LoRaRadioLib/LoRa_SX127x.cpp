@@ -54,6 +54,8 @@ uint8_t SX127xDriver::_TXenablePin = GPIO_PIN_TX_ENABLE;
 //// Debug Variables ////
 uint32_t SX127xDriver::TXstartMicros = 0;
 uint32_t SX127xDriver::TXdoneMicros = 0;
+uint32_t SX127xDriver::RXstartMicros = 0;
+uint32_t SX127xDriver::RXdoneMicros = 0;
 uint32_t SX127xDriver::TotalTime = 0;
 uint32_t SX127xDriver::HeadRoom = 0;
 uint32_t SX127xDriver::TXspiTime = 0;
@@ -473,9 +475,9 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, RXdataBuffer);
-  setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   SX127xDriver::LastPacketRSSI = SX127xDriver::GetLastPacketRSSI();
   SX127xDriver::LastPacketSNR = SX127xDriver::GetLastPacketSNR();
+  //writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   NonceRX++;
   ClearIRQFlags();
   RXdoneCallback1();
@@ -515,7 +517,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
     }
   }
 
-  setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   SetMode(OPMODE_RXCONTINUOUS);
 }
 

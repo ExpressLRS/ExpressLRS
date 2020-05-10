@@ -143,16 +143,18 @@ public:
     static uint32_t TotalTime;
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;
+    static uint32_t TXdoneMicros;
+    static uint32_t RXstartMicros;
+    static uint32_t RXdoneMicros;
     static uint32_t TXspiTime;
     static uint32_t HeadRoom;
-    static uint32_t TXdoneMicros;
+
     /////////////////////////////////
 
     //// Local Variables //// Copy of values for SPI speed optimisation
     static uint8_t CURR_REG_PAYLOAD_LENGTH;
     static uint8_t CURR_REG_DIO_MAPPING_1;
     static uint8_t CURR_REG_FIFO_ADDR_PTR;
-
 
     ////////////////Configuration Functions/////////////
     static uint8_t Begin();
