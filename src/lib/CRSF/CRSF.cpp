@@ -388,8 +388,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
             // TODO: This currently only supports single MSP packets per cmd
             // To support longer packets we need to re-write this to allow packet splitting
-
-            uint8_t outBuffer[ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES] = {0};
+            const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
+            uint8_t outBuffer[totalBufferLen] = {0};
 
             // CRSF extended frame header
             outBuffer[0] = CRSF_ADDRESS_BROADCAST; // address
@@ -407,12 +407,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
             }
             // Encapsulated MSP crc
-            outBuffer[12] =  CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
+            outBuffer[totalBufferLen - 2] =  CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
 
             // CRSF frame crc
-            outBuffer[13] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+            outBuffer[totalBufferLen - 1] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
 
-            this->_dev->write(outBuffer, ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES);
+            this->_dev->write(outBuffer, totalBufferLen);
         }
 #endif
 

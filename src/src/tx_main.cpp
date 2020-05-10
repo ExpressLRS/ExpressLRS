@@ -230,6 +230,11 @@ void ICACHE_RAM_ATTR GenerateMSPData()
       Radio.TXdataBuffer[3+i] = MSPPacket.readByte();
     }
   }
+  else
+  {
+    Serial.println("Unable to send MSP command. Packet too long.");
+  }
+  
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
@@ -350,13 +355,22 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    #if defined HYBRID_SWITCHES_8
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-    #elif defined SEQ_SWITCHES
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-    #else
-    Generate4ChannelData_11bit();
-    #endif
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
+    {
+      GenerateMSPData();
+      MSPPacketLastSent = millis();
+      MSPPacketSendCount--;
+    }
+    else
+    {
+      #if defined HYBRID_SWITCHES_8
+      GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+      #elif defined SEQ_SWITCHES
+      GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+      #else
+      Generate4ChannelData_11bit();
+      #endif
+    }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
