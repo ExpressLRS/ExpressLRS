@@ -19,37 +19,33 @@ local AirRate = {
     editable = true,
     name = 'Pkt. Rate',
     selected = 99,
-    list = {'200 Hz', '100 Hz', '50 Hz '},
-    dataId = {0x00, 0x01, 0x02},
-    elements = 3
+    list = {'200 Hz', '100 Hz', '50 Hz'},
+    values = {0x00, 0x01, 0x02},
+    allowed = 3
 }
 local TLMinterval = {
     editable = true,
     name = 'TLM Ratio',
-    selected = 9,
-    list = {
-        'Off    ', '1:128  ', '1:64   ', '1:32   ', '1:16   ', '1:8    ', '1:4    ', '1:2    ', 'Default'
-    },
-    dataId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xFF},
-    elements = 9
+    selected = 99,
+    list = {'Off', '1:128', '1:64', '1:32', '1:16', '1:8', '1:4', '1:2', 'Default'},
+    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xFF},
+    allowed = 9
 }
 local MaxPower = {
     editable = true,
     name = 'Power',
     selected = 99,
-    list = {
-        '10 mW  ', '25 mW  ', '50 mW  ', '100 mW ', '250 mW ', '500 mW ', '1000 mW', '2000 mW',
-    },
-    dataId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
-    elements = 8
+    list = {'10 mW', '25 mW', '50 mW', '100 mW', '250 mW', '500 mW', '1000 mW', '2000 mW'},
+    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    allowed = 8
 }
 local RFfreq = {
     editable = false,
     name = 'RF Freq',
     selected = 99,
     list = {'915 MHz', '868 MHz', '433 MHz'},
-    dataId = {0x00, 0x01, 0x02},
-    elements = 3
+    values = {0x00, 0x01, 0x02},
+    allowed = 3
 }
 
 local selection = {
@@ -57,7 +53,7 @@ local selection = {
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
     list = {AirRate, TLMinterval, MaxPower, RFfreq},
-    elements = 4
+    allowed = 4
 }
 
 -- returns flags to pass to lcd.drawText for inverted and flashing text
@@ -122,7 +118,7 @@ local function refreshLCD()
 
     for idx,item in pairs(selection.list) do
         local value = '?'
-        if item.selected <= item.elements then
+        if item.selected <= #item.list and item.selected <= item.allowed then
             value = item.list[item.selected]
         end
         lcd.drawText(1, yOffset, item.name, radio_data.textSize)
@@ -148,7 +144,7 @@ local function increase(_selection)
         item = item.list[item.selected]
     end
 
-    if item.selected < item.elements then
+    if item.selected < #item.list and item.selected < item.allowed then
         item.selected = item.selected + 1
         --playTone(2000, 50, 0)
     end
@@ -159,7 +155,7 @@ local function decrease(_selection)
     if item.modify then
         item = item.list[item.selected]
     end
-    if item.selected > 1 and item.selected <= item.elements then
+    if item.selected > 1 and item.selected <= #item.list then
         item.selected = item.selected - 1
         --playTone(2000, 50, 0)
     end
@@ -168,7 +164,6 @@ end
 -- ################################################
 
 --[[
-
 It's unclear how the telemetry push/pop system works. We don't always seem to get
 a response to a single push event. Can multiple responses be stacked up? Do they timeout?
 
@@ -189,11 +184,19 @@ local function processResp()
             return
         else
             if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
-                AirRate.selected = data[3] + 1
-                TLMinterval.selected = data[4] + 1
-                MaxPower.selected = data[5] + 1
-                MaxPower.elements = data[6] + 1 -- limit power list
-                if data[7] ~= 0xff then
+                if data[3] < #AirRate.list then
+                    AirRate.selected = data[3] + 1
+                end
+                if data[4] < #TLMinterval.list then
+                    TLMinterval.selected = data[4] + 1
+                end
+                if data[5] < #MaxPower.list then
+                    MaxPower.selected = data[5] + 1
+                end
+                if data[6] < #MaxPower.list then
+                    MaxPower.allowed = data[6] + 1 -- limit power list
+                end
+                if data[7] ~= 0xff and data[7] < #RFfreq.list then
                     RFfreq.selected = data[7] + 1
                 end
 
@@ -205,9 +208,6 @@ local function processResp()
 end
 
 local function init_func()
-    -- first push so that we get the current values. Didn't seem to work.
-    crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-    --processResp()
 end
 
 local function bg_func(event)
@@ -238,27 +238,11 @@ local function run_func(event)
        event == EVT_MINUS_BREAK or
        event == EVT_DOWN_BREAK then
         decrease(selection)
-        --[[
-        if selection.modify == false then
-            decrease(selection)
-            --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-        else
-            crossfireTelemetryPush(0x2D, {0xEE, 0xEA, selection.selected, 0x00})
-        end
-        ]]--
 
     elseif event == EVT_ROT_RIGHT or
            event == EVT_PLUS_BREAK or
            event == EVT_UP_BREAK then
         increase(selection)
-        --[[
-        if selection.modify == false then
-            increase(selection)
-            --crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00})
-        else
-            crossfireTelemetryPush(0x2D, {0xEE, 0xEA, selection.selected, 0x01})
-        end
-        ]]--
 
     elseif event == EVT_ENTER_BREAK then
         if selection.modify then
@@ -266,14 +250,15 @@ local function run_func(event)
             local type = selection.selected
             local item = selection.list[type]
             local value = 0
-            if item.selected <= item.elements then
-                value = item.dataId[item.selected]
+            if item.selected <= #item.values then
+                value = item.values[item.selected]
             else
                 type = 0
             end
             crossfireTelemetryPush(0x2D, {0xEE, 0xEA, type, value})
             selection.modify = false
-        elseif selection.list[selection.selected].editable then
+        elseif selection.list[selection.selected].editable and item.selected <= #item.values then
+            -- allow modification only if not readonly and values received from module
             selection.modify = true
         end
 
