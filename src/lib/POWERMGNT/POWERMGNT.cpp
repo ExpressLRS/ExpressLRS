@@ -35,11 +35,6 @@ PowerLevels_e POWERMGNT::decPower()
     return CurrentPower;
 }
 
-PowerLevels_e POWERMGNT::currPower()
-{
-    return CurrentPower;
-}
-
 void POWERMGNT::defaultPower(PowerLevels_e power)
 {
     if (power == PWR_UNKNOWN)
@@ -47,11 +42,11 @@ void POWERMGNT::defaultPower(PowerLevels_e power)
     setPower(power);
 }
 
-void POWERMGNT::setPower(PowerLevels_e Power)
+uint8_t POWERMGNT::setPower(PowerLevels_e Power)
 {
     if (Power == CurrentPower || Power < PWR_10mW ||
         Power > MaxPower)
-        return;
+        return 0;
 
 #ifdef TARGET_R9M_TX
     r9dac.setPower(Power);
@@ -101,16 +96,17 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     }
 #endif
     CurrentPower = Power;
+    return 1;
 }
 
-void POWERMGNT::pa_off(void)
+void POWERMGNT::pa_off(void) const
 {
 #ifdef TARGET_R9M_TX
     r9dac.standby();
 #endif
 }
 
-void POWERMGNT::pa_on(void)
+void POWERMGNT::pa_on(void) const
 {
 #ifdef TARGET_R9M_TX
     r9dac.resume();

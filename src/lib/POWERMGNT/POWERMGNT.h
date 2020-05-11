@@ -41,15 +41,22 @@ class POWERMGNT
 private:
     SX127xDriver &p_radio;
     PowerLevels_e CurrentPower;
-    void setPower(PowerLevels_e Power);
 
 public:
     POWERMGNT(SX127xDriver &radio);
     void Begin();
     PowerLevels_e incPower();
     PowerLevels_e decPower();
-    PowerLevels_e currPower();
+    PowerLevels_e currPower() const
+    {
+        return CurrentPower;
+    }
+    PowerLevels_e maxPower() const
+    {
+        return MaxPower;
+    }
     void defaultPower(PowerLevels_e power = TX_POWER_DEFAULT);
+    uint8_t setPower(PowerLevels_e Power);
 
     uint8_t power_to_radio_enum(PowerLevels_e power = PWR_UNKNOWN)
     {
@@ -80,6 +87,6 @@ public:
         }
     }
 
-    void pa_off(void);
-    void pa_on(void);
+    void pa_off(void) const;
+    void pa_on(void) const;
 };
