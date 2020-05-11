@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Wire.h>
 #include "../../src/targets.h"
+#include <Wire.h>
 #ifdef PLATFORM_STM32
     #include <extEEPROM.h>
 #else

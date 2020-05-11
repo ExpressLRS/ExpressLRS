@@ -8,8 +8,8 @@ void
 ELRS_EEPROM::Begin()
 {
 #ifdef PLATFORM_STM32
-    Wire.setSDA(GPIO_PIN_EEPROM_SDA); // set is needed or it wont work :/
-    Wire.setSCL(GPIO_PIN_EEPROM_SCK);
+    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
+    Wire.setSCL(GPIO_PIN_SCK);
     Wire.begin();
     EEPROM.begin();
 #else
