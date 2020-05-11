@@ -11,9 +11,9 @@ volatile uint8_t current_rate_config = RATE_DEFAULT;
 //
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     /* 200Hz */
-    {BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, FHSS_4, 8, RATE_200HZ, SYNC_64, 1000, 1500}, // airtime: 4.380ms/8B
+    {BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, SYNC_64, 1000, 1500}, // airtime: 4.380ms/8B
     /* 100Hz */
-    {BW_500_00_KHZ, SF_7, CR_4_8, -117, 10000, 100, TLM_RATIO_1_32, FHSS_4, 8, RATE_100HZ, SYNC_32, 2000, 2000}, // airtime =  9.280ms/9B
+    {BW_500_00_KHZ, SF_7, CR_4_8, -117, 10000, 100, TLM_RATIO_1_32, FHSS_1, 8, RATE_100HZ, SYNC_32, 2000, 2000}, // airtime =  9.280ms/9B
     /* 50Hz */
     //{BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, FHSS_2, 10, RATE_50HZ, SYNC_16, 6000, 2500}, // airtime = 18.560ms/11B - ORIG
     {BW_500_00_KHZ, SF_8, CR_4_8, -120, 20000, 50, TLM_RATIO_1_16, FHSS_2, 9, RATE_50HZ, SYNC_16, 6000, 2500}, // airtime = 19.07ms/11B
@@ -43,33 +43,21 @@ uint8_t const DRAM_ATTR UID[6] = {MY_UID};
 uint8_t const DRAM_ATTR CRCCaesarCipher = UID[4];
 uint8_t const DRAM_ATTR DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily based on mac until listen before assigning method merged
 
+uint8_t getSyncWord(void)
+{
 #if 0
-static uint8_t my_sync_word = UID[4]; //0 , SX127X_SYNC_WORD;
-uint8_t getSyncWord(void)
-{
-    if (my_sync_word)
-        return my_sync_word;
-    uint8_t i, u, syncw = 0;
-    for (u = 0; u < 10 && (syncw < 0x10 || syncw == SX127X_SYNC_WORD_LORAWAN); u++)
-    {
-        syncw = SX127X_SYNC_WORD + u;
-        for (i = 0; i < sizeof(UID); i++)
-            syncw ^= UID[i];
-    }
-    my_sync_word = syncw;
-    return syncw;
-}
-#else
-uint8_t getSyncWord(void)
-{
+    // TX: 0x1d
+    // RX: 0x61 -> NOK
+    // RX: 0x1E, 0x1F, 0x2d, 0x3d, 0x4d, 0x6d -> OK
+    // RX: 0x20, 0x30, 0x40 -> NOK
     uint8_t syncw = UID[4];
     if (syncw == SX127X_SYNC_WORD_LORAWAN)
         syncw++;
     return syncw;
-}
+#else
+    return SX127X_SYNC_WORD;
 #endif
-
-#define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
+}
 
 uint16_t TLMratioEnumToValue(uint8_t enumval)
 {
