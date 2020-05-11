@@ -8,6 +8,11 @@
 // limited to a 4 byte payload on the BF side
 #define MSP_PORT_INBUF_SIZE 8
 
+#define CHECK_PACKET_PARSING() \
+  if (packet->readError) {\
+    return;\
+  }
+
 typedef enum {
     MSP_IDLE,
     MSP_HEADER_START,

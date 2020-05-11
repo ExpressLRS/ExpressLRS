@@ -10,6 +10,8 @@
 #include "rx_LinkQuality.h"
 #include "errata.h"
 #include "OTA.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -246,12 +248,18 @@ void ICACHE_RAM_ATTR UnpackChannelData_10bit()
     crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
 }
 
-void ICACHE_RAM_ATTR UnpackSwitchData()
+void ICACHE_RAM_ATTR UnpackMSPData()
 {
-    crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
-    crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
-    crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.flags = 0;
+    packet.function = Radio.RXdataBuffer[1];
+    packet.addByte(Radio.RXdataBuffer[3]);
+    packet.addByte(Radio.RXdataBuffer[4]);
+    packet.addByte(Radio.RXdataBuffer[5]);
+    packet.addByte(Radio.RXdataBuffer[6]);
+    crsf.sendMSPFrameToFC(&packet);
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
@@ -292,14 +300,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
-    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
-        if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
-        {
-            UnpackSwitchData();
-            NonceRXlocal = Radio.RXdataBuffer[5];
-            FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-            crsf.sendRCFrameToFC();
-        }
+    case MSP_DATA_PACKET:
+        UnpackMSPData();
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -510,7 +512,6 @@ void setup()
 
 void loop()
 {
-
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)

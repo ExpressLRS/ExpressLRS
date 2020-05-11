@@ -91,4 +91,3 @@ int16_t MeasureNoiseFloor(); //--todo, move this to radio lib
 int16_t MeasureRSSI(int FHSSindex); //--todo, move this to radio lib
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
-

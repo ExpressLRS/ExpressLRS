@@ -12,6 +12,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
+#include "elrs_eeprom.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -31,7 +32,7 @@ hwTimer hwTimer;
 #define RX_CONNECTION_LOST_TIMEOUT 1500 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500
 #define RF_MODE_CYCLE_INTERVAL 1000
-#define SWITCH_PACKET_SEND_INTERVAL 200
+#define MSP_PACKET_SEND_INTERVAL 200
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
 ///////////////////
@@ -46,8 +47,10 @@ MSP msp;
 
 void TimerExpired();
 
-//// Switch Data Handling ///////
-uint32_t SwitchPacketLastSent = 0; //time in ms when the last switch data packet was sent
+//// MSP Data Handling ///////
+uint32_t MSPPacketLastSent = 0; // time in ms when the last switch data packet was sent
+uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
+mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -209,20 +212,30 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 #endif
 }
 
-void ICACHE_RAM_ATTR GenerateSwitchChannelData()
+void ICACHE_RAM_ATTR GenerateMSPData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + SWITCH_DATA_PACKET;
+  PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
-  Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
-  Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
-  Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
-  Radio.TXdataBuffer[5] = Radio.NonceTX;
-  Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
+  Radio.TXdataBuffer[1] = MSPPacket.function;
+  Radio.TXdataBuffer[2] = MSPPacket.payloadSize;
+  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[4] = 0;
+  Radio.TXdataBuffer[5] = 0;
+  Radio.TXdataBuffer[6] = 0;
+  if (MSPPacket.payloadSize <= 4)
+  {
+    MSPPacket.payloadReadIterator = 0;
+    for (int i = 0; i < MSPPacket.payloadSize; i++)
+    {
+      Radio.TXdataBuffer[3+i] = MSPPacket.readByte();
+    }
+  }
+  else
+  {
+    Serial.println("Unable to send MSP command. Packet too long.");
+  }
+  
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
@@ -343,22 +356,22 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    #if defined HYBRID_SWITCHES_8
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-    #elif defined SEQ_SWITCHES
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-    #else
-    if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      Channels5to8Changed = false;
-      GenerateSwitchChannelData();
-      SwitchPacketLastSent = millis();
+      GenerateMSPData();
+      MSPPacketLastSent = millis();
+      MSPPacketSendCount--;
     }
-    else // else we just have regular channel data which we send as 8 + 2 bits
+    else
     {
+      #if defined HYBRID_SWITCHES_8
+      GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+      #elif defined SEQ_SWITCHES
+      GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+      #else
       Generate4ChannelData_11bit();
+      #endif
     }
-    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
@@ -466,7 +479,9 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  Serial2.begin(400000);
+  #ifdef USE_UART2
+    Serial2.begin(400000);
+  #endif
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -477,7 +492,7 @@ void setup()
   HardwareSerial(USART2);
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.begin(115200);
+  Serial.begin(400000);
 
   // Annoying startup beeps
 #ifndef JUST_BEEP_ONCE
@@ -740,5 +755,9 @@ void ProcessMSPPacket(mspPacket_t* packet)
     default:
       break;
     }
+  } else
+  if (packet->function == MSP_SET_VTX_CONFIG) {
+    MSPPacket = *packet;
+    MSPPacketSendCount = 6;
   }
 }
