@@ -35,6 +35,7 @@ int8_t platform_config_load(struct platform_config &config)
     temp.key = EEPROM.readUInt(offsetof(struct platform_config, key));
     temp.mode = EEPROM.readUInt(offsetof(struct platform_config, mode));
     temp.power = EEPROM.readUInt(offsetof(struct platform_config, power));
+    temp.tlm = EEPROM.readUInt(offsetof(struct platform_config, tlm));
 
     if (temp.key == ELRS_EEPROM_KEY)
     {
@@ -42,6 +43,7 @@ int8_t platform_config_load(struct platform_config &config)
         config.key = temp.key;
         config.mode = temp.mode;
         config.power = temp.power;
+        config.tlm = temp.tlm;
         return 0;
     }
     return -1;
@@ -59,6 +61,7 @@ int8_t platform_config_save(struct platform_config &config)
     EEPROM.writeUInt(offsetof(struct platform_config, key), config.key);
     EEPROM.writeUInt(offsetof(struct platform_config, mode), config.mode);
     EEPROM.writeUInt(offsetof(struct platform_config, power), config.power);
+    EEPROM.writeUInt(offsetof(struct platform_config, tlm), config.tlm);
     return EEPROM.commit() ? 0 : -1;
 #else
     return 0;

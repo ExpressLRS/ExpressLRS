@@ -41,7 +41,9 @@ enum
     TLM_RATIO_1_16 = 4,
     TLM_RATIO_1_8 = 5,
     TLM_RATIO_1_4 = 6,
-    TLM_RATIO_1_2 = 7
+    TLM_RATIO_1_2 = 7,
+    TLM_RATIO_MAX,
+    TLM_RATIO_DEFAULT = 0xff,
 };
 
 enum

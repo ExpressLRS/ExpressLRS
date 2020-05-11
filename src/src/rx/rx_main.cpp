@@ -66,6 +66,14 @@ inline void led_toggle(void)
     led_set_state(!ledState);
 }
 
+static void ICACHE_RAM_ATTR handle_tlm_ratio(uint8_t TLMinterval)
+{
+    tlm_check_ratio = 0;
+    if (TLM_RATIO_NO_TLM < TLMinterval && TLM_RATIO_DEFAULT > TLMinterval)
+    {
+        tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+    }
+}
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -332,6 +340,14 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                     crsf.sendRCFrameToFC();
                 }
 
+#if 0
+                uint8_t rateIn = (rx_buffer[3] >> 4) % RATE_MAX;
+                if (ExpressLRS_currAirRate->enum_rate != rateIn)
+                    SetRFLinkRate(rateIn);
+#endif
+                uint8_t TLMinterval = rx_buffer[3] & TLM_RATIO_1_2;
+                handle_tlm_ratio(TLMinterval);
+
                 FHSSsetCurrIndex(rx_buffer[1]);
                 NonceRXlocal = rx_buffer[2];
             }
@@ -418,11 +434,7 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     RFmodeCycleDelay = ExpressLRS_currAirRate->RFmodeCycleInterval +
                        ExpressLRS_currAirRate->RFmodeCycleAddtionalTime;
 
-    tlm_check_ratio = 0;
-    if (TLM_RATIO_NO_TLM < config->TLMinterval)
-    {
-        tlm_check_ratio = TLMratioEnumToValue(config->TLMinterval) - 1;
-    }
+    handle_tlm_ratio(config->TLMinterval);
 
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);

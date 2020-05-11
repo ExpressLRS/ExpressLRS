@@ -20,7 +20,6 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 //#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350u
 
-#define SYNC_PACKET_INTERVAL 1
 ///////////////////
 
 /// define some libs to use ///
@@ -36,13 +35,11 @@ struct platform_config pl_config = {
     .key = 0,
     .mode = RATE_DEFAULT,
     .power = TX_POWER_DEFAULT,
+    .tlm = TLM_RATIO_DEFAULT,
 };
 
 /////////// SYNC PACKET ////////
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
-#if SYNC_PACKET_INTERVAL
-static volatile uint32_t DRAM_ATTR sync_check_ratio = 0xff;
-#endif
 
 /////////// CONNECTION /////////
 static uint32_t LastPacketRecvMillis = 0;
@@ -53,6 +50,7 @@ static uint32_t recv_tlm_counter = 0;
 static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
 static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
+static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
 static volatile uint_fast8_t tlm_send = 0;
@@ -141,7 +139,8 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
     output[0] = (DeviceAddr) + SYNC_PACKET;
     output[1] = FHSSgetCurrIndex();
     output[2] = _rf_rxtx_counter;
-    output[3] = 0;
+    output[3] = ((ExpressLRS_currAirRate->enum_rate % RATE_MAX) << 4) +
+                (TLMinterval & TLM_RATIO_1_2);
     output[4] = UID[3];
     output[5] = UID[4];
     output[6] = UID[5];
@@ -205,24 +204,6 @@ exit_rx_send:
 
 ///////////////////////////////////////
 
-static uint8_t decRFLinkRate(void)
-{
-    if (ExpressLRS_currAirRate->enum_rate < (RATE_MAX - 1))
-    {
-        return SetRFLinkRate((ExpressLRS_currAirRate->enum_rate + 1));
-    }
-    return 0;
-}
-
-static uint8_t incRFLinkRate(void)
-{
-    if (ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
-    {
-        return SetRFLinkRate((ExpressLRS_currAirRate->enum_rate - 1));
-    }
-    return 0;
-}
-
 static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 {
     // Called from UART handling loop (main loop)
@@ -238,34 +219,37 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
 
         case 1:
-            // air rate
-            if (value == 0)
-            {
-                modified |= decRFLinkRate() ? (1 << 1) : 0;
-            }
-            else if (value == 1)
-            {
-                modified |= incRFLinkRate() ? (1 << 1) : 0;
-            }
+            // set air rate
+            if (RATE_MAX > value)
+                modified |= SetRFLinkRate(value) ? (1 << 1) : 0;
             DEBUG_PRINT("Rate: ");
             DEBUG_PRINTLN(ExpressLRS_currAirRate->enum_rate);
             break;
 
         case 2:
-            // TLMinterval
+            // set TLM interval
+            modified = TLMinterval;
+            if (value == TLM_RATIO_DEFAULT)
+            {
+                // Default requested
+                TLMinterval = ExpressLRS_currAirRate->TLMinterval;
+            }
+            else if (value < TLM_RATIO_MAX)
+            {
+                TLMinterval = value;
+            }
+            modified = (modified != TLMinterval) ? (1 << 2) : 0;
+
+            if (modified)
+                tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+            DEBUG_PRINT("TLM: ");
+            DEBUG_PRINTLN(TLMinterval);
             break;
 
         case 3:
-            // TXPower
+            // set TX power
             modified = PowerMgmt.currPower();
-            if (value == 0)
-            {
-                PowerMgmt.decPower();
-            }
-            else if (value == 1)
-            {
-                PowerMgmt.incPower();
-            }
+            PowerMgmt.setPower((PowerLevels_e)value);
             crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
@@ -307,10 +291,19 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             break;
     }
 
-    uint8_t resp[4] = {(uint8_t)(ExpressLRS_currAirRate->enum_rate + 2),
-                       (uint8_t)(ExpressLRS_currAirRate->TLMinterval + 1),
-                       (uint8_t)(PowerMgmt.currPower() + 2),
-                       4u};
+    uint8_t resp[5] = {(uint8_t)(ExpressLRS_currAirRate->enum_rate),
+                       (uint8_t)(TLMinterval),
+                       (uint8_t)(PowerMgmt.currPower()),
+                       (uint8_t)(PowerMgmt.maxPower()),
+                       0xff};
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
+    resp[4] = 0;
+#elif defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_EU_868_R9)
+    resp[4] = 1;
+#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    resp[4] = 2;
+#endif
+
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 
     if (modified)
@@ -319,6 +312,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
         pl_config.key = ELRS_EEPROM_KEY;
         pl_config.mode = ExpressLRS_currAirRate->enum_rate;
         pl_config.power = PowerMgmt.currPower();
+        pl_config.tlm = TLMinterval;
         platform_config_save(pl_config);
 
         // and start timer if rate was changed
@@ -352,7 +346,9 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
     crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate);
-    if (TLM_RATIO_NO_TLM == config->TLMinterval)
+    if (TLMinterval == TLM_RATIO_DEFAULT) // unknown, so use default
+        TLMinterval = config->TLMinterval;
+    if (TLM_RATIO_NO_TLM == TLMinterval)
     {
         Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
         Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
@@ -365,15 +361,11 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         Radio.RXdoneCallback1 = ProcessTLMpacket;
         Radio.TXdoneCallback1 = HandleTLM;
         connectionState = STATE_disconnected;
-        tlm_check_ratio = TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval) - 1;
+        tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
     }
-#if SYNC_PACKET_INTERVAL
-    sync_check_ratio = ExpressLRS_currAirRate->sync_interval;
-#endif
+
     platform_connection_state(connectionState);
 
-    //if (!init)
-    //    TxTimer.start();
     return 1;
 }
 
@@ -432,6 +424,7 @@ void setup()
     platform_config_load(pl_config);
     current_rate_config = pl_config.mode % RATE_MAX;
     power = (PowerLevels_e)(pl_config.power % PWR_UNKNOWN);
+    TLMinterval = pl_config.tlm;
     platform_mode_notify();
 
     crsf.connected = hw_timer_init; // it will auto init when it detects UART connection
@@ -472,7 +465,7 @@ void loop()
         goto exit_loop;
     }
 
-    if (TLM_RATIO_NO_TLM < ExpressLRS_currAirRate->TLMinterval)
+    if (TLM_RATIO_NO_TLM < TLMinterval)
     {
         uint32_t current_ms = millis();
 
@@ -487,20 +480,6 @@ void loop()
         {
             PacketRateNextCheck = current_ms;
 
-#if 0
-            // TODO: this is not ok... need improvements
-            float targetFrameRate = ExpressLRS_currAirRate->rate; // 200
-            if (TLM_RATIO_NO_TLM != ExpressLRS_currAirRate->TLMinterval)
-                targetFrameRate /= TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval); //  / 64
-            float PacketRate = recv_tlm_counter;
-            PacketRate /= LQ_CALCULATE_INTERVAL; // num tlm packets
-            downlink_linkQuality = int(((PacketRate / targetFrameRate) * 100000.0));
-            if (downlink_linkQuality > 99)
-            {
-                downlink_linkQuality = 99;
-            }
-            recv_tlm_counter = 0;
-#else
             // Calc LQ based on good tlm packets and receptions done
             uint8_t rx_cnt = Radio.NonceRX;
             uint32_t tlm_cnt = recv_tlm_counter;
@@ -510,7 +489,6 @@ void loop()
             else
                 // failure value??
                 downlink_linkQuality = 0;
-#endif
         }
     }
 

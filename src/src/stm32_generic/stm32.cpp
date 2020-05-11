@@ -78,6 +78,7 @@ int8_t platform_config_load(struct platform_config &config)
         config.key = temp.key;
         config.mode = temp.mode;
         config.power = temp.power;
+        config.tlm = temp.tlm;
         res = 0;
     }
 #else

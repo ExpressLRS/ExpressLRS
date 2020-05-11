@@ -4,13 +4,14 @@
 #include "platform_internal.h"
 #include <stdint.h>
 
-#define ELRS_EEPROM_KEY 0x454c5253 // ELRS
+#define ELRS_EEPROM_KEY 0x454c5201 // ELR + version nbr
 
 struct platform_config
 {
     uint32_t key;
     uint32_t mode;
     uint32_t power;
+    uint32_t tlm;
 };
 
 int8_t platform_config_load(struct platform_config &config);
