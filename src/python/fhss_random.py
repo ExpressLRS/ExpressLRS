@@ -3,7 +3,7 @@ import os
 
 DEBUG = 0
 
-CALC_MY_STEMP = 0
+CALC_MY_STEP = 1
 NR_SEQUENCE_ENTRIES = 256
 
 
@@ -326,8 +326,8 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     rngSeed(macSeed)
 
     uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
-    header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u; SYNC_INTERVAL=%s\n" % (
-        uid_compare, DOMAIN, rand_version, use_local_rand, SYNC_INTERVAL)
+    header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u; SYNC_INTERVAL=%s; CALC_MY_STEP=%u\n" % (
+        uid_compare, DOMAIN, rand_version, use_local_rand, SYNC_INTERVAL, CALC_MY_STEP)
     write_out = False
     try:
         with open(os.path.join('src', 'fhss_freqs.h'), "r") as _f:
@@ -347,7 +347,7 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
             _f.write("#define NR_SEQUENCE_ENTRIES (%u)\n" % NR_SEQUENCE_ENTRIES)
 
             my_step = 0
-            if CALC_MY_STEMP:
+            if CALC_MY_STEP:
                 my_step = sum(MY_UID[3:])
                 my_step %= 8
             my_step |= 1
