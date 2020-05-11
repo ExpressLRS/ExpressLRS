@@ -6,6 +6,7 @@
 #include "msp_tests.h"
 #include "encapsulated_msp_tests.h"
 #include "test_switches.h"
+#include "eeprom_tests.h"
 
 void setup() {
     // NOTE!!! Wait for >2 secs
@@ -17,6 +18,7 @@ void setup() {
     RUN_TEST(test_msp_receive);
     RUN_TEST(test_msp_send);
     RUN_TEST(test_encapsulated_msp_send);
+    RUN_TEST(test_eeprom_rw);
 
     setup_switches();
 }
