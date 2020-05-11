@@ -482,7 +482,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  Serial2.begin(400000);
+  //Serial2.begin(400000);
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -596,9 +596,9 @@ void setup()
   SetRFLinkRate(RATE_200HZ);
 
 // #ifdef PLATFORM_ESP32
-//   xTaskCreate(printDebug, "printdebug", 1024, (void *)1, tskIDLE_PRIORITY, NULL);
-//   POWERMGNT.setPower(PWR_10mW);
-//   Radio.StartTimerTask();
+   xTaskCreate(printDebug, "printdebug", 1024, (void *)1, tskIDLE_PRIORITY, NULL);
+   POWERMGNT.setPower(PWR_10mW);
+   Radio.StartTimerTask();
 // #endif
 
 }

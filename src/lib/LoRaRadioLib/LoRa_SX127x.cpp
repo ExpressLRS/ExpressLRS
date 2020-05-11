@@ -224,7 +224,7 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 
   uint8_t status = ERR_NONE;
 
-  //status = SetMode(SX127X_STANDBY);
+  status = SetMode(OPMODE_STANDBY);
 
   if (status != ERR_NONE)
   {
@@ -400,10 +400,10 @@ void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 void SX127xDriver::ConfigLoraDefaults()
 {
   Serial.print("Set lora defaults");
-  setRegValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
   writeRegister(SX127X_REG_PAYLOAD_LENGTH, CURR_REG_PAYLOAD_LENGTH);
   writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  setRegValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
 }
 
 /////////////////////////////////////TX functions/////////////////////////////////////////
@@ -433,11 +433,12 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t length)
 {
+
 #ifdef SX127x_DEBUG_TIMINGS
   SX127xDriver::TXstartMicros = micros();
 #endif
 
-  //SetMode(OPMODE_STANDBY); // will be skipped if already in standby
+  SetMode(OPMODE_STANDBY); // will be skipped if already in standby
 
   if (InterruptAssignment != TX_DONE)
   {

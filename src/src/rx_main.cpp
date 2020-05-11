@@ -502,8 +502,9 @@ void setup()
 
     crsf.Begin();
     hwTimer.callbackTock = &HWtimerCallback;
-    SetRFLinkRate(RATE_200HZ);
     hwTimer.init();
+    SetRFLinkRate(RATE_200HZ);
+    
 }
 
 void loop()
