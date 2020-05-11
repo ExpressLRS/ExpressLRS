@@ -193,9 +193,9 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
 uint8_t SX1276begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
 {
   // initialize low-level drivers
-  //initModule(nss, dio0, dio1);
+ 
   Serial.println("Init module SX1276");
-  initModule(nss, dio1, dio0);
+  initPins();
 
   // execute common part
   uint8_t status = SX127xDriver::SX127xBegin();

@@ -1,9 +1,7 @@
 #include "LoRa_lowlevel.h"
 #include <SPI.h>
 
-Verbosity_ DebugVerbosity = DEBUG_1;
-
-void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
+void initPins()
 {
   pinMode(SX127xDriver::SX127x_nss, OUTPUT);
   pinMode(SX127xDriver::SX127x_dio0, INPUT);
@@ -18,6 +16,8 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 
 #ifdef PLATFORM_ESP32
   SPI.begin(SX127xDriver::SX127x_SCK, SX127xDriver::SX127x_MISO, SX127xDriver::SX127x_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
+  SPI.setBitOrder(MSBFIRST);
+  SPI.setDataMode(SPI_MODE0);
   SPI.setFrequency(10000000);
 #endif
 
@@ -64,112 +64,8 @@ uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t
   SPI.write(OutByte);
 #endif
 
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //   inBytes[i] = SPI.transfer(reg);
-  // }
-
   SPI.transfer(inBytes, numBytes);
-
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-
-  if (DebugVerbosity >= DEBUG_4)
-  {
-    Serial.print("SPI: Read Burst ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
-
-    for (int i = 0; i < numBytes; i++)
-    {
-      Serial.print(inBytes[i]);
-    }
-
-    Serial.println();
-  }
-
-  return (ERR_NONE);
-}
-
-uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, volatile uint8_t *inBytes)
-{
-  char OutByte;
-
-  digitalWrite(SX127xDriver::SX127x_nss, LOW);
-
-  OutByte = (reg | SPI_READ);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(OutByte);
-#else
-  SPI.write(OutByte);
-#endif
-
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //    inBytes[i] = SPI.transfer(reg);
-  // }
-  SPI.transfer((uint8_t *)inBytes, numBytes);
-
-  digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-
-  if (DebugVerbosity >= DEBUG_4)
-  {
-    Serial.print("SPI: Read Burst ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
-
-    for (int i = 0; i < numBytes; i++)
-    {
-      Serial.print(inBytes[i]);
-    }
-
-    Serial.println();
-  }
-
-  return (ERR_NONE);
-}
-
-uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, char *inBytes)
-{
-  digitalWrite(SX127xDriver::SX127x_nss, LOW);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(reg | SPI_READ);
-#else
-  SPI.write(reg | SPI_READ);
-#endif
-
-  // for (uint8_t i = 0; i < numBytes; i++)
-  // {
-  //   inBytes[i] = SPI.transfer(reg);
-  // }
-
-  SPI.transfer((uint8_t *)inBytes, numBytes);
-
-  digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-
-  if (DebugVerbosity >= DEBUG_4)
-  {
-    Serial.print("SPI: Read BurstStr ");
-    Serial.print("REG: ");
-    Serial.print(reg);
-    Serial.print(" LEN: ");
-    Serial.print(numBytes);
-    Serial.print(" DATA: ");
-
-    for (int i = 0; i < numBytes; i++)
-    {
-      Serial.print(inBytes[i]);
-    }
-
-    Serial.println();
-  }
 
   return (ERR_NONE);
 }
@@ -209,7 +105,7 @@ uint8_t ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uin
   return (ERR_NONE);
 }
 
-void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t numBytes)
+void ICACHE_RAM_ATTR writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes)
 {
   digitalWrite(SX127xDriver::SX127x_nss, LOW);
 
@@ -219,21 +115,6 @@ void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t n
 #else
   SPI.write(reg | SPI_WRITE);
   SPI.writeBytes(data, numBytes);
-#endif
-
-  digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-}
-
-void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *data, uint8_t numBytes)
-{
-  digitalWrite(SX127xDriver::SX127x_nss, LOW);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(reg | SPI_WRITE);
-  SPI.transfer((uint8_t *)data, numBytes);
-#else
-  SPI.write(reg | SPI_WRITE);
-  SPI.writeBytes((uint8_t *)data, numBytes);
 #endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
@@ -252,13 +133,4 @@ void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
 #endif
 
   digitalWrite(SX127xDriver::SX127x_nss, HIGH);
-
-  // if (DebugVerbosity >= DEBUG_4)
-  // {
-  //   Serial.print("SPI: Write ");
-  //   Serial.print("REG: ");
-  //   Serial.print(reg, HEX);
-  //   Serial.print(" VAL: ");
-  //   Serial.println(data, HEX);
-  // }
 }
