@@ -117,7 +117,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
         //Serial.print(" : ");
-        //Serial.println(linkQuality);
+        Serial.println(linkQuality);
         crsf.sendLinkStatisticsToFC();
     }
 }
@@ -162,6 +162,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
+    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
 
     if (alreadyFHSS == true)
     {
@@ -267,6 +268,7 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -342,60 +344,59 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
     addPacketToLQ();
+    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1) + 100); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
-    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
-    //Serial.print(HWtimerError);
+    //Serial.println(HWtimerError);
 
-    if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+    if (connectionState == tentative)
     {
-        if (connectionState == tentative)
-        {
-            int32_t freqerror = Radio.GetFrequencyError();
-            FreqCorrection = freqerror;
-            //Serial.print("init freq correction: ");
-            //Serial.println(freqerror);
-        }
-        else
-        {
-            bool freqerror = Radio.GetFrequencyErrorbool();
-            //Serial.print(freqerror);
-            //Serial.print(" : ");
+        int32_t freqerror = Radio.GetFrequencyError();
+        FreqCorrection = freqerror;
+        //Serial.print("init freq correction: ");
+        //Serial.println(freqerror);
+    }
+    else
+    {
+        bool freqerror = Radio.GetFrequencyErrorbool();
+        //Serial.print(FreqCorrection);
+        //Serial.print(" : ");
 
-            if (!freqerror)
+        if (!freqerror)
+        {
+            if (FreqCorrection < FreqCorrectionMax)
             {
-                if (FreqCorrection < FreqCorrectionMax)
-                {
-                    FreqCorrection += 61; //min freq step is ~ 61hz
-                }
-                else
-                {
-                    FreqCorrection = FreqCorrectionMax;
-                    Serial.println("Max pos reasontable freq offset correction limit reached!");
-                }
+                FreqCorrection += 61; //min freq step is ~ 61hz
             }
             else
             {
-                if (FreqCorrection > FreqCorrectionMin)
-                {
-                    FreqCorrection -= 61; //min freq step is ~ 61hz
-                }
-                else
-                {
-                    FreqCorrection = FreqCorrectionMin;
-                    Serial.println("Max neg reasontable freq offset correction limit reached!");
-                }
+                FreqCorrection = FreqCorrectionMax;
+                Serial.println("Max pos reasontable freq offset correction limit reached!");
             }
         }
-
-        Radio.setPPMoffsetReg(FreqCorrection);
-
-        //Serial.println(FreqCorrection);
-
-        HandleFHSS();
-        alreadyFHSS = true;
+        else
+        {
+            if (FreqCorrection > FreqCorrectionMin)
+            {
+                FreqCorrection -= 61; //min freq step is ~ 61hz
+            }
+            else
+            {
+                FreqCorrection = FreqCorrectionMin;
+                Serial.println("Max neg reasontable freq offset correction limit reached!");
+            }
+        }
     }
+
+    // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
+    // {
+
+    //     Radio.setPPMoffsetReg(FreqCorrection);
+
+    //     //Serial.println(FreqCorrection);
+
+    //     HandleFHSS();
+    //     alreadyFHSS = true;
+    // }
 }
 
 void beginWebsever()

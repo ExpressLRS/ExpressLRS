@@ -437,7 +437,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 
   SetMode(SX127X_STANDBY);
 
-  if (InterruptAssignment != RX_DONE) //attach interrupt to DIO0, 
+  if (InterruptAssignment != RX_DONE) //attach interrupt to DIO0,
   {
     attachInterrupt(digitalPinToInterrupt(SX127x_dio0), RXnbISR, RISING);
     InterruptAssignment = RX_DONE;
@@ -678,14 +678,14 @@ bool SX127xDriver::GetFrequencyErrorbool()
 int32_t SX127xDriver::GetFrequencyError()
 {
 
-  uint8_t MSB_reg = readRegister(SX127X_REG_FEI_MSB) & 0b1111;
+  uint8_t reg[3] = {0x0, 0x0, 0x0};
+  readRegisterBurst(SX127X_REG_FEI_MSB, sizeof(reg), reg);
 
-  uint32_t RegFei = 0;
-  RegFei = ((MSB_reg) << 16) + (readRegister(SX127X_REG_FEI_MID) << 8) + (readRegister(SX127X_REG_FEI_LSB));
+  uint32_t RegFei = ((reg[0] & 0b0111) << 16) + (reg[1] << 8) + reg[2];
 
-  int32_t intFreqError = RegFei & 0b01111111111111111111;
+  int32_t intFreqError = RegFei;
 
-  if (MSB_reg & 0b1000)
+  if ((reg[0] & 0b1000) >> 3)
   {
     intFreqError -= 524288; // Sign bit is on
   }

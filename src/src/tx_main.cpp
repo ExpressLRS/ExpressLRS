@@ -590,9 +590,9 @@ void setup()
   Radio.Begin();
   crsf.Begin();
   SetRFLinkRate(RATE_200HZ);
-#ifdef PLATFORM_ESP32
+//#ifdef PLATFORM_ESP32
   //Radio.StartTimerTask();
-#endif
+//#endif
 }
 
 void loop()
