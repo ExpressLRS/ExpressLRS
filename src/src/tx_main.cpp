@@ -591,7 +591,7 @@ void setup()
   crsf.Begin();
   SetRFLinkRate(RATE_200HZ);
 #ifdef PLATFORM_ESP32
-  Radio.StartTimerTask();
+  //Radio.StartTimerTask();
 #endif
 }
 
