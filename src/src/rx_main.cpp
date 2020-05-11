@@ -116,9 +116,9 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        Serial.print(" : ");
-        Serial.println(linkQuality);
-        //crsf.sendLinkStatisticsToFC();
+        //Serial.print(" : ");
+        //Serial.println(linkQuality);
+        crsf.sendLinkStatisticsToFC();
     }
 }
 
@@ -300,7 +300,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #else
         UnpackChannelData_11bit();
 #endif
-        //crsf.sendRCFrameToFC();
+        crsf.sendRCFrameToFC();
         break;
 
     case MSP_DATA_PACKET:
@@ -346,7 +346,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
     hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
-    Serial.print(HWtimerError);
+    //Serial.print(HWtimerError);
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -548,7 +548,7 @@ void loop()
 
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
     {
-        //crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
 
