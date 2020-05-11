@@ -12,6 +12,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
+#include "elrs_eeprom.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
