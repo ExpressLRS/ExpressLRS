@@ -83,6 +83,8 @@ uint8_t SX127xDriver::maxPWR = 0b1111;
 uint8_t volatile SX127xDriver::TXdataBuffer[256];
 uint8_t volatile SX127xDriver::RXdataBuffer[256];
 
+uint8_t SX127xDriver::currOpmode = 0xFF; // no a valid opmode, ie undefined
+
 ContinousMode SX127xDriver::ContMode = CONT_OFF;
 RFmodule_ SX127xDriver::RFmodule = RFMOD_SX1276;
 RadioState_ SX127xDriver::RadioState = RADIO_IDLE;
@@ -130,6 +132,8 @@ uint8_t SX127xDriver::Begin()
     status = SX1276begin(SX127x_nss, SX127x_dio0, SX127x_dio1);
     Serial.println("SX1276 Done");
   }
+
+  ConfigLoraDefaults();
 
   return (status);
 }
@@ -224,11 +228,38 @@ uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 
 uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 {
+  //   SX127xDriver::currFreq = freq;
+
+  //   uint8_t status = ERR_NONE;
+
+  //   status = SetMode(SX127X_STANDBY);
+  //   if (status != ERR_NONE)
+  //   {
+  //     return (status);
+  //   }
+
+  // #define FREQ_STEP 61.03515625
+
+  //   uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+
+  //   status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
+  //   status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
+  //   status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
+
+  //   if (status != ERR_NONE)
+  //   {
+  //     return (status);
+  //   }
+
+  //   status = SetMode(SX127X_STANDBY);
+  //   return (status);
+
   SX127xDriver::currFreq = freq;
 
   uint8_t status = ERR_NONE;
 
-  status = SetMode(SX127X_SLEEP);
+  status = SetMode(SX127X_STANDBY);
+
   if (status != ERR_NONE)
   {
     return (status);
@@ -236,18 +267,25 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
 
 #define FREQ_STEP 61.03515625
 
-  uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+  int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+
+  uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
+  uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
+  uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
+
+  uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
+
+  //writeRegisterBurstStr(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+
+  //writeRegister(SX127X_REG_FRF_MSB, FRQ_MSB);
+  //writeRegister(SX127X_REG_FRF_MID, FRQ_MID);
+  //writeRegister(SX127X_REG_FRF_LSB, FRQ_LSB);
+
+  //writeRegisterBurstStr(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 
   status = setRegValue(SX127X_REG_FRF_MSB, (uint8_t)((FRQ >> 16) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_MID, (uint8_t)((FRQ >> 8) & 0xFF));
   status = setRegValue(SX127X_REG_FRF_LSB, (uint8_t)(FRQ & 0xFF));
-
-  // set carrier frequency  CHANGED
-  // uint32_t base = 2;
-  // uint32_t FRF = (freq * (base << 18)) / 32.0;
-  // status = setRegValue(SX127X_REG_FRF_MSB, (FRF & 0xFF0000) >> 16);
-  // status = setRegValue(SX127X_REG_FRF_MID, (FRF & 0x00FF00) >> 8);
-  // status = setRegValue(SX127X_REG_FRF_LSB, FRF & 0x0000FF);
 
   if (status != ERR_NONE)
   {
@@ -255,6 +293,7 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
   }
 
   status = SetMode(SX127X_STANDBY);
+
   return (status);
 }
 
@@ -472,6 +511,15 @@ void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////
 
+void SX127xDriver::ConfigLoraDefaults()
+{
+  Serial.print("Set lora defaults");
+  writeRegister(SX127X_REG_PAYLOAD_LENGTH, 8);
+  writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
+  writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  setRegValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
+}
+
 /////////////////////////////////////TX functions/////////////////////////////////////////
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
@@ -510,12 +558,11 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
     InterruptAssignment = TX_DONE;
   }
 
-  setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
+  //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE, 7, 6);
 
-  setRegValue(SX127X_REG_PAYLOAD_LENGTH, length);
-  setRegValue(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
+  //setRegValue(SX127X_REG_PAYLOAD_LENGTH, length);
+  //setRegValue(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-
   writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, length);
 
 #if defined(PLATFORM_ESP32)
@@ -576,11 +623,10 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
     setRegValue(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
   }
 
-  setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE | SX127X_DIO1_RX_TIMEOUT, 7, 4);
+  //setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE | SX127X_DIO1_RX_TIMEOUT, 7, 4);
+  //setRegValue(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
 
-  setRegValue(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
-
   SetMode(SX127X_RXCONTINUOUS);
 }
 
@@ -704,19 +750,13 @@ uint8_t SX127xDriver::RunCAD()
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
-{ //if radio is not already in the required mode set it to the requested mode
-
-  //if (!(_opmode == mode)) {
-  setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
-  // _opmode = (RadioOPmodes)mode;
+{ //if radio is not already in the required mode set it to the requested mod
+  if (currOpmode != mode)
+  {
+    setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
+    currOpmode = mode;
+  }
   return (ERR_NONE);
-  //  } else {
-  //    if (DebugVerbosity >= DEBUG_3) {
-  //      Serial.print("OPMODE was already at requested value: ");
-  //      printOPMODE(mode);
-  //      Serial.println();
-  //    }
-  //  }
 }
 
 uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)

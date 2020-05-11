@@ -18,6 +18,7 @@ void initModule(uint8_t nss, uint8_t dio0, uint8_t dio1)
 
 #ifdef PLATFORM_ESP32
   SPI.begin(SX127xDriver::SX127x_SCK, SX127xDriver::SX127x_MISO, SX127xDriver::SX127x_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
+  SPI.setFrequency(10000000);
 #endif
 
 #ifdef PLATFORM_ESP8266

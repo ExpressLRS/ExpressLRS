@@ -592,6 +592,7 @@ void setup()
   crsf.Begin();
 
   SetRFLinkRate(RATE_200HZ);
+  Radio.StartTimerTask();
 }
 
 void loop()

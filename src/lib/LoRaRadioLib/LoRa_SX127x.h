@@ -183,7 +183,9 @@ public:
     static void setPPMoffsetReg(int32_t offset);
 
     static uint8_t SX127xBegin();
+    static void ConfigLoraDefaults();
     static uint8_t SetMode(uint8_t mode);
+    static uint8_t currOpmode;
     static uint8_t TX(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
 
