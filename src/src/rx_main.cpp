@@ -46,6 +46,9 @@ uint8_t scanIndex = 0;
 
 int32_t HWtimerError;
 int32_t Offset;
+RXtimerState_e RXtimerState;
+uint32_t GotConnectionMillis = 0;
+uint32_t ConsiderConnGoodMillis = 4000; //after 5 seconds of connection it is considered 'good'
 
 bool LED = false;
 
@@ -94,7 +97,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM;   // to match BF
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
@@ -117,7 +120,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        //crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC();
     }
 }
 
@@ -142,10 +145,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI>127)
+    if (openTxRSSI > 127)
         openTxRSSI = 127;
     // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255-openTxRSSI;
+    openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
 
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
@@ -186,6 +189,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
+    RXtimerState = tim_disconnected;
     LPF_FreqError.init(0);
 
     digitalWrite(GPIO_PIN_LED, 0);        // turn off led
@@ -202,6 +206,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
 {
     connectionStatePrev = connectionState;
     connectionState = tentative;
+    RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
 }
 
@@ -214,6 +219,8 @@ void ICACHE_RAM_ATTR GotConnection()
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
+    RXtimerState = tim_tentative;
+    GotConnectionMillis = millis();
 
     RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
     digitalWrite(GPIO_PIN_LED, 1); // turn on led
@@ -290,13 +297,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
+#if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(&Radio, &crsf);
-        #elif defined HYBRID_SWITCHES_8
+#elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(&Radio, &crsf);
-        #else
+#else
         UnpackChannelData_11bit();
-        #endif
+#endif
         crsf.sendRCFrameToFC();
         break;
 
@@ -340,9 +347,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+
+    if (RXtimerState == tim_tentative || RXtimerState == tim_disconnected)
+    {
+        hwTimer.phaseShift((Offset >> 3) + timerOffset);
+    }
+    else
+    {
+        hwTimer.phaseShift((Offset >> 4) + timerOffset);
+    }
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -542,6 +557,12 @@ void loop()
     {
         sampleButton();
         buttonLastSampled = millis();
+    }
+
+    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)))
+    {
+        RXtimerState = tim_locked;
+        Serial.println("Timer Considered Locked");
     }
 
 #ifdef Auto_WiFi_On_Boot
