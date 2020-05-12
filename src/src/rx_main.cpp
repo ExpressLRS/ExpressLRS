@@ -45,6 +45,9 @@ uint8_t scanIndex = 0;
 
 int32_t HWtimerError;
 int32_t Offset;
+RXtimerState_e RXtimerState;
+uint32_t GotConnectionMillis = 0;
+uint32_t ConsiderConnGoodMillis = 4000; //4 seconds after we got the inital connection we assume the timer has locked on
 
 bool LED = false;
 
@@ -116,8 +119,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        //Serial.print(" : ");
-        Serial.println(linkQuality);
         crsf.sendLinkStatisticsToFC();
     }
 }
@@ -188,7 +189,8 @@ void ICACHE_RAM_ATTR LostConnection()
 
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
-    //LPF_Offset.Beta = 3;
+    RXtimerState = tim_disconnected;
+    LPF_FreqError.init(0);
 
     digitalWrite(GPIO_PIN_LED, 0);        // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
@@ -204,6 +206,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
 {
     connectionStatePrev = connectionState;
     connectionState = tentative;
+    RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
     //LPF_Offset.Beta = 3;
 }
@@ -217,7 +220,8 @@ void ICACHE_RAM_ATTR GotConnection()
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
-    //LPF_Offset.Beta = 5;
+    RXtimerState = tim_tentative;
+    GotConnectionMillis = millis();
 
     RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
     digitalWrite(GPIO_PIN_LED, 1); // turn on led
@@ -346,7 +350,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     addPacketToLQ();
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1) + 100); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
 
-    //Serial.println(HWtimerError);
+    HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+
+    if (RXtimerState == tim_tentative || RXtimerState == tim_disconnected)
+    {
+        hwTimer.phaseShift((Offset >> 3) + timerOffset);
+    }
+    else
+    {
+        hwTimer.phaseShift((Offset >> 4) + timerOffset);
+    }
 
     if (connectionState == tentative)
     {
@@ -557,6 +571,12 @@ void loop()
     {
         sampleButton();
         buttonLastSampled = millis();
+    }
+
+    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)))
+    {
+        RXtimerState = tim_locked;
+        Serial.println("Timer Considered Locked");
     }
 
 #ifdef Auto_WiFi_On_Boot

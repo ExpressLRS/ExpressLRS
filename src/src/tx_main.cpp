@@ -446,6 +446,16 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
     break;
 
+  case 0xFF:
+    if (crsf.ParameterUpdateData[1] == 1)
+    {
+      Serial.println("Binding Requested!");
+      crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00);
+
+      //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done 
+    }
+    break;
+
   default:
     break;
   }
