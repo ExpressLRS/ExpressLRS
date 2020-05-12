@@ -12,53 +12,105 @@ local version = 'v0.1'
 local gotFirstResp = false
 
 local AirRate = {
+    index = 1,
     editable = true,
     name = 'Pkt. Rate',
     selected = 99,
     list = {'200 Hz', '100 Hz', '50 Hz'},
     values = {0x00, 0x01, 0x02},
-    max_allowed = 3
+    max_allowed = 3,
 }
 
 local TLMinterval = {
+    index = 2,
     editable = true,
     name = 'TLM Ratio',
     selected = 99,
     list = {'Off', '1:128', '1:64', '1:32', '1:16', '1:8', '1:4', '1:2', 'Default'},
     values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xFF},
-    max_allowed = 9
+    max_allowed = 9,
 }
 
 local MaxPower = {
+    index = 3,
     editable = true,
     name = 'Power',
     selected = 99,
     list = {'10 mW', '25 mW', '50 mW', '100 mW', '250 mW', '500 mW', '1000 mW', '2000 mW'},
     values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
-    max_allowed = 8
+    max_allowed = 8,
 }
 
 local RFfreq = {
+    index = 4,
     editable = false,
     name = 'RF Freq',
     selected = 99,
     list = {'915 MHz', '868 MHz', '433 MHz'},
     values = {0x00, 0x01, 0x02},
-    max_allowed = 3
+    max_allowed = 3,
 }
 
-local selection = {
+local function binding(item, event)
+    playTone(2000, 50, 0)
+    item.exec = false
+    return 0
+end
+local Bind = {
+    index = 5,
+    editable = false,
+    name = '[Bind]',
+    exec = false,
+    func = binding,
+    selected = 99,
+    list = {},
+    values = {},
+    max_allowed = 0,
+    offsets = {left=5, right=0, top=5, bottom=5},
+}
+
+local function web_server_start(item, event)
+    playTone(2000, 50, 0)
+    item.exec = false
+    return 0
+end
+local WebServer = {
+    index = 5,
+    editable = false,
+    name = '[Web Server]',
+    exec = false,
+    func = web_server_start,
+    selected = 99,
+    list = {},
+    values = {},
+    max_allowed = 0,
+    offsets = {left=65, right=0, top=5, bottom=5},
+}
+
+local exit_script = {
+    index = 6,
+    editable = false,
+    action = 'exit',
+    name = '[EXIT]',
+    selected = 99,
+    list = {},
+    values = {},
+    max_allowed = 0,
+    offsets = {left=5, right=0, top=5, bottom=5},
+}
+
+local menu = {
     selected = 1,
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
-    list = {AirRate, TLMinterval, MaxPower, RFfreq},
-    max_allowed = 4
+    --list = {AirRate, TLMinterval, MaxPower, RFfreq, Bind, WebServer, exit_script},
+    list = {AirRate, TLMinterval, MaxPower, RFfreq, exit_script},
 }
 
 -- returns flags to pass to lcd.drawText for inverted and flashing text
 local function getFlags(element)
-    if selection.selected ~= element then return 0 end
-    if selection.selected == element and selection.modify == false then
+    if menu.selected ~= element then return 0 end
+    if menu.selected == element and menu.modify == false then
         return 0 + INVERS
     end
     -- this element is currently selected
@@ -100,7 +152,7 @@ local supportedRadios =
     {
         --highRes         = true,
         textSize        = 0,
-        xOffset         = 60,
+        xOffset         = 120,
         yOffset         = 25,
         topOffset       = 5,
         leftOffset      = 5,
@@ -118,44 +170,43 @@ local function refreshLCD()
 
     lcd.clear()
     lcd.drawText(lOffset, yOffset, 'ExpressLRS CFG ' .. version, INVERS)
-    yOffset = 5 + radio_data.yOffset
+    yOffset = 5
 
-    for idx,item in pairs(selection.list) do
-        local value = '?'
-        if item.selected <= #item.list and item.selected <= item.max_allowed then
-            value = item.list[item.selected]
+    for idx,item in pairs(menu.list) do
+        local offsets = {left=0, right=0, top=0, bottom=0}
+        if item.offsets ~= nil then
+            offsets = item.offsets
         end
-        lcd.drawText(lOffset, yOffset, item.name, radio_data.textSize)
-        lcd.drawText(radio_data.xOffset, yOffset, value, getFlags(idx) + radio_data.textSize)
-        yOffset = yOffset + radio_data.yOffset
-    end
-
-    --[[
-    lcd.drawText(18, 54, '[Bind]', getFlags(5) + SMLSIZE)
-    lcd.drawText(55, 54, '[Web Server]', getFlags(6) + SMLSIZE)
-
-    if selection.selected > 4 then
-        if selection.modify == true then
-            lcd.drawText(7, 53, 'Press [ENTER] to stop', MEDSIZE)
+        lOffset = offsets.left + radio_data.leftOffset
+        local item_y = yOffset + offsets.top + radio_data.yOffset * item.index
+        if item.action ~= nil or item.func ~= nil then
+            lcd.drawText(lOffset, item_y, item.name, getFlags(idx) + radio_data.textSize)
+        else
+            local value = '?'
+            if 0 < item.selected and item.selected <= #item.list and item.selected <= item.max_allowed then
+                value = item.list[item.selected]
+            end
+            lcd.drawText(lOffset, item_y, item.name, radio_data.textSize)
+            lcd.drawText(radio_data.xOffset, item_y, value, getFlags(idx) + radio_data.textSize)
         end
     end
-    ]]--
 end
 
-local function increase(_selection)
-    local item = _selection
+local function increase(_menu)
+    local item = _menu
     if item.modify then
         item = item.list[item.selected]
     end
 
-    if item.selected < #item.list and item.selected < item.max_allowed then
+    if item.selected < #item.list and
+       (item.max_allowed == nil or item.selected < item.max_allowed) then
         item.selected = item.selected + 1
         --playTone(2000, 50, 0)
     end
 end
 
-local function decrease(_selection)
-    local item = _selection
+local function decrease(_menu)
+    local item = _menu
     if item.modify then
         item = item.list[item.selected]
     end
@@ -237,40 +288,61 @@ local function run_func(event)
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
     end
 
-    local type = selection.selected
-    local item = selection.list[type]
+    local type = menu.selected
+    local item = menu.list[type]
+
+    if item.exec == true and item.func ~= nil then
+        local retval = item.func(item, event)
+        refreshLCD()
+        return retval
+    end
 
     -- now process key events
-    if event == EVT_ROT_LEFT or
-       event == EVT_MINUS_BREAK or
-       event == EVT_DOWN_BREAK then
-        decrease(selection)
+    if event == EVT_VIRTUAL_ENTER_LONG or
+       event == EVT_ENTER_LONG or
+       event == EVT_MENU_LONG then
+        -- exit script
+        return 2
+    elseif event == EVT_VIRTUAL_PREV or
+           event == EVT_ROT_LEFT or
+           event == EVT_MINUS_BREAK or
+           event == EVT_DOWN_BREAK or
+           event == EVT_SLIDE_LEFT then
+        decrease(menu)
 
-    elseif event == EVT_ROT_RIGHT or
+    elseif event == EVT_VIRTUAL_NEXT or
+           event == EVT_ROT_RIGHT or
            event == EVT_PLUS_BREAK or
-           event == EVT_UP_BREAK then
-        increase(selection)
+           event == EVT_UP_BREAK or
+           event == EVT_SLIDE_RIGHT then
+        increase(menu)
 
-    elseif event == EVT_ENTER_BREAK then
-        if selection.modify then
+    elseif event == EVT_VIRTUAL_ENTER or
+           event == EVT_ENTER_BREAK then
+        if menu.modify then
             -- update module when edit ready
             local value = 0
-            if item.selected <= #item.values then
+            if 0 < item.selected and item.selected <= #item.values then
                 value = item.values[item.selected]
             else
                 type = 0
             end
             crossfireTelemetryPush(0x2D, {0xEE, 0xEA, type, value})
-            selection.modify = false
-        elseif item.editable and item.selected <= #item.values then
+            menu.modify = false
+        elseif item.editable and 0 < item.selected and item.selected <= #item.values then
             -- allow modification only if not readonly and values received from module
-            selection.modify = true
+            menu.modify = true
+        elseif item.func ~= nil then
+            item.exec = true
+        elseif item.action == 'exit' then
+            -- exit script
+            return 2
         end
 
-    elseif event == EVT_EXIT_BREAK and selection.modify then
-        -- I was hoping to find the T16 RTN button as an alternate way of deselecting
-        -- a field, but no luck so far
-        selection.modify = false
+    elseif menu.modify and (event == EVT_VIRTUAL_EXIT or
+                            event == EVT_EXIT_BREAK or
+                            event == EVT_RTN_FIRST) then
+        menu.modify = false
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- refresh data
     end
 
