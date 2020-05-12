@@ -48,7 +48,7 @@ int32_t HWtimerError;
 int32_t Offset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
-uint32_t ConsiderConnGoodMillis = 4000; //after 5 seconds of connection it is considered 'good'
+uint32_t ConsiderConnGoodMillis = 4000; //4 seconds after we got the inital connection we assume the timer has locked on
 
 bool LED = false;
 
