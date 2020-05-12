@@ -107,10 +107,8 @@
 //#define SX127X_PREAMBLE_LENGTH_LSB                    0b00000100  //  7     0         where l_p = preamble length  //CHANGED
 
 // SX127X_REG_DETECT_OPTIMIZE - Errata, set bits 7,6
-#define SX127X_DETECT_OPTIMIZE_SF_6                   0b11000101  //  2     0     SF6 detection optimization
-#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b11000011  //  2     0     SF7 to SF12 detection optimization
-//#define SX127X_DETECT_OPTIMIZE_SF_6                   0b00000101  //  2     0     SF6 detection optimization
-//#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b00000011  //  2     0     SF7 to SF12 detection optimization
+#define SX127X_DETECT_OPTIMIZE_SF_6                   0b01000101  //  2     0     SF6 detection optimization (0xC0 | 0x05)
+#define SX127X_DETECT_OPTIMIZE_SF_7_12                0b01000011  //  2     0     SF7 to SF12 detection optimization (0xC0 | 0x03)
 
 // SX127X_REG_DETECTION_THRESHOLD
 #define SX127X_DETECTION_THRESHOLD_SF_6               0b00001100  //  7     0     SF6 detection threshold

@@ -199,7 +199,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
     uint32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
     uint8_t buff[3] = {(uint8_t)((FRQ >> 16) & 0xFF), (uint8_t)((FRQ >> 8) & 0xFF), (uint8_t)(FRQ & 0xFF)};
 #else
-    uint64_t frf = ((uint64_t)freq << 19) / 32000000;
+    uint64_t frf = ((uint64_t)(freq + p_freqOffset) << 19) / 32000000;
     uint8_t buff[3] = {
         (uint8_t)(frf >> 16),
         (uint8_t)(frf >> 8),
@@ -555,7 +555,7 @@ uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, ui
 
 uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
 {
-
+    uint8_t reg;
     uint8_t status = ERR_NONE;
 
     // set mode to SLEEP
@@ -579,23 +579,68 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
     writeRegister(SX127X_REG_HOP_PERIOD, SX127X_HOP_PERIOD_OFF);
 
     // basic setting (bw, cr, sf, header mode and CRC)
-    uint8_t cfg2 = (sf | SX127X_TX_MODE_SINGLE | SX127X_RX_CRC_MODE_OFF); // RX timeout MSB = 0b00
-    //status = setRegValue(SX127X_REG_MODEM_CONFIG_2, cfg2, 7, 2);
-    //if (status != ERR_NONE)
-    //{
-    //    return (status);
-    //}
-    writeRegister(SX127X_REG_MODEM_CONFIG_2, cfg2);
+    reg = (sf | SX127X_TX_MODE_SINGLE | SX127X_RX_CRC_MODE_OFF); // RX timeout MSB = 0b00
+    writeRegister(SX127X_REG_MODEM_CONFIG_2, reg);
+
     if (sf == SX127X_SF_6)
     {
-        writeRegister(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6);
+        reg = SX127X_DETECT_OPTIMIZE_SF_6;
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
     }
     else
     {
-        writeRegister(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12);
+        reg = SX127X_DETECT_OPTIMIZE_SF_7_12;
         writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
     }
+    if (bw == SX1276_BW_500_00_KHZ)
+        reg |= (1u << 7); // Errata: bit 7 to 1
+    writeRegister(SX127X_REG_DETECT_OPTIMIZE, reg);
+
+    //  Errata fix
+    switch(bw)
+    {
+        case SX1276_BW_7_80_KHZ:
+            p_freqOffset = 7810;
+            reg = 0x48;
+            break;
+        case SX1276_BW_10_40_KHZ:
+            p_freqOffset = 10420;
+            reg = 0x44;
+            break;
+        case SX1276_BW_15_60_KHZ:
+            p_freqOffset = 15620;
+            reg = 0x44;
+            break;
+        case SX1276_BW_20_80_KHZ:
+            p_freqOffset = 20830;
+            reg = 0x44;
+            break;
+        case SX1276_BW_31_25_KHZ:
+            p_freqOffset = 31250;
+            reg = 0x44;
+            break;
+        case SX1276_BW_41_70_KHZ:
+            p_freqOffset = 41670;
+            reg = 0x44;
+            break;
+        case SX1276_BW_62_50_KHZ:
+        case SX1276_BW_125_00_KHZ:
+        case SX1276_BW_250_00_KHZ:
+            p_freqOffset = 0;
+            reg = 0x40;
+            break;
+        case SX1276_BW_500_00_KHZ:
+        default:
+            p_freqOffset = 0;
+            reg = 0;
+            break;
+    }
+
+    if (reg)
+        writeRegister(0x2F, reg);
+
+    if (bw != SX1276_BW_500_00_KHZ)
+        writeRegister(0x30, 0x00);
 
     // set the sync word
     writeRegister(SX127X_REG_SYNC_WORD, syncWord);

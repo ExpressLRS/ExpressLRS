@@ -140,6 +140,7 @@ public:
     void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
 private:
+    volatile uint32_t p_freqOffset = 0;
     volatile uint8_t p_ppm_off = 0;
     //volatile uint8_t p_isr_mask = 0;
     volatile uint8_t p_last_payload_len = 0;
