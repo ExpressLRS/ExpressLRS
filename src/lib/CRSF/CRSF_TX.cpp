@@ -28,16 +28,16 @@ void CRSF_TX::LinkStatisticsSend(void)
         return;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength);
-    //uint8_t outBuffer[len] = {0};
+    uint8_t buffer[len];
 
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
+    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
     // this is nok with volatile
-    memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(&buffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
-    CrsfFramePushToFifo(outBuffer, len);
+    CrsfFramePushToFifo(buffer, len);
 }
 
 void CRSF_TX::sendSetVTXchannelToRadio(uint8_t band, uint8_t channel)
@@ -46,26 +46,26 @@ void CRSF_TX::sendSetVTXchannelToRadio(uint8_t band, uint8_t channel)
         return;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(VTXcontrolFrameLength);
-    //uint8_t outBuffer[len] = {0};
+    uint8_t buffer[len];
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = CRSF_FRAME_SIZE(VTXcontrolFrameLength);
-    outBuffer[2] = CRSF_FRAMETYPE_COMMAND;
-    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_RECEIVER;
+    buffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    buffer[1] = CRSF_FRAME_SIZE(VTXcontrolFrameLength);
+    buffer[2] = CRSF_FRAMETYPE_COMMAND;
+    buffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    buffer[4] = CRSF_ADDRESS_CRSF_RECEIVER;
     /////////////////////////////////////////////
-    outBuffer[5] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[6] = CRSF_ADDRESS_CRSF_RECEIVER;
-    outBuffer[7] = 0x08; // vtx command
+    buffer[5] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    buffer[6] = CRSF_ADDRESS_CRSF_RECEIVER;
+    buffer[7] = 0x08; // vtx command
     ////////////////////////////////////////////
-    outBuffer[8] = channel + 8 * band;
-    outBuffer[9] = 0x00;
-    outBuffer[10] = 0x00;
-    outBuffer[11] = 0x00;
-    outBuffer[12] = 0x00;
-    outBuffer[13] = 0x00;
+    buffer[8] = channel + 8 * band;
+    buffer[9] = 0x00;
+    buffer[10] = 0x00;
+    buffer[11] = 0x00;
+    buffer[12] = 0x00;
+    buffer[13] = 0x00;
 
-    CrsfFramePushToFifo(outBuffer, len);
+    CrsfFramePushToFifo(buffer, len);
 }
 
 void CRSF_TX::sendLUAresponseToRadio(uint8_t *data, uint8_t size)
@@ -74,19 +74,19 @@ void CRSF_TX::sendLUAresponseToRadio(uint8_t *data, uint8_t size)
         return;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(2 + size);
-    //uint8_t outBuffer[len] = {0};
+    uint8_t buffer[len];
 
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = CRSF_FRAME_SIZE(2 + size);
-    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = CRSF_FRAME_SIZE(2 + size);
+    buffer[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
 
-    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    buffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
     for (uint8_t i = 0; i < size; i++)
-        outBuffer[5 + i] = data[i];
+        buffer[5 + i] = data[i];
 
-    CrsfFramePushToFifo(outBuffer, len);
+    CrsfFramePushToFifo(buffer, len);
 }
 
 void CRSF_TX::sendMspPacketToRadio(mspPacket_t &msp)
@@ -96,6 +96,10 @@ void CRSF_TX::sendMspPacketToRadio(mspPacket_t &msp)
 
     uint8_t msp_len = CRSF_MSP_FRAME_SIZE(msp.payloadSize);
     uint8_t len = CRSF_EXT_FRAME_SIZE(msp_len);
+
+    if (CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX) < len)
+        // just ignore if too big
+        return;
 
     // CRSF MSP packet
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -124,22 +128,22 @@ void CRSF_TX::BatterySensorSend(void)
         return;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(BattSensorFrameLength);
-    //uint8_t outBuffer[len] = {0};
+    uint8_t buffer[len];
 
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = CRSF_FRAME_SIZE(BattSensorFrameLength);
-    outBuffer[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = CRSF_FRAME_SIZE(BattSensorFrameLength);
+    buffer[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
 
-    outBuffer[3] = (TLMbattSensor.voltage >> 8) & 0xff;
-    outBuffer[4] = TLMbattSensor.voltage & 0xff;
-    outBuffer[5] = (TLMbattSensor.current >> 8) & 0xff;
-    outBuffer[6] = TLMbattSensor.current & 0xff;
-    outBuffer[7] = (TLMbattSensor.capacity >> 16) & 0xff;
-    outBuffer[9] = (TLMbattSensor.capacity >> 8) & 0xff;
-    outBuffer[10] = TLMbattSensor.capacity & 0xff;
-    outBuffer[11] = TLMbattSensor.remaining;
+    buffer[3] = (TLMbattSensor.voltage >> 8) & 0xff;
+    buffer[4] = TLMbattSensor.voltage & 0xff;
+    buffer[5] = (TLMbattSensor.current >> 8) & 0xff;
+    buffer[6] = TLMbattSensor.current & 0xff;
+    buffer[7] = (TLMbattSensor.capacity >> 16) & 0xff;
+    buffer[9] = (TLMbattSensor.capacity >> 8) & 0xff;
+    buffer[10] = TLMbattSensor.capacity & 0xff;
+    buffer[11] = TLMbattSensor.remaining;
 
-    CrsfFramePushToFifo(outBuffer, len);
+    CrsfFramePushToFifo(buffer, len);
 }
 
 #if (FEATURE_OPENTX_SYNC)
@@ -159,27 +163,27 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
             offset *= 10;
 
             uint8_t len = CRSF_EXT_FRAME_SIZE(OpenTXsyncFrameLength);
-            //uint8_t outBuffer[len] = {0};
+            uint8_t buffer[len];
 
-            outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;         // 0xEA
-            outBuffer[1] = CRSF_FRAME_SIZE(OpenTXsyncFrameLength); // 13
-            outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;                // 0x3A
+            buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;         // 0xEA
+            buffer[1] = CRSF_FRAME_SIZE(OpenTXsyncFrameLength); // 13
+            buffer[2] = CRSF_FRAMETYPE_RADIO_ID;                // 0x3A
 
-            outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
-            outBuffer[4] = 0x00;                           //??? not sure doesn't seem to matter
-            outBuffer[5] = CRSF_FRAMETYPE_OPENTX_SYNC;     //0X10
+            buffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
+            buffer[4] = 0x00;                           //??? not sure doesn't seem to matter
+            buffer[5] = CRSF_FRAMETYPE_OPENTX_SYNC;     //0X10
 
-            outBuffer[6] = (packetRate & 0xFF000000) >> 24;
-            outBuffer[7] = (packetRate & 0x00FF0000) >> 16;
-            outBuffer[8] = (packetRate & 0x0000FF00) >> 8;
-            outBuffer[9] = (packetRate & 0x000000FF) >> 0;
+            buffer[6] = (packetRate & 0xFF000000) >> 24;
+            buffer[7] = (packetRate & 0x00FF0000) >> 16;
+            buffer[8] = (packetRate & 0x0000FF00) >> 8;
+            buffer[9] = (packetRate & 0x000000FF) >> 0;
 
-            outBuffer[10] = (offset & 0xFF000000) >> 24;
-            outBuffer[11] = (offset & 0x00FF0000) >> 16;
-            outBuffer[12] = (offset & 0x0000FF00) >> 8;
-            outBuffer[13] = (offset & 0x000000FF) >> 0;
+            buffer[10] = (offset & 0xFF000000) >> 24;
+            buffer[11] = (offset & 0x00FF0000) >> 16;
+            buffer[12] = (offset & 0x0000FF00) >> 8;
+            buffer[13] = (offset & 0x000000FF) >> 0;
 
-            CrsfFramePushToFifo(outBuffer, len);
+            CrsfFramePushToFifo(buffer, len);
 
             OpenTXsynNextSend = current;
             platform_wd_feed();
