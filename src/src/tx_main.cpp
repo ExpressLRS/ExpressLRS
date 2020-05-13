@@ -35,7 +35,6 @@ hwTimer hwTimer;
 #define MSP_PACKET_SEND_INTERVAL 200
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
-///////////////////
 
 String DebugOutput;
 
@@ -92,10 +91,10 @@ void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
 // MSP packet handling function defs
-void ProcessMSPPacket(mspPacket_t* packet);
-void OnRFModePacket(mspPacket_t* packet);
-void OnTxPowerPacket(mspPacket_t* packet);
-void OnTLMRatePacket(mspPacket_t* packet);
+void ProcessMSPPacket(mspPacket_t *packet);
+void OnRFModePacket(mspPacket_t *packet);
+void OnTxPowerPacket(mspPacket_t *packet);
+void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
@@ -169,7 +168,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
-  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate->enum_rate & 0b11) << 6) + ((ExpressLRS_currAirRate->TLMinterval & 0b111) << 3);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -240,7 +239,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
-  const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+  expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
 #ifdef PLATFORM_ESP32
   Radio.TimerInterval = mode->interval;
   Radio.UpdateTimerInterval();
@@ -257,9 +256,34 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
   //R9DAC.resume();
 }
 
+uint8_t ICACHE_RAM_ATTR decTLMrate()
+{
+  Serial.println("dec TLM");
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+
+  if (currTLMinterval < (uint8_t)TLM_RATIO_1_2)
+  {
+    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval + 1);
+    Serial.println(currTLMinterval);
+  }
+  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+}
+
+uint8_t ICACHE_RAM_ATTR incTLMrate()
+{
+  Serial.println("inc TLM");
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+
+  if (currTLMinterval > (uint8_t)TLM_RATIO_NO_TLM)
+  {
+    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
+  }
+  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+}
+
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 {
-  Serial.println("dec");
+  Serial.println("dec RFrate");
   if ((uint8_t)ExpressLRS_currAirRate->enum_rate < MaxRFrate)
   {
     SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate + 1));
@@ -269,7 +293,7 @@ uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 
 uint8_t ICACHE_RAM_ATTR incRFLinkRate()
 {
-  Serial.println("inc");
+  Serial.println("inc RFrate");
   if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
   {
     SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate - 1));
@@ -427,6 +451,15 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     break;
 
   case 2:
+
+    if (crsf.ParameterUpdateData[1] == 0)
+    {
+      decTLMrate();
+    }
+    else if (crsf.ParameterUpdateData[1] == 1)
+    {
+      incTLMrate();
+    }
 
     break;
 
@@ -602,6 +635,7 @@ void setup()
   crsf.Begin();
 
   SetRFLinkRate(RATE_200HZ);
+
 }
 
 void loop()
