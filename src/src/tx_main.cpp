@@ -44,7 +44,7 @@ CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 
-void TimerExpired();
+void ICACHE_RAM_ATTR TimerExpired();
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
