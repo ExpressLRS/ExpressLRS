@@ -9,7 +9,7 @@ extern SX127xDriver Radio;
 // TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
 
 #define RATE_MAX 3
-const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
+expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},
     {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000},
     {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_32, 4, 8, RATE_50HZ, 6000, 2500},
@@ -17,7 +17,7 @@ const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     //{BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
 };
 
-const expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e rate)
+expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e rate)
 {
     // Protect against out of bounds rate
     if (rate < 0) {
@@ -33,8 +33,8 @@ const expresslrs_mod_settings_s * get_elrs_airRateConfig(expresslrs_RFrates_e ra
 }
 
 //const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-const expresslrs_mod_settings_s * ExpressLRS_currAirRate;
-const expresslrs_mod_settings_s * ExpressLRS_prevAirRate;
+expresslrs_mod_settings_s * ExpressLRS_currAirRate;
+expresslrs_mod_settings_s * ExpressLRS_prevAirRate;
 
 int8_t ExpressLRS_currPower = 0;
 int8_t ExpressLRS_prevPower = 0;
