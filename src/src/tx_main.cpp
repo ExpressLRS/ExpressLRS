@@ -12,6 +12,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
+#include "elrs_eeprom.h"
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #include "soc/soc.h"
@@ -31,10 +32,9 @@ hwTimer hwTimer;
 #define RX_CONNECTION_LOST_TIMEOUT 1500 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500
 #define RF_MODE_CYCLE_INTERVAL 1000
-#define SWITCH_PACKET_SEND_INTERVAL 200
+#define MSP_PACKET_SEND_INTERVAL 200
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
-///////////////////
 
 String DebugOutput;
 
@@ -46,8 +46,10 @@ MSP msp;
 
 void ICACHE_RAM_ATTR TimerExpired();
 
-//// Switch Data Handling ///////
-uint32_t SwitchPacketLastSent = 0; //time in ms when the last switch data packet was sent
+//// MSP Data Handling ///////
+uint32_t MSPPacketLastSent = 0; // time in ms when the last switch data packet was sent
+uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
+mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -89,10 +91,10 @@ void ICACHE_RAM_ATTR IncreasePower();
 void ICACHE_RAM_ATTR DecreasePower();
 
 // MSP packet handling function defs
-void ProcessMSPPacket(mspPacket_t* packet);
-void OnRFModePacket(mspPacket_t* packet);
-void OnTxPowerPacket(mspPacket_t* packet);
-void OnTLMRatePacket(mspPacket_t* packet);
+void ProcessMSPPacket(mspPacket_t *packet);
+void OnRFModePacket(mspPacket_t *packet);
+void OnTxPowerPacket(mspPacket_t *packet);
+void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
@@ -166,7 +168,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = Radio.NonceTX;
-  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate->enum_rate & 0b11) << 6) + ((ExpressLRS_currAirRate->TLMinterval & 0b111) << 3);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -209,25 +211,35 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 #endif
 }
 
-void ICACHE_RAM_ATTR GenerateSwitchChannelData()
+void ICACHE_RAM_ATTR GenerateMSPData()
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + SWITCH_DATA_PACKET;
+  PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1110000000) >> 2) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1110000000) >> 5) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1100000000) >> 8);
-  Radio.TXdataBuffer[2] = (CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b0010000000) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[7]) & 0b1110000000) >> 3);
-  Radio.TXdataBuffer[3] = Radio.TXdataBuffer[1];
-  Radio.TXdataBuffer[4] = Radio.TXdataBuffer[2];
-  Radio.TXdataBuffer[5] = Radio.NonceTX;
-  Radio.TXdataBuffer[6] = FHSSgetCurrIndex();
+  Radio.TXdataBuffer[1] = MSPPacket.function;
+  Radio.TXdataBuffer[2] = MSPPacket.payloadSize;
+  Radio.TXdataBuffer[3] = 0;
+  Radio.TXdataBuffer[4] = 0;
+  Radio.TXdataBuffer[5] = 0;
+  Radio.TXdataBuffer[6] = 0;
+  if (MSPPacket.payloadSize <= 4)
+  {
+    MSPPacket.payloadReadIterator = 0;
+    for (int i = 0; i < MSPPacket.payloadSize; i++)
+    {
+      Radio.TXdataBuffer[3+i] = MSPPacket.readByte();
+    }
+  }
+  else
+  {
+    Serial.println("Unable to send MSP command. Packet too long.");
+  }
+  
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
-  const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+  expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
 #ifdef PLATFORM_ESP32
   Radio.TimerInterval = mode->interval;
   Radio.UpdateTimerInterval();
@@ -244,9 +256,34 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
   //R9DAC.resume();
 }
 
+uint8_t ICACHE_RAM_ATTR decTLMrate()
+{
+  Serial.println("dec TLM");
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+
+  if (currTLMinterval < (uint8_t)TLM_RATIO_1_2)
+  {
+    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval + 1);
+    Serial.println(currTLMinterval);
+  }
+  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+}
+
+uint8_t ICACHE_RAM_ATTR incTLMrate()
+{
+  Serial.println("inc TLM");
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+
+  if (currTLMinterval > (uint8_t)TLM_RATIO_NO_TLM)
+  {
+    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
+  }
+  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+}
+
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 {
-  Serial.println("dec");
+  Serial.println("dec RFrate");
   if ((uint8_t)ExpressLRS_currAirRate->enum_rate < MaxRFrate)
   {
     SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate + 1));
@@ -256,7 +293,7 @@ uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 
 uint8_t ICACHE_RAM_ATTR incRFLinkRate()
 {
-  Serial.println("inc");
+  Serial.println("inc RFrate");
   if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
   {
     SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate - 1));
@@ -343,22 +380,22 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    #if defined HYBRID_SWITCHES_8
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-    #elif defined SEQ_SWITCHES
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-    #else
-    if ((millis() > (SWITCH_PACKET_SEND_INTERVAL + SwitchPacketLastSent)) || Channels5to8Changed)
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      Channels5to8Changed = false;
-      GenerateSwitchChannelData();
-      SwitchPacketLastSent = millis();
+      GenerateMSPData();
+      MSPPacketLastSent = millis();
+      MSPPacketSendCount--;
     }
-    else // else we just have regular channel data which we send as 8 + 2 bits
+    else
     {
+      #if defined HYBRID_SWITCHES_8
+      GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+      #elif defined SEQ_SWITCHES
+      GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+      #else
       Generate4ChannelData_11bit();
+      #endif
     }
-    #endif
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
@@ -415,6 +452,15 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
   case 2:
 
+    if (crsf.ParameterUpdateData[1] == 0)
+    {
+      decTLMrate();
+    }
+    else if (crsf.ParameterUpdateData[1] == 1)
+    {
+      incTLMrate();
+    }
+
     break;
 
   case 3:
@@ -432,6 +478,16 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
   case 4:
 
+    break;
+
+  case 0xFF:
+    if (crsf.ParameterUpdateData[1] == 1)
+    {
+      Serial.println("Binding Requested!");
+      crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00);
+
+      //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done 
+    }
     break;
 
   default:
@@ -466,7 +522,9 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  Serial2.begin(400000);
+  #ifdef USE_UART2
+    Serial2.begin(400000);
+  #endif
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -477,7 +535,7 @@ void setup()
   HardwareSerial(USART2);
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.begin(115200);
+  Serial.begin(400000);
 
   // Annoying startup beeps
 #ifndef JUST_BEEP_ONCE
@@ -555,16 +613,7 @@ void setup()
 #endif
 
   Radio.RFmodule = RFMOD_SX1276; //define radio module here
-#ifdef TARGET_100mW_MODULE
-  Radio.SetOutputPower(0b1111); // 20dbm = 100mW
-#else                           // Below output power settings are for 1W modules
-  // Radio.SetOutputPower(0b0000); // 15dbm = 32mW
-  // Radio.SetOutputPower(0b0001); // 18dbm = 40mW
-  // Radio.SetOutputPower(0b0101); // 20dbm = 100mW
-  Radio.SetOutputPower(0b1000); // 23dbm = 200mW
-                                // Radio.SetOutputPower(0b1100); // 27dbm = 500mW
-                                // Radio.SetOutputPower(0b1111); // 30dbm = 1000mW
-#endif
+
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
   Serial.println("Setting 433MHz Mode");
   Radio.RFmodule = RFMOD_SX1278; //define radio module here
@@ -586,6 +635,7 @@ void setup()
   crsf.Begin();
 
   SetRFLinkRate(RATE_200HZ);
+
 }
 
 void loop()
@@ -749,5 +799,9 @@ void ProcessMSPPacket(mspPacket_t* packet)
     default:
       break;
     }
+  } else
+  if (packet->function == MSP_SET_VTX_CONFIG) {
+    MSPPacket = *packet;
+    MSPPacketSendCount = 6;
   }
 }

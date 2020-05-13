@@ -10,6 +10,8 @@
 #include "rx_LinkQuality.h"
 #include "errata.h"
 #include "OTA.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -44,6 +46,9 @@ uint8_t scanIndex = 0;
 
 int32_t HWtimerError;
 int32_t Offset;
+RXtimerState_e RXtimerState;
+uint32_t GotConnectionMillis = 0;
+uint32_t ConsiderConnGoodMillis = 4000; //4 seconds after we got the inital connection we assume the timer has locked on
 
 bool LED = false;
 
@@ -92,7 +97,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM;   // to match BF
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.GetLastPacketSNR() * 10;
@@ -100,6 +105,19 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
+}
+
+void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+{
+    expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
+    Radio.StopContRX();
+    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+    ExpressLRS_currAirRate = mode;
+    hwTimer.updateInterval(mode->interval);
+    LPF_PacketInterval.init(mode->interval);
+    //LPF_Offset.init(0);
+    //InitHarwareTimer();
+    Radio.RXnb();
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -115,13 +133,13 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        //crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC();
     }
 }
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    if (connectionState != connected)
+    if ((connectionState != connected) || (ExpressLRS_currAirRate->TLMinterval == 0))
     {
         return; // don't bother sending tlm if disconnected
     }
@@ -140,10 +158,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
     // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI>127)
+    if (openTxRSSI > 127)
         openTxRSSI = 127;
     // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255-openTxRSSI;
+    openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
 
     Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
@@ -184,6 +202,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
+    RXtimerState = tim_disconnected;
     LPF_FreqError.init(0);
 
     digitalWrite(GPIO_PIN_LED, 0);        // turn off led
@@ -200,6 +219,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
 {
     connectionStatePrev = connectionState;
     connectionState = tentative;
+    RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
 }
 
@@ -212,6 +232,8 @@ void ICACHE_RAM_ATTR GotConnection()
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
+    RXtimerState = tim_tentative;
+    GotConnectionMillis = millis();
 
     RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
     digitalWrite(GPIO_PIN_LED, 1); // turn on led
@@ -246,12 +268,18 @@ void ICACHE_RAM_ATTR UnpackChannelData_10bit()
     crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
 }
 
-void ICACHE_RAM_ATTR UnpackSwitchData()
+void ICACHE_RAM_ATTR UnpackMSPData()
 {
-    crsf.PackedRCdataOut.ch4 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b11100000) >> 5); //unpack the byte structure, each switch is stored as a possible 8 states (3 bits). we shift by 2 to translate it into the 0....1024 range like the other channel data.
-    crsf.PackedRCdataOut.ch5 = SWITCH3b_to_CRSF((uint16_t)(Radio.RXdataBuffer[1] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch6 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[1] & 0b00000011) << 1) + ((Radio.RXdataBuffer[2] & 0b10000000) >> 7));
-    crsf.PackedRCdataOut.ch7 = SWITCH3b_to_CRSF((uint16_t)((Radio.RXdataBuffer[2] & 0b01110000) >> 4));
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.flags = 0;
+    packet.function = Radio.RXdataBuffer[1];
+    packet.addByte(Radio.RXdataBuffer[3]);
+    packet.addByte(Radio.RXdataBuffer[4]);
+    packet.addByte(Radio.RXdataBuffer[5]);
+    packet.addByte(Radio.RXdataBuffer[6]);
+    crsf.sendMSPFrameToFC(&packet);
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
@@ -292,14 +320,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         crsf.sendRCFrameToFC();
         break;
 
-    case SWITCH_DATA_PACKET:                                                                                      // Switch Data Packet
-        if ((Radio.RXdataBuffer[3] == Radio.RXdataBuffer[1]) && (Radio.RXdataBuffer[4] == Radio.RXdataBuffer[2])) // extra layer of protection incase the crc and addr headers fail us.
-        {
-            UnpackSwitchData();
-            NonceRXlocal = Radio.RXdataBuffer[5];
-            FHSSsetCurrIndex(Radio.RXdataBuffer[6]);
-            crsf.sendRCFrameToFC();
-        }
+    case MSP_DATA_PACKET:
+        UnpackMSPData();
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -320,12 +342,20 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 GotConnection();
             }
 
-            // if (ExpressLRS_currAirRate->enum_rate == !(expresslrs_RFrates_e)(Radio.RXdataBuffer[2] & 0b00001111))
-            // {
-            //     Serial.println("update air rate");
-            //     SetRFLinkRate(ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]]);
-            //     ExpressLRS_currAirRate = ExpressLRS_AirRateConfig[Radio.RXdataBuffer[3]];
-            // }
+            expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11000000) >> 6);
+
+            if (ExpressLRS_currAirRate->enum_rate != rateIn)
+            {
+                //Serial.println("update air rate");
+                SetRFLinkRate(rateIn);
+            }
+
+            uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00111000) >> 3);
+
+            if (ExpressLRS_currAirRate->TLMinterval != TLMrateIn)
+            {
+                ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+            }
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
             NonceRXlocal = Radio.RXdataBuffer[2];
@@ -338,9 +368,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
+    HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1)); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
+
+    if (RXtimerState == tim_tentative || RXtimerState == tim_disconnected)
+    {
+        hwTimer.phaseShift((Offset >> 3) + timerOffset);
+    }
+    else
+    {
+        hwTimer.phaseShift((Offset >> 4) + timerOffset);
+    }
 
     if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
     {
@@ -430,19 +468,6 @@ void ICACHE_RAM_ATTR sampleButton()
     buttonPrevValue = buttonValue;
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
-{
-    const expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-    Radio.StopContRX();
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
-    ExpressLRS_currAirRate = mode;
-    hwTimer.updateInterval(mode->interval);
-    LPF_PacketInterval.init(mode->interval);
-    //LPF_Offset.init(0);
-    //InitHarwareTimer();
-    Radio.RXnb();
-}
-
 void setup()
 {
 #ifdef PLATFORM_STM32
@@ -510,7 +535,6 @@ void setup()
 
 void loop()
 {
-
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval + ((connectionState == tentative) ? ExpressLRS_currAirRate->RFmodeCycleAddtionalTime : 0))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
@@ -541,6 +565,12 @@ void loop()
     {
         sampleButton();
         buttonLastSampled = millis();
+    }
+
+    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)))
+    {
+        RXtimerState = tim_locked;
+        Serial.println("Timer Considered Locked");
     }
 
 #ifdef Auto_WiFi_On_Boot

@@ -16,7 +16,7 @@ public:
     virtual int peek() { return position < string.length() ? string[position] : -1; }
     virtual void flush() { };
     // Print methods
-    virtual size_t write(uint8_t c) { string += (char)c; return 1;};
+    virtual size_t write(uint8_t c) { string += (char)c; return 1; };
 
 private:
     String &string;

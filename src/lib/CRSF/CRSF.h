@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include "HardwareSerial.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -37,6 +39,8 @@
 #define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
+#define CRSF_FRAME_CRC_SIZE 1
+#define CRSF_FRAME_LENGTH_EXT_TYPE_CRC 4 // length of Extended Dest/Origin, TYPE and CRC fields combined
 
 // Macros for big-endian (assume little endian host for now) etc
 #define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
@@ -320,13 +324,22 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
     return crc;
 }
 
+static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
+{
+    uint8_t crc = 0;
+    for (uint8_t i = 0; i < length; ++i) {
+        crc = crc ^ *data++;
+    }
+    return crc;
+}
+
 class CRSF
 {
 
 public:
     //CRSF(HardwareSerial& serial);
 
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {
@@ -429,6 +442,7 @@ public:
 
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
+    void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();

@@ -4,6 +4,9 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
 
+//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+
+
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
@@ -349,7 +352,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX)
+#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
         void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
         {
             uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -363,8 +366,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             uint8_t crc = CalcCRC(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
-
+            #ifndef DEBUG_CRSF_NO_OUTPUT
             this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            #endif
         }
 
         void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
@@ -380,8 +384,40 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             uint8_t crc = CalcCRC(&outBuffer[2], RCframeLength + 1);
 
             outBuffer[RCframeLength + 3] = crc;
-
+            #ifndef DEBUG_CRSF_NO_OUTPUT
             this->_dev->write(outBuffer, RCframeLength + 4);
+            #endif
+        }
+
+        void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t* packet)
+        {
+            // TODO: This currently only supports single MSP packets per cmd
+            // To support longer packets we need to re-write this to allow packet splitting
+            const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
+            uint8_t outBuffer[totalBufferLen] = {0};
+
+            // CRSF extended frame header
+            outBuffer[0] = CRSF_ADDRESS_BROADCAST; // address
+            outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
+            outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE; // packet type
+            outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER; // destination
+            outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER; // origin
+            
+            // Encapsulated MSP payload
+            outBuffer[5] = 0x30; // header
+            outBuffer[6] = packet->payloadSize; // mspPayloadSize
+            outBuffer[7] = packet->function; // packet->cmd
+            for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i) {
+                // copy packet payload into outBuffer and pad with zeros where required
+                outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
+            }
+            // Encapsulated MSP crc
+            outBuffer[totalBufferLen - 2] =  CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
+
+            // CRSF frame crc
+            outBuffer[totalBufferLen - 1] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+
+            this->_dev->write(outBuffer, totalBufferLen);
         }
 #endif
 
@@ -531,7 +567,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                                 uint8_t OutPktLen = SerialOutFIFO.pop();
                                                 uint8_t OutData[OutPktLen];
                                                 SerialOutFIFO.popBytes(OutData, OutPktLen);
+                                                #ifndef DEBUG_CRSF_NO_OUTPUT
                                                 CRSF::Port.write(OutData, OutPktLen); // write the packet out
+                                                #endif
                                                 xSemaphoreGive(mutexOutFIFO);
                                                 CRSF::Port.flush(); // flush makes sure all bytes are pushed.
                                                 CRSF::duplex_set_RX();
@@ -697,7 +735,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             uint8_t OutData[OutPktLen];
 
                             SerialOutFIFO.popBytes(OutData, OutPktLen);
+                            #ifndef DEBUG_CRSF_NO_OUTPUT
                             CRSF::Port.write(OutData, OutPktLen); // write the packet out
+                            #endif
                             CRSF::Port.flush();
                             digitalWrite(BUFFER_OE, LOW);
 
