@@ -43,6 +43,8 @@ typedef enum
     RFMOD_SX1276
 } RFmodule_;
 
+#define RX_BUFFER_LEN (8)
+
 class SX127xDriver
 {
 public:
@@ -69,8 +71,6 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    volatile uint8_t RXbuffLen;
-
     volatile bool headerExplMode;
 
     volatile RFmodule_ RFmodule;
