@@ -28,7 +28,7 @@ void ICACHE_RAM_ATTR HwTimer::start()
     noInterrupts();
     running = true;
     //timer1_attachInterrupt(MyTimCallback);
-    reset(100);
+    reset(0);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
     interrupts();
 }
@@ -57,7 +57,7 @@ void ICACHE_RAM_ATTR HwTimer::reset(int32_t offset)
 void ICACHE_RAM_ATTR HwTimer::setTime(uint32_t time)
 {
     if (!time)
-        return;
+        time = HWtimerInterval;
     timer1_write(time * 5);
 #if PRINT_TIMER
     DEBUG_PRINT(" set: ");
