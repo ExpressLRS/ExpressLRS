@@ -2,16 +2,27 @@ name: Build ExpressLRS
 on: [push, pull_request]
 jobs:
   build:
+    strategy:
+      max-parallel: 1
     runs-on: ubuntu-latest
     steps:
+
+    - name: Inject slug/short variables
+      uses: rlespinasse/github-slug-action@v2.x
+
     - name: Checkout
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
     - name: Set up Python
       uses: actions/setup-python@v1
+
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
         pip install platformio
+
     - name: Run PlatformIO
       run: |
         platformio platform update
@@ -29,8 +40,10 @@ jobs:
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433
         platformio run
         mv .pio/build ~/artifcats/EU_433
-    - name: Upload artifcats
+
+    - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:
-        name: firmware
+        name: ExpressLRS-${{ env.GITHUB_REF_SLUG_URL }}-${{ github.run_number }}
         path: ~/artifcats/**/*.bin
+      continue-on-error: true

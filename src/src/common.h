@@ -41,6 +41,13 @@ typedef enum
     disconnected = 0
 } connectionState_e;
 
+typedef enum
+{
+    tim_disconnected = 0,
+    tim_tentative = 1,
+    tim_locked = 2
+} RXtimerState_e;
+
 extern connectionState_e connectionState;
 extern connectionState_e connectionStatePrev;
 

@@ -19,7 +19,8 @@ local updateValues = false
 local readIdState = 0
 local sendIdState = 0
 local timestamp = 0
-local sensorIdTx = 17 -- sensorid 18
+local bindmode = 0
+
 local gotFirstResp = false
 
 local binding = false
@@ -56,8 +57,8 @@ local RFfreq = {
 local selection = {
     selected = 1,
     state = false,
-    list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq'},
-    elements = 4
+    list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq', "Bind"},
+    elements = 5
 }
 
 -- returns flags to pass to lcd.drawText for inverted and flashing text
@@ -119,32 +120,6 @@ local function readId()
     end
 end
 
--- local function sendId()
-    --stop sensors
-    -- if sendIdState >= 1 and sendIdState <= 15 and getTime() - timestamp > 11 then
-        -- sportTelemetryPush(sensorIdTx, 0x21, 0xFFFF, 0x80)
-        -- timestamp = getTime()
-        -- sendIdState = sendIdState + 1
-    -- end
-    --send id
-    -- if sendIdState >= 16 and sendIdState <= 30 and getTime() - timestamp > 11 then
-        -- sportTelemetryPush(sensorIdTx, 0x31,
-                           -- sensor.sensorType.dataId[sensor.sensorType.selected],
-                           -- 0x01 + (sensor.sensorId.selected - 1) * 256)
-        -- timestamp = getTime()
-        -- sendIdState = sendIdState + 1
-    -- end
-    --restart sensors
-    -- if sendIdState >= 31 and sendIdState <= 45 and getTime() - timestamp > 11 then
-        -- sportTelemetryPush(sensorIdTx, 0x20, 0xFFFF, 0x80)
-        -- timestamp = getTime()
-        -- sendIdState = sendIdState + 1
-    -- end
-    -- if sendIdState == 46 then
-        -- sendIdState = 0
-        -- lcdChange = true
-    -- end
--- end
 
 --[[
 
@@ -157,6 +132,7 @@ of reads is used to defend against the possibility of this function running for 
 period.
 
 ]]--
+
 local function processResp()
     local tries=0
     local MAX_TRIES=5
@@ -168,10 +144,18 @@ local function processResp()
 	    return
 	else
             if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
-                AirRate.selected = data[3]
-                TLMinterval.selected = data[4]
-                MaxPower.selected = data[5]
-                RFfreq.selected = data[6]
+				if(data[3] == 0xFF) then
+					if(data[4] ==  0x01) then -- bind mode active
+						bindmode = 1
+					else
+						bindmode = 0
+					end
+				else	
+					AirRate.selected = data[3]
+					TLMinterval.selected = data[4]
+					MaxPower.selected = data[5]
+					RFfreq.selected = data[6]
+				end
 				if (gotFirstResp == false) then
 					gotFirstResp = true -- detect when first contact is made with TX module 
 				end
@@ -197,9 +181,12 @@ local function refreshHorus()
     lcd.drawText(20, 110, '[Bind]', getFlags(5) + SMLSIZE)
     lcd.drawText(60, 110, '[Web Server]', getFlags(6) + SMLSIZE)
 
-    if selection.selected > 4 then
+    if selection.selected == 5 then
         if selection.state == true then
             lcd.drawText(30, 110, 'Press [ENTER] to stop', MEDSIZE)
+			if (bindmode == 0) then
+				crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+			end
         end
     end
 
@@ -223,9 +210,12 @@ local function refreshTaranis()
     lcd.drawText(18, 54, '[Bind]', getFlags(5) + SMLSIZE)
     lcd.drawText(55, 54, '[Web Server]', getFlags(6) + SMLSIZE)
 
-    if selection.selected > 4 then
+    if selection.selected == 5 then
         if selection.state == true then
             lcd.drawText(7, 53, 'Press [ENTER] to stop', MEDSIZE)
+			if (bindmode == 0) then
+				crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+			end
         end
     end
 

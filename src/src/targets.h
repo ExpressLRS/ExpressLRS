@@ -12,7 +12,6 @@
 /// General Features ///
 #define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
-
 /////////////////////////
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
@@ -101,23 +100,25 @@ https://github.com/jaxxzer
 #ifdef TARGET_R9M_RX
 #undef FEATURE_OPENTX_SYNC
 
-#define GPIO_PIN_NSS PB12
-#define GPIO_PIN_DIO0 PA15
-#define GPIO_PIN_DIO1 PA1 // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
-#define GPIO_PIN_MOSI PB15
-#define GPIO_PIN_MISO PB14
-#define GPIO_PIN_SCK PB13
-#define GPIO_PIN_RST PC14
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
-#define GPIO_PIN_OLED_SDA -1
-#define GPIO_PIN_OLED_SCK -1
-#define GPIO_PIN_RCSIGNAL_RX PA10
-#define GPIO_PIN_RCSIGNAL_TX PA9
-#define GPIO_PIN_LED PC1      // Red
-#define GPIO_PIN_LED_GREEN PB3 // Green - Currently unused
-#define GPIO_PIN_BUTTON PC13  // pullup e.g. LOW when pressed
-#define timerOffset 2
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PA15
+#define GPIO_PIN_DIO1           PA1 // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      -1
+#define GPIO_PIN_TX_ENABLE      -1
+#define GPIO_PIN_OLED_SDA       -1
+#define GPIO_PIN_OLED_SCK       -1
+#define GPIO_PIN_SDA            PB7
+#define GPIO_PIN_SCL            PB6
+#define GPIO_PIN_RCSIGNAL_RX    PA10
+#define GPIO_PIN_RCSIGNAL_TX    PA9
+#define GPIO_PIN_LED            PC1      // Red
+#define GPIO_PIN_LED_GREEN      PB3 // Green - Currently unused
+#define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+#define timerOffset             2
 
 // External pads
 // #define R9m_Ch1    PA8
