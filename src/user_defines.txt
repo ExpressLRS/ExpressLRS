@@ -8,6 +8,7 @@
 # Define need to start with '-D' keyword
 #
 
+################################
 ### Enable one of these regulatory domains
 
 #-DRegulatory_Domain_AU_915
@@ -17,15 +18,21 @@
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
 
+################################
 ### CRSFshot sync
 -DFEATURE_OPENTX_SYNC=1
 
-### Flash used
+################################
+### Use part of the FLASH to simulate EEPROM
+# and store TX configuration
 -DSTORE_TO_FLASH=1
 
+################################
 ### EPS RX auto WiFi startup
-#-DAuto_WiFi_On_Boot
+# Wifi starts if no connection is found between 10 and 11 seconds after boot
+-DAuto_WiFi_On_Boot
 
+################################
 ### Default power
 # Note: Power will be clipped to max power!
 # use only one of these values:
@@ -39,9 +46,10 @@
 #    PWR_2000mW
 -DTX_POWER_DEFAULT=PWR_50mW
 
+##################################################
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 
-# Sequential switches
+# === Sequential switches ===
 # 5 bits are used in each rc packet to encode 8 3 position switches
 # first 3 bits are the switch ID, followed by 2 bits for the switch value.
 # Switches that have changed are given priority, otherwise each switch value
@@ -51,7 +59,7 @@
 
 #-DSEQ_SWITCHES
 
-# Hybrid switches
+# === Hybrid switches ===
 # The first switch is treated as a low-latency switch to be used for arm/disarm.
 # It is sent with every packet. The remaining 7 switch channels are sent
 # in the same change-prioritized round-robin fashion as described for sequential
@@ -61,9 +69,16 @@
 
 -DHYBRID_SWITCHES_8
 
-## Enable this for 1bit switches
+# === Legacy switches ===
+# Separated switch packet is sent to RX
+#-DLEGACY_SWITCHES
+
+### Enable this for 1bit switches
+# Used if LEGACY_SWITCHES is selected and switches are sent together
+# with RC command packet but only 1bit is used
 -DOne_Bit_Switches
 
+################################
 ### Set your UID here. Must be 6 bytes!
 
 -DMY_UID=0xb8,0x27,0xeb,0x61,0x1d,0x38

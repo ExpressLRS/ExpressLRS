@@ -15,8 +15,6 @@ void HwTimer::init()
 {
     noInterrupts();
     timer1_attachInterrupt(MyTimCallback);
-    //timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
-    //setTime(HWtimerInterval);
     running = false;
     interrupts();
 }
@@ -27,7 +25,6 @@ void ICACHE_RAM_ATTR HwTimer::start()
         return;
     noInterrupts();
     running = true;
-    //timer1_attachInterrupt(MyTimCallback);
     reset(0);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
     interrupts();

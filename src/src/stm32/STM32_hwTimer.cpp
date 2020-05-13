@@ -17,7 +17,6 @@ void HwTimer::init()
     stop();
     timer_tx.attachInterrupt(TimerCallback);
     timer_tx.setMode(2, TIMER_OUTPUT_COMPARE);
-    //setTime(HWtimerInterval);
     interrupts();
 }
 
@@ -26,7 +25,8 @@ void HwTimer::start()
     if (running)
         return;
     running = true;
-    setTime(HWtimerInterval);
+    //setTime(HWtimerInterval);
+    reset(0);
     timer_tx.resume();
 }
 

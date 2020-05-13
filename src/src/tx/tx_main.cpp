@@ -10,12 +10,13 @@
 #include "HwTimer.h"
 #include "debug.h"
 #include "rc_channels.h"
+#include <stdlib.h>
 
 static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 1500U // After 1500ms of no TLM response consider that slave has lost connection
-#define LQ_CALCULATE_INTERVAL 500u
+#define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
+#define LQ_CALCULATE_INTERVAL             500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150u // 250u
 //#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350u
@@ -195,7 +196,9 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     tx_buffer[7] = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
     // Enable PA
     PowerMgmt.pa_on();
+    //delayMicroseconds(random(0, 200));
     // Send data to rf
+    //if (random(0, 99) < 60)
     Radio.TXnb(tx_buffer, 8, freq);
 exit_rx_send:
     // Increase TX counter

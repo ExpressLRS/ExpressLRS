@@ -17,7 +17,7 @@ static void SetRFLinkRate(uint8_t rate);
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
-#define PRINT_FREQ_ERROR 0
+#define PRINT_FREQ_ERROR               0
 
 ///////////////////
 
@@ -131,7 +131,7 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
     }
 #if PRINT_FREQ_ERROR
     DEBUG_PRINT(" > local:");
-    DEBUG_PRINTLN(FreqCorrection - (UID[4] + UID[5]));
+    DEBUG_PRINT(FreqCorrection - (UID[4] + UID[5]));
 #endif
 
     return retval;
@@ -191,7 +191,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     uint8_t fhss_config_rx = 0;
 
 #if PRINT_TIMER
-    DEBUG_PRINT(" us ");
+    DEBUG_PRINT("us ");
     DEBUG_PRINT(us);
 #endif
     /* do adjustment */
@@ -205,8 +205,14 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
         DEBUG_PRINT(diff_us);
 #endif
         rx_last_valid_us = 0;
+        // allow max 500us correction
+        if (diff_us < -500)
+            diff_us = -500;
+        else if (diff_us > 500)
+            diff_us = 500;
+
         /* Adjust timer */
-        if (abs(diff_us) > 100)
+        if (100 < abs(diff_us))
             TxTimer.reset(diff_us - TIMER_OFFSET);
     }
     else
@@ -261,12 +267,13 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    TxTimer.start(); // Start local sync timer
-
+    TxTimer.start();      // Start local sync timer
+    TxTimer.setTime(100); // Trigger isr right after reception
     /* Do initial freq correction */
     FreqCorrection += rx_freqerror;
     Radio.setPPMoffsetReg(rx_freqerror, 0);
     rx_freqerror = 0;
+    rx_last_valid_us = 0;
 
     tentative_cnt = 0;
     connectionState = STATE_tentative;
@@ -505,7 +512,7 @@ void setup()
 
     // Measure RF noise
 #ifdef DEBUG_SERIAL // TODO: Enable this when noize floor is used!
-    int16_t RFnoiseFloor = Radio.MeasureNoiseFloor(10, GetInitialFreq());
+    int RFnoiseFloor = Radio.MeasureNoiseFloor(10, GetInitialFreq());
     DEBUG_PRINT("RF noise floor: ");
     DEBUG_PRINT(RFnoiseFloor);
     DEBUG_PRINTLN("dBm");
