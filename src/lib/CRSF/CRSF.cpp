@@ -4,13 +4,13 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
 
-//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
-portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 TaskHandle_t xESP32uartWDT = NULL;
@@ -166,12 +166,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     if (CRSF::CRSFstate)
     {
 #ifdef PLATFORM_ESP32
-        xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+        portENTER_CRITICAL(&FIFOmux);
 #endif
         SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
         SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
 #ifdef PLATFORM_ESP32
-        xSemaphoreGive(mutexOutFIFO);
+        portEXIT_CRITICAL(&FIFOmux);
 #endif
     }
 }
@@ -209,8 +209,14 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
 
     if (CRSF::CRSFstate)
     {
+        #ifdef PLATFORM_ESP32
+        portENTER_CRITICAL(&FIFOmux);
+        #endif
         SerialOutFIFO.push(VTXcontrolFrameLength + 4); // length
         SerialOutFIFO.pushBytes(outBuffer, VTXcontrolFrameLength + 4);
+        #ifdef PLATFORM_ESP32
+        portEXIT_CRITICAL(&FIFOmux);
+        #endif
     }
 }
 
@@ -239,12 +245,12 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t v
     if (CRSF::CRSFstate)
     {
 #ifdef PLATFORM_ESP32
-        xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+        portENTER_CRITICAL(&FIFOmux);
 #endif
         SerialOutFIFO.push(LUArespLength + 4); // length
         SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
 #ifdef PLATFORM_ESP32
-        xSemaphoreGive(mutexOutFIFO);
+        portEXIT_CRITICAL(&FIFOmux);
 #endif
     }
 }
@@ -335,12 +341,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 if (CRSF::CRSFstate)
                 {
 #ifdef PLATFORM_ESP32
-                    xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+                    portENTER_CRITICAL(&FIFOmux);
 #endif
                     SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
                     SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
 #ifdef PLATFORM_ESP32
-                    xSemaphoreGive(mutexOutFIFO);
+                    portEXIT_CRITICAL(&FIFOmux);
 #endif
                 }
                 OpenTXsyncLastSent = millis();
@@ -563,14 +569,14 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                             if (SerialOutFIFO.size() >= peekVal)
                                             {
                                                 CRSF::duplex_set_TX();
-                                                xSemaphoreTake(mutexOutFIFO, portMAX_DELAY); // stops other tasks from writing to the FIFO when we want to read it
+                                                portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
                                                 uint8_t OutPktLen = SerialOutFIFO.pop();
                                                 uint8_t OutData[OutPktLen];
                                                 SerialOutFIFO.popBytes(OutData, OutPktLen);
+                                                portEXIT_CRITICAL(&FIFOmux);
                                                 #ifndef DEBUG_CRSF_NO_OUTPUT
                                                 CRSF::Port.write(OutData, OutPktLen); // write the packet out
                                                 #endif
-                                                xSemaphoreGive(mutexOutFIFO);
                                                 CRSF::Port.flush(); // flush makes sure all bytes are pushed.
                                                 CRSF::duplex_set_RX();
                                                 vTaskDelay(1); // we don't expect anything for while so feel free to delay

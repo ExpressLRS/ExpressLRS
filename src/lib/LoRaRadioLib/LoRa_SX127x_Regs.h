@@ -149,7 +149,7 @@
 #define SX127X_MASK_IRQ_FLAG_CAD_DETECTED             0b11111110  //  0     0     valid LoRa signal detected during CAD operation
 
 // SX127X_REG_FIFO_TX_BASE_ADDR
-#define SX127X_FIFO_TX_BASE_ADDR_MAX                  0b10000000  //  7     0     allocate the entire FIFO buffer for TX only
+#define SX127X_FIFO_TX_BASE_ADDR_MAX                  0b00000000  //  7     0     allocate the entire FIFO buffer for TX only
 
 // SX127X_REG_FIFO_RX_BASE_ADDR
 #define SX127X_FIFO_RX_BASE_ADDR_MAX                  0b00000000  //  7     0     allocate the entire FIFO buffer for RX only
