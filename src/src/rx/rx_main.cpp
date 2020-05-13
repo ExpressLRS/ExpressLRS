@@ -68,10 +68,13 @@ inline void led_toggle(void)
 
 static void ICACHE_RAM_ATTR handle_tlm_ratio(uint8_t TLMinterval)
 {
-    tlm_check_ratio = 0;
-    if (TLM_RATIO_NO_TLM < TLMinterval && TLM_RATIO_DEFAULT > TLMinterval)
+    if ((TLM_RATIO_NO_TLM < TLMinterval) && (TLM_RATIO_MAX > TLMinterval))
     {
         tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+    }
+    else
+    {
+        tlm_check_ratio = 0;
     }
 }
 ///////////////////////////////////////
