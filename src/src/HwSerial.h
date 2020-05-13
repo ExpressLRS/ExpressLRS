@@ -33,6 +33,11 @@ public:
         return ret;
     }
 
+    size_t write_buffer(const uint8_t * buff, size_t len)
+    {
+        return HardwareSerial::write(buff, len);
+    }
+
     size_t write(FIFO &fifo);
 
 private:

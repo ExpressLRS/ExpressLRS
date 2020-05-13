@@ -461,6 +461,8 @@ void setup()
 
 void loop()
 {
+    uint8_t can_send;
+
     if (rx_buffer_handle)
     {
         process_rx_buffer();
@@ -495,14 +497,14 @@ void loop()
         }
     }
 
-    if (msp_packet_rx.iterated())
+    // Process CRSF packets from TX
+    can_send = crsf.handleUartIn(rx_buffer_handle);
+    // Send MSP resp if allowed or packet ready
+    if (can_send && msp_packet_rx.iterated())
     {
         crsf.sendMspPacketToRadio(msp_packet_rx);
         msp_packet_rx.reset();
     }
-
-    // Process CRSF packets from TX
-    crsf.handleUartIn(rx_buffer_handle);
 
     platform_loop(connectionState);
 

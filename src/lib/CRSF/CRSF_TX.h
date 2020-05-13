@@ -12,14 +12,13 @@ public:
     void Begin(void);
 
     // Handle incoming data
-    void handleUartIn(volatile uint8_t &rx_data_rcvd);
+    uint8_t handleUartIn(volatile uint8_t &rx_data_rcvd);
 
     // Send to RADIO
     void LinkStatisticsSend(void);
     void BatterySensorSend(void);
     void sendLUAresponseToRadio(uint8_t *data, uint8_t len);
     void sendMspPacketToRadio(mspPacket_t &msp);
-    void sendSetVTXchannelToRadio(uint8_t band, uint8_t channel);
 
     // OpenTX Syncing
     void ICACHE_RAM_ATTR setRcPacketRate(uint32_t interval)
@@ -46,6 +45,10 @@ private:
 
     void uart_wdt(void);
     void processPacket(uint8_t const *input);
+    void ICACHE_RAM_ATTR CrsfFramePushToFifo(uint8_t *buff, uint8_t size);
+    void LinkStatisticsProcess(void);
+    void BatteryStatisticsProcess(void);
+    void LuaResponseProcess(void);
 
 #if (FEATURE_OPENTX_SYNC)
 
@@ -63,6 +66,8 @@ private:
     // for the UART wdt, every 1000ms we change bauds when connect is lost
 #define UARTwdtInterval 1000
     uint32_t p_UartNextCheck = 0;
+
+    uint8_t lua_buff[5];
 };
 
 #endif /* CRSF_TX_H_ */
