@@ -11,8 +11,8 @@
 ### Enable one of these regulatory domains
 
 #-DRegulatory_Domain_AU_915
--DRegulatory_Domain_EU_868
-#-DRegulatory_Domain_EU_868_R9
+#-DRegulatory_Domain_EU_868
+-DRegulatory_Domain_EU_868_R9
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
@@ -22,6 +22,9 @@
 
 ### Flash used
 -DSTORE_TO_FLASH=1
+
+### EPS RX auto WiFi startup
+#-DAuto_WiFi_On_Boot
 
 ### Default power
 # Note: Power will be clipped to max power!
@@ -58,6 +61,8 @@
 
 -DHYBRID_SWITCHES_8
 
+## Enable this for 1bit switches
+-DOne_Bit_Switches
 
 ### Set your UID here. Must be 6 bytes!
 

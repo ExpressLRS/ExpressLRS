@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
-#define Auto_WiFi_On_Boot
+//#define Auto_WiFi_On_Boot
 
-#define One_Bit_Switches
+//#define One_Bit_Switches
 
 #define BUTTON_RESET_INTERVAL_RX 4000u  // Hold button for 4 sec to reboot RX
 #define WEB_UPDATE_PRESS_INTERVAL 2000u // hold button for 2 sec to enable webupdate mode
