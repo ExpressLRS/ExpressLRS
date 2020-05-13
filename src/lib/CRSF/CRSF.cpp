@@ -739,9 +739,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             uint8_t OutData[OutPktLen];
 
                             SerialOutFIFO.popBytes(OutData, OutPktLen);
-                            #ifndef DEBUG_CRSF_NO_OUTPUT
                             CRSF::Port.write(OutData, OutPktLen); // write the packet out
-                            #endif
                             CRSF::Port.flush();
                             digitalWrite(BUFFER_OE, LOW);
 
