@@ -10,7 +10,7 @@
 #include "esp32-hal-timer.h"
 #endif
 
-#ifdef PLATFORM_8266
+#ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
@@ -99,9 +99,6 @@ public:
 #ifdef PLATFORM_ESP32
     static TaskHandle_t Timertask_handle; //Task Handle for ContTX mode
 #endif
-
-    //static void (*TXcallback)();
-
     ////////Hardware/////////////
     static uint8_t _RXenablePin;
     static uint8_t _TXenablePin;
@@ -114,9 +111,6 @@ public:
     static uint8_t SX127x_MISO;
     static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
-
-    static bool HighPowerModule;
-
     /////////////////////////////
 
     ///////////Radio Variables////////
@@ -158,6 +152,7 @@ public:
     static uint32_t LastTXdoneMicros;
     static uint32_t TXdoneMicros;
     static uint8_t currOpmode;
+    static bool IRQneedsClear;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////

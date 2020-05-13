@@ -48,14 +48,6 @@ uint8_t SX127xDriver::SX127x_RST = GPIO_PIN_RST;
 
 uint8_t SX127xDriver::_RXenablePin = GPIO_PIN_RX_ENABLE;
 uint8_t SX127xDriver::_TXenablePin = GPIO_PIN_TX_ENABLE;
-
-#ifdef TARGET_100mW_MODULE
-bool SX127xDriver::HighPowerModule = false;
-#endif
-
-#ifdef TARGET_1000mW_MODULE
-bool SX127xDriver::HighPowerModule = true;
-#endif
 /////////////////////////////////////////////////////////////////
 
 //// Debug Variables ////
@@ -82,6 +74,8 @@ uint8_t volatile SX127xDriver::RXdataBuffer[256];
 
 uint8_t SX127xDriver::currOpmode = 0xFF; // no a valid opmode, ie undefined
 
+bool SX127xDriver::IRQneedsClear = false;
+
 ContinousMode SX127xDriver::ContMode = CONT_OFF;
 RFmodule_ SX127xDriver::RFmodule = RFMOD_SX1276;
 
@@ -106,12 +100,9 @@ uint8_t SX127xDriver::Begin()
   digitalWrite(SX127x_RST, 1);
   delay(100);
 
-#if defined(PLATFORM_ESP32)
-  if (HighPowerModule)
-  {
+#ifdef TARGET_1000mW_MODULE
     pinMode(SX127xDriver::_TXenablePin, OUTPUT);
     pinMode(SX127xDriver::_RXenablePin, OUTPUT);
-  }
 #endif
 
   //static uint8_t SX127x_SCK;
@@ -178,7 +169,6 @@ uint8_t SX127xDriver::SetOutputPower(uint8_t Power)
 
 uint8_t SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
 {
-  //status = setRegValue(SX127X_REG_PREAMBLE_MSB, SX127X_PREAMBLE_LENGTH_MSB);
   uint8_t status = setRegValue(SX127X_REG_PREAMBLE_LSB, PreambleLen);
   if (status != ERR_NONE)
   {
@@ -350,7 +340,7 @@ void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
 
 void SX127xDriver::ConfigLoraDefaults()
 {
-  Serial.print("Setting ExpressLRS LoRa reg defaults");
+  Serial.println("Setting ExpressLRS LoRa reg defaults");
   writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
   writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
@@ -362,7 +352,7 @@ void SX127xDriver::ConfigLoraDefaults()
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
 
-#if defined(PLATFORM_ESP32)
+#ifdef TARGET_1000mW_MODULE
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
 #endif
   ClearIRQFlags();
@@ -377,11 +367,10 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t length)
 {
-
   SX127xDriver::TXstartMicros = micros();
   SX127xDriver::HeadRoom = TXstartMicros - TXdoneMicros;
-  //ClearIRQFlags();
   SetMode(SX127X_STANDBY);
+  ClearIRQFlags();
 
   if (InterruptAssignment != TX_DONE)
   {
@@ -389,17 +378,16 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
     InterruptAssignment = TX_DONE;
   }
 
-  setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
+  writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   writeRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t *)data, length);
 
-#if defined(PLATFORM_ESP32)
-
+#ifdef TARGET_1000mW_MODULE
   digitalWrite(_RXenablePin, LOW);
   digitalWrite(_TXenablePin, HIGH); //the larger TX/RX modules require that the TX/RX enable pins are toggled
-
 #endif
 
   SetMode(SX127X_TX);
+  IRQneedsClear = true;
   PacketCount = PacketCount + 1;
 
   return (ERR_NONE);
@@ -409,6 +397,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
+  IRQneedsClear = true;
   ClearIRQFlags();
   readRegisterBurst((uint8_t)SX127X_REG_FIFO, (uint8_t)RXbuffLen, (uint8_t *)RXdataBuffer);
   SX127xDriver::LastPacketRSSI = SX127xDriver::GetLastPacketRSSI();
@@ -421,7 +410,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
   detachInterrupt(SX127xDriver::SX127x_dio0);
-  SX127xDriver::SetMode(SX127X_SLEEP);
+  SX127xDriver::SetMode(SX127X_STANDBY);
   ClearIRQFlags();
   InterruptAssignment = NONE;
 }
@@ -430,12 +419,13 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   //RX continuous mode
 
-#if defined(PLATFORM_ESP32)
+#ifdef TARGET_1000mW_MODULE
   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
   digitalWrite(_RXenablePin, HIGH);
 #endif
 
   SetMode(SX127X_STANDBY);
+  ClearIRQFlags();
 
   if (InterruptAssignment != RX_DONE) //attach interrupt to DIO0,
   {
@@ -443,15 +433,14 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
     InterruptAssignment = RX_DONE;
   }
 
-  ClearIRQFlags();
-
   if (headerExplMode == false)
   {
-    setRegValue(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
+    writeRegister(SX127X_REG_PAYLOAD_LENGTH, RXbuffLen);
   }
 
-  setRegValue(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   SetMode(SX127X_RXCONTINUOUS);
+  IRQneedsClear = true;
 }
 
 uint8_t SX127xDriver::RunCAD()
@@ -532,11 +521,8 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   SetFrequency(freq);
 
   // output power configuration
-
   status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | currPWR);
-  //status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_OUTPUT_POWER);
   status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | 23, 5, 0); //200ma
-  //status = setRegValue(SX127X_REG_LNA, SX127X_LNA_GAIN_1 | SX127X_LNA_BOOST_ON);
 
   if (status != ERR_NONE)
   {
@@ -719,5 +705,9 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 {
-  writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
+  if (IRQneedsClear)
+  {
+    writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
+    IRQneedsClear = false;
+  }
 }
