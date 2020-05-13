@@ -574,9 +574,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                                 uint8_t OutData[OutPktLen];
                                                 SerialOutFIFO.popBytes(OutData, OutPktLen);
                                                 portEXIT_CRITICAL(&FIFOmux);
-                                                #ifndef DEBUG_CRSF_NO_OUTPUT
                                                 CRSF::Port.write(OutData, OutPktLen); // write the packet out
-                                                #endif
                                                 CRSF::Port.flush(); // flush makes sure all bytes are pushed.
                                                 CRSF::duplex_set_RX();
                                                 vTaskDelay(1); // we don't expect anything for while so feel free to delay
