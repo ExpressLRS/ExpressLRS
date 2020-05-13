@@ -4,6 +4,9 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
 
+//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+
+
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
 HardwareSerial CRSF::Port = SerialPort;
@@ -363,8 +366,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             uint8_t crc = CalcCRC(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
-
+            #ifndef DEBUG_CRSF_NO_OUTPUT
             this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            #endif
         }
 
         void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
@@ -380,8 +384,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             uint8_t crc = CalcCRC(&outBuffer[2], RCframeLength + 1);
 
             outBuffer[RCframeLength + 3] = crc;
-
+            #ifndef DEBUG_CRSF_NO_OUTPUT
             this->_dev->write(outBuffer, RCframeLength + 4);
+            #endif
         }
 
         void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t* packet)
@@ -548,7 +553,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                             uint8_t OutPktLen = SerialOutFIFO.pop();
                                             uint8_t OutData[OutPktLen];
                                             SerialOutFIFO.popBytes(OutData, OutPktLen);
+                                            #ifndef DEBUG_CRSF_NO_OUTPUT
                                             CRSF::Port.write(OutData, OutPktLen); // write the packet out
+                                            #endif
                                             xSemaphoreGive(mutexOutFIFO);
                                             CRSF::Port.flush(); // flush makes sure all bytes are pushed.
                                             CRSF::duplex_set_RX();
@@ -715,7 +722,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             uint8_t OutData[OutPktLen];
 
                             SerialOutFIFO.popBytes(OutData, OutPktLen);
+                            #ifndef DEBUG_CRSF_NO_OUTPUT
                             CRSF::Port.write(OutData, OutPktLen); // write the packet out
+                            #endif
                             CRSF::Port.flush();
                             digitalWrite(BUFFER_OE, LOW);
 
