@@ -222,10 +222,10 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 #endif
 
         /* Adjust the timer */
-        if ((TIMER_OFFSET < diff_us))
+        if ((TIMER_OFFSET_LIMIT < diff_us) || (diff_us < 0))
             TxTimer.reset(diff_us - TIMER_OFFSET);
-        else if ((diff_us < 0))
-            TxTimer.reset(diff_us);
+        //else if ((diff_us < 0))
+        //    TxTimer.reset(diff_us);
     }
     else
     {
@@ -279,8 +279,8 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    TxTimer.start();               // Start local sync timer
-    TxTimer.setTime(TIMER_OFFSET); // Trigger isr right after reception
+    TxTimer.start();                     // Start local sync timer
+    TxTimer.setTime(TIMER_OFFSET_LIMIT); // Trigger isr right after reception
     /* Do initial freq correction */
     FreqCorrection += rx_freqerror;
     Radio.setPPMoffsetReg(rx_freqerror, 0);
