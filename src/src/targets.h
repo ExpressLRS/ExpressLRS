@@ -4,6 +4,8 @@
 
 #ifdef PLATFORM_STM32
 #define WORD_ALIGNED_ATTR //nothing//
+#else
+#define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
 #endif
 
 #ifdef PLATFORM_STM32
