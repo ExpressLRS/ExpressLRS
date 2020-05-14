@@ -656,12 +656,12 @@ void ICACHE_RAM_ATTR SX127xDriver::setPPMoffsetReg(int32_t offset)
   writeRegister(SX127x_PPMOFFSET, regValue);
 }
 
-bool SX127xDriver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool()
 {
   return (readRegister(SX127X_REG_FEI_MSB) & 0b1000) >> 3; // returns true if pos freq error, neg if false
 }
 
-int32_t SX127xDriver::GetFrequencyError()
+int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
 {
 
   WORD_ALIGNED_ATTR uint8_t reg[3] = {0x0, 0x0, 0x0};

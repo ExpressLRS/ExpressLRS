@@ -378,53 +378,31 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.phaseShift((Offset >> 4) + timerOffset);
     }
 
-    if (RXtimerState == tim_tentative || RXtimerState == tim_disconnected)
+    if (!Radio.GetFrequencyErrorbool())
     {
-        int32_t freqerror = Radio.GetFrequencyError();
-        FreqCorrection = freqerror;
-    }
-    else
-    {
-        if (!Radio.GetFrequencyErrorbool())
+        if (FreqCorrection < FreqCorrectionMax)
         {
-            if (FreqCorrection < FreqCorrectionMax)
-            {
-                FreqCorrection += 61; //min freq step is ~ 61hz
-            }
-            else
-            {
-                FreqCorrection = FreqCorrectionMax;
-                Serial.println("Max pos reasontable freq offset correction limit reached!");
-            }
+            FreqCorrection += 61; //min freq step is ~ 61hz
         }
         else
         {
-            if (FreqCorrection > FreqCorrectionMin)
-            {
-                FreqCorrection -= 61; //min freq step is ~ 61hz
-            }
-            else
-            {
-                FreqCorrection = FreqCorrectionMin;
-                Serial.println("Max neg reasontable freq offset correction limit reached!");
-            }
+            FreqCorrection = FreqCorrectionMax;
+            Serial.println("Max pos reasontable freq offset correction limit reached!");
         }
-        Radio.setPPMoffsetReg(FreqCorrection);
     }
-
-    //Serial.println(linkQuality);
-
-    // if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) == 0) //premept the FHSS if we already know we'll have to do it next timer tick.
-    // {
-
-    //     Radio.setPPMoffsetReg(FreqCorrection);
-    //     Serial.println(linkQuality);
-
-    //     //Serial.println(FreqCorrection);
-
-    //     HandleFHSS();
-    //     alreadyFHSS = true;
-    // }
+    else
+    {
+        if (FreqCorrection > FreqCorrectionMin)
+        {
+            FreqCorrection -= 61; //min freq step is ~ 61hz
+        }
+        else
+        {
+            FreqCorrection = FreqCorrectionMin;
+            Serial.println("Max neg reasontable freq offset correction limit reached!");
+        }
+    }
+    Radio.setPPMoffsetReg(FreqCorrection);
 }
 
 void beginWebsever()
