@@ -208,14 +208,24 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
         DEBUG_PRINT(diff_us);
 #endif
         rx_last_valid_us = 0;
+#if 0
         // allow max 500us correction
         if (diff_us < -500)
             diff_us = -500;
         else if (diff_us > 500)
             diff_us = 500;
+#else
+        int32_t interval = ExpressLRS_currAirRate->interval;
+        if (diff_us > (interval >> 1))
+        {
+            /* the timer was called too early */
+            diff_us %= interval;
+            diff_us -= interval;
+        }
+#endif
 
-        /* Adjust timer */
-        if (100 < abs(diff_us))
+        /* Adjust the timer */
+        if ((diff_us < 0) || (TIMER_OFFSET < diff_us))
             TxTimer.reset(diff_us - TIMER_OFFSET);
     }
     else
@@ -244,7 +254,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     if (fhss_config_rx)
         Radio.RXnb(FHSSgetCurrFreq()); // 260us => 148us => ~67us
 
-#if PRINT_TIMER
+#if PRINT_TIMER || PRINT_FREQ_ERROR
     DEBUG_PRINTLN("");
 #endif
 }
