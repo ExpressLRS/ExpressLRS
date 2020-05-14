@@ -78,6 +78,12 @@ enum
 #define RATE_GET_OSD_NUM(_x) ((RATE_MAX + 1) - (_x))
 #define RATE_DEFAULT         RATE_200HZ
 
+#define SYNC_RATE_PACK(_rate) ((_rate % RATE_MAX) << 4)
+#define SYNC_RATE_EXTR(_byte) (((_byte) >> 4) % RATE_MAX)
+
+#define SYNC_TLM_PACK(_tlm)  ((_tlm % TLM_RATIO_MAX) << 0)
+#define SYNC_TLM_EXTR(_byte) (((_byte) >> 0) % TLM_RATIO_MAX)
+
 typedef struct expresslrs_mod_settings_s
 {
     Bandwidth bw;

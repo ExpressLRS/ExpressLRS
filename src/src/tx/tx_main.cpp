@@ -139,8 +139,8 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
     output[0] = (DeviceAddr) + SYNC_PACKET;
     output[1] = FHSSgetCurrIndex();
     output[2] = _rf_rxtx_counter;
-    output[3] = ((ExpressLRS_currAirRate->enum_rate % RATE_MAX) << 4) +
-                (TLMinterval & TLM_RATIO_1_2);
+    output[3] = SYNC_RATE_PACK(ExpressLRS_currAirRate->enum_rate) +
+                SYNC_TLM_PACK(TLMinterval);
     output[4] = UID[3];
     output[5] = UID[4];
     output[6] = UID[5];
@@ -241,7 +241,12 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             modified = (modified != TLMinterval) ? (1 << 2) : 0;
 
             if (modified)
-                tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+            {
+                if (TLM_RATIO_NO_TLM < TLMinterval)
+                    tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+                else
+                    tlm_check_ratio = 0;
+            }
             DEBUG_PRINT("TLM: ");
             DEBUG_PRINTLN(TLMinterval);
             break;

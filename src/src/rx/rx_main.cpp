@@ -222,8 +222,10 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 #endif
 
         /* Adjust the timer */
-        if ((diff_us < 0) || (TIMER_OFFSET < diff_us))
+        if ((TIMER_OFFSET < diff_us))
             TxTimer.reset(diff_us - TIMER_OFFSET);
+        else if ((diff_us < 0))
+            TxTimer.reset(diff_us);
     }
     else
     {
@@ -277,8 +279,8 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    TxTimer.start();      // Start local sync timer
-    TxTimer.setTime(100); // Trigger isr right after reception
+    TxTimer.start();               // Start local sync timer
+    TxTimer.setTime(TIMER_OFFSET); // Trigger isr right after reception
     /* Do initial freq correction */
     FreqCorrection += rx_freqerror;
     Radio.setPPMoffsetReg(rx_freqerror, 0);
@@ -358,11 +360,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                 }
 
 #if 0
-                uint8_t rateIn = (rx_buffer[3] >> 4) % RATE_MAX;
+                uint8_t rateIn = SYNC_RATE_EXTR(rx_buffer[3]);
                 if (ExpressLRS_currAirRate->enum_rate != rateIn)
                     SetRFLinkRate(rateIn);
 #endif
-                handle_tlm_ratio((rx_buffer[3] & TLM_RATIO_1_2));
+                handle_tlm_ratio(SYNC_TLM_EXTR(rx_buffer[3]));
                 FHSSsetCurrIndex(rx_buffer[1]);
                 NonceRXlocal = rx_buffer[2];
             }
