@@ -2,9 +2,17 @@
 #include "debug.h"
 #include <Arduino.h>
 
+#if defined(TIM1)
+#define TIMER_BASE TIM1
+#elif defined(TIM2)
+#define TIMER_BASE TIM2
+#elif defined(TIM6)
+#define TIMER_BASE TIM6
+#endif
+
 HwTimer TxTimer;
 
-static HardwareTimer timer_tx(TIM1);
+static HardwareTimer timer_tx(TIMER_BASE);
 
 static void TimerCallback(HardwareTimer *)
 {

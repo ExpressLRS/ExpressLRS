@@ -14,19 +14,19 @@ Button button;
 void button_event_short(uint32_t ms)
 {
     (void)ms;
-#if defined(TARGET_R9M_TX)
-#elif defined(TARGET_R9M_RX)
+#if defined(TX_MODULE)
+#elif defined(RX_MODULE)
     forced_start();
-#endif /* TARGET_R9M_RX */
+#endif /* RX_MODULE */
 }
 
 void button_event_long(uint32_t ms)
 {
-#if defined(TARGET_R9M_TX)
-#elif defined(TARGET_R9M_RX)
+#if defined(TX_MODULE)
+#elif defined(RX_MODULE)
     if (ms > BUTTON_RESET_INTERVAL_RX)
         platform_restart();
-#endif /* TARGET_R9M_RX */
+#endif /* RX_MODULE */
 }
 #endif // GPIO_PIN_BUTTON
 
@@ -61,9 +61,7 @@ static inline void PLAY_SOUND(uint32_t wait = 244, uint32_t cnt = 50)
 #if defined(TARGET_R9M_TX)
 #include "DAC.h"
 R9DAC r9dac;
-
-#elif defined(TARGET_R9M_RX)
-#endif /* TARGET_R9M_RX */
+#endif /* TARGET_R9M_TX */
 
 /******************* CONFIG *********************/
 int8_t platform_config_load(struct platform_config &config)
@@ -152,12 +150,13 @@ void platform_setup(void)
     button.init(GPIO_PIN_BUTTON, true);
 #endif
 
-#if defined(TARGET_R9M_TX)
+#if defined(TX_MODULE)
     /*************** CONFIGURE TX *******************/
 
+#if defined(TARGET_R9M_TX)
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100, GPIO_PIN_RFswitch_CONTROL,
                GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
-
+#endif // TARGET_R9M_TX
 #ifdef GPIO_PIN_BUZZER
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 
@@ -177,10 +176,10 @@ void platform_setup(void)
 #endif // STARTUP_BEEPS
 #endif // GPIO_PIN_BUZZER
 
-#elif defined(TARGET_R9M_RX)
+#elif defined(RX_MODULE)
     /*************** CONFIGURE RX *******************/
 
-#endif /* TARGET_R9M_RX */
+#endif /* RX_MODULE */
 }
 
 void platform_mode_notify(void)
@@ -203,16 +202,16 @@ void platform_loop(int state)
         button.handle();
 #endif
 
-#if defined(TARGET_R9M_TX)
-#elif defined(TARGET_R9M_RX)
-#endif /* TARGET_R9M_RX */
+#if defined(TX_MODULE)
+#elif defined(RX_MODULE)
+#endif /* RX_MODULE */
 }
 
 void platform_connection_state(int state)
 {
     bool connected = (state == STATE_connected);
     LED_STATE_GREEN(connected ? HIGH : LOW);
-#if defined(TARGET_R9M_TX)
+#if defined(TX_MODULE)
     //platform_set_led(!connected);
 #endif
 }

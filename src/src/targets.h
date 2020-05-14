@@ -114,6 +114,38 @@
 #define GPIO_PIN_BUTTON      2
 #endif
 
+
+/******************************************************************************************/
+/*                                   STM32 RX CONFIGS                                     */
+/******************************************************************************************/
+#ifdef TARGET_RHF76_052
+/*
+    Other pins:
+    PA15        LOW to enable default bootloader
+*/
+
+#define GPIO_PIN_NSS         PA4
+#define GPIO_PIN_DIO0        PB10
+#define GPIO_PIN_DIO1        PB2
+#define GPIO_PIN_DIO2        PB0  // not used at the moment
+#define GPIO_PIN_DIO3        PB1  // not used at the moment
+#define GPIO_PIN_MOSI        PA7
+#define GPIO_PIN_MISO        PA6
+#define GPIO_PIN_SCK         PA5
+#define GPIO_PIN_RST         PB11
+/* PA1 and PA2 is used to selct HIGH or LOW RF band! */
+#define GPIO_PIN_RX_ENABLE   -1   //PA1  // Need to check!
+#define GPIO_PIN_TX_ENABLE   -1   //PA2  // Need to check!
+#define BUFFER_OE            -1
+#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1
+#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1
+#define GPIO_PIN_LED         PB4  // on board led (green)
+#define GPIO_PIN_LED_GREEN   -1   //
+#define GPIO_PIN_BUTTON      -1   // TODO pullup!
+#define GPIO_PIN_DEBUG_RX    PA10 // USART1, default stm bootloader = 115200,8,n,1
+#define GPIO_PIN_DEBUG_TX    PA9  // USART1, default stm bootloader = 115200,8,n,1
+#endif // TARGET_RHF76_052
+
 /******************************************************************************************/
 /*                                        R9 CONFIGS                                      */
 /******************************************************************************************/
