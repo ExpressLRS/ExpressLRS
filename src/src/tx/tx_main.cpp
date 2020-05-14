@@ -241,7 +241,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 
             if (modified != TLMinterval)
             {
-                modified = (PLATFORM_ESP32) ? 0 : (1 << 2);
+#if PLATFORM_ESP32
+                modified = 0;
+#else
+                modified = (1 << 2);
+#endif
                 if (TLM_RATIO_NO_TLM < TLMinterval)
                     tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
                 else
@@ -258,7 +262,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
-            modified = (!PLATFORM_ESP32 && modified != PowerMgmt.currPower()) ? (1 << 3) : 0;
+#if PLATFORM_ESP32
+            modified = 0;
+#else
+            modified = (modified != PowerMgmt.currPower()) ? (1 << 3) : 0;
+#endif
             break;
 
         case 4:
