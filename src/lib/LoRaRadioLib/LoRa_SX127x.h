@@ -114,8 +114,8 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static volatile uint8_t TXdataBuffer[256];
-    static volatile uint8_t RXdataBuffer[256];
+    static volatile WORD_ALIGNED_ATTR uint8_t  TXdataBuffer[256];
+    static volatile WORD_ALIGNED_ATTR uint8_t  RXdataBuffer[256];
 
     static uint8_t TXbuffLen;
     static uint8_t RXbuffLen;
@@ -124,7 +124,7 @@ public:
 
     static volatile bool headerExplMode;
 
-    static volatile uint32_t TimerInterval; //20ms default for now.
+    static volatile uint32_t TimerInterval; //20ms default for now.WORD_ALIGNED_ATTRt
 
     static uint32_t currFreq;
     static uint8_t _syncWord;

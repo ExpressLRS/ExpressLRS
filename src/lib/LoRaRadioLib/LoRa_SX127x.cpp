@@ -233,7 +233,7 @@ uint8_t SX127xDriver::SetFrequency(uint32_t freq)
   uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
   uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
 
-  uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
+  WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
   writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 
@@ -664,7 +664,7 @@ bool SX127xDriver::GetFrequencyErrorbool()
 int32_t SX127xDriver::GetFrequencyError()
 {
 
-  uint8_t reg[3] = {0x0, 0x0, 0x0};
+  WORD_ALIGNED_ATTR uint8_t reg[3] = {0x0, 0x0, 0x0};
   readRegisterBurst(SX127X_REG_FEI_MSB, sizeof(reg), reg);
 
   uint32_t RegFei = ((reg[0] & 0b0111) << 16) + (reg[1] << 8) + reg[2];
