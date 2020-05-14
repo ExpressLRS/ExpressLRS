@@ -1,13 +1,9 @@
 #include "CRSF_TX.h"
 #include "debug.h"
-#include "FIFO.h"
 #include <string.h>
 
 void paramNullCallback(uint8_t const *, uint16_t){};
 void (*CRSF_TX::ParamWriteCallback)(uint8_t const *msg, uint16_t len) = &paramNullCallback;
-
-///Out FIFO to buffer messages///
-//FIFO SerialOutFIFO;
 
 enum {
     SEND_NA = 0,
@@ -28,8 +24,6 @@ void CRSF_TX::Begin(void)
 void ICACHE_RAM_ATTR CRSF_TX::CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
-    //SerialOutFIFO.push(size); // length
-    //SerialOutFIFO.pushBytes(buff, size);
     _dev->write(buff, size);
 }
 
@@ -253,7 +247,6 @@ uint8_t CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX v
             if (rx_data_rcvd == 0)
             {
                 /* Can write right after successful package reception */
-                //_dev->write(SerialOutFIFO);
 #if (FEATURE_OPENTX_SYNC)
                 sendSyncPacketToRadio();
 #endif
@@ -283,11 +276,8 @@ void CRSF_TX::uart_wdt(void)
 
         if (BadPktsCount >= GoodPktsCount)
         {
-            //DEBUG_PRINTLN("  Too many bad UART RX packets!");
-
             if (CRSFstate == true)
             {
-                //SerialOutFIFO.flush();
                 DEBUG_PRINT("CRSF UART Disconnect. ");
                 disconnected();
                 CRSFstate = false;

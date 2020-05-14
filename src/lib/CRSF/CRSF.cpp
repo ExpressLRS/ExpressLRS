@@ -44,7 +44,7 @@ void CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
         LinkStatistics.uplink_SNR = input[3];
         LinkStatistics.uplink_Link_quality = input[4];
 
-        TLMbattSensor.voltage = (input[2] << 8) + input[5];
+        TLMbattSensor.voltage = ((uint16_t)input[2] << 8) + input[5];
 
         LinkStatisticsSend();
     }

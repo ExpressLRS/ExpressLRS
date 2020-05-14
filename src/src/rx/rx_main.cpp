@@ -32,7 +32,6 @@ static volatile int32_t rx_freqerror = 0;
 
 ///////////////////////////////////////////////
 ////////////////  Filters  ////////////////////
-static LPF LPF_Offset(3);
 static LPF LPF_FreqError(4);
 static LPF LPF_UplinkRSSI(5);
 
@@ -117,8 +116,6 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
     else if (freqerror > MAX_ERROR)
         freqerror = MAX_ERROR;
 #endif
-    //if (connectionState == STATE_tentative)
-    //    LPF_FreqError.init(freqerror);
     freqerror = LPF_FreqError.update(freqerror);
 
 #if PRINT_FREQ_ERROR
@@ -365,9 +362,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                 if (ExpressLRS_currAirRate->enum_rate != rateIn)
                     SetRFLinkRate(rateIn);
 #endif
-                uint8_t TLMinterval = rx_buffer[3] & TLM_RATIO_1_2;
-                handle_tlm_ratio(TLMinterval);
-
+                handle_tlm_ratio((rx_buffer[3] & TLM_RATIO_1_2));
                 FHSSsetCurrIndex(rx_buffer[1]);
                 NonceRXlocal = rx_buffer[2];
             }
@@ -459,7 +454,6 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
     TxTimer.updateInterval(config->interval);
-    LPF_Offset.init(0);
     LPF_FreqError.init(0);
     LPF_UplinkRSSI.init(0);
     crsf.LinkStatistics.uplink_RSSI_2 = 0;

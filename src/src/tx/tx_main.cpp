@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include "FIFO.h"
 #include "utils.h"
 #include "common.h"
 #include "LoRaRadioLib.h"
