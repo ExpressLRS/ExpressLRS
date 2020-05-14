@@ -308,18 +308,16 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     const connectionState_e _conn_state = connectionState;
     const uint32_t current_us = Radio.LastPacketIsrMicros;
     const uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
-    const uint8_t address = rx_buffer[0];
+    ElrsSyncPacket_s const * const sync = (ElrsSyncPacket_s*)rx_buffer;
+    const uint8_t address = sync->address;
 
-    if (rx_buffer[7] != calculatedCRC)
+    if (sync->crc != calculatedCRC)
     {
-        //DEBUG_PRINTLN("CRC error on RF packet");
-        //DEBUG_PRINT("!CRC");
         DEBUG_PRINT("!C");
         return;
     }
     else if (DEIVCE_ADDR_GET(address) != DeviceAddr)
     {
-        //DEBUG_PRINTLN("Wrong device address on RF packet");
         DEBUG_PRINT("!A");
         return;
     }
@@ -331,11 +329,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 
     switch (TYPE_GET(address))
     {
-        case SYNC_PACKET:
+        case UL_PACKET_SYNC:
         {
-            if (rx_buffer[4] == UID[3] &&
-                rx_buffer[5] == UID[4] &&
-                rx_buffer[6] == UID[5])
+            if (sync->uid3 == UID[3] &&
+                sync->uid4 == UID[4] &&
+                sync->uid5 == UID[5])
             {
                 if (_conn_state == STATE_disconnected)
                 {
@@ -343,8 +341,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                 }
                 else if (_conn_state == STATE_tentative)
                 {
-                    if (NonceRXlocal == rx_buffer[2] &&
-                        FHSSgetCurrIndex() == rx_buffer[1])
+                    if (NonceRXlocal == sync->rxtx_counter &&
+                        FHSSgetCurrIndex() == sync->fhssIndex)
                     {
                         GotConnection();
                     }
@@ -360,17 +358,16 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                 }
 
 #if 0
-                uint8_t rateIn = SYNC_RATE_EXTR(rx_buffer[3]);
-                if (ExpressLRS_currAirRate->enum_rate != rateIn)
-                    SetRFLinkRate(rateIn);
+                if (ExpressLRS_currAirRate->enum_rate != sync->air_rate)
+                    SetRFLinkRate(sync->air_rate);
 #endif
-                handle_tlm_ratio(SYNC_TLM_EXTR(rx_buffer[3]));
-                FHSSsetCurrIndex(rx_buffer[1]);
-                NonceRXlocal = rx_buffer[2];
+                handle_tlm_ratio(sync->tlm_interval);
+                FHSSsetCurrIndex(sync->fhssIndex);
+                NonceRXlocal = sync->rxtx_counter;
             }
             break;
         }
-        case RC_DATA_PACKET: //Standard RC Data Packet
+        case UL_PACKET_RC_DATA: //Standard RC Data Packet
             if (_conn_state == STATE_connected)
             {
                 rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
@@ -379,7 +376,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
             break;
 
 #if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
-        case SWITCH_DATA_PACKET: // Switch Data Packet
+        case UL_PACKET_SWITCH_DATA: // Switch Data Packet
             // extra layer of protection incase the crc and addr headers fail us.
             if ((rx_buffer[3] == rx_buffer[1]) &&
                 (rx_buffer[4] == rx_buffer[2]))

@@ -136,14 +136,15 @@ static void ICACHE_RAM_ATTR HandleFHSS_TX()
 
 static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 {
-    output[0] = (DeviceAddr) + SYNC_PACKET;
-    output[1] = FHSSgetCurrIndex();
-    output[2] = _rf_rxtx_counter;
-    output[3] = SYNC_RATE_PACK(ExpressLRS_currAirRate->enum_rate) +
-                SYNC_TLM_PACK(TLMinterval);
-    output[4] = UID[3];
-    output[5] = UID[4];
-    output[6] = UID[5];
+    ElrsSyncPacket_s * sync = (ElrsSyncPacket_s*)output;
+    sync->address = (DeviceAddr) + UL_PACKET_SYNC;
+    sync->fhssIndex = FHSSgetCurrIndex();
+    sync->rxtx_counter = _rf_rxtx_counter;
+    sync->air_rate = ExpressLRS_currAirRate->enum_rate;
+    sync->tlm_interval = TLMinterval;
+    sync->uid3 = UID[3];
+    sync->uid4 = UID[4];
+    sync->uid5 = UID[5];
 }
 
 static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)

@@ -15,12 +15,12 @@
 // 00 -> standard 4 channel data packet
 // 01 -> switch data packet
 // 10 -> sync packet with hop data
-// 11 -> tlm packet
+// 11 -> tlm packet (MSP)
 enum
 {
-    RC_DATA_PACKET = 0b00,
-    SWITCH_DATA_PACKET = 0b01,
-    SYNC_PACKET = 0b10,
+    UL_PACKET_RC_DATA = 0b00,
+    UL_PACKET_SWITCH_DATA = 0b01,
+    UL_PACKET_SYNC = 0b10,
     UL_PACKET_MSP = 0b11,
 };
 
@@ -31,6 +31,19 @@ enum
     DL_PACKET_FREE2 = 0b10,
     DL_PACKET_TLM_LINK = 0b11,
 };
+
+typedef struct ElrsSyncPacket_s {
+    uint8_t address;
+    uint8_t fhssIndex;
+    uint8_t rxtx_counter;
+    uint8_t air_rate: 4;
+    uint8_t tlm_interval : 4;
+    uint8_t uid3;
+    uint8_t uid4;
+    uint8_t uid5;
+    uint8_t crc;
+} ElrsSyncPacket_s;
+
 
 class RcChannels
 {

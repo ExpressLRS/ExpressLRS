@@ -32,7 +32,7 @@ typedef struct
 void RcChannels::channels_pack()
 {
     uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
+    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_RC_DATA;
     packed_buffer[0] = PacketHeaderAddr;
 
     // find the next switch to send
@@ -127,7 +127,7 @@ typedef struct
 void RcChannels::channels_pack()
 {
     uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + RC_DATA_PACKET;
+    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_RC_DATA;
     packed_buffer[0] = PacketHeaderAddr;
 
     // find the next switch to send
@@ -233,7 +233,7 @@ void RcChannels::channels_pack()
         SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
         p_auxChannelsChanged = 0;
 
-        packed_buffer[0] = PacketHeaderAddr + SWITCH_DATA_PACKET;
+        packed_buffer[0] = PacketHeaderAddr + UL_PACKET_SWITCH_DATA;
         SwitchPacket_s *rcdata = (SwitchPacket_s *)&packed_buffer[1];
         rcdata->aux1 = (CRSF_to_UINT10(ChannelDataIn[4]) >> 6);
         rcdata->aux2 = (CRSF_to_UINT10(ChannelDataIn[5]) >> 6);
@@ -247,7 +247,7 @@ void RcChannels::channels_pack()
     else // else we just have regular channel data which we send as 8 + 2 bits
 #endif // !One_Bit_Switches
     {
-        packed_buffer[0] = PacketHeaderAddr + RC_DATA_PACKET;
+        packed_buffer[0] = PacketHeaderAddr + UL_PACKET_RC_DATA;
 
         RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
         rcdata->rc1 = ChannelDataIn[0];
@@ -267,7 +267,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
                                                   crsf_channels_t &PackedRCdataOut)
 {
     uint8_t type = input[0] & 0b11;
-    if (type == RC_DATA_PACKET)
+    if (type == UL_PACKET_RC_DATA)
     {
         RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
         PackedRCdataOut.ch0 = rcdata->rc1;
@@ -281,7 +281,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
         PackedRCdataOut.ch7 = BIT_to_CRSF(rcdata->aux4);
 #endif // One_Bit_Switches
     }
-    else if (type == SWITCH_DATA_PACKET)
+    else if (type == UL_PACKET_SWITCH_DATA)
     {
         SwitchPacket_s *rcdata = (SwitchPacket_s *)&input[1];
         PackedRCdataOut.ch4 = SWITCH3b_to_CRSF(rcdata->aux1);
