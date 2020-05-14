@@ -124,7 +124,7 @@ public:
 
     static volatile bool headerExplMode;
 
-    static volatile uint32_t TimerInterval; //20ms default for now.WORD_ALIGNED_ATTRt
+    static volatile uint32_t TimerInterval; //20ms default for now
 
     static uint32_t currFreq;
     static uint8_t _syncWord;
