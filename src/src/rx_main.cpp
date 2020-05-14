@@ -176,8 +176,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
-    hwTimer.phaseShift(uint32_t((Offset >> 4) + timerOffset));
-
     if (alreadyFHSS == true)
     {
         alreadyFHSS = false;
