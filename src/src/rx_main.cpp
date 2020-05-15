@@ -31,7 +31,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-//#define DEBUG_SUPPRESS // supresses debug messages on uart 
+#define DEBUG_SUPPRESS // supresses debug messages on uart 
 
 hwTimer hwTimer;
 SX127xDriver Radio;
@@ -176,6 +176,38 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
+void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
+{
+    if (!value)
+    {
+        if (FreqCorrection < FreqCorrectionMax)
+        {
+            FreqCorrection += 61; //min freq step is ~ 61hz
+        }
+        else
+        {
+            FreqCorrection = FreqCorrectionMax;
+#ifndef DEBUG_SUPPRESS
+            Serial.println("Max pos reasontable freq offset correction limit reached!");
+#endif
+        }
+    }
+    else
+    {
+        if (FreqCorrection > FreqCorrectionMin)
+        {
+            FreqCorrection -= 61; //min freq step is ~ 61hz
+        }
+        else
+        {
+            FreqCorrection = FreqCorrectionMin;
+#ifndef DEBUG_SUPPRESS
+            Serial.println("Max neg reasontable freq offset correction limit reached!");
+#endif
+        }
+    }
+}
+
 void ICACHE_RAM_ATTR HWtimerCallback()
 {
     if (alreadyFHSS == true)
@@ -305,12 +337,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    HWtimerError = ((micros() - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = micros();
     LastValidPacket = millis();
-
-    getRFlinkInfo();
 
     switch (type)
     {
@@ -351,7 +380,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (ExpressLRS_currAirRate->enum_rate != rateIn)
             {
-                //Serial.println("update air rate");
                 SetRFLinkRate(rateIn);
             }
 
@@ -372,6 +400,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
     addPacketToLQ();
+    getRFlinkInfo();
+    
     HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1) + 50); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
 
@@ -384,35 +414,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.phaseShift((Offset >> 4) + timerOffset);
     }
 
-    if (!Radio.GetFrequencyErrorbool())
-    {
-        if (FreqCorrection < FreqCorrectionMax)
-        {
-            FreqCorrection += 61; //min freq step is ~ 61hz
-        }
-        else
-        {
-            FreqCorrection = FreqCorrectionMax;
-            #ifndef DEBUG_SUPPRESS
-            Serial.println("Max pos reasontable freq offset correction limit reached!");
-            #endif
-        }
-    }
-    else
-    {
-        if (FreqCorrection > FreqCorrectionMin)
-        {
-            FreqCorrection -= 61; //min freq step is ~ 61hz
-        }
-        else
-        {
-            FreqCorrection = FreqCorrectionMin;
-            #ifndef DEBUG_SUPPRESS
-            Serial.println("Max neg reasontable freq offset correction limit reached!");
-            #endif
-        }
-    }
-    Radio.setPPMoffsetReg(FreqCorrection);
+    HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+    Radio.setPPMoffsetReg(FreqCorrection); //as above but corrects a different PPM offset based on freq error 
 }
 
 void beginWebsever()
@@ -503,12 +506,12 @@ void setup()
 #endif
 
     FHSSrandomiseFHSSsequence();
-    Radio.SetFrequency(GetInitialFreq());
-
+    
     //Radio.SetSyncWord(0x122);
 
+    Radio.currFreq = GetInitialFreq();
     Radio.Begin();
-
+    
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
     RFnoiseFloor = MeasureNoiseFloor();
@@ -517,7 +520,6 @@ void setup()
     Serial.println("dBm");
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
-
     Radio.TXdoneCallback1 = &Radio.RXnb;
 
     crsf.Begin();
