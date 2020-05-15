@@ -180,6 +180,19 @@ void platform_setup(void)
     /*************** CONFIGURE RX *******************/
 
 #endif /* RX_MODULE */
+
+#if defined(GPIO_SELECT_RFIO_HIGH) && defined(GPIO_SELECT_RFIO_LOW)
+    pinMode(GPIO_SELECT_RFIO_HIGH, OUTPUT);
+    pinMode(GPIO_SELECT_RFIO_LOW, OUTPUT);
+
+#if defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    digitalWrite(GPIO_SELECT_RFIO_HIGH, 0);
+    digitalWrite(GPIO_SELECT_RFIO_LOW, 1);
+#else
+    digitalWrite(GPIO_SELECT_RFIO_LOW, 0);
+    digitalWrite(GPIO_SELECT_RFIO_HIGH, 1);
+#endif
+#endif /* RFIO HIGH / LOW */
 }
 
 void platform_mode_notify(void)

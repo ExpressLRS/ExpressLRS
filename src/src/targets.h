@@ -134,16 +134,23 @@
 #define GPIO_PIN_SCK         PA5
 #define GPIO_PIN_RST         PB11
 /* PA1 and PA2 is used to selct HIGH or LOW RF band! */
-#define GPIO_PIN_RX_ENABLE   -1   //PA1  // Need to check!
-#define GPIO_PIN_TX_ENABLE   -1   //PA2  // Need to check!
+/*
+    LOW 0 : HIGH 0 = OFF
+    LOW 1 : HIGH 0 = LOW BAND (433)
+    LOW 0 : HIGH 1 = HIGH BAND (868 / 915)
+*/
+#define GPIO_SELECT_RFIO_HIGH PA2
+#define GPIO_SELECT_RFIO_LOW  PA1
+#define GPIO_PIN_RX_ENABLE   -1
+#define GPIO_PIN_TX_ENABLE   -1
 #define BUFFER_OE            -1
-#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1
-#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1
-#define GPIO_PIN_LED         PB4  // on board led (green)
+#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1, PIN23
+#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1, PIN22
+#define GPIO_PIN_LED         PB4  // on board led (green), PIN16
 #define GPIO_PIN_LED_GREEN   -1   //
-#define GPIO_PIN_BUTTON      -1   // TODO pullup!
-#define GPIO_PIN_DEBUG_RX    PA10 // USART1, default stm bootloader = 115200,8,n,1
-#define GPIO_PIN_DEBUG_TX    PA9  // USART1, default stm bootloader = 115200,8,n,1
+#define GPIO_PIN_BUTTON      -1   // Note: pullup!
+#define GPIO_PIN_DEBUG_RX    PA10 // USART1, default stm bootloader = 115200,8,n,1, PIN5
+#define GPIO_PIN_DEBUG_TX    PA9  // USART1, default stm bootloader = 115200,8,n,1, PIN4
 #endif // TARGET_RHF76_052
 
 /******************************************************************************************/
