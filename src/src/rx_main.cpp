@@ -31,6 +31,8 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
+//#define DEBUG_SUPPRESS // supresses debug messages on uart 
+
 hwTimer hwTimer;
 SX127xDriver Radio;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
@@ -289,13 +291,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (inCRC != calculatedCRC)
     {
+        #ifndef DEBUG_SUPPRESS
         Serial.println("CRC error on RF packet");
+        #endif
         return;
     }
 
     if (packetAddr != DeviceAddr)
     {
+        #ifndef DEBUG_SUPPRESS
         Serial.println("Wrong device address on RF packet");
+        #endif
         return;
     }
 
@@ -387,7 +393,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         else
         {
             FreqCorrection = FreqCorrectionMax;
+            #ifndef DEBUG_SUPPRESS
             Serial.println("Max pos reasontable freq offset correction limit reached!");
+            #endif
         }
     }
     else
@@ -399,7 +407,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         else
         {
             FreqCorrection = FreqCorrectionMin;
+            #ifndef DEBUG_SUPPRESS
             Serial.println("Max neg reasontable freq offset correction limit reached!");
+            #endif
         }
     }
     Radio.setPPMoffsetReg(FreqCorrection);
@@ -554,7 +564,9 @@ void loop()
     if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)))
     {
         RXtimerState = tim_locked;
+        #ifndef DEBUG_SUPPRESS
         Serial.println("Timer Considered Locked");
+        #endif
     }
 
 #ifdef Auto_WiFi_On_Boot
