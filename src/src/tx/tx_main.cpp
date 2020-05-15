@@ -40,6 +40,7 @@ struct platform_config pl_config = {
 
 /////////// SYNC PACKET ////////
 static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
+static volatile uint32_t DRAM_ATTR sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
 
 /////////// CONNECTION /////////
 static uint32_t LastPacketRecvMillis = 0;
@@ -76,6 +77,7 @@ static void process_rx_buffer()
     }
 
     connectionState = STATE_connected;
+    sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     platform_connection_state(STATE_connected);
     platform_set_led(0);
     LastPacketRecvMillis = millis();
@@ -151,8 +153,6 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
     uint32_t current_ms = current_us / 1000U;
-    uint32_t sync_send_interval = ((connectionState != STATE_connected) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN);
-    //uint32_t sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
@@ -368,6 +368,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
         // Set connected if telemetry is not used
         connectionState = STATE_connected;
+        sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
         tlm_check_ratio = 0;
     }
     else
@@ -375,6 +376,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         Radio.RXdoneCallback1 = ProcessTLMpacket;
         Radio.TXdoneCallback1 = HandleTLM;
         connectionState = STATE_disconnected;
+        sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
         tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
     }
 
@@ -489,6 +491,7 @@ void loop()
             RX_CONNECTION_LOST_TIMEOUT < (current_ms - LastPacketRecvMillis))
         {
             connectionState = STATE_disconnected;
+            sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
             platform_connection_state(STATE_disconnected);
             platform_set_led(red_led_state);
         }

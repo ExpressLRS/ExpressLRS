@@ -91,8 +91,8 @@ typedef struct expresslrs_mod_settings_s
     uint8_t PreambleLen;
     uint8_t enum_rate;
     uint8_t sync_interval;
-    uint16_t RFmodeCycleAddtionalTime;
-    uint16_t RFmodeCycleInterval;
+    uint16_t connectionLostTimeout;
+    uint16_t syncSearchTimeout;
 } expresslrs_mod_settings_t;
 
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);

@@ -48,7 +48,7 @@ static volatile uint_fast8_t tlm_msp_send = 0;
 ///////////// Variables for Sync Behaviour ////////////////////
 static uint32_t RFmodeNextCycle = 0;
 static uint32_t RFmodeCycleDelay = 0;
-static volatile uint8_t scanIndex = 0;
+static uint8_t scanIndex = 0;
 static uint8_t tentative_cnt = 0;
 
 ///////////////////////////////////////
@@ -82,7 +82,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int8_t LastRSSI = Radio.LastPacketRSSI;
     //crsf.ChannelsPacked.ch15 = UINT10_to_CRSF(MAP(LastRSSI, -100, -50, 0, 1023));
-    //crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(linkQuality, 0, 100, 0, 1023));
+    //crsf.ChannelsPacked.ch14 = UINT10_to_CRSF(MAP_U16(crsf.LinkStatistics.uplink_Link_quality, 0, 100, 0, 1023));
     int32_t rssiDBM = LPF_UplinkRSSI.update(LastRSSI);
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
@@ -90,7 +90,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
-    crsf.LinkStatistics.uplink_Link_quality = linkQuality;
     //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
@@ -147,7 +146,6 @@ uint8_t ICACHE_RAM_ATTR HandleFHSS()
         if ((NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval) == 0)
         {
             //DEBUG_PRINT("F");
-            linkQuality = LQ_getlinkQuality();
             Radio.NonceRX = 0;
             FHSSincCurrIndex();
             fhss = 1;
@@ -177,6 +175,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     else
     {
         tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
+        crsf.LinkStatistics.uplink_Link_quality = LQ_getlinkQuality();
         crsf.LinkStatisticsPack(&tx_buffer[1]);
     }
     uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
@@ -268,13 +267,14 @@ void ICACHE_RAM_ATTR LostConnection()
     TxTimer.stop(); // Stop sync timer
 
     connectionState = STATE_disconnected; //set lost connection
-    scanIndex = RATE_DEFAULT;
+    //scanIndex = RATE_DEFAULT;
 
     led_set_state(1);                     // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
     platform_connection_state(connectionState);
+    RFmodeNextCycle = millis(); // make sure to stay on same freq during next sync search phase
 }
 
 void ICACHE_RAM_ATTR TentativeConnection()
@@ -445,8 +445,8 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     FHSSresetFreqCorrection();
     FHSSsetCurrIndex(0);
 
-    RFmodeCycleDelay = ExpressLRS_currAirRate->RFmodeCycleInterval +
-                       ExpressLRS_currAirRate->RFmodeCycleAddtionalTime;
+    RFmodeCycleDelay = ExpressLRS_currAirRate->syncSearchTimeout +
+                       ExpressLRS_currAirRate->connectionLostTimeout;
 
     handle_tlm_ratio(config->TLMinterval);
 
@@ -546,7 +546,7 @@ void loop()
         {
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
             scanIndex++;
-            if (RATE_MAX < scanIndex)
+            if (RATE_MAX <= scanIndex)
                 platform_connection_state(STATE_search_iteration_done);
 
             RFmodeNextCycle = now;
@@ -560,7 +560,7 @@ void loop()
     else if (connectionState > STATE_disconnected)
     {
         // check if we lost conn.
-        if (ExpressLRS_currAirRate->RFmodeCycleAddtionalTime < (int32_t)(now - LastValidPacket))
+        if (ExpressLRS_currAirRate->connectionLostTimeout < (int32_t)(now - LastValidPacket))
         {
             LostConnection();
         }
@@ -568,6 +568,7 @@ void loop()
         {
             if (SEND_LINK_STATS_TO_FC_INTERVAL <= (now - SendLinkStatstoFCintervalNextSend))
             {
+                crsf.LinkStatistics.uplink_Link_quality = LQ_getlinkQuality();
                 crsf.LinkStatisticsSend();
                 SendLinkStatstoFCintervalNextSend = now;
             }
