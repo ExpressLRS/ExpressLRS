@@ -477,7 +477,8 @@ void setup()
 
 #ifdef PLATFORM_ESP8266
     Serial.begin(420000);
-
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
 #endif
     // Serial.begin(230400); // for linux debugging
 
