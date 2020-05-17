@@ -10,7 +10,7 @@
 #include "esp32-hal-timer.h"
 #endif
 
-#ifdef PLATFORM_8266
+#ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
@@ -78,11 +78,6 @@ typedef enum
     CONT_TX,
     CONT_RX
 } ContinousMode;
-typedef enum
-{
-    RADIO_IDLE,
-    RADIO_BUSY
-} RadioState_;
 
 class SX127xDriver
 {
@@ -104,9 +99,6 @@ public:
 #ifdef PLATFORM_ESP32
     static TaskHandle_t Timertask_handle; //Task Handle for ContTX mode
 #endif
-
-    //static void (*TXcallback)();
-
     ////////Hardware/////////////
     static uint8_t _RXenablePin;
     static uint8_t _TXenablePin;
@@ -119,23 +111,20 @@ public:
     static uint8_t SX127x_MISO;
     static uint8_t SX127x_SCK;
     static uint8_t SX127x_RST;
-
-    static bool HighPowerModule;
-
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static volatile uint8_t TXdataBuffer[256];
-    static volatile uint8_t RXdataBuffer[256];
+    static volatile WORD_ALIGNED_ATTR uint8_t  TXdataBuffer[256];
+    static volatile WORD_ALIGNED_ATTR uint8_t  RXdataBuffer[256];
 
-    static volatile uint8_t TXbuffLen;
-    static volatile uint8_t RXbuffLen;
+    static uint8_t TXbuffLen;
+    static uint8_t RXbuffLen;
 
     static volatile uint32_t PacketCount;
 
     static volatile bool headerExplMode;
 
-    static volatile uint32_t TimerInterval; //20ms default for now.
+    static volatile uint32_t TimerInterval; //20ms default for now
 
     static uint32_t currFreq;
     static uint8_t _syncWord;
@@ -148,7 +137,6 @@ public:
     static uint8_t currPWR;
     static uint8_t maxPWR;
     static RadioOPmodes _opmode;
-    static RadioState_ RadioState;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -163,6 +151,8 @@ public:
     static uint32_t HeadRoom;
     static uint32_t LastTXdoneMicros;
     static uint32_t TXdoneMicros;
+    static uint8_t currOpmode;
+    static bool IRQneedsClear;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
@@ -180,9 +170,11 @@ public:
     static uint8_t SetCodingRate(CodingRate cr);
     static uint8_t SetFrequency(uint32_t freq);
     static int32_t GetFrequencyError();
+    static bool GetFrequencyErrorbool();
     static void setPPMoffsetReg(int32_t offset);
 
     static uint8_t SX127xBegin();
+    static void ConfigLoraDefaults();
     static uint8_t SetMode(uint8_t mode);
     static uint8_t TX(uint8_t *data, uint8_t length);
     ////////////////////////////////////////////////////
@@ -216,10 +208,7 @@ public:
     static void ICACHE_RAM_ATTR StopContRX();
     static void ICACHE_RAM_ATTR RXnb();
 
-    static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
-
-    static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length);
-    static uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
+    static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routin
 
 private:
 };

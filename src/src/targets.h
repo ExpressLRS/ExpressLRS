@@ -3,6 +3,12 @@
 #define EMPTY()
 
 #ifdef PLATFORM_STM32
+#define WORD_ALIGNED_ATTR //nothing//
+#else
+#define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
+#endif
+
+#ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
 #else
 #ifndef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266

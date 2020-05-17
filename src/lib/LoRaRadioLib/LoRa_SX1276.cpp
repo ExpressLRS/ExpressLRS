@@ -121,15 +121,6 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
     return (status);
   }
 
-  // output power configuration  //changed
-  //   status = setRegValue(SX127X_REG_PA_CONFIG, SX1278_MAX_POWER, 6, 4);
-  //    status = setRegValue(SX1278_REG_PA_DAC, SX127X_PA_BOOST_ON, 2, 0);
-  //    if (status != ERR_NONE) {
-  //      return (status);
-  //    }
-
-  //  status = setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST);
-
   //status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_TRIM, 5, 0);
   status = setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | 15, 5, 0);
 
@@ -193,9 +184,9 @@ uint8_t SX1276configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, ui
 uint8_t SX1276begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
 {
   // initialize low-level drivers
-  //initModule(nss, dio0, dio1);
+ 
   Serial.println("Init module SX1276");
-  initModule(nss, dio1, dio0);
+  initPins();
 
   // execute common part
   uint8_t status = SX127xDriver::SX127xBegin();

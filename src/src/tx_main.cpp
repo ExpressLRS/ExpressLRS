@@ -14,7 +14,7 @@
 #include <OTA.h>
 #include "elrs_eeprom.h"
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+#ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
@@ -47,7 +47,7 @@ MSP msp;
 void ICACHE_RAM_ATTR TimerExpired();
 
 //// MSP Data Handling ///////
-uint32_t MSPPacketLastSent = 0; // time in ms when the last switch data packet was sent
+uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
 uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
 mspPacket_t MSPPacket;
 
@@ -86,9 +86,6 @@ uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
 uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
 uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ICACHE_RAM_ATTR IncreasePower();
-void ICACHE_RAM_ATTR DecreasePower();
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -227,14 +224,13 @@ void ICACHE_RAM_ATTR GenerateMSPData()
     MSPPacket.payloadReadIterator = 0;
     for (int i = 0; i < MSPPacket.payloadSize; i++)
     {
-      Radio.TXdataBuffer[3+i] = MSPPacket.readByte();
+      Radio.TXdataBuffer[3 + i] = MSPPacket.readByte();
     }
   }
   else
   {
     Serial.println("Unable to send MSP command. Packet too long.");
   }
-  
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
@@ -253,7 +249,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
   crsf.RequestedRCpacketInterval = mode->interval;
   DebugOutput += String(mode->rate) + "Hz";
   isRXconnected = false;
-  //R9DAC.resume();
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
@@ -340,7 +335,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   /////// This Part Handles the Telemetry Response ///////
-  if (ExpressLRS_currAirRate->TLMinterval > 0)
+  if ((uint8_t)ExpressLRS_currAirRate->TLMinterval > 0)
   {
     uint8_t modresult = (Radio.NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult == 0)
@@ -388,13 +383,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      #if defined HYBRID_SWITCHES_8
+#if defined HYBRID_SWITCHES_8
       GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-      #elif defined SEQ_SWITCHES
+#elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-      #else
+#else
       Generate4ChannelData_11bit();
-      #endif
+#endif
     }
   }
 
@@ -429,15 +424,10 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   switch (crsf.ParameterUpdateData[0])
   {
   case 0: // send all params
-    Serial.println("send all");
-    //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
+    Serial.println("send all lua params");
     break;
+
   case 1:
-    // if (ExpressLRS_currAirRate->enum_rate != (expresslrs_RFrates_e)crsf.ParameterUpdateData[1])
-    // {
-    //   SetRFLinkRate(ExpressLRS_AirRateConfig[crsf.ParameterUpdateData[1]]);
-    // }
-    //crsf.sendLUAresponse(0x01, (uint8_t)random(1, 5));
     if (crsf.ParameterUpdateData[1] == 0)
     {
       /*uint8_t newRate =*/decRFLinkRate();
@@ -447,7 +437,6 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
       /*uint8_t newRate =*/incRFLinkRate();
     }
     Serial.println(ExpressLRS_currAirRate->enum_rate);
-    //crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, 7, 1);
     break;
 
   case 2:
@@ -486,7 +475,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
       Serial.println("Binding Requested!");
       crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00);
 
-      //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done 
+      //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done
     }
     break;
 
@@ -522,9 +511,9 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  #ifdef USE_UART2
-    Serial2.begin(400000);
-  #endif
+#ifdef USE_UART2
+  Serial2.begin(400000);
+#endif
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
@@ -563,7 +552,6 @@ void setup()
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-  //R9DAC.setPower(R9_PWR_50mW);
 
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 
@@ -576,7 +564,7 @@ void setup()
   Serial.println("ExpressLRS TX Module Booted...");
 
 #ifdef PLATFORM_ESP32
-  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
 
   //strip.Begin();
 
@@ -630,12 +618,10 @@ void setup()
 #endif
 
   POWERMGNT.defaultPower();
-  Radio.SetFrequency(GetInitialFreq()); //set frequency first or an error will occur!!!
+  Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
   crsf.Begin();
-
   SetRFLinkRate(RATE_200HZ);
-
 }
 
 void loop()
@@ -675,20 +661,25 @@ void loop()
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
+#ifdef OPENTX_SYNC
   crsf.sendSyncPacketToTX();
+#endif
   crsf.UARTwdt();
   button.handle();
 #endif
 
 #ifdef PLATFORM_ESP32
-  if (Serial2.available()) {
+  if (Serial2.available())
+  {
     uint8_t c = Serial2.read();
 #else
-  if (Serial.available()) {
+  if (Serial.available())
+  {
     uint8_t c = Serial.read();
 #endif
 
-    if (msp.processReceivedByte(c)) {
+    if (msp.processReceivedByte(c))
+    {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
@@ -701,13 +692,14 @@ void ICACHE_RAM_ATTR TimerExpired()
   SendRCdataToRF();
 }
 
-void OnRFModePacket(mspPacket_t* packet)
+void OnRFModePacket(mspPacket_t *packet)
 {
   // Parse the RF mode
   uint8_t rfMode = packet->readByte();
   CHECK_PACKET_PARSING();
 
-  switch (rfMode) {
+  switch (rfMode)
+  {
   case RATE_200HZ:
     SetRFLinkRate(RATE_200HZ);
     break;
@@ -723,13 +715,14 @@ void OnRFModePacket(mspPacket_t* packet)
   }
 }
 
-void OnTxPowerPacket(mspPacket_t* packet)
+void OnTxPowerPacket(mspPacket_t *packet)
 {
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
 
-  switch (txPower) {
+  switch (txPower)
+  {
   case PWR_10mW:
     POWERMGNT.setPower(PWR_10mW);
     break;
@@ -760,7 +753,7 @@ void OnTxPowerPacket(mspPacket_t* packet)
   }
 }
 
-void OnTLMRatePacket(mspPacket_t* packet)
+void OnTLMRatePacket(mspPacket_t *packet)
 {
   // Parse the TLM rate
   uint8_t tlmRate = packet->readByte();
@@ -778,15 +771,17 @@ void OnTLMRatePacket(mspPacket_t* packet)
   // }
 }
 
-void ProcessMSPPacket(mspPacket_t* packet)
+void ProcessMSPPacket(mspPacket_t *packet)
 {
   // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC) {
+  if (packet->function == MSP_ELRS_FUNC)
+  {
     uint8_t opcode = packet->readByte();
 
     CHECK_PACKET_PARSING();
 
-    switch (opcode) {
+    switch (opcode)
+    {
     case MSP_ELRS_RF_MODE:
       OnRFModePacket(packet);
       break;
@@ -799,8 +794,9 @@ void ProcessMSPPacket(mspPacket_t* packet)
     default:
       break;
     }
-  } else
-  if (packet->function == MSP_SET_VTX_CONFIG) {
+  }
+  else if (packet->function == MSP_SET_VTX_CONFIG)
+  {
     MSPPacket = *packet;
     MSPPacketSendCount = 6;
   }

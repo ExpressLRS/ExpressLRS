@@ -3,36 +3,6 @@
 #include "LoRa_SX1278.h"
 #include "LoRa_lowlevel.h"
 
-uint8_t SX1278rxCont()
-{ //ADDED CHANGED
-  // get header mode
-  bool headerExplMode = false;
-  if (getRegValue(SX127X_REG_MODEM_CONFIG_1, 0, 0) == SX1278_HEADER_EXPL_MODE)
-  {
-    headerExplMode = true;
-  }
-
-  // execute common part
-  //return
-  SX127xDriver::RXnb();
-  (void)headerExplMode;
-  return (ERR_NONE);
-}
-
-uint8_t SX1278rxSingle(uint8_t *data, uint8_t length)
-{
-  // get header mode
-  bool headerExplMode = false;
-  if (getRegValue(SX127X_REG_MODEM_CONFIG_1, 0, 0) == SX1278_HEADER_EXPL_MODE)
-  {
-    headerExplMode = true;
-  }
-
-  // execute common part
-  (void)headerExplMode;
-  return SX127xDriver::RXsingle(data, length);
-}
-
 // uint8_t SX1278setBandwidth(Bandwidth bw) {  //moved renamed
 // uint8_t state = config(bw, _sf, _cr, _freq, _syncWord);
 // if (state == ERR_NONE) {
@@ -253,7 +223,7 @@ uint8_t SX1278begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
   // initialize low-level drivers
   //initModule(nss, dio0, dio1);
   Serial.println("Init module SX1278");
-  initModule(nss, dio0, dio1);
+  initPins();
 
   // execute common part
   uint8_t status = SX127xDriver::SX127xBegin();

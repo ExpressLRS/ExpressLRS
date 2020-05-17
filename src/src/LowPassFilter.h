@@ -9,7 +9,7 @@ public:
     int32_t SmoothDataINT;
     int32_t SmoothDataFP;
     int Beta = 3;     // Length = 16
-    int FP_Shift = 3; //Number of fractional bits
+    int FP_Shift = 5; //Number of fractional bits
 
     LPF(int Beta_, int FP_Shift_)
     {
@@ -25,7 +25,7 @@ public:
     LPF()
     {
         Beta = 3;
-        FP_Shift = 3;
+        FP_Shift = 5;
     }
 
     int32_t update(int32_t Indata)

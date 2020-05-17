@@ -5,6 +5,7 @@
 #include "HardwareSerial.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "../../src/targets.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
