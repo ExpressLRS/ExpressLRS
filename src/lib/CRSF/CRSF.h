@@ -163,6 +163,9 @@ typedef enum
     CRSF_OUT_OF_RANGE = 127,
 } crsf_value_type_e;
 
+/**
+ * Define the shape of a standard header
+ */
 typedef struct crsf_header_s
 {
     uint8_t device_addr; // from crsf_addr_e
@@ -182,6 +185,9 @@ typedef struct crsf_ext_header_s
     uint8_t orig_addr;
 } PACKED crsf_ext_header_t;
 
+/**
+ * Crossfire packed channel structure, each channel is 11 bits
+ */
 typedef struct crsf_channels_s
 {
     unsigned ch0 : 11;
@@ -201,6 +207,31 @@ typedef struct crsf_channels_s
     unsigned ch14 : 11;
     unsigned ch15 : 11;
 } PACKED crsf_channels_t;
+
+/**
+ * Define the shape of a standard packet
+ * A 'standard' header followed by the packed channels
+ */
+typedef struct rcPacket_s
+{
+    crsf_header_t header;
+    crsf_channels_s channels;
+} PACKED rcPacket_t;
+
+/**
+ * Union to allow accessing the input buffer as different data shapes
+ * without generating compiler warnings (and relying on undefined C++ behaviour!)
+ * Each entry in the union provides a different view of the same memory.
+ * This is just the defintion of the union, the declaration of the variable that
+ * uses it is later in the file.
+ */
+union inBuffer_U
+{
+    uint8_t asUint8_t[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
+    rcPacket_t asRCPacket_t;    // access the memory as RC data
+                                // add other packet types here
+};
+
 
 typedef struct crsf_channels_s crsf_channels_t;
 
@@ -473,13 +504,14 @@ public:
 
     static void inline nullCallback(void);
 
+
 private:
     Stream *_dev;
 
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
     static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
-    static volatile uint8_t SerialInBuffer[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
 
+    static volatile inBuffer_U inBuffer;
     static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
     static volatile bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
