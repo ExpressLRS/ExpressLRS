@@ -11,12 +11,12 @@ volatile uint8_t current_rate_config = RATE_DEFAULT;
 //
 const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     /* 200Hz */
-    {BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, SYNC_64, 1000, 1500}, // airtime: 4.380ms/8B
+    {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, 3872, 1000, 1500},
+    //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, 4384, 1000, 1500},
     /* 100Hz */
-    {BW_500_00_KHZ, SF_7, CR_4_8, -117, 10000, 100, TLM_RATIO_1_32, FHSS_1, 8, RATE_100HZ, SYNC_32, 1000, 2000}, // airtime =  9.280ms/9B
+    {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, FHSS_1, 8, RATE_100HZ, 8768, 1000, 2000},
     /* 50Hz */
-    //{BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_16, FHSS_1, 10, RATE_50HZ, SYNC_16, 6000, 2500}, // airtime = 18.560ms/11B - ORIG
-    {BW_500_00_KHZ, SF_8, CR_4_8, -120, 20000, 50, TLM_RATIO_1_16, FHSS_1, 9, RATE_50HZ, SYNC_16, 1000, 2500}, // airtime = 19.07ms/11B
+    {BW_500_00_KHZ, SF_8, CR_4_8, -120, 20000, 50, TLM_RATIO_1_16, FHSS_1, 8, RATE_50HZ, 18560, 1000, 2500},
 
 #if RATE_MAX > RATE_50HZ
     {BW_250_00_KHZ, SF_8, CR_4_8, -123, 40000, 25, TLM_RATIO_1_8, FHSS_2, 10, RATE_25HZ, SYNC_8, 6000, 2500}, // airtime = 39.17ms/11B
@@ -45,7 +45,7 @@ uint8_t const DRAM_ATTR DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily 
 
 uint8_t getSyncWord(void)
 {
-#if 0
+#if 1
     // TX: 0x1d
     // RX: 0x61 -> NOK
     // RX: 0x1E, 0x1F, 0x2d, 0x3d, 0x4d, 0x6d -> OK
