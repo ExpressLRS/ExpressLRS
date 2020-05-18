@@ -16,9 +16,10 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL             500u
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150u // 250u
-//#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500u
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350u
+//#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150000u //  250000u
+//#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350000u // 1500000u
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250000u
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN SYNC_PACKET_SEND_INTERVAL_RX_LOST
 
 ///////////////////
 
@@ -152,7 +153,6 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 {
     // Called by HW timer
-    uint32_t current_ms = current_us / 1000U;
     uint32_t freq;
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
@@ -171,10 +171,10 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     freq = FHSSgetCurrFreq();
 
     //only send sync when its time and only on channel 0;
-    if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_ms - SyncPacketNextSend)))
+    if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_us - SyncPacketNextSend)))
     {
         GenerateSyncPacketData(tx_buffer);
-        SyncPacketNextSend = current_ms;
+        SyncPacketNextSend = current_us;
     }
     else if (tlm_send)
     {
@@ -467,7 +467,6 @@ void setup()
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
-    TxTimer.start();
 
     crsf.Begin();
 }
