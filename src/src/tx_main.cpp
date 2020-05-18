@@ -33,8 +33,8 @@ hwTimer hwTimer;
 #define PACKET_RATE_INTERVAL 500
 #define RF_MODE_CYCLE_INTERVAL 1000
 #define MSP_PACKET_SEND_INTERVAL 200
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250  // how often to send the switch data packet (ms) when there is no response from RX
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 1500 // how often to send the switch data packet (ms) when there we have a connection
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 1500  // how often to send the switch data packet (ms) when there is no response from RX
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 2500 // how often to send the switch data packet (ms) when there we have a connection
 
 String DebugOutput;
 
