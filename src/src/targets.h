@@ -141,16 +141,21 @@
 */
 #define GPIO_SELECT_RFIO_HIGH PA2
 #define GPIO_SELECT_RFIO_LOW  PA1
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
+//#define GPIO_PIN_RX_ENABLE   -1
+//#define GPIO_PIN_TX_ENABLE   -1
 #define BUFFER_OE            -1
+// USART1: TX=PA9, RX=PA10 (AF4) or TX=PB6, RX=PB7 (AF0)
 #define GPIO_PIN_RCSIGNAL_RX PB7  // USART1, PIN23
 #define GPIO_PIN_RCSIGNAL_TX PB6  // USART1, PIN22
 #define GPIO_PIN_LED         PB4  // on board led (green), PIN16
 #define GPIO_PIN_LED_GREEN   -1   //
 #define GPIO_PIN_BUTTON      -1   // Note: pullup!
-#define GPIO_PIN_DEBUG_RX    PA10 // USART1, default stm bootloader = 115200,8,n,1, PIN5
-#define GPIO_PIN_DEBUG_TX    PA9  // USART1, default stm bootloader = 115200,8,n,1, PIN4
+// USART2: TX=PA2, RX=PA3 or TX=PA14, RX=PA15. Both AF4
+//#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN??
+//#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN??
+
+#define GPIO_PIN_RX_ENABLE -1
+#define GPIO_PIN_TX_ENABLE -1
 #endif // TARGET_RHF76_052
 
 /******************************************************************************************/
