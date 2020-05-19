@@ -81,6 +81,11 @@ void platform_setup(void)
     pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
 #endif
 
+#ifdef GPIO_PIN_LED
+    pinMode(GPIO_PIN_LED, OUTPUT);
+    platform_set_led(0);
+#endif
+
 #ifdef DEBUG_SERIAL
     DEBUG_SERIAL.begin(115200);
 #endif
@@ -131,6 +136,9 @@ void platform_connection_state(int state)
 
 void platform_set_led(bool state)
 {
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, (uint32_t)(state));
+#endif
 }
 
 void platform_restart(void)

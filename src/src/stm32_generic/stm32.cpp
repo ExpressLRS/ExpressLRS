@@ -31,7 +31,11 @@ void button_event_long(uint32_t ms)
 #endif // GPIO_PIN_BUTTON
 
 #ifdef GPIO_PIN_LED
+#ifdef TARGET_RHF76_052
+#define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, !(_x))
+#else // R9Mx
 #define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, (_x))
+#endif
 #else
 #define LED_STATE_RED(_x)
 #endif

@@ -1,0 +1,42 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0plus",
+    "extra_flags": "-DSTM32L0xx -DSTM32L051xx",
+    "f_cpu": "84000000L",
+    "framework_extra_flags": {
+      "arduino": "-D__CORTEX_SC=0"
+    },
+    "mcu": "stm32l051c8t6",
+    "variants_dir": "variants",
+    "variant": "RHF76_052_HSI"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "jlink_device": "STM32L051C8",
+    "openocd_target": "stm32l0x",
+    "svd_path": "STM32L051x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "stm32cube"
+  ],
+  "name": "RHF76 052",
+  "upload": {
+    "maximum_ram_size": 8192,
+    "maximum_size": 65536,
+    "protocol": "serial",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "dfu",
+      "serial"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32l051c8.html",
+  "vendor": "ST"
+}

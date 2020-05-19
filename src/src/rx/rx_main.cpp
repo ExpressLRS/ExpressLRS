@@ -525,11 +525,8 @@ static void msp_data_cb(uint8_t const *const input)
 
 void setup()
 {
-#if defined(TARGET_RHF76_052)
-    CrsfSerial.Begin(/*CRSF_RX_BAUDRATE*/115200);
-#else
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
-#endif
+
     msp_packet_rx.reset();
     msp_packet_tx.reset();
 
