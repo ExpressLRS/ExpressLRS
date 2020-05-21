@@ -530,6 +530,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) // we got sync, reset write pointer
                                 {
                                     SerialInPacketPtr = 0;
+                                    SerialInPacketLen = 0;
                                     CRSFframeActive = true;
                                     SerialInBuffer[SerialInPacketPtr] = inChar;
                                     SerialInPacketPtr++;
@@ -542,6 +543,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 {
                                     SerialInPacketPtr = 0;
                                     CRSFframeActive = false;
+                                    continue; 
                                 }
 
                                 // special case where we save the expected pkt len to buffer //
@@ -554,7 +556,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     else
                                     {
                                         SerialInPacketPtr = 0;
+                                        SerialInPacketLen = 0;
                                         CRSFframeActive = false;
+                                        continue;
                                     }
                                 }
 
