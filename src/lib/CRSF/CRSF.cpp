@@ -542,7 +542,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 {
                                     SerialInPacketPtr = 0;
                                     CRSFframeActive = false;
-                                    return;
                                 }
 
                                 // special case where we save the expected pkt len to buffer //
@@ -556,7 +555,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     {
                                         SerialInPacketPtr = 0;
                                         CRSFframeActive = false;
-                                        return;
                                     }
                                 }
 
