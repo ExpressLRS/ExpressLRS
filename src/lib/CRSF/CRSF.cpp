@@ -542,14 +542,22 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 {
                                     SerialInPacketPtr = 0;
                                     CRSFframeActive = false;
-                                    // XXX we shouldn't carry on with the rest of the processing below.
-                                    // Either turn this into an if/else structure or add a continue here.
+                                    return;
                                 }
 
                                 // special case where we save the expected pkt len to buffer //
-                                if (SerialInPacketPtr == 1 && CRSFframeActive == true) // TODO don't need to test CRSFframeActive again here
+                                if (SerialInPacketPtr == 1)
                                 {
-                                    SerialInPacketLen = inChar; // TODO should we validate the range of SerialInPacketLen here?
+                                    if (inChar <= CRSF_MAX_PACKET_LEN)
+                                    {
+                                        SerialInPacketLen = inChar;
+                                    }
+                                    else
+                                    {
+                                        SerialInPacketPtr = 0;
+                                        CRSFframeActive = false;
+                                        return;
+                                    }
                                 }
 
                                 SerialInBuffer[SerialInPacketPtr] = inChar;
