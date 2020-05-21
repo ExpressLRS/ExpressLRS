@@ -250,14 +250,15 @@ uint8_t SX127xDriver::SX127xBegin()
 int16_t SX127xDriver::MeasureNoiseFloor(uint32_t num_meas, uint32_t freq)
 {
     SetFrequency(freq, SX127X_CAD);
+    delay(3);
 
-    int32_t noise = 0;
+    int noise = 0;
     for (uint32_t iter = 0; iter < num_meas; iter++)
     {
+        delayMicroseconds(100);
         noise += GetCurrRSSI();
-        delay(5);
     }
-    noise /= num_meas;
+    noise /= (int)num_meas; // Compiler bug! must cast to int to make this div working!
     return noise;
 }
 
@@ -748,7 +749,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSIUnsigned()
     return (LastPacketRssiRaw);
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
+int16_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
     LastPacketRSSI = (-157 + GetLastPacketRSSIUnsigned());
     return LastPacketRSSI;
@@ -761,7 +762,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
     return LastPacketSNR;
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI() const
+int16_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI() const
 {
     return (-157 + readRegister(SX127X_REG_RSSI_VALUE));
 }

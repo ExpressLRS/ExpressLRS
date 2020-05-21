@@ -84,8 +84,8 @@ public:
 
     /////////////Packet Stats//////////
     volatile uint32_t LastPacketIsrMicros = 0;
+    volatile int16_t LastPacketRSSI;
     volatile uint8_t LastPacketRssiRaw;
-    volatile int8_t LastPacketRSSI;
     volatile int8_t LastPacketSNR;
     volatile uint8_t NonceTX;
     volatile uint8_t NonceRX;
@@ -125,10 +125,10 @@ public:
     uint8_t ICACHE_RAM_ATTR RXsingle(uint8_t *data, uint8_t length, uint32_t timeout);
 
     uint8_t ICACHE_RAM_ATTR GetLastPacketRSSIUnsigned();
-    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
+    int16_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
     void ICACHE_RAM_ATTR GetLastRssiSnr();
-    int8_t ICACHE_RAM_ATTR GetCurrRSSI() const;
+    int16_t ICACHE_RAM_ATTR GetCurrRSSI() const;
 
     ////////////Non-blocking TX related Functions/////////////////
     void ICACHE_RAM_ATTR TXnb(const uint8_t *data, uint8_t length, uint32_t freq = 0);

@@ -486,6 +486,16 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 
     Radio.Config(config->bw, config->sf, config->cr, GetInitialFreq(), 0);
     Radio.SetPreambleLength(config->PreambleLen);
+
+    // Measure RF noise
+#ifdef DEBUG_SERIAL // TODO: Enable this when noize floor is used!
+    int RFnoiseFloor = Radio.MeasureNoiseFloor(10, GetInitialFreq());
+    DEBUG_PRINT("RF noise floor: ");
+    DEBUG_PRINT(RFnoiseFloor);
+    DEBUG_PRINTLN("dBm");
+    (void)RFnoiseFloor;
+#endif
+
     TxTimer.updateInterval(config->interval);
     LPF_FreqError.init(0);
     LPF_UplinkRSSI.init(0);
@@ -547,15 +557,6 @@ void setup()
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
     Radio.RXdoneCallback1 = ProcessRFPacketCallback;
     Radio.TXdoneCallback1 = tx_done_cb;
-
-    // Measure RF noise
-#ifdef DEBUG_SERIAL // TODO: Enable this when noize floor is used!
-    int RFnoiseFloor = Radio.MeasureNoiseFloor(10, GetInitialFreq());
-    DEBUG_PRINT("RF noise floor: ");
-    DEBUG_PRINT(RFnoiseFloor);
-    DEBUG_PRINTLN("dBm");
-    (void)RFnoiseFloor;
-#endif
 
     // Set call back for timer ISR
     TxTimer.callbackTock = &HWtimerCallback;
