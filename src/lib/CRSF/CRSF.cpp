@@ -56,9 +56,11 @@ uint32_t CRSF::BadPktsCount = 0;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0;                     // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0;                     // index where we are reading/writing
-volatile uint8_t CRSF::SerialInBuffer[CRSF_MAX_PACKET_LEN] = {0}; // max 64 bytes for CRSF packet
+
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
+
+volatile inBuffer_U CRSF::inBuffer;
 
 // current and sent switch values, used for prioritising sequential switch transmission
 uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
@@ -503,7 +505,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1, CSFR_RXpin_Module, CSFR_TXpin_Module, false, 500);
                     UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
-                    const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
+                    // const TickType_t xDelay1 = 1 / portTICK_PERIOD_MS;
                     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
                     CRSF::duplex_set_RX();
 
@@ -513,6 +515,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     }
 
                     vTaskDelay(5); // wait for the first packet to arrive
+
+                    volatile uint8_t * SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
                     for (;;)
                     {
@@ -632,18 +636,22 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
                         connected();
                     }
-                    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
+
+                    const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+
+                    if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
                     {
-                        Serial.println("Got Other Packet");
-                        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+                        Serial.println("Got Other Packet"); // TODO use debug macro?
+                        const volatile uint8_t *buffer = CRSF::inBuffer.asUint8_t;
+                        if (buffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && buffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
                         {
-                            ParameterUpdateData[0] = SerialInBuffer[5];
-                            ParameterUpdateData[1] = SerialInBuffer[6];
+                            ParameterUpdateData[0] = buffer[5];
+                            ParameterUpdateData[1] = buffer[6];
                             RecvParameterUpdate();
                         }
                     }
 
-                    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+                    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
                     {
                         CRSF::RCdataLastRecv = micros();
                         GetChannelDataIn();
@@ -672,6 +680,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 void ICACHE_RAM_ATTR CRSF::STM32handleUARTin() //RTOS task to read and write CRSF packets to the serial port
                 {
+                    volatile uint8_t * SerialInBuffer = CRSF::inBuffer.asUint8_t;
+
                     if (UARTrequestedBaud != UARTcurrentBaud)
                     {
                         CRSF::Port.begin(UARTrequestedBaud);
@@ -767,9 +777,13 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         Serial.println("CRSF UART Connected");
                         connected();
                     }
-                    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_PARAMETER_WRITE)
+
+                    const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+
+                    if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
                     {
                         Serial.println("Got Other Packet");
+                        const volatile uint8_t * SerialInBuffer = CRSF::inBuffer.asUint8_t;
                         if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
                         {
                             ParameterUpdateData[0] = SerialInBuffer[5];
@@ -779,7 +793,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         }
                     }
 
-                    if (CRSF::SerialInBuffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+                    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
                     {
                         CRSF::RCdataLastRecv = micros();
                         GetChannelDataIn();
@@ -809,32 +823,32 @@ void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
     }
 }
 
-    void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-    {
+void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+{
 #define SERIAL_PACKET_OFFSET 3
 
-        memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
+    memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
 
-            const crsf_channels_t *const rcChannels = (crsf_channels_t *)&CRSF::SerialInBuffer[SERIAL_PACKET_OFFSET];
-            ChannelDataIn[0] = (rcChannels->ch0);
-            ChannelDataIn[1] = (rcChannels->ch1);
-            ChannelDataIn[2] = (rcChannels->ch2);
-            ChannelDataIn[3] = (rcChannels->ch3);
-            ChannelDataIn[4] = (rcChannels->ch4);
-            ChannelDataIn[5] = (rcChannels->ch5);
-            ChannelDataIn[6] = (rcChannels->ch6);
-            ChannelDataIn[7] = (rcChannels->ch7);
-            ChannelDataIn[8] = (rcChannels->ch8);
-            ChannelDataIn[9] = (rcChannels->ch9);
-            ChannelDataIn[10] = (rcChannels->ch10);
-            ChannelDataIn[11] = (rcChannels->ch11);
-            ChannelDataIn[12] = (rcChannels->ch12);
-            ChannelDataIn[13] = (rcChannels->ch13);
-            ChannelDataIn[14] = (rcChannels->ch14);
-            ChannelDataIn[15] = (rcChannels->ch15);
+    const volatile crsf_channels_t * rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
+    ChannelDataIn[0] = (rcChannels->ch0);
+    ChannelDataIn[1] = (rcChannels->ch1);
+    ChannelDataIn[2] = (rcChannels->ch2);
+    ChannelDataIn[3] = (rcChannels->ch3);
+    ChannelDataIn[4] = (rcChannels->ch4);
+    ChannelDataIn[5] = (rcChannels->ch5);
+    ChannelDataIn[6] = (rcChannels->ch6);
+    ChannelDataIn[7] = (rcChannels->ch7);
+    ChannelDataIn[8] = (rcChannels->ch8);
+    ChannelDataIn[9] = (rcChannels->ch9);
+    ChannelDataIn[10] = (rcChannels->ch10);
+    ChannelDataIn[11] = (rcChannels->ch11);
+    ChannelDataIn[12] = (rcChannels->ch12);
+    ChannelDataIn[13] = (rcChannels->ch13);
+    ChannelDataIn[14] = (rcChannels->ch14);
+    ChannelDataIn[15] = (rcChannels->ch15);
 
-            updateSwitchValues();
-        }
+    updateSwitchValues();
+}
 
     void ICACHE_RAM_ATTR CRSF::FlushSerial()
     {
