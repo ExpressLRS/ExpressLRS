@@ -47,6 +47,7 @@ public:
     void Begin();
     PowerLevels_e incPower();
     PowerLevels_e decPower();
+    PowerLevels_e loopPower();
     PowerLevels_e currPower() const
     {
         return CurrentPower;

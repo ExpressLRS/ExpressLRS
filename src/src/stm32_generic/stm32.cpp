@@ -2,33 +2,11 @@
 #include "targets.h"
 #include "debug.h"
 #include "common.h"
+#include "POWERMGNT.h"
 #include <Arduino.h>
 #include <EEPROM.h>
 
 uint8_t rate_config_dips = 0xff;
-
-#ifdef GPIO_PIN_BUTTON
-#include "button.h"
-Button button;
-
-void button_event_short(uint32_t ms)
-{
-    (void)ms;
-#if defined(TX_MODULE)
-#elif defined(RX_MODULE)
-    forced_start();
-#endif /* RX_MODULE */
-}
-
-void button_event_long(uint32_t ms)
-{
-#if defined(TX_MODULE)
-#elif defined(RX_MODULE)
-    if (ms > BUTTON_RESET_INTERVAL_RX)
-        platform_restart();
-#endif /* RX_MODULE */
-}
-#endif // GPIO_PIN_BUTTON
 
 #ifdef GPIO_PIN_LED
 #ifdef TARGET_RHF76_052
@@ -65,7 +43,43 @@ static inline void PLAY_SOUND(uint32_t wait = 244, uint32_t cnt = 50)
 #if defined(TARGET_R9M_TX)
 #include "DAC.h"
 R9DAC r9dac;
+extern POWERMGNT PowerMgmt;
 #endif /* TARGET_R9M_TX */
+
+#ifdef GPIO_PIN_BUTTON
+#define TX_CHANGE_POWER_TIME 2000
+
+#include "button.h"
+Button button;
+
+void button_event_short(uint32_t ms)
+{
+    (void)ms;
+#if defined(TX_MODULE)
+#elif defined(RX_MODULE)
+    forced_start();
+#endif /* RX_MODULE */
+}
+
+void button_event_long(uint32_t ms)
+{
+#if defined(TX_MODULE)
+    if (ms > TX_CHANGE_POWER_TIME)
+    {
+        uint8_t val = PowerMgmt.loopPower() + 1;
+        while (val--)
+        {
+            delay(300);
+            PLAY_SOUND(244, 50);
+            delay(50);
+        }
+    }
+#elif defined(RX_MODULE)
+    if (ms > BUTTON_RESET_INTERVAL_RX)
+        platform_restart();
+#endif /* RX_MODULE */
+}
+#endif // GPIO_PIN_BUTTON
 
 /******************* CONFIG *********************/
 int8_t platform_config_load(struct platform_config &config)
@@ -149,7 +163,11 @@ void platform_setup(void)
     //button.set_press_delay_short();
     //button.buttonShortPress = button_event_short;
     button.buttonLongPress = button_event_long;
+#if defined(TX_MODULE)
+    button.set_press_delay_long(TX_CHANGE_POWER_TIME, 1000);
+#elif defined(RX_MODULE)
     button.set_press_delay_long(BUTTON_RESET_INTERVAL_RX, 1000);
+#endif
     // R9M TX appears to be active high
     button.init(GPIO_PIN_BUTTON, true);
 #endif
@@ -215,13 +233,13 @@ void platform_loop(int state)
 {
     (void)state;
 #ifdef GPIO_PIN_BUTTON
+#if defined(TX_MODULE)
+    button.handle();
+#elif defined(RX_MODULE)
     if (state == STATE_disconnected)
         button.handle();
-#endif
-
-#if defined(TX_MODULE)
-#elif defined(RX_MODULE)
 #endif /* RX_MODULE */
+#endif // GPIO_PIN_BUTTON
 }
 
 void platform_connection_state(int state)

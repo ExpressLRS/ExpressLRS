@@ -35,6 +35,13 @@ PowerLevels_e POWERMGNT::decPower()
     return CurrentPower;
 }
 
+PowerLevels_e POWERMGNT::loopPower()
+{
+    PowerLevels_e next = (PowerLevels_e)((CurrentPower + 1) % (MaxPower+1));
+    setPower(next);
+    return CurrentPower;
+}
+
 void POWERMGNT::defaultPower(PowerLevels_e power)
 {
     if (power == PWR_UNKNOWN)
