@@ -43,6 +43,10 @@ void button_event_long(uint32_t ms)
 
 void platform_setup(void)
 {
+    /* Force WIFI off until it is realy needed */
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+
 #ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
 #endif
