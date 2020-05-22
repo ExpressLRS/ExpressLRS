@@ -19,7 +19,7 @@
 //#define DEBUG_SERIAL CrsfSerial
 //#define DEBUG_SERIAL Serial
 #elif defined(TARGET_RHF76_052)
-#define DEBUG_SERIAL CrsfSerial
+//#define DEBUG_SERIAL CrsfSerial
 #endif
 
 #endif // ifndef DEBUG_SERIAL
