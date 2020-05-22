@@ -19,7 +19,7 @@ Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
-void inline ICACHE_RAM_ATTR SX1280Hal::nullCallback(void){};
+void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void){};
 
 void (*SX1280Hal::TXdoneCallback)() = &nullCallback;
 void (*SX1280Hal::RXdoneCallback)() = &nullCallback;
@@ -288,7 +288,12 @@ void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
     while (instance->SX1280_busy == SX1280_BUSY)
     {
+#ifdef PLATFORM_ESP32
+        NOP();
+#endif
+#ifdef PLATFORM_ESP8266
         _NOP();
+#endif
     }
 }
 

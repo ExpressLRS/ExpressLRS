@@ -41,6 +41,9 @@ txBaseAddress and rxBaseAddress are offset relative to the beginning of the data
 
 5. Define the modulation parameter signal BW SF CR
 */
+
+void ICACHE_RAM_ATTR SX1280Driver::nullCallback(void){};
+
 SX1280Driver::SX1280Driver()
 {
     instance = this;
@@ -257,7 +260,7 @@ void SX1280Driver::RXnbISR()
 
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     
-    hal.ReadBuffer(0x00, RXdataBuffer, 8);
+    hal.ReadBuffer(0x00, instance->RXdataBuffer, 8);
 
     instance->RXdoneCallback1();
     instance->RXdoneCallback2();

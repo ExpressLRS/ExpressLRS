@@ -20,7 +20,7 @@ class SX1280Driver
 
 public:
     ///////Callback Function Pointers/////
-    static void ICACHE_RAM_ATTR nullCallback(void){};
+    static void ICACHE_RAM_ATTR nullCallback(void);
 
     void (*RXdoneCallback1)() = &nullCallback; //function pointer for callback
     void (*RXdoneCallback2)() = &nullCallback; //function pointer for callback
@@ -37,13 +37,11 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    static uint8_t TXdataBuffer[256];
-    static uint8_t RXdataBuffer[256];
+    uint8_t TXdataBuffer[256];
+    uint8_t RXdataBuffer[256];
 
-    static volatile uint8_t TXbuffLen;
-    static volatile uint8_t RXbuffLen;
-
-    //static volatile bool headerExplMode;
+    uint8_t TXbuffLen;
+    uint8_t RXbuffLen;
 
     static uint32_t currFreq;
     static uint8_t _syncWord;

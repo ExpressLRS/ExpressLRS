@@ -59,6 +59,8 @@ public:
 
     SX1280Hal();
 
+    
+
     void init();
     void SetSpiSpeed(uint32_t spiSpeed);
     void reset();
@@ -77,8 +79,9 @@ public:
 
     void ICACHE_RAM_ATTR setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment);
 
-    static void ICACHE_RAM_ATTR inline nullCallback(void);
-     void ICACHE_RAM_ATTR WaitOnBusy();
+    static void ICACHE_RAM_ATTR nullCallback(void);
+    
+    void ICACHE_RAM_ATTR WaitOnBusy();
     static ICACHE_RAM_ATTR void dioISR();
     static ICACHE_RAM_ATTR void busyISR();
     static void (*TXdoneCallback)(); //function pointer for callback
