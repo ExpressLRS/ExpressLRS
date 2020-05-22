@@ -10,7 +10,12 @@
 #include <Arduino.h>
 #include <unity.h>
 
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+#endif
+
 #include "CRSF.h"       // has to come after LoraRadioLib.h for R9
 #include "targets.h"
 #include "common.h"

@@ -10,12 +10,15 @@
 
 ### Enable one of these regulatory domains
 
--DRegulatory_Domain_AU_915
+### Bands for SX1276 (900MHz) ###
+#DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
 
+### Bands for SX1280 (2400MHz) ###
+-DRegulatory_Domain_ISM_2400
 
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 

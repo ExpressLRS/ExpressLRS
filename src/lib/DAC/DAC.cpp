@@ -1,11 +1,6 @@
 
 #ifdef TARGET_R9M_TX
-
-#include "../../src/targets.h"
 #include "DAC.h"
-#include "LoRaRadioLib.h"
-
-extern SX127xDriver Radio;
 
 int R9DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input

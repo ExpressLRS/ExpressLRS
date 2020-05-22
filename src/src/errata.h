@@ -1,4 +1,8 @@
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+#endif
 
 #define REG_FREQ_ERROR_LSB 0x2a
 #define REG_RSSI_WIDEBAND 0x2c

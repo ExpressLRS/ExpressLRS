@@ -1,7 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+#endif
+
 #include "utils.h"
 #include "common.h"
 
@@ -59,11 +65,11 @@ const uint32_t FHSSfreqs[] = {
  * 868MHz ISM band traffic too much.
  */
 const uint32_t FHSSfreqs[] = {
-    863275000,  // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
+    863275000, // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
     863800000,
     864325000,
     864850000,
-    865375000,  // Band H2, 865 - 868.6MHz, 1.0% dutycycle or CSMA, 25mW EIRP
+    865375000, // Band H2, 865 - 868.6MHz, 1.0% dutycycle or CSMA, 25mW EIRP
     865900000,
     866425000,
     866950000,
@@ -72,7 +78,7 @@ const uint32_t FHSSfreqs[] = {
     868525000, // Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
     869050000,
     869575000};
-#elif defined Regulatory_Domain_EU_433    
+#elif defined Regulatory_Domain_EU_433
 /* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
  * of the spectrum, nothing else. As such, these are likely illegal to use. 
@@ -134,8 +140,59 @@ const uint32_t FHSSfreqs[] = {
     925700000,
     926300000,
     926900000};
+#elif Regulatory_Domain_ISM_2400
+const uint32_t FHSSfreqs[] = {
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000,
+
+    2450000000,
+    2450000000,
+    2450000000,
+    2450000000};
 #else
-    #error No regulatory domain defined, please define one in common.h
+#error No regulatory domain defined, please define one in common.h
 #endif
 
 // The number of FHSS frequencies in the table

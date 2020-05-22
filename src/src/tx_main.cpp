@@ -2,7 +2,15 @@
 #include "FIFO.h"
 #include "utils.h"
 #include "common.h"
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
+extern SX127xDriver Radio;
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+extern SX1280Driver Radio;
+#endif
+
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
@@ -39,7 +47,6 @@ hwTimer hwTimer;
 String DebugOutput;
 
 /// define some libs to use ///
-SX127xDriver Radio;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;

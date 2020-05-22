@@ -1,16 +1,16 @@
 #pragma once
 
-// define exacly one frequency band of operation here
-
-// #define Regulatory_Domain_AU_915
-// #define Regulatory_Domain_EU_868
-// #define Regulatory_Domain_AU_433
-// #define Regulatory_Domain_EU_433
-// #define Regulatory_Domain_FCC_915
-
-#include "FHSS.h"
-#include "LoRaRadioLib.h"
 #include <Arduino.h>
+#include "FHSS.h"
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#include "LoRaRadioLib.h"
+#endif
+
+#if defined(Regulatory_Domain_ISM_2400)
+#include "SX1280RadioLib.h"
+#endif
+
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot
 #define Auto_WiFi_On_Boot
@@ -69,6 +69,8 @@ typedef enum
 
 #define MaxRFrate 2
 
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 typedef struct expresslrs_mod_settings_s
 {
     Bandwidth bw;
@@ -84,6 +86,29 @@ typedef struct expresslrs_mod_settings_s
     uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;
 } expresslrs_mod_settings_t;
+#endif
+
+
+#if defined(Regulatory_Domain_ISM_2400)
+typedef struct expresslrs_mod_settings_s
+{
+    SX1280_RadioLoRaBandwidths_t bw;
+    SX1280_RadioLoRaSpreadingFactors_t sf;
+    SX1280_RadioLoRaCodingRates_t cr;
+    int32_t sensitivity;                //expected RF sensitivity based on
+    uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
+    uint8_t rate;                       // rate in hz
+    expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
+    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t PreambleLen;
+    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint16_t RFmodeCycleAddtionalTime;
+    uint16_t RFmodeCycleInterval;
+} expresslrs_mod_settings_t;
+#endif
+
+
+
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
 

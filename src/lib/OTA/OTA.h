@@ -1,7 +1,12 @@
 #ifndef H_OTA
 #define H_OTA
 
-#include "LoRaRadioLib.h" // this has to come before CRSF.h when compiling on R9
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#include "LoRaRadioLib.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+#endif
+// this has to come before CRSF.h when compiling on R9
 #include "CRSF.h"
 
 // expresslrs packet header types

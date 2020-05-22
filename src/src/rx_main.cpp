@@ -3,7 +3,15 @@
 #include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
+SX127xDriver Radio;
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280RadioLib.h"
+SX1280Driver Radio;
+#endif
+
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "Debug.h"
@@ -32,9 +40,9 @@
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart 
-
+    
 hwTimer hwTimer;
-SX127xDriver Radio;
+
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 /// Filters ////////////////
@@ -514,10 +522,10 @@ void setup()
     
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
-    RFnoiseFloor = MeasureNoiseFloor();
-    Serial.print("RF noise floor: ");
-    Serial.print(RFnoiseFloor);
-    Serial.println("dBm");
+    // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs 
+    // Serial.print("RF noise floor: ");
+    // Serial.print(RFnoiseFloor);
+    // Serial.println("dBm");
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
     Radio.TXdoneCallback1 = &Radio.RXnb;

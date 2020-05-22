@@ -1,6 +1,12 @@
 #include "POWERMGNT.h"
 
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 extern SX127xDriver Radio;
+#elif Regulatory_Domain_ISM_2400
+extern SX1280Driver Radio;
+#endif
+
+
 #ifdef TARGET_R9M_TX
 extern R9DAC R9DAC;
 #endif
