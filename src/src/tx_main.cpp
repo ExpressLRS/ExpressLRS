@@ -503,12 +503,6 @@ void DetectOtherRadios()
 
 void setup()
 {
-
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
-  pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
-  pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
-#endif
-
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
 #ifdef USE_UART2
