@@ -171,7 +171,8 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     freq = FHSSgetCurrFreq();
 
     //only send sync when its time and only on channel 0;
-    if ((freq == GetInitialFreq()) && (sync_send_interval <= (current_us - SyncPacketNextSend)))
+    if ((FHSSgetCurrSequenceIndex() == 0) &&
+        (sync_send_interval <= (current_us - SyncPacketNextSend)))
     {
         GenerateSyncPacketData(tx_buffer);
         SyncPacketNextSend = current_us;

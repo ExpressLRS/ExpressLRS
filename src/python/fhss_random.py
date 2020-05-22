@@ -4,8 +4,6 @@ import os
 DEBUG = 0
 
 CALC_MY_STEP = 1
-NR_SEQUENCE_ENTRIES = 256
-
 
 FHSS_FREQS_HEAD = '''
 #ifndef FHSS_FREQS_H_
@@ -29,7 +27,12 @@ rand_version = 1
 # The 0 index is special - the 'sync' channel. The sync channel appears every
 # syncInterval hops. The other channels are randomly distributed between the
 # sync channels
-SYNC_INTERVAL = 16
+SYNC_INTERVAL = 15
+
+# Size of the FHSS sequence entries
+#   TODO: modify biffer at some day (e.g 20 * SYNC_INTERVAL).
+#         ElrsSyncPacket_s need to be updated to hold bigger than uin8_t value!!
+NR_SEQUENCE_ENTRIES = 256
 
 # returns values between 0 and 0x7FFF
 # NB rngN depends on this output range, so if we change the
