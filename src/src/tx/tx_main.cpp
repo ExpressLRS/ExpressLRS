@@ -78,7 +78,7 @@ static void process_rx_buffer()
     }
 
     connectionState = STATE_connected;
-    sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
+    //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     platform_connection_state(STATE_connected);
     platform_set_led(0);
     LastPacketRecvMillis = millis();
@@ -368,7 +368,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
         // Set connected if telemetry is not used
         connectionState = STATE_connected;
-        sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
+        //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
         tlm_check_ratio = 0;
     }
     else
@@ -376,9 +376,10 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         Radio.RXdoneCallback1 = ProcessTLMpacket;
         Radio.TXdoneCallback1 = HandleTLM;
         connectionState = STATE_disconnected;
-        sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
+        //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
         tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
     }
+    sync_send_interval = config->syncInterval;
 
     platform_connection_state(connectionState);
 
@@ -490,7 +491,7 @@ void loop()
             RX_CONNECTION_LOST_TIMEOUT < (current_ms - LastPacketRecvMillis))
         {
             connectionState = STATE_disconnected;
-            sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
+            //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
             platform_connection_state(STATE_disconnected);
             platform_set_led(red_led_state);
         }

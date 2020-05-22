@@ -84,6 +84,7 @@ typedef struct expresslrs_mod_settings_s
     uint16_t air_time;
     uint16_t connectionLostTimeout;
     uint16_t syncSearchTimeout;
+    uint32_t syncInterval;
 } expresslrs_mod_settings_t;
 
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
