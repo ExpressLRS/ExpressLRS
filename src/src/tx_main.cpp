@@ -29,7 +29,6 @@
 #include "button.h"
 button button;
 R9DAC R9DAC;
-hwTimer hwTimer;
 #endif
 
 //// CONSTANTS ////
@@ -510,11 +509,6 @@ void setup()
 #ifdef USE_UART2
   Serial2.begin(400000);
 #endif
-
-  crsf.connected = &Radio.StartTimerTask;
-  crsf.disconnected = &Radio.StopTimerTask;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
-  Radio.TimerDoneCallback = &TimerExpired;
 
 
 #ifdef TARGET_R9M_TX
