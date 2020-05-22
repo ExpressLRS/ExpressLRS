@@ -19,6 +19,10 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
+#ifdef PLATFORM_ESP32
+#include "ESP32_hwTimer.h"
+#endif
+
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
 #include "STM32_hwTimer.h"
@@ -39,6 +43,7 @@ hwTimer hwTimer;
 String DebugOutput;
 
 /// define some libs to use ///
+hwTimer hwTimer;
 SX127xDriver Radio;
 CRSF crsf;
 POWERMGNT POWERMGNT;
@@ -236,14 +241,9 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-#ifdef PLATFORM_ESP32
-  Radio.TimerInterval = mode->interval;
-  Radio.UpdateTimerInterval();
-#else
-  hwTimer.updateInterval(mode->interval); // TODO: Make sure this is equiv to above commented lines
-#endif
   Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
   Radio.SetPreambleLength(mode->PreambleLen);
+  hwTimer.updateInterval(mode->interval);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
   crsf.RequestedRCpacketInterval = mode->interval;
@@ -505,14 +505,17 @@ void setup()
 {
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
+#endif
+
 #ifdef USE_UART2
   Serial2.begin(400000);
 #endif
+
   crsf.connected = &Radio.StartTimerTask;
   crsf.disconnected = &Radio.StopTimerTask;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   Radio.TimerDoneCallback = &TimerExpired;
-#endif
+
 
 #ifdef TARGET_R9M_TX
   HardwareSerial(USART2);
@@ -546,22 +549,19 @@ void setup()
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+#endif
 
   crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
   crsf.disconnected = &hwTimer.stop;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &TimerExpired;
-#endif
 
   Serial.println("ExpressLRS TX Module Booted...");
 
 #ifdef PLATFORM_ESP32
   //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
-
   //strip.Begin();
-
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // Print base mac address

@@ -284,60 +284,6 @@ uint8_t SX127xDriver::SX127xBegin()
   return (ERR_NONE);
 }
 
-///////////////////////////////////Functions for Hardware Timer/////////////////////////////////////////
-#ifdef PLATFORM_ESP32
-
-//on the ESP32 we can use a hardware timer to do fancy things like schedule regular TX transmissions
-
-hw_timer_t *timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-TaskHandle_t TimerTask_handle = NULL;
-
-void ICACHE_RAM_ATTR SX127xDriver::TimerTask_ISRhandler()
-{
-  portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-  portENTER_CRITICAL(&myMutex);
-  TimerDoneCallback();
-  portEXIT_CRITICAL(&myMutex);
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::StopTimerTask()
-{
-  //vTaskSuspend(TimerTask_handle);
-  detachInterrupt(SX127xDriver::SX127x_dio0);
-  //SX127xDriver::SetMode(SX127X_SLEEP);
-  ClearIRQFlags();
-
-  if (timer)
-  {
-    timerEnd(timer);
-    timer = NULL;
-  }
-
-  //timerEnd(timer);
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::UpdateTimerInterval()
-{
-  if (timer)
-  {
-    timerAlarmWrite(timer, TimerInterval, true);
-  }
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::StartTimerTask()
-{
-  if (!timer)
-  {
-    timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(timer, &TimerTask_ISRhandler, true);
-    timerAlarmWrite(timer, TimerInterval, true);
-    timerAlarmEnable(timer);
-  }
-}
-#endif
-////////////////////////////////////////////////////////////////////////////////////////
-
 void SX127xDriver::ConfigLoraDefaults()
 {
   Serial.println("Setting ExpressLRS LoRa reg defaults");
