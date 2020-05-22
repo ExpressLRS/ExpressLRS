@@ -76,11 +76,6 @@ void platform_setup(void)
 
     EEPROM.begin(sizeof(struct platform_config));
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
-    pinMode(RC_SIGNAL_PULLDOWN, INPUT_PULLDOWN);
-    pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
-#endif
-
 #ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
     platform_set_led(0);

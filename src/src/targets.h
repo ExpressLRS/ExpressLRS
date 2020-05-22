@@ -70,11 +70,6 @@
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #endif
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
-#define GPIO_PIN_BUTTON    36
-#define RC_SIGNAL_PULLDOWN 4
-#endif
-
 #ifdef TARGET_ESP32_WROOM_RFM95
 #define GPIO_PIN_NSS       5  // V_SPI_CS0
 #define GPIO_PIN_DIO0      35 //26
