@@ -87,17 +87,17 @@ void CRSF_RX::processPacket(uint8_t const *data)
         {
             TLMbattSensor.voltage = data[1];
             TLMbattSensor.voltage <<= 8;
-            TLMbattSensor.voltage = data[2];
+            TLMbattSensor.voltage += data[2];
 
             TLMbattSensor.current = data[3];
             TLMbattSensor.current <<= 8;
-            TLMbattSensor.current = data[4];
+            TLMbattSensor.current += data[4];
 
             TLMbattSensor.capacity = data[5];
             TLMbattSensor.capacity <<= 8;
-            TLMbattSensor.capacity = data[6];
+            TLMbattSensor.capacity += data[6];
             TLMbattSensor.capacity <<= 8;
-            TLMbattSensor.capacity = data[7];
+            TLMbattSensor.capacity += data[7];
 
             TLMbattSensor.remaining = 0;
             break;

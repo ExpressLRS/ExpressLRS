@@ -23,19 +23,22 @@ void CRSF::Begin()
     SerialInPacketPtr = 0;
     CRSFframeActive = false;
 
+    TLMbattSensor.capacity = 0;
+    TLMbattSensor.current = 0;
+    TLMbattSensor.voltage = 0;
+    //TLMbattSensor.remaining = 100;
+
     _dev->flush_read();
 }
 
 void CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
                                  int8_t snr,
-                                 uint8_t rssi,
-                                 uint8_t lq)
+                                 uint8_t rssi)
 {
     // NOTE: input is only 6 bytes!!
 
     LinkStatistics.downlink_SNR = snr * 10;
     LinkStatistics.downlink_RSSI = 120 + rssi;
-    LinkStatistics.downlink_Link_quality = lq;
 
     if (input[0] == CRSF_FRAMETYPE_LINK_STATISTICS)
     {
@@ -45,11 +48,7 @@ void CRSF::LinkStatisticsExtract(volatile uint8_t const *const input,
         LinkStatistics.uplink_Link_quality = input[4];
 
         TLMbattSensor.voltage = ((uint16_t)input[2] << 8) + input[5];
-
-        LinkStatisticsSend();
     }
-
-    //BatterySensorSend();
 }
 
 void ICACHE_RAM_ATTR CRSF::LinkStatisticsPack(uint8_t *const output)

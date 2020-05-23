@@ -123,6 +123,7 @@ void CRSF_TX::BatteryStatisticsProcess(void)
     send_buffers &= ~SEND_BATT;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(BattSensorFrameLength);
+    memset(outBuffer, 0, len);
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = CRSF_FRAME_SIZE(BattSensorFrameLength);
@@ -130,12 +131,12 @@ void CRSF_TX::BatteryStatisticsProcess(void)
 
     outBuffer[3] = (TLMbattSensor.voltage >> 8) & 0xff;
     outBuffer[4] = TLMbattSensor.voltage & 0xff;
-    outBuffer[5] = (TLMbattSensor.current >> 8) & 0xff;
-    outBuffer[6] = TLMbattSensor.current & 0xff;
-    outBuffer[7] = (TLMbattSensor.capacity >> 16) & 0xff;
-    outBuffer[9] = (TLMbattSensor.capacity >> 8) & 0xff;
-    outBuffer[10] = TLMbattSensor.capacity & 0xff;
-    outBuffer[11] = TLMbattSensor.remaining;
+    //outBuffer[5] = (TLMbattSensor.current >> 8) & 0xff;
+    //outBuffer[6] = TLMbattSensor.current & 0xff;
+    //outBuffer[7] = (TLMbattSensor.capacity >> 16) & 0xff;
+    //outBuffer[9] = (TLMbattSensor.capacity >> 8) & 0xff;
+    //outBuffer[10] = TLMbattSensor.capacity & 0xff;
+    //outBuffer[11] = TLMbattSensor.remaining;
 
     CrsfFramePushToFifo(outBuffer, len);
     platform_wd_feed();

@@ -46,6 +46,14 @@
 #    PWR_2000mW
 -DTX_POWER_DEFAULT=PWR_50mW
 
+######################################
+### Telemtry reporting period to radio
+# Some older versions of OpenTX and ERSKY might need shorted (100ms)
+# reporting interval. Uncomment and change set value in milliseconds
+# to make your radio happy :)
+# Default value is 320ms
+# -DTLM_REPORT_INTERVAL=320U
+
 ##################################################
 ### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
 

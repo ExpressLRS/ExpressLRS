@@ -138,10 +138,10 @@ typedef struct crsf_channels_s
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_sensor_battery_s
 {
-    unsigned voltage : 16;  // mv * 100
-    unsigned current : 16;  // ma * 100
-    unsigned capacity : 24; // mah
-    unsigned remaining : 8; // %
+    uint16_t voltage;  // mv * 100
+    uint16_t current;  // ma * 100
+    uint32_t capacity : 24; // mah
+    uint32_t remaining : 8; // %
 } PACKED crsf_sensor_battery_t;
 
 /*
@@ -214,8 +214,7 @@ public:
     // Protocol funcs
     void LinkStatisticsExtract(volatile uint8_t const *const data,
                                int8_t snr,
-                               uint8_t rssi,
-                               uint8_t lq);
+                               uint8_t rssi);
     void ICACHE_RAM_ATTR LinkStatisticsPack(uint8_t *const output);
 
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct

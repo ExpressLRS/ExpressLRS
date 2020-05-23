@@ -16,6 +16,9 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL             500u
+#ifndef TLM_REPORT_INTERVAL
+#define TLM_REPORT_INTERVAL               320u
+#endif
 //#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150000u //  250000u
 //#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350000u // 1500000u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250000u
@@ -48,6 +51,7 @@ static uint32_t LastPacketRecvMillis = 0;
 volatile connectionState_e DRAM_ATTR connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
+static volatile uint32_t expected_tlm_counter = 0;
 static uint32_t recv_tlm_counter = 0;
 static uint8_t downlink_linkQuality = 0;
 static uint32_t PacketRateNextCheck = 0;
@@ -56,6 +60,7 @@ static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
 static volatile uint_fast8_t tlm_send = 0;
+static uint32_t TlmSentToRadioTime = 0;
 
 //////////// LUA /////////
 
@@ -95,8 +100,7 @@ static void process_rx_buffer()
         {
             crsf.LinkStatisticsExtract(&rx_buffer[1],
                                        Radio.LastPacketSNR,
-                                       Radio.LastPacketRSSI,
-                                       downlink_linkQuality);
+                                       Radio.LastPacketRSSI);
             break;
         }
         case DL_PACKET_FREE1:
@@ -121,6 +125,7 @@ static void ICACHE_RAM_ATTR HandleTLM()
         // receive tlm package
         PowerMgmt.pa_off();
         Radio.RXnb(FHSSgetCurrFreq());
+        expected_tlm_counter++;
     }
 }
 
@@ -501,14 +506,22 @@ void loop()
             PacketRateNextCheck = current_ms;
 
             // Calc LQ based on good tlm packets and receptions done
-            uint8_t rx_cnt = Radio.NonceRX;
+            uint8_t rx_cnt = expected_tlm_counter;
             uint32_t tlm_cnt = recv_tlm_counter;
-            Radio.NonceRX = recv_tlm_counter = 0; // Clear RX counter
+            expected_tlm_counter = recv_tlm_counter = 0; // Clear RX counter
             if (rx_cnt)
                 downlink_linkQuality = (tlm_cnt * 100u) / rx_cnt;
             else
                 // failure value??
                 downlink_linkQuality = 0;
+        }
+        else if (connectionState == STATE_connected &&
+                 TLM_REPORT_INTERVAL <= (current_ms - TlmSentToRadioTime))
+        {
+            TlmSentToRadioTime = current_ms;
+            crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
+            crsf.LinkStatisticsSend();
+            crsf.BatterySensorSend();
         }
     }
 
