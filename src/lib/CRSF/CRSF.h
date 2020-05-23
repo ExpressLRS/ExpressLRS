@@ -487,7 +487,7 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
-#define OpenTXsyncPakcetInterval 250 // in ms
+#define OpenTXsyncPacketInterval 200 // in ms
     static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
