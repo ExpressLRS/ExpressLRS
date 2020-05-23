@@ -309,7 +309,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #ifdef PLATFORM_STM32
         void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
         {
-            if (millis() > OpenTXsyncLastSent + OpenTXsyncPakcetInterval)
+            if (millis() > OpenTXsyncLastSent + OpenTXsyncPacketInterval)
             {
 #endif
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
@@ -351,7 +351,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 }
                 OpenTXsyncLastSent = millis();
 #ifdef PLATFORM_ESP32
-                vTaskDelay(OpenTXsyncPakcetInterval);
+                vTaskDelay(OpenTXsyncPacketInterval);
 #endif
             }
         }
