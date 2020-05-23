@@ -84,7 +84,13 @@ void ICACHE_RAM_ATTR SX1280Hal::reset(void)
 
     while (digitalRead(this->SX1280_busy) == HIGH) // wait for busy
     {
+        #ifdef PLATFORM_STM32
+        __NOP();
+        #elif PLATFORM_ESP32
         _NOP();
+        #elif PLATFORM_ESP8266
+        _NOP();
+        #endif
     }
 
     this->BusyState = SX1280_NOT_BUSY;

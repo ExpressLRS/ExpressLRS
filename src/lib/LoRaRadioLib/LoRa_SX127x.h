@@ -142,7 +142,6 @@ public:
     /////////////Packet Stats//////////
     static int8_t LastPacketRSSI;
     static int8_t LastPacketSNR;
-    static float PacketLossRate;
     static volatile uint8_t NonceTX;
     static volatile uint8_t NonceRX;
     static uint32_t TimeOnAir;
@@ -157,8 +156,8 @@ public:
 
     ////////////////Configuration Functions/////////////
     static uint8_t Begin();
-    static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
-    static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
+    static uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t PreambleLength);
+    static uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq);
 
     static uint8_t SetBandwidth(Bandwidth bw);
     static uint32_t getCurrBandwidth();
@@ -194,20 +193,10 @@ public:
 
     ////////////Non-blocking TX related Functions/////////////////
     static void nullCallback(void);
-
-    static void ICACHE_RAM_ATTR StartTimerTask(); //Start Cont TX mode, sends data continuiously
-    static void ICACHE_RAM_ATTR StopTimerTask();
-    static void ICACHE_RAM_ATTR UpdateTimerInterval();
     static uint8_t ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
-
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
-    static void ICACHE_RAM_ATTR TimerTask_ISRhandler();
-    static void ICACHE_RAM_ATTR TimerTask(void *param);
-
     /////////////Non-blocking RX related Functions///////////////
-    static void ICACHE_RAM_ATTR StopContRX();
     static void ICACHE_RAM_ATTR RXnb();
-
     static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routin
 
 private:

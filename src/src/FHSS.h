@@ -192,7 +192,7 @@ const uint32_t FHSSfreqs[] = {
     2450000000,
     2450000000};
 #else
-#error No regulatory domain defined, please define one in common.h
+#error No regulatory domain defined, please define one in user_defines.txt
 #endif
 
 // The number of FHSS frequencies in the table

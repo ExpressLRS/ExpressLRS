@@ -217,6 +217,10 @@ local function refreshTaranis()
 				crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
 			end
         end
+		if (selection.state == false) and (bindmode == 1) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+			bindmode = 0
+		end
     end
 
     lcdChange = false

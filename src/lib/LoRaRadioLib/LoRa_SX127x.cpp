@@ -101,8 +101,8 @@ uint8_t SX127xDriver::Begin()
   delay(100);
 
 #ifdef TARGET_1000mW_MODULE
-    pinMode(SX127xDriver::_TXenablePin, OUTPUT);
-    pinMode(SX127xDriver::_RXenablePin, OUTPUT);
+  pinMode(SX127xDriver::_TXenablePin, OUTPUT);
+  pinMode(SX127xDriver::_RXenablePin, OUTPUT);
 #endif
 
   //static uint8_t SX127x_SCK;
@@ -127,7 +127,7 @@ uint8_t SX127xDriver::Begin()
 
 uint8_t SX127xDriver::SetBandwidth(Bandwidth bw)
 {
-  uint8_t state = SX127xConfig(bw, currSF, currCR, currFreq, _syncWord);
+  uint8_t state = SX127xConfig(bw, currSF, currCR, currFreq);
   if (state == ERR_NONE)
   {
     currBW = bw;
@@ -204,7 +204,7 @@ uint8_t SX127xDriver::SetSpreadingFactor(SpreadingFactor sf)
 
 uint8_t SX127xDriver::SetCodingRate(CodingRate cr)
 {
-  uint8_t state = SX127xConfig(currBW, currSF, cr, currFreq, _syncWord);
+  uint8_t state = SX127xConfig(currBW, currSF, cr, currFreq);
   if (state == ERR_NONE)
   {
     currCR = cr;
@@ -353,14 +353,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   RXdoneCallback2();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
-{
-  detachInterrupt(SX127xDriver::SX127x_dio0);
-  SX127xDriver::SetMode(SX127X_STANDBY);
-  ClearIRQFlags();
-  InterruptAssignment = NONE;
-}
-
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   //RX continuous mode
@@ -431,21 +423,24 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::SetMode(uint8_t mode)
   return (ERR_NONE);
 }
 
-uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX127xDriver::Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t PreambleLength)
 {
   if (RFmodule == RFMOD_SX1276)
   {
-    SX1276config(bw, sf, cr, freq, syncWord);
+    SX1276config(bw, sf, cr, freq);
   }
 
   if (RFmodule == RFMOD_SX1278)
   {
-    SX1278config(bw, sf, cr, freq, syncWord);
+    SX1278config(bw, sf, cr, freq);
   }
+
+  SetPreambleLength(PreambleLength);
+
   return 0;
 }
 
-uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq)
 {
 
   uint8_t status = ERR_NONE;
@@ -504,11 +499,11 @@ uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t 
   }
 
   // set the sync word
-  status = setRegValue(SX127X_REG_SYNC_WORD, syncWord);
-  if (status != ERR_NONE)
-  {
-    return (status);
-  }
+  //status = setRegValue(SX127X_REG_SYNC_WORD, syncWord);
+  //if (status != ERR_NONE)
+  //{
+  //  return (status);
+  //}
 
   // set default preamble length
   //status = setRegValue(SX127X_REG_PREAMBLE_MSB, SX127X_PREAMBLE_LENGTH_MSB);

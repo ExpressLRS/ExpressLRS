@@ -57,11 +57,10 @@ public:
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
-    static int8_t LastPacketRSSI;
-    static int8_t LastPacketSNR;
-    static float PacketLossRate;
-    static volatile uint8_t NonceTX;
-    static volatile uint8_t NonceRX;
+    int8_t LastPacketRSSI = 0;
+    int8_t LastPacketSNR = 0;
+    volatile uint8_t NonceTX = 0;
+    volatile uint8_t NonceRX = 0;
     static uint32_t TotalTime;
     static uint32_t TimeOnAir;
     static uint32_t TXstartMicros;
@@ -79,18 +78,23 @@ public:
     SX1280Driver();
     static SX1280Driver *instance;
     void Begin();
-    void setMode(SX1280_RadioOperatingModes_t OPmode);
-    void configModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
-    void setPacketParams(SX1280_RadioPreambleLengths_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
-    void SetFrequency(uint32_t freq);
-    void setFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
+    void ICACHE_RAM_ATTR SetMode(SX1280_RadioOperatingModes_t OPmode);
+    void ICACHE_RAM_ATTR ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
+    void ICACHE_RAM_ATTR SetPacketParams(SX1280_RadioPreambleLengths_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
+    void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
+    void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
+    void ICACHE_RAM_ATTR SetPreambleLength(SX1280_RadioPreambleLengths_t preambleLen);
 
-    int32_t GetFrequencyError();
+    void ICACHE_RAM_ATTR Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, SX1280_RadioPreambleLengths_t PreambleLength);
 
-    void ICACHE_RAM_ATTR TXnb(volatile uint8_t *data, uint8_t length);
+    void SetOutputPower(uint8_t power);
+
+    int32_t ICACHE_RAM_ATTR GetFrequencyError();
+
+    static void ICACHE_RAM_ATTR TXnb(volatile uint8_t *data, uint8_t length);
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
 
-    void ICACHE_RAM_ATTR RXnb();
+    static void ICACHE_RAM_ATTR RXnb();
     static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routine
 
     void ICACHE_RAM_ATTR ClearIrqStatus(uint16_t irqMask);
@@ -103,6 +107,12 @@ public:
     // uint8_t SetPreambleLength(uint8_t PreambleLen);
     // uint8_t SetSpreadingFactor(SX1280_RadioLoRaSpreadingFactors_t sf);
     // uint8_t SetCodingRate(SX1280_RadioLoRaCodingRates_t cr);
+
+    bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
+    void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t offset);
+
+    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
+    int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
 
 private:
 };

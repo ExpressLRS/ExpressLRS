@@ -4,6 +4,8 @@
 #include "SX1280RadioLib.h"
 #endif
 
+#include "LoRa_lowlevel.h" //todo move errata inside sx127x lib
+
 #define REG_FREQ_ERROR_LSB 0x2a
 #define REG_RSSI_WIDEBAND 0x2c
 #define REG_DETECTION_OPTIMIZE 0x31

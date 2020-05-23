@@ -5,10 +5,10 @@
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "LoRaRadioLib.h"
-extern SX127xDriver Radio;
+SX127xDriver Radio;
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280RadioLib.h"
-extern SX1280Driver Radio;
+SX1280Driver Radio;
 #endif
 
 #include "CRSF.h"
@@ -247,8 +247,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-  Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
-  Radio.SetPreambleLength(mode->PreambleLen);
+  Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, mode->PreambleLen);
   hwTimer.updateInterval(mode->interval);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;

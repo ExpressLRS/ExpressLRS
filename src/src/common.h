@@ -100,7 +100,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t rate;                       // rate in hz
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint8_t PreambleLen;
+    SX1280_RadioPreambleLengths_t PreambleLen;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;

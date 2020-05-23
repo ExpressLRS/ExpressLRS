@@ -119,8 +119,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
     expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-    Radio.StopContRX();
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, mode->PreambleLen);
     ExpressLRS_currAirRate = mode;
     hwTimer.updateInterval(mode->interval);
     LPF_PacketInterval.init(mode->interval);
@@ -429,9 +428,7 @@ void beginWebsever()
 {
 #ifdef PLATFORM_STM32
 #else
-    Radio.StopContRX();
     hwTimer.stop();
-
     BeginWebUpdate();
     webUpdateMode = true;
 #endif
@@ -483,7 +480,7 @@ void setup()
 #endif
 
 #ifdef PLATFORM_ESP8266
-    Serial.begin(420000);
+    Serial.begin(115200);
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
 #endif
@@ -509,8 +506,6 @@ void setup()
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
     Radio.RFmodule = RFMOD_SX1278; //define radio module here
-#else
-#error No regulatory domain defined, please define one in common.h
 #endif
 
     FHSSrandomiseFHSSsequence();

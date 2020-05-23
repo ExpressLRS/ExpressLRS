@@ -43,7 +43,7 @@
 // return (state);
 // }
 
-uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq)
 {
   uint8_t status = ERR_NONE;
   uint8_t newBandwidth, newSpreadingFactor, newCodingRate;
@@ -138,7 +138,7 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
   }
 
   // execute common part
-  status = SX1278configCommon(newBandwidth, newSpreadingFactor, newCodingRate, freq, syncWord);
+  status = SX1278configCommon(newBandwidth, newSpreadingFactor, newCodingRate, freq);
   if (status != ERR_NONE)
   {
     return (status);
@@ -153,10 +153,10 @@ uint8_t SX1278config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t f
   return (ERR_NONE);
 }
 
-uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
+uint8_t SX1278configCommon(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq)
 {
   // configure common registers
-  uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq, syncWord);
+  uint8_t status = SX127xDriver::SX127xConfig(bw, sf, cr, freq);
   if (status != ERR_NONE)
   {
     return (status);
@@ -233,5 +233,5 @@ uint8_t SX1278begin(uint8_t nss, uint8_t dio0, uint8_t dio1)
   }
 
   // start configuration
-  return (SX1278config(SX127xDriver::currBW, SX127xDriver::currSF, SX127xDriver::currCR, SX127xDriver::currFreq, SX127xDriver::_syncWord));
+  return (SX1278config(SX127xDriver::currBW, SX127xDriver::currSF, SX127xDriver::currCR, SX127xDriver::currFreq));
 }
