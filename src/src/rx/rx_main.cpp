@@ -49,6 +49,7 @@ static uint32_t SendLinkStatstoFCintervalNextSend = SEND_LINK_STATS_TO_FC_INTERV
 static mspPacket_t msp_packet_rx;
 static mspPacket_t msp_packet_tx;
 static volatile uint_fast8_t tlm_msp_send = 0;
+static volatile uint_fast8_t uplink_Link_quality = 0;
 
 ///////////////////////////////////////////////////////////////
 ///////////// Variables for Sync Behaviour ////////////////////
@@ -179,7 +180,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     else
     {
         tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
-        crsf.LinkStatistics.uplink_Link_quality = LQ_getlinkQuality();
+        crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
         crsf.LinkStatisticsPack(&tx_buffer[1]);
     }
     uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
@@ -236,6 +237,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     //DEBUG_PRINT(NonceRXlocal);
 #endif
 
+    uplink_Link_quality = LQ_getlinkQuality();
     // Check if connected before sending tlm resp
     if (STATE_disconnected < connectionState)
     {
@@ -601,7 +603,7 @@ void loop()
         {
             if (SEND_LINK_STATS_TO_FC_INTERVAL < (now - SendLinkStatstoFCintervalNextSend))
             {
-                crsf.LinkStatistics.uplink_Link_quality = LQ_getlinkQuality();
+                crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
                 crsf.LinkStatisticsSend();
                 SendLinkStatstoFCintervalNextSend = now;
             }
