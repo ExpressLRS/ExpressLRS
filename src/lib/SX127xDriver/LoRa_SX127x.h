@@ -38,7 +38,7 @@ public:
     bool headerExplMode = false;
     bool crcEnabled = false;
 
-//// Default Parameters ////
+//// Default Parameters for ELRS ////
 #define defaultFreq 915000000
 #define defaultSyncWord SX127X_SYNC_WORD
 #define defaultPreambleLen 8
@@ -48,15 +48,14 @@ public:
 #define defaultOpmode SX127x_OPMODE_SLEEP
 
     //// Parameters ////
-    uint32_t currFreq = 0;
+    uint32_t currFreq = 0; // leave as 0 to ensure that it gets set 
     uint8_t currSyncWord = 0;
-    uint8_t currPreambleLen = 0;
-    SX127x_Bandwidth currBW;
-    SX127x_SpreadingFactor currSF;
-    SX127x_CodingRate currCR;
-    SX127x_RadioOPmodes currOpmode;
+    uint8_t currPreambleLen = 8;
+    SX127x_Bandwidth currBW = SX127x_BW_125_00_KHZ; //default values from datasheet
+    SX127x_SpreadingFactor currSF = SX127x_SF_7;
+    SX127x_CodingRate currCR = SX127x_CR_4_5;
+    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_STANDBY;
     uint8_t currPWR = 0b0000;
-    uint8_t maxPWR = 0b1111;
 
     ///////////////////////////////////
 

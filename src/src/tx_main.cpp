@@ -604,9 +604,10 @@ void setup()
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
 
-  POWERMGNT.defaultPower();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
+  POWERMGNT.defaultPower();
+  
   crsf.Begin();
   SetRFLinkRate(RATE_200HZ);
 
