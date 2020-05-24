@@ -2,68 +2,52 @@
 
 typedef enum
 {
-    CURR_OPMODE_FSK_OOK = 0b00000000,
-    CURR_OPMODE_LORA = 0b10000000, //removed CURR_OPMODE_ACCESS_SHARED_REG_OFF and CURR_OPMODE_ACCESS_SHARED_REG_ON for now
-    CURR_OPMODE_SLEEP = 0b00000000,
-    CURR_OPMODE_STANDBY = 0b00000001,
-    CURR_OPMODE_FSTX = 0b00000010,
-    CURR_OPMODE_TX = 0b00000011,
-    CURR_OPMODE_FSRX = 0b00000100,
-    CURR_OPMODE_RXCONTINUOUS = 0b00000101,
-    CURR_OPMODE_RXSINGLE = 0b00000110,
-    CURR_OPMODE_CAD = 0b00000111
-} RadioOPmodes;
+    SX127x_OPMODE_FSK_OOK = 0b00000000,
+    SX127x_OPMODE_LORA = 0b10000000,
+    SX127x_OPMODE_SLEEP = 0b00000000,
+    SX127x_OPMODE_STANDBY = 0b00000001,
+    SX127x_OPMODE_FSTX = 0b00000010,
+    SX127x_OPMODE_TX = 0b00000011,
+    SX127x_OPMODE_FSRX = 0b00000100,
+    SX127x_OPMODE_RXCONTINUOUS = 0b00000101,
+    SX127x_OPMODE_RXSINGLE = 0b00000110,
+    SX127x_OPMODE_CAD = 0b00000111,
+    SX127X_ACCESS_SHARED_REG_OFF = 0b00000000,
+    SX127X_ACCESS_SHARED_REG_ON = 0b01000000
+} SX127x_RadioOPmodes;
 
 typedef enum
 {
-    CH_SX1272,
-    CH_SX1273,
-    CH_SX1276,
-    CH_SX1277,
-    CH_SX1278,
-    CH_SX1279
-} Chip;
+    SX127x_BW_7_80_KHZ = 0b00000000,
+    SX127x_BW_10_40_KHZ = 0b00010000,
+    SX127x_BW_15_60_KHZ = 0b00100000,
+    SX127x_BW_20_80_KHZ = 0b00110000,
+    SX127x_BW_31_25_KHZ = 0b01000000,
+    SX127x_BW_41_70_KHZ = 0b01010000,
+    SX127x_BW_62_50_KHZ = 0b01100000,
+    SX127x_BW_125_00_KHZ = 0b01110000,
+    SX127x_BW_250_00_KHZ = 0b10000000,
+    SX127x_BW_500_00_KHZ = 0b10010000
+} SX127x_Bandwidth;
+
 typedef enum
 {
-    BW_7_80_KHZ = 0,
-    BW_10_40_KHZ = 1,
-    BW_15_60_KHZ = 2,
-    BW_20_80_KHZ = 3,
-    BW_31_25_KHZ = 4,
-    BW_41_70_KHZ = 5,
-    BW_62_50_KHZ = 6,
-    BW_125_00_KHZ = 7,
-    BW_250_00_KHZ = 8,
-    BW_500_00_KHZ = 9
-} Bandwidth;
+    SX127x_SF_6 = 0b01100000,
+    SX127x_SF_7 = 0b01110000,
+    SX127x_SF_8 = 0b10000000,
+    SX127x_SF_9 = 0b10010000,
+    SX127x_SF_10 = 0b10100000,
+    SX127x_SF_11 = 0b10110000,
+    SX127x_SF_12 = 0b11000000
+} SX127x_SpreadingFactor;
+
 typedef enum
 {
-    SF_6,
-    SF_7,
-    SF_8,
-    SF_9,
-    SF_10,
-    SF_11,
-    SF_12
-} SpreadingFactor;
-typedef enum
-{
-    CR_4_5,
-    CR_4_6,
-    CR_4_7,
-    CR_4_8
-} CodingRate;
-typedef enum
-{
-    RFMOD_SX1278,
-    RFMOD_SX1276
-} RFmodule_;
-typedef enum
-{
-    CONT_OFF,
-    CONT_TX,
-    CONT_RX
-} ContinousMode;
+    SX127x_CR_4_5 = 0b00000010,
+    SX127x_CR_4_6 = 0b00000100,
+    SX127x_CR_4_7 = 0b00000110,
+    SX127x_CR_4_8 = 0b00001000
+} SX127x_CodingRate;
 
 // SX127x series common registers
 #define SX127X_REG_FIFO 0x00
@@ -112,20 +96,20 @@ typedef enum
 #define SX127X_REG_DIO_MAPPING_2 0x41
 #define SX127X_REG_VERSION 0x42
 
-// SX127x common modem settings
-// SX127X_REG_OP_MODE                                                 MSB   LSB   DESCRIPTION
-#define SX127X_FSK_OOK 0b00000000               //  7     7     FSK/OOK mode
-#define SX127X_LORA 0b10000000                  //  7     7     LoRa mode
-#define SX127X_ACCESS_SHARED_REG_OFF 0b00000000 //  6     6     access LoRa registers (0x0D:0x3F) in LoRa mode
-#define SX127X_ACCESS_SHARED_REG_ON 0b01000000  //  6     6     access FSK registers (0x0D:0x3F) in LoRa mode
-#define SX127X_SLEEP 0b00000000                 //  2     0     sleep
-#define SX127X_STANDBY 0b00000001               //  2     0     standby
-#define SX127X_FSTX 0b00000010                  //  2     0     frequency synthesis TX
-#define SX127X_TX 0b00000011                    //  2     0     transmit
-#define SX127X_FSRX 0b00000100                  //  2     0     frequency synthesis RX
-#define SX127X_RXCONTINUOUS 0b00000101          //  2     0     receive continuous
-#define SX127X_RXSINGLE 0b00000110              //  2     0     receive single
-#define SX127X_CAD 0b00000111                   //  2     0     channel activity detection
+// // SX127x common modem settings
+// // SX127X_REG_OP_MODE                                                 MSB   LSB   DESCRIPTION
+// #define SX127X_FSK_OOK 0b00000000               //  7     7     FSK/OOK mode
+// #define SX127X_LORA 0b10000000                  //  7     7     LoRa mode
+// #define SX127X_ACCESS_SHARED_REG_OFF 0b00000000 //  6     6     access LoRa registers (0x0D:0x3F) in LoRa mode
+// #define SX127X_ACCESS_SHARED_REG_ON 0b01000000  //  6     6     access FSK registers (0x0D:0x3F) in LoRa mode
+// #define SX127X_SLEEP 0b00000000                 //  2     0     sleep
+// #define SX127X_STANDBY 0b00000001               //  2     0     standby
+// #define SX127X_FSTX 0b00000010                  //  2     0     frequency synthesis TX
+// #define SX127X_TX 0b00000011                    //  2     0     transmit
+// #define SX127X_FSRX 0b00000100                  //  2     0     frequency synthesis RX
+// #define SX127X_RXCONTINUOUS 0b00000101          //  2     0     receive continuous
+// #define SX127X_RXSINGLE 0b00000110              //  2     0     receive single
+// #define SX127X_CAD 0b00000111                   //  2     0     channel activity detection
 
 // SX127X_REG_PA_CONFIG
 #define SX127X_PA_SELECT_RFO 0b00000000    //  7     7     RFO pin output, power limited to +14 dBm
@@ -151,14 +135,14 @@ typedef enum
 #define SX127X_LNA_BOOST_OFF 0b00000000 //  1     0     default LNA current
 #define SX127X_LNA_BOOST_ON 0b00000011  //  1     0     150% LNA current
 
-// SX127X_REG_MODEM_CONFIG_2
-#define SX127X_SF_6 0b01100000           //  7     4     spreading factor:   64 chips/bit
-#define SX127X_SF_7 0b01110000           //  7     4                         128 chips/bit
-#define SX127X_SF_8 0b10000000           //  7     4                         256 chips/bit
-#define SX127X_SF_9 0b10010000           //  7     4                         512 chips/bit
-#define SX127X_SF_10 0b10100000          //  7     4                         1024 chips/bit
-#define SX127X_SF_11 0b10110000          //  7     4                         2048 chips/bit
-#define SX127X_SF_12 0b11000000          //  7     4                         4096 chips/bit
+// // SX127X_REG_MODEM_CONFIG_2
+// #define SX127X_SF_6 0b01100000           //  7     4     spreading factor:   64 chips/bit
+// #define SX127X_SF_7 0b01110000           //  7     4                         128 chips/bit
+// #define SX127X_SF_8 0b10000000           //  7     4                         256 chips/bit
+// #define SX127X_SF_9 0b10010000           //  7     4                         512 chips/bit
+// #define SX127X_SF_10 0b10100000          //  7     4                         1024 chips/bit
+// #define SX127X_SF_11 0b10110000          //  7     4                         2048 chips/bit
+// #define SX127X_SF_12 0b11000000          //  7     4                         4096 chips/bit
 #define SX127X_TX_MODE_SINGLE 0b00000000 //  3     3     single TX
 #define SX127X_TX_MODE_CONT 0b00001000   //  3     3     continuous TX
 #define SX127X_RX_TIMEOUT_MSB 0b00000000 //  1     0
@@ -264,20 +248,20 @@ typedef enum
 #define SX1278_LNA_BOOST_LF_OFF 0b00000000 //  4     3     default LNA current
 
 //SX1278_REG_MODEM_CONFIG_1
-#define SX1278_BW_7_80_KHZ 0b00000000      //  7     4     bandwidth:  7.80 kHz
-#define SX1278_BW_10_40_KHZ 0b00010000     //  7     4                 10.40 kHz
-#define SX1278_BW_15_60_KHZ 0b00100000     //  7     4                 15.60 kHz
-#define SX1278_BW_20_80_KHZ 0b00110000     //  7     4                 20.80 kHz
-#define SX1278_BW_31_25_KHZ 0b01000000     //  7     4                 31.25 kHz
-#define SX1278_BW_41_70_KHZ 0b01010000     //  7     4                 41.70 kHz
-#define SX1278_BW_62_50_KHZ 0b01100000     //  7     4                 62.50 kHz
-#define SX1278_BW_125_00_KHZ 0b01110000    //  7     4                 125.00 kHz
-#define SX1278_BW_250_00_KHZ 0b10000000    //  7     4                 250.00 kHz
-#define SX1278_BW_500_00_KHZ 0b10010000    //  7     4                 500.00 kHz
-#define SX1278_CR_4_5 0b00000010           //  3     1     error coding rate:  4/5
-#define SX1278_CR_4_6 0b00000100           //  3     1                         4/6
-#define SX1278_CR_4_7 0b00000110           //  3     1                         4/7
-#define SX1278_CR_4_8 0b00001000           //  3     1                         4/8
+// #define SX1278_BW_7_80_KHZ 0b00000000      //  7     4     bandwidth:  7.80 kHz
+// #define SX1278_BW_10_40_KHZ 0b00010000     //  7     4                 10.40 kHz
+// #define SX1278_BW_15_60_KHZ 0b00100000     //  7     4                 15.60 kHz
+// #define SX1278_BW_20_80_KHZ 0b00110000     //  7     4                 20.80 kHz
+// #define SX1278_BW_31_25_KHZ 0b01000000     //  7     4                 31.25 kHz
+// #define SX1278_BW_41_70_KHZ 0b01010000     //  7     4                 41.70 kHz
+// #define SX1278_BW_62_50_KHZ 0b01100000     //  7     4                 62.50 kHz
+// #define SX1278_BW_125_00_KHZ 0b01110000    //  7     4                 125.00 kHz
+// #define SX1278_BW_250_00_KHZ 0b10000000    //  7     4                 250.00 kHz
+// #define SX1278_BW_500_00_KHZ 0b10010000    //  7     4                 500.00 kHz
+// #define SX1278_CR_4_5 0b00000010           //  3     1     error coding rate:  4/5
+// #define SX1278_CR_4_6 0b00000100           //  3     1                         4/6
+// #define SX1278_CR_4_7 0b00000110           //  3     1                         4/7
+// #define SX1278_CR_4_8 0b00001000           //  3     1                         4/8
 #define SX1278_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
 #define SX1278_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
 
@@ -293,22 +277,26 @@ typedef enum
 
 //The below values were cut and paste from SX1278 values, they should be the same but just take note.
 //SX1276_REG_MODEM_CONFIG_1
-#define SX1276_BW_7_80_KHZ 0b00000000      //  7     4     bandwidth:  7.80 kHz
-#define SX1276_BW_10_40_KHZ 0b00010000     //  7     4                 10.40 kHz
-#define SX1276_BW_15_60_KHZ 0b00100000     //  7     4                 15.60 kHz
-#define SX1276_BW_20_80_KHZ 0b00110000     //  7     4                 20.80 kHz
-#define SX1276_BW_31_25_KHZ 0b01000000     //  7     4                 31.25 kHz
-#define SX1276_BW_41_70_KHZ 0b01010000     //  7     4                 41.70 kHz
-#define SX1276_BW_62_50_KHZ 0b01100000     //  7     4                 62.50 kHz
-#define SX1276_BW_125_00_KHZ 0b01110000    //  7     4                 125.00 kHz
-#define SX1276_BW_250_00_KHZ 0b10000000    //  7     4                 250.00 kHz
-#define SX1276_BW_500_00_KHZ 0b10010000    //  7     4                 500.00 kHz
-#define SX1276_CR_4_5 0b00000010           //  3     1     error coding rate:  4/5
-#define SX1276_CR_4_6 0b00000100           //  3     1                         4/6
-#define SX1276_CR_4_7 0b00000110           //  3     1                         4/7
-#define SX1276_CR_4_8 0b00001000           //  3     1                         4/8
+// #define SX1276_BW_7_80_KHZ 0b00000000      //  7     4     bandwidth:  7.80 kHz
+// #define SX1276_BW_10_40_KHZ 0b00010000     //  7     4                 10.40 kHz
+// #define SX1276_BW_15_60_KHZ 0b00100000     //  7     4                 15.60 kHz
+// #define SX1276_BW_20_80_KHZ 0b00110000     //  7     4                 20.80 kHz
+// #define SX1276_BW_31_25_KHZ 0b01000000     //  7     4                 31.25 kHz
+// #define SX1276_BW_41_70_KHZ 0b01010000     //  7     4                 41.70 kHz
+// #define SX1276_BW_62_50_KHZ 0b01100000     //  7     4                 62.50 kHz
+// #define SX1276_BW_125_00_KHZ 0b01110000    //  7     4                 125.00 kHz
+// #define SX1276_BW_250_00_KHZ 0b10000000    //  7     4                 250.00 kHz
+// #define SX1276_BW_500_00_KHZ 0b10010000    //  7     4                 500.00 kHz
+// #define SX1276_CR_4_5 0b00000010           //  3     1     error coding rate:  4/5
+// #define SX1276_CR_4_6 0b00000100           //  3     1                         4/6
+// #define SX1276_CR_4_7 0b00000110           //  3     1                         4/7
+// #define SX1276_CR_4_8 0b00001000           //  3     1                         4/8
 #define SX1276_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
 #define SX1276_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
+
+
+
+
 
 #define ERR_NONE 0x00
 #define ERR_CHIP_NOT_FOUND 0x01

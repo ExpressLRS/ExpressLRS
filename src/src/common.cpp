@@ -10,9 +10,9 @@ extern SX127xDriver Radio;
 
 #define RATE_MAX 3
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},
-    {BW_500_00_KHZ, SF_7, CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000},
-    {BW_500_00_KHZ, SF_8, CR_4_7, -120, 20000, 50, TLM_RATIO_1_32, 4, 8, RATE_50HZ, 6000, 2500},
+    {SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 1000, 1500},
+    {SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, -117, 10000, 100, TLM_RATIO_1_32, 4, 8, RATE_100HZ, 2000, 2000},
+    {SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, -120, 20000, 50, TLM_RATIO_1_32, 4, 8, RATE_50HZ, 6000, 2500},
     //{BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
     //{BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
 };
@@ -56,25 +56,25 @@ uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
 
-int16_t MeasureNoiseFloor()
-{
-    int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
-    float returnval = 0;
+// int16_t MeasureNoiseFloor() TODO disabled for now 
+// {
+//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
+//     float returnval = 0;
 
-    for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
-    {
-        FHSSsetCurrIndex(freq);
-        Radio.SetMode(SX127X_CAD);
+//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
+//     {
+//         FHSSsetCurrIndex(freq);
+//         Radio.SetMode(SX127X_CAD);
 
-        for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
-        {
-            returnval = returnval + Radio.GetCurrRSSI();
-            delay(5);
-        }
-    }
-    returnval = returnval / NUM_READS;
-    return (returnval);
-}
+//         for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
+//         {
+//             returnval = returnval + Radio.GetCurrRSSI();
+//             delay(5);
+//         }
+//     }
+//     returnval = returnval / NUM_READS;
+//     return (returnval);
+// }
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
 {

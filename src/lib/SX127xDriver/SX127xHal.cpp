@@ -1,10 +1,13 @@
 #include "SX127xHal.h"
-#include <SPI.h>
 
-void SX127xHal::init(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, int DIO1, int RXenb, int TXenb)
+SX127xHal *SX127xHal::instance = NULL;
+
+SX127xHal::SX127xHal(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, int DIO1, int RXenb, int TXenb)
 {
+  instance = this;
+
   GPIO_MOSI = MOSI;
-  GPIO_MISO = MOSI;
+  GPIO_MISO = MISO;
   GPIO_SCK = SCK;
   GPIO_NSS = NSS;
   GPIO_RST = RST;
@@ -12,22 +15,45 @@ void SX127xHal::init(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, in
   GPIO_DIO0 = DIO0;
   GPIO_DIO1 = DIO1;
 
-  pinMode(GPIO_NSS, OUTPUT);
-  pinMode(GPIO_DIO0, INPUT);
-  pinMode(GPIO_DIO1, INPUT);
-
-  pinMode(GPIO_MOSI, OUTPUT);
-  pinMode(GPIO_MISO, INPUT);
-  pinMode(GPIO_SCK, OUTPUT);
-  pinMode(GPIO_RST, OUTPUT);
-
-  digitalWrite(GPIO_NSS, HIGH);
-
   if ((GPIO_RXenb < 0) && (GPIO_TXenb < 0))
   {
     UsePApins = true;
     GPIO_RXenb = RXenb;
     GPIO_TXenb = TXenb;
+  }
+}
+
+void SX127xHal::init()
+{
+  Serial.print("MISO:");
+  Serial.print(GPIO_MOSI);
+
+  Serial.print(" MOSI:");
+  Serial.print(GPIO_MISO);
+
+  Serial.print(" SCK:");
+  Serial.print(GPIO_SCK);
+
+  Serial.print(" NSS:");
+  Serial.print(GPIO_NSS);
+
+  Serial.print(" RESET:");
+  Serial.print(GPIO_RST);
+
+  Serial.print(" DIO0:");
+  Serial.print(GPIO_DIO0);
+
+  Serial.print(" DIO1:");
+  Serial.print(GPIO_DIO1);
+
+  Serial.print(" RXenb:");
+  Serial.print(GPIO_RXenb);
+
+  Serial.print(" TXenb:");
+  Serial.println(GPIO_TXenb);
+
+  if (UsePApins)
+  {
     pinMode(GPIO_RXenb, OUTPUT);
     pinMode(GPIO_TXenb, OUTPUT);
     digitalWrite(GPIO_RXenb, LOW);
@@ -35,7 +61,7 @@ void SX127xHal::init(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, in
   }
 
 #ifdef PLATFORM_ESP32
-  SPI.begin(GPIO_SCK, GPIO_MISO, GPIO_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
+  SPI.begin(GPIO_SCK, GPIO_MISO, GPIO_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setFrequency(10000000);
@@ -58,6 +84,19 @@ void SX127xHal::init(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, in
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
+  pinMode(GPIO_NSS, OUTPUT);
+  pinMode(GPIO_RST, OUTPUT);
+
+  pinMode(GPIO_DIO0, INPUT);
+  pinMode(GPIO_DIO1, INPUT);
+
+  //pinMode(GPIO_MOSI, OUTPUT);
+  //pinMode(GPIO_MISO, INPUT);
+  //pinMode(GPIO_SCK, OUTPUT);
+
+  digitalWrite(GPIO_NSS, HIGH);
+
+  delay(100);
   digitalWrite(GPIO_RST, 0);
   delay(100);
   digitalWrite(GPIO_RST, 1);
@@ -156,4 +195,11 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 #endif
 
   digitalWrite(GPIO_NSS, HIGH);
+}
+
+void ICACHE_RAM_ATTR SX127xHal::TXenable()
+{
+}
+void ICACHE_RAM_ATTR SX127xHal::RXenable()
+{
 }

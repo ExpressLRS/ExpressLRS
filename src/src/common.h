@@ -71,9 +71,9 @@ typedef enum
 
 typedef struct expresslrs_mod_settings_s
 {
-    Bandwidth bw;
-    SpreadingFactor sf;
-    CodingRate cr;
+    SX127x_Bandwidth bw;
+    SX127x_SpreadingFactor sf;
+    SX127x_CodingRate cr;
     int32_t sensitivity;                //expected RF sensitivity based on
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     uint8_t rate;                       // rate in hz

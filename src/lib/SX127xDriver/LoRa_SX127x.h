@@ -13,6 +13,8 @@ class SX127xDriver
 {
 
 public:
+    static SX127xDriver *instance;
+    SX127xDriver();
     ///////Callback Function Pointers/////
     static void (*RXdoneCallback1)(); //function pointer for callback
     static void (*RXdoneCallback2)(); //function pointer for callback
@@ -33,18 +35,20 @@ public:
     static volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[256];
 
     bool headerExplMode = false;
+    bool crcEnabled = false;
 
     //// Default Parameters ////
     uint32_t currFreq = 915000000;
     uint8_t currSyncWord = SX127X_SYNC_WORD;
-    RFmodule_ RFmodule = RFMOD_SX1276;
-    Bandwidth currBW = BW_500_00_KHZ;
-    SpreadingFactor currSF = SF_6;
-    CodingRate currCRCR_4_5;
+    uint8_t currPreambleLen = 0;
+    SX127x_Bandwidth currBW = SX127x_BW_500_00_KHZ;
+    SX127x_SpreadingFactor currSF = SX127x_SF_6;
+    SX127x_CodingRate currCR = SX127x_CR_4_5;
+    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
+
     uint8_t currPWR = 0b0000;
     uint8_t maxPWR = 0b1111;
-    RadioOPmodes _opmode = CURR_OPMODE_SLEEP;
-    uint8_t currOpmode = (uint8_t)CURR_OPMODE_SLEEP;
+
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -62,22 +66,24 @@ public:
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
-    uint8_t Begin();
+    void Begin();
     uint8_t DetectChip();
-    uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq, uint8_t syncWord);
-    uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
-    uint8_t SetMode(uint8_t mode);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t syncWord);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr);
+    void SetMode(SX127x_RadioOPmodes mode);
     void ConfigLoraDefaults();
 
-    uint8_t SetBandwidth(Bandwidth bw);
+    void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
+
+    void SetSyncWord(uint8_t syncWord);
+    void SetOutputPower(uint8_t Power);
+    void SetPreambleLength(uint8_t PreambleLen);
+    void SetSpreadingFactor(SX127x_SpreadingFactor sf);
+
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
-    uint8_t SetSyncWord(uint8_t syncWord);
-    uint8_t SetOutputPower(uint8_t Power);
-    uint8_t SetPreambleLength(uint8_t PreambleLen);
-    uint8_t SetSpreadingFactor(SpreadingFactor sf);
-    uint8_t SetCodingRate(CodingRate cr);
-    uint8_t SetFrequency(uint32_t freq);
+
+    void SetFrequency(uint32_t freq);
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
     void SetPPMoffsetReg(int32_t offset);
@@ -89,7 +95,7 @@ public:
 
     //////////////RX related Functions/////////////////
 
-    static uint8_t RunCAD();
+    //uint8_t RunCAD();
 
     uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();

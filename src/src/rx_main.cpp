@@ -112,7 +112,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
 {
     expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
     Radio.StopContRX();
-    Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+    Radio.Config(mode->bw, mode->sf, mode->cr);
     ExpressLRS_currAirRate = mode;
     hwTimer.updateInterval(mode->interval);
     LPF_PacketInterval.init(mode->interval);
@@ -514,10 +514,10 @@ void setup()
     
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
-    RFnoiseFloor = MeasureNoiseFloor();
-    Serial.print("RF noise floor: ");
-    Serial.print(RFnoiseFloor);
-    Serial.println("dBm");
+    // RFnoiseFloor = MeasureNoiseFloor(); TODO disabled for now 
+    // Serial.print("RF noise floor: ");
+    // Serial.print(RFnoiseFloor);
+    // Serial.println("dBm");
 
     Radio.RXdoneCallback1 = &ProcessRFPacket;
     Radio.TXdoneCallback1 = &Radio.RXnb;

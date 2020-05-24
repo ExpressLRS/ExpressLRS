@@ -36,7 +36,7 @@ R9DAC R9DAC;
 #define PACKET_RATE_INTERVAL 500
 #define RF_MODE_CYCLE_INTERVAL 1000
 #define MSP_PACKET_SEND_INTERVAL 200
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 1500  // how often to send the switch data packet (ms) when there is no response from RX
+#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 1500 // how often to send the switch data packet (ms) when there is no response from RX
 #define SYNC_PACKET_SEND_INTERVAL_RX_CONN 2500 // how often to send the switch data packet (ms) when there we have a connection
 
 String DebugOutput;
@@ -240,7 +240,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-  Radio.Config(mode->bw, mode->sf, mode->cr, Radio.currFreq, Radio._syncWord);
+  Radio.Config(mode->bw, mode->sf, mode->cr);
   Radio.SetPreambleLength(mode->PreambleLen);
   hwTimer.updateInterval(mode->interval);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
@@ -510,7 +510,6 @@ void setup()
   Serial2.begin(400000);
 #endif
 
-
 #ifdef TARGET_R9M_TX
   HardwareSerial(USART2);
   Serial.setTx(GPIO_PIN_DEBUG_TX);
@@ -543,7 +542,7 @@ void setup()
   digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
   R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+  button.init(GPIO_PIN_BUTTON, true);                // r9 tx appears to be active high
 #endif
 
   crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
@@ -588,11 +587,11 @@ void setup()
   Serial.println("Setting 915MHz Mode");
 #endif
 
-  Radio.RFmodule = RFMOD_SX1276; //define radio module here
+  //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
   Serial.println("Setting 433MHz Mode");
-  Radio.RFmodule = RFMOD_SX1278; //define radio module here
+  //Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
@@ -610,6 +609,8 @@ void setup()
   Radio.Begin();
   crsf.Begin();
   SetRFLinkRate(RATE_200HZ);
+
+  hwTimer.init();
 }
 
 void loop()
