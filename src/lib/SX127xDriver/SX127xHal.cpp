@@ -2,66 +2,27 @@
 
 SX127xHal *SX127xHal::instance = NULL;
 
-SX127xHal::SX127xHal(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, int DIO1, int RXenb, int TXenb)
+void ICACHE_RAM_ATTR SX127xHal::nullCallback(void){};
+void (*SX127xHal::TXdoneCallback)() = &nullCallback;
+void (*SX127xHal::RXdoneCallback)() = &nullCallback;
+
+SX127xHal::SX127xHal()
 {
   instance = this;
-
-  GPIO_MOSI = MOSI;
-  GPIO_MISO = MISO;
-  GPIO_SCK = SCK;
-  GPIO_NSS = NSS;
-  GPIO_RST = RST;
-
-  GPIO_DIO0 = DIO0;
-  GPIO_DIO1 = DIO1;
-
-  if ((GPIO_RXenb < 0) && (GPIO_TXenb < 0))
-  {
-    UsePApins = true;
-    GPIO_RXenb = RXenb;
-    GPIO_TXenb = TXenb;
-  }
 }
 
 void SX127xHal::init()
 {
-  Serial.print("MISO:");
-  Serial.print(GPIO_MOSI);
-
-  Serial.print(" MOSI:");
-  Serial.print(GPIO_MISO);
-
-  Serial.print(" SCK:");
-  Serial.print(GPIO_SCK);
-
-  Serial.print(" NSS:");
-  Serial.print(GPIO_NSS);
-
-  Serial.print(" RESET:");
-  Serial.print(GPIO_RST);
-
-  Serial.print(" DIO0:");
-  Serial.print(GPIO_DIO0);
-
-  Serial.print(" DIO1:");
-  Serial.print(GPIO_DIO1);
-
-  Serial.print(" RXenb:");
-  Serial.print(GPIO_RXenb);
-
-  Serial.print(" TXenb:");
-  Serial.println(GPIO_TXenb);
-
-  if (UsePApins)
+  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
   {
-    pinMode(GPIO_RXenb, OUTPUT);
-    pinMode(GPIO_TXenb, OUTPUT);
-    digitalWrite(GPIO_RXenb, LOW);
-    digitalWrite(GPIO_TXenb, LOW);
+    pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
+    pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
   }
 
 #ifdef PLATFORM_ESP32
-  SPI.begin(GPIO_SCK, GPIO_MISO, GPIO_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
+  SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setFrequency(10000000);
@@ -75,32 +36,28 @@ void SX127xHal::init()
 #endif
 
 #ifdef PLATFORM_STM32
-  SPI.setMOSI(GPIO_MOSI);
-  SPI.setMISO(GPIO_MISO);
-  SPI.setSCLK(GPIO_SCK);
+  SPI.setMOSI(GPIO_PIN_MOSI);
+  SPI.setMISO(GPIO_PIN_MISO);
+  SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+  SPI.begin();
 #endif
 
-  pinMode(GPIO_NSS, OUTPUT);
-  pinMode(GPIO_RST, OUTPUT);
+  pinMode(GPIO_PIN_NSS, OUTPUT);
+  pinMode(GPIO_PIN_RST, OUTPUT);
+  pinMode(GPIO_PIN_DIO0, INPUT);
 
-  pinMode(GPIO_DIO0, INPUT);
-  pinMode(GPIO_DIO1, INPUT);
-
-  //pinMode(GPIO_MOSI, OUTPUT);
-  //pinMode(GPIO_MISO, INPUT);
-  //pinMode(GPIO_SCK, OUTPUT);
-
-  digitalWrite(GPIO_NSS, HIGH);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
 
   delay(100);
-  digitalWrite(GPIO_RST, 0);
+  digitalWrite(GPIO_PIN_RST, 0);
   delay(100);
-  digitalWrite(GPIO_RST, 1);
+  digitalWrite(GPIO_PIN_RST, 1);
   delay(100);
+
+  attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
@@ -117,7 +74,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
 {
   char OutByte;
-  digitalWrite(GPIO_NSS, LOW);
+  digitalWrite(GPIO_PIN_NSS, LOW);
   OutByte = (reg | SPI_READ);
 
 #ifdef PLATFORM_STM32
@@ -127,7 +84,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numByt
 #endif
 
   SPI.transfer(inBytes, numBytes);
-  digitalWrite(GPIO_NSS, HIGH);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
 
   return (ERR_NONE);
 }
@@ -136,7 +93,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg)
 {
   uint8_t InByte;
   uint8_t OutByte;
-  digitalWrite(GPIO_NSS, LOW);
+  digitalWrite(GPIO_PIN_NSS, LOW);
 
   OutByte = (reg | SPI_READ);
 
@@ -148,7 +105,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg)
 
   InByte = SPI.transfer(0x00);
 
-  digitalWrite(GPIO_NSS, HIGH);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
 
   return (InByte);
 }
@@ -169,7 +126,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::setRegValue(uint8_t reg, uint8_t value, uint8
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes)
 {
-  digitalWrite(GPIO_NSS, LOW);
+  digitalWrite(GPIO_PIN_NSS, LOW);
 
 #ifdef PLATFORM_STM32
   SPI.transfer(reg | SPI_WRITE);
@@ -179,12 +136,12 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, u
   SPI.writeBytes(data, numBytes);
 #endif
 
-  digitalWrite(GPIO_NSS, HIGH);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 {
-  digitalWrite(GPIO_NSS, LOW);
+  digitalWrite(GPIO_PIN_NSS, LOW);
 
 #ifdef PLATFORM_STM32
   SPI.transfer(reg | SPI_WRITE);
@@ -194,12 +151,46 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
   SPI.write(data);
 #endif
 
-  digitalWrite(GPIO_NSS, HIGH);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::TXenable()
 {
+  InterruptAssignment = SX127x_INTERRUPT_TX_DONE;
+  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  {
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+  }
 }
+
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
+  InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
+  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  {
+    digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+  }
+}
+
+void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
+{
+  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  {
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+  }
+}
+
+void ICACHE_RAM_ATTR SX127xHal::dioISR()
+{
+  if (instance->InterruptAssignment == SX127x_INTERRUPT_TX_DONE)
+  {
+    TXdoneCallback();
+  }
+  else if (instance->InterruptAssignment == SX127x_INTERRUPT_RX_DONE)
+  {
+    RXdoneCallback();
+  }
 }

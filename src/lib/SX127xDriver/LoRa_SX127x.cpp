@@ -1,13 +1,7 @@
-
-
-#include <Arduino.h>
-
 #include "LoRa_SX127x.h"
-#include "LoRa_SX1276.h"
-#include "../../src/targets.h"
-#include "SX127xHal.h"
 
-SX127xHal hal(GPIO_PIN_MOSI, GPIO_PIN_MISO, GPIO_PIN_SCK, GPIO_PIN_NSS, GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1, GPIO_PIN_RX_ENABLE, GPIO_PIN_TX_ENABLE);
+//SX127xHal hal(GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_SCK, GPIO_PIN_NSS, GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1, GPIO_PIN_RX_ENABLE, GPIO_PIN_TX_ENABLE);
+SX127xHal hal;
 
 void inline SX127xDriver::nullCallback(void){};
 SX127xDriver *SX127xDriver::instance = NULL;
@@ -23,8 +17,8 @@ void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
 void (*SX127xDriver::TXtimeout)() = &nullCallback;
 void (*SX127xDriver::RXtimeout)() = &nullCallback;
 
-volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[256] = {0};
-volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[256] = {0};
+WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[TXRXBuffSize] = {0};
+WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0};
 //////////////////////////////////////////////
 
 SX127xDriver::SX127xDriver()
@@ -35,8 +29,12 @@ SX127xDriver::SX127xDriver()
 void SX127xDriver::Begin()
 {
   Serial.println("SX127x Driver Begin");
+  hal.TXdoneCallback = &TXnbISR;
+  hal.RXdoneCallback = &RXnbISR;
+  delay(100);
   hal.init();
   DetectChip();
+  Config(defaultBW, defaultSF, defaultCR, defaultFreq, defaultSyncWord);
   ConfigLoraDefaults();
 }
 
@@ -214,7 +212,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   instance->TXdoneMicros = micros();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(const volatile uint8_t *data, uint8_t length)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t *data, uint8_t length)
 {
   instance->TXstartMicros = micros();
   instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
@@ -246,13 +244,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-  //RX continuous mode
-
-  // #ifdef TARGET_1000mW_MODULE
-  //   digitalWrite(_TXenablePin, LOW); //the larger TX/RX modules require that the TX/RX enable pins are toggled
-  //   digitalWrite(_RXenablePin, HIGH);
-  // #endif
-
   instance->SetMode(SX127x_OPMODE_STANDBY);
   instance->ClearIRQFlags();
 
@@ -297,11 +288,11 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
-  if (currOpmode != mode)
-  {
-    hal.setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
-    currOpmode = mode;
-  }
+  //if (currOpmode != mode)
+  //{
+  hal.setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
+  currOpmode = mode;
+  //}
 }
 
 void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr)
@@ -325,59 +316,9 @@ void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x
   SetSpreadingFactor(sf);
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
   SetSyncWord(syncWord);
+
+  SetMode(SX127x_OPMODE_STANDBY);
 }
-
-// uint8_t SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord)
-// {
-
-//   // output power configuration
-//   //status = hal.setRegValue(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | currPWR);
-//   //status = hal.setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
-
-//   // basic setting (bw, cr, sf, header mode and CRC)
-//   if (sf == SX127X_SF_6)
-//   {
-//     status = hal.setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_SINGLE, 7, 3);
-//     //status = hal.setRegValue(SX127X_REG_MODEM_CONFIG_2, SX127X_SF_6 | SX127X_TX_MODE_CONT, 7, 3);
-//     status = hal.setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
-//     status = hal.setRegValue(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
-//   }
-//   else
-//   {
-//     status = hal.setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
-//     //status = hal.setRegValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_CONT, 7, 3);
-//     status = hal.setRegValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
-//     status = hal.setRegValue(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
-//   }
-
-//   if (status != ERR_NONE)
-//   {
-//     return (status);
-//   }
-
-//   // set the sync word
-//   status = hal.setRegValue(SX127X_REG_SYNC_WORD, syncWord);
-//   if (status != ERR_NONE)
-//   {
-//     return (status);
-//   }
-
-// set default preamble length
-//status = hal.setRegValue(SX127X_REG_PREAMBLE_MSB, SX127X_PREAMBLE_LENGTH_MSB);
-//status = hal.setRegValue(SX127X_REG_PREAMBLE_LSB, SX127X_PREAMBLE_LENGTH_LSB);
-
-//status = hal.setRegValue(SX127X_REG_PREAMBLE_MSB, 0);
-//status = hal.setRegValue(SX127X_REG_PREAMBLE_LSB, 6);
-
-//   if (status != ERR_NONE)
-//   {
-//     return (status);
-//   }
-
-//   // set mode to STANDBY
-//   status = SetMode(SX127X_STANDBY);
-//   return (status);
-// }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
 {

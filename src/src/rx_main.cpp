@@ -31,7 +31,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-#define DEBUG_SUPPRESS // supresses debug messages on uart 
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
 SX127xDriver Radio;
@@ -111,7 +111,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
     expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-    Radio.StopContRX();
     Radio.Config(mode->bw, mode->sf, mode->cr);
     ExpressLRS_currAirRate = mode;
     hwTimer.updateInterval(mode->interval);
@@ -322,17 +321,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (inCRC != calculatedCRC)
     {
-        #ifndef DEBUG_SUPPRESS
+#ifndef DEBUG_SUPPRESS
         Serial.println("CRC error on RF packet");
-        #endif
+#endif
         return;
     }
 
     if (packetAddr != DeviceAddr)
     {
-        #ifndef DEBUG_SUPPRESS
+#ifndef DEBUG_SUPPRESS
         Serial.println("Wrong device address on RF packet");
-        #endif
+#endif
         return;
     }
 
@@ -343,13 +342,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
+#if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(&Radio, &crsf);
-        #elif defined HYBRID_SWITCHES_8
+#elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(&Radio, &crsf);
-        #else
+#else
         UnpackChannelData_11bit();
-        #endif
+#endif
         crsf.sendRCFrameToFC();
         break;
 
@@ -400,7 +399,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     addPacketToLQ();
     getRFlinkInfo();
-    
+
     HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate->interval);
     Offset = LPF_Offset.update(HWtimerError - (ExpressLRS_currAirRate->interval >> 1) + 50); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
 
@@ -414,14 +413,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
     HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-    Radio.setPPMoffsetReg(FreqCorrection); //as above but corrects a different PPM offset based on freq error 
+    Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
 }
 
 void beginWebsever()
 {
 #ifdef PLATFORM_STM32
 #else
-    Radio.StopContRX();
     hwTimer.stop();
 
     BeginWebUpdate();
@@ -491,30 +489,31 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_FCC_915
     Serial.println("Setting 915MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_EU_868
     Serial.println("Setting 868MHz Mode");
-    Radio.RFmodule = RFMOD_SX1276; //define radio module here
+    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
-    Radio.RFmodule = RFMOD_SX1278; //define radio module here
+    //Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #else
 #error No regulatory domain defined, please define one in common.h
 #endif
 
     FHSSrandomiseFHSSsequence();
-    
+    delay(100);
+
     //Radio.SetSyncWord(0x122);
 
     Radio.currFreq = GetInitialFreq();
+
     Radio.Begin();
-    
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
 
-    // RFnoiseFloor = MeasureNoiseFloor(); TODO disabled for now 
+    // RFnoiseFloor = MeasureNoiseFloor(); TODO disabled for now
     // Serial.print("RF noise floor: ");
     // Serial.print(RFnoiseFloor);
     // Serial.println("dBm");
@@ -566,9 +565,9 @@ void loop()
     if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)))
     {
         RXtimerState = tim_locked;
-        #ifndef DEBUG_SUPPRESS
+#ifndef DEBUG_SUPPRESS
         Serial.println("Timer Considered Locked");
-        #endif
+#endif
     }
 
 #ifdef Auto_WiFi_On_Boot

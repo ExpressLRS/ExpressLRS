@@ -19,12 +19,18 @@ class SX127xHal
 public:
     static SX127xHal *instance;
 
-    SX127xHal(int MISO, int MOSI, int SCK, int NSS, int RST, int DIO0, int DIO1, int RXenb, int TXenb);
+    SX127xHal();
 
     void init();
 
+    static void ICACHE_RAM_ATTR dioISR();
+    static void ICACHE_RAM_ATTR nullCallback(void);
+    static void (*TXdoneCallback)(); //function pointer for callback
+    static void (*RXdoneCallback)(); //function pointer for callback
+
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
+    void ICACHE_RAM_ATTR TXRXdisable();
 
     uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb = 7, uint8_t lsb = 0);
     uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg);
@@ -37,18 +43,5 @@ public:
 
 private:
     SX127x_InterruptAssignment InterruptAssignment = SX127x_INTERRUPT_NONE;
-    ////////Hardware Pins/////////////
-    int8_t GPIO_MOSI = -1;
-    int8_t GPIO_MISO = -1;
-    int8_t GPIO_SCK = -1;
-    int8_t GPIO_RST = -1;
-
-    int8_t GPIO_NSS = -1;
-    int8_t GPIO_DIO0 = -1;
-    int8_t GPIO_DIO1 = -1;
-
-    int8_t GPIO_RXenb = -1;
-    int8_t GPIO_TXenb = -1;
-
     bool UsePApins = false; //uses seperate pins to toggle RX and TX (for external PA)
 };

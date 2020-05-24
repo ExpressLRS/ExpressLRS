@@ -27,25 +27,34 @@ public:
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
 
-    ///////////Radio Variables////////
-    uint8_t TXbuffLen = 8;
-    uint8_t RXbuffLen = 8;
+///////////Radio Variables////////
+#define TXRXBuffSize 8
+    const uint8_t TXbuffLen = TXRXBuffSize; //TODO might not always be const
+    const uint8_t RXbuffLen = TXRXBuffSize;
 
-    static volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[256];
-    static volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[256];
+    static WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
+    static WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     bool headerExplMode = false;
     bool crcEnabled = false;
 
-    //// Default Parameters ////
-    uint32_t currFreq = 915000000;
-    uint8_t currSyncWord = SX127X_SYNC_WORD;
-    uint8_t currPreambleLen = 0;
-    SX127x_Bandwidth currBW = SX127x_BW_500_00_KHZ;
-    SX127x_SpreadingFactor currSF = SX127x_SF_6;
-    SX127x_CodingRate currCR = SX127x_CR_4_5;
-    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
+//// Default Parameters ////
+#define defaultFreq 915000000
+#define defaultSyncWord SX127X_SYNC_WORD
+#define defaultPreambleLen 8
+#define defaultBW SX127x_BW_500_00_KHZ
+#define defaultSF SX127x_SF_6
+#define defaultCR SX127x_CR_4_5
+#define defaultOpmode SX127x_OPMODE_SLEEP
 
+    //// Parameters ////
+    uint32_t currFreq = 0;
+    uint8_t currSyncWord = 0;
+    uint8_t currPreambleLen = 0;
+    SX127x_Bandwidth currBW;
+    SX127x_SpreadingFactor currSF;
+    SX127x_CodingRate currCR;
+    SX127x_RadioOPmodes currOpmode;
     uint8_t currPWR = 0b0000;
     uint8_t maxPWR = 0b1111;
 
@@ -104,7 +113,7 @@ public:
 
     static void nullCallback(void);
     ////////////Non-blocking TX related Functions/////////////////
-    static void ICACHE_RAM_ATTR TXnb(const volatile uint8_t *data, uint8_t length);
+    static void ICACHE_RAM_ATTR TXnb(uint8_t *data, uint8_t length);
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
     /////////////Non-blocking RX related Functions///////////////
     static void ICACHE_RAM_ATTR RXnb();
