@@ -284,8 +284,8 @@ void ICACHE_RAM_ATTR LostConnection()
     connectionState = STATE_disconnected; //set lost connection
     scanIndex = ExpressLRS_currAirRate->enum_rate;
 
-    led_set_state(1);                     // turn off led
-    Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+    led_set_state(1);             // turn off led
+    Radio.RXnb(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     DEBUG_PRINTLN("lost conn");
 
     platform_connection_state(connectionState);
