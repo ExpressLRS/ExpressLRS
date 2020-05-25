@@ -164,8 +164,8 @@ void SX127xDriver::SetPreambleLength(uint16_t PreambleLen)
 void ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
     // TODO: Take this into use if ok!!
-    //if (freq == currFreq)
-    //    return;
+    if (freq == currFreq)
+        return;
 
     if (mode != 0xff)
         SetMode(SX127X_SLEEP);
