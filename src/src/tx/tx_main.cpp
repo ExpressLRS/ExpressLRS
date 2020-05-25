@@ -17,7 +17,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 #define RX_CONNECTION_LOST_TIMEOUT        1500U // After 1500ms of no TLM response consider that slave has lost connection
 #define LQ_CALCULATE_INTERVAL             500u
 #ifndef TLM_REPORT_INTERVAL
-#define TLM_REPORT_INTERVAL               320u
+#define TLM_REPORT_INTERVAL               300u
 #endif
 //#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150000u //  250000u
 //#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350000u // 1500000u

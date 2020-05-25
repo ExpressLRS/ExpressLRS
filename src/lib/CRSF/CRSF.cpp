@@ -15,7 +15,6 @@ uint8_t DMA_ATTR outBuffer[CRSF_EXT_FRAME_SIZE(CRSF_PAYLOAD_SIZE_MAX)];
 
 void CRSF::Begin()
 {
-    CRSFstate = false;
     GoodPktsCount = 0;
     BadPktsCount = 0;
     SerialInPacketStart = 0;

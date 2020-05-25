@@ -25,6 +25,7 @@ void ICACHE_RAM_ATTR CRSF_TX::CrsfFramePushToFifo(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
     _dev->write(buff, size);
+    platform_wd_feed();
 }
 
 void CRSF_TX::LinkStatisticsSend(void)
@@ -47,7 +48,6 @@ void CRSF_TX::LinkStatisticsProcess(void)
     memcpy(&outBuffer[3], (void *)&LinkStatistics, LinkStatisticsFrameLength);
 
     CrsfFramePushToFifo(outBuffer, len);
-    platform_wd_feed();
 }
 
 void CRSF_TX::sendLUAresponseToRadio(uint8_t *data, uint8_t size)
@@ -75,12 +75,11 @@ void CRSF_TX::LuaResponseProcess(void)
         outBuffer[5 + i] = lua_buff[i];
 
     CrsfFramePushToFifo(outBuffer, len);
-    platform_wd_feed();
 }
 
 void CRSF_TX::sendMspPacketToRadio(mspPacket_t &msp)
 {
-    if (!CRSFstate)
+    if (!p_RadioConnected)
         return;
 
     uint8_t msp_len = CRSF_MSP_FRAME_SIZE(msp.payloadSize);
@@ -109,7 +108,6 @@ void CRSF_TX::sendMspPacketToRadio(mspPacket_t &msp)
     }
 
     CrsfFramePushToFifo(outBuffer, len);
-    platform_wd_feed();
 }
 
 void CRSF_TX::BatterySensorSend(void)
@@ -139,25 +137,26 @@ void CRSF_TX::BatteryStatisticsProcess(void)
     //outBuffer[11] = TLMbattSensor.remaining;
 
     CrsfFramePushToFifo(outBuffer, len);
-    platform_wd_feed();
 }
 
 #if (FEATURE_OPENTX_SYNC)
-void CRSF_TX::sendSyncPacketToRadio() // in values in us.
+void CRSF_TX::sendSyncPacketToRadio()
 {
-    if (RCdataLastRecv && CRSFstate)
+    if (RCdataLastRecv && p_RadioConnected)
     {
         uint32_t current = millis();
+        int32_t offset = (int32_t)(OpenTXsyncOffset - RequestedRCpacketAdvance);
 
-        if (OpenTXsyncPakcetInterval <= (current - OpenTXsynNextSend))
+        // Adjust radio timing if not in requested window or not sent within 200ms
+        if ((100 < offset) || // too early
+            (-50 > offset) || // too late
+            (OpenTXsyncPakcetInterval <= (current - OpenTXsynNextSend)))
         {
             OpenTXsynNextSend = current;
-            platform_wd_feed();
 
             uint32_t packetRate = RequestedRCpacketInterval;
             packetRate *= 10; //convert from us to right format
 
-            int32_t offset = OpenTXsyncOffset - RequestedRCpacketAdvance;
             offset *= 10;
 
             uint8_t len = CRSF_EXT_FRAME_SIZE(OpenTXsyncFrameLength);
@@ -188,9 +187,9 @@ void CRSF_TX::sendSyncPacketToRadio() // in values in us.
 
 void CRSF_TX::processPacket(uint8_t const *input)
 {
-    if (CRSFstate == false)
+    if (p_RadioConnected == false)
     {
-        CRSFstate = true;
+        p_RadioConnected = true;
 #if (FEATURE_OPENTX_SYNC)
         RCdataLastRecv = 0;
         OpenTXsynNextSend = millis(); //+60;
@@ -277,11 +276,11 @@ void CRSF_TX::uart_wdt(void)
 
         if (BadPktsCount >= GoodPktsCount)
         {
-            if (CRSFstate == true)
+            if (p_RadioConnected == true)
             {
                 DEBUG_PRINT("CRSF UART Disconnect. ");
                 disconnected();
-                CRSFstate = false;
+                p_RadioConnected = false;
 #if (FEATURE_OPENTX_SYNC)
                 OpenTXsynNextSend = 0;
                 OpenTXsyncOffset = 0;

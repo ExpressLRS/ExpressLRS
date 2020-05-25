@@ -220,8 +220,6 @@ public:
     volatile crsfPayloadLinkstatistics_s LinkStatistics = {0}; // Link Statisitics Stored as Struct
     volatile crsf_sensor_battery_s TLMbattSensor = {0};
 
-    volatile bool CRSFstate = false; // connected staet
-
 protected:
     uint8_t *HandleUartIn(uint8_t inChar);
     virtual void LinkStatisticsSend(void) = 0;

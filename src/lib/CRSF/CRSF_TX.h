@@ -42,6 +42,7 @@ public:
 
 private:
     bool p_slowBaudrate = false;
+    volatile bool p_RadioConnected = false; // connected staet
 
     void uart_wdt(void);
     void processPacket(uint8_t const *input);
@@ -52,7 +53,7 @@ private:
 
 #if (FEATURE_OPENTX_SYNC)
 
-#define OpenTXsyncPakcetInterval 100 // in ms
+#define OpenTXsyncPakcetInterval 200 // in ms
 #define RequestedRCpacketAdvance 500 // 800 timing adcance in us
 
     volatile uint32_t RCdataLastRecv = 0;
