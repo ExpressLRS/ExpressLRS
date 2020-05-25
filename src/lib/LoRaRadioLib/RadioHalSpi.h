@@ -1,15 +1,15 @@
-#ifndef LoRa_lowlevel
-#define LoRa_lowlevel
+#ifndef RADIO_HAL_SPI_H_
+#define RADIO_HAL_SPI_H_
 
 #include "platform.h"
+#include "HwSpi.h"
 #include <stdint.h>
 
-class LoRaSpi {
+class RadioHalSpi {
 public:
-    LoRaSpi(uint8_t read, uint8_t write) {
-        p_read = read;
-        p_write = write;
-    }
+    RadioHalSpi(HwSpi &spi, uint8_t read, uint8_t write)
+            : spi_bus(spi), p_write(write), p_read(read) {}
+
 protected:
     void Begin(void);
 
@@ -20,12 +20,13 @@ protected:
     uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg) const;
     void ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb = 7, uint8_t lsb = 0) const;
 
-    void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t numBytes) const;
+    void ICACHE_RAM_ATTR writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes) const;
     void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data) const;
 
 private:
-    uint8_t p_write = 0;
-    uint8_t p_read = 0;
+    HwSpi &spi_bus;
+    const uint8_t p_write = 0;
+    const uint8_t p_read = 0;
 };
 
-#endif
+#endif /* RADIO_HAL_SPI_H_ */

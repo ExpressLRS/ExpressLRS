@@ -23,6 +23,7 @@ void ICACHE_RAM_ATTR LostConnection();
 
 ///////////////////
 
+SX127xDriver Radio(RadioSpi);
 CRSF_RX crsf(CrsfSerial); //pass a serial port object to the class for it to use
 RcChannels rc_ch;
 

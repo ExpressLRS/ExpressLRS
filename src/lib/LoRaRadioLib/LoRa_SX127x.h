@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platform.h"
-#include "LoRa_lowlevel.h"
+#include "RadioHalSpi.h"
 #include <stdint.h>
 
 typedef enum
@@ -48,10 +48,10 @@ typedef enum
 #define SX127X_SYNC_WORD          0xC8  //  200 - default ExpressLRS sync word - 200Hz
 #define SX127X_SYNC_WORD_LORAWAN  0x34  //  52  - sync word reserved for LoRaWAN networks
 
-class SX127xDriver: public LoRaSpi
+class SX127xDriver: public RadioHalSpi
 {
 public:
-    SX127xDriver(int rst = -1, int dio0 = -1, int dio1 = -1, int txpin = -1, int rxpin = -1);
+    SX127xDriver(HwSpi &spi, int rst = -1, int dio0 = -1, int dio1 = -1, int txpin = -1, int rxpin = -1);
 
     ///////Callback Function Pointers/////
     static void rx_nullCallback(uint8_t *){};

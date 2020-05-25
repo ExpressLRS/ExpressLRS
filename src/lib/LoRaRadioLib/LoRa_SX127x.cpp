@@ -44,8 +44,8 @@ static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio1(void)
 
 //////////////////////////////////////////////
 
-SX127xDriver::SX127xDriver(int rst, int dio0, int dio1, int txpin, int rxpin):
-    LoRaSpi(SX127X_SPI_READ, SX127X_SPI_WRITE)
+SX127xDriver::SX127xDriver(HwSpi &spi, int rst, int dio0, int dio1, int txpin, int rxpin):
+    RadioHalSpi(spi, SX127X_SPI_READ, SX127X_SPI_WRITE)
 {
     _RXenablePin = rxpin;
     _TXenablePin = txpin;
@@ -58,11 +58,10 @@ SX127xDriver::SX127xDriver(int rst, int dio0, int dio1, int txpin, int rxpin):
 
     currBW = BW_500_00_KHZ;
     currSF = SF_6;
-    currCR = CR_4_7;
+    currCR = CR_4_5;
     _syncWord = SX127X_SYNC_WORD;
-    currFreq = 123456789;
-    currPWR = 0xf0; // define to max for forced init. was: 0b0000;
-    //maxPWR = 0b1111;
+    currFreq = 0;
+    currPWR = (SX127X_PA_SELECT_BOOST + SX127X_MAX_OUTPUT_POWER); // define to max for forced init.
 
     //LastPacketIsrMicros = 0;
     LastPacketRSSI = LastPacketRssiRaw = 0;
@@ -115,7 +114,7 @@ uint8_t SX127xDriver::Begin(int txpin, int rxpin)
     }
 
     // initialize low-level drivers
-    LoRaSpi::Begin();
+    RadioHalSpi::Begin();
 
     status = CheckChipVersion();
     if (status != ERR_NONE)
@@ -156,16 +155,17 @@ void SX127xDriver::SetPreambleLength(uint16_t PreambleLen)
 {
     if (PreambleLen < 6)
         PreambleLen = 6;
-    //SetMode(SX127X_SLEEP); // needed??
+    SetMode(SX127X_SLEEP);
     uint8_t len[2] = {(uint8_t)(PreambleLen >> 16), (uint8_t)(PreambleLen & 0xff)};
-    writeRegisterBurstStr(SX127X_REG_PREAMBLE_MSB, len, sizeof(len));
-    //SetMode(SX127X_STANDBY);
+    writeRegisterBurst(SX127X_REG_PREAMBLE_MSB, len, sizeof(len));
+    SetMode(SX127X_STANDBY);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
 {
+    // TODO: Take this into use if ok!!
     //if (freq == currFreq)
-    //    return ERR_NONE;
+    //    return;
 
     if (mode != 0xff)
         SetMode(SX127X_SLEEP);
@@ -183,7 +183,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequency(uint32_t freq, uint8_t mode)
         (uint8_t)(frf >> 0),
     };
 #endif
-    writeRegisterBurstStr(SX127X_REG_FRF_MSB, buff, sizeof(buff));
+    writeRegisterBurst(SX127X_REG_FRF_MSB, buff, sizeof(buff));
     currFreq = freq;
 
     if (mode != 0xff && mode != SX127X_SLEEP)
@@ -262,7 +262,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::TX(uint8_t *data, uint8_t length)
     writeRegister(SX127X_REG_PAYLOAD_LENGTH, length);
     writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
     writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-    writeRegisterBurstStr((uint8_t)SX127X_REG_FIFO, data, (uint8_t)length);
+    writeRegisterBurst((uint8_t)SX127X_REG_FIFO, data, (uint8_t)length);
 
     reg_dio1_isr_mask_write(SX127X_DIO0_TX_DONE);
 
@@ -320,8 +320,8 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(const uint8_t *data, uint8_t length, uin
         p_last_payload_len = length;
     }
     uint8_t cfg[2] = {SX127X_FIFO_TX_BASE_ADDR_MAX, SX127X_FIFO_TX_BASE_ADDR_MAX};
-    writeRegisterBurstStr(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
-    writeRegisterBurstStr(SX127X_REG_FIFO, (uint8_t *)data, length);
+    writeRegisterBurst(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
+    writeRegisterBurst(SX127X_REG_FIFO, (uint8_t *)data, length);
 
     reg_dio1_isr_mask_write(SX127X_DIO0_TX_DONE);
 
@@ -385,7 +385,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb(uint32_t freq)
     //uint8_t WORD_ALIGNED_ATTR cfg[3] = {SX127X_FIFO_RX_BASE_ADDR_MAX,
     //                                    SX127X_FIFO_TX_BASE_ADDR_MAX,
     //                                    SX127X_FIFO_RX_BASE_ADDR_MAX};
-    writeRegisterBurstStr(SX127X_REG_FIFO_ADDR_PTR, (uint8_t *)&cfg, 3);
+    writeRegisterBurst(SX127X_REG_FIFO_ADDR_PTR, (uint8_t *)&cfg, 3);
 
     reg_dio1_isr_mask_write(SX127X_DIO0_RX_DONE);
 
@@ -405,7 +405,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length, ui
     uint8_t WORD_ALIGNED_ATTR cfg[3] = {SX127X_FIFO_RX_BASE_ADDR_MAX,
                                         SX127X_FIFO_TX_BASE_ADDR_MAX,
                                         SX127X_FIFO_RX_BASE_ADDR_MAX};
-    writeRegisterBurstStr(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
+    writeRegisterBurst(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
 
     SetMode(SX127X_RXSINGLE);
 
@@ -436,7 +436,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RXsingle(uint8_t *data, uint8_t length)
     uint8_t WORD_ALIGNED_ATTR cfg[3] = {SX127X_FIFO_RX_BASE_ADDR_MAX,
                                         SX127X_FIFO_TX_BASE_ADDR_MAX,
                                         SX127X_FIFO_RX_BASE_ADDR_MAX};
-    writeRegisterBurstStr(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
+    writeRegisterBurst(SX127X_REG_FIFO_ADDR_PTR, cfg, sizeof(cfg));
 
     reg_dio1_isr_mask_write(SX127X_DIO0_RX_DONE);
 
@@ -735,7 +735,7 @@ void SX127xDriver::SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t fre
     {
         reg |= SX127X_LOW_DATA_RATE_OPT_OFF;
     }
-    setRegValue(SX127X_REG_MODEM_CONFIG_3, reg, 3, 2);
+    writeRegister(SX127X_REG_MODEM_CONFIG_3, reg);
 
     reg = bw | cr;
     if (headerExplMode == false)
@@ -900,7 +900,7 @@ void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_isr_mask_write(uint8_t mask)
 {
     // write mask and clear irqs
     uint8_t cfg[2] = {mask, 0xff};
-    writeRegisterBurstStr(SX127X_REG_IRQ_FLAGS_MASK, cfg, sizeof(cfg));
+    writeRegisterBurst(SX127X_REG_IRQ_FLAGS_MASK, cfg, sizeof(cfg));
 
     /*if (p_isr_mask != mask)
     {
@@ -908,5 +908,3 @@ void ICACHE_RAM_ATTR SX127xDriver::reg_dio1_isr_mask_write(uint8_t mask)
         p_isr_mask = mask;
     }*/
 }
-
-SX127xDriver Radio;

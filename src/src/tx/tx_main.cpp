@@ -27,6 +27,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 ///////////////////
 
 /// define some libs to use ///
+SX127xDriver Radio(RadioSpi);
 CRSF_TX crsf(CrsfSerial);
 RcChannels rc_ch;
 POWERMGNT PowerMgmt(Radio);
