@@ -1,3 +1,6 @@
+#ifndef LORA_SX127X_REGS_H_
+#define LORA_SX127X_REGS_H_
+
 // SX127x series common registers
 #define SX127X_REG_FIFO                               0x00
 #define SX127X_REG_OP_MODE                            0x01
@@ -33,6 +36,8 @@
 #define SX127X_REG_MAX_PAYLOAD_LENGTH                 0x23
 #define SX127X_REG_HOP_PERIOD                         0x24
 #define SX127X_REG_FIFO_RX_BYTE_ADDR                  0x25
+#define SX127X_REG_MODEM_CONFIG_3                     0x26
+#define SX127x_REG_PPMOFFSET                          0x27
 #define SX127X_REG_FEI_MSB                            0x28
 #define SX127X_REG_FEI_MID                            0x29
 #define SX127X_REG_FEI_LSB                            0x2A
@@ -44,6 +49,13 @@
 #define SX127X_REG_DIO_MAPPING_1                      0x40
 #define SX127X_REG_DIO_MAPPING_2                      0x41
 #define SX127X_REG_VERSION                            0x42
+#define SX127X_REG_TCXO                               0x4B
+#define SX127X_REG_PA_DAC                             0x4D
+#define SX127X_REG_AGC_REF                            0x61
+#define SX127X_REG_AGC_THRESH_1                       0x62
+#define SX127X_REG_AGC_THRESH_2                       0x63
+#define SX127X_REG_AGC_THRESH_3                       0x64
+#define SX127X_REG_PLL                                0x70
 
 // SX127x common modem settings
 // SX127X_REG_OP_MODE                                                 MSB   LSB   DESCRIPTION
@@ -97,6 +109,12 @@
 #define SX127X_RX_TIMEOUT_MSB                         0b00000000  //  1     0
 #define SX127X_RX_CRC_MODE_OFF                        0b00000000 //  2     2     CRC disabled
 #define SX127X_RX_CRC_MODE_ON                         0b00000100  //  2     2     CRC enabled
+
+//SX127X_REG_MODEM_CONFIG_3
+#define SX127X_LOW_DATA_RATE_OPT_OFF                  0b00000000  //  3     3     low data rate optimization disabled
+#define SX127X_LOW_DATA_RATE_OPT_ON                   0b00001000  //  3     3     low data rate optimization enabled
+#define SX127X_AGC_AUTO_OFF                           0b00000000  //  2     2     LNA gain set by REG_LNA
+#define SX127X_AGC_AUTO_ON                            0b00000100  //  2     2     LNA gain set by internal AGC loop
 
 // SX127X_REG_SYMB_TIMEOUT_LSB
 #define SX127X_RX_TIMEOUT_LSB                         0b01100100  //  7     0     10 bit RX operation timeout
@@ -156,101 +174,35 @@
 // SX127X_REG_FIFO_RX_BASE_ADDR
 #define SX127X_FIFO_RX_BASE_ADDR_MAX                  0b00000000  //  7     0     allocate the entire FIFO buffer for RX only
 
-// SX127X_REG_SYNC_WORD
-#define SX127X_SYNC_WORD                              0xC8        //  200   0     default ExpressLRS sync word - 200Hz
-// #define SX127X_SYNC_WORD                              0x12        //  18    0     default LoRa sync word
-#define SX127X_SYNC_WORD_LORAWAN                      0x34        //  52    0     sync word reserved for LoRaWAN networks
-
-///Added by Sandro
-#define SX127x_TXCONTINUOUSMODE_MASK     0xF7
-#define SX127x_TXCONTINUOUSMODE_ON       0x08
-#define SX127x_TXCONTINUOUSMODE_OFF      0x00
-#define SX127x_PPMOFFSET                 0x27
-
+//SX127x_REG_MODEM_CONFIG_1
+#define SX127X_BW_7_80_KHZ                            0b00000000  //  7     4     bandwidth:  7.80 kHz
+#define SX127X_BW_10_40_KHZ                           0b00010000  //  7     4                 10.40 kHz
+#define SX127X_BW_15_60_KHZ                           0b00100000  //  7     4                 15.60 kHz
+#define SX127X_BW_20_80_KHZ                           0b00110000  //  7     4                 20.80 kHz
+#define SX127X_BW_31_25_KHZ                           0b01000000  //  7     4                 31.25 kHz
+#define SX127X_BW_41_70_KHZ                           0b01010000  //  7     4                 41.70 kHz
+#define SX127X_BW_62_50_KHZ                           0b01100000  //  7     4                 62.50 kHz
+#define SX127X_BW_125_00_KHZ                          0b01110000  //  7     4                 125.00 kHz
+#define SX127X_BW_250_00_KHZ                          0b10000000  //  7     4                 250.00 kHz
+#define SX127X_BW_500_00_KHZ                          0b10010000  //  7     4                 500.00 kHz
+#define SX127X_CR_4_5                                 0b00000010  //  3     1     error coding rate:  4/5
+#define SX127X_CR_4_6                                 0b00000100  //  3     1                         4/6
+#define SX127X_CR_4_7                                 0b00000110  //  3     1                         4/7
+#define SX127X_CR_4_8                                 0b00001000  //  3     1                         4/8
+#define SX127X_HEADER_EXPL_MODE                       0b00000000  //  0     0     explicit header mode
+#define SX127X_HEADER_IMPL_MODE                       0b00000001  //  0     0     implicit header mode
 
 
 /*****************************************************************
  * SX1278 SPECIFIC
  *****************************************************************/
 //SX1278 specific register map
-#define SX1278_REG_MODEM_CONFIG_3                     0x26
-#define SX1278_REG_TCXO                               0x4B
-#define SX1278_REG_PA_DAC                             0x4D
 #define SX1278_REG_FORMER_TEMP                        0x5D
-#define SX1278_REG_AGC_REF                            0x61
-#define SX1278_REG_AGC_THRESH_1                       0x62
-#define SX1278_REG_AGC_THRESH_2                       0x63
-#define SX1278_REG_AGC_THRESH_3                       0x64
-#define SX1278_REG_PLL                                0x70
-
-//SX1278 LoRa modem settings
-//SX1278_REG_OP_MODE                                                  MSB   LSB   DESCRIPTION
-#define SX1278_HIGH_FREQ                              0b00000000  //  3     3     access HF test registers
-#define SX1278_LOW_FREQ                               0b00001000  //  3     3     access LF test registers
-
-//SX1278_REG_FRF_MSB + REG_FRF_MID + REG_FRF_LSB
-#define SX1278_FRF_MSB                                0x6C        //  7     0     carrier frequency setting: f_RF = (F(XOSC) * FRF)/2^19
-#define SX1278_FRF_MID                                0x80        //  7     0         where F(XOSC) = 32 MHz
-#define SX1278_FRF_LSB                                0x00        //  7     0               FRF = 3 byte value of FRF registers
-
-//SX1278_REG_PA_CONFIG
-#define SX1278_MAX_POWER                              0b01110000  //  6     4     max power: P_max = 10.8 + 0.6*MAX_POWER [dBm]; P_max(MAX_POWER = 0b111) = 15 dBm
-//#define SX1278_MAX_POWER                              0b00010000  //  6     4     changed
-
-//SX1278_REG_LNA
-#define SX1278_LNA_BOOST_LF_OFF                       0b00000000  //  4     3     default LNA current
-
-//SX1278_REG_MODEM_CONFIG_1
-#define SX1278_BW_7_80_KHZ                            0b00000000  //  7     4     bandwidth:  7.80 kHz
-#define SX1278_BW_10_40_KHZ                           0b00010000  //  7     4                 10.40 kHz
-#define SX1278_BW_15_60_KHZ                           0b00100000  //  7     4                 15.60 kHz
-#define SX1278_BW_20_80_KHZ                           0b00110000  //  7     4                 20.80 kHz
-#define SX1278_BW_31_25_KHZ                           0b01000000  //  7     4                 31.25 kHz
-#define SX1278_BW_41_70_KHZ                           0b01010000  //  7     4                 41.70 kHz
-#define SX1278_BW_62_50_KHZ                           0b01100000  //  7     4                 62.50 kHz
-#define SX1278_BW_125_00_KHZ                          0b01110000  //  7     4                 125.00 kHz
-#define SX1278_BW_250_00_KHZ                          0b10000000  //  7     4                 250.00 kHz
-#define SX1278_BW_500_00_KHZ                          0b10010000  //  7     4                 500.00 kHz
-#define SX1278_CR_4_5                                 0b00000010  //  3     1     error coding rate:  4/5
-#define SX1278_CR_4_6                                 0b00000100  //  3     1                         4/6
-#define SX1278_CR_4_7                                 0b00000110  //  3     1                         4/7
-#define SX1278_CR_4_8                                 0b00001000  //  3     1                         4/8
-#define SX1278_HEADER_EXPL_MODE                       0b00000000  //  0     0     explicit header mode
-#define SX1278_HEADER_IMPL_MODE                       0b00000001  //  0     0     implicit header mode
-
-//SX1278_REG_MODEM_CONFIG_2
-
-//SX1278_REG_MODEM_CONFIG_3
-#define SX1278_LOW_DATA_RATE_OPT_OFF                  0b00000000  //  3     3     low data rate optimization disabled
-#define SX1278_LOW_DATA_RATE_OPT_ON                   0b00001000  //  3     3     low data rate optimization enabled
-#define SX1278_AGC_AUTO_OFF                           0b00000000  //  2     2     LNA gain set by REG_LNA
-#define SX1278_AGC_AUTO_ON                            0b00000100  //  2     2     LNA gain set by internal AGC loop
-
-
 
 
 /*****************************************************************
- * SX1276 SPECIFIC
+ * GENERIC
  *****************************************************************/
-//The below values were cut and paste from SX1278 values, they should be the same but just take note.
-//SX1276_REG_MODEM_CONFIG_1
-#define SX1276_BW_7_80_KHZ                            0b00000000  //  7     4     bandwidth:  7.80 kHz
-#define SX1276_BW_10_40_KHZ                           0b00010000  //  7     4                 10.40 kHz
-#define SX1276_BW_15_60_KHZ                           0b00100000  //  7     4                 15.60 kHz
-#define SX1276_BW_20_80_KHZ                           0b00110000  //  7     4                 20.80 kHz
-#define SX1276_BW_31_25_KHZ                           0b01000000  //  7     4                 31.25 kHz
-#define SX1276_BW_41_70_KHZ                           0b01010000  //  7     4                 41.70 kHz
-#define SX1276_BW_62_50_KHZ                           0b01100000  //  7     4                 62.50 kHz
-#define SX1276_BW_125_00_KHZ                          0b01110000  //  7     4                 125.00 kHz
-#define SX1276_BW_250_00_KHZ                          0b10000000  //  7     4                 250.00 kHz
-#define SX1276_BW_500_00_KHZ                          0b10010000  //  7     4                 500.00 kHz
-#define SX1276_CR_4_5                                 0b00000010  //  3     1     error coding rate:  4/5
-#define SX1276_CR_4_6                                 0b00000100  //  3     1                         4/6
-#define SX1276_CR_4_7                                 0b00000110  //  3     1                         4/7
-#define SX1276_CR_4_8                                 0b00001000  //  3     1                         4/8
-#define SX1276_HEADER_EXPL_MODE                       0b00000000  //  0     0     explicit header mode
-#define SX1276_HEADER_IMPL_MODE                       0b00000001  //  0     0     implicit header mode
-
 
 #define ERR_NONE                        0x00
 #define ERR_CHIP_NOT_FOUND              0x01
@@ -272,5 +224,7 @@
 #define CHANNEL_FREE                    0x50
 #define PREAMBLE_DETECTED               0x51
 
-#define SPI_READ  0b00000000
-#define SPI_WRITE 0b10000000
+#define SX127X_SPI_READ  0b00000000
+#define SX127X_SPI_WRITE 0b10000000
+
+#endif /* LORA_SX127X_REGS_H_ */

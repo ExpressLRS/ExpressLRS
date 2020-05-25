@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platform.h"
-#include "LoRa_SX127x_Regs.h"
+#include "LoRa_lowlevel.h"
 #include <stdint.h>
 
 typedef enum
@@ -45,7 +45,10 @@ typedef enum
 
 #define RX_BUFFER_LEN (8)
 
-class SX127xDriver
+#define SX127X_SYNC_WORD          0xC8  //  200 - default ExpressLRS sync word - 200Hz
+#define SX127X_SYNC_WORD_LORAWAN  0x34  //  52  - sync word reserved for LoRaWAN networks
+
+class SX127xDriver: public LoRaSpi
 {
 public:
     SX127xDriver(int rst = -1, int dio0 = -1, int dio1 = -1, int txpin = -1, int rxpin = -1);
@@ -95,26 +98,17 @@ public:
     void SetPins(int rst, int dio0, int dio1);
     uint8_t Begin(int txpin = -1, int rxpin = -1);
     uint8_t Config(Bandwidth bw, SpreadingFactor sf, CodingRate cr, uint32_t freq = 0, uint8_t syncWord = 0);
-    // Don't call SX127xConfig directly from app! use Config instead
-    uint8_t SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
 
-    uint8_t SetBandwidth(Bandwidth bw);
-    uint32_t getCurrBandwidth();
+    uint32_t getCurrBandwidth() const;
     uint8_t SetSyncWord(uint8_t syncWord);
-    uint8_t SetOutputPower(uint8_t Power);
-    uint8_t SetPreambleLength(uint16_t PreambleLen);
-    uint8_t SetSpreadingFactor(SpreadingFactor sf);
-    uint8_t SetCodingRate(CodingRate cr);
-    uint8_t ICACHE_RAM_ATTR SetFrequency(uint32_t freq, uint8_t mode = SX127X_STANDBY);
+    void SetOutputPower(uint8_t Power);
+    void SetPreambleLength(uint16_t PreambleLen);
+    void ICACHE_RAM_ATTR SetFrequency(uint32_t freq, uint8_t mode);
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
     void ICACHE_RAM_ATTR setPPMoffsetReg(int32_t error_hz, uint32_t frf = 0);
 
-    uint8_t SX127xBegin();
-    uint8_t SetMode(uint8_t mode);
-
     /////////////////Utility Funcitons//////////////////
     int16_t MeasureNoiseFloor(uint32_t num_meas, uint32_t freq);
-    void ICACHE_RAM_ATTR ClearIRQFlags();
 
     //////////////TX related Functions/////////////////
     uint8_t ICACHE_RAM_ATTR TX(uint8_t *data, uint8_t length);
@@ -144,6 +138,11 @@ private:
     volatile uint8_t p_ppm_off = 0;
     //volatile uint8_t p_isr_mask = 0;
     volatile uint8_t p_last_payload_len = 0;
+
+    uint8_t CheckChipVersion();
+    void SX127xConfig(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t syncWord);
+    void ICACHE_RAM_ATTR SetMode(uint8_t mode);
+    void ICACHE_RAM_ATTR ClearIRQFlags();
 
     inline __attribute__((always_inline)) void ICACHE_RAM_ATTR _change_mode_val(uint8_t mode);
     void ICACHE_RAM_ATTR reg_op_mode_mode_lora(void);

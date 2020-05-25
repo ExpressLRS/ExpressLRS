@@ -1,14 +1,12 @@
 #include "LoRa_lowlevel.h"
-#include "debug.h"
-#include "LoRa_SX127x.h"
 #include "HwSpi.h"
 
-void initModule()
+void LoRaSpi::Begin(void)
 {
     RadioSpi.prepare();
 }
 
-uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
+uint8_t ICACHE_RAM_ATTR LoRaSpi::getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb) const
 {
     uint8_t value = readRegister(reg);
     if ((msb - lsb) < 7)
@@ -18,46 +16,26 @@ uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
     return (value);
 }
 
-uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
+void ICACHE_RAM_ATTR LoRaSpi::readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes) const
 {
     RadioSpi.set_ss(LOW);
-    RadioSpi.write((reg | SPI_READ));
+    RadioSpi.write((reg | p_read));
     RadioSpi.transfer(inBytes, numBytes);
     RadioSpi.set_ss(HIGH);
-
-#if (DebugVerbosity >= 4)
-    {
-        DEBUG_PRINT("SPI: Read Burst ");
-        DEBUG_PRINT("REG: ");
-        DEBUG_PRINT(reg);
-        DEBUG_PRINT(" LEN: ");
-        DEBUG_PRINT(numBytes);
-        DEBUG_PRINT(" DATA: ");
-
-        for (int i = 0; i < numBytes; i++)
-        {
-            DEBUG_PRINT(inBytes[i]);
-        }
-
-        DEBUG_PRINTLN();
-    }
-#endif
-
-    return (ERR_NONE);
 }
 
-uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg)
+uint8_t ICACHE_RAM_ATTR LoRaSpi::readRegister(uint8_t reg) const
 {
     uint8_t InByte;
     RadioSpi.set_ss(LOW);
-    RadioSpi.write((reg | SPI_READ));
+    RadioSpi.write((reg | p_read));
     InByte = RadioSpi.transfer(0x00);
     RadioSpi.set_ss(HIGH);
 
     return (InByte);
 }
 
-uint8_t ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb)
+void ICACHE_RAM_ATTR LoRaSpi::setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb) const
 {
     if ((msb - lsb) < 7)
     {
@@ -66,41 +44,20 @@ uint8_t ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uin
         value = (currentValue & ~mask) | (value & mask);
     }
     writeRegister(reg, value);
-    return (ERR_NONE);
 }
 
-void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t numBytes)
+void ICACHE_RAM_ATTR LoRaSpi::writeRegisterBurstStr(uint8_t reg, uint8_t *data, uint8_t numBytes) const
 {
     RadioSpi.set_ss(LOW);
-    RadioSpi.write(reg | SPI_WRITE);
+    RadioSpi.write(reg | p_write);
     RadioSpi.write(data, numBytes);
     RadioSpi.set_ss(HIGH);
 }
 
-/*
-void ICACHE_RAM_ATTR writeRegisterBurstStr(uint8_t reg, const volatile uint8_t *data, uint8_t numBytes)
+void ICACHE_RAM_ATTR LoRaSpi::writeRegister(uint8_t reg, uint8_t data) const
 {
     RadioSpi.set_ss(LOW);
-    RadioSpi.write(reg | SPI_WRITE);
-    RadioSpi.write((uint8_t *)data, numBytes);
-    RadioSpi.set_ss(HIGH);
-}
-*/
-
-void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data)
-{
-    RadioSpi.set_ss(LOW);
-    RadioSpi.write(reg | SPI_WRITE);
+    RadioSpi.write(reg | p_write);
     RadioSpi.write(data);
     RadioSpi.set_ss(HIGH);
-
-#if (0 && DebugVerbosity >= 4)
-    {
-        DEBUG_PRINT("SPI: Write ");
-        DEBUG_PRINT("REG: ");
-        DEBUG_PRINT(reg, HEX);
-        DEBUG_PRINT(" VAL: ");
-        DEBUG_PRINTLN(data, HEX);
-    }
-#endif
 }
