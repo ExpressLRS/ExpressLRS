@@ -28,7 +28,7 @@ const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate)
 {
     if (RATE_MAX <= rate)
-        rate = (RATE_MAX - 1);
+        return NULL;
     return &ExpressLRS_AirRateConfig[rate];
 }
 
@@ -59,37 +59,7 @@ uint8_t getSyncWord(void)
 #endif
 }
 
-uint16_t TLMratioEnumToValue(uint8_t enumval)
+uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
 {
-#if 0
-    switch (enumval)
-    {
-    case TLM_RATIO_1_2:
-        return 2;
-        break;
-    case TLM_RATIO_1_4:
-        return 4;
-        break;
-    case TLM_RATIO_1_8:
-        return 8;
-        break;
-    case TLM_RATIO_1_16:
-        return 16;
-        break;
-    case TLM_RATIO_1_32:
-        return 32;
-        break;
-    case TLM_RATIO_1_64:
-        return 64;
-        break;
-    case TLM_RATIO_1_128:
-        return 128;
-        break;
-    case TLM_RATIO_NO_TLM:
-    default:
-        return 0xFF;
-    }
-#else
     return (256u >> (enumval));
-#endif
 }

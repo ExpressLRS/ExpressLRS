@@ -58,6 +58,7 @@ static volatile uint32_t RFmodeNextCycle = 0; // set from isr
 static uint32_t RFmodeCycleDelay = 0;
 static volatile uint8_t scanIndex = 0; // set from isr
 static uint8_t tentative_cnt = 0;
+static volatile uint32_t updatedAirRate = RATE_MAX;
 
 ///////////////////////////////////////
 
@@ -386,10 +387,11 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                     crsf.sendRCFrameToFC();
                 }
 
-#if 0
-                if (ExpressLRS_currAirRate->enum_rate != sync->air_rate)
-                    SetRFLinkRate(sync->air_rate);
-#endif
+                if (current_rate_config != sync->air_rate)
+                {
+                    updatedAirRate = sync->air_rate;
+                }
+
                 handle_tlm_ratio(sync->tlm_interval);
                 FHSSsetCurrIndex(sync->fhssIndex);
                 NonceRXlocal = sync->rxtx_counter;
@@ -464,7 +466,7 @@ void forced_stop(void)
 static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
 {
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
-    if (config == ExpressLRS_currAirRate)
+    if (config == NULL || config == ExpressLRS_currAirRate)
         return; // No need to modify, rate is same
 
     // Stop ongoing actions before configuring next rate
@@ -472,6 +474,7 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     Radio.StopContRX();
 
     ExpressLRS_currAirRate = config;
+    current_rate_config = rate;
 
     DEBUG_PRINT("Set RF rate: ");
     DEBUG_PRINTLN(config->rate);
@@ -482,8 +485,8 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     FHSSresetFreqCorrection();
     FHSSsetCurrIndex(0);
 
-    RFmodeCycleDelay = ExpressLRS_currAirRate->syncSearchTimeout +
-                       ExpressLRS_currAirRate->connectionLostTimeout;
+    RFmodeCycleDelay = config->syncSearchTimeout +
+                       config->connectionLostTimeout;
 
     handle_tlm_ratio(config->TLMinterval);
 
@@ -575,6 +578,16 @@ void loop()
 {
     uint32_t now = millis();
     uint8_t rx_buffer_handle = 0;
+
+    /* update air rate config, timed to FHSS index 0 */
+    if (updatedAirRate < RATE_MAX && updatedAirRate != current_rate_config /*&& FHSSgetCurrIndex() == 0*/)
+    {
+        connectionState = STATE_disconnected; // Force resync
+        SetRFLinkRate(updatedAirRate); // configure air rate
+        RFmodeNextCycle = now;
+        updatedAirRate = RATE_MAX;
+        return;
+    }
 
     if (connectionState == STATE_disconnected)
     {

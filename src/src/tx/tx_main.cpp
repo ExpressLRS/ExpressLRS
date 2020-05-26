@@ -349,7 +349,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
     // TODO: Protect this by disabling timer/isr...
 
     const expresslrs_mod_settings_s *const config = get_elrs_airRateConfig(rate);
-    if (config == ExpressLRS_currAirRate)
+    if (config == NULL || config == ExpressLRS_currAirRate)
         return 0; // No need to modify, rate is same
 
     if (!init)
