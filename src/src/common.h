@@ -36,6 +36,8 @@ typedef enum
 
 typedef enum
 {
+    bad_sync_retry = 4,
+    bad_sync = 3,
     connected = 2,
     tentative = 1,
     disconnected = 0
@@ -81,15 +83,17 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint16_t RFmodeCycleAddtionalTime;
     uint16_t RFmodeCycleInterval;
+    uint16_t RFmodeCycleAddtionalTime;
+
 } expresslrs_mod_settings_t;
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
 
-//extern const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
+extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+extern bool ExpressLRS_AirRateNeedsUpdate;
 
 extern int8_t ExpressLRS_currPower;
 extern int8_t ExpressLRS_prevPower;
@@ -97,4 +101,4 @@ extern int8_t ExpressLRS_prevPower;
 int16_t MeasureNoiseFloor();        //--todo, move this to radio lib
 int16_t MeasureRSSI(int FHSSindex); //--todo, move this to radio lib
 
-uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
+uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);

@@ -32,8 +32,8 @@ public:
     const uint8_t TXbuffLen = TXRXBuffSize; //TODO might not always be const
     const uint8_t RXbuffLen = TXRXBuffSize;
 
-    static WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    static WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
+    static volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
+    static volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     bool headerExplMode = false;
     bool crcEnabled = false;
@@ -48,13 +48,13 @@ public:
 #define defaultOpmode SX127x_OPMODE_SLEEP
 
     //// Parameters ////
-    uint32_t currFreq = 0; // leave as 0 to ensure that it gets set 
-    uint8_t currSyncWord = 0;
-    uint8_t currPreambleLen = 8;
+    uint32_t currFreq = 0; // leave as 0 to ensure that it gets set
+    uint8_t currSyncWord = SX127X_SYNC_WORD;
+    uint8_t currPreambleLen = 0;
     SX127x_Bandwidth currBW = SX127x_BW_125_00_KHZ; //default values from datasheet
     SX127x_SpreadingFactor currSF = SX127x_SF_7;
     SX127x_CodingRate currCR = SX127x_CR_4_5;
-    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_STANDBY;
+    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
     uint8_t currPWR = 0b0000;
 
     ///////////////////////////////////
@@ -75,9 +75,9 @@ public:
 
     ////////////////Configuration Functions/////////////
     void Begin();
-    uint8_t DetectChip();
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t syncWord);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr);
+    void DetectChip();
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint8_t preambleLen);
     void SetMode(SX127x_RadioOPmodes mode);
     void ConfigLoraDefaults();
 
@@ -99,7 +99,7 @@ public:
     ////////////////////////////////////////////////////
 
     /////////////////Utility Funcitons//////////////////
-    void ClearIRQFlags();
+    void ICACHE_RAM_ATTR ClearIRQFlags();
 
     //////////////RX related Functions/////////////////
 
@@ -110,9 +110,9 @@ public:
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
     int8_t ICACHE_RAM_ATTR GetCurrRSSI();
 
-    static void nullCallback(void);
+    static void inline nullCallback(void);
     ////////////Non-blocking TX related Functions/////////////////
-    static void ICACHE_RAM_ATTR TXnb(uint8_t *data, uint8_t length);
+    static void ICACHE_RAM_ATTR TXnb(uint8_t volatile *data, uint8_t length);
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
     /////////////Non-blocking RX related Functions///////////////
     static void ICACHE_RAM_ATTR RXnb();

@@ -32,12 +32,12 @@ R9DAC R9DAC;
 #endif
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 1500 // After 1500ms of no TLM response consider that slave has lost connection
+#define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500
 #define RF_MODE_CYCLE_INTERVAL 1000
 #define MSP_PACKET_SEND_INTERVAL 200
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 1000 // how often to send the switch data packet (ms) when there is no response from RX
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 2500 // how often to send the switch data packet (ms) when there we have a connection
+//#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 500 // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
+#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 5000 // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 String DebugOutput;
 
@@ -111,13 +111,17 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   if (packetAddr != DeviceAddr)
   {
+    #ifndef DEBUG_SUPPRESS
     Serial.println("TLM device address error");
+    #endif
     return;
   }
 
   if ((inCRC != calculatedCRC))
   {
+    #ifndef DEBUG_SUPPRESS
     Serial.println("TLM crc error");
+    #endif
     return;
   }
 
@@ -125,8 +129,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   if (type != TLM_PACKET)
   {
+    #ifndef DEBUG_SUPPRESS
     Serial.println("TLM type error");
     Serial.println(type);
+    #endif
+    return;
   }
 
   isRXconnected = true;
@@ -240,8 +247,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-  Radio.Config(mode->bw, mode->sf, mode->cr);
-  Radio.SetPreambleLength(mode->PreambleLen);
+  Radio.Config(mode->bw, mode->sf, mode->cr, mode->PreambleLen);
   hwTimer.updateInterval(mode->interval);
   ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
   ExpressLRS_currAirRate = mode;
@@ -353,17 +359,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-  if (isRXconnected)
-  {
-    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
-  }
-  else
-  {
-    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
-  }
+  //if (isRXconnected)
+  //{
+  //  SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
+ // }
+  //else
+ //{
+    //SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
+  //}
 
-  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq())) || ChangeAirRateRequested) //only send sync when its time and only on channel 0;
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))
+  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
+  if ((millis() > ((SyncPacketLastSent + SYNC_PACKET_SEND_INTERVAL_RX_CONN)) && (Radio.currFreq == GetInitialFreq())) || ((isRXconnected == false) && (Radio.currFreq == GetInitialFreq())))
+  //if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((Radio.NonceTX) % ExpressLRS_currAirRate->FHSShopInterval == 0))
   {
 
     GenerateSyncPacketData();
@@ -607,7 +614,7 @@ void setup()
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
   POWERMGNT.defaultPower();
-  
+
   crsf.Begin();
   SetRFLinkRate(RATE_200HZ);
 
@@ -616,6 +623,8 @@ void setup()
 
 void loop()
 {
+  //Serial.print("Headroom: ");
+  //Serial.println(Radio.HeadRoom);
 
 #ifdef FEATURE_OPENTX_SYNC
   //Serial.println(crsf.OpenTXsyncOffset);

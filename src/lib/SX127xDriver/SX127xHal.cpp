@@ -2,7 +2,7 @@
 
 SX127xHal *SX127xHal::instance = NULL;
 
-void ICACHE_RAM_ATTR SX127xHal::nullCallback(void){};
+void inline SX127xHal::nullCallback(void) { return; };
 void (*SX127xHal::TXdoneCallback)() = &nullCallback;
 void (*SX127xHal::RXdoneCallback)() = &nullCallback;
 
@@ -56,8 +56,6 @@ void SX127xHal::init()
   delay(100);
   digitalWrite(GPIO_PIN_RST, 1);
   delay(100);
-
-  attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)
@@ -124,6 +122,48 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::setRegValue(uint8_t reg, uint8_t value, uint8
   return (ERR_NONE);
 }
 
+void ICACHE_RAM_ATTR SX127xHal::writeRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
+{
+  uint8_t localbuf[numBytes];
+
+  for (int i = 0; i < numBytes; i++) // todo check if this is the right want to handle volatiles
+  {
+    localbuf[i] = data[i];
+  }
+
+  digitalWrite(GPIO_PIN_NSS, LOW);
+
+#ifdef PLATFORM_STM32
+  SPI.transfer(SX127X_REG_FIFO | SPI_WRITE);
+  SPI.transfer(localbuf, numBytes);
+#else
+  SPI.write(SX127X_REG_FIFO | SPI_WRITE);
+  SPI.writeBytes(localbuf, numBytes);
+#endif
+
+  digitalWrite(GPIO_PIN_NSS, HIGH);
+}
+
+void ICACHE_RAM_ATTR SX127xHal::readRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
+{
+  uint8_t localbuf[numBytes];
+  digitalWrite(GPIO_PIN_NSS, LOW);
+
+#ifdef PLATFORM_STM32
+  SPI.transfer(SX127X_REG_FIFO | SPI_READ);
+#else
+  SPI.write(SX127X_REG_FIFO | SPI_READ);
+#endif
+
+  SPI.transfer(localbuf, numBytes);
+  digitalWrite(GPIO_PIN_NSS, HIGH);
+
+  for (int i = 0; i < numBytes; i++) // todo check if this is the right want to handle volatiles
+  {
+    data[i] = localbuf[i];
+  }
+}
+
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes)
 {
   digitalWrite(GPIO_PIN_NSS, LOW);
@@ -185,6 +225,7 @@ void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()
 {
+  noInterrupts();
   if (instance->InterruptAssignment == SX127x_INTERRUPT_TX_DONE)
   {
     TXdoneCallback();
@@ -193,4 +234,5 @@ void ICACHE_RAM_ATTR SX127xHal::dioISR()
   {
     RXdoneCallback();
   }
+  interrupts();
 }
