@@ -102,6 +102,14 @@ static void process_rx_buffer()
             crsf.LinkStatisticsExtract(&rx_buffer[1],
                                        Radio.LastPacketSNR,
                                        Radio.LastPacketRSSI);
+
+            // Check RSSI and update TX power if needed
+            int8_t rssi = (int8_t)crsf.LinkStatistics.uplink_RSSI_1;
+            if (-65 < rssi) {
+                PowerMgmt.decPower();
+            } else if (-90 > rssi) {
+                PowerMgmt.incPower();
+            }
             break;
         }
         case DL_PACKET_FREE1:
@@ -315,7 +323,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
     uint8_t resp[5] = {(uint8_t)(ExpressLRS_currAirRate->enum_rate),
                        (uint8_t)(TLMinterval),
                        (uint8_t)(PowerMgmt.currPower()),
-                       (uint8_t)(PowerMgmt.maxPower()),
+                       (uint8_t)(PowerMgmt.maxPowerGet()),
                        0xff};
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
     resp[4] = 0;
@@ -471,7 +479,7 @@ void setup()
     Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
 
     PowerMgmt.Begin();
-    PowerMgmt.defaultPower(power);
+    PowerMgmt.setPower(power);
     crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);

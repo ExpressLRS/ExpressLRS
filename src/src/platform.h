@@ -4,7 +4,12 @@
 #include "platform_internal.h"
 #include <stdint.h>
 
-#define ELRS_EEPROM_KEY 0x454c5201 // ELR + version nbr
+/** EEPROM storage key
+* v0 - initial
+* v1 - tlm added
+* v2 - power range changed (dynamic added)
+*/
+#define ELRS_EEPROM_KEY 0x454c5202 // ELR + version nbr
 
 struct platform_config
 {

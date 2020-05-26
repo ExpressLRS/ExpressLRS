@@ -5,10 +5,10 @@
 #ifdef TARGET_R9M_TX
 #define MaxPower PWR_1000mW // was PWR_2000mW
 #elif defined(TARGET_1000mW_MODULE)
-#define MaxPower PWR_250mW // 4
+#define MaxPower PWR_250mW
 #else
 // TARGET_100mW_MODULE
-#define MaxPower PWR_50mW // 2
+#define MaxPower PWR_50mW
 #endif
 
 #ifndef TX_POWER_DEFAULT
@@ -18,7 +18,8 @@
 
 typedef enum
 {
-    PWR_10mW = 0,
+    PWR_DYNAMIC = 0,
+    PWR_10mW,
     PWR_25mW,
     PWR_50mW,
     PWR_100mW,
@@ -29,41 +30,44 @@ typedef enum
     PWR_UNKNOWN
 } PowerLevels_e;
 
-// typedef enum
-// {
-//     PWR_10mW = 0,
-//     PWR_25mW = 1,
-//     PWR_50mW = 2,
-// } SX127x_PA_Boost_PowerLevels_e;
+#if TX_POWER_DEFAULT > PWR_2000mW || TX_POWER_DEFAULT < PWR_10mW
+#error "Default power is not valid!"
+#endif
 
 class POWERMGNT
 {
 private:
     SX127xDriver &p_radio;
-    PowerLevels_e CurrentPower;
+    PowerLevels_e p_current_power = PWR_10mW;
+    uint_fast8_t p_dyn_power = 0;
+
+    void p_set_power(PowerLevels_e power);
 
 public:
     POWERMGNT(SX127xDriver &radio);
     void Begin();
+
+    // inc and decPower are used to control dynamic tx power
     PowerLevels_e incPower();
     PowerLevels_e decPower();
+    // loop is used to control power by button on tx module
     PowerLevels_e loopPower();
+
     PowerLevels_e currPower() const
     {
-        return CurrentPower;
+        return p_dyn_power ? PWR_DYNAMIC : p_current_power;
     }
-    PowerLevels_e maxPower() const
+    PowerLevels_e maxPowerGet() const
     {
         return MaxPower;
     }
-    void defaultPower(PowerLevels_e power = TX_POWER_DEFAULT);
-    uint8_t setPower(PowerLevels_e Power);
+    void setPower(PowerLevels_e power);
 
     uint8_t power_to_radio_enum(PowerLevels_e power = PWR_UNKNOWN)
     {
-        if (power == PWR_UNKNOWN)
-            power = CurrentPower;
-        // ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 250mW )
+        if (power == PWR_UNKNOWN || power == PWR_DYNAMIC)
+            power = p_current_power;
+        // OpenTX: ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 250mW )
         switch (power)
         {
             case PWR_10mW:
@@ -71,7 +75,7 @@ public:
             case PWR_25mW:
                 return 2;
             case PWR_50mW:
-                return 2; // not speficied
+                return 2; // not speficied by otx, use 25mW
             case PWR_100mW:
                 return 3;
             case PWR_250mW:
@@ -82,10 +86,10 @@ public:
                 return 5;
             case PWR_2000mW:
                 return 6;
-            case PWR_UNKNOWN:
             default:
-                return 0;
+                break;
         }
+        return 0;
     }
 
     void pa_off(void) const;

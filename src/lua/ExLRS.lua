@@ -36,9 +36,9 @@ local MaxPower = {
     editable = true,
     name = 'Power',
     selected = 99,
-    list = {'10 mW', '25 mW', '50 mW', '100 mW', '250 mW', '500 mW', '1000 mW', '2000 mW'},
-    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
-    max_allowed = 8,
+    list = {'Dynamic', '10 mW', '25 mW', '50 mW', '100 mW', '250 mW', '500 mW', '1000 mW', '2000 mW'},
+    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+    max_allowed = 9,
 }
 
 local RFfreq = {
