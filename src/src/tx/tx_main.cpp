@@ -20,6 +20,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 #ifndef TLM_REPORT_INTERVAL
 #define TLM_REPORT_INTERVAL               300u
 #endif
+#define TX_POWER_UPDATE_PERIOD            1500
 //#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 150000u //  250000u
 //#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 350000u // 1500000u
 #define SYNC_PACKET_SEND_INTERVAL_RX_LOST 250000u
@@ -63,7 +64,8 @@ static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
 static volatile uint_fast8_t tlm_send = 0;
 static uint32_t TlmSentToRadioTime = 0;
-static LPF LPF_dyn_tx_power(4);
+static LPF LPF_dyn_tx_power(3);
+static uint32_t dyn_tx_updated = 0;
 
 //////////// LUA /////////
 
@@ -71,6 +73,7 @@ static LPF LPF_dyn_tx_power(4);
 
 static void process_rx_buffer()
 {
+    uint32_t ms = millis();
     uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
     uint8_t in_byte = rx_buffer[0];
 
@@ -89,7 +92,7 @@ static void process_rx_buffer()
     //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     platform_connection_state(STATE_connected);
     platform_set_led(0);
-    LastPacketRecvMillis = millis();
+    LastPacketRecvMillis = ms;
     recv_tlm_counter++;
 
     switch (TYPE_GET(in_byte))
@@ -107,10 +110,13 @@ static void process_rx_buffer()
 
             // Check RSSI and update TX power if needed
             int8_t rssi = LPF_dyn_tx_power.update((int8_t)crsf.LinkStatistics.uplink_RSSI_1);
-            if (-75 < rssi) {
-                PowerMgmt.decPower();
-            } else if (-95 > rssi) {
-                PowerMgmt.incPower();
+            if (TX_POWER_UPDATE_PERIOD <= (ms - dyn_tx_updated)) {
+                dyn_tx_updated = ms;
+                if (-75 < rssi) {
+                    PowerMgmt.decPower();
+                } else if (-95 > rssi) {
+                    PowerMgmt.incPower();
+                }
             }
             break;
         }
@@ -277,7 +283,6 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             // set TX power
             modified = PowerMgmt.currPower();
             PowerMgmt.setPower((PowerLevels_e)value);
-            //crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
 #if PLATFORM_ESP32
@@ -484,7 +489,6 @@ void setup()
 
     PowerMgmt.Begin();
     PowerMgmt.setPower(power);
-    //crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
 

@@ -44,21 +44,19 @@ static inline void PLAY_SOUND(uint32_t wait = 244, uint32_t cnt = 50)
 #include "DAC.h"
 R9DAC r9dac;
 extern POWERMGNT PowerMgmt;
-#endif /* TARGET_R9M_TX */
 
 static uint32_t tone_play_cnt = 0;
 static uint32_t tone_last_played = 0;
 void play_tone_loop(uint32_t ms)
 {
-    if (!tone_play_cnt)
-        return;
-    if (300 < (ms - tone_last_played))
+    if (tone_play_cnt && 350 < (ms - tone_last_played))
     {
         PLAY_SOUND(244, 50);
         tone_play_cnt--;
         tone_last_played = ms;
     }
 }
+#endif /* TARGET_R9M_TX */
 
 #ifdef GPIO_PIN_BUTTON
 #define TX_CHANGE_POWER_TIME 2000
@@ -80,25 +78,8 @@ void button_event_long(uint32_t ms)
 #if defined(TX_MODULE)
     if (ms > TX_CHANGE_POWER_TIME)
     {
-#if 0
-        PowerLevels_e current = PowerMgmt.currPower();
-        if (current == PWR_DYNAMIC)
-            PowerMgmt.setPower(PWR_10mW);
-        else if (current == PowerMgmt.maxPowerGet())
-            PowerMgmt.setPower(PWR_DYNAMIC);
-        else
-            PowerMgmt.loopPower();
-        uint8_t val = PowerMgmt.currPower() + 1;
-#else
         uint8_t val = PowerMgmt.loopPower() + 1;
-#endif
         tone_play_cnt = val;
-        /*while (val--)
-        {
-            delay(300);
-            PLAY_SOUND(244, 50);
-            delay(50);
-        }*/
     }
 #elif defined(RX_MODULE)
     if (ms > BUTTON_RESET_INTERVAL_RX)
