@@ -436,7 +436,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
                 //ExpressLRS_nextAirRate->TLMinterval = TLM_RATIO_1_128;
             }
-            
+
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
             NonceRXlocal = Radio.RXdataBuffer[2];
         }
@@ -481,7 +481,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else
         {
-            hwTimer.phaseShift((Offset) + timerOffset);
+            hwTimer.phaseShift((Offset >> 3) + timerOffset);
         }
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
