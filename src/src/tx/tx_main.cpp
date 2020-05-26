@@ -9,6 +9,7 @@
 #include "HwTimer.h"
 #include "debug.h"
 #include "rc_channels.h"
+#include "LowPassFilter.h"
 #include <stdlib.h>
 
 static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
@@ -62,6 +63,7 @@ static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
 static volatile uint_fast8_t tlm_send = 0;
 static uint32_t TlmSentToRadioTime = 0;
+static LPF LPF_dyn_tx_power(4);
 
 //////////// LUA /////////
 
@@ -104,10 +106,10 @@ static void process_rx_buffer()
                                        Radio.LastPacketRSSI);
 
             // Check RSSI and update TX power if needed
-            int8_t rssi = (int8_t)crsf.LinkStatistics.uplink_RSSI_1;
-            if (-65 < rssi) {
+            int8_t rssi = LPF_dyn_tx_power.update((int8_t)crsf.LinkStatistics.uplink_RSSI_1);
+            if (-75 < rssi) {
                 PowerMgmt.decPower();
-            } else if (-90 > rssi) {
+            } else if (-95 > rssi) {
                 PowerMgmt.incPower();
             }
             break;
@@ -275,7 +277,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             // set TX power
             modified = PowerMgmt.currPower();
             PowerMgmt.setPower((PowerLevels_e)value);
-            //crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+            //crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
 #if PLATFORM_ESP32
@@ -366,6 +368,8 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
         TxTimer.stop();
         Radio.StopContRX();
     }
+
+    LPF_dyn_tx_power.init(-55);
 
     ExpressLRS_currAirRate = config;
     TxTimer.updateInterval(config->interval); // TODO: Make sure this is equiv to above commented lines
@@ -480,7 +484,7 @@ void setup()
 
     PowerMgmt.Begin();
     PowerMgmt.setPower(power);
-    //crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+    //crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
 
@@ -529,7 +533,7 @@ void loop()
         {
             TlmSentToRadioTime = current_ms;
             crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
-            crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+            crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
             crsf.LinkStatisticsSend();
             crsf.BatterySensorSend();
         }
