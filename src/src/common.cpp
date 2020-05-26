@@ -10,10 +10,10 @@ extern SX127xDriver Radio;
 
 #define RATE_MAX 3
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, -112, 5000, 200, TLM_RATIO_1_128, 4, 8, RATE_200HZ, 2000, 4000},
-    {SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, -117, 10000, 100, TLM_RATIO_1_64, 4, 8, RATE_100HZ, 3000, 6000},
-    {SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, -120, 20000, 50, TLM_RATIO_1_128, 4, 8, RATE_50HZ, 4000, 8000},
-    //{BW_250_00_KHZ, SF_8, CR_4_7, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
+    {SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 2000, 4000},
+    {SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, -117, 10000, 100, TLM_RATIO_1_64, 4, 8, RATE_100HZ, 2000, 6000},
+    {SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, -120, 20000, 50, TLM_RATIO_1_128, 4, 8, RATE_50HZ, 2000, 8000}
+    //{SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_8, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
     //{BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
 };
 
@@ -34,9 +34,9 @@ expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
     return &ExpressLRS_AirRateConfig[rate];
 }
 
-expresslrs_mod_settings_s *ExpressLRS_nextAirRate = &ExpressLRS_AirRateConfig[0];
-expresslrs_mod_settings_s *ExpressLRS_currAirRate = &ExpressLRS_AirRateConfig[0];
-expresslrs_mod_settings_s *ExpressLRS_prevAirRate = &ExpressLRS_AirRateConfig[0];
+expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
+expresslrs_mod_settings_s *ExpressLRS_currAirRate;
+expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 bool ExpressLRS_AirRateNeedsUpdate = false;
 
 int8_t ExpressLRS_currPower = 0;
@@ -108,6 +108,6 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
         return 128;
         break;
     default:
-        return 128;
+        return 0;
     }
 }

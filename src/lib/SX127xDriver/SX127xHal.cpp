@@ -225,7 +225,6 @@ void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()
 {
-  noInterrupts();
   if (instance->InterruptAssignment == SX127x_INTERRUPT_TX_DONE)
   {
     TXdoneCallback();
@@ -234,5 +233,4 @@ void ICACHE_RAM_ATTR SX127xHal::dioISR()
   {
     RXdoneCallback();
   }
-  interrupts();
 }
