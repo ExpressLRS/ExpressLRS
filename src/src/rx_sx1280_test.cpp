@@ -32,11 +32,11 @@ void loop()
 {
     Serial.println("about to TX");
     Radio.TXnb(testdata, sizeof(testdata));
-    delay(10);
+    delay(random(50,200));
 
     Serial.println("about to RX");
     Radio.RXnb();
-    delay(200);
+    delay(random(50,200));
 
     yield();
 }
