@@ -142,7 +142,9 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequency(FHSSgetNextFreq());
+    uint32_t nextFreq = FHSSgetNextFreq();
+    Serial.print("NF = "); Serial.println(nextFreq);
+    Radio.SetFrequency(nextFreq);
 
     if (ExpressLRS_currAirRate->TLMinterval == TLM_RATIO_NO_TLM)
     {
@@ -356,6 +358,7 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    Serial.print("ProcessRFPacket:");
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -388,9 +391,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketMicros = micros();
     LastValidPacket = millis();
 
+    Serial.print(" LVPPM = "); Serial.print(LastValidPacketPrevMicros);
+    Serial.print(" LVPM = "); Serial.print(LastValidPacketMicros);
+    Serial.print(" LVP = "); Serial.print(LastValidPacket);
+
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
+        Serial.print(" type = RC_DATA_PACKET");
 #if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(&Radio, &crsf);
 #elif defined HYBRID_SWITCHES_8
@@ -402,19 +410,21 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
+        Serial.print(" type = MSP_DATA_PACKET");
         UnpackMSPData();
         break;
 
     case TLM_PACKET: //telemetry packet from master
-
+        Serial.print(" type = TLM_PACKET");
         // not implimented yet
         break;
 
     case SYNC_PACKET: //sync packet from master
+        Serial.print(" type = SYNC_PACKET");
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
-            Serial.println("sync");
+            //Serial.println("sync");
 
             if (connectionState == disconnected)
             {
@@ -429,8 +439,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if ((ExpressLRS_currAirRate->enum_rate != rateIn) || (ExpressLRS_currAirRate->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
             { // change link parameters if required
-                Serial.println("New TLMrate: ");
-                Serial.println(TLMrateIn);
+                Serial.print(" TLMRI = "); Serial.print(TLMrateIn);
                 ExpressLRS_AirRateNeedsUpdate = true;
                 ExpressLRS_currAirRate = get_elrs_airRateConfig((expresslrs_RFrates_e)rateIn);
                 ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
@@ -439,30 +448,30 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
             NonceRXlocal = Radio.RXdataBuffer[2];
+            Serial.print(" NORXL = "); Serial.print(NonceRXlocal);
         }
         break;
 
     default: // code to be executed if n doesn't match any cases
+        Serial.print(" type = UNKNOWN");
         break;
     }
 
     addPacketToLQ();
     getRFlinkInfo();
 
+    Serial.print(" ");
     Serial.print(alreadyFHSS);
     Serial.print(":");
     Serial.print(OffsetDx);
     Serial.print(":");
-    Serial.println(linkQuality);
+    Serial.print(linkQuality);
 
     bool doFreqCorrections = true;
 
     if (RXtimerState == tim_locked)
     {
-        Serial.print(alreadyFHSS);
-        Serial.print(":");
-        Serial.print(OffsetDx);
-        Serial.print(":");
+        Serial.print(" tim_locked");
 
         HandleFHSS();
         HandleSendTelemetryResponse(); // TODO since the TX RXnb is synced with the timer and not the reception of the packet on the RX side it turns out we can't actually do this early.
@@ -477,6 +486,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
         if (RXtimerState == tim_tentative || RXtimerState == tim_disconnected)
         {
+            if (RXtimerState == tim_tentative) {
+                Serial.print(" tim_tentative");
+            }
+            if (RXtimerState == tim_disconnected) {
+                Serial.print(" tim_disconnected");
+            }
+
             hwTimer.phaseShift((Offset >> 2) + timerOffset);
         }
         else
@@ -486,6 +502,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
     }
+    Serial.print(" HTE = "); Serial.print(HWtimerError);
+    Serial.print(" OS = "); Serial.print(Offset);
+    Serial.print(" OSDX = "); Serial.println(OffsetDx);
 }
 
 void beginWebsever()
