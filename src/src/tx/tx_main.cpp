@@ -275,7 +275,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             // set TX power
             modified = PowerMgmt.currPower();
             PowerMgmt.setPower((PowerLevels_e)value);
-            crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+            //crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
 #if PLATFORM_ESP32
@@ -480,7 +480,7 @@ void setup()
 
     PowerMgmt.Begin();
     PowerMgmt.setPower(power);
-    crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
+    //crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
 
     SetRFLinkRate(current_rate_config, 1);
 
@@ -529,6 +529,7 @@ void loop()
         {
             TlmSentToRadioTime = current_ms;
             crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
+            crsf.LinkStatistics.downlink_TX_Power = PowerMgmt.power_to_radio_enum();
             crsf.LinkStatisticsSend();
             crsf.BatterySensorSend();
         }
