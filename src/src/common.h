@@ -92,7 +92,8 @@ const expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t rate);
 extern volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 extern volatile uint8_t current_rate_config;
 
-uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval);
+//uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval);
+#define TLMratioEnumToValue(TLM) (256U >> (TLM))
 
 void forced_start(void);
 void forced_stop(void);

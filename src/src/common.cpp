@@ -9,7 +9,7 @@ volatile uint8_t current_rate_config = RATE_DEFAULT;
 //
 // https://semtech.my.salesforce.com/sfc/p/#E0000000JelG/a/2R000000HUhK/6T9Vdb3_ldnElA8drIbPYjs1wBbhlWUXej8ZMXtZXOM
 //
-const expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
+const expresslrs_mod_settings_s DRAM_ATTR ExpressLRS_AirRateConfig[RATE_MAX] = {
     /* 200Hz */
     {BW_500_00_KHZ, SF_6, CR_4_5, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, 3872, 1000, 1500, 250000u},
     //{BW_500_00_KHZ, SF_6, CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, FHSS_1, 8, RATE_200HZ, 4384, 1000, 1500, 250000u},
@@ -59,7 +59,8 @@ uint8_t getSyncWord(void)
 #endif
 }
 
-uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
+/*uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
 {
     return (256u >> (enumval));
 }
+*/
