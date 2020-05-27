@@ -308,7 +308,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (!(currOpmode == mode))
   {
-    hal.writeRegister(ModFSKorLoRa || SX127X_REG_OP_MODE, mode);
+    hal.writeRegister(ModFSKorLoRa | SX127X_REG_OP_MODE, mode);
     currOpmode = mode;
   }
 }
