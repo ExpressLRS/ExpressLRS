@@ -25,7 +25,7 @@ HwSerial CrsfSerial(CRSF_SERIAL_NBR, -1);
 
 HwSerial::HwSerial(int uart_nr, int32_t pin) : HardwareSerial(uart_nr)
 {
-    duplex_pin = pin;
+    (void)pin;
 }
 
 void HwSerial::Begin(uint32_t baud, uint32_t config)
@@ -34,7 +34,7 @@ void HwSerial::Begin(uint32_t baud, uint32_t config)
     enable_receiver();
 }
 
-void HwSerial::enable_receiver(void)
+void ICACHE_RAM_ATTR HwSerial::enable_receiver(void)
 {
     yield();
     HardwareSerial::flush(); // wait until write ends
@@ -46,7 +46,7 @@ void HwSerial::enable_receiver(void)
     yield();
 }
 
-void HwSerial::enable_transmitter(void)
+void ICACHE_RAM_ATTR HwSerial::enable_transmitter(void)
 {
     delayMicroseconds(20);
     /* Detach RX pin */

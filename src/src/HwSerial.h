@@ -2,9 +2,7 @@
 #define SERIAL_H_
 
 #include <HardwareSerial.h>
-#include "debug.h"
-
-class FIFO;
+#include "platform.h"
 
 class HwSerial : public HardwareSerial
 {
@@ -15,10 +13,10 @@ public:
 
     void Begin(uint32_t baud, uint32_t config = SERIAL_8N1);
 
-    void enable_receiver(void);
-    void enable_transmitter(void);
+    void ICACHE_RAM_ATTR enable_receiver(void);
+    void ICACHE_RAM_ATTR enable_transmitter(void);
 
-    void flush_read()
+    void ICACHE_RAM_ATTR flush_read()
     {
         while (available())
             (void)read();
@@ -38,10 +36,7 @@ public:
         return HardwareSerial::write(buff, len);
     }
 
-    size_t write(FIFO &fifo);
-
 private:
-    int32_t duplex_pin;
 };
 
 extern HwSerial CrsfSerial;

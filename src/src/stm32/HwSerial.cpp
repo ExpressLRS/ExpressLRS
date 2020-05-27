@@ -1,5 +1,7 @@
 #include "HwSerial.h"
 #include "targets.h"
+#include <Arduino.h>
+
 
 #if defined(GPIO_PIN_RCSIGNAL_RX) && defined(GPIO_PIN_RCSIGNAL_TX)
 #define SPORT_RX_TX GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX
@@ -18,16 +20,20 @@
 #endif
 #endif
 
+static int32_t duplex_pin = -1;
+
 HwSerial CrsfSerial(SPORT_RX_TX, BUFFER_OE);
 
 HwSerial::HwSerial(uint32_t _rx, uint32_t _tx, int32_t pin)
-    : HardwareSerial(_rx, _tx), duplex_pin(pin)
+    : HardwareSerial(_rx, _tx)
 {
+    duplex_pin = pin;
 }
 
 HwSerial::HwSerial(void *peripheral, int32_t pin)
-    : HardwareSerial(peripheral), duplex_pin(pin)
+    : HardwareSerial(peripheral)
 {
+    duplex_pin = pin;
 }
 
 void HwSerial::Begin(uint32_t baud, uint32_t config)
@@ -37,7 +43,7 @@ void HwSerial::Begin(uint32_t baud, uint32_t config)
         pinMode(duplex_pin, OUTPUT);
 }
 
-void HwSerial::enable_receiver(void)
+void ICACHE_RAM_ATTR HwSerial::enable_receiver(void)
 {
     if (duplex_pin > -1)
     {
@@ -47,7 +53,7 @@ void HwSerial::enable_receiver(void)
     }
 }
 
-void HwSerial::enable_transmitter(void)
+void ICACHE_RAM_ATTR HwSerial::enable_transmitter(void)
 {
     if (duplex_pin > -1)
     {
