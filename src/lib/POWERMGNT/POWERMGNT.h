@@ -52,5 +52,5 @@ public:
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
-    static void defaultPower();
+    static void init();
 };

@@ -2,10 +2,10 @@
 
 extern SX127xDriver Radio;
 #ifdef TARGET_R9M_TX
-extern R9DAC R9DAC;
+R9DAC R9DAC;
 #endif
 
-    PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
 
 PowerLevels_e POWERMGNT::incPower()
 {
@@ -30,8 +30,12 @@ PowerLevels_e POWERMGNT::currPower()
     return CurrentPower;
 }
 
-void POWERMGNT::defaultPower()
+void POWERMGNT::init()
 {
+    #ifdef TARGET_R9M_TX
+    Serial.println("Init TARGET_R9M_TX DAC Driver");
+    R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100);
+    #endif
     setPower((PowerLevels_e)DefaultPowerEnum);
 }
 

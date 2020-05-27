@@ -144,19 +144,22 @@ https://github.com/jaxxzer
 // #endif /* HSE_VALUE */
 
 //#define SYSCLK_FREQ_72MHz
-
 #include <stdio.h>
 #endif
 
 #ifdef TARGET_R9M_TX
+
+#define GPIO_PIN_RFamp_APC1           PA6  //CONFIRMED SANDRO// APC2 is connected through a I2C dac and is handled elsewhere
+#define GPIO_PIN_RFswitch_CONTROL     PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
+
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PC14
-#define GPIO_PIN_RX_ENABLE      -1
-#define GPIO_PIN_TX_ENABLE      -1
+#define GPIO_PIN_RX_ENABLE      GPIO_PIN_RFswitch_CONTROL
+#define GPIO_PIN_TX_ENABLE      GPIO_PIN_RFamp_APC1
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
@@ -177,8 +180,7 @@ https://github.com/jaxxzer
 #define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
-#define GPIO_PIN_RFamp_APC1           PA6  //CONFIRMED SANDRO// APC2 is connected through a I2C dac and is handled elsewhere
-#define GPIO_PIN_RFswitch_CONTROL     PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
+
 // PwrAmp, RFControl, dodgy measurement with SDR, descending
 // high low  -5 
 // low  low  -30

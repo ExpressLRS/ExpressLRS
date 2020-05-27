@@ -228,6 +228,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
     Serial.println("abort TX");
     return; // we were already TXing so abort
   }
+  hal.TXenable();
   instance->TXstartMicros = micros();
   instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
@@ -237,7 +238,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
-  hal.TXenable();
+  
   instance->SetMode(SX127x_OPMODE_TX);
 }
 
@@ -265,10 +266,9 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   // }
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
-  instance->SetMode(SX127x_OPMODE_STANDBY);
-
-  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   hal.RXenable();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
+  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);
 }
 

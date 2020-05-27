@@ -29,13 +29,16 @@ DAC_STATE_ R9DAC::DAC_STATE = UNKNOWN;
 
 void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
 {
+    Serial.println("Wire.h begin()");
+    Serial.println(SDA_);
+    Serial.println(SCL_);
     R9DAC::SDA = SDA_;
     R9DAC::SCL = SCL_;
     R9DAC::ADDR = ADDR_;
 
     Wire.setSDA(SDA); // set is needed or it wont work :/
     Wire.setSCL(SCL);
-    Wire.begin();
+    Wire.begin(ADDR);
     R9DAC::DAC_STATE = UNKNOWN;
 }
 
@@ -57,7 +60,6 @@ void R9DAC::resume()
     {
         Radio.SetOutputPower(0b0000);
         R9DAC::setVoltageRegDirect(CurrVoltageRegVal);
-        R9DAC::DAC_STATE = RUNNING;
     }
 }
 
@@ -66,6 +68,7 @@ void R9DAC::setVoltageMV(uint32_t voltsMV)
     uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
     setVoltageRegDirect(ScaledVolts);
     CurrVoltageMV = voltsMV;
+    Serial.println(CurrVoltageMV);
 }
 
 void R9DAC::setVoltageRegDirect(uint8_t voltReg)

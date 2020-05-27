@@ -28,7 +28,7 @@
 #include "STM32_hwTimer.h"
 #include "button.h"
 button button;
-R9DAC R9DAC;
+//R9DAC R9DAC;
 #endif
 
 //// CONSTANTS ////
@@ -323,8 +323,8 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 #ifdef TARGET_R9M_TX
     //R9DAC.standby(); //takes too long
-    digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
-    digitalWrite(GPIO_PIN_RFamp_APC1, 0);
+    //digitalWrite(GPIO_PIN_RFswitch_CONTROL, 1);
+    //digitalWrite(GPIO_PIN_RFamp_APC1, 0);
 #endif
 
     Radio.RXnb();
@@ -403,8 +403,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[7] = crc;
 #ifdef TARGET_R9M_TX
   //R9DAC.resume(); takes too long
-  digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
-  digitalWrite(GPIO_PIN_RFamp_APC1, 1);
+  //digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
+  //digitalWrite(GPIO_PIN_RFamp_APC1, 1);
 #endif
   Radio.TXnb(Radio.TXdataBuffer, 8);
 
@@ -542,8 +542,6 @@ void setup()
   tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
 
-
-  Serial.println("STM32 pin config");
   pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
   pinMode(GPIO_PIN_LED_RED, OUTPUT);
 
@@ -551,18 +549,10 @@ void setup()
 
   pinMode(GPIO_PIN_RFswitch_CONTROL, OUTPUT);
   pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
-  digitalWrite(GPIO_PIN_RFamp_APC1, HIGH);
 
-  R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
+  //R9DAC.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100); // used to control ADC which sets PA output
   button.init(GPIO_PIN_BUTTON, true);                // r9 tx appears to be active high
 #endif
-
-  crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
-  crsf.disconnected = &hwTimer.stop;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
-  hwTimer.callbackTock = &TimerExpired;
-
-  Serial.println("ExpressLRS TX Module Booted...");
 
 #ifdef PLATFORM_ESP32
   //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
@@ -598,12 +588,8 @@ void setup()
 #else
   Serial.println("Setting 915MHz Mode");
 #endif
-
-  //Radio.RFmodule = RFMOD_SX1276; //define radio module here
-
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
   Serial.println("Setting 433MHz Mode");
-  //Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
   Radio.RXdoneCallback1 = &ProcessTLMpacket;
@@ -615,11 +601,18 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
+  crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
+  crsf.disconnected = &hwTimer.stop;
+  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  hwTimer.callbackTock = &TimerExpired;
+
+  Serial.println("ExpressLRS TX Module Booted...");
+
 
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
   crsf.Begin();
-  POWERMGNT.defaultPower();
+  POWERMGNT.init();
   SetRFLinkRate(RATE_200HZ);
 }
 
