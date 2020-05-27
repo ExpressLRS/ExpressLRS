@@ -71,6 +71,11 @@ volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
+uint32_t headroom;
+uint32_t headroom2;
+uint32_t beginProcessing;
+uint32_t doneProcessing;
+
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
@@ -338,6 +343,8 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    beginProcessing =  micros();
+
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -365,9 +372,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
+    uint32_t now = millis();
+    uint32_t nowMS = micros();
     LastValidPacketPrevMicros = LastValidPacketMicros;
-    LastValidPacketMicros = micros();
-    LastValidPacket = millis();
+    LastValidPacketMicros = nowMS;
+    LastValidPacket = now;
 
     switch (type)
     {
@@ -395,7 +404,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
-            //Serial.println("sync");
+            Serial.println("sync");
 
             if (connectionState == disconnected)
             {
@@ -457,6 +466,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             hwTimer.phaseShift((Offset >> 4) + timerOffset);
         }
+        doneProcessing = micros();
 }
 
 void beginWebsever()
@@ -589,6 +599,11 @@ void loop()
 {
 
     //Serial.println(linkQuality);
+    //
+    //Serial.print(headroom);
+    //Serial.print(" Head2:");
+    //Serial.println(headroom2);
+
 
     crsf.RXhandleUARTout();
 
@@ -628,11 +643,11 @@ void loop()
     {
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
-                Serial.print(Offset);
-        //Serial.print(":");
-        //Serial.print(OffsetDx);
-        //Serial.print(":");
-       // Serial.println(linkQuality);
+        Serial.print(Offset);
+        Serial.print(":");
+        Serial.print(OffsetDx);
+        Serial.print(":");
+        Serial.println(linkQuality);
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
@@ -672,4 +687,5 @@ void loop()
         }
     }
 #endif
+yield();
 }

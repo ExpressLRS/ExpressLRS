@@ -616,6 +616,7 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   SetRFLinkRate(RATE_200HZ);
+  hwTimer.init();
 }
 
 void loop()
