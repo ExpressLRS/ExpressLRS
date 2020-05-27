@@ -42,7 +42,7 @@ void SX127xDriver::ConfigLoraDefaults()
   Serial.println("Setting ExpressLRS LoRa reg defaults");
 
   SetMode(SX127x_OPMODE_SLEEP);
-  hal.setRegValue(SX127X_REG_OP_MODE, SX127x_OPMODE_LORA, 7, 7);
+  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa);
   SetMode(SX127x_OPMODE_STANDBY);
 
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
@@ -114,11 +114,11 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
   //todo make function turn on PA_BOOST ect
-  if (currPWR != Power)
-  {
-    hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
-    currPWR = Power;
-  }
+  //if (currPWR != Power)
+  //{
+  hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
+  currPWR = Power;
+  //}
 }
 
 void SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
@@ -238,7 +238,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
-  
+
   instance->SetMode(SX127x_OPMODE_TX);
 }
 
@@ -308,7 +308,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (!(currOpmode == mode))
   {
-    hal.setRegValue(SX127X_REG_OP_MODE, mode, 2, 0);
+    hal.writeRegister(ModFSKorLoRa || SX127X_REG_OP_MODE, mode);
     currOpmode = mode;
   }
 }

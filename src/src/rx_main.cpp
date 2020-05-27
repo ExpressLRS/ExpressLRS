@@ -395,7 +395,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
-            Serial.println("sync");
+            //Serial.println("sync");
 
             if (connectionState == disconnected)
             {
@@ -629,10 +629,10 @@ void loop()
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
                 Serial.print(Offset);
-        Serial.print(":");
-        Serial.print(OffsetDx);
-        Serial.print(":");
-        Serial.println(linkQuality);
+        //Serial.print(":");
+        //Serial.print(OffsetDx);
+        //Serial.print(":");
+       // Serial.println(linkQuality);
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))

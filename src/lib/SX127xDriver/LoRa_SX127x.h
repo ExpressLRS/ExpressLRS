@@ -56,6 +56,7 @@ public:
     SX127x_CodingRate currCR = SX127x_CR_4_5;
     SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
     uint8_t currPWR = 0b0000;
+    SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
 
     ///////////////////////////////////
 

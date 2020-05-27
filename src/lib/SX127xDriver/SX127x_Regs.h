@@ -4,6 +4,12 @@ typedef enum
 {
     SX127x_OPMODE_FSK_OOK = 0b00000000,
     SX127x_OPMODE_LORA = 0b10000000,
+    SX127X_ACCESS_SHARED_REG_OFF = 0b00000000,
+    SX127X_ACCESS_SHARED_REG_ON = 0b01000000
+} SX127x_ModulationModes;
+
+typedef enum
+{
     SX127x_OPMODE_SLEEP = 0b00000000,
     SX127x_OPMODE_STANDBY = 0b00000001,
     SX127x_OPMODE_FSTX = 0b00000010,
@@ -12,8 +18,6 @@ typedef enum
     SX127x_OPMODE_RXCONTINUOUS = 0b00000101,
     SX127x_OPMODE_RXSINGLE = 0b00000110,
     SX127x_OPMODE_CAD = 0b00000111,
-    SX127X_ACCESS_SHARED_REG_OFF = 0b00000000,
-    SX127X_ACCESS_SHARED_REG_ON = 0b01000000
 } SX127x_RadioOPmodes;
 
 typedef enum
@@ -293,8 +297,6 @@ typedef enum
 // #define SX1276_CR_4_8 0b00001000           //  3     1                         4/8
 #define SX1276_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
 #define SX1276_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
-
-
 
 
 
