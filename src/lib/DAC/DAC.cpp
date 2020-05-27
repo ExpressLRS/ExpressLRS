@@ -1,7 +1,6 @@
 
 #ifdef TARGET_R9M_TX
 
-#include "../../src/targets.h"
 #include "DAC.h"
 #include "LoRaRadioLib.h"
 
@@ -27,18 +26,17 @@ uint8_t R9DAC::ADDR = 0;
 
 DAC_STATE_ R9DAC::DAC_STATE = UNKNOWN;
 
-void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
+void R9DAC::init()
 {
     Serial.println("Wire.h begin()");
-    Serial.println(SDA_);
-    Serial.println(SCL_);
-    R9DAC::SDA = SDA_;
-    R9DAC::SCL = SCL_;
-    R9DAC::ADDR = ADDR_;
 
-    Wire.setSDA(SDA); // set is needed or it wont work :/
+    R9DAC::SDA = GPIO_PIN_SDA;
+    R9DAC::SCL = GPIO_PIN_SCL;
+    R9DAC::ADDR = 0b0001100;
+
+    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
     Wire.setSCL(SCL);
-    Wire.begin(ADDR);
+    Wire.begin();
     R9DAC::DAC_STATE = UNKNOWN;
 }
 

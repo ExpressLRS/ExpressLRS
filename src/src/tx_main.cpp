@@ -12,7 +12,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
-#include "elrs_eeprom.h"
+//#include "elrs_eeprom.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
@@ -28,7 +28,7 @@
 #include "STM32_hwTimer.h"
 #include "button.h"
 button button;
-//R9DAC R9DAC;
+R9DAC R9DAC;
 #endif
 
 //// CONSTANTS ////
@@ -523,6 +523,7 @@ void setup()
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
   Serial.begin(400000);
+  R9DAC.init();
 
   // Annoying startup beeps
   #ifndef JUST_BEEP_ONCE
@@ -608,12 +609,14 @@ void setup()
 
   Serial.println("ExpressLRS TX Module Booted...");
 
-
+  POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
   crsf.Begin();
-  POWERMGNT.init();
+  POWERMGNT.setDefaultPower();
+
   SetRFLinkRate(RATE_200HZ);
+  hwTimer.init();
 }
 
 void loop()
