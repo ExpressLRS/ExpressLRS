@@ -54,7 +54,6 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
   hal.setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
-  
 }
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
@@ -210,7 +209,7 @@ void SX127xDriver::DetectChip()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-  noInterrupts();
+  instance->IRQneedsClear = true;
   instance->currOpmode = SX127x_OPMODE_STANDBY;
   instance->ClearIRQFlags();
   instance->NonceTX++;
@@ -219,7 +218,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback3();
   TXdoneCallback4();
   instance->TXdoneMicros = micros();
-  interrupts();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
@@ -231,23 +229,21 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   }
   instance->TXstartMicros = micros();
   instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
+
+  instance->IRQneedsClear = true;
+  instance->ClearIRQFlags();
   instance->SetMode(SX127x_OPMODE_STANDBY);
 
-  instance->ClearIRQFlags();
-
-  hal.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
-
+  hal.TXenable();
   instance->SetMode(SX127x_OPMODE_TX);
-  instance->IRQneedsClear = true;
 }
 
 ///////////////////////////////////RX Functions Non-Blocking///////////////////////////////////////////
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-  noInterrupts();
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
@@ -256,25 +252,22 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   instance->NonceRX++;
   RXdoneCallback1();
   RXdoneCallback2();
-  interrupts();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-  if (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)
-  {
-    Serial.println("abort RX");
-    return; // we were already TXing so abort
-  }
-  instance->SetMode(SX127x_OPMODE_STANDBY);
+  // if (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)
+  // {
+  //   Serial.println("abort RX");
+  //   return; // we were already TXing so abort
+  // }
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
-
-  hal.RXenable();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  hal.RXenable();
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);
-  instance->IRQneedsClear = true;
 }
 
 // uint8_t SX127xDriver::RunCAD() TODO
@@ -453,9 +446,9 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 {
-  //if (IRQneedsClear)
-  //{
-  hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
-  // IRQneedsClear = false;
-  //}
+  if (IRQneedsClear)
+  {
+    hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
+    IRQneedsClear = false;
+  }
 }

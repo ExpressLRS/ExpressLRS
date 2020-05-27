@@ -42,6 +42,7 @@ void SX127xHal::init()
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+                                       // SPI.setFrequency(10000000);
   SPI.begin();
 #endif
 
