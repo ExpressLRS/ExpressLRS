@@ -13,12 +13,15 @@ SX127xHal::SX127xHal()
 
 void SX127xHal::init()
 {
-  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  Serial.println("Hal Init");
+
+  if ((GPIO_PIN_RX_ENABLE > -1) && (GPIO_PIN_TX_ENABLE > -1))
   {
+    Serial.println("This Target uses seperate TX/RX enable pins");
     pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
     pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+    //digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    //digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
   }
 
 #ifdef PLATFORM_ESP32
@@ -41,9 +44,9 @@ void SX127xHal::init()
   SPI.setSCLK(GPIO_PIN_SCK);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
+  SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
                                        // SPI.setFrequency(10000000);
-  SPI.begin();
 #endif
 
   pinMode(GPIO_PIN_NSS, OUTPUT);
@@ -208,7 +211,7 @@ void ICACHE_RAM_ATTR SX127xHal::TXenable()
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
   InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
-  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  if ((GPIO_PIN_RX_ENABLE > -1) && (GPIO_PIN_TX_ENABLE > -1))
   {
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
@@ -217,7 +220,7 @@ void ICACHE_RAM_ATTR SX127xHal::RXenable()
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
-  if ((GPIO_PIN_RX_ENABLE > 0) || (GPIO_PIN_TX_ENABLE > 0))
+  if ((GPIO_PIN_RX_ENABLE > -1) && (GPIO_PIN_TX_ENABLE > -1))
   {
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);

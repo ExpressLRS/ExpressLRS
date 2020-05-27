@@ -334,7 +334,6 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
-
 #ifdef FEATURE_OPENTX_SYNC
   crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
@@ -462,10 +461,12 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
 
     if (crsf.ParameterUpdateData[1] == 0)
     {
+      Serial.println("Decrease RF power");
       POWERMGNT.decPower();
     }
     else if (crsf.ParameterUpdateData[1] == 1)
     {
+      Serial.println("Increase RF power");
       POWERMGNT.incPower();
     }
 
@@ -524,7 +525,7 @@ void setup()
   Serial.begin(400000);
 
   // Annoying startup beeps
-#ifndef JUST_BEEP_ONCE
+  #ifndef JUST_BEEP_ONCE
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
   const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
   const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
@@ -535,10 +536,14 @@ void setup()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
-#else
+  #else
   tone(GPIO_PIN_BUZZER, 400, 200);
-#endif
+  delay(200);
+  tone(GPIO_PIN_BUZZER, 480, 200);
+  #endif
 
+
+  Serial.println("STM32 pin config");
   pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
   pinMode(GPIO_PIN_LED_RED, OUTPUT);
 
@@ -613,12 +618,9 @@ void setup()
 
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
-  POWERMGNT.defaultPower();
-
   crsf.Begin();
+  POWERMGNT.defaultPower();
   SetRFLinkRate(RATE_200HZ);
-
-  hwTimer.init();
 }
 
 void loop()
@@ -627,7 +629,7 @@ void loop()
   //Serial.println(Radio.HeadRoom);
 
 #ifdef FEATURE_OPENTX_SYNC
-  //Serial.println(crsf.OpenTXsyncOffset);
+ // Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate->TLMinterval);
@@ -660,7 +662,7 @@ void loop()
 
 #ifdef TARGET_R9M_TX
   crsf.STM32handleUARTin();
-#ifdef OPENTX_SYNC
+#ifdef FEATURE_OPENTX_SYNC
   crsf.sendSyncPacketToTX();
 #endif
   crsf.UARTwdt();
@@ -719,6 +721,7 @@ void OnTxPowerPacket(mspPacket_t *packet)
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
+  Serial.println("TX setpower");
 
   switch (txPower)
   {

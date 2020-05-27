@@ -209,6 +209,7 @@ void SX127xDriver::DetectChip()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
+  hal.TXRXdisable();
   instance->IRQneedsClear = true;
   instance->currOpmode = SX127x_OPMODE_STANDBY;
   instance->ClearIRQFlags();
@@ -244,6 +245,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
+  hal.TXRXdisable();
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
