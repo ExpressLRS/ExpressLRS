@@ -37,9 +37,17 @@ PowerLevels_e POWERMGNT::decPower()
 
 PowerLevels_e POWERMGNT::loopPower()
 {
-    PowerLevels_e next = (PowerLevels_e)((p_current_power + 1) % (MaxPower+1));
+    PowerLevels_e next;
+    if (p_dyn_power)
+    {
+        next = PWR_10mW;
+    }
+    else
+    {
+        next = (PowerLevels_e)((p_current_power + 1) % (MaxPower+1));
+    }
     setPower(next);
-    return p_current_power;
+    return next;
 }
 
 void POWERMGNT::setPower(PowerLevels_e power)
