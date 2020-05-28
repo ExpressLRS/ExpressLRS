@@ -63,13 +63,13 @@ void platform_loop(int state)
     if (state == STATE_fw_upgrade)
     {
         HandleWebUpdate();
-        if (now > webUpdateLedFlashIntervalNext)
+        if (WEB_UPDATE_LED_FLASH_INTERVAL < (now - webUpdateLedFlashIntervalNext))
         {
 #ifdef GPIO_PIN_LED
             // toggle led
             digitalWrite(GPIO_PIN_LED, !digitalRead(GPIO_PIN_LED));
 #endif
-            webUpdateLedFlashIntervalNext = now + WEB_UPDATE_LED_FLASH_INTERVAL;
+            webUpdateLedFlashIntervalNext = now;
         }
     }
     else

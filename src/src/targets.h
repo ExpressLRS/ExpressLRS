@@ -107,7 +107,7 @@
 #define GPIO_PIN_OLED_SCK    -1
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define GPIO_PIN_BUTTON      2
+#define GPIO_PIN_BUTTON      0
 #endif
 
 
