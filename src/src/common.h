@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 #include <stdint.h>
 
 #define BUTTON_RESET_INTERVAL_RX  4000u // Hold button for 4 sec to reboot RX

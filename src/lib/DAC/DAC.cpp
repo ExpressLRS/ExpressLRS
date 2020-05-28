@@ -3,7 +3,7 @@
 
 #include "DAC.h"
 #include "helpers.h"
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 #include <Wire.h>
 
 #define VCC 3300

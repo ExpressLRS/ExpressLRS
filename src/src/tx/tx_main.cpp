@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "utils.h"
 #include "common.h"
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 #include "CRSF_TX.h"
 #include "FHSS.h"
 #include "targets.h"

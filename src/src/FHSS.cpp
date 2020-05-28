@@ -1,6 +1,6 @@
 #include "FHSS.h"
 #include "debug.h"
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 #include "common.h"
 #include "utils.h"
 

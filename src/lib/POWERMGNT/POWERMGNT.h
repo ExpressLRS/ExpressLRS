@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 
 #ifdef TARGET_R9M_TX
 #define MaxPower PWR_1000mW // was PWR_2000mW

@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
-#include "LoRaRadioLib.h"
+#include "LoRa_SX127x.h"
 #include "CRSF_RX.h"
 #include "FHSS.h"
 #include "rx_LinkQuality.h"
