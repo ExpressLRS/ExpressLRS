@@ -32,22 +32,14 @@ SX1280Hal::SX1280Hal()
 void SX1280Hal::init()
 {
     Serial.println("Spi Begin");
-    pinMode(this->SX1280_busy, INPUT);
-    pinMode(this->SX1280_dio1, INPUT);
-    pinMode(this->SX1280_RST, OUTPUT);
+    pinMode(GPIO_PIN_BUSY, INPUT);
+    pinMode(GPIO_PIN_DIO1, INPUT);
 
-    //this->TXdoneCallback = TXdoneCallback;
-    //this->RXdoneCallback = RXdoneCallback;
-
-    //pinMode(this->SX1280_MOSI, OUTPUT);
-    //pinMode(this->SX1280_MISO, INPUT);
-    //pinMode(this->SX1280_SCK, OUTPUT)
-    //pinMode(this->SX1280_nss, OUTPUT);
-
-    pinMode(this->SX1280_nss, HIGH);
+    pinMode(GPIO_PIN_RST, OUTPUT); 
+    pinMode(GPIO_PIN_NSS, OUTPUT);
 
 #ifdef PLATFORM_ESP32
-    SPI.begin(this->SX1280_SCK, this->SX1280_MISO, this->SX1280_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
+    SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     SPI.setFrequency(10000000);
 #endif
 
@@ -70,19 +62,19 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
-    attachInterrupt(digitalPinToInterrupt(this->SX1280_busy), this->busyISR, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(this->SX1280_dio1), this->dioISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::reset(void)
 {
     Serial.println("SX1280 Reset");
     delay(50);
-    digitalWrite(this->SX1280_RST, LOW);
+    digitalWrite(GPIO_PIN_RST, LOW);
     delay(50);
-    digitalWrite(this->SX1280_RST, HIGH);
+    digitalWrite(GPIO_PIN_RST, HIGH);
 
-    while (digitalRead(this->SX1280_busy) == HIGH) // wait for busy
+    while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
         #ifdef PLATFORM_STM32
         __NOP();

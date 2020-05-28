@@ -39,17 +39,17 @@ class SX1280Hal
 {
 
 private:
-    const uint8_t SX1280_nss = GPIO_PIN_NSS;
-    const uint8_t SX1280_busy = GPIO_PIN_BUSY;
-    const uint8_t SX1280_dio1 = GPIO_PIN_DIO1;
+    // const uint8_t SX1280_nss = GPIO_PIN_NSS;
+    // const uint8_t SX1280_busy = GPIO_PIN_BUSY;
+    // const uint8_t SX1280_dio1 = GPIO_PIN_DIO1;
 
-    const uint8_t SX1280_MOSI = GPIO_PIN_MOSI;
-    const uint8_t SX1280_MISO = GPIO_PIN_MISO;
-    const uint8_t SX1280_SCK = GPIO_PIN_SCK;
-    const uint8_t SX1280_RST = GPIO_PIN_RST;
+    // const uint8_t SX1280_MOSI = GPIO_PIN_MOSI;
+    // const uint8_t SX1280_MISO = GPIO_PIN_MISO;
+    // const uint8_t SX1280_SCK = GPIO_PIN_SCK;
+    // const uint8_t SX1280_RST = GPIO_PIN_RST;
 
-    const uint8_t SX1280_RXenb = GPIO_PIN_RX_ENABLE;
-    const uint8_t SX1280_TXenb = GPIO_PIN_RX_ENABLE;
+    // const uint8_t SX1280_RXenb = GPIO_PIN_RX_ENABLE;
+    // const uint8_t SX1280_TXenb = GPIO_PIN_RX_ENABLE;
 
     SX1280_InterruptAssignment_ InterruptAssignment = SX1280_INTERRUPT_NONE;
     SX1280_BusyState_ BusyState = SX1280_NOT_BUSY;

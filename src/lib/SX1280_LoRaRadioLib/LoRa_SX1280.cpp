@@ -53,6 +53,7 @@ void SX1280Driver::Begin()
 {
     hal.init();
     hal.TXdoneCallback = &SX1280Driver::TXnbISR;
+    hal.RXdoneCallback = &SX1280Driver::RXnbISR;
 
     hal.reset();
     Serial.println("SX1280 Begin");
