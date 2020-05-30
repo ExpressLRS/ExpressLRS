@@ -25,7 +25,7 @@ void setup()
     Serial.println("Begin SX1280 testing...");
 
     Radio.Begin();
-    Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF10, SX1280_LORA_CR_4_8, 2420000000, SX1280_PREAMBLE_LENGTH_32_BITS);
+    //Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF10, SX1280_LORA_CR_4_8, 2420000000, SX1280_PREAMBLE_LENGTH_32_BITS);
     Radio.TXdoneCallback1 = &TXdoneCallback1;
     Radio.RXdoneCallback1 = &RXdoneCallback1;
     Radio.TXnb(testdata, sizeof(testdata));

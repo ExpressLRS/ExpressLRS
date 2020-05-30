@@ -16,6 +16,12 @@ void ICACHE_RAM_ATTR TXdoneCallback1()
 void ICACHE_RAM_ATTR RXdoneCallback1()
 {
     Serial.println("RXdoneCallback1");
+    for (int i = 0; i < 8; i++)
+    {
+        Serial.print(Radio.RXdataBuffer[i], HEX);
+        Serial.print(",");
+    }
+    Serial.println("");
     //Radio.RXnb();
 }
 
