@@ -7,9 +7,9 @@ SX1280Hal hal;
 /////////////////////////////////////////////////////////////////
 
 SX1280_RadioLoRaBandwidths_t SX1280Driver::currBW = SX1280_LORA_BW_0800;
-SX1280_RadioLoRaSpreadingFactors_t SX1280Driver::currSF = SX1280_LORA_SF6;
+SX1280_RadioLoRaSpreadingFactors_t SX1280Driver::currSF = SX1280_LORA_SF10;
 SX1280_RadioLoRaCodingRates_t SX1280Driver::currCR = SX1280_LORA_CR_4_5;
-uint32_t SX1280Driver::currFreq = 2400000000; //should be mid 2.4 band, todo
+uint32_t SX1280Driver::currFreq = 2420000000; //should be mid 2.4 band, todo
 
 SX1280_RadioOperatingModes_t SX1280Driver::currOpmode = SX1280_MODE_SLEEP;
 
@@ -42,6 +42,9 @@ txBaseAddress and rxBaseAddress are offset relative to the beginning of the data
 5. Define the modulation parameter signal BW SF CR
 */
 
+uint32_t beginTX;
+uint32_t endTX;
+
 void ICACHE_RAM_ATTR SX1280Driver::nullCallback(void){};
 
 SX1280Driver::SX1280Driver()
@@ -63,19 +66,19 @@ void SX1280Driver::Begin()
     Serial.print("Firmware Revision: ");
     Serial.println(firmwareRev);
 
-    this->SetMode(SX1280_MODE_STDBY_RC); //step 1 put in STDBY_RC mode
-
+    this->SetMode(SX1280_MODE_STDBY_RC);                                    //step 1 put in STDBY_RC mode
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA); //Step 2: set packet type to LoRa
-
+    this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
+    this->SetPacketParams(12, SX1280_LORA_PACKET_EXPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
     this->SetFrequency(this->currFreq); //Step 3: Set Freq
+    this->SetFIFOaddr(0x00, 0x00);      //Step 4: Config FIFO addr
+    this->SetOutputPower(13);
 
-    this->SetFIFOaddr(0x00, 0x00); //Step 4: Config FIFO addr
+    this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); // set DIO1 to trigger on TxDone and RxDone, disable other DIOs
 
-    this->ConfigModParams(currBW, currSF, currCR); //Step 5: Configure Modulation Params
+    //hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01); //enable auto FS
 
-    this->SetPacketParams(SX1280_PREAMBLE_LENGTH_12_BITS, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
-
-    this->SetDioIrqParams(0x0003, 0x0003, 0x0000, 0x0000); // set DIO1 to trigger on TxDone and RxDone, disable other DIOs
+    //this->SetMode(SX1280_MODE_STDBY_XOSC); //step 1 put in STDBY_RC mode
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, SX1280_RadioPreambleLengths_t PreambleLength)
@@ -85,12 +88,16 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(uint8_t power)
+void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
 {
+    uint8_t buf[2];
+    buf[0] = power + 18;
+    buf[1] = (uint8_t)SX1280_RADIO_RAMP_04_US;
+    hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, 2);
     return; //TODO impliment function
 }
 
-void SX1280Driver::SetPacketParams(SX1280_RadioPreambleLengths_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ)
+void SX1280Driver::SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ)
 {
     uint8_t buf[7];
 
@@ -112,17 +119,18 @@ void SX1280Driver::SetPreambleLength(SX1280_RadioPreambleLengths_t preambleLen)
 void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 {
 
-    if (OPmode == currOpmode)
-    {
-        return;
-    }
+    //if (OPmode == currOpmode)
+    //{
+    //   return;
+    //}
 
-    uint8_t buf3[3] = {0x00}; //TODO make word alignmed
+    uint8_t buf3[3]; //TODO make word alignmed
 
     switch (OPmode)
     {
 
     case SX1280_MODE_SLEEP:
+        hal.WriteCommand(SX1280_RADIO_SET_SLEEP, 0x01);
         break;
 
     case SX1280_MODE_CALIBRATION:
@@ -141,7 +149,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 
     case SX1280_MODE_RX:
 
-        buf3[0] = 0xFF; // periodBase = 1ms, page 71 datasheet, set to FF for cont RX
+        buf3[0] = 0x00; // periodBase = 1ms, page 71 datasheet, set to FF for cont RX
         buf3[1] = 0xFF;
         buf3[2] = 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf3, sizeof(buf3));
@@ -151,9 +159,9 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     case SX1280_MODE_TX:
 
         //uses timeout Time-out duration = periodBase * periodBaseCount
-        buf3[0] = 0x02; // periodBase = 1ms, page 71 datasheet
-        buf3[1] = 0x00; // no timeout set for now
-        buf3[2] = 0x00; // TODO dynamic timeout based on expected onairtime
+        buf3[0] = 0x00; // periodBase = 1ms, page 71 datasheet
+        buf3[1] = 0xFF; // no timeout set for now
+        buf3[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
 
         hal.WriteCommand(SX1280_RADIO_SET_TX, buf3, sizeof(buf3));
 
@@ -171,8 +179,6 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 
 void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr)
 {
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA); // set to LoRa Mode
-
     // Care must therefore be taken to ensure that modulation parameters are set using the command
     // SetModulationParam() only after defining the packet type SetPacketType() to be used
 
@@ -251,12 +257,17 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 
 void SX1280Driver::TXnbISR()
 {
+    endTX = micros();
+    Serial.print("TOA: ");
+    Serial.println(endTX - beginTX);
+    instance->GetStatus();
     instance->NonceTX++;
 
     instance->currOpmode = SX1280_MODE_SLEEP; // radio goes to sleep after TX
     Serial.println("TXnbISR!");
-
+    instance->GetStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+    instance->GetStatus();
 
     instance->TXdoneCallback1();
     instance->TXdoneCallback2();
@@ -266,10 +277,19 @@ void SX1280Driver::TXnbISR()
 
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
+    Serial.println("TXnb");
+    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+    instance->SetOutputPower(13);
+    instance->GetStatus();
     hal.setIRQassignment(SX1280_INTERRUPT_TX_DONE);
-    instance->SetFIFOaddr(0x00, 0x00);                  // not 100% sure if needed again
+    instance->GetStatus();
+    instance->SetFIFOaddr(0x00, 0x00); // not 100% sure if needed again
+    instance->GetStatus();
     hal.WriteBuffer(0x00, (uint8_t *)data, length); //todo fix offset to equal fifo addr
+    instance->GetStatus();
     instance->SetMode(SX1280_MODE_TX);
+    beginTX = micros();
+    instance->GetStatus();
 }
 
 void SX1280Driver::RXnbISR()
@@ -287,9 +307,38 @@ void SX1280Driver::RXnbISR()
 
 void SX1280Driver::RXnb()
 {
-    hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
-    instance->SetFIFOaddr(0x00, 0x00);
-    instance->SetMode(SX1280_MODE_RX);
+    // Serial.println("RXnb");
+    // instance->SetMode(SX1280_MODE_STDBY_XOSC);
+    // instance->GetStatus();
+    // //instance->SetDioIrqParams(0x0003, 0x0003, 0x0000, 0x0000); // set DIO1 to trigger on TxDone and RxDone, disable other DIOs
+    // //instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+    // instance->GetStatus();
+    // hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
+    // instance->GetStatus();
+    // //instance->SetFIFOaddr(0x00, 0x00);
+    // instance->GetStatus();
+     instance->SetMode(SX1280_MODE_RX);
+    // instance->GetStatus();
+}
+
+void ICACHE_RAM_ATTR SX1280Driver::GetStatus()
+{
+    uint8_t status = 0;
+
+    uint8_t stat1;
+    uint8_t stat2;
+    bool busy;
+
+    hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1);
+    stat1 = (0b11100000 & status) >> 5;
+    stat2 = (0b00011100 & status) >> 2;
+    busy = 0b00000001 & status;
+    Serial.print("Status: ");
+    Serial.print(stat1, HEX);
+    Serial.print(", ");
+    Serial.print(stat2, HEX);
+    Serial.print(", ");
+    Serial.println(busy, HEX);
 }
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()

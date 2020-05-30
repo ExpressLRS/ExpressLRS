@@ -35,12 +35,12 @@ void SX1280Hal::init()
     pinMode(GPIO_PIN_BUSY, INPUT);
     pinMode(GPIO_PIN_DIO1, INPUT);
 
-    pinMode(GPIO_PIN_RST, OUTPUT); 
+    pinMode(GPIO_PIN_RST, OUTPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
 
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
-    SPI.setFrequency(10000000);
+    SPI.setFrequency(8000000);
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -76,13 +76,13 @@ void ICACHE_RAM_ATTR SX1280Hal::reset(void)
 
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
-        #ifdef PLATFORM_STM32
+#ifdef PLATFORM_STM32
         __NOP();
-        #elif PLATFORM_ESP32
+#elif PLATFORM_ESP32
         _NOP();
-        #elif PLATFORM_ESP8266
+#elif PLATFORM_ESP8266
         _NOP();
-        #endif
+#endif
     }
 
     this->BusyState = SX1280_NOT_BUSY;
@@ -91,8 +91,9 @@ void ICACHE_RAM_ATTR SX1280Hal::reset(void)
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val)
 {
+    WaitOnBusy();
+    digitalWrite(GPIO_PIN_NSS, LOW);
 
-    digitalWrite(this->SX1280_nss, LOW);
 #ifdef PLATFORM_STM32
     SPI.transfer((uint8_t)command);
     SPI.transfer(val);
@@ -100,7 +101,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.write((uint8_t)command);
     SPI.write(val);
 #endif
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     if (command != SX1280_RADIO_SET_SLEEP)
     {
@@ -111,8 +112,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint16_t size)
 {
     WaitOnBusy();
+    digitalWrite(GPIO_PIN_NSS, LOW);
 
-    digitalWrite(this->SX1280_nss, LOW);
 #ifdef PLATFORM_STM32
     SPI.transfer((uint8_t)command);
 #else
@@ -126,7 +127,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
         SPI.write(buffer[i]);
 #endif
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     if (command != SX1280_RADIO_SET_SLEEP)
     {
@@ -136,9 +137,9 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint16_t size)
 {
-    WaitOnBusy();
 
-    digitalWrite(this->SX1280_nss, LOW);
+    WaitOnBusy();
+    digitalWrite(GPIO_PIN_NSS, LOW);
 
     if (command == SX1280_RADIO_GET_STATUS)
     {
@@ -165,16 +166,17 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
             buffer[i] = SPI.transfer(0);
         }
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint16_t size)
 {
-    WaitOnBusy();
 
-    digitalWrite(this->SX1280_nss, LOW);
+    WaitOnBusy();
+    digitalWrite(GPIO_PIN_NSS, LOW);
+
 #ifdef PLATFORM_STM32
     SPI.transfer(SX1280_RADIO_WRITE_REGISTER);
     SPI.transfer((address & 0xFF00) >> 8);
@@ -192,7 +194,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
         SPI.write(buffer[i]);
 #endif
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     WaitOnBusy();
 }
@@ -206,7 +208,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
 {
     WaitOnBusy();
 
-    digitalWrite(this->SX1280_nss, LOW);
+    digitalWrite(GPIO_PIN_NSS, LOW);
 #ifdef PLATFORM_STM32
     SPI.transfer(SX1280_RADIO_READ_REGISTER);
     SPI.transfer((address & 0xFF00) >> 8);
@@ -222,7 +224,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     {
         buffer[i] = SPI.transfer(0);
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     WaitOnBusy();
 }
@@ -238,7 +240,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 {
     WaitOnBusy();
 
-    digitalWrite(this->SX1280_nss, LOW);
+    digitalWrite(GPIO_PIN_NSS, LOW);
 #ifdef PLATFORM_STM32
     SPI.transfer(SX1280_RADIO_WRITE_BUFFER);
     SPI.transfer(offset);
@@ -254,7 +256,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
         SPI.write(buffer[i]);
 #endif
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     WaitOnBusy();
 }
@@ -263,7 +265,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
 {
     WaitOnBusy();
 
-    digitalWrite(this->SX1280_nss, LOW);
+    digitalWrite(GPIO_PIN_NSS, LOW);
 #ifdef PLATFORM_STM32
     SPI.transfer(SX1280_RADIO_READ_BUFFER);
     SPI.transfer(offset);
@@ -277,44 +279,61 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     {
         buffer[i] = SPI.transfer(0);
     }
-    digitalWrite(this->SX1280_nss, HIGH);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 
     WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-    while (instance->SX1280_busy == SX1280_BUSY)
+    //while (instance->BusyState != SX1280_NOT_BUSY)
+    while (digitalRead(GPIO_PIN_BUSY) == HIGH)
     {
+        //if (instance->BusyState == SX1280_BUSY)
+        // {
+        //     Serial.println("wB");
+        // }
+        // else
+        // {
+        //     Serial.println("wnB");
+        // }
+        //{
+        //Serial.println("W");
 #ifdef PLATFORM_ESP32
         NOP();
 #endif
 #ifdef PLATFORM_ESP8266
         _NOP();
+        //delayMicroseconds(1);
 #endif
     }
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::busyISR()
 {
-    if (digitalRead(instance->SX1280_busy) == HIGH)
+    if (digitalRead(GPIO_PIN_BUSY) == HIGH)
     {
         instance->BusyState = SX1280_BUSY;
+        Serial.println("B");
     }
     else
     {
         instance->BusyState = SX1280_NOT_BUSY;
+        Serial.println("Bn");
     }
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 {
+    Serial.println("DIOISR");
     if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
+        Serial.println("HalRXdone");
         RXdoneCallback();
     }
     else if (instance->InterruptAssignment == SX1280_INTERRUPT_TX_DONE)
     {
+        Serial.println("HalTXdone");
         TXdoneCallback();
     }
 }
@@ -322,19 +341,19 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 void ICACHE_RAM_ATTR SX1280Hal::setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment)
 {
 
-    if (InterruptAssignment == newInterruptAssignment)
+    // if (InterruptAssignment == newInterruptAssignment)
+    // {
+    //     return;
+    // }
+    // else
+    // {
+    if (newInterruptAssignment == SX1280_INTERRUPT_TX_DONE)
     {
-        return;
+        this->InterruptAssignment = SX1280_INTERRUPT_TX_DONE;
     }
-    else
+    else if (newInterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
-        if (newInterruptAssignment == SX1280_INTERRUPT_TX_DONE)
-        {
-            this->InterruptAssignment = SX1280_INTERRUPT_TX_DONE;
-        }
-        else if (newInterruptAssignment == SX1280_INTERRUPT_RX_DONE)
-        {
-            this->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
-        }
+        this->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
     }
+    //}
 }
