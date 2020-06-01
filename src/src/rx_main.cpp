@@ -127,7 +127,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
     Radio.RXnb();
 }
 
-void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
 {
     ExpressLRS_currAirRate->TLMinterval = TLMrateIn;
 }

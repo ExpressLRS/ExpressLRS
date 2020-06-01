@@ -11,6 +11,12 @@ SX127xHal::SX127xHal()
   instance = this;
 }
 
+void SX127xHal::end()
+{
+  SPI.end();
+  detachInterrupt(GPIO_PIN_DIO0);
+}
+
 void SX127xHal::init()
 {
   Serial.println("Hal Init");
@@ -49,7 +55,7 @@ void SX127xHal::init()
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
-  SPI.begin();                                     // SPI.setFrequency(10000000);
+  SPI.begin();                         // SPI.setFrequency(10000000);
 #endif
 
   pinMode(GPIO_PIN_NSS, OUTPUT);
@@ -63,6 +69,8 @@ void SX127xHal::init()
   delay(100);
   digitalWrite(GPIO_PIN_RST, 1);
   delay(100);
+
+  attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t lsb)

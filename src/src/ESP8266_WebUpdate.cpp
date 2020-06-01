@@ -5,6 +5,9 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include "LoRaRadioLib.h"
+
+extern SX127xDriver Radio;
 extern float PacketRate;
 
 #define STASSID "ExpressLRS RX"
@@ -19,6 +22,7 @@ ESP8266HTTPUpdateServer httpUpdater;
 
 void BeginWebUpdate(void)
 {
+  Radio.End();
 
   Serial.println("Begin Webupdater");
   WiFi.mode(WIFI_AP);

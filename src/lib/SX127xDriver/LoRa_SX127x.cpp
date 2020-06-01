@@ -23,6 +23,7 @@ volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0
 
 SX127xDriver::SX127xDriver()
 {
+  SetMode(SX127x_OPMODE_SLEEP);
   instance = this;
 }
 
@@ -34,7 +35,18 @@ void SX127xDriver::Begin()
   hal.init();
   DetectChip();
   ConfigLoraDefaults();
-  attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), hal.dioISR, RISING);
+}
+
+void SX127xDriver::End()
+{
+  hal.end();
+  instance->TXdoneCallback1 = &nullCallback;
+  instance->TXdoneCallback2 = &nullCallback;
+  instance->TXdoneCallback3 = &nullCallback;
+  instance->TXdoneCallback4 = &nullCallback;
+
+  instance->RXdoneCallback1 = &nullCallback;
+  instance->RXdoneCallback2 = &nullCallback;
 }
 
 void SX127xDriver::ConfigLoraDefaults()
@@ -42,7 +54,7 @@ void SX127xDriver::ConfigLoraDefaults()
   Serial.println("Setting ExpressLRS LoRa reg defaults");
 
   SetMode(SX127x_OPMODE_SLEEP);
-  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa);
+  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
 
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
@@ -58,7 +70,6 @@ void SX127xDriver::ConfigLoraDefaults()
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
 {
-
   if ((currBW != bw) || (currCR != cr))
   {
     if (currSF == SX127x_SF_6) // set SF6 optimizations
@@ -211,7 +222,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   hal.TXRXdisable();
   instance->IRQneedsClear = true;
-  instance->currOpmode = SX127x_OPMODE_STANDBY;
+  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission 
   instance->ClearIRQFlags();
   instance->NonceTX++;
   TXdoneCallback1();

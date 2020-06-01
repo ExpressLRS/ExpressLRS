@@ -121,8 +121,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PA10
 #define GPIO_PIN_RCSIGNAL_TX    PA9
-#define GPIO_PIN_LED            PC1      // Red
-#define GPIO_PIN_LED_GREEN      PB3 // Green - Currently unused
+#define GPIO_PIN_LED            PC1 // Red
+#define GPIO_PIN_LED_GREEN      PB3 // Green 
 #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #define timerOffset             2
 
@@ -149,8 +149,8 @@ https://github.com/jaxxzer
 
 #ifdef TARGET_R9M_TX
 
-#define GPIO_PIN_RFamp_APC1           PA6  //CONFIRMED SANDRO// APC2 is connected through a I2C dac and is handled elsewhere
-#define GPIO_PIN_RFswitch_CONTROL     PB3  //CONFIRMED SANDRO HIGH = RX, LOW = TX
+#define GPIO_PIN_RFamp_APC1           PA6  //APC2 is connected through a I2C dac and is handled elsewhere
+#define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PA15
@@ -181,11 +181,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 
-// PwrAmp, RFControl, dodgy measurement with SDR, descending
-// high low  -5 
-// low  low  -30
-// low  high -40
-// high high -40
+
 
 #include <stdio.h>
 #endif

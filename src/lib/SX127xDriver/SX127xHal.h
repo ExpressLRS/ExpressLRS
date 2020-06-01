@@ -22,6 +22,7 @@ public:
     SX127xHal();
 
     void init();
+    void end();
 
     static void ICACHE_RAM_ATTR dioISR();
     static void inline nullCallback(void);
