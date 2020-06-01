@@ -6,13 +6,8 @@ SX127xHal hal;
 void inline SX127xDriver::nullCallback(void){};
 SX127xDriver *SX127xDriver::instance = NULL;
 
-void (*SX127xDriver::RXdoneCallback1)() = &nullCallback;
-void (*SX127xDriver::RXdoneCallback2)() = &nullCallback;
-
-void (*SX127xDriver::TXdoneCallback1)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback2)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback3)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback4)() = &nullCallback;
+void (*SX127xDriver::RXdoneCallback)() = &nullCallback;
+void (*SX127xDriver::TXdoneCallback)() = &nullCallback;
 
 void (*SX127xDriver::TXtimeout)() = &nullCallback;
 void (*SX127xDriver::RXtimeout)() = &nullCallback;
@@ -40,13 +35,8 @@ void SX127xDriver::Begin()
 void SX127xDriver::End()
 {
   hal.end();
-  instance->TXdoneCallback1 = &nullCallback;
-  instance->TXdoneCallback2 = &nullCallback;
-  instance->TXdoneCallback3 = &nullCallback;
-  instance->TXdoneCallback4 = &nullCallback;
-
-  instance->RXdoneCallback1 = &nullCallback;
-  instance->RXdoneCallback2 = &nullCallback;
+  instance->TXdoneCallback = &nullCallback; // remove callbacks
+  instance->RXdoneCallback = &nullCallback;
 }
 
 void SX127xDriver::ConfigLoraDefaults()
@@ -222,14 +212,10 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   hal.TXRXdisable();
   instance->IRQneedsClear = true;
-  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission 
+  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   instance->ClearIRQFlags();
-  instance->NonceTX++;
-  TXdoneCallback1();
-  TXdoneCallback2();
-  TXdoneCallback3();
-  TXdoneCallback4();
   instance->TXdoneMicros = micros();
+  TXdoneCallback();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
@@ -239,13 +225,14 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
     Serial.println("abort TX");
     return; // we were already TXing so abort
   }
+  instance->SetMode(SX127x_OPMODE_STANDBY);
+
   hal.TXenable();
   instance->TXstartMicros = micros();
   instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
-  instance->SetMode(SX127x_OPMODE_STANDBY);
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
@@ -263,9 +250,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
   instance->LastPacketRSSI = instance->GetLastPacketRSSI();
   instance->LastPacketSNR = instance->GetLastPacketSNR();
-  instance->NonceRX++;
-  RXdoneCallback1();
-  RXdoneCallback2();
+  RXdoneCallback();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()

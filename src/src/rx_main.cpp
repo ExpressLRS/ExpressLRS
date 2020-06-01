@@ -66,7 +66,7 @@ bool webUpdateMode = false;
 uint32_t webUpdateLedFlashIntervalLast;
 ///////////////////////////////////////////////
 
-volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
+volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
@@ -139,7 +139,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         return;
     }
 
-    uint8_t modresult = (NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval;
+    uint8_t modresult = (NonceRX + 1) % ExpressLRS_currAirRate->FHSShopInterval;
 
     if ((modresult != 0) || (connectionState == disconnected)) // don't hop if disconnected
     {
@@ -154,7 +154,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
         Radio.RXnb();
         return;
     }
-    else if (((NonceRXlocal + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval))) != 0) // if we aren't about to send a response don't go back into RX mode
+    else if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval))) != 0) // if we aren't about to send a response don't go back into RX mode
     {
         Radio.RXnb();
         return;
@@ -168,7 +168,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return; // don't bother sending tlm if disconnected or TLM is off
     }
 
-    uint8_t modresult = (NonceRXlocal + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
     if (modresult != 0)
     {
         return;
@@ -236,18 +236,18 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     }
 }
 
-void ICACHE_RAM_ATTR HWtimerCallback_180() // this is 180 out of phase with the other callback
+void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback
 {
+    NonceRX++;
     alreadyFHSS = false;
     linkQuality = getRFlinkQuality();
     incrementLQArray();
 }
 
-void ICACHE_RAM_ATTR HWtimerCallback()
+void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     HandleFHSS();
     HandleSendTelemetryResponse();
-    NonceRXlocal++;
 }
 
 void ICACHE_RAM_ATTR LostConnection()
@@ -344,6 +344,7 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing =  micros();
+    //Serial.println(micros() - doneProcessing);
 
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -404,14 +405,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
+            #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
+            #endif
 
             if (connectionState == disconnected)
             {
                 TentativeConnection();
             }
 
-            if (connectionState == tentative && NonceRXlocal == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1] && OffsetDx <= 5 && linkQuality > 85)
+            if (connectionState == tentative && NonceRX == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1] && OffsetDx <= 5 && linkQuality > 85)
                 GotConnection();
 
             expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11000000) >> 6);
@@ -419,15 +422,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if ((ExpressLRS_currAirRate->enum_rate != rateIn) || (ExpressLRS_currAirRate->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
             { // change link parameters if required
+                #ifndef DEBUG_SUPPRESS
                 Serial.println("New TLMrate: ");
                 Serial.println(TLMrateIn);
+                #endif
                 ExpressLRS_AirRateNeedsUpdate = true;
                 ExpressLRS_currAirRate = get_elrs_airRateConfig((expresslrs_RFrates_e)rateIn);
                 ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
             }
 
             FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-            NonceRXlocal = Radio.RXdataBuffer[2];
+            NonceRX = Radio.RXdataBuffer[2];
         }
         break;
 
@@ -527,7 +532,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
     alreadyTLMresp = false;
     addPacketToLQ();
     Radio.RXnb();
-    //Serial.println("t");
 }
 
 void setup()
@@ -584,15 +588,14 @@ void setup()
     // Serial.print(RFnoiseFloor);
     // Serial.println("dBm");
 
-    Radio.RXdoneCallback1 = &RXdoneISR;
-    Radio.TXdoneCallback1 = &TXdoneISR;
+    Radio.RXdoneCallback = &RXdoneISR;
+    Radio.TXdoneCallback = &TXdoneISR;
 
     crsf.Begin();
-    hwTimer.callbackTock = &HWtimerCallback;
-    hwTimer.callbackTick = &HWtimerCallback_180;
+    hwTimer.callbackTock = &HWtimerCallbackTock;
+    hwTimer.callbackTick = &HWtimerCallbackTick;
 
     SetRFLinkRate(RATE_200HZ);
-    //hwTimer.init();
 }
 
 void loop()
@@ -603,9 +606,7 @@ void loop()
     //Serial.print(headroom);
     //Serial.print(" Head2:");
     //Serial.println(headroom2);
-
-
-    crsf.RXhandleUARTout();
+    //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
     if (connectionState == tentative && linkQuality < 85 && (millis() > (LastSyncPacket + ExpressLRS_currAirRate->RFmodeCycleAddtionalTime)))
     {
@@ -615,7 +616,7 @@ void loop()
         SetRFLinkRate(ExpressLRS_currAirRate->enum_rate); //switch between 200hz, 100hz, 50hz, rates
         scanIndex = 3 - ExpressLRS_currAirRate->enum_rate;
         RFmodeLastCycled = millis();
-        NonceRXlocal=0;
+        NonceRX=0;
     }
 
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate->RFmodeCycleInterval)) // connection = tentative we add alittle delay
@@ -643,11 +644,13 @@ void loop()
     {
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
+        #ifndef DEBUG_SUPPRESS
         Serial.print(Offset);
         Serial.print(":");
         Serial.print(OffsetDx);
         Serial.print(":");
         Serial.println(linkQuality);
+        #endif
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))

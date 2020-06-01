@@ -16,19 +16,16 @@ public:
     static SX127xDriver *instance;
     SX127xDriver();
     ///////Callback Function Pointers/////
-    static void (*RXdoneCallback1)(); //function pointer for callback
-    static void (*RXdoneCallback2)(); //function pointer for callback
-
-    static void (*TXdoneCallback1)(); //function pointer for callback
-    static void (*TXdoneCallback2)(); //function pointer for callback
-    static void (*TXdoneCallback3)(); //function pointer for callback
-    static void (*TXdoneCallback4)(); //function pointer for callback
+    static void inline nullCallback(void);
+    
+    static void (*RXdoneCallback)(); //function pointer for callback
+    static void (*TXdoneCallback)(); //function pointer for callback
 
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
 
 ///////////Radio Variables////////
-#define TXRXBuffSize 8
+    #define TXRXBuffSize 8
     const uint8_t TXbuffLen = TXRXBuffSize; //TODO might not always be const
     const uint8_t RXbuffLen = TXRXBuffSize;
 
@@ -37,15 +34,6 @@ public:
 
     bool headerExplMode = false;
     bool crcEnabled = false;
-
-//// Default Parameters for ELRS ////
-#define defaultFreq 915000000
-#define defaultSyncWord SX127X_SYNC_WORD
-#define defaultPreambleLen 8
-#define defaultBW SX127x_BW_500_00_KHZ
-#define defaultSF SX127x_SF_6
-#define defaultCR SX127x_CR_4_5
-#define defaultOpmode SX127x_OPMODE_SLEEP
 
     //// Parameters ////
     uint32_t currFreq = 0; // leave as 0 to ensure that it gets set
@@ -112,7 +100,6 @@ public:
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
     int8_t ICACHE_RAM_ATTR GetCurrRSSI();
 
-    static void inline nullCallback(void);
     ////////////Non-blocking TX related Functions/////////////////
     static void ICACHE_RAM_ATTR TXnb(uint8_t volatile *data, uint8_t length);
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
