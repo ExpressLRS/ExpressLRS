@@ -151,7 +151,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
     crsf.LinkStatistics.downlink_Link_quality = linkQuality;
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate->enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->enum_rate;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
@@ -177,7 +177,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate->enum_rate & 0b11) << 6) + ((ExpressLRS_currAirRate->TLMinterval & 0b111) << 3);
+  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->enum_rate & 0b11) << 6) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 3);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -247,64 +247,67 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
-  expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
-  Radio.Config(mode->bw, mode->sf, mode->cr, mode->PreambleLen);
-  hwTimer.updateInterval(mode->interval);
-  ExpressLRS_prevAirRate = ExpressLRS_currAirRate;
-  ExpressLRS_currAirRate = mode;
-  crsf.RequestedRCpacketInterval = mode->interval;
-  DebugOutput += String(mode->rate) + "Hz";
+  expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
+  expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
+
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, ModParams->PreambleLen);
+  hwTimer.updateInterval(ModParams->interval);
+
+  ExpressLRS_currAirRate_Modparams = ModParams;
+  ExpressLRS_currAirRate_RFperfParams = RFperf;
+
+  crsf.RequestedRCpacketInterval = ModParams->interval;
   isRXconnected = false;
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
 {
   Serial.println("dec TLM");
-  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 
   if (currTLMinterval < (uint8_t)TLM_RATIO_1_2)
   {
-    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval + 1);
+    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval + 1);
     Serial.println(currTLMinterval);
   }
-  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+  return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 }
 
 uint8_t ICACHE_RAM_ATTR incTLMrate()
 {
   Serial.println("inc TLM");
-  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 
   if (currTLMinterval > (uint8_t)TLM_RATIO_NO_TLM)
   {
-    ExpressLRS_currAirRate->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
+    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
   }
-  return (uint8_t)ExpressLRS_currAirRate->TLMinterval;
+  return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 }
 
 uint8_t ICACHE_RAM_ATTR decRFLinkRate()
 {
   Serial.println("dec RFrate");
-  if ((uint8_t)ExpressLRS_currAirRate->enum_rate < MaxRFrate)
+  if ((uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate < (RATE_MAX - 1))
   {
-    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate + 1));
+    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate_Modparams->enum_rate + 1));
   }
-  return (uint8_t)ExpressLRS_currAirRate->enum_rate;
+  return (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 }
 
 uint8_t ICACHE_RAM_ATTR incRFLinkRate()
 {
   Serial.println("inc RFrate");
-  if ((uint8_t)ExpressLRS_currAirRate->enum_rate > RATE_200HZ)
+  if ((uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate > RATE_200HZ)
   {
-    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate->enum_rate - 1));
+    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate_Modparams->enum_rate - 1));
   }
-  return (uint8_t)ExpressLRS_currAirRate->enum_rate;
+  return (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-  uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate->FHSShopInterval;
+  uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
   {
@@ -314,9 +317,9 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleTLM()
 {
-  if (ExpressLRS_currAirRate->TLMinterval > 0)
+  if (ExpressLRS_currAirRate_Modparams->TLMinterval > 0)
   {
-    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
     if (modresult != 0) // wait for tlm response because it's time
     {
       return;
@@ -333,9 +336,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   /////// This Part Handles the Telemetry Response ///////
-  if ((uint8_t)ExpressLRS_currAirRate->TLMinterval > 0)
+  if ((uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval > 0)
   {
-    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval);
+    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
     if (modresult == 0)
     { // wait for tlm response
       if (WaitRXresponse == true)
@@ -354,16 +357,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   if (isRXconnected)
   {
-    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
+    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected;
   }
   else
   {
-    SyncInterval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
+    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   }
 
-  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
+  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
   //if ((millis() > ((SyncPacketLastSent + SYNC_PACKET_SEND_INTERVAL_RX_CONN)) && (Radio.currFreq == GetInitialFreq())) || ((isRXconnected == false) && (Radio.currFreq == GetInitialFreq())))
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX + random(0, ExpressLRS_currAirRate->FHSShopInterval - 1)) % ExpressLRS_currAirRate->FHSShopInterval == 0)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  //if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
     GenerateSyncPacketData();
@@ -435,7 +438,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
     {
       /*uint8_t newRate =*/incRFLinkRate();
     }
-    Serial.println(ExpressLRS_currAirRate->enum_rate);
+    Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
     break;
 
   case 2:
@@ -487,7 +490,7 @@ void ICACHE_RAM_ATTR HandleUpdateParameter()
   UpdateParamReq = false;
   //Serial.println("Power");
   //Serial.println(POWERMGNT.currPower());
-  crsf.sendLUAresponse((ExpressLRS_currAirRate->enum_rate + 2), ExpressLRS_currAirRate->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
+  crsf.sendLUAresponse((ExpressLRS_currAirRate_Modparams->enum_rate + 2), ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -612,7 +615,7 @@ void loop()
   // Serial.println(crsf.OpenTXsyncOffset);
 #endif
 
-  //updateLEDs(isRXconnected, ExpressLRS_currAirRate->TLMinterval);
+  //updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
@@ -629,7 +632,7 @@ void loop()
 #endif
   }
 
-  float targetFrameRate = (ExpressLRS_currAirRate->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate->TLMinterval)));
+  float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
   PacketRateLastChecked = millis();
   PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
   linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));

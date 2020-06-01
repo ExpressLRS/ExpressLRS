@@ -268,38 +268,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);
 }
 
-// uint8_t SX127xDriver::RunCAD() TODO
-// {
-//   SetMode(SX127X_STANDBY);
-
-//   hal.setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_CAD_DONE | SX127X_DIO1_CAD_DETECTED, 7, 4);
-
-//   SetMode(SX127X_CAD);
-//   ClearIRQFlags();
-
-//   uint32_t startTime = millis();
-
-//   while (!digitalRead(SX127x_dio0))
-//   {
-//     if (millis() > (startTime + 500))
-//     {
-//       return (CHANNEL_FREE);
-//     }
-//     else
-//     {
-//       //yield();
-//       if (digitalRead(SX127x_dio1))
-//       {
-//         ClearIRQFlags();
-//         return (PREAMBLE_DETECTED);
-//       }
-//     }
-//   }
-
-//   ClearIRQFlags();
-//   return (CHANNEL_FREE);
-// }
-
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (!(currOpmode == mode))
@@ -450,3 +418,55 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
     IRQneedsClear = false;
   }
 }
+
+// int16_t MeasureNoiseFloor() TODO disabled for now
+// {
+//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
+//     float returnval = 0;
+
+//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
+//     {
+//         FHSSsetCurrIndex(freq);
+//         Radio.SetMode(SX127X_CAD);
+
+//         for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
+//         {
+//             returnval = returnval + Radio.GetCurrRSSI();
+//             delay(5);
+//         }
+//     }
+//     returnval = returnval / NUM_READS;
+//     return (returnval);
+// }
+
+// uint8_t SX127xDriver::RunCAD() TODO
+// {
+//   SetMode(SX127X_STANDBY);
+
+//   hal.setRegValue(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_CAD_DONE | SX127X_DIO1_CAD_DETECTED, 7, 4);
+
+//   SetMode(SX127X_CAD);
+//   ClearIRQFlags();
+
+//   uint32_t startTime = millis();
+
+//   while (!digitalRead(SX127x_dio0))
+//   {
+//     if (millis() > (startTime + 500))
+//     {
+//       return (CHANNEL_FREE);
+//     }
+//     else
+//     {
+//       //yield();
+//       if (digitalRead(SX127x_dio1))
+//       {
+//         ClearIRQFlags();
+//         return (PREAMBLE_DETECTED);
+//       }
+//     }
+//   }
+
+//   ClearIRQFlags();
+//   return (CHANNEL_FREE);
+// }

@@ -28,6 +28,8 @@ void hwTimer::init()
 void hwTimer::stop()
 {
     MyTim->pause();
+    ResetNextLoop = false;
+    TickTock = false;
 }
 
 void hwTimer::pause()

@@ -3,6 +3,8 @@ volatile uint8_t linkQualityArray[100] = {0};
 volatile uint32_t linkQualityArrayCounter = 0;
 volatile uint8_t linkQualityArrayIndex = 0;
 
+#include "common.h"
+
 void ICACHE_RAM_ATTR incrementLQArray()
 {
     linkQualityArrayCounter++;

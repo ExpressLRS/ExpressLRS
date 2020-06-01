@@ -1,23 +1,22 @@
 #include "common.h"
 
-void commonConfig()
-{ //settings common to both master and slave
-}
-
 extern SX127xDriver Radio;
 
-// TODO: Validate values for RFmodeCycleAddtionalTime and RFmodeCycleInterval for rates lower than 50HZ
-
-#define RATE_MAX 3
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, -112, 5000, 200, TLM_RATIO_1_64, 4, 8, RATE_200HZ, 2000, 5000},
-    {SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, -117, 10000, 100, TLM_RATIO_1_64, 4, 8, RATE_100HZ, 2000, 6000},
-    {SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, -120, 20000, 50, TLM_RATIO_NO_TLM, 4, 8, RATE_50HZ, 3000, 8000}
-    //{SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_8, -123, 40000, 25, TLM_RATIO_NO_TLM, 2, 8, RATE_25HZ, 6000, 2500}, // not using thse slower rates for now
-    //{BW_250_00_KHZ, SF_11, CR_4_5, -131, 250000, 4, TLM_RATIO_NO_TLM, 2, 8, RATE_4HZ, 6000, 2500},
-};
+    {RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, 200, TLM_RATIO_1_64, 2, 8},
+    {RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, 100, TLM_RATIO_1_64, 2, 8},
+    {RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, 50, TLM_RATIO_NO_TLM, 2, 8},
+    {RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, 25, TLM_RATIO_NO_TLM, 2, 10},
+    {RATE_4HZ, SX127x_BW_500_00_KHZ, SX127x_SF_12, SX127x_CR_4_7, 250000, 4, TLM_RATIO_1_4, 2, 10}}; // for model recovery 
 
-expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
+expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
+    {RATE_200HZ, -112, 4380, 2500, 5000, 2000, 5000}, // ~ 3 sync packets
+    {RATE_100HZ, -117, 8770, 2500, 8000, 2000, 5000},
+    {RATE_50HZ, -120, 17540, 2500, 12000, 2000, 5000},
+    {RATE_25HZ, -123, 17540, 5000, 20000, 2000, 5000},
+    {RATE_4HZ, -131, 239620, 30000, 60000, 0, 250}}; // this means always send sync on ch[0] as soon as we can 
+
+ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
 {
     // Protect against out of bounds rate
     if (rate < 0)
@@ -25,22 +24,36 @@ expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
         // Set to first entry in the array (200HZ)
         return &ExpressLRS_AirRateConfig[0];
     }
-    else if (rate > MaxRFrate)
+    else if (rate > (RATE_MAX - 1))
     {
         // Set to last usable entry in the array (currently 50HZ)
-        return &ExpressLRS_AirRateConfig[MaxRFrate];
+        return &ExpressLRS_AirRateConfig[RATE_MAX - 1];
     }
-
     return &ExpressLRS_AirRateConfig[rate];
 }
 
-expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
-expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
-bool ExpressLRS_AirRateNeedsUpdate = false;
+ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(expresslrs_RFrates_e rate)
+{
+    // Protect against out of bounds rate
+    if (rate < 0)
+    {
+        // Set to first entry in the array (200HZ)
+        return &ExpressLRS_AirRateRFperf[0];
+    }
+    else if (rate > (RATE_MAX - 1))
+    {
+        // Set to last usable entry in the array (currently 50HZ)
+        return &ExpressLRS_AirRateRFperf[RATE_MAX - 1];
+    }
+    return &ExpressLRS_AirRateRFperf[rate];
+}
 
-int8_t ExpressLRS_currPower = 0;
-int8_t ExpressLRS_prevPower = 0;
+expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
+expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+
+//expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
+//expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+bool ExpressLRS_AirRateNeedsUpdate = false;
 
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
@@ -58,26 +71,6 @@ uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
-
-// int16_t MeasureNoiseFloor() TODO disabled for now
-// {
-//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
-//     float returnval = 0;
-
-//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
-//     {
-//         FHSSsetCurrIndex(freq);
-//         Radio.SetMode(SX127X_CAD);
-
-//         for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
-//         {
-//             returnval = returnval + Radio.GetCurrRSSI();
-//             delay(5);
-//         }
-//     }
-//     returnval = returnval / NUM_READS;
-//     return (returnval);
-// }
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
 {

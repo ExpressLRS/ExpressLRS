@@ -44,9 +44,11 @@ public:
 
     void init(int32_t Indata)
     {
-        for (int i = 0; i < 255; i++)
-        {
-            this->update(Indata);
-        }
+        SmoothDataINT = Indata;
+        SmoothDataFP = SmoothDataINT << FP_Shift;
+        // for (int i = 0; i < 50; i++)
+        // {
+        //     this->update(Indata);
+        // }
     }
 };

@@ -3,7 +3,7 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
 
-//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
@@ -393,9 +393,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            //SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-            //SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-            this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+            //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
         }
 
@@ -413,9 +413,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[RCframeLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            //SerialOutFIFO.push(RCframeLength + 4);
-            //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-            this->_dev->write(outBuffer, RCframeLength + 4);
+            SerialOutFIFO.push(RCframeLength + 4);
+            SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
+            //this->_dev->write(outBuffer, RCframeLength + 4);
 #endif
         }
 
@@ -448,7 +448,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             // CRSF frame crc
             outBuffer[totalBufferLen - 1] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
 
-            this->_dev->write(outBuffer, totalBufferLen);
+            SerialOutFIFO.push(totalBufferLen);
+            SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
+            //this->_dev->write(outBuffer, totalBufferLen);
         }
 #endif
 
