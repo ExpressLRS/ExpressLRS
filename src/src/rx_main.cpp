@@ -480,7 +480,7 @@ void setup()
 #endif
 
 #ifdef PLATFORM_ESP8266
-    Serial.begin(420000);
+    Serial.begin(115200);
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
 #endif

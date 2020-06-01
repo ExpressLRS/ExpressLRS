@@ -3,6 +3,7 @@
 #include "SX1280RadioLib.h"
 #include "esp32-hal.h"
 #include "common.h"
+#include "FHSS.h"
 
 SX1280Driver Radio;
 
@@ -33,18 +34,19 @@ void setup()
     Radio.Begin();
     Radio.TXdoneCallback1 = &TXdoneCallback1;
     Radio.RXdoneCallback1 = &RXdoneCallback1;
-    Radio.RXnb();
+    Radio.SetFrequency(FHSSfreqs[0]);
+    //Radio.RXnb();
 }
 
 void loop()
 {
     // Serial.println("about to TX");
-    //Radio.TXnb(testdata, sizeof(testdata));
+    Radio.TXnb(testdata, sizeof(testdata));
     //delay(1000);
 
     // Serial.println("about to RX");
     //Radio.RXnb();
-    //delay(1000);
+    delay(100);
     //delay(random(50,200));
     //delay(100);
     //Radio.GetStatus();

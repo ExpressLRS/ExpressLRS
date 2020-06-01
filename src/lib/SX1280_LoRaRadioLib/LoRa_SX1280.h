@@ -43,13 +43,13 @@ public:
     uint8_t TXbuffLen;
     uint8_t RXbuffLen;
 
-    static uint32_t currFreq;
     static uint8_t _syncWord;
 
-    static SX1280_RadioLoRaBandwidths_t currBW;
-    static SX1280_RadioLoRaSpreadingFactors_t currSF;
-    static SX1280_RadioLoRaCodingRates_t currCR;
-    static SX1280_RadioOperatingModes_t currOpmode;
+    SX1280_RadioLoRaBandwidths_t currBW = SX1280_LORA_BW_0800;
+    SX1280_RadioLoRaSpreadingFactors_t currSF = SX1280_LORA_SF6;
+    SX1280_RadioLoRaCodingRates_t currCR = SX1280_LORA_CR_4_7;
+    uint32_t currFreq = 2400000000;
+    SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
 
     // static uint8_t currPWR;
     // static uint8_t maxPWR;

@@ -5,14 +5,6 @@
 
 SX1280Hal hal;
 /////////////////////////////////////////////////////////////////
-
-SX1280_RadioLoRaBandwidths_t SX1280Driver::currBW = SX1280_LORA_BW_0400;
-SX1280_RadioLoRaSpreadingFactors_t SX1280Driver::currSF = SX1280_LORA_SF10;
-SX1280_RadioLoRaCodingRates_t SX1280Driver::currCR = SX1280_LORA_CR_4_8;
-uint32_t SX1280Driver::currFreq = 2420000000; //should be mid 2.4 band, todo
-
-SX1280_RadioOperatingModes_t SX1280Driver::currOpmode = SX1280_MODE_SLEEP;
-
 SX1280Driver *SX1280Driver::instance = NULL;
 //InterruptAssignment_ InterruptAssignment = NONE;
 
@@ -255,16 +247,16 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 void SX1280Driver::TXnbISR()
 {
     endTX = micros();
-    Serial.print("TOA: ");
-    Serial.println(endTX - beginTX);
-    instance->GetStatus();
+    instance->currOpmode = SX1280_MODE_FS; // radio goes to FS
+    //Serial.print("TOA: ");
+    //Serial.println(endTX - beginTX);
+    //instance->GetStatus();
     instance->NonceTX++;
 
-    instance->currOpmode = SX1280_MODE_SLEEP; // radio goes to sleep after TX
-    Serial.println("TXnbISR!");
-    instance->GetStatus();
+    // Serial.println("TXnbISR!");
+    //instance->GetStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    instance->GetStatus();
+    //instance->GetStatus();
 
     instance->TXdoneCallback1();
     instance->TXdoneCallback2();
@@ -285,7 +277,7 @@ void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 
 void SX1280Driver::RXnbISR()
 {
-    //instance->currOpmode = SX1280_MODE_SLEEP; // radio goes to sleep after TX, not need when auto FS is used
+    instance->currOpmode = SX1280_MODE_FS; // radio goes to FS
     Serial.println("RXnbISR!");
 
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);

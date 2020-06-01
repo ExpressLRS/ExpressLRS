@@ -314,12 +314,12 @@ void ICACHE_RAM_ATTR SX1280Hal::busyISR()
     if (digitalRead(GPIO_PIN_BUSY) == HIGH)
     {
         instance->BusyState = SX1280_BUSY;
-        Serial.println("B");
+        //Serial.println("B");
     }
     else
     {
         instance->BusyState = SX1280_NOT_BUSY;
-        Serial.println("Bn");
+        //Serial.println("Bn");
     }
 }
 
@@ -328,12 +328,12 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
     Serial.println("DIOISR");
     if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
-        Serial.println("HalRXdone");
+        //Serial.println("HalRXdone");
         RXdoneCallback();
     }
     else if (instance->InterruptAssignment == SX1280_INTERRUPT_TX_DONE)
     {
-        Serial.println("HalTXdone");
+        //Serial.println("HalTXdone");
         TXdoneCallback();
     }
 }

@@ -205,6 +205,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SCK 14
 #define GPIO_PIN_RST 2
 #define GPIO_PIN_LED 16
+#define GPIO_PIN_BUTTON 0
 #define GPIO_PIN_RX_ENABLE -1
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA -1
@@ -228,6 +229,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA -1
 #define GPIO_PIN_OLED_SCK -1
-#define GPIO_PIN_RCSIGNAL_RX -1
-#define GPIO_PIN_RCSIGNAL_TX -1
+#define GPIO_PIN_RCSIGNAL_RX 13
+#define GPIO_PIN_RCSIGNAL_TX 13
 #endif
