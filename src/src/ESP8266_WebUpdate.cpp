@@ -22,9 +22,10 @@ ESP8266HTTPUpdateServer httpUpdater;
 
 void BeginWebUpdate(void)
 {
-  Radio.End();
-
   Serial.println("Begin Webupdater");
+  Serial.println("Stopping Radio");
+  Radio.End();
+  
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
 
