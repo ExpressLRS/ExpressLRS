@@ -9,7 +9,7 @@
 // #define Regulatory_Domain_FCC_915
 
 #include "FHSS.h"
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include <Arduino.h>
 
 // Wifi starts if no connection is found between 10 and 11 seconds after boot

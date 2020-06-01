@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include "../../src/targets.h"
-#include "SX127x_Regs.h"
+#include "SX127xRegs.h"
 
 typedef enum
 {

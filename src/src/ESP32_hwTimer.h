@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "targets.h"
-#include "LoRa_SX127x.h"
+#include "SX127xDriver.h"
 #include <FreeRTOS.h>
 #include <esp32-hal-timer.h>
 #include "debug.h"

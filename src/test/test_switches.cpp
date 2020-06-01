@@ -10,8 +10,8 @@
 #include <Arduino.h>
 #include <unity.h>
 
-#include "LoRaRadioLib.h"
-#include "CRSF.h"       // has to come after LoraRadioLib.h for R9
+#include "SX127xDriver.h"
+#include "CRSF.h"       // has to come after SX127xDriver.h for R9
 #include "targets.h"
 #include "common.h"
 #include <OTA.h>

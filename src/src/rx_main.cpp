@@ -3,12 +3,11 @@
 #include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "Debug.h"
 #include "rx_LinkQuality.h"
-#include "errata.h"
 #include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
@@ -122,7 +121,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
     expresslrs_mod_settings_s *const mode = get_elrs_airRateConfig(rate);
     Radio.Config(mode->bw, mode->sf, mode->cr, mode->PreambleLen);
     hwTimer.updateInterval(mode->interval);
-    //LPF_PacketInterval.init(mode->interval);
     ExpressLRS_currAirRate = mode;
     Radio.RXnb();
 }

@@ -2,7 +2,7 @@
 
 #include "Arduino.h"
 #include "../../src/targets.h"
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include "DAC.h"
 
 #ifdef TARGET_R9M_TX

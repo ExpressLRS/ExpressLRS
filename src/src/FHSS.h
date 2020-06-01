@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include "utils.h"
 #include "common.h"
 

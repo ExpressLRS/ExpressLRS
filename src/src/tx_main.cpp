@@ -2,7 +2,7 @@
 #include "FIFO.h"
 #include "utils.h"
 #include "common.h"
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "../../src/targets.h"
-#include "SX127x_Regs.h"
+#include "SX127xRegs.h"
 #include "SX127xHal.h"
 
 #ifdef PLATFORM_ESP8266
