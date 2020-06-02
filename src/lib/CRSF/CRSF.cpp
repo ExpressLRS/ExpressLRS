@@ -703,7 +703,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
                 Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
-                FlushSerial();
+                CRSF::Port.flush();
             }
 
             void ICACHE_RAM_ATTR CRSF::STM32handleUARTin() //RTOS task to read and write CRSF packets to the serial port
@@ -877,9 +877,4 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 ChannelDataIn[15] = (rcChannels->ch15);
 
                 updateSwitchValues();
-            }
-
-            void ICACHE_RAM_ATTR CRSF::FlushSerial()
-            {
-                CRSF::Port.flush();
             }

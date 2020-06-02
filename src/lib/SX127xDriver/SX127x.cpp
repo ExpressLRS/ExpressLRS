@@ -105,11 +105,16 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
 
 void SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
-  // if (currSyncWord != syncWord)
-  //{
+  uint8_t _syncWord = syncWord;
+
+  if (_syncWord == SX127X_SYNC_WORD_LORAWAN)
+  {
+    _syncWord++;
+    Serial.println("Reserved Syncword detected in UID config, Using 0x35 instead");
+  }
+
   hal.writeRegister(SX127X_REG_SYNC_WORD, syncWord);
-  currSyncWord = syncWord;
-  //}
+  currSyncWord = _syncWord;
 }
 
 void SX127xDriver::SetOutputPower(uint8_t Power)

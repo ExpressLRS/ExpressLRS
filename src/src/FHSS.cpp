@@ -41,7 +41,7 @@ void ICACHE_RAM_ATTR resetIsAvailable(uint8_t *array)
     array[0] = 0;
 
     // all other entires to 1
-    for(unsigned int i=1; i<NR_FHSS_ENTRIES; i++)
+    for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
         array[i] = 1;
 }
 
@@ -64,6 +64,19 @@ Approach:
 */
 void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
+
+#ifdef Regulatory_Domain_AU_915
+    Serial.println("Setting 915MHz Mode");
+#elif defined Regulatory_Domain_FCC_915
+    Serial.println("Setting 915MHz Mode");
+#elif defined Regulatory_Domain_EU_868
+    Serial.println("Setting 868MHz Mode");
+#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
+    Serial.println("Setting 433MHz Mode");
+#else
+#error No regulatory domain defined, please define one in common.h
+#endif
+
     Serial.print("Number of FHSS frequencies =");
     Serial.println(NR_FHSS_ENTRIES);
 
@@ -80,32 +93,41 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     // sync channels
     const int SYNC_INTERVAL = 20;
 
-    int nLeft = NR_FHSS_ENTRIES-1; // how many channels are left to be allocated. Does not include the sync channel
-    unsigned int prev = 0; // needed to prevent repeats of the same index
+    int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
+    unsigned int prev = 0;           // needed to prevent repeats of the same index
 
     // for each slot in the sequence table
-    for(int i=0; i<NR_SEQUENCE_ENTRIES; i++) {
-        if (i % SYNC_INTERVAL == 0) {
+    for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++)
+    {
+        if (i % SYNC_INTERVAL == 0)
+        {
             // assign sync channel 0
             FHSSsequence[i] = 0;
             prev = 0;
-        } else {
+        }
+        else
+        {
             // pick one of the available channels. May need to loop to avoid repeats
             unsigned int index;
-            do {
+            do
+            {
                 int c = rngN(nLeft); // returnc 0<c<nLeft
                 // find the c'th entry in the isAvailable array
                 // can skip 0 as that's the sync channel and is never available for normal allocation
-                index=1;
-                int found=0;
-                while(index<NR_FHSS_ENTRIES) {
-                    if (isAvailable[index]) {
-                        if (found==c) break;
+                index = 1;
+                int found = 0;
+                while (index < NR_FHSS_ENTRIES)
+                {
+                    if (isAvailable[index])
+                    {
+                        if (found == c)
+                            break;
                         found++;
                     }
                     index++;
                 }
-                if (index == NR_FHSS_ENTRIES) {
+                if (index == NR_FHSS_ENTRIES)
+                {
                     // This should never happen
                     Serial.print("FAILED to find the available entry!\n");
                     // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
@@ -119,23 +141,26 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
             isAvailable[index] = 0;  // clear the flag
             prev = index;            // remember for next iteration
             nLeft--;                 // reduce the count of available channels
-            if (nLeft==0) {
+            if (nLeft == 0)
+            {
                 // we've assigned all of the channels, so reset for next cycle
                 resetIsAvailable(isAvailable);
-                nLeft = NR_FHSS_ENTRIES-1;
+                nLeft = NR_FHSS_ENTRIES - 1;
             }
         }
 
         Serial.print(FHSSsequence[i]);
-        if ((i+1) % 10 == 0) {
+        if ((i + 1) % 10 == 0)
+        {
             Serial.println();
-        } else {
+        }
+        else
+        {
             Serial.print(" ");
         }
     } // for each element in FHSSsequence
 
     Serial.println();
-
 }
 
 /** Previous version of FHSSrandomiseFHSSsequence

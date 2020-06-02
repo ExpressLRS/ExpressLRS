@@ -369,40 +369,20 @@ class CRSF
 {
 
 public:
-    //CRSF(HardwareSerial& serial);
-
-#if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
+    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {
     }
+
     CRSF(Stream &dev) : _dev(&dev) {}
 
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-
-#endif
-
-#ifdef TARGET_R9M_RX
-
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-#endif
+    #endif
 
     static HardwareSerial Port;
-    //static Stream *Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
+    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only 
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values
@@ -453,25 +433,21 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
+#ifdef PLATFORM_ESP32
+    static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
+    static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
     static void ICACHE_RAM_ATTR duplex_set_RX();
     static void ICACHE_RAM_ATTR duplex_set_TX();
     static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
     static void ICACHE_RAM_ATTR FlushSerial();
+#endif
 
-#ifdef PLATFORM_ESP32
-    static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
-    static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
-#endif
-#ifdef PLATFORM_ESP8266
-    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
-#endif
 #ifdef TARGET_R9M_TX
     static void ICACHE_RAM_ATTR STM32initUART();
     static void ICACHE_RAM_ATTR UARTwdt();
     static void ICACHE_RAM_ATTR STM32handleUARTin();
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
-
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
@@ -487,7 +463,7 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
-#define OpenTXsyncPacketInterval 200 // in ms
+    #define OpenTXsyncPacketInterval 200 // in ms
     static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;

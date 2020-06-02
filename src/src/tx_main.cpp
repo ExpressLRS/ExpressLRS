@@ -177,7 +177,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->enum_rate & 0b11) << 6) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 3);
+  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->enum_rate & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -601,11 +601,12 @@ void setup()
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
-  crsf.Begin();
+  Radio.SetSyncWord(UID[3]);
   POWERMGNT.setDefaultPower();
 
-  hwTimer.init(); //enable this for debug
+  //hwTimer.init(); //enable this for debug
   SetRFLinkRate(RATE_200HZ);
+  crsf.Begin();
 }
 
 void loop()
