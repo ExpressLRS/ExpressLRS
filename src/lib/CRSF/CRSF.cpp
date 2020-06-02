@@ -373,8 +373,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     uint8_t OutPktLen = SerialOutFIFO.pop();
                     uint8_t OutData[OutPktLen];
                     SerialOutFIFO.popBytes(OutData, OutPktLen);
-                    this->_dev->write(OutData, OutPktLen); // write the packet out
                     interrupts();
+                    this->_dev->write(OutData, OutPktLen); // write the packet out
                     return true;
                 }
             }
