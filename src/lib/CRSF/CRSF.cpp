@@ -223,7 +223,7 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
+void CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
 {
 #define LUArespLength 6
 
@@ -362,7 +362,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
-        bool ICACHE_RAM_ATTR CRSF::RXhandleUARTout()
+        bool CRSF::RXhandleUARTout()
         {
             uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
             if (peekVal > 0)
@@ -470,7 +470,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #ifdef TARGET_R9M_TX
-            void ICACHE_RAM_ATTR CRSF::UARTwdt()
+            void  CRSF::UARTwdt()
             {
                 if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
                 {

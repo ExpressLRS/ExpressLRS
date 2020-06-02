@@ -449,7 +449,7 @@ public:
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
+    void  sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -477,7 +477,7 @@ public:
     static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
-    bool ICACHE_RAM_ATTR RXhandleUARTout();
+    bool RXhandleUARTout();
 
     static void inline nullCallback(void);
 

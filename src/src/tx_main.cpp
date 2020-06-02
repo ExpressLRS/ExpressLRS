@@ -416,7 +416,7 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
   UpdateParamReq = true;
 }
 
-void ICACHE_RAM_ATTR HandleUpdateParameter()
+void HandleUpdateParameter()
 {
   if (!UpdateParamReq)
   {
@@ -503,7 +503,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
   NonceTX++; // must be done before callback
   HandleFHSS();
   HandleTLM();
-  HandleUpdateParameter();
 }
 
 void setup()
@@ -615,6 +614,8 @@ void loop()
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
 #endif
+
+HandleUpdateParameter();
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
 
