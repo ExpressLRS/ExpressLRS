@@ -11,9 +11,9 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {RATE_200HZ, -112, 4380, 2500, 5000, 2000, 5000}, // ~ 3 sync packets
-    {RATE_100HZ, -117, 8770, 2500, 8000, 2000, 5000},
-    {RATE_50HZ, -120, 17540, 2500, 12000, 2000, 5000},
-    {RATE_25HZ, -123, 17540, 5000, 20000, 2000, 5000},
+    {RATE_100HZ, -117, 8770, 2500, 5000, 2000, 5000},
+    {RATE_50HZ, -120, 17540, 2500, 5000, 2000, 5000},
+    {RATE_25HZ, -123, 17540, 5000, 15000, 2000, 5000},
     {RATE_4HZ, -131, 239620, 30000, 60000, 0, 250}}; // this means always send sync on ch[0] as soon as we can 
 
 ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate)
