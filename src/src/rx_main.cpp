@@ -54,6 +54,7 @@ int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+bool lowRateMode = false;
 
 bool LED = false;
 
@@ -592,7 +593,8 @@ void setup()
 
 void loop()
 {
-    while(crsf.RXhandleUARTout()); //empty the UART out buffer
+    crsf.RXhandleUARTout(); //empty the UART out buffer
+    yield(); // to be safe
 
     //Serial.println(linkQuality);
     //
@@ -607,18 +609,23 @@ void loop()
         Serial.println("Bad sync, aborting");
         Radio.SetFrequency(GetInitialFreq());
         SetRFLinkRate(ExpressLRS_currAirRate_Modparams->enum_rate); //switch between 200hz, 100hz, 50hz, rates
-        scanIndex = RATE_MAX - ExpressLRS_currAirRate_Modparams->enum_rate;
+        scanIndex = (RATE_MAX - 1) - ExpressLRS_currAirRate_Modparams->enum_rate;
         RFmodeLastCycled = millis();
         NonceRX = 0;
     }
 
-    if (millis() > (LastValidPacket + 60000))
+    if (lowRateMode == false) // this makes it latch to ON if it ever gets triggered
     {
-        CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
-    }
-    else
-    {
-        CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
+        if (millis() > (LastValidPacket + 60000))
+        {
+            lowRateMode = true;
+            CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
+            scanIndex = 3;
+        }
+        else
+        {
+            CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
+        }
     }
 
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
@@ -685,5 +692,4 @@ void loop()
         }
     }
     #endif
-    yield();
 }
