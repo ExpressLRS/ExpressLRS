@@ -30,7 +30,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-//#define DEBUG_SUPPRESS // supresses debug messages on uart
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
 SX127xDriver Radio;
@@ -474,6 +474,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
     doneProcessing = micros();
+    #ifndef DEBUG_SUPPRESS
     Serial.print(RawOffset);
     Serial.print(":");
     Serial.print(Offset);
@@ -481,8 +482,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(OffsetDx);
     Serial.print(":");
     Serial.println(linkQuality);
-    crsf.RXhandleUARTout();
-    
+    #endif
     interrupts();
 }
 
@@ -592,7 +592,7 @@ void setup()
 
 void loop()
 {
-
+    crsf.RXhandleUARTout();
     //Serial.println(linkQuality);
     //
     //Serial.print(headroom);
