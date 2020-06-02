@@ -612,7 +612,7 @@ void loop()
         NonceRX = 0;
     }
 
-    if (millis() > (LastSyncPacket + 60000))
+    if (millis() > (LastValidPacket + 60000))
     {
         CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
     }
