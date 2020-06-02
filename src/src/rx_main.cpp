@@ -459,9 +459,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     if (connectionState != disconnected)
     {
         HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate_Modparams->interval);
-        RawOffset = HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1);
+        RawOffset = (HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1) + 50); // the offset is because we want the hwtimer tick to occur slightly after the packet would have otherwise been recv
         OffsetDx = LPF_OffsetDx.update(abs(RawOffset - prevOffset));
-        Offset = LPF_Offset.update(RawOffset + 50); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+        Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
         prevOffset = Offset;
 
         hwTimer.phaseShift((Offset >> 2) + timerOffset);
