@@ -449,7 +449,7 @@ public:
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
 
-    void  sendRCFrameToFC();
+    void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
     void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
