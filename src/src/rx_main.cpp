@@ -461,7 +461,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate_Modparams->interval);
         RawOffset = HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1);
         OffsetDx = LPF_OffsetDx.update(abs(RawOffset - prevOffset));
-        Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+        Offset = LPF_Offset.update(RawOffset + 50); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
         prevOffset = Offset;
 
         hwTimer.phaseShift((Offset >> 2) + timerOffset);
@@ -611,7 +611,7 @@ void loop()
         NonceRX = 0;
     }
 
-    if (millis() > 60000)
+    if (millis() > (LastSyncPacket + 60000))
     {
         CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
     }
