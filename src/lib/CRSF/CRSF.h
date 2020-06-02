@@ -477,7 +477,7 @@ public:
     static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
-    void ICACHE_RAM_ATTR RXhandleUARTout();
+    bool ICACHE_RAM_ATTR RXhandleUARTout();
 
     static void inline nullCallback(void);
 

@@ -362,21 +362,26 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
-        void ICACHE_RAM_ATTR CRSF::RXhandleUARTout()
+        bool ICACHE_RAM_ATTR CRSF::RXhandleUARTout()
         {
-            noInterrupts();
             uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
             if (peekVal > 0)
             {
                 if (SerialOutFIFO.size() > (peekVal))
                 {
+                    noInterrupts();
                     uint8_t OutPktLen = SerialOutFIFO.pop();
                     uint8_t OutData[OutPktLen];
                     SerialOutFIFO.popBytes(OutData, OutPktLen);
                     this->_dev->write(OutData, OutPktLen); // write the packet out
+                    interrupts();
+                    return true;
                 }
             }
-            interrupts();
+            else
+            {
+                return false;
+            }
         }
 
         void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()

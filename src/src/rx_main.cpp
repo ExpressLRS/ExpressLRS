@@ -592,7 +592,8 @@ void setup()
 
 void loop()
 {
-    crsf.RXhandleUARTout();
+    while(crsf.RXhandleUARTout()); //empty the UART out buffer
+
     //Serial.println(linkQuality);
     //
     //Serial.print(headroom);
@@ -645,13 +646,6 @@ void loop()
     {
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
-        #ifndef DEBUG_SUPPRESS
-        //Serial.print(Offset);
-        //Serial.print(":");
-        //Serial.print(OffsetDx);
-        //Serial.print(":");
-        //Serial.println(linkQuality);
-        #endif
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
