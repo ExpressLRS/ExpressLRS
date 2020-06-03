@@ -43,6 +43,7 @@ typedef enum
 typedef enum
 {
     MSP_PACKET_UNKNOWN,
+    MSP_PACKET_TLM_OTA, // Used to carry info OTA
     MSP_PACKET_V1_CMD,
     MSP_PACKET_V1_RESP,
     MSP_PACKET_COMMAND,
@@ -79,10 +80,13 @@ typedef struct
     uint16_t volatile payloadIterator;
     uint8_t volatile flags;
     bool volatile error;
+    bool volatile header_sent_or_rcvd;
 
     inline uint8_t iterated()
     {
-        return (0 < payloadSize && payloadSize <= payloadIterator);
+        return (type != MSP_PACKET_UNKNOWN &&
+                0 < payloadSize &&
+                payloadSize <= payloadIterator);
     }
 
     inline void ICACHE_RAM_ATTR reset()
@@ -93,6 +97,7 @@ typedef struct
         payloadSize = 0;
         payloadIterator = 0;
         error = false;
+        header_sent_or_rcvd = false;
     }
     void ICACHE_RAM_ATTR reset(mspHeaderV1_t *hdr)
     {
@@ -102,6 +107,7 @@ typedef struct
         payloadSize = hdr->payloadSize;
         payloadIterator = 0;
         error = false;
+        header_sent_or_rcvd = false;
     }
     void ICACHE_RAM_ATTR reset(mspHeaderV2_t *hdr)
     {
@@ -111,6 +117,7 @@ typedef struct
         payloadSize = hdr->payloadSize;
         payloadIterator = 0;
         error = false;
+        header_sent_or_rcvd = false;
     }
 
     void ICACHE_RAM_ATTR addByte(uint8_t b)

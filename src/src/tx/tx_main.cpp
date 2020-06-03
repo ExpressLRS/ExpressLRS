@@ -62,7 +62,7 @@ static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
 static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
-static volatile uint_fast8_t tlm_send = 0;
+static volatile uint_fast8_t tlm_msp_send = 0;
 static uint32_t TlmSentToRadioTime = 0;
 static LPF LPF_dyn_tx_power(3);
 static uint32_t dyn_tx_updated = 0;
@@ -74,7 +74,7 @@ static uint32_t dyn_tx_updated = 0;
 static void process_rx_buffer()
 {
     uint32_t ms = millis();
-    uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
+    uint8_t calculatedCRC = CalcCRC(rx_buffer, 7, CRCCaesarCipher);
     uint8_t in_byte = rx_buffer[0];
 
     if (rx_buffer[7] != calculatedCRC)
@@ -187,25 +187,26 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
     {
         // Skip TX because TLM RX is ongoing
-        goto exit_rx_send;
+        HandleFHSS_TX();
+        return;
     }
 
     freq = FHSSgetCurrFreq();
 
     //only send sync when its time and only on channel 0;
     if ((FHSSgetCurrSequenceIndex() == 0) &&
-        (sync_send_interval <= (current_us - SyncPacketNextSend)))
+        (sync_send_interval <= (uint32_t)(current_us - SyncPacketNextSend)))
     {
         GenerateSyncPacketData(tx_buffer);
         SyncPacketNextSend = current_us;
     }
-    else if (tlm_send)
+    else if ((tlm_msp_send == 1) && (msp_packet_tx.type == MSP_PACKET_TLM_OTA))
     {
         /* send tlm packet if needed */
-        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx))
+        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx) || msp_packet_tx.error)
         {
             msp_packet_tx.reset();
-            tlm_send = 0;
+            tlm_msp_send = 0;
         }
     }
     else
@@ -214,14 +215,13 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     }
 
     // Calculate the CRC
-    tx_buffer[7] = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
+    tx_buffer[7] = CalcCRC(tx_buffer, 7, CRCCaesarCipher);
     // Enable PA
     PowerMgmt.pa_on();
     //delayMicroseconds(random(0, 200));
     // Send data to rf
     //if (random(0, 99) < 60)
     Radio.TXnb(tx_buffer, 8, freq);
-exit_rx_send:
     // Increase TX counter
     HandleFHSS_TX();
 }
@@ -307,6 +307,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             // VTX settings
             msp_packet_tx.reset();
             //msp_packet_tx.makeCommand();
+            msp_packet_tx.type = MSP_PACKET_TLM_OTA;
             msp_packet_tx.flags = MSP_VERSION | MSP_STARTFLAG;
             msp_packet_tx.payloadSize = size + 1;
             crc = CalcCRCxor((uint8_t)msp_packet_tx.payloadSize, crc);
@@ -318,7 +319,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
                 crc = CalcCRCxor((uint8_t)vtx_cmd[iter], crc);
             }
             msp_packet_tx.addByte(crc);
-            tlm_send = 1; // rdy for sending
+            tlm_msp_send = 1; // rdy for sending
             break;
         }
 #endif
@@ -386,7 +387,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
     crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate);
     if (TLMinterval == TLM_RATIO_DEFAULT) // unknown, so use default
         TLMinterval = config->TLMinterval;
-    if (TLM_RATIO_NO_TLM == TLMinterval)
+    if (TLM_RATIO_NO_TLM == TLMinterval || TLM_RATIO_MAX <= TLMinterval)
     {
         Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
         Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
@@ -432,7 +433,7 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 /* OpenTX sends v1 MSPs */
 static void msp_data_cb(uint8_t const *const input)
 {
-    if (tlm_send)
+    if (tlm_msp_send)
         return;
 
     /* process MSP packet from radio
@@ -442,14 +443,19 @@ static void msp_data_cb(uint8_t const *const input)
      *  [3...] payload + crc
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
+
+    if (MSP_PORT_INBUF_SIZE > hdr->payloadSize)
+        /* too big, ignore */
+        return;
+
     msp_packet_tx.reset(hdr);
-    msp_packet_tx.type = MSP_PACKET_V1_CMD;
-    if (hdr->payloadSize)
+    msp_packet_tx.type = MSP_PACKET_TLM_OTA;
+    if (0 < hdr->payloadSize)
         volatile_memcpy(msp_packet_tx.payload,
                         hdr->payload,
                         hdr->payloadSize);
 
-    tlm_send = 1; // rdy for sending
+    tlm_msp_send = 1; // rdy for sending
 }
 
 void setup()
@@ -503,7 +509,8 @@ void loop()
     {
         process_rx_buffer();
         rx_buffer_handle = 0;
-        goto exit_loop;
+        platform_wd_feed();
+        return;
     }
 
     if (TLM_RATIO_NO_TLM < TLMinterval)
@@ -511,14 +518,14 @@ void loop()
         uint32_t current_ms = millis();
 
         if (connectionState > STATE_disconnected &&
-            RX_CONNECTION_LOST_TIMEOUT < (current_ms - LastPacketRecvMillis))
+            RX_CONNECTION_LOST_TIMEOUT < (uint32_t)(current_ms - LastPacketRecvMillis))
         {
             connectionState = STATE_disconnected;
             //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
             platform_connection_state(STATE_disconnected);
             platform_set_led(red_led_state);
         }
-        else if (LQ_CALCULATE_INTERVAL <= (current_ms - PacketRateNextCheck))
+        else if (LQ_CALCULATE_INTERVAL <= (uint32_t)(current_ms - PacketRateNextCheck))
         {
             PacketRateNextCheck = current_ms;
 
@@ -533,7 +540,7 @@ void loop()
                 downlink_linkQuality = 0;
         }
         else if (connectionState == STATE_connected &&
-                 TLM_REPORT_INTERVAL <= (current_ms - TlmSentToRadioTime))
+                 TLM_REPORT_INTERVAL <= (uint32_t)(current_ms - TlmSentToRadioTime))
         {
             TlmSentToRadioTime = current_ms;
             crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
@@ -545,15 +552,15 @@ void loop()
 
     // Process CRSF packets from TX
     can_send = crsf.handleUartIn(rx_buffer_handle);
-    // Send MSP resp if allowed or packet ready
+
+    // Send MSP resp if allowed and packet ready
     if (can_send && msp_packet_rx.iterated())
     {
-        crsf.sendMspPacketToRadio(msp_packet_rx);
+        if (!msp_packet_rx.error)
+            crsf.sendMspPacketToRadio(msp_packet_rx);
         msp_packet_rx.reset();
     }
 
     platform_loop(connectionState);
-
-exit_loop:
     platform_wd_feed();
 }

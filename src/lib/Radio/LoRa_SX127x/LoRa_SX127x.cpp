@@ -339,6 +339,7 @@ static uint8_t DMA_ATTR RXdataBuffer[RX_BUFFER_LEN];
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
     LastPacketIsrMicros = micros();
+    memset(RXdataBuffer, 0, RX_BUFFER_LEN); // make sure the buffer is clean
     readRegisterBurst((uint8_t)SX127X_REG_FIFO, RX_BUFFER_LEN, (uint8_t *)RXdataBuffer);
     GetLastRssiSnr();
     NonceRX++;

@@ -19,9 +19,8 @@ const uint8_t crc8tab[256] = {
     0xD6, 0x03, 0xA9, 0x7C, 0x28, 0xFD, 0x57, 0x82, 0xFF, 0x2A, 0x80, 0x55, 0x01, 0xD4, 0x7E, 0xAB,
     0x84, 0x51, 0xFB, 0x2E, 0x7A, 0xAF, 0x05, 0xD0, 0xAD, 0x78, 0xD2, 0x07, 0x53, 0x86, 0x2C, 0xF9};
 
-uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t const *data, int length)
+uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t const *data, int length, uint8_t crc)
 {
-    uint8_t crc = 0;
     while (length--)
     {
         crc = crc8tab[crc ^ *data++];
@@ -29,9 +28,8 @@ uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t const *data, int length)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t const *data, int length)
+uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t const *data, int length, uint8_t crc)
 {
-    uint8_t crc = 0;
     while (length--)
     {
         crc = crc8tab[crc ^ *data++];
@@ -72,9 +70,8 @@ const uint8_t crc8tabcmd[256] =
      0xC2, 0x78, 0x0C, 0xB6, 0xE4, 0x5E, 0x2A, 0x90, 0x8E, 0x34, 0x40, 0xFA, 0xA8, 0x12, 0x66, 0xDC,
      0x5A, 0xE0, 0x94, 0x2E, 0x7C, 0xC6, 0xB2, 0x08, 0x16, 0xAC, 0xD8, 0x62, 0x30, 0x8A, 0xFE, 0x44};
 
-uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t const *data, int length)
+uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t const *data, int length, uint8_t crc)
 {
-    uint8_t crc = 0;
     while (length--)
     {
         crc = crc8tabcmd[crc ^ *data++];

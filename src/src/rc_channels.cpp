@@ -386,7 +386,7 @@ typedef union {
         uint8_t flags;
         uint16_t func;
         uint16_t payloadSize;
-        uint8_t data1;
+        uint8_t type;
     } hdr;
     struct
     {
@@ -400,15 +400,20 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
 {
     TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)output;
 
+    /* Ignore invalid packets */
+    if (packet.type != MSP_PACKET_TLM_OTA)
+        return 0;
+
     tlm_ptr->hdr.address = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_MSP;
 
-    if (!packet.payloadIterator)
+    if (!packet.header_sent_or_rcvd)
     {
         /* Send header and first byte */
+        tlm_ptr->hdr.type = MSP_PACKET_TLM_OTA;
         tlm_ptr->hdr.flags = packet.flags;
         tlm_ptr->hdr.func = packet.function;
         tlm_ptr->hdr.payloadSize = packet.payloadSize;
-        tlm_ptr->hdr.data1 = packet.readByte();
+        packet.header_sent_or_rcvd = true;
     }
     else
     {
@@ -422,18 +427,23 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_receive(volatile uint8_t const *const in
                                                 mspPacket_t &packet)
 {
     TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)input;
-    if (!packet.payloadSize)
-    {
-        // Fill header
-        packet.flags = tlm_ptr->hdr.flags;
-        packet.function = tlm_ptr->hdr.func;
-        packet.payloadSize = tlm_ptr->hdr.payloadSize;
-        packet.addByte(tlm_ptr->hdr.data1);
-    }
-    else
+    if (packet.header_sent_or_rcvd && packet.type == MSP_PACKET_TLM_OTA)
     {
         for (uint8_t iter = 0; iter < sizeof(tlm_ptr->payload.data); iter++)
             packet.addByte(tlm_ptr->payload.data[iter]);
+    }
+    else if (packet.type == MSP_PACKET_UNKNOWN && tlm_ptr->hdr.type == MSP_PACKET_TLM_OTA)
+    {
+        // buffer free, fill header
+        packet.type = MSP_PACKET_TLM_OTA;
+        packet.flags = tlm_ptr->hdr.flags;
+        packet.function = tlm_ptr->hdr.func;
+        packet.payloadSize = tlm_ptr->hdr.payloadSize;
+        packet.header_sent_or_rcvd = true;
+    }
+    else
+    {
+        return 0;
     }
     return packet.iterated();
 }

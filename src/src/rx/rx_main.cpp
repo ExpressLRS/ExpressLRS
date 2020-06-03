@@ -99,7 +99,6 @@ void ICACHE_RAM_ATTR FillLinkStats()
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
-    //DEBUG_PRINTLN(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
 uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
@@ -168,16 +167,15 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
 
     LQ_setPacketState(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 
-    if (tlm_msp_send)
+    if ((tlm_msp_send == 1) && (msp_packet_tx.type == MSP_PACKET_TLM_OTA))
     {
-        /* send msp packet if needed */
-        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_MSP;
-
-        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx))
+        if (rc_ch.tlm_send(tx_buffer, msp_packet_tx) || msp_packet_tx.error)
         {
             msp_packet_tx.reset();
             tlm_msp_send = 0;
         }
+        /* send msp packet if needed */
+        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_MSP;
     }
     else
     {
@@ -185,8 +183,8 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
         crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
         crsf.LinkStatisticsPack(&tx_buffer[1]);
     }
-    uint8_t crc = CalcCRC(tx_buffer, 7) + CRCCaesarCipher;
-    tx_buffer[7] = crc;
+
+    tx_buffer[7] = CalcCRC(tx_buffer, 7, CRCCaesarCipher);
     Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
 }
 
@@ -331,7 +329,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     //DEBUG_PRINT("I");
     const connectionState_e _conn_state = connectionState;
     const uint32_t current_us = Radio.LastPacketIsrMicros;
-    const uint8_t calculatedCRC = CalcCRC(rx_buffer, 7) + CRCCaesarCipher;
+    const uint8_t calculatedCRC = CalcCRC(rx_buffer, 7, CRCCaesarCipher);
     ElrsSyncPacket_s const * const sync = (ElrsSyncPacket_s*)rx_buffer;
     const uint8_t address = sync->address;
 
@@ -432,7 +430,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
             if (rc_ch.tlm_receive(rx_buffer, msp_packet_rx))
             {
                 // TODO: Check if packet is for receiver
-                crsf.sendMSPFrameToFC(msp_packet_rx);
+                if (!msp_packet_rx.error)
+                    crsf.sendMSPFrameToFC(msp_packet_rx);
                 msp_packet_rx.reset();
             }
 #endif
@@ -519,7 +518,7 @@ void tx_done_cb(void)
 /* FC sends v1 MSPs */
 static void msp_data_cb(uint8_t const *const input)
 {
-    if (tlm_msp_send)
+    if ((tlm_msp_send != 0) || (tlm_check_ratio == 0))
         return;
 
     /* process MSP packet from flight controller
@@ -529,9 +528,14 @@ static void msp_data_cb(uint8_t const *const input)
      *  [3...] payload + crc
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
+
+    if (MSP_PORT_INBUF_SIZE > hdr->payloadSize)
+        /* too big, ignore */
+        return;
+
     msp_packet_tx.reset(hdr);
-    msp_packet_tx.type = MSP_PACKET_V1_CMD;
-    if (hdr->payloadSize)
+    msp_packet_tx.type = MSP_PACKET_TLM_OTA;
+    if (0 < hdr->payloadSize)
         volatile_memcpy(msp_packet_tx.payload,
                         hdr->payload,
                         hdr->payloadSize);
@@ -560,7 +564,7 @@ void setup()
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
     Radio.Begin();
-    Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX)
+    Radio.SetOutputPower(0b1111); // default is max power (17dBm for RX)
     Radio.RXdoneCallback1 = ProcessRFPacketCallback;
     Radio.TXdoneCallback1 = tx_done_cb;
 
@@ -591,7 +595,7 @@ void loop()
 
     if (connectionState == STATE_disconnected)
     {
-        if (RFmodeCycleDelay < (now - RFmodeNextCycle))
+        if (RFmodeCycleDelay < (uint32_t)(now - RFmodeNextCycle))
         {
             SetRFLinkRate((scanIndex % RATE_MAX)); //switch between rates
             scanIndex++;
@@ -600,7 +604,7 @@ void loop()
 
             RFmodeNextCycle = now;
         }
-        else if (150 < (now - led_toggle_ms))
+        else if (150 <= (uint32_t)(now - led_toggle_ms))
         {
             led_toggle();
             led_toggle_ms = now;
@@ -609,13 +613,13 @@ void loop()
     else if (connectionState > STATE_disconnected)
     {
         // check if we lost conn.
-        if (ExpressLRS_currAirRate->connectionLostTimeout < (int32_t)(now - LastValidPacket))
+        if (ExpressLRS_currAirRate->connectionLostTimeout <= (uint32_t)(now - LastValidPacket))
         {
             LostConnection();
         }
         else if (connectionState == STATE_connected)
         {
-            if (SEND_LINK_STATS_TO_FC_INTERVAL < (now - SendLinkStatstoFCintervalNextSend))
+            if (SEND_LINK_STATS_TO_FC_INTERVAL <= (uint32_t)(now - SendLinkStatstoFCintervalNextSend))
             {
                 crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
                 crsf.LinkStatisticsSend();
