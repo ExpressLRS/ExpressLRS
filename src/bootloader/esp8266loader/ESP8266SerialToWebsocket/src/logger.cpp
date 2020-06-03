@@ -41,6 +41,19 @@ uint16_t eppromPointer = 0;
 
 bool webUpdateMode = false;
 
+static const char PROGMEM GO_BACK[] = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<script>
+window.history.back();
+</script>
+</body>
+</html>
+)rawliteral";
+
 static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 <!DOCTYPE html>
 <html>
@@ -195,6 +208,11 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
   }
 }
 
+void sendReturn()
+{
+  server.send_P(200, "text/html", GO_BACK);
+}
+
 void handleRoot()
 {
   server.send_P(200, "text/html", INDEX_HTML);
@@ -206,7 +224,7 @@ bool flashR9M()
   stm32flasher_hardware_init();
   webSocket.broadcastTXT("Going to flash the following file: " + uploadedfilename);
   char filename[31];
-  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename));
+  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
   bool result = esp8266_spifs_write_file(filename);
   Serial.begin(400000);
   return result;
@@ -269,15 +287,15 @@ void handleFileUpload()
       if (flashR9M())
       {
         server.sendHeader("Location", "/"); // Redirect the client to the success page
-        server.send(303);
-        delay(2500);
+        server.send(202);
+        //delay(2500);
         webSocket.broadcastTXT("Update Sucess!!!");
       }
       else
       {
         server.sendHeader("Location", "/"); // Redirect the client to the success page
-        server.send(303);
-        delay(2500);
+        server.send(202);
+        //delay(2500);
         webSocket.broadcastTXT("Update Failed!!!");
       }
     }
@@ -359,7 +377,7 @@ void setup()
 
   server.on(
       "/upload", HTTP_POST, // if the client posts to the upload page
-      []() {},              // Send status 200 (OK) to tell the client we are ready to receive
+      []() {sendReturn();},              // Send status 200 (OK) to tell the client we are ready to receive
       handleFileUpload      // Receive and save the file
   );
   //server.on("/uploadFirmware", handleFileUpload);

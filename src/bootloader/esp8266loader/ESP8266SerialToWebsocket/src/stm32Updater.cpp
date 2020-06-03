@@ -56,8 +56,8 @@ void stm32flasher_hardware_init()
 	pinMode(RESET_PIN, INPUT);
 	pinMode(BOOT0_PIN, INPUT);
 	pinMode(START_KEY, INPUT);
-	Serial.begin(57600, SERIAL_8E1);
-	Serial.setTimeout(5000);
+	Serial.begin(115200, SERIAL_8E1);
+	Serial.setTimeout(10000);
 	//debugSerial.begin(57600);
 }
 
@@ -277,7 +277,7 @@ uint8_t esp8266_spifs_write_file(char *filename)
 
 	if (!SPIFFS.exists(filename))
 	{
-		sprintf(log_buffer, "file: %s not exists.", filename);
+		sprintf(log_buffer, "file: %s doesn't exist!", filename);
 		debug_log();
 		return 0;
 	}
