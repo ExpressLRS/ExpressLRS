@@ -48,7 +48,7 @@ static const char PROGMEM GO_BACK[] = R"rawliteral(
 </head>
 <body>
 <script>
-window.history.back();
+javascript:history.back();
 </script>
 </body>
 </html>
@@ -78,6 +78,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
     <script>
         var websock;
         function start() {
+            document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
             websock = new WebSocket('ws://' + window.location.hostname + ':81/');
             websock.onopen = function (evt) { console.log('websock open'); };
             websock.onclose = function(e) {
@@ -89,7 +90,6 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
             websock.onerror = function (evt) { console.log(evt); };
             websock.onmessage = function (evt) {
                 console.log(evt);
-
                 var d = new Date();
                 var n = d.toISOString();
                 document.getElementById("logField").value += n + ' ' + evt.data + '\n';
@@ -261,7 +261,6 @@ void handleFileUpload()
       uploadedfilename = "/" + uploadedfilename;
     }
     fsUploadFile = SPIFFS.open(uploadedfilename, "w"); // Open the file for writing in SPIFFS (create if it doesn't exist)
-    //filename = String();
   }
   else if (upload.status == UPLOAD_FILE_WRITE)
   {
@@ -286,24 +285,22 @@ void handleFileUpload()
       TotalUploadedBytes = 0;
       if (flashR9M())
       {
-        server.sendHeader("Location", "/"); // Redirect the client to the success page
-        server.send(202);
-        //delay(2500);
+        server.sendHeader("Location", "/return"); // Redirect the client to the success page
+        server.send(303);
         webSocket.broadcastTXT("Update Sucess!!!");
       }
       else
       {
-        server.sendHeader("Location", "/"); // Redirect the client to the success page
-        server.send(202);
-        //delay(2500);
+        server.sendHeader("Location", "/return"); // Redirect the client to the success page
+        server.send(303);
         webSocket.broadcastTXT("Update Failed!!!");
       }
     }
     else
     {
-      //server.send(500, "text/plain", "500: couldn't create file");
-      webSocket.broadcastTXT("couldn't create file");
-      //handleRoot();
+      webSocket.broadcastTXT("error: Couldn't create file");
+      server.sendHeader("Location", "/return"); // Redirect the client to the success page
+      server.send(202);
     }
   }
 }
@@ -375,14 +372,15 @@ void setup()
   //     handleFileUpload            // Receive and save the file
   // );
 
-  server.on(
-      "/upload", HTTP_POST, // if the client posts to the upload page
-      []() {sendReturn();},              // Send status 200 (OK) to tell the client we are ready to receive
-      handleFileUpload      // Receive and save the file
-  );
-  //server.on("/uploadFirmware", handleFileUpload);
-  server.onNotFound(handleNotFound);
+  server.on("/return", sendReturn);
 
+  server.on(
+      "/upload", HTTP_POST,       // if the client posts to the upload page
+      []() { server.send(200); }, // Send status 200 (OK) to tell the client we are ready to receive
+      handleFileUpload            // Receive and save the file
+  );
+
+  server.onNotFound(handleNotFound);
   httpUpdater.setup(&server);
   server.begin();
 
