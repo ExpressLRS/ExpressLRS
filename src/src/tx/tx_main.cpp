@@ -71,6 +71,50 @@ static uint32_t dyn_tx_updated = 0;
 
 ///////////////////////////////////////
 
+int8_t tx_tlm_change_interval(uint8_t const value)
+{
+    uint8_t const current = TLMinterval;
+    if (value == TLM_RATIO_DEFAULT)
+    {
+        // Default requested
+        TLMinterval = ExpressLRS_currAirRate->TLMinterval;
+    }
+    else if (value < TLM_RATIO_MAX)
+    {
+        TLMinterval = value;
+    }
+
+    if (current != TLMinterval)
+    {
+        if (TLM_RATIO_NO_TLM < TLMinterval)
+            tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+        else
+            tlm_check_ratio = 0;
+        DEBUG_PRINT("TLM: ");
+        DEBUG_PRINTLN(TLMinterval);
+        return 0;
+    }
+    return -1;
+}
+
+void tx_tlm_disable_enable(uint8_t enable)
+{
+    if (enable)
+        tx_tlm_change_interval(TLM_RATIO_DEFAULT);
+    else
+        tx_tlm_change_interval(TLM_RATIO_NO_TLM);
+}
+
+int8_t tx_tlm_toggle(void)
+{
+    /* Toggle TLM between NO_TLM and DEFAULT */
+    uint8_t tlm = (TLMinterval == TLM_RATIO_NO_TLM) ? TLM_RATIO_DEFAULT : TLM_RATIO_NO_TLM;
+    tx_tlm_change_interval(tlm);
+    return (TLMinterval != TLM_RATIO_NO_TLM);
+}
+
+///////////////////////////////////////
+
 static void process_rx_buffer()
 {
     uint32_t ms = millis();
@@ -252,28 +296,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 
         case 2:
             // set TLM interval
-            modified = TLMinterval;
-            if (value == TLM_RATIO_DEFAULT)
+            if (tx_tlm_change_interval(value) >= 0)
             {
-                // Default requested
-                TLMinterval = ExpressLRS_currAirRate->TLMinterval;
-            }
-            else if (value < TLM_RATIO_MAX)
-            {
-                TLMinterval = value;
-            }
-
-            if (modified != TLMinterval)
-            {
-#if PLATFORM_ESP32
-                modified = 0;
-#else
+#ifndef PLATFORM_ESP32
                 modified = (1 << 2);
 #endif
-                if (TLM_RATIO_NO_TLM < TLMinterval)
-                    tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
-                else
-                    tlm_check_ratio = 0;
             }
             DEBUG_PRINT("TLM: ");
             DEBUG_PRINTLN(TLMinterval);

@@ -6,6 +6,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
+#define NEW_BUTTON 1
+
 uint8_t rate_config_dips = 0xff;
 
 #ifdef GPIO_PIN_LED
@@ -59,10 +61,35 @@ void play_tone_loop(uint32_t ms)
 #endif /* TARGET_R9M_TX */
 
 #ifdef GPIO_PIN_BUTTON
+#if defined(TX_MODULE) && NEW_BUTTON
+#include "ClickButton.h"
+
+ClickButton clickButton(GPIO_PIN_BUTTON, LOW, 40,  400,  600);
+
+void button_handle(void)
+{
+    clickButton.update();
+    if (clickButton.clicks == 1 && clickButton.lastClickLong) {
+        tone_play_cnt = PowerMgmt.loopPower() + 1;
+        clickButton.reset();
+    } else if (clickButton.clicks == 2 && clickButton.lastClickLong) {
+        extern int8_t tx_tlm_toggle(void);
+        tone_play_cnt = tx_tlm_toggle() + 1;
+        clickButton.reset();
+    }
+}
+
+#else // NEW_BUTTON
+
 #define TX_CHANGE_POWER_TIME 2000
 
 #include "button.h"
 Button button;
+
+void button_handle(void)
+{
+    button.handle();
+}
 
 void button_event_short(uint32_t ms)
 {
@@ -86,6 +113,8 @@ void button_event_long(uint32_t ms)
         platform_restart();
 #endif /* RX_MODULE */
 }
+
+#endif // NEW_BUTTON
 #endif // GPIO_PIN_BUTTON
 
 /******************* CONFIG *********************/
@@ -167,6 +196,8 @@ void platform_setup(void)
 
 #ifdef GPIO_PIN_BUTTON
     /*************** CONFIGURE BUTTON *******************/
+#if defined(TX_MODULE) && NEW_BUTTON
+#else // NEW_BUTTON
     //button.set_press_delay_short();
     //button.buttonShortPress = button_event_short;
     button.buttonLongPress = button_event_long;
@@ -177,6 +208,7 @@ void platform_setup(void)
 #endif
     // R9M TX appears to be active high
     button.init(GPIO_PIN_BUTTON, true);
+#endif // NEW_BUTTON
 #endif
 
 #if defined(TX_MODULE)
@@ -241,7 +273,7 @@ void platform_loop(int state)
     (void)state;
 #ifdef GPIO_PIN_BUTTON
 #if defined(TX_MODULE)
-    button.handle();
+    button_handle();
     play_tone_loop(millis());
 #elif defined(RX_MODULE)
     if (state == STATE_disconnected)
