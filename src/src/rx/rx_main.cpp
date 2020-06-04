@@ -426,7 +426,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 
         case UL_PACKET_MSP:
             DEBUG_PRINT(" M");
-#if 0
+#if 1
             if (rc_ch.tlm_receive(rx_buffer, msp_packet_rx))
             {
                 // TODO: Check if packet is for receiver
@@ -529,7 +529,7 @@ static void msp_data_cb(uint8_t const *const input)
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
 
-    if (MSP_PORT_INBUF_SIZE > hdr->payloadSize)
+    if (sizeof(msp_packet_tx.payload) < hdr->payloadSize)
         /* too big, ignore */
         return;
 
@@ -613,7 +613,7 @@ void loop()
     else if (connectionState > STATE_disconnected)
     {
         // check if we lost conn.
-        if (ExpressLRS_currAirRate->connectionLostTimeout <= (uint32_t)(now - LastValidPacket))
+        if (ExpressLRS_currAirRate->connectionLostTimeout <= (int32_t)(now - LastValidPacket))
         {
             LostConnection();
         }

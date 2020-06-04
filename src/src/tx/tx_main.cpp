@@ -56,8 +56,6 @@ volatile connectionState_e DRAM_ATTR connectionState = STATE_disconnected;
 //////////// TELEMETRY /////////
 static volatile uint32_t expected_tlm_counter = 0;
 static uint32_t recv_tlm_counter = 0;
-static uint8_t downlink_linkQuality = 0;
-static uint32_t PacketRateNextCheck = 0;
 static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
 static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
@@ -471,7 +469,7 @@ static void msp_data_cb(uint8_t const *const input)
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
 
-    if (MSP_PORT_INBUF_SIZE > hdr->payloadSize)
+    if (sizeof(msp_packet_tx.payload) < hdr->payloadSize)
         /* too big, ignore */
         return;
 
@@ -537,7 +535,6 @@ void loop()
         process_rx_buffer();
         rx_buffer_handle = 0;
         platform_wd_feed();
-        return;
     }
 
     if (TLM_RATIO_NO_TLM < TLMinterval)
@@ -552,25 +549,21 @@ void loop()
             platform_connection_state(STATE_disconnected);
             platform_set_led(red_led_state);
         }
-        else if (LQ_CALCULATE_INTERVAL <= (uint32_t)(current_ms - PacketRateNextCheck))
+        else if (connectionState == STATE_connected &&
+                 TLM_REPORT_INTERVAL <= (uint32_t)(current_ms - TlmSentToRadioTime))
         {
-            PacketRateNextCheck = current_ms;
+            TlmSentToRadioTime = current_ms;
 
             // Calc LQ based on good tlm packets and receptions done
             uint8_t rx_cnt = expected_tlm_counter;
             uint32_t tlm_cnt = recv_tlm_counter;
             expected_tlm_counter = recv_tlm_counter = 0; // Clear RX counter
             if (rx_cnt)
-                downlink_linkQuality = (tlm_cnt * 100u) / rx_cnt;
+                crsf.LinkStatistics.downlink_Link_quality = (tlm_cnt * 100u) / rx_cnt;
             else
                 // failure value??
-                downlink_linkQuality = 0;
-        }
-        else if (connectionState == STATE_connected &&
-                 TLM_REPORT_INTERVAL <= (uint32_t)(current_ms - TlmSentToRadioTime))
-        {
-            TlmSentToRadioTime = current_ms;
-            crsf.LinkStatistics.downlink_Link_quality = downlink_linkQuality;
+                crsf.LinkStatistics.downlink_Link_quality = 0;
+
             crsf.LinkStatistics.uplink_TX_Power = PowerMgmt.power_to_radio_enum();
             crsf.LinkStatisticsSend();
             crsf.BatterySensorSend();

@@ -6,7 +6,7 @@
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 
-#define TIMER_OFFSET       200
+#define TIMER_OFFSET       300
 #define TIMER_OFFSET_LIMIT 100
 
 #define SX127X_SPI_SPEED 10000000
