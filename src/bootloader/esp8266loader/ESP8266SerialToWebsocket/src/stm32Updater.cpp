@@ -57,7 +57,7 @@ void stm32flasher_hardware_init()
 	pinMode(BOOT0_PIN, INPUT);
 	pinMode(START_KEY, INPUT);
 	Serial.begin(115200, SERIAL_8E1);
-	Serial.setTimeout(10000);
+	Serial.setTimeout(5000);
 	//debugSerial.begin(57600);
 }
 
@@ -114,7 +114,7 @@ uint8_t init_chip()
 {
 	uint8_t cmd[1];
 	cmd[0] = 0x7F;
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		sprintf(log_buffer, "trying to init chip...");
 		debug_log();

@@ -22,6 +22,7 @@ const char *password = "password";         // The password required to connect t
 MDNSResponder mdns;
 
 ESP8266WebServer server(80);
+
 WebSocketsServer webSocket = WebSocketsServer(81);
 ESP8266HTTPUpdateServer httpUpdater;
 
@@ -141,7 +142,7 @@ curl --include \
      --header "Origin: http://example.com:80" \
      --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
      --header "Sec-WebSocket-Version: 13" \
-     http://<ipaddr>:81/
+     http://elrs_tx.local:81/
     </textarea>
     <br><br>
         <textarea id="logField" rows="40" cols="100" style="margin: 0px; height: 621px; width: 968px;">BEGIN LOG
@@ -232,9 +233,7 @@ bool flashR9M()
 
 void handleFileUpload()
 { // upload a new file to the SPIFFS
-
   HTTPUpload &upload = server.upload();
-
   if (upload.status == UPLOAD_FILE_START)
   {
 
@@ -283,6 +282,7 @@ void handleFileUpload()
       String totsize = String(upload.totalSize);
       webSocket.broadcastTXT("Total uploaded size: " + totsize);
       TotalUploadedBytes = 0;
+      server.send(100);
       if (flashR9M())
       {
         server.sendHeader("Location", "/return"); // Redirect the client to the success page
@@ -298,9 +298,7 @@ void handleFileUpload()
     }
     else
     {
-      webSocket.broadcastTXT("error: Couldn't create file");
-      server.sendHeader("Location", "/return"); // Redirect the client to the success page
-      server.send(202);
+      server.send(500, "text/plain", "500: couldn't create file");
     }
   }
 }
@@ -332,6 +330,8 @@ void setup()
 
   SPIFFS.begin();
 
+  wifi_station_set_hostname("elrs_tx");
+
 #ifdef USE_WIFI_MANAGER
   WiFiManager wifiManager;
   Serial.println("Starting ESP WiFiManager captive portal...");
@@ -347,7 +347,7 @@ void setup()
   Serial.println(WiFi.softAPIP());
 #endif
 
-  if (mdns.begin("espWebSock", WiFi.localIP()))
+  if (mdns.begin("elrs_tx", WiFi.localIP()))
   {
     Serial.println("MDNS responder started");
     mdns.addService("http", "tcp", 80);
@@ -358,7 +358,7 @@ void setup()
     Serial.println("MDNS.begin failed");
   }
 
-  Serial.print("Connect to http://espWebSock.local or http://");
+  Serial.print("Connect to http://elrs_tx.local or http://");
 #ifdef USE_WIFI_MANAGER
   Serial.println(WiFi.localIP());
 #else
@@ -366,12 +366,6 @@ void setup()
 #endif
 
   server.on("/", handleRoot);
-  // server.on(
-  //     "/upload", HTTP_POST,       // if the client posts to the upload page
-  //     []() { server.send(200); }, // Send status 200 (OK) to tell the client we are ready to receive
-  //     handleFileUpload            // Receive and save the file
-  // );
-
   server.on("/return", sendReturn);
 
   server.on(
@@ -380,7 +374,7 @@ void setup()
       handleFileUpload            // Receive and save the file
   );
 
-  server.onNotFound(handleNotFound);
+  server.onNotFound(handleRoot);
   httpUpdater.setup(&server);
   server.begin();
 
@@ -405,24 +399,15 @@ void serialEvent()
 void loop()
 {
   serialEvent();
-
   if (stringComplete)
   {
     String line = inputString;
     inputString = "";
     stringComplete = false;
-
-    // for (uint16_t i = 0; i < line.length(); ++i) {
-    //   eppromPointer++;
-    //   eeprom.WriteByte(eppromPointer, line[i]);
-    //   if (eppromPointer == RESERVED_EEPROM_SIZE) {
-    //     eppromPointer = 0;
-    //   }
-    // }
-
     webSocket.broadcastTXT(line);
   }
 
   server.handleClient();
   webSocket.loop();
+  mdns.update();
 }
