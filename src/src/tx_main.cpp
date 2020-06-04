@@ -512,10 +512,10 @@ void setup()
 
 
 #ifdef TARGET_R9M_TX
-  HardwareSerial(USART2);
+  HardwareSerial(USART1);
   Serial.setTx(GPIO_PIN_DEBUG_TX);
   Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.begin(400000);
+  Serial.begin(460800);
 
   // Annoying startup beeps
 #ifndef JUST_BEEP_ONCE

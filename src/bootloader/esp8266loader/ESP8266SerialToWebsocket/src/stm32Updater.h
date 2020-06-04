@@ -7,9 +7,8 @@
 
 //#define ispSerial Serial
 #define BLOCK_SIZE 128
-#define START_KEY 0
-#define BOOT0_PIN 5
-#define RESET_PIN 4
+#define BOOT0_PIN 4
+#define RESET_PIN 5
 #define BEGIN_ADDRESS 0x08000000
 
 uint8_t start_key_pressed();

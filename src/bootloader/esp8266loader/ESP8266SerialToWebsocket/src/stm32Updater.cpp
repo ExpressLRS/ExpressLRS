@@ -10,18 +10,6 @@ extern WebSocketsServer webSocket;
 char log_buffer[BLOCK_SIZE];
 uint8_t memory_buffer[BLOCK_SIZE];
 
-uint8_t start_key_pressed()
-{
-	if (digitalRead(START_KEY) == LOW)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
 uint8_t reset_stm32_to_isp_mode()
 {
 	pinMode(RESET_PIN, OUTPUT);
@@ -55,7 +43,6 @@ void stm32flasher_hardware_init()
 	webSocket.broadcastTXT("STM32 Flasher Pin IO init");
 	pinMode(RESET_PIN, INPUT);
 	pinMode(BOOT0_PIN, INPUT);
-	pinMode(START_KEY, INPUT);
 	Serial.begin(115200, SERIAL_8E1);
 	Serial.setTimeout(5000);
 	//debugSerial.begin(57600);
@@ -121,7 +108,7 @@ uint8_t init_chip()
 		isp_serial_write(cmd, 1);
 		if (wait_for_ack("init_chip_write_cmd") > 0)
 		{ // ack or nack
-			sprintf(log_buffer, "init chip successed.");
+			sprintf(log_buffer, "init chip succeeded.");
 			debug_log();
 			isp_serial_flush();
 			return 1;
@@ -233,19 +220,32 @@ uint8_t cmd_write_memory(uint32_t address, uint8_t length)
 	return 0;
 }
 
-uint8_t cmd_erase_all_memory()
-{
-	if (cmd_generic(0x44) == 1)
+uint8_t cmd_erase_all_memory()    // added by Sandro, it appears earilier BL versions (like the one on the r9m's chip) do not support the 0x44 erase command
+{							      // pg 7 of https://www.st.com/resource/en/application_note/cd00264342-usart-protocol-used-in-the-stm32-bootloader-stmicroelectronics.pdf
+	if (cmd_generic(0x43) == 1)   // instead used the previous 0x43 cmd. TODO: save bootloader version and device which command to run?
 	{
-		uint8_t cmd[3];
+		uint8_t cmd[2];
 		cmd[0] = 0xFF;
-		cmd[1] = 0xFF;
-		cmd[2] = 0x00;
-		isp_serial_write(cmd, 3);
+		cmd[1] = 0x00;
+		isp_serial_write(cmd, 2);
 		return wait_for_ack("erase_all_memory");
 	}
 	return 0;
 }
+
+// uint8_t cmd_erase_all_memory()
+// {
+// 	if (cmd_generic(0x44) == 1)
+// 	{
+// 		uint8_t cmd[3];
+// 		cmd[0] = 0xFF;
+// 		cmd[1] = 0xFF;
+// 		cmd[2] = 0x00;
+// 		isp_serial_write(cmd, 3);
+// 		return wait_for_ack("erase_all_memory");
+// 	}
+// 	return 0;
+// }
 
 uint8_t cmd_go(uint32_t address)
 {
@@ -272,7 +272,14 @@ uint8_t esp8266_spifs_write_file(char *filename)
 
 	if (cmd_erase_all_memory() != 1)
 	{
+		sprintf(log_buffer, "erase Failed!");
+		debug_log();
 		return 0;
+	}
+	else
+	{
+		sprintf(log_buffer, "erase Success!");
+		debug_log();
 	}
 
 	if (!SPIFFS.exists(filename))
@@ -305,7 +312,7 @@ uint8_t esp8266_spifs_write_file(char *filename)
 			return 0;
 		}
 	}
-	sprintf(log_buffer, "file write successed.");
+	sprintf(log_buffer, "file write succeeded.");
 	debug_log();
 	uint8_t file_buffer[BLOCK_SIZE];
 	fp.seek(0, SeekSet);
@@ -336,7 +343,7 @@ uint8_t esp8266_spifs_write_file(char *filename)
 			return 0;
 		}
 	}
-	sprintf(log_buffer, "verify file successed.");
+	sprintf(log_buffer, "verify file succeeded.");
 	debug_log();
 	sprintf(log_buffer, "start application.");
 	debug_log();
@@ -344,18 +351,3 @@ uint8_t esp8266_spifs_write_file(char *filename)
 	cmd_go(BEGIN_ADDRESS);
 	return 1;
 }
-
-// void setup() {
-// 	hardware_init();
-// 	delay(1000);
-// 	while(! start_key_pressed()) {
-// 		delay(1000);
-// 		sprintf(log_buffer,"press key to start.\n");
-// 		debug_log();
-// 	}
-// 	esp8266_spifs_write_file("/stm32f030c8_db_led.bin");
-// }
-
-// void loop() {
-// 	delay(100);
-// }

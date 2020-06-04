@@ -219,6 +219,7 @@ void handleRoot()
   server.send_P(200, "text/html", INDEX_HTML);
 }
 
+
 bool flashR9M()
 {
   webSocket.broadcastTXT("R9M Firmware Flash Requested!");
@@ -227,7 +228,7 @@ bool flashR9M()
   char filename[31];
   uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
   bool result = esp8266_spifs_write_file(filename);
-  Serial.begin(400000);
+  Serial.begin(460800);
   return result;
 }
 
@@ -299,6 +300,7 @@ void handleFileUpload()
     else
     {
       server.send(500, "text/plain", "500: couldn't create file");
+      SPIFFS.format();
     }
   }
 }
@@ -322,10 +324,11 @@ void handleNotFound()
 
 void setup()
 {
+
 #ifdef INVERTED_SERIAL
-  Serial.begin(400000, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
+  Serial.begin(460800, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
 #else
-  Serial.begin(400000); // non-inverted serial
+  Serial.begin(460800); // non-inverted serial
 #endif
 
   SPIFFS.begin();
