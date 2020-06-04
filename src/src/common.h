@@ -81,7 +81,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval; // every X packets we hope to a new frequnecy.
     uint8_t PreambleLen;
     uint8_t enum_rate;
-    uint16_t air_time;
+    uint32_t air_time;
     uint16_t connectionLostTimeout;
     uint16_t syncSearchTimeout;
     uint32_t syncInterval;
