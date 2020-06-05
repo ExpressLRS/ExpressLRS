@@ -31,7 +31,11 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
+<<<<<<< Updated upstream
 #define DEBUG_SUPPRESS // supresses debug messages on uart 
+=======
+//#define DEBUG_SUPPRESS // supresses debug messages on uart
+>>>>>>> Stashed changes
 
 hwTimer hwTimer;
 SX127xDriver Radio;

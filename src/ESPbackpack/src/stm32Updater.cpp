@@ -45,13 +45,11 @@ void stm32flasher_hardware_init()
 	pinMode(BOOT0_PIN, INPUT);
 	Serial.begin(115200, SERIAL_8E1);
 	Serial.setTimeout(5000);
-	//debugSerial.begin(57600);
 }
 
 void debug_log()
 {
 	webSocket.broadcastTXT(log_buffer);
-	//debugSerial.print(log_buffer);
 }
 
 uint8_t isp_serial_write(uint8_t *buffer, uint8_t length)

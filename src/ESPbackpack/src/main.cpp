@@ -58,7 +58,6 @@ javascript:history.back();
 static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta name="viewport" content="width = device-width, initial-scale = 1.0, maximum-scale = 1.0, user-scalable=0">
     <title>TX Log Messages</title>
@@ -237,7 +236,6 @@ void handleFileUpload()
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START)
   {
-
     if (SPIFFS.info(fs_info))
     {
       String output;

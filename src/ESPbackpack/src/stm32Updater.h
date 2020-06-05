@@ -11,8 +11,6 @@
 #define RESET_PIN 5
 #define BEGIN_ADDRESS 0x08000000
 
-uint8_t start_key_pressed();
-
 uint8_t reset_stm32_to_isp_mode();
 
 uint8_t reset_stm32_to_app_mode();

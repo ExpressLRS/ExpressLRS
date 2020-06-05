@@ -1,6 +1,4 @@
-<!DOCTYPE html>
 <html>
-
 <head>
     <meta name="viewport" content="width = device-width, initial-scale = 1.0, maximum-scale = 1.0, user-scalable=0">
     <title>TX Log Messages</title>
@@ -21,6 +19,7 @@
     <script>
         var websock;
         function start() {
+            document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
             websock = new WebSocket('ws://' + window.location.hostname + ':81/');
             websock.onopen = function (evt) { console.log('websock open'); };
             websock.onclose = function(e) {
@@ -32,7 +31,6 @@
             websock.onerror = function (evt) { console.log(evt); };
             websock.onmessage = function (evt) {
                 console.log(evt);
-
                 var d = new Date();
                 var n = d.toISOString();
                 document.getElementById("logField").value += n + ' ' + evt.data + '\n';
@@ -84,7 +82,7 @@ curl --include \
      --header "Origin: http://example.com:80" \
      --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
      --header "Sec-WebSocket-Version: 13" \
-     http://<ipaddr>:81/
+     http://elrs_tx.local:81/
     </textarea>
     <br><br>
         <textarea id="logField" rows="40" cols="100" style="margin: 0px; height: 621px; width: 968px;">BEGIN LOG
@@ -94,27 +92,23 @@ curl --include \
         <br><br>
 		
 	<h1>Danger Zone</h1>
-	Update ESP8266 module and R9M Firmware<br><br> <button onclick="window.location.href='/page2'">Continue</button>
+	Update ESP8266 module and R9M Firmware<br><br>
 	<b>ESP8266 Flashing:</b><br>
-	Select new .bin and press Upload<br>
+	Select new .bin and press 'Upload and Flash Self'<br>
 	<br>
 	<b>R9M Flashing:</b><br>
-	Select new .bin and press 'Upload R9M .bin'<br>
-	Once Uploaded select 'Flash R9M'<br><br><br>
+	Select new .bin and press 'Upload and Flash R9M'<br><br><br>
     <form method='POST' action='/update' enctype='multipart/form-data'>
          Self Firmware:
          <input type='file' accept='.bin' name='firmware'>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-         <input type='submit' value='Update Self'>
+         <input type='submit' value='Upload and Flash Self'>
     </form>
 	<br>
-    <form method='POST' action='/update' enctype='multipart/form-data'>
+    <form method='POST' action='/upload' enctype='multipart/form-data'>
          R9M Firmware: 
          <input type='file' accept='.bin' name='filesystem'>
-         <input type='submit' value='Upload R9M .bin'>
+         <input type='submit' value='Upload and Flash R9M'>
     </form>
-	<br><br>WARNING !!! <button onclick="window.location.href='/flash'">Flash R9M</button> WARNING !!!<br><br>
-	<a href="back.html">link text</a>
-	
 	</center>
 	
 </body>
