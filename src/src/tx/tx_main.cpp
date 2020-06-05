@@ -31,12 +31,15 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
 /// define some libs to use ///
 SX127xDriver Radio(RadioSpi);
 CRSF_TX crsf(CrsfSerial);
-RcChannels rc_ch;
+RcChannels DRAM_ATTR rc_ch;
 POWERMGNT PowerMgmt(Radio);
-/*static*/ volatile uint32_t DRAM_ATTR _rf_rxtx_counter = 0;
-static volatile uint8_t rx_buffer[8];
-static volatile uint8_t rx_buffer_handle = 0;
+
+volatile uint32_t DRAM_ATTR _rf_rxtx_counter = 0;
+static volatile uint8_t DMA_ATTR rx_buffer[8];
+static volatile uint8_t DRAM_ATTR rx_buffer_handle = 0;
 static volatile uint8_t red_led_state = 0;
+
+static uint16_t DRAM_ATTR CRCCaesarCipher = 0;
 
 struct platform_config pl_config = {
     .key = 0,
@@ -50,18 +53,18 @@ static uint32_t DRAM_ATTR SyncPacketNextSend = 0;
 static volatile uint32_t DRAM_ATTR sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
 
 /////////// CONNECTION /////////
-static uint32_t LastPacketRecvMillis = 0;
+static uint32_t DRAM_ATTR LastPacketRecvMillis = 0;
 volatile connectionState_e DRAM_ATTR connectionState = STATE_disconnected;
 
 //////////// TELEMETRY /////////
-static volatile uint32_t expected_tlm_counter = 0;
-static uint32_t recv_tlm_counter = 0;
+static volatile uint32_t DMA_ATTR expected_tlm_counter = 0;
+static uint32_t DMA_ATTR recv_tlm_counter = 0;
 static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
 static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
-static volatile uint_fast8_t tlm_msp_send = 0;
-static uint32_t TlmSentToRadioTime = 0;
+static volatile uint_fast8_t DRAM_ATTR tlm_msp_send = 0;
+static uint32_t DRAM_ATTR TlmSentToRadioTime = 0;
 static LPF LPF_dyn_tx_power(3);
 static uint32_t dyn_tx_updated = 0;
 
@@ -116,17 +119,13 @@ int8_t tx_tlm_toggle(void)
 static void process_rx_buffer()
 {
     uint32_t ms = millis();
-    uint8_t calculatedCRC = CalcCRC(rx_buffer, 7, CRCCaesarCipher);
-    uint8_t in_byte = rx_buffer[0];
+    const uint16_t crc = CalcCRC16((uint8_t*)rx_buffer, 6, CRCCaesarCipher);
+    const uint16_t crc_in = ((uint16_t)(rx_buffer[6] & 0x3f) << 8) + rx_buffer[7];
+    uint8_t type = TYPE_EXTRACT(rx_buffer[6]);
 
-    if (rx_buffer[7] != calculatedCRC)
+    if (crc_in != (crc & 0x3FFF))
     {
         DEBUG_PRINT("!C");
-        return;
-    }
-    else if (DEIVCE_ADDR_GET(in_byte) != DeviceAddr)
-    {
-        DEBUG_PRINT("!A");
         return;
     }
 
@@ -137,7 +136,7 @@ static void process_rx_buffer()
     LastPacketRecvMillis = ms;
     recv_tlm_counter++;
 
-    switch (TYPE_GET(in_byte))
+    switch (type)
     {
         case DL_PACKET_TLM_MSP:
         {
@@ -146,7 +145,7 @@ static void process_rx_buffer()
         }
         case DL_PACKET_TLM_LINK:
         {
-            crsf.LinkStatisticsExtract(&rx_buffer[1],
+            crsf.LinkStatisticsExtract(rx_buffer,
                                        Radio.LastPacketSNR,
                                        Radio.LastPacketRSSI);
 
@@ -204,7 +203,6 @@ static void ICACHE_RAM_ATTR HandleFHSS_TX()
 static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
 {
     ElrsSyncPacket_s * sync = (ElrsSyncPacket_s*)output;
-    sync->address = (DeviceAddr) + UL_PACKET_SYNC;
     sync->fhssIndex = FHSSgetCurrIndex();
     sync->rxtx_counter = _rf_rxtx_counter;
     sync->air_rate = ExpressLRS_currAirRate->enum_rate;
@@ -212,6 +210,7 @@ static void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t *const output)
     sync->uid3 = UID[3];
     sync->uid4 = UID[4];
     sync->uid5 = UID[5];
+    output[6] = TYPE_PACK(UL_PACKET_SYNC);
 }
 
 static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
@@ -257,7 +256,9 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     }
 
     // Calculate the CRC
-    tx_buffer[7] = CalcCRC(tx_buffer, 7, CRCCaesarCipher);
+    uint16_t crc = CalcCRC16(tx_buffer, 6, CRCCaesarCipher);
+    tx_buffer[6] += (crc >> 8) & 0x3F;
+    tx_buffer[7] = (crc & 0xFF);
     // Enable PA
     PowerMgmt.pa_on();
     // Debugging
@@ -489,6 +490,8 @@ void setup()
     PowerLevels_e power;
     msp_packet_tx.reset();
     msp_packet_rx.reset();
+
+    CRCCaesarCipher = CalcCRC16(UID, sizeof(UID), 0);
 
     DEBUG_PRINTLN("ExpressLRS TX Module...");
     CrsfSerial.Begin(CRSF_TX_BAUDRATE_FAST);

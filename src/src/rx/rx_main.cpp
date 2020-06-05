@@ -37,6 +37,8 @@ static volatile uint32_t rx_lost_packages = 0;
 #endif
 static volatile int32_t rx_hw_isr_running = 0;
 
+static uint16_t DRAM_ATTR CRCCaesarCipher = 0;
+
 ///////////////////////////////////////////////
 ////////////////  Filters  ////////////////////
 static LPF LPF_FreqError(5);
@@ -177,16 +179,18 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
             tlm_msp_send = 0;
         }
         /* send msp packet if needed */
-        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_MSP;
+        tx_buffer[6] = TYPE_PACK(DL_PACKET_TLM_MSP);
     }
     else
     {
-        tx_buffer[0] = DEIVCE_ADDR_GENERATE(DeviceAddr) + DL_PACKET_TLM_LINK; // address + tlm packet
         crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
-        crsf.LinkStatisticsPack(&tx_buffer[1]);
+        crsf.LinkStatisticsPack(tx_buffer);
+        tx_buffer[6] = TYPE_PACK(DL_PACKET_TLM_LINK);
     }
 
-    tx_buffer[7] = CalcCRC(tx_buffer, 7, CRCCaesarCipher);
+    uint16_t crc = CalcCRC16(tx_buffer, 6, CRCCaesarCipher);
+    tx_buffer[6] += ((crc >> 8) & 0x3F);
+    tx_buffer[7] = (crc & 0xFF);
     Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
 }
 
@@ -334,17 +338,16 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     //DEBUG_PRINT("I");
     const connectionState_e _conn_state = connectionState;
     const uint32_t current_us = Radio.LastPacketIsrMicros;
-    const uint8_t calculatedCRC = CalcCRC(rx_buffer, 7, CRCCaesarCipher);
-    ElrsSyncPacket_s const * const sync = (ElrsSyncPacket_s*)rx_buffer;
-    const uint8_t address = sync->address;
+    const uint16_t crc = CalcCRC16(rx_buffer, 6, CRCCaesarCipher);
+    const uint16_t crc_in = ((uint16_t)(rx_buffer[6] & 0x3f) << 8) + rx_buffer[7];
+    const uint8_t type = TYPE_EXTRACT(rx_buffer[6]);
 
 #if PRINT_TIMER
     DEBUG_PRINT("RX us ");
     DEBUG_PRINT(current_us);
 #endif
 
-    if ((sync->crc != calculatedCRC) ||
-        (DEIVCE_ADDR_GET(address) != DeviceAddr))
+    if (crc_in != (crc & 0x3FFF))
     {
         DEBUG_PRINT(" ! ");
         //DEBUG_PRINTLN(FHSSgetCurrFreq());
@@ -359,11 +362,12 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     rx_last_valid_us = current_us;
     LastValidPacket = millis();
 
-    switch (TYPE_GET(address))
+    switch (type)
     {
         case UL_PACKET_SYNC:
         {
             DEBUG_PRINT(" S");
+            ElrsSyncPacket_s const * const sync = (ElrsSyncPacket_s*)rx_buffer;
             if (sync->uid3 == UID[3] &&
                 sync->uid4 == UID[4] &&
                 sync->uid5 == UID[5])
@@ -414,8 +418,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 #if !defined(SEQ_SWITCHES) && !defined(HYBRID_SWITCHES_8)
         case UL_PACKET_SWITCH_DATA: // Switch Data Packet
             // extra layer of protection incase the crc and addr headers fail us.
-            if ((rx_buffer[3] == rx_buffer[1]) &&
-                (rx_buffer[4] == rx_buffer[2]))
+            if ((rx_buffer[2] == rx_buffer[0]) &&
+                (rx_buffer[3] == rx_buffer[1]))
             {
                 //if (_conn_state == STATE_connected)
                 if (STATE_disconnected < _conn_state)
@@ -423,8 +427,8 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
                     rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
                     crsf.sendRCFrameToFC();
                 }
-                NonceRXlocal = rx_buffer[5];
-                FHSSsetCurrIndex(rx_buffer[6]);
+                NonceRXlocal = rx_buffer[4];
+                FHSSsetCurrIndex(rx_buffer[5]);
             }
             break;
 #endif
@@ -542,6 +546,8 @@ static void msp_data_cb(uint8_t const *const input)
 
 void setup()
 {
+    CRCCaesarCipher = CalcCRC16(UID, sizeof(UID), 0);
+
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);
 
     msp_packet_rx.reset();

@@ -33,7 +33,6 @@ enum
 };
 
 typedef struct ElrsSyncPacket_s {
-    uint8_t address;
     uint8_t fhssIndex;
     uint8_t rxtx_counter;
     uint8_t air_rate: 4;
@@ -41,8 +40,10 @@ typedef struct ElrsSyncPacket_s {
     uint8_t uid3;
     uint8_t uid4;
     uint8_t uid5;
-    uint8_t crc;
 } ElrsSyncPacket_s;
+
+#define TYPE_PACK(T) (((T) & 0b11) << 6)
+#define TYPE_EXTRACT(B) (((B) >> 6) && 0b11)
 
 
 class RcChannels

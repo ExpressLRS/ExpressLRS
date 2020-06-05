@@ -41,9 +41,6 @@ volatile const expresslrs_mod_settings_s *ExpressLRS_currAirRate = NULL;
 uint8_t const DRAM_ATTR UID[6] = {MY_UID};
 #endif
 
-uint8_t const DRAM_ATTR CRCCaesarCipher = UID[4];
-uint8_t const DRAM_ATTR DeviceAddr = (UID[5] & 0b00111111) << 2; // temporarily based on mac until listen before assigning method merged
-
 uint8_t getSyncWord(void)
 {
 #if 1

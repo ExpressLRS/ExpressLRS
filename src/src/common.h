@@ -17,13 +17,6 @@ typedef enum
 extern volatile connectionState_e connectionState;
 
 extern uint8_t const DRAM_ATTR UID[6];
-extern uint8_t const DRAM_ATTR CRCCaesarCipher;
-extern uint8_t const DRAM_ATTR DeviceAddr;
-
-// These are used as message type header
-#define DEIVCE_ADDR_GET(_B)      ((_B)&0b11111100)
-#define DEIVCE_ADDR_GENERATE(_B) (_B)
-#define TYPE_GET(_B)             ((_B)&0b00000011)
 
 uint8_t getSyncWord(void);
 

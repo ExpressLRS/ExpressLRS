@@ -32,14 +32,12 @@ typedef struct
  */
 void RcChannels::channels_pack()
 {
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_RC_DATA;
-    packed_buffer[0] = PacketHeaderAddr;
+    packed_buffer[6] = TYPE_PACK(UL_PACKET_RC_DATA);
 
     // find the next switch to send
     uint8_t ch_idx = getNextSwitchIndex() & 0b111;
 
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[0];
     // The analog channels, ch4 scaled to 10bits
     rcdata->rc1 = (ChannelDataIn[0]);
     rcdata->rc2 = (ChannelDataIn[1]);
@@ -59,7 +57,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
     uint16_t switchValue;
     uint8_t switchIndex;
 
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[0];
     // The analog channels
     PackedRCdataOut.ch0 = rcdata->rc1;
     PackedRCdataOut.ch0 = rcdata->rc2;
@@ -127,14 +125,12 @@ typedef struct
  */
 void RcChannels::channels_pack()
 {
-    uint8_t PacketHeaderAddr;
-    PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_RC_DATA;
-    packed_buffer[0] = PacketHeaderAddr;
+    packed_buffer[6] = TYPE_PACK(UL_PACKET_RC_DATA);
 
     // find the next switch to send
     uint8_t ch_idx = getNextSwitchIndex() & 0b111; // mask for paranoia
 
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[0];
     // The analog channels, scale down to 10bits
     rcdata->rc1 = (ChannelDataIn[0] >> 1);
     rcdata->rc2 = (ChannelDataIn[1] >> 1);
@@ -155,7 +151,7 @@ void RcChannels::channels_pack()
 void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
                                                   crsf_channels_t &PackedRCdataOut)
 {
-    RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
+    RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[0];
     // The analog channels, scaled back to 11bits
     PackedRCdataOut.ch0 = ((uint16_t)rcdata->rc1 << 1);
     PackedRCdataOut.ch1 = ((uint16_t)rcdata->rc2 << 1);
@@ -226,7 +222,6 @@ extern volatile uint32_t DRAM_ATTR _rf_rxtx_counter;
 void RcChannels::channels_pack()
 {
     uint32_t current_ms = millis();
-    uint8_t PacketHeaderAddr = DEIVCE_ADDR_GENERATE(DeviceAddr);
 
 #ifndef One_Bit_Switches
     if ((current_ms > SwitchPacketNextSend) || (p_auxChannelsChanged & 0xf))
@@ -234,23 +229,23 @@ void RcChannels::channels_pack()
         SwitchPacketNextSend = current_ms + SWITCH_PACKET_SEND_INTERVAL;
         p_auxChannelsChanged = 0;
 
-        packed_buffer[0] = PacketHeaderAddr + UL_PACKET_SWITCH_DATA;
-        SwitchPacket_s *rcdata = (SwitchPacket_s *)&packed_buffer[1];
+        packed_buffer[6] = TYPE_PACK(UL_PACKET_SWITCH_DATA);
+        SwitchPacket_s *rcdata = (SwitchPacket_s *)&packed_buffer[0];
         rcdata->aux1 = (CRSF_to_UINT10(ChannelDataIn[4]) >> 6);
         rcdata->aux2 = (CRSF_to_UINT10(ChannelDataIn[5]) >> 6);
         rcdata->aux3 = (CRSF_to_UINT10(ChannelDataIn[6]) >> 6);
         rcdata->aux4 = (CRSF_to_UINT10(ChannelDataIn[7]) >> 6);
+        packed_buffer[2] = packed_buffer[0];
         packed_buffer[3] = packed_buffer[1];
-        packed_buffer[4] = packed_buffer[2];
-        packed_buffer[5] = _rf_rxtx_counter;
-        packed_buffer[6] = FHSSgetCurrIndex();
+        packed_buffer[4] = _rf_rxtx_counter;
+        packed_buffer[5] = FHSSgetCurrIndex();
     }
     else // else we just have regular channel data which we send as 8 + 2 bits
 #endif // !One_Bit_Switches
     {
-        packed_buffer[0] = PacketHeaderAddr + UL_PACKET_RC_DATA;
+        packed_buffer[6] = TYPE_PACK(UL_PACKET_RC_DATA);
 
-        RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[1];
+        RcDataPacket_s *rcdata = (RcDataPacket_s *)&packed_buffer[0];
         rcdata->rc1 = ChannelDataIn[0];
         rcdata->rc2 = ChannelDataIn[1];
         rcdata->rc3 = ChannelDataIn[2];
@@ -267,10 +262,10 @@ void RcChannels::channels_pack()
 void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const input,
                                                   crsf_channels_t &PackedRCdataOut)
 {
-    uint8_t type = input[0] & 0b11;
+    uint8_t type = TYPE_EXTRACT(input[6]);
     if (type == UL_PACKET_RC_DATA)
     {
-        RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[1];
+        RcDataPacket_s *rcdata = (RcDataPacket_s *)&input[0];
         PackedRCdataOut.ch0 = rcdata->rc1;
         PackedRCdataOut.ch1 = rcdata->rc2;
         PackedRCdataOut.ch2 = rcdata->rc3;
@@ -284,7 +279,7 @@ void ICACHE_RAM_ATTR RcChannels::channels_extract(volatile uint8_t const *const 
     }
     else if (type == UL_PACKET_SWITCH_DATA)
     {
-        SwitchPacket_s *rcdata = (SwitchPacket_s *)&input[1];
+        SwitchPacket_s *rcdata = (SwitchPacket_s *)&input[0];
         PackedRCdataOut.ch4 = SWITCH3b_to_CRSF(rcdata->aux1);
         PackedRCdataOut.ch5 = SWITCH3b_to_CRSF(rcdata->aux2);
         PackedRCdataOut.ch6 = SWITCH3b_to_CRSF(rcdata->aux3);
@@ -382,15 +377,13 @@ uint8_t RcChannels::getNextSwitchIndex()
 typedef union {
     struct
     {
-        uint8_t address; // just to align
-        uint8_t flags;
         uint16_t func;
         uint16_t payloadSize;
+        uint8_t flags;
         uint8_t type;
     } hdr;
     struct
     {
-        uint8_t address; // just to align
         uint8_t data[6];
     } payload;
 } TlmDataPacket_s;
@@ -404,7 +397,7 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
     if (packet.type != MSP_PACKET_TLM_OTA)
         return 0;
 
-    tlm_ptr->hdr.address = DEIVCE_ADDR_GENERATE(DeviceAddr) + UL_PACKET_MSP;
+    output[6] = TYPE_PACK(UL_PACKET_MSP);
 
     if (!packet.header_sent_or_rcvd)
     {
