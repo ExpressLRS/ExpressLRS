@@ -2,6 +2,7 @@
 #include "platform.h"
 #include "utils.h"
 #include "FHSS.h"
+#include "crc.h"
 #include <Arduino.h>
 
 volatile uint8_t current_rate_config = RATE_DEFAULT;
@@ -50,17 +51,11 @@ uint8_t getSyncWord(void)
     // RX: 0x61 -> NOK
     // RX: 0x1E, 0x1F, 0x2d, 0x3d, 0x4d, 0x6d -> OK
     // RX: 0x20, 0x30, 0x40 -> NOK
-    uint8_t syncw = UID[4];
+    uint8_t syncw = CalcCRC(UID, sizeof(UID)); //UID[4];
     if (syncw == SX127X_SYNC_WORD_LORAWAN)
-        syncw++;
+        syncw += 0x1;
     return syncw;
 #else
     return SX127X_SYNC_WORD;
 #endif
 }
-
-/*uint16_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
-{
-    return (256u >> (enumval));
-}
-*/

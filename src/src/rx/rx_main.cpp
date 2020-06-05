@@ -99,6 +99,8 @@ void ICACHE_RAM_ATTR FillLinkStats()
         rssiDBM = 0;
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
+
+
 }
 
 uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
@@ -426,15 +428,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 
         case UL_PACKET_MSP:
             DEBUG_PRINT(" M");
-#if 1
-            if (rc_ch.tlm_receive(rx_buffer, msp_packet_rx))
-            {
-                // TODO: Check if packet is for receiver
-                if (!msp_packet_rx.error)
-                    crsf.sendMSPFrameToFC(msp_packet_rx);
-                msp_packet_rx.reset();
-            }
-#endif
+            rc_ch.tlm_receive(rx_buffer, msp_packet_rx);
             break;
 
         default:
@@ -624,6 +618,16 @@ void loop()
                 crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
                 crsf.LinkStatisticsSend();
                 SendLinkStatstoFCintervalNextSend = now;
+            }
+            else if (msp_packet_rx.iterated())
+            {
+                // MPS packet received, handle it
+                if (!msp_packet_rx.error)
+                {
+                    // TODO: Check if packet is for receiver
+                    crsf.sendMSPFrameToFC(msp_packet_rx);
+                }
+                msp_packet_rx.reset();
             }
         }
     }

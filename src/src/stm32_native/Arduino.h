@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#define noInterrupts() __disable_irq()
+#define interrupts() __enable_irq()
+
 #define PA0  GPIO('A', 0)
 #define PA1  GPIO('A', 1)
 #define PA2  GPIO('A', 2)

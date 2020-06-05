@@ -34,8 +34,6 @@ void CRSF_TX::LinkStatisticsSend(void)
 }
 void CRSF_TX::LinkStatisticsProcess(void)
 {
-    if (!(send_buffers & SEND_LNK_STAT))
-        return;
     send_buffers &= ~SEND_LNK_STAT;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(LinkStatisticsFrameLength);
@@ -58,8 +56,6 @@ void CRSF_TX::sendLUAresponseToRadio(uint8_t *data, uint8_t size)
 
 void CRSF_TX::LuaResponseProcess(void)
 {
-    if (!(send_buffers & SEND_LUA))
-        return;
     send_buffers &= ~SEND_LUA;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(2 + sizeof(lua_buff));
@@ -116,8 +112,6 @@ void CRSF_TX::BatterySensorSend(void)
 }
 void CRSF_TX::BatteryStatisticsProcess(void)
 {
-    if (!(send_buffers & SEND_BATT))
-        return;
     send_buffers &= ~SEND_BATT;
 
     uint8_t len = CRSF_EXT_FRAME_SIZE(BattSensorFrameLength);
@@ -140,8 +134,9 @@ void CRSF_TX::BatteryStatisticsProcess(void)
 }
 
 #if (FEATURE_OPENTX_SYNC)
-void CRSF_TX::sendSyncPacketToRadio()
+uint8_t CRSF_TX::sendSyncPacketToRadio()
 {
+    uint8_t retval = 1;
     if (RCdataLastRecv && p_RadioConnected)
     {
         uint32_t current = millis();
@@ -180,8 +175,10 @@ void CRSF_TX::sendSyncPacketToRadio()
             outBuffer[13] = (offset & 0x000000FF) >> 0;
 
             CrsfFramePushToFifo(outBuffer, len);
+            retval = 0;
         }
     }
+    return retval;
 }
 #endif /* FEATURE_OPENTX_SYNC */
 
@@ -236,9 +233,9 @@ uint8_t CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX v
     uint8_t can_send = 0;
     uint8_t split_cnt = 0;
 
-    while (rx_data_rcvd == 0 && _dev->available() && ((++split_cnt & 0x7) > 0))
+    for (split_cnt = 0; (rx_data_rcvd == 0) && _dev->available() && (split_cnt < 16); split_cnt++)
     {
-        uint8_t *ptr = HandleUartIn(_dev->read());
+        uint8_t *ptr = ParseInByte(_dev->read());
         if (ptr)
         {
             processPacket(ptr);
@@ -248,12 +245,18 @@ uint8_t CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX v
             {
                 /* Can write right after successful package reception */
 #if (FEATURE_OPENTX_SYNC)
-                sendSyncPacketToRadio();
+                if (sendSyncPacketToRadio() && !rx_data_rcvd)
 #endif
-                LuaResponseProcess();
-                LinkStatisticsProcess();
-                BatteryStatisticsProcess();
-                can_send = 1;
+                {
+                    if (send_buffers & SEND_LNK_STAT)
+                        LinkStatisticsProcess();
+                    else if (send_buffers & SEND_BATT)
+                        BatteryStatisticsProcess();
+                    else if (send_buffers & SEND_LUA)
+                        LuaResponseProcess();
+                    else
+                        can_send = 1;
+                }
             }
         }
     }

@@ -60,7 +60,7 @@ private:
     volatile int32_t OpenTXsyncOffset = 0;
     uint32_t RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
     uint32_t OpenTXsynNextSend = 0;
-    void sendSyncPacketToRadio(); // called from main loop
+    uint8_t sendSyncPacketToRadio(); // called from main loop
 
 #endif /* FEATURE_OPENTX_SYNC */
 

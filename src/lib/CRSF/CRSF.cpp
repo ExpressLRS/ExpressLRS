@@ -76,7 +76,7 @@ void CRSF::BatterySensorSend(void)
 {
 }
 
-uint8_t *CRSF::HandleUartIn(uint8_t inChar)
+uint8_t *CRSF::ParseInByte(uint8_t inChar)
 {
     uint8_t *packet_ptr = NULL;
 

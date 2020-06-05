@@ -7,7 +7,9 @@ void ICACHE_RAM_ATTR CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
 #if !NO_DATA_TO_FC
+    noInterrupts();
     _dev->write(buff, size);
+    interrupts();
 #endif
 }
 
@@ -26,13 +28,15 @@ void CRSF_RX::LinkStatisticsSend()
 
 void ICACHE_RAM_ATTR CRSF_RX::sendRCFrameToFC()
 {
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = CRSF_FRAME_SIZE(RCframeLength);
-    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+    uint8_t out_rc_data[CRSF_EXT_FRAME_SIZE(RCframeLength)];
 
-    memcpy(&outBuffer[3], &ChannelsPacked, RCframeLength);
+    out_rc_data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    out_rc_data[1] = CRSF_FRAME_SIZE(RCframeLength);
+    out_rc_data[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    sendFrameToFC(outBuffer, CRSF_EXT_FRAME_SIZE(RCframeLength));
+    memcpy(&out_rc_data[3], &ChannelsPacked, RCframeLength);
+
+    sendFrameToFC(out_rc_data, sizeof(out_rc_data));
 }
 
 void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t &packet)
@@ -121,10 +125,9 @@ void CRSF_RX::processPacket(uint8_t const *data)
 void CRSF_RX::handleUartIn(volatile uint8_t &rx_data_rcvd)
 {
     uint8_t split_cnt = 0;
-
-    while (rx_data_rcvd == 0 && _dev->available() && ((++split_cnt & 0xF) > 0))
+    for (split_cnt = 0; (rx_data_rcvd == 0) && _dev->available() && (split_cnt < 16); split_cnt++)
     {
-        uint8_t *ptr = HandleUartIn(_dev->read());
+        uint8_t *ptr = ParseInByte(_dev->read());
         if (ptr)
             processPacket(ptr);
     }

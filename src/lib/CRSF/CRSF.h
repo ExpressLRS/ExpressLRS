@@ -221,7 +221,7 @@ public:
     volatile crsf_sensor_battery_s TLMbattSensor = {0};
 
 protected:
-    uint8_t *HandleUartIn(uint8_t inChar);
+    uint8_t *ParseInByte(uint8_t inChar);
     virtual void LinkStatisticsSend(void) = 0;
     virtual void BatterySensorSend(void);
 

@@ -426,6 +426,9 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_send(uint8_t *const output,
 uint8_t ICACHE_RAM_ATTR RcChannels::tlm_receive(volatile uint8_t const *const input,
                                                 mspPacket_t &packet)
 {
+    if (packet.iterated())
+        return 1;
+
     TlmDataPacket_s *tlm_ptr = (TlmDataPacket_s *)input;
     if (packet.header_sent_or_rcvd && packet.type == MSP_PACKET_TLM_OTA)
     {
