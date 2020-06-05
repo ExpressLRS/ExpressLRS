@@ -43,7 +43,7 @@ typedef struct ElrsSyncPacket_s {
 } ElrsSyncPacket_s;
 
 #define TYPE_PACK(T) (((T) & 0b11) << 6)
-#define TYPE_EXTRACT(B) (((B) >> 6) && 0b11)
+#define TYPE_EXTRACT(B) (((B) >> 6) & 0b11)
 
 
 class RcChannels
