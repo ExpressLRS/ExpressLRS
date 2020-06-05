@@ -89,7 +89,7 @@ typedef struct
                 payloadSize <= payloadIterator);
     }
 
-    inline void ICACHE_RAM_ATTR reset()
+    void reset(void)
     {
         type = MSP_PACKET_UNKNOWN;
         flags = 0;

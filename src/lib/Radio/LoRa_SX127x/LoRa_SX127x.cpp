@@ -2,6 +2,7 @@
 #include "LoRa_SX127x_Regs.h"
 #include "debug.h"
 #include <stdio.h>
+#include <string.h>
 
 #define DEBUG
 
