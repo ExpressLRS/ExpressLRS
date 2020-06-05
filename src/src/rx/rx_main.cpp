@@ -39,7 +39,7 @@ static volatile int32_t rx_hw_isr_running = 0;
 
 ///////////////////////////////////////////////
 ////////////////  Filters  ////////////////////
-static LPF LPF_FreqError(4);
+static LPF LPF_FreqError(5);
 static LPF LPF_UplinkRSSI(5);
 
 //////////////////////////////////////////////////////////////
@@ -132,7 +132,7 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
     DEBUG_PRINT(freqerror);
 #endif
 
-    if (abs(freqerror) > 120)
+    if (abs(freqerror) > 100) // 120
     {
         FreqCorrection += freqerror;
         Radio.setPPMoffsetReg(freqerror, 0);
@@ -252,9 +252,11 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 #if NUM_FAILS_TO_RESYNC
         else if (!__rx_last_valid_us)
         {
-            if (NUM_FAILS_TO_RESYNC < (++rx_lost_packages))
+            if (NUM_FAILS_TO_RESYNC < (++rx_lost_packages)) {
                 // consecutive losts => trigger connection lost to resync
                 LostConnection();
+                DEBUG_PRINT("RESYNC!");
+            }
         }
 #endif
     }
@@ -282,6 +284,7 @@ void ICACHE_RAM_ATTR LostConnection()
     // Reset FHSS
     FHSSresetFreqCorrection();
     FHSSsetCurrIndex(0);
+    LPF_FreqError.init(0);
 
     connectionState = STATE_disconnected; //set lost connection
     scanIndex = ExpressLRS_currAirRate->enum_rate;

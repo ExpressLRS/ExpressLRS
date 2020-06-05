@@ -245,8 +245,9 @@ uint8_t CRSF_TX::handleUartIn(volatile uint8_t &rx_data_rcvd) // Merge with RX v
             {
                 /* Can write right after successful package reception */
 #if (FEATURE_OPENTX_SYNC)
-                if (sendSyncPacketToRadio() && !rx_data_rcvd)
+                sendSyncPacketToRadio();
 #endif
+                if (!rx_data_rcvd)
                 {
                     if (send_buffers & SEND_LNK_STAT)
                         LinkStatisticsProcess();

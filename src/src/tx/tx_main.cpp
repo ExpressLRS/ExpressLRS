@@ -260,9 +260,10 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     tx_buffer[7] = CalcCRC(tx_buffer, 7, CRCCaesarCipher);
     // Enable PA
     PowerMgmt.pa_on();
-    //delayMicroseconds(random(0, 200));
+    // Debugging
+    //delayMicroseconds(random(0, 400)); // 300 ok
+    //if (random(0, 99) < 55) tx_buffer[1] = 0;
     // Send data to rf
-    //if (random(0, 99) < 60)
     Radio.TXnb(tx_buffer, 8, freq);
     // Increase TX counter
     HandleFHSS_TX();
