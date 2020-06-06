@@ -509,11 +509,11 @@ void setup()
 {
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
+  #ifdef USE_UART2
+    Serial2.begin(400000);
+  #endif
 #endif
 
-#ifdef USE_UART2
-  Serial2.begin(400000);
-#endif
 
 #ifdef TARGET_R9M_TX
   HardwareSerial(USART2);
