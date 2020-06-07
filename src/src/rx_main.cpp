@@ -593,8 +593,8 @@ void setup()
 
 void loop()
 {
-    crsf.RXhandleUARTout(); //empty the UART out buffer
-    yield(); // to be safe
+    //crsf.RXhandleUARTout(); //empty the UART out buffer
+    //yield(); // to be safe
 
     //Serial.println(linkQuality);
     //

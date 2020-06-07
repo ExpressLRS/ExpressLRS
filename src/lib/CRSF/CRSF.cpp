@@ -398,9 +398,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-            SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-            //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            //SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
+            //SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+            this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
         }
 
@@ -418,9 +418,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[RCframeLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            SerialOutFIFO.push(RCframeLength + 4);
-            SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-            //this->_dev->write(outBuffer, RCframeLength + 4);
+            //SerialOutFIFO.push(RCframeLength + 4);
+            //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
+            this->_dev->write(outBuffer, RCframeLength + 4);
 #endif
         }
 
