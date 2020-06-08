@@ -143,11 +143,16 @@ uint8_t CRSF_TX::sendSyncPacketToRadio()
         int32_t offset = (int32_t)(OpenTXsyncOffset - RequestedRCpacketAdvance);
 
         // Adjust radio timing if not in requested window or not sent within 200ms
-        if ((100 < offset) || // too early
-            (-50 > offset) || // too late
+        if (/*(100 < offset) || // too early
+            (-50 > offset) || // too late*/
             (OpenTXsyncPakcetInterval <= (current - OpenTXsynNextSend)))
         {
             OpenTXsynNextSend = current;
+
+            /*DEBUG_PRINT("rate: ");
+            DEBUG_PRINT(RequestedRCpacketInterval);
+            DEBUG_PRINT(" offset: ");
+            DEBUG_PRINTLN(offset);*/
 
             uint32_t packetRate = RequestedRCpacketInterval;
             packetRate *= 10; //convert from us to right format
@@ -191,7 +196,7 @@ void CRSF_TX::processPacket(uint8_t const *input)
         RCdataLastRecv = 0;
         OpenTXsynNextSend = millis(); //+60;
 #endif
-        DEBUG_PRINTLN("CRSF UART Connected");
+        DEBUG_PRINTLN("CRSF Connected");
         connected();
     }
 
@@ -273,7 +278,7 @@ void CRSF_TX::uart_wdt(void)
     uint32_t now = millis();
     if (UARTwdtInterval < (now - p_UartNextCheck))
     {
-        DEBUG_PRINT("UART RX packets! Bad:Good ");
+        DEBUG_PRINT("CRSF Bad:Good ");
         DEBUG_PRINT(BadPktsCount);
         DEBUG_PRINT(":");
         DEBUG_PRINTLN(GoodPktsCount);
