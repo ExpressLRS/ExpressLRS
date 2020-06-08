@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width = device-width, initial-scale = 1.0, maximum-scale = 1.0, user-scalable=0">
+    <title>TX Log Messages</title>
+    <style>
+        body {
+            background-color: #1E1E1E;
+            font-family: Arial, Helvetica, Sans-Serif;
+            Color: #69cbf7;
+        }
+
+        textarea {
+            background-color: #252525;
+            Color: #C5C5C5;
+            border-radius: 5px;
+            border: none;
+        }
+    </style>
+    <script>
+        var websock;
+        function start() {
+            document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
+            websock = new WebSocket('ws://' + window.location.hostname + ':81/');
+            websock.onopen = function (evt) { console.log('websock open'); };
+            websock.onclose = function(e) {
+              console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+              setTimeout(function() {
+                start();
+              }, 1000);
+            };
+            websock.onerror = function (evt) { console.log(evt); };
+            websock.onmessage = function (evt) {
+                console.log(evt);
+                var text = evt.data;
+                if (text.startsWith("setting_")) {
+                  var res = str.replace("setting_", "");
+                  res = res.split("=");
+                  setting_set(res[0], res[1]);
+                } else {
+                  var d = new Date();
+                  var n = d.toISOString();
+                  document.getElementById("logField").value += n + ' ' + text + '\n';
+                  document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
+                }
+            };
+        }
+
+        function saveTextAsFile() {
+            var textToWrite = document.getElementById('logField').innerHTML;
+            var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
+            var fileNameToSaveAs = "tx_log.txt";
+
+            var downloadLink = document.createElement("a");
+            downloadLink.download = fileNameToSaveAs;
+            downloadLink.innerHTML = "Download File";
+            if (window.webkitURL != null) {
+                // Chrome allows the link to be clicked without actually adding it to the DOM.
+                downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+            } else {
+                // Firefox requires the link to be added to the DOM before it can be clicked.
+                downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+                downloadLink.onclick = destroyClickedElement;
+                downloadLink.style.display = "none";
+                document.body.appendChild(downloadLink);
+            }
+
+            downloadLink.click();
+        }
+
+        function destroyClickedElement(event) {
+            // remove the link from the DOM
+            document.body.removeChild(event.target);
+        }
+
+        function setting_set(type, value) {
+          var elem = document.getElementById(type);
+          elem.selectedIndex = [...elem.options].findIndex (option => option.value === value);
+        }
+
+        function setting_send(type, elem) {
+          console.log(type+"="+elem.value);
+          //websock.send(type+"="+event.target.value);
+          setting_set("tlm_input", "5");
+        }
+    </script>
+</head>
+
+<body onload="javascript:start();">
+  <center>
+    <h2>TX Log Messages</h2>
+    <textarea id="logField" rows="40" cols="100" style="margin: 0px; height: 621px; width: 968px;"></textarea>
+    <br>
+    <button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file...</button>
+    <hr/>
+    <h2>Settings</h2>
+    <div>
+        <table>
+            <tr><td style="padding: 1px 20px 1px 1px;">
+
+        Rate:
+      <select list="rates" name="rate" onchange="setting_send('rate', this)" id="rates_input">
+        <option value="0">200Hz</option>
+        <option value="1">100Hz</option>
+        <option value="2">50Hz</option>
+      </select>
+    </td>
+        <td style="padding: 1px 20px 1px 20px;">
+
+      Power:
+      <select list="powers" name="power" onchange="setting_send('pwr', this)" id="power_input">
+        <option value="0">Dynamic</option>
+        <option value="1">10mW</option>
+        <option value="2">25mW</option>
+        <option value="3">50mW</option>
+        <option value="4">100mW</option>
+        <option value="5">250mW</option>
+        <option value="6">500mW</option>
+        <option value="7">1000mW</option>
+        <option value="8">2000mW</option>
+        <option value="ff">Reset</option>
+      </select>
+    </td>
+    <td style="padding: 1px 1px 1px 20px;">
+
+      Telemetry:
+      <select list="telemtries" name="telemetry" onchange="setting_send('tlm', this)" id="tlm_input">
+        <option value="0">Off</option>
+        <option value="1">1/128</option>
+        <option value="2">1/64</option>
+        <option value="3">1/32</option>
+        <option value="4">1/16</option>
+        <option value="5">1/8</option>
+        <option value="6">1/4</option>
+        <option value="7">1/2</option>
+        <option value="ff">Reset</option>
+      </select>
+    </td></tr>
+</table>
+    </div>
+    <hr/>
+	  <h2>Danger Zone</h2>
+      <div>
+        <form method='POST' action='/update' enctype='multipart/form-data'>
+             Self Firmware:
+             <input type='file' accept='.bin' name='firmware'>
+             <input type='submit' value='Flash Self'>
+        </form>
+      </div>
+      <br>
+      <div>
+        <form method='POST' action='/upload' enctype='multipart/form-data'>
+             R9M Firmware:
+             <input type='file' accept='.bin' name='filesystem'>
+             <input type='submit' value='Flash R9M'>
+        </form>
+      </div>
+    </center>
+  <hr/>
+  <pre>
+The following command can be used to connect to the websocket using curl, which is a lot faster over the terminal than Chrome.
+
+curl --include \
+     --output - \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Host: elrs_tx.local:80" \
+     --header "Origin: http://elrs_tx.local:80" \
+     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     --header "Sec-WebSocket-Version: 13" \
+     http://elrs_tx.local:81/
+  </pre>
+</body>
+</html>
+
+curl --include --output - --no-buffer --header "Connection: Upgrade" --header "Upgrade: websocket" --header "Host: elrs_tx.local:80" --header "Origin: http://elrs_tx.local:80" --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" --header "Sec-WebSocket-Version: 13" http://elrs_tx.local:81/

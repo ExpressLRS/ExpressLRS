@@ -158,7 +158,9 @@ void platform_setup(void)
     EEPROM.begin();
 
 #if defined(DEBUG_SERIAL)
-    if ((void *)&DEBUG_SERIAL != (void *)&CrsfSerial)
+    // Init debug serial if not done already
+    if (((void *)&DEBUG_SERIAL != (void *)&CrsfSerial) &&
+        ((void *)&DEBUG_SERIAL != (void *)&Serial1))
     {
         // init debug serial
 #ifdef GPIO_PIN_DEBUG_TX
@@ -170,6 +172,8 @@ void platform_setup(void)
         DEBUG_SERIAL.begin(400000);
     }
 #endif
+    // Serial1 is connected to internal ESP module if in use
+    Serial1.begin(460800);
 
     /**** SWTICHES ****/
 #if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
@@ -280,6 +284,16 @@ void platform_loop(int state)
         button.handle();
 #endif /* RX_MODULE */
 #endif // GPIO_PIN_BUTTON
+
+#if 0
+    static char test_buff[32];
+    if (Serial1.available()) {
+        uint8_t cnt = Serial1.readBytesUntil('\n', test_buff, sizeof(test_buff));
+        Serial1.print("Received: ");
+        Serial1.write(test_buff, cnt);
+        Serial1.println();
+    }
+#endif
 }
 
 void platform_connection_state(int state)
