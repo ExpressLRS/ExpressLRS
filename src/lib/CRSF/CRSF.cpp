@@ -202,9 +202,9 @@ void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel)
     outBuffer[12] = 0x00;
     outBuffer[13] = 0x00;
 
-    uint8_t crc1 = CalcCRCcmd(&outBuffer[2], VTXcontrolFrameLength + 1);
+    //uint8_t crc1 = CalcCRCcmd(&outBuffer[2], VTXcontrolFrameLength + 1);
 
-    outBuffer[14] = crc1;
+    //outBuffer[14] = crc1;
 
     uint8_t crc2 = CalcCRC(&outBuffer[2], VTXcontrolFrameLength + 2);
 
