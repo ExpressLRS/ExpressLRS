@@ -139,7 +139,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.SetFrequency(FHSSgetNextFreq());
         Radio.RXnb();
-        crsf.sendLinkStatisticsToFC();
     }
 }
 
