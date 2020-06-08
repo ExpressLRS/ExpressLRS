@@ -328,6 +328,7 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
     return crc;
 }
 
+
 static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
 {
     uint8_t crc = 0;
@@ -341,6 +342,7 @@ class CRSF
 {
 
 public:
+    //CRSF(HardwareSerial& serial);
 
 #if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
 
