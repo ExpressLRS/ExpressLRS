@@ -82,9 +82,6 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
             websock = new WebSocket('ws://' + window.location.hostname + ':81/');
             websock.onopen = function (evt) {
               console.log('websock open');
-              //setting_send('S_power');
-              //setting_send('S_telemetry');
-              //setting_send('S_rate');
             };
             websock.onclose = function(e) {
               console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
@@ -111,12 +108,11 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
         }
 
         function saveTextAsFile() {
-            var textToWrite = document.getElementById('logField').innerHTML;
+            var textToWrite = document.getElementById('logField').value;
             var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
-            var fileNameToSaveAs = "tx_log.txt";
 
             var downloadLink = document.createElement("a");
-            downloadLink.download = fileNameToSaveAs;
+            downloadLink.download = "tx_log.txt";
             downloadLink.innerHTML = "Download File";
             if (window.webkitURL != null) {
                 // Chrome allows the link to be clicked without actually adding it to the DOM.
@@ -139,8 +135,37 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 
         function setting_set(type, value) {
           var elem = document.getElementById(type);
-          if (elem)
-            elem.selectedIndex = [...elem.options].findIndex (option => option.value === value);
+          if (elem) {
+            if (type == "region_domain") {
+              if (value == "0")
+                value = "Regulatory domain 915MHz";
+              else if (value == "1")
+                value = "Regulatory domain 868MHz";
+              else if (value == "2")
+                value = "Regulatory domain 433MHz";
+              else
+                value = "Regulatory domain UNKNOWN";
+              elem.innerHTML = value;
+            } else {
+              value = value.split(",");
+              if (1 < value.length) {
+                var max_value = parseInt(value[1], 10);
+                if (elem.options[0].value == "R")
+                  max_value = max_value + 1; // include reset
+                var i;
+                // enable all
+                for (i = 0; i < elem.length; i++) {
+                  elem.options[i].disabled = false;
+                }
+                // disable unavailable values
+                for (i = (elem.length-1); max_value < i; i--) {
+                  //elem.remove(i);
+                  elem.options[i].disabled = true;
+                }
+              }
+              elem.selectedIndex = [...elem.options].findIndex (option => option.value === value[0]);
+            }
+          }
         }
 
         function setting_send(type, elem=null) {
@@ -162,47 +187,83 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
     <button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file...</button>
     <hr/>
     <h2>Settings</h2>
-    <table><tr>
-      <td style="padding: 1px 20px 1px 1px;">
-        Rate:
-        <select name="rate" onchange="setting_send('S_rate', this)" id="rates_input">
-          <option value="0">200Hz</option>
-          <option value="1">100Hz</option>
-          <option value="2">50Hz</option>
-        </select>
-      </td>
+    <table>
+      <tr>
+        <td style="padding: 1px 20px 1px 1px;" colspan="3" id="region_domain">
+          Regulatory domain UNKNOWN
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 1px 20px 1px 1px;">
+          Rate:
+          <select name="rate" onchange="setting_send('S_rate', this)" id="rates_input">
+            <option value="0">200Hz</option>
+            <option value="1">100Hz</option>
+            <option value="2">50Hz</option>
+          </select>
+        </td>
 
-      <td style="padding: 1px 20px 1px 20px;">
-        Power:
-        <select name="power" onchange="setting_send('S_power', this)" id="power_input">
-          <option value="0">Dynamic</option>
-          <option value="1">10mW</option>
-          <option value="2">25mW</option>
-          <option value="3">50mW</option>
-          <option value="4">100mW</option>
-          <option value="5">250mW</option>
-          <option value="6">500mW</option>
-          <option value="7">1000mW</option>
-          <option value="8">2000mW</option>
-          <option value="ff">Reset</option>
-        </select>
-      </td>
+        <td style="padding: 1px 20px 1px 20px;">
+          Power:
+          <select name="power" onchange="setting_send('S_power', this)" id="power_input">
+            <option value="R">Reset</option>
+            <option value="0">Dynamic</option>
+            <option value="1">10mW</option>
+            <option value="2">25mW</option>
+            <option value="3">50mW</option>
+            <option value="4">100mW</option>
+            <option value="5">250mW</option>
+            <option value="6">500mW</option>
+            <option value="7">1000mW</option>
+            <option value="8">2000mW</option>
+          </select>
+        </td>
 
-      <td style="padding: 1px 1px 1px 20px;">
-        Telemetry:
-        <select name="telemetry" onchange="setting_send('S_telemetry', this)" id="tlm_input">
-          <option value="0">Off</option>
-          <option value="1">1/128</option>
-          <option value="2">1/64</option>
-          <option value="3">1/32</option>
-          <option value="4">1/16</option>
-          <option value="5">1/8</option>
-          <option value="6">1/4</option>
-          <option value="7">1/2</option>
-          <option value="ff">Reset</option>
-        </select>
-      </td>
-    </tr></table>
+        <td style="padding: 1px 1px 1px 20px;">
+          Telemetry:
+          <select name="telemetry" onchange="setting_send('S_telemetry', this)" id="tlm_input">
+            <option value="R">Reset</option>
+            <option value="0">Off</option>
+            <option value="1">1/128</option>
+            <option value="2">1/64</option>
+            <option value="3">1/32</option>
+            <option value="4">1/16</option>
+            <option value="5">1/8</option>
+            <option value="6">1/4</option>
+            <option value="7">1/2</option>
+          </select>
+        </td>
+      </tr>
+      <!--
+      <tr>
+        <td style="padding: 1px 1px 1px 20px;">
+        VTX Settings
+        </td>
+        <td style="padding: 1px 1px 1px 20px;">
+          Freq:
+          <select name="vtx_freq" onchange="setting_send('S_vtx_freq', this)" id="vtx_f_input">
+            <option value="5740">F1</option>
+            <option value="5760">F2</option>
+            <option value="5780">F3</option>
+            <option value="5800">F4</option>
+            <option value="5820">F5</option>
+            <option value="5840">F6</option>
+            <option value="5860">F7</option>
+            <option value="5880">F8</option>
+          </select>
+        </td>
+        <td style="padding: 1px 1px 1px 20px;">
+          Power:
+          <select name="vtx_pwr" onchange="setting_send('S_vtx_pwr', this)" id="vtx_p_input">
+            <option value="0">Pit</option>
+            <option value="1">0</option>
+            <option value="2">1</option>
+            <option value="3">2</option>
+          </select>
+        </td>
+      </tr>
+      -->
+    </table>
 
     <hr/>
 	  <h2>Danger Zone</h2>
@@ -243,9 +304,23 @@ curl --include \
 )rawliteral";
 
 static uint8_t settings_rate = 1;
-static uint8_t settings_power = 4;
+static uint8_t settings_power = 4, settings_power_max = 8;
 static uint8_t settings_tlm = 7;
+static uint8_t settings_region = 0;
 String settings_out;
+
+void SettingsWrite(uint8_t * buff, uint8_t len)
+{
+  Serial.print("ELRS");
+  Serial.write(buff, len);
+  Serial.write('\n');
+}
+
+void SettingsGet(void)
+{
+  uint8_t buff[] = {0, 0};
+  SettingsWrite(buff, sizeof(buff));
+}
 
 void handleSettingRate(const char * input, uint8_t num)
 {
@@ -255,8 +330,12 @@ void handleSettingRate(const char * input, uint8_t num)
     settings_out += settings_rate;
   } else if (*input == '=') {
     input++;
-    settings_out = "Rate: ";
+    settings_out = "Setting rate: ";
     settings_out += input;
+    // Write to ELRS
+    char val = *input;
+    uint8_t buff[] = {1, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
+    SettingsWrite(buff, sizeof(buff));
   }
   webSocket.sendTXT(num, settings_out);
 }
@@ -267,10 +346,16 @@ void handleSettingPower(const char * input, uint8_t num)
   if (input == NULL || *input == '?') {
     settings_out = "ELRS_setting_power_input=";
     settings_out += settings_power;
+    settings_out += ",";
+    settings_out += settings_power_max;
   } else if (*input == '=') {
     input++;
-    settings_out = "Power: ";
+    settings_out = "Setting power: ";
     settings_out += input;
+    // Write to ELRS
+    char val = *input;
+    uint8_t buff[] = {3, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
+    SettingsWrite(buff, sizeof(buff));
   }
   webSocket.sendTXT(num, settings_out);
 }
@@ -283,8 +368,22 @@ void handleSettingTlm(const char * input, uint8_t num)
     settings_out += settings_tlm;
   } else if (*input == '=') {
     input++;
-    settings_out = "Telemetry: ";
+    settings_out = "Setting telemetry: ";
     settings_out += input;
+    // Write to ELRS
+    char val = *input;
+    uint8_t buff[] = {2, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
+    SettingsWrite(buff, sizeof(buff));
+  }
+  webSocket.sendTXT(num, settings_out);
+}
+
+void handleSettingDomain(const char * input, uint8_t num)
+{
+  settings_out = "[ERROR] Domain set is not supported!";
+  if (input == NULL || *input == '?') {
+    settings_out = "ELRS_setting_region_domain=";
+    settings_out += settings_region;
   }
   webSocket.sendTXT(num, settings_out);
 }
@@ -315,9 +414,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     webSocket.sendTXT(num, info);
 
     // Send settings
-    handleSettingRate(NULL, num);
-    handleSettingPower(NULL, num);
-    handleSettingTlm(NULL, num);
+    SettingsGet();
   }
   break;
   case WStype_TEXT:
@@ -350,7 +447,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     break;
   default:
     //Serial.printf("Invalid WStype [%d]\r\n", type);
-    webSocket.broadcastTXT("Invalid WStype: " + type);
+    //webSocket.broadcastTXT("Invalid WStype: " + type);
     break;
   }
 }
@@ -540,8 +637,23 @@ int serialEvent()
     if (inChar == '\r') {
       continue;
     } else if (inChar == '\n') {
-      if (0 <= inputString.indexOf("400000"))
-        Serial.write("TEST\n");
+      if (inputString.startsWith("ELRS_RESP_")) {
+        /* this is the settings control message */
+        uint8_t const * ctrl = (uint8_t*)(&inputString.c_str()[10]);
+        settings_rate = ctrl[0];
+        settings_tlm = ctrl[1];
+        settings_power = ctrl[2];
+        settings_power_max = ctrl[3];
+        settings_region = ctrl[4];
+
+        handleSettingDomain(NULL, socketNumber);
+        handleSettingRate(NULL, socketNumber);
+        handleSettingPower(NULL, socketNumber);
+        handleSettingTlm(NULL, socketNumber);
+
+        inputString = "";
+        return -1;
+      }
       return 0;
     }
     inputString += inChar;

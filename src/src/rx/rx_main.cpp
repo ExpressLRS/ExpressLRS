@@ -9,7 +9,7 @@
 #include "rx_LinkQuality.h"
 #include "HwTimer.h"
 #include "HwSerial.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include "helpers.h"
 #include "rc_channels.h"
 

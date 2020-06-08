@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "debug_elrs.h"
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>

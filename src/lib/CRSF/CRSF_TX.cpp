@@ -1,5 +1,5 @@
 #include "CRSF_TX.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <string.h>
 
 void paramNullCallback(uint8_t const *, uint16_t){};

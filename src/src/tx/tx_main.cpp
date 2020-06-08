@@ -7,7 +7,7 @@
 #include "targets.h"
 #include "POWERMGNT.h"
 #include "HwTimer.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include "rc_channels.h"
 #include "LowPassFilter.h"
 #include <stdlib.h>
@@ -140,6 +140,7 @@ static void process_rx_buffer()
     {
         case DL_PACKET_TLM_MSP:
         {
+            DEBUG_PRINTLN("DL MSP junk");
             rc_ch.tlm_receive(rx_buffer, msp_packet_rx);
             break;
         }
@@ -248,6 +249,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
         {
             msp_packet_tx.reset();
             tlm_msp_send = 0;
+            DEBUG_PRINTLN("MSP sent");
         }
     }
     else
@@ -272,21 +274,20 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
 
 ///////////////////////////////////////
 
-static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
+static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_t const *msg, uint8_t *out)
 {
-    // Called from UART handling loop (main loop)
-    if (len != 2)
-        return;
-
-    uint8_t value = msg[1];
     uint8_t modified = 0;
+    uint8_t value = msg[0];
 
-    switch (msg[0])
+    switch (cmd)
     {
         case 0: // send all params
             break;
 
         case 1:
+            if (len != 1)
+                return -1;
+
             // set air rate
             if (RATE_MAX > value)
                 modified |= SetRFLinkRate(value) ? (1 << 1) : 0;
@@ -296,18 +297,23 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 
         case 2:
             // set TLM interval
+            if (len != 1)
+                return -1;
+
             if (tx_tlm_change_interval(value) >= 0)
             {
 #ifndef PLATFORM_ESP32
                 modified = (1 << 2);
 #endif
             }
-            DEBUG_PRINT("TLM: ");
-            DEBUG_PRINTLN(TLMinterval);
+            //DEBUG_PRINT("TLM: ");
+            //DEBUG_PRINTLN(TLMinterval);
             break;
 
         case 3:
             // set TX power
+            if (len != 1)
+                return -1;
             modified = PowerMgmt.currPower();
             PowerMgmt.setPower((PowerLevels_e)value);
             DEBUG_PRINT("Power: ");
@@ -326,9 +332,11 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 #if 1
         case 5:
         {
-            uint8_t power = msg[3];
+            if (len != 3)
+                return -1;
+            uint8_t power = msg[2];
             uint8_t crc = 0;
-            uint16_t freq = (uint16_t)msg[1] * 8 + msg[2]; // band * 8 + channel
+            uint16_t freq = (uint16_t)msg[0] * 8 + msg[1]; // band * 8 + channel
             uint8_t vtx_cmd[] = {(uint8_t)(freq >> 8), (uint8_t)freq, power, (power == 0)};
             uint8_t size = sizeof(vtx_cmd);
             // VTX settings
@@ -347,28 +355,36 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
             }
             msp_packet_tx.addByte(crc);
             tlm_msp_send = 1; // rdy for sending
+
+            DEBUG_PRINT("VTX MSP - freq:");
+            DEBUG_PRINT(freq);
+            DEBUG_PRINT(" pwr:");
+            DEBUG_PRINTLN(power);
             break;
         }
 #endif
 
         default:
-            break;
+            return -1;
     }
 
-    uint8_t resp[5] = {(uint8_t)(ExpressLRS_currAirRate->enum_rate),
-                       (uint8_t)(TLMinterval),
-                       (uint8_t)(PowerMgmt.currPower()),
-                       (uint8_t)(PowerMgmt.maxPowerGet()),
-                       0xff};
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
-    resp[4] = 0;
-#elif defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_EU_868_R9)
-    resp[4] = 1;
-#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-    resp[4] = 2;
-#endif
 
-    crsf.sendLUAresponseToRadio(resp, sizeof(resp));
+    // Fill response
+    if (out) {
+        out[0] = (uint8_t)(ExpressLRS_currAirRate->enum_rate);
+        out[1] = (uint8_t)(TLMinterval);
+        out[2] = (uint8_t)(PowerMgmt.currPower());
+        out[3] = (uint8_t)(PowerMgmt.maxPowerGet());
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)
+        out[4] = 0;
+#elif defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_EU_868_R9)
+        out[4] = 1;
+#elif defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+        out[4] = 2;
+#else
+        out[4] = 0xff;
+#endif
+    }
 
     if (modified)
     {
@@ -383,7 +399,40 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
         if (modified & (1 << 1))
             TxTimer.start();
     }
+
+    return 0;
 }
+
+static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
+{
+    // Called from UART handling loop (main loop)
+    uint8_t resp[5];
+    if (0 > SettingsCommandHandle(msg[0], len, &msg[1], resp))
+        return;
+    crsf.sendLUAresponseToRadio(resp, sizeof(resp));
+}
+
+#ifdef CTRL_SERIAL
+static uint8_t cmd_buffer[128];
+static uint8_t * cmd_next = cmd_buffer;
+
+static void CtrlCommandHandler(uint8_t *msg, uint16_t len)
+{
+    // Check header: ELRS
+    if (5 < len && msg[0] == 'E' && msg[1] == 'L' && msg[2] == 'R' && msg[3] == 'S') {
+        if (0 > SettingsCommandHandle(msg[4], (len - 6), &msg[5], msg)) {
+            CTRL_SERIAL.println("SETTING FAILED!");
+            return;
+        }
+        // Send response
+        CTRL_SERIAL.print("ELRS_RESP_");
+        CTRL_SERIAL.write(msg, 5); //  payload 5B
+        CTRL_SERIAL.write('\n');
+    } else if (msg[0] == 'M' && msg[1] == 'S' && msg[2] == 'P') {
+        // handle MSP message input
+    }
+}
+#endif /* CTRL_SERIAL */
 
 ///////////////////////////////////////
 
@@ -463,6 +512,8 @@ static void msp_data_cb(uint8_t const *const input)
     if (tlm_msp_send)
         return;
 
+    DEBUG_PRINTLN("MSP from radio rcvd");
+
     /* process MSP packet from radio
      *  [0] header: seq&0xF,
      *  [1] payload size
@@ -527,6 +578,12 @@ void setup()
 
     SetRFLinkRate(current_rate_config, 1);
 
+#ifdef CTRL_SERIAL
+    // populate current configuration
+    uint8_t cmd[] = {'E', 'L', 'R', 'S', 0, 0, '\n'};
+    CtrlCommandHandler(cmd, sizeof(cmd));
+#endif /* CTRL_SERIAL */
+
     crsf.Begin();
 }
 
@@ -577,12 +634,31 @@ void loop()
     // Process CRSF packets from TX
     can_send = crsf.handleUartIn(rx_buffer_handle);
 
-    // Send MSP resp if allowed and packet ready
-    if (can_send && msp_packet_rx.iterated())
-    {
-        if (!msp_packet_rx.error)
-            crsf.sendMspPacketToRadio(msp_packet_rx);
-        msp_packet_rx.reset();
+    if (!rx_buffer_handle) {
+        // Send MSP resp if allowed and packet ready
+        if (can_send && msp_packet_rx.iterated())
+        {
+            DEBUG_PRINTLN("DL MSP rcvd => radio");
+            if (!msp_packet_rx.error)
+                crsf.sendMspPacketToRadio(msp_packet_rx);
+            msp_packet_rx.reset();
+        }
+#ifdef CTRL_SERIAL
+        else if (CTRL_SERIAL.available()) {
+            platform_wd_feed();
+            uint8_t in = CTRL_SERIAL.read();
+            *cmd_next++ = in;
+            uint8_t cnt = (cmd_next - cmd_buffer);
+            if (3 < cnt && in == '\n') {
+                CtrlCommandHandler(cmd_buffer, cnt);
+                cmd_buffer[0] = 0;
+                cmd_next = cmd_buffer;
+            } else if (sizeof(cmd_buffer) <= cnt) {
+                cmd_buffer[0] = 0;
+                cmd_next = cmd_buffer;
+            }
+        }
+#endif /* CTRL_SERIAL */
     }
 
     platform_loop(connectionState);

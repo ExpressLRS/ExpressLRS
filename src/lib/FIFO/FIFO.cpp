@@ -28,7 +28,7 @@
  * Modified/Ammended by Alessandro Carcione 2020
  */
 #include "FIFO.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include "platform.h"
 
 FIFO::FIFO()

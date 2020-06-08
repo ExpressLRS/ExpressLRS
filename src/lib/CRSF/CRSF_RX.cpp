@@ -1,6 +1,6 @@
 #include "CRSF_RX.h"
 #include "utils.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <string.h>
 
 void ICACHE_RAM_ATTR CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)

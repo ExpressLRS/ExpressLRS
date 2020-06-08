@@ -1,5 +1,5 @@
 #include "CRSF.h"
-#include "debug.h"
+#include "debug_elrs.h"
 
 void rcNullCb(crsf_channels_t const *const) {}
 void (*CRSF::RCdataCallback1)(crsf_channels_t const *const) = &rcNullCb; // function is called whenever there is new RC data.

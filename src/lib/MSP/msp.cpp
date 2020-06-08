@@ -1,7 +1,7 @@
 #include "msp.h"
 #include "crc.h"
 #include "platform.h"
-#include "debug.h"
+#include "debug_elrs.h"
 
 /* ==========================================
 MSP V2 Message Structure:

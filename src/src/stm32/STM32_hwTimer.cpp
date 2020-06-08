@@ -1,5 +1,5 @@
 #include "HwTimer.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <Arduino.h>
 
 #if defined(TIM1)

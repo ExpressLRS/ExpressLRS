@@ -1,5 +1,5 @@
 #include "targets.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include "button.h"
 #include "common.h"
 #include "ESP8266_WebUpdate.h"

@@ -1,6 +1,6 @@
 #include "platform.h"
 #include "targets.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include "common.h"
 #include "POWERMGNT.h"
 #include <Arduino.h>
@@ -174,6 +174,7 @@ void platform_setup(void)
 #endif
     // Serial1 is connected to internal ESP module if in use
     Serial1.begin(460800);
+    Serial1.setTimeout(5);
 
     /**** SWTICHES ****/
 #if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)

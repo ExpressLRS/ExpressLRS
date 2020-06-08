@@ -1,5 +1,5 @@
 #include "HwTimer.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <Arduino.h>
 
 /* HW specific code can be found from <mcu type>/ folder */

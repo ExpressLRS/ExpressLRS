@@ -48,12 +48,11 @@
         }
 
         function saveTextAsFile() {
-            var textToWrite = document.getElementById('logField').innerHTML;
+            var textToWrite = document.getElementById('logField').value;
             var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
-            var fileNameToSaveAs = "tx_log.txt";
 
             var downloadLink = document.createElement("a");
-            downloadLink.download = fileNameToSaveAs;
+            downloadLink.download = "r9m_tx_log.txt";
             downloadLink.innerHTML = "Download File";
             if (window.webkitURL != null) {
                 // Chrome allows the link to be clicked without actually adding it to the DOM.
@@ -137,6 +136,35 @@
         <option value="ff">Reset</option>
       </select>
     </td></tr>
+    <!--
+      <tr>
+        <td style="padding: 1px 1px 1px 20px;">
+          VTX Settings
+        </td>
+        <td style="padding: 1px 1px 1px 20px;">
+          Freq:
+          <select name="vtx_freq" onchange="setting_send('S_vtx_freq', this)" id="vtx_f_input">
+            <option value="5740">F1</option>
+            <option value="5760">F2</option>
+            <option value="5780">F3</option>
+            <option value="5800">F4</option>
+            <option value="5820">F5</option>
+            <option value="5840">F6</option>
+            <option value="5860">F7</option>
+            <option value="5880">F8</option>
+          </select>
+        </td>
+        <td style="padding: 1px 1px 1px 20px;">
+          Power:
+          <select name="vtx_pwr" onchange="setting_send('S_vtx_pwr', this)" id="vtx_p_input">
+            <option value="0">Pit</option>
+            <option value="1">0</option>
+            <option value="2">1</option>
+            <option value="3">2</option>
+          </select>
+        </td>
+      </tr>
+    -->
 </table>
     </div>
     <hr/>

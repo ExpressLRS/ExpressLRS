@@ -1,6 +1,6 @@
 #include "LoRa_SX127x.h"
 #include "LoRa_SX127x_Regs.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <stdio.h>
 #include <string.h>
 

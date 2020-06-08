@@ -243,4 +243,6 @@ https://github.com/jaxxzer
 
 class R9DAC;
 extern R9DAC r9dac;
+
+#define CTRL_SERIAL Serial1
 #endif

@@ -2,7 +2,7 @@
 #include "common.h"
 #include "helpers.h"
 #include "FHSS.h"
-#include "debug.h"
+#include "debug_elrs.h"
 
 #if (N_SWITCHES > (N_CHANNELS - N_CONTROLS))
 #error "CRSF Channels Config is not OK"

@@ -1,6 +1,6 @@
 #include "HwTimer.h"
 #include "targets.h"
-#include "debug.h"
+#include "debug_elrs.h"
 #include <user_interface.h>
 #include <Arduino.h>
 
