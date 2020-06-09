@@ -29,6 +29,7 @@ RcChannels rc_ch;
 
 volatile connectionState_e connectionState = STATE_disconnected;
 static volatile uint8_t NonceRXlocal = 0; // nonce that we THINK we are up to.
+static volatile uint8_t TLMinterval = 0;
 static volatile uint32_t tlm_check_ratio = 0;
 static volatile uint32_t rx_last_valid_us = 0; //Time the last valid packet was recv
 static volatile int32_t rx_freqerror = 0;
@@ -76,16 +77,21 @@ inline void led_toggle(void)
     led_set_state(!ledState);
 }
 
-static void ICACHE_RAM_ATTR handle_tlm_ratio(uint8_t TLMinterval)
+static void ICACHE_RAM_ATTR handle_tlm_ratio(uint8_t interval)
 {
-    if ((TLM_RATIO_NO_TLM < TLMinterval) && (TLM_RATIO_MAX > TLMinterval))
+    if (TLMinterval == interval) return;
+
+    if ((TLM_RATIO_NO_TLM < interval) && (TLM_RATIO_MAX > interval))
     {
-        tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
+        tlm_check_ratio = TLMratioEnumToValue(interval) - 1;
     }
     else
     {
         tlm_check_ratio = 0;
     }
+    TLMinterval = interval;
+    DEBUG_PRINT("TLM: ");
+    DEBUG_PRINTLN(interval);
 }
 ///////////////////////////////////////
 
@@ -165,7 +171,7 @@ uint8_t ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
 {
-    //DEBUG_PRINT("X");
+    DEBUG_PRINT(" X");
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
@@ -349,7 +355,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 
     if (crc_in != (crc & 0x3FFF))
     {
-        DEBUG_PRINT(" ! ");
+        DEBUG_PRINT(" !");
         //DEBUG_PRINTLN(FHSSgetCurrFreq());
         return;
     }
