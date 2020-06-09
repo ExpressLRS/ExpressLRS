@@ -10,6 +10,7 @@
 #include "debug_elrs.h"
 #include "rc_channels.h"
 #include "LowPassFilter.h"
+#include "msp.h"
 #include <stdlib.h>
 
 static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init = 0);
@@ -63,11 +64,11 @@ static volatile uint32_t DRAM_ATTR tlm_check_ratio = 0;
 static volatile uint_fast8_t DRAM_ATTR TLMinterval = 0;
 static mspPacket_t msp_packet_tx;
 static mspPacket_t msp_packet_rx;
+static MSP msp_packet_parser;
 static volatile uint_fast8_t DRAM_ATTR tlm_msp_send = 0;
 static uint32_t DRAM_ATTR TlmSentToRadioTime = 0;
 static LPF LPF_dyn_tx_power(3);
 static uint32_t dyn_tx_updated = 0;
-
 //////////// LUA /////////
 
 ///////////////////////////////////////
@@ -407,7 +408,7 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
 {
     // Called from UART handling loop (main loop)
     uint8_t resp[5];
-    if (0 > SettingsCommandHandle(msg[0], len, &msg[1], resp))
+    if (0 > SettingsCommandHandle(msg[0], (len - 1), &msg[1], resp))
         return;
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 }
@@ -647,6 +648,7 @@ void loop()
         else if (CTRL_SERIAL.available()) {
             platform_wd_feed();
             uint8_t in = CTRL_SERIAL.read();
+            //msp_packet_parser.processReceivedByte(in);
             *cmd_next++ = in;
             uint8_t cnt = (cmd_next - cmd_buffer);
             if (3 < cnt && in == '\n') {

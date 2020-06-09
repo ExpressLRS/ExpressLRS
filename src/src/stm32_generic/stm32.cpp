@@ -285,16 +285,6 @@ void platform_loop(int state)
         button.handle();
 #endif /* RX_MODULE */
 #endif // GPIO_PIN_BUTTON
-
-#if 0
-    static char test_buff[32];
-    if (Serial1.available()) {
-        uint8_t cnt = Serial1.readBytesUntil('\n', test_buff, sizeof(test_buff));
-        Serial1.print("Received: ");
-        Serial1.write(test_buff, cnt);
-        Serial1.println();
-    }
-#endif
 }
 
 void platform_connection_state(int state)

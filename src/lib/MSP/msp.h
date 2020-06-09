@@ -163,6 +163,7 @@ typedef struct
 class MSP
 {
 public:
+    MSP() {}
     bool processReceivedByte(uint8_t c);
     mspPacket_t *getReceivedPacket();
     void markPacketReceived();
