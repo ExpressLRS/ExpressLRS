@@ -634,7 +634,7 @@ void loop()
                 crsf.LinkStatisticsSend();
                 SendLinkStatstoFCintervalNextSend = now;
             }
-            else if (msp_packet_rx.iterated())
+            else if (msp_packet_rx.iterated() || msp_packet_rx.error)
             {
                 // MPS packet received, handle it
                 if (!msp_packet_rx.error)

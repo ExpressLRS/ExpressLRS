@@ -439,6 +439,7 @@ uint8_t ICACHE_RAM_ATTR RcChannels::tlm_receive(volatile uint8_t const *const in
     }
     else
     {
+        packet.error = true;
         return 0;
     }
     return packet.iterated();
