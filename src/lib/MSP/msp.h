@@ -84,9 +84,8 @@ typedef struct
 
     inline uint8_t iterated()
     {
-        return (type != MSP_PACKET_UNKNOWN &&
-                0 < payloadSize &&
-                payloadSize <= payloadIterator);
+        return ((type != MSP_PACKET_UNKNOWN) &&
+                ((0 < payloadSize && payloadSize <= payloadIterator) || (payloadSize == 0)));
     }
 
     void reset(void)
