@@ -76,7 +76,7 @@ static uint32_t dyn_tx_updated = 0;
 static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff);
 static void ICACHE_RAM_ATTR HandleTLM();
 
-int8_t tx_tlm_change_interval(uint8_t value)
+int8_t tx_tlm_change_interval(uint8_t value, uint8_t init = 0)
 {
     if (value == TLM_RATIO_DEFAULT)
     {
@@ -89,7 +89,7 @@ int8_t tx_tlm_change_interval(uint8_t value)
         value = TLM_RATIO_NO_TLM;
     }
 
-    if (value != TLMinterval)
+    if (value != TLMinterval || init)
     {
         if (TLM_RATIO_NO_TLM < value) {
             Radio.RXdoneCallback1 = ProcessTLMpacket;
@@ -188,7 +188,7 @@ static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff)
     volatile_memcpy(rx_buffer, buff, sizeof(rx_buffer));
     rx_buffer_handle = 1;
 
-    //DEBUG_PRINT("R");
+    //DEBUG_PRINT(" R");
 }
 
 static void ICACHE_RAM_ATTR HandleTLM()
@@ -482,7 +482,7 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
     crsf.setRcPacketRate(config->interval);
     crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate);
 
-    tx_tlm_change_interval(TLMinterval);
+    tx_tlm_change_interval(TLMinterval, init);
 
     //sync_send_interval = (tlm_check_ratio) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     sync_send_interval = config->syncInterval;
