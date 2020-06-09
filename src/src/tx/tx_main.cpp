@@ -73,27 +73,40 @@ static uint32_t dyn_tx_updated = 0;
 
 ///////////////////////////////////////
 
-int8_t tx_tlm_change_interval(uint8_t const value)
+static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff);
+static void ICACHE_RAM_ATTR HandleTLM();
+
+int8_t tx_tlm_change_interval(uint8_t value)
 {
-    uint8_t const current = TLMinterval;
     if (value == TLM_RATIO_DEFAULT)
     {
         // Default requested
-        TLMinterval = ExpressLRS_currAirRate->TLMinterval;
+        value = ExpressLRS_currAirRate->TLMinterval;
     }
-    else if (value < TLM_RATIO_MAX)
+    else if (TLM_RATIO_MAX <= value)
     {
-        TLMinterval = value;
+        DEBUG_PRINTLN("TLM: Invalid value! disable tlm");
+        value = TLM_RATIO_NO_TLM;
     }
 
-    if (current != TLMinterval)
+    if (value != TLMinterval)
     {
-        if (TLM_RATIO_NO_TLM < TLMinterval)
-            tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
-        else
+        if (TLM_RATIO_NO_TLM < value) {
+            Radio.RXdoneCallback1 = ProcessTLMpacket;
+            Radio.TXdoneCallback1 = HandleTLM;
+            connectionState = STATE_disconnected;
+            tlm_check_ratio = TLMratioEnumToValue(value) - 1;
+            DEBUG_PRINT("TLM changed to ");
+            DEBUG_PRINTLN(value);
+        } else {
+            Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
+            Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
+            // Set connected if telemetry is not used
+            connectionState = STATE_connected;
             tlm_check_ratio = 0;
-        DEBUG_PRINT("TLM: ");
-        DEBUG_PRINTLN(TLMinterval);
+            DEBUG_PRINTLN("TLM disabled");
+        }
+        TLMinterval = value;
         return 0;
     }
     return -1;
@@ -250,7 +263,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
         {
             msp_packet_tx.reset();
             tlm_msp_send = 0;
-            DEBUG_PRINTLN("MSP sent");
+            DEBUG_PRINTLN("<< MSP sent");
         }
     }
     else
@@ -411,6 +424,12 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
     if (0 > SettingsCommandHandle(msg[0], (len - 1), &msg[1], resp))
         return;
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
+
+#ifdef CTRL_SERIAL
+    CTRL_SERIAL.print("ELRS_RESP_");
+    CTRL_SERIAL.write(resp, sizeof(resp));
+    CTRL_SERIAL.write('\n');
+#endif /* CTRL_SERIAL */
 }
 
 #ifdef CTRL_SERIAL
@@ -462,25 +481,10 @@ static uint8_t SetRFLinkRate(uint8_t rate, uint8_t init) // Set speed of RF link
     Radio.SetPreambleLength(config->PreambleLen);
     crsf.setRcPacketRate(config->interval);
     crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate);
-    if (TLMinterval == TLM_RATIO_DEFAULT) // unknown, so use default
-        TLMinterval = config->TLMinterval;
-    if (TLM_RATIO_NO_TLM == TLMinterval || TLM_RATIO_MAX <= TLMinterval)
-    {
-        Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
-        Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
-        // Set connected if telemetry is not used
-        connectionState = STATE_connected;
-        //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
-        tlm_check_ratio = 0;
-    }
-    else
-    {
-        Radio.RXdoneCallback1 = ProcessTLMpacket;
-        Radio.TXdoneCallback1 = HandleTLM;
-        connectionState = STATE_disconnected;
-        //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_LOST;
-        tlm_check_ratio = TLMratioEnumToValue(TLMinterval) - 1;
-    }
+
+    tx_tlm_change_interval(TLMinterval);
+
+    //sync_send_interval = (tlm_check_ratio) ? SYNC_PACKET_SEND_INTERVAL_RX_LOST : SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     sync_send_interval = config->syncInterval;
 
     platform_connection_state(connectionState);
@@ -510,10 +514,12 @@ static void rc_data_cb(crsf_channels_t const *const channels)
 /* OpenTX sends v1 MSPs */
 static void msp_data_cb(uint8_t const *const input)
 {
-    if (tlm_msp_send)
+    if (tlm_msp_send) {
+        DEBUG_PRINTLN("MSP ongoing, ignore");
         return;
+    }
 
-    DEBUG_PRINTLN("MSP from radio rcvd");
+    DEBUG_PRINT("MSP from radio: ");
 
     /* process MSP packet from radio
      *  [0] header: seq&0xF,
@@ -523,9 +529,20 @@ static void msp_data_cb(uint8_t const *const input)
      */
     mspHeaderV1_t *hdr = (mspHeaderV1_t *)input;
 
-    if (sizeof(msp_packet_tx.payload) < hdr->payloadSize)
+    if (sizeof(msp_packet_tx.payload) < hdr->payloadSize) {
         /* too big, ignore */
+        DEBUG_PRINTLN(" too big, ignore!");
         return;
+    }
+
+    // BF: MSP from radio: size: 0 flags: 48 func: 88 Lsize: 0 Lflags: 48 Lfunc: 88 received
+
+    DEBUG_PRINT("size: ");
+    DEBUG_PRINT(hdr->payloadSize);
+    DEBUG_PRINT(" flags: ");
+    DEBUG_PRINT(hdr->flags);
+    DEBUG_PRINT(" func: ");
+    DEBUG_PRINT(hdr->function);
 
     msp_packet_tx.reset(hdr);
     msp_packet_tx.type = MSP_PACKET_TLM_OTA;
@@ -533,6 +550,8 @@ static void msp_data_cb(uint8_t const *const input)
         volatile_memcpy(msp_packet_tx.payload,
                         hdr->payload,
                         hdr->payloadSize);
+
+    DEBUG_PRINTLN(" >>");
 
     tlm_msp_send = 1; // rdy for sending
 }
