@@ -7,8 +7,6 @@
 #include <WiFiManager.h>
 #include <ESP8266HTTPUpdateServer.h>
 #include "stm32Updater.h"
-#include "elrs_eeprom.h"
-
 #include "FS.h"
 
 //reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
@@ -36,7 +34,6 @@ uint8_t socketNumber;
 
 String inputString = "";
 
-ELRS_EEPROM eeprom;
 uint16_t eppromPointer = 0;
 
 bool webUpdateMode = false;
