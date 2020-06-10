@@ -233,6 +233,7 @@ protected:
 
 private:
     bool CRSFframeActive = false;
+    uint8_t SerialInCrc = 0;
     uint8_t SerialInPacketStart = 0;
     uint8_t SerialInPacketLen = 0;               // length of the CRSF packet as measured
     uint8_t SerialInPacketPtr = 0;               // index where we are reading/writing

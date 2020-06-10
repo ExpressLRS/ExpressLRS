@@ -92,6 +92,9 @@ uint8_t *CRSF::ParseInByte(uint8_t inChar)
     // store byte
     SerialInBuffer[SerialInPacketPtr++] = inChar;
 
+    // CRSF Frame:
+    // | address | payload_len | payload* | crc |
+
     if (CRSFframeActive == false)
     {
         if (inChar == CRSF_ADDRESS_CRSF_RECEIVER ||
@@ -110,6 +113,7 @@ uint8_t *CRSF::ParseInByte(uint8_t inChar)
     {
         if (SerialInPacketLen == 0) // we read the packet length and save it
         {
+            SerialInCrc = 0;
             SerialInPacketLen = inChar;
             SerialInPacketStart = SerialInPacketPtr;
             if ((SerialInPacketLen < 2) || (CRSF_FRAME_SIZE_MAX < SerialInPacketLen))
@@ -122,14 +126,15 @@ uint8_t *CRSF::ParseInByte(uint8_t inChar)
         }
         else
         {
-            if ((SerialInPacketPtr - SerialInPacketStart) == (SerialInPacketLen))
+            if ((SerialInPacketPtr - SerialInPacketStart) >= (SerialInPacketLen))
             {
-                uint8_t *payload = &SerialInBuffer[SerialInPacketStart];
-                uint8_t CalculatedCRC = CalcCRC(payload, (SerialInPacketLen - 1));
+                //uint8_t *payload = &SerialInBuffer[SerialInPacketStart];
+                //uint8_t CalculatedCRC = CalcCRC(payload, (SerialInPacketLen - 1));
 
-                if (CalculatedCRC == inChar)
+                if (/*CalculatedCRC*/ SerialInCrc == inChar)
                 {
-                    packet_ptr = payload;
+                    //packet_ptr = payload;
+                    packet_ptr = &SerialInBuffer[SerialInPacketStart];
                     GoodPktsCount++;
                 }
                 else
@@ -153,6 +158,11 @@ uint8_t *CRSF::ParseInByte(uint8_t inChar)
                 CRSFframeActive = false;
                 SerialInPacketPtr = 0;
                 SerialInPacketLen = 0;
+            }
+            else
+            {
+                // Calc crc on the fly
+                SerialInCrc = CalcCRC(inChar, SerialInCrc);
             }
         }
     }
