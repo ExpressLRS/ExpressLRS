@@ -343,41 +343,6 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
             // RFFreq
             break;
 
-#if 1
-        case 5:
-        {
-            if (len != 3)
-                return -1;
-            uint8_t power = msg[2];
-            uint8_t crc = 0;
-            uint16_t freq = (uint16_t)msg[0] * 8 + msg[1]; // band * 8 + channel
-            uint8_t vtx_cmd[] = {(uint8_t)(freq >> 8), (uint8_t)freq, power, (power == 0)};
-            uint8_t size = sizeof(vtx_cmd);
-            // VTX settings
-            msp_packet_tx.reset();
-            //msp_packet_tx.makeCommand();
-            msp_packet_tx.type = MSP_PACKET_TLM_OTA;
-            msp_packet_tx.flags = MSP_VERSION | MSP_STARTFLAG;
-            msp_packet_tx.payloadSize = size + 1;
-            crc = CalcCRCxor((uint8_t)msp_packet_tx.payloadSize, crc);
-            msp_packet_tx.function = MSP_VTX_SET_CONFIG;
-            crc = CalcCRCxor((uint8_t)msp_packet_tx.function, crc);
-            for (uint8_t iter = 0; iter < size; iter++)
-            {
-                msp_packet_tx.addByte(vtx_cmd[iter]);
-                crc = CalcCRCxor((uint8_t)vtx_cmd[iter], crc);
-            }
-            msp_packet_tx.addByte(crc);
-            tlm_msp_send = 1; // rdy for sending
-
-            DEBUG_PRINT("VTX MSP - freq:");
-            DEBUG_PRINT(freq);
-            DEBUG_PRINT(" pwr:");
-            DEBUG_PRINTLN(power);
-            break;
-        }
-#endif
-
         default:
             return -1;
     }
@@ -426,33 +391,31 @@ static void ParamWriteHandler(uint8_t const *msg, uint16_t len)
     crsf.sendLUAresponseToRadio(resp, sizeof(resp));
 
 #ifdef CTRL_SERIAL
-    CTRL_SERIAL.print("ELRS_RESP_");
-    CTRL_SERIAL.write(resp, sizeof(resp));
-    CTRL_SERIAL.write('\n');
+    msp_packet_parser.sendPacket(
+        &CTRL_SERIAL, MSP_PACKET_V1_ELRS, ELRS_INT_MSP_PARAMS, MSP_ELRS_INT, sizeof(resp), resp);
 #endif /* CTRL_SERIAL */
 }
 
 #ifdef CTRL_SERIAL
-static uint8_t cmd_buffer[128];
-static uint8_t * cmd_next = cmd_buffer;
-
-static void CtrlCommandHandler(uint8_t *msg, uint16_t len)
+static void MspOtaCommandsSend(mspPacket_t &packet)
 {
-    // Check header: ELRS
-    if (5 < len && msg[0] == 'E' && msg[1] == 'L' && msg[2] == 'R' && msg[3] == 'S') {
-        if (0 > SettingsCommandHandle(msg[4], (len - 6), &msg[5], msg)) {
-            CTRL_SERIAL.println("SETTING FAILED!");
-            return;
-        }
-        // Send response
-        CTRL_SERIAL.print("ELRS_RESP_");
-        CTRL_SERIAL.write(msg, 5); //  payload 5B
-        CTRL_SERIAL.write('\n');
-    } else if (msg[0] == 'M' && msg[1] == 'S' && msg[2] == 'P') {
-        // handle MSP message input
+    uint8_t iter;
+    // ignore if reserved
+    if (tlm_msp_send)
+        return;
+
+    msp_packet_tx.reset();
+    msp_packet_tx.type = MSP_PACKET_TLM_OTA;
+    msp_packet_tx.flags = packet.flags;
+    msp_packet_tx.payloadSize = packet.payloadSize + 1; // include CRC
+    msp_packet_tx.function = packet.function;
+    for (iter = 0; iter < msp_packet_tx.payloadSize; iter++)
+    {
+        msp_packet_tx.addByte(packet.payload[iter]);
     }
+    tlm_msp_send = 1; // rdy for sending
 }
-#endif /* CTRL_SERIAL */
+#endif
 
 ///////////////////////////////////////
 
@@ -550,6 +513,8 @@ static void msp_data_cb(uint8_t const *const input)
         volatile_memcpy(msp_packet_tx.payload,
                         hdr->payload,
                         hdr->payloadSize);
+    // include CRC into payload!!
+    msp_packet_tx.payload[hdr->payloadSize] = hdr->payload[hdr->payloadSize];
 
     DEBUG_PRINTLN(" >>");
 
@@ -599,9 +564,11 @@ void setup()
     SetRFLinkRate(current_rate_config, 1);
 
 #ifdef CTRL_SERIAL
-    // populate current configuration
-    uint8_t cmd[] = {'E', 'L', 'R', 'S', 0, 0, '\n'};
-    CtrlCommandHandler(cmd, sizeof(cmd));
+    uint8_t resp[5];
+    if (0 == SettingsCommandHandle(0, 0, resp, resp))
+        msp_packet_parser.sendPacket(
+            &CTRL_SERIAL, MSP_PACKET_V1_ELRS,
+            ELRS_INT_MSP_PARAMS, MSP_ELRS_INT, sizeof(resp), resp);
 #endif /* CTRL_SERIAL */
 
     crsf.Begin();
@@ -667,16 +634,33 @@ void loop()
         else if (CTRL_SERIAL.available()) {
             platform_wd_feed();
             uint8_t in = CTRL_SERIAL.read();
-            //msp_packet_parser.processReceivedByte(in);
-            *cmd_next++ = in;
-            uint8_t cnt = (cmd_next - cmd_buffer);
-            if (3 < cnt && in == '\n') {
-                CtrlCommandHandler(cmd_buffer, cnt);
-                cmd_buffer[0] = 0;
-                cmd_next = cmd_buffer;
-            } else if (sizeof(cmd_buffer) <= cnt) {
-                cmd_buffer[0] = 0;
-                cmd_next = cmd_buffer;
+            if (msp_packet_parser.processReceivedByte(in)) {
+                //  MSP received, check content
+                mspPacket_t &packet = msp_packet_parser.getPacket();
+
+                CTRL_SERIAL.print("MSP rcvd, type:");
+                CTRL_SERIAL.println(packet.type);
+
+                /* Check if packet is ELRS internal */
+                if ((packet.type == MSP_PACKET_V1_ELRS) && (packet.flags & MSP_ELRS_INT)) {
+                    switch (packet.function) {
+                        case ELRS_INT_MSP_PARAMS: {
+                            uint8_t * msg = (uint8_t*)packet.payload;
+                            if (0 == SettingsCommandHandle(msg[0], (packet.payloadSize - 1), &msg[1], msg)) {
+                                //packet.type = MSP_PACKET_V1_ELRS;
+                                packet.payloadSize = 5;
+                                msp_packet_parser.sendPacket(&packet, &CTRL_SERIAL);
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    };
+                } else {
+                    packet.flags = MSP_VERSION | MSP_STARTFLAG;
+                    MspOtaCommandsSend(packet);
+                }
+                msp_packet_parser.markPacketFree();
             }
         }
 #endif /* CTRL_SERIAL */

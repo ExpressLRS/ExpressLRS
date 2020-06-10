@@ -6,16 +6,17 @@
 #include <ESP8266mDNS.h>
 #include <WiFiManager.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include <FS.h>
+
 #include "stm32Updater.h"
-#include "FS.h"
+#include "msp.h"
 
 //reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
 //#define INVERTED_SERIAL // Comment this out for non-inverted serial
-#define USE_WIFI_MANAGER // Comment this out to host an access point rather than use the WiFiManager
 
-const char *ssid = "ESP8266 Access Point"; // The name of the Wi-Fi network that will be created
-const char *password = "password";         // The password required to connect to it, leave blank for an open network
+#define STASSID "ExpressLRS TX AP"
+#define STAPSK "expresslrs"
 
 MDNSResponder mdns;
 
@@ -33,10 +34,7 @@ uint32_t TotalUploadedBytes;
 uint8_t socketNumber;
 
 String inputString = "";
-
-uint16_t eppromPointer = 0;
-
-bool webUpdateMode = false;
+String my_ipaddress_info_str = "NA";
 
 static const char PROGMEM GO_BACK[] = R"rawliteral(
 <!DOCTYPE html>
@@ -306,11 +304,19 @@ static uint8_t settings_tlm = 7;
 static uint8_t settings_region = 0;
 String settings_out;
 
+MSP msp_handler;
+mspPacket_t msp_out;
+
 void SettingsWrite(uint8_t * buff, uint8_t len)
 {
-  Serial.print("ELRS");
-  Serial.write(buff, len);
-  Serial.write('\n');
+  // Fill MSP packet
+  msp_out.type = MSP_PACKET_V1_ELRS;
+  msp_out.flags = MSP_ELRS_INT;
+  msp_out.payloadSize = len;
+  msp_out.function = ELRS_INT_MSP_PARAMS;
+  memcpy((void*)msp_out.payload, buff, len);
+  // Send packet
+  msp_handler.sendPacket(&msp_out, &Serial);
 }
 
 void SettingsGet(void)
@@ -319,7 +325,7 @@ void SettingsGet(void)
   SettingsWrite(buff, sizeof(buff));
 }
 
-void handleSettingRate(const char * input, uint8_t num)
+void handleSettingRate(const char * input, int num = -1)
 {
   settings_out = "[INTERNAL ERROR] something went wrong";
   if (input == NULL || *input == '?') {
@@ -334,10 +340,13 @@ void handleSettingRate(const char * input, uint8_t num)
     uint8_t buff[] = {1, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
     SettingsWrite(buff, sizeof(buff));
   }
-  webSocket.sendTXT(num, settings_out);
+  if (0 <= num)
+    webSocket.sendTXT(num, settings_out);
+  else
+    webSocket.broadcastTXT(settings_out);
 }
 
-void handleSettingPower(const char * input, uint8_t num)
+void handleSettingPower(const char * input, int num = -1)
 {
   settings_out = "[INTERNAL ERROR] something went wrong";
   if (input == NULL || *input == '?') {
@@ -354,10 +363,13 @@ void handleSettingPower(const char * input, uint8_t num)
     uint8_t buff[] = {3, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
     SettingsWrite(buff, sizeof(buff));
   }
-  webSocket.sendTXT(num, settings_out);
+  if (0 <= num)
+    webSocket.sendTXT(num, settings_out);
+  else
+    webSocket.broadcastTXT(settings_out);
 }
 
-void handleSettingTlm(const char * input, uint8_t num)
+void handleSettingTlm(const char * input, int num = -1)
 {
   settings_out = "[INTERNAL ERROR] something went wrong";
   if (input == NULL || *input == '?') {
@@ -372,17 +384,44 @@ void handleSettingTlm(const char * input, uint8_t num)
     uint8_t buff[] = {2, (uint8_t)(val == 'R' ? 0xff : (val - '0'))};
     SettingsWrite(buff, sizeof(buff));
   }
-  webSocket.sendTXT(num, settings_out);
+  if (0 <= num)
+    webSocket.sendTXT(num, settings_out);
+  else
+    webSocket.broadcastTXT(settings_out);
 }
 
-void handleSettingDomain(const char * input, uint8_t num)
+void handleSettingDomain(const char * input, int num = -1)
 {
   settings_out = "[ERROR] Domain set is not supported!";
   if (input == NULL || *input == '?') {
     settings_out = "ELRS_setting_region_domain=";
     settings_out += settings_region;
   }
-  webSocket.sendTXT(num, settings_out);
+  if (0 <= num)
+    webSocket.sendTXT(num, settings_out);
+  else
+    webSocket.broadcastTXT(settings_out);
+}
+
+void MspVtxWrite(void)
+{
+  // TODO, FIXME: VTX power & freq
+  uint8_t power = 1;
+  uint16_t freq = 5880; //(uint16_t)msg[0] * 8 + msg[1]; // band * 8 + channel
+  uint8_t vtx_cmd[] = {
+    (uint8_t)(freq >> 8), (uint8_t)freq,
+    power,
+    (power == 0), // pit mode
+  };
+
+  // Fill MSP packet
+  msp_out.type = MSP_PACKET_V1_CMD;
+  msp_out.flags = MSP_VERSION | MSP_STARTFLAG;
+  msp_out.function = MSP_VTX_SET_CONFIG;
+  msp_out.payloadSize = sizeof(vtx_cmd);
+  memcpy((void*)msp_out.payload, vtx_cmd, sizeof(vtx_cmd));
+  // Send packet
+  msp_handler.sendPacket(&msp_out, &Serial);
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
@@ -401,14 +440,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     //Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
     socketNumber = num;
 
-    String info = "My IP address = ";
-#ifdef USE_WIFI_MANAGER
-    info += WiFi.localIP().toString();
-#else
-    info += WiFi.softAPIP().toString();
-#endif
-    info += "\n";
-    webSocket.sendTXT(num, info);
+    webSocket.sendTXT(num, my_ipaddress_info_str);
 
     // Send settings
     SettingsGet();
@@ -564,6 +596,7 @@ void handleNotFound()
 
 void setup()
 {
+  IPAddress my_ip;
 
 #ifdef INVERTED_SERIAL
   Serial.begin(460800, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
@@ -575,38 +608,30 @@ void setup()
 
   wifi_station_set_hostname("elrs_tx");
 
-#ifdef USE_WIFI_MANAGER
   WiFiManager wifiManager;
-  //Serial.println("Starting ESP WiFiManager captive portal...");
-  wifiManager.autoConnect("ESP WiFiManager");
-#else
-  //Serial.println("Starting ESP softAP...");
-  WiFi.softAP(ssid, password);
-  //Serial.print("Access Point \"");
-  //Serial.print(ssid);
-  //Serial.println("\" started");
-
-  //Serial.print("IP address:\t");
-  //Serial.println(WiFi.softAPIP());
-#endif
-
-  if (mdns.begin("elrs_tx", WiFi.localIP()))
-  {
-    //Serial.println("MDNS responder started");
-    mdns.addService("http", "tcp", 80);
-    mdns.addService("ws", "tcp", 81);
+  wifiManager.setConfigPortalTimeout(180); // 3min
+  if (wifiManager.autoConnect("ESP WiFiManager")) {
+    // AP found, connected
+    my_ip = WiFi.localIP();
   }
   else
   {
-    //Serial.println("MDNS.begin failed");
+    // No WiFi found, start access point
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(STASSID, STAPSK);
+    my_ip = WiFi.softAPIP();
   }
 
+  if (mdns.begin("elrs_tx", my_ip))
+  {
+    mdns.addService("http", "tcp", 80);
+    mdns.addService("ws", "tcp", 81);
+  }
+  my_ipaddress_info_str = "My IP address = ";
+  my_ipaddress_info_str += my_ip.toString();
+
   //Serial.print("Connect to http://elrs_tx.local or http://");
-#ifdef USE_WIFI_MANAGER
-  //Serial.println(WiFi.localIP());
-#else
-  //Serial.println(WiFi.softAPIP());
-#endif
+  //Serial.println(my_ip);
 
   server.on("/", handleRoot);
   server.on("/return", sendReturn);
@@ -631,29 +656,40 @@ int serialEvent()
   while (Serial.available())
   {
     inChar = (char)Serial.read();
-    if (inChar == '\r') {
-      continue;
-    } else if (inChar == '\n') {
-      if (inputString.startsWith("ELRS_RESP_")) {
-        /* this is the settings control message */
-        uint8_t const * ctrl = (uint8_t*)(&inputString.c_str()[10]);
-        settings_rate = ctrl[0];
-        settings_tlm = ctrl[1];
-        settings_power = ctrl[2];
-        settings_power_max = ctrl[3];
-        settings_region = ctrl[4];
 
-        handleSettingDomain(NULL, socketNumber);
-        handleSettingRate(NULL, socketNumber);
-        handleSettingPower(NULL, socketNumber);
-        handleSettingTlm(NULL, socketNumber);
+    if (msp_handler.processReceivedByte(inChar)) {
+      webSocket.broadcastTXT("MSP received");
+      // msp fully received
+      mspPacket_t &msp_in = msp_handler.getPacket();
+      if (msp_in.type == MSP_PACKET_V1_ELRS) {
+        uint8_t * payload = (uint8_t*)msp_in.payload;
+        switch (msp_in.function) {
+          case ELRS_INT_MSP_PARAMS: {
+            webSocket.broadcastTXT("ELRS params resp");
+            settings_rate = payload[0];
+            settings_tlm = payload[1];
+            settings_power = payload[2];
+            settings_power_max = payload[3];
+            settings_region = payload[4];
 
-        inputString = "";
-        return -1;
+            handleSettingDomain(NULL);
+            handleSettingRate(NULL);
+            handleSettingPower(NULL);
+            handleSettingTlm(NULL);
+            break;
+          }
+        };
       }
-      return 0;
+      msp_handler.markPacketFree();
+    } else if (!msp_handler.mspOngoing())
+    {
+      if (inChar == '\r') {
+        continue;
+      } else if (inChar == '\n') {
+        return 0;
+      }
+      inputString += inChar;
     }
-    inputString += inChar;
   }
   return -1;
 }

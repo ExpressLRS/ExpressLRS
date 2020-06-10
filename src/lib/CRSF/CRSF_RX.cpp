@@ -58,13 +58,13 @@ void ICACHE_RAM_ATTR CRSF_RX::sendMSPFrameToFC(mspPacket_t &packet)
     outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER; // origin
 
     // Encapsulated MSP payload
-    outBuffer[5] = packet.flags;       // 0x30, header
-    outBuffer[6] = packet.payloadSize; // mspPayloadSize
+    outBuffer[5] = packet.flags;
+    outBuffer[6] = packet.payloadSize - 1;
     outBuffer[7] = packet.function;
-    for (i = 8; i < (packet.payloadSize + 8); i++)
+    for (i = 0; i < packet.payloadSize; i++)
     {
-        // copy packet payload into outBuffer and pad with zeros where required
-        outBuffer[i] = packet.payload[i];
+        // copy packet payload into outBuffer
+        outBuffer[i+8] = packet.payload[i];
     }
     // Encapsulated MSP crc - bypass CRC to received to protect possible transfer failures
     //outBuffer[i] = CalcCRCxor(&outBuffer[6], (packet.payloadSize + 1)); // was out[12]

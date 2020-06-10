@@ -5,6 +5,10 @@
 #include <HardwareSerial.h>
 #include <Arduino.h>
 
+enum {
+    ELRS_INT_MSP_PARAMS = 1,
+};
+
 // TODO: MSP_PORT_INBUF_SIZE should be changed to
 // dynamically allocate array length based on the payload size
 // Hardcoding payload size to 8 bytes for now, since MSP is
@@ -18,8 +22,9 @@
         return;                \
     }
 
-#define MSP_VERSION (1U << 5)
-#define MSP_STARTFLAG (1U << 4)
+#define MSP_VERSION     (1U << 5)
+#define MSP_STARTFLAG   (1U << 4)
+#define MSP_ELRS_INT    (3U << 0)
 
 typedef enum
 {
@@ -27,6 +32,8 @@ typedef enum
     MSP_MSP_START,
     MSP_HEADER_M, // MSPv1
     MSP_HEADER_X, // MSPv2
+
+    MSP_FLAGS,
 
     MSP_PAYLOAD_SIZE,
     MSP_PAYLOAD_FUNC,
@@ -44,10 +51,11 @@ typedef enum
 {
     MSP_PACKET_UNKNOWN,
     MSP_PACKET_TLM_OTA, // Used to carry info OTA
+    MSP_PACKET_V1_ELRS,
     MSP_PACKET_V1_CMD,
     MSP_PACKET_V1_RESP,
-    MSP_PACKET_COMMAND,
-    MSP_PACKET_RESPONSE
+    MSP_PACKET_V2_COMMAND,
+    MSP_PACKET_V2_RESPONSE
 } mspPacketType_e;
 
 enum
@@ -119,6 +127,12 @@ typedef struct
         header_sent_or_rcvd = false;
     }
 
+    void ICACHE_RAM_ATTR setPayloadSize(uint8_t len)
+    {
+        // func + payload
+        payloadSize = len + 1;
+    }
+
     void ICACHE_RAM_ATTR addByte(uint8_t b)
     {
         if (payloadIterator >= sizeof(payload))
@@ -137,12 +151,12 @@ typedef struct
 
     inline void ICACHE_RAM_ATTR makeResponse()
     {
-        type = MSP_PACKET_RESPONSE;
+        type = MSP_PACKET_V2_RESPONSE;
     }
 
     inline void ICACHE_RAM_ATTR makeCommand()
     {
-        type = MSP_PACKET_COMMAND;
+        type = MSP_PACKET_V2_COMMAND;
     }
 
     uint8_t ICACHE_RAM_ATTR readByte()
@@ -164,9 +178,18 @@ class MSP
 public:
     MSP() {}
     bool processReceivedByte(uint8_t c);
-    mspPacket_t *getReceivedPacket();
-    void markPacketReceived();
+    bool mspOngoing() {
+        return (m_inputState != MSP_IDLE);
+    }
+    bool mspReceived() {
+        return (m_inputState == MSP_COMMAND_RECEIVED);
+    }
+    mspPacket_t &getPacket();
+    void markPacketFree();
     bool sendPacket(mspPacket_t *packet, HardwareSerial *port);
+    bool sendPacket(HardwareSerial *port, mspPacketType_e type,
+                    uint16_t function, uint8_t flags,
+                    uint8_t len, uint8_t const * payload);
 
 private:
     mspPacket_t m_packet;
