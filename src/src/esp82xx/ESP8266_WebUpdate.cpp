@@ -18,6 +18,8 @@
 #define STASSID "ExpressLRS RX AP"
 #define STAPSK "expresslrs"
 
+MDNSResponder mdns;
+
 ESP8266WebServer httpServer(80);
 ESP8266HTTPUpdateServer httpUpdater;
 
@@ -66,10 +68,10 @@ void BeginWebUpdate(void)
         addr = WiFi.softAPIP();
     }
 
-    if (MDNS.begin(host, addr))
+    if (mdns.begin(host, addr))
     {
-        MDNS.addService("http", "tcp", 80);
-        MDNS.update();
+        mdns.addService("http", "tcp", 80);
+        mdns.update();
     }
 
     httpUpdater.setup(&httpServer);
@@ -81,5 +83,5 @@ void BeginWebUpdate(void)
 void HandleWebUpdate(void)
 {
     httpServer.handleClient();
-    MDNS.update();
+    mdns.update();
 }
