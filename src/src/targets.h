@@ -104,6 +104,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_RX    PA10
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 #define GPIO_PIN_LED            PC1 // Red
+#define GPIO_PIN_LED_RED        PC1 // Red
 #define GPIO_PIN_LED_GREEN      PB3 // Green 
 #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #define timerOffset             2

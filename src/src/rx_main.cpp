@@ -357,7 +357,7 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    noInterrupts();
+    //noInterrupts();
     beginProcessing = micros();
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -484,7 +484,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(":");
     Serial.println(linkQuality);
     #endif
-    interrupts();
+    //interrupts();
 }
 
 void beginWebsever()
@@ -556,6 +556,8 @@ void setup()
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    pinMode(GPIO_PIN_LED, OUTPUT);
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif
 
@@ -599,7 +601,7 @@ void loop()
     //Serial.println(linkQuality);
     //
     //Serial.print(headroom);
-    //Serial.print(" Head2:");
+    //Serial.println(" Head2:");
     //Serial.println(headroom2);
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 

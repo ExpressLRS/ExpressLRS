@@ -603,9 +603,10 @@ void setup()
   Radio.SetSyncWord(UID[3]);
   POWERMGNT.setDefaultPower();
 
-  //hwTimer.init(); //enable this for debug
+
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
+  //hwTimer.init(); //enable this for debug
 }
 
 void loop()
