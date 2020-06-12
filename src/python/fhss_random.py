@@ -61,6 +61,17 @@ def rngN(max):
     return random.randrange(0, max, 1)
 
 
+def CalcCRC32(data, length=None):
+    if length is None:
+        length = len(data)
+    crc = 0xffffffff
+    for i in range(length):
+        crc = crc ^ data[i]
+        for j in range(8):
+            crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1))
+    return 0xffffffff & ~crc
+
+
 def print_fhss(vals, num_of_fhss):
     buffer = []
     print_lst = []
@@ -148,11 +159,12 @@ def FHSSrandomiseFHSSsequence_v2(num_of_fhss):
 
 
 def check_fhss_freqs_h(DOMAIN, MY_UID):
+    _uid = [int(val, 16) for val in MY_UID.replace("-DMY_UID=", "").split(",")]
+    _uid_crc = CalcCRC32(bytearray(_uid))
 
-    MY_UID = [int(val, 16) for val in MY_UID.replace("-DMY_UID=", "").split(",")]
     DOMAIN = DOMAIN.replace("-D", "")
 
-    FREQ_OFFSET_UID = sum(MY_UID[3:]) #(MY_UID[3] + MY_UID[4] + MY_UID[5])
+    FREQ_OFFSET_UID = sum(_uid[3:])
 
     # Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
     if DOMAIN == "Regulatory_Domain_AU_433":
@@ -325,12 +337,10 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
     num_of_fhss = len(FHSSfreqs)
     print("Number of FHSS frequencies = %u" % num_of_fhss)
 
-    macSeed = (MY_UID[2] << 24) + (MY_UID[3] << 16) + (MY_UID[4] << 8) + MY_UID[5]
-    rngSeed(macSeed)
+    rngSeed(_uid_crc)
 
-    uid_compare = ",".join(["0x%02X" % one for one in MY_UID])
     header = "// MY_UID=%s; DOMAIN=%s; RAND=%u.%u; SYNC_INTERVAL=%s; CALC_MY_STEP=%u\n" % (
-        uid_compare, DOMAIN, rand_version, use_local_rand, SYNC_INTERVAL, CALC_MY_STEP)
+        MY_UID, DOMAIN, rand_version, use_local_rand, SYNC_INTERVAL, CALC_MY_STEP)
     write_out = False
     try:
         with open(os.path.join('src', 'fhss_freqs.h'), "r") as _f:
@@ -348,11 +358,11 @@ def check_fhss_freqs_h(DOMAIN, MY_UID):
 
             _f.write("#define FREQ_OFFSET_UID (%u)\n" % FREQ_OFFSET_UID)
             _f.write("#define NR_SEQUENCE_ENTRIES (%u)\n" % NR_SEQUENCE_ENTRIES)
+            _f.write("#define UID_CRC32 (0x%08X)\n" % _uid_crc)
 
             my_step = 0
             if CALC_MY_STEP:
-                my_step = sum(MY_UID[3:])
-                my_step %= 8
+                my_step = _uid_crc % 8
             my_step |= 1
             _f.write("#define FHSS_MY_STEP (%u)\n\n" % (my_step))
 

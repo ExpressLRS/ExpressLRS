@@ -3,6 +3,7 @@
 #include "LoRa_SX127x.h"
 #include "common.h"
 #include "utils.h"
+#include "crc.h"
 
 #include "fhss_freqs.h"
 
@@ -107,10 +108,7 @@ void FHSSrandomiseFHSSsequence()
     DEBUG_PRINT("Number of FHSS frequencies =");
     DEBUG_PRINTLN(NR_FHSS_ENTRIES);
 
-    uint32_t macSeed = ((uint32_t)UID[2] << 24) +
-                       ((uint32_t)UID[3] << 16) +
-                       ((uint32_t)UID[4] << 8) +
-                       UID[5];
+    uint32_t macSeed = CalcCRC32(UID, sizeof(UID));
     rngSeed(macSeed);
 
     uint8_t isAvailable[NR_FHSS_ENTRIES];

@@ -139,6 +139,20 @@ uint8_t crc8_dvb_s2(uint8_t crc, uint8_t a)
     return crc;
 }
 
+uint32_t CalcCRC32(uint8_t const *data, uint16_t len) {
+   int bit;
+   uint32_t mask;
+   uint32_t crc = 0xFFFFFFFF;
+   while (len--) {
+      crc = crc ^ *data++; // Get next byte.
+      for (bit = 7; bit >= 0; bit--) { // Do eight times.
+         mask = -(crc & 1);
+         crc = (crc >> 1) ^ (0xEDB88320 & mask);
+      }
+   }
+   return ~crc;
+}
+
 #if (CRSF_CMD_CRC)
 const uint8_t crc8tabcmd[256] =
     {0x00, 0xBA, 0xCE, 0x74, 0x26, 0x9C, 0xE8, 0x52, 0x4C, 0xF6, 0x82, 0x38, 0x6A, 0xD0, 0xA4, 0x1E,

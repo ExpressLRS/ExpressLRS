@@ -48,7 +48,7 @@ uint8_t getSyncWord(void)
     // RX: 0x61 -> NOK
     // RX: 0x1E, 0x1F, 0x2d, 0x3d, 0x4d, 0x6d -> OK
     // RX: 0x20, 0x30, 0x40 -> NOK
-    uint8_t syncw = CalcCRC(UID, sizeof(UID)); //UID[4];
+    uint8_t syncw = CalcCRC(UID, sizeof(UID));
     if (syncw == SX127X_SYNC_WORD_LORAWAN)
         syncw += 0x1;
     return syncw;

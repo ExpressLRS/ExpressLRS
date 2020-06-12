@@ -17,6 +17,8 @@ uint16_t ICACHE_RAM_ATTR CalcCRC16_CCITT(uint8_t const *data, uint16_t length, u
 
 uint8_t crc8_dvb_s2(uint8_t crc, uint8_t a);
 
+uint32_t CalcCRC32(uint8_t const *data, uint16_t len);
+
 #if (CRSF_CMD_CRC)
 uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t const *data, uint16_t length, uint8_t crc = 0);
 #endif
