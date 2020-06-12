@@ -164,7 +164,6 @@ https://github.com/jaxxzer
 
 #ifdef TARGET_R9M_LITE_TX
 
-#define GPIO_PIN_RFamp_APC1           PA6  //APC2 is connected through a I2C dac and is handled elsewhere
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
