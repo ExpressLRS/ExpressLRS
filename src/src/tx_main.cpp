@@ -31,6 +31,10 @@ button button;
 R9DAC R9DAC;
 #endif
 
+#ifdef TARGET_R9M_LITE_TX
+#include "STM32_hwTimer.h"
+#endif
+
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500

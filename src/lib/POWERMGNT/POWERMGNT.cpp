@@ -54,7 +54,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 #endif
 
-#ifdef TARGET_100mW_MODULE
+#if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
 
     if (Power <= PWR_50mW)
     {

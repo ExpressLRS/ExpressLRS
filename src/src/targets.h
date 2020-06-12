@@ -162,6 +162,31 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 #endif
 
+#ifdef TARGET_R9M_LITE_TX
+
+#define GPIO_PIN_RFamp_APC1           PA6  //APC2 is connected through a I2C dac and is handled elsewhere
+#define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
+
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PC15
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_SDA            PB7
+#define GPIO_PIN_SCL            PB6
+#define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
+#define GPIO_PIN_LED_RED        PA11 // Red LED
+#define GPIO_PIN_LED_GREEN      PA12 // Green LED
+
+#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
+#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
+
+#define BUFFER_OE               PA5  //CONFIRMED
+#define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
+#endif
+
 
 //// If Target Doesn't Have these defs we define as -1 ////
 #ifndef GPIO_PIN_RX_ENABLE
@@ -206,4 +231,12 @@ https://github.com/jaxxzer
 
 #ifndef GPIO_PIN_BUZZER
 #define GPIO_PIN_BUZZER -1
+#endif
+
+#ifndef GPIO_PIN_DIP1
+#define GPIO_PIN_DIP1 -1
+#endif
+
+#ifndef GPIO_PIN_DIP2
+#define GPIO_PIN_DIP2 -1
 #endif
