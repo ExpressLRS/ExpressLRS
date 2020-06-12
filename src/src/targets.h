@@ -158,13 +158,12 @@ https://github.com/jaxxzer
 #define GPIO_PIN_BUZZER      PB1 // confirmed
 
 #define BUFFER_OE               PA5  //CONFIRMED
-#define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 #endif
 
 #ifdef TARGET_R9M_LITE_TX
 
-#define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
+#define GPIO_PIN_RFswitch_CONTROL     -1//PB3  // need to confirm  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
@@ -172,18 +171,18 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      GPIO_PIN_RFswitch_CONTROL //PB3 // need to confirm 
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
 #define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
-#define GPIO_PIN_LED_RED        PA11 // Red LED
-#define GPIO_PIN_LED_GREEN      PA12 // Green LED
+#define GPIO_PIN_LED_RED        -1 // Red LED // not yet confirmed
+#define GPIO_PIN_LED_GREEN      -1 // Green LED // not yet confirmed
 
 #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
 #define BUFFER_OE               PA5  //CONFIRMED
-#define SPORT                   PB10 //CONFIRMED connected to tx3 and rx3 through 40ohn resistor. Needs BufferOE. inverted
 #endif
 
 
