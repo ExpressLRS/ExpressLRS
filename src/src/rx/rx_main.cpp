@@ -19,7 +19,7 @@ void ICACHE_RAM_ATTR LostConnection();
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define PRINT_FREQ_ERROR               0
-#define NUM_FAILS_TO_RESYNC            20
+#define NUM_FAILS_TO_RESYNC            100
 
 ///////////////////
 
