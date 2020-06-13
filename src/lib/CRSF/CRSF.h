@@ -285,8 +285,6 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
 
-static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
-
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
 static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 2, 188, 1795)); };
 
@@ -411,8 +409,6 @@ public:
     static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
     static void ICACHE_RAM_ATTR duplex_set_RX();
     static void ICACHE_RAM_ATTR duplex_set_TX();
-    static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
-    static void ICACHE_RAM_ATTR FlushSerial();
 #endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)

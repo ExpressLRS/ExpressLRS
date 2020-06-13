@@ -163,7 +163,7 @@ https://github.com/jaxxzer
 
 #ifdef TARGET_R9M_LITE_TX
 
-#define GPIO_PIN_RFswitch_CONTROL     -1//PB3  // need to confirm  //HIGH = RX, LOW = TX
+#define GPIO_PIN_RFswitch_CONTROL     PB3  // need to confirm  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15

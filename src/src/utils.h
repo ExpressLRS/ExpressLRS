@@ -1,6 +1,6 @@
 #pragma once
 
-// void ICACHE_RAM_ATTR PrintRC()
+// void  PrintRC()
 // }
 
 // the max value returned by rng

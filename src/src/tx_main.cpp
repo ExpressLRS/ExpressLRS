@@ -402,11 +402,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
-#ifdef TARGET_R9M_TX
-  //R9DAC.resume(); takes too long
-  //digitalWrite(GPIO_PIN_RFswitch_CONTROL, 0);
-  //digitalWrite(GPIO_PIN_RFamp_APC1, 1);
-#endif
   Radio.TXnb(Radio.TXdataBuffer, 8);
 
   if (ChangeAirRateRequested)
@@ -518,16 +513,19 @@ void setup()
   #endif
 #endif
 
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    HardwareSerial(USART2);
+    Serial.setTx(GPIO_PIN_DEBUG_TX);
+    Serial.setRx(GPIO_PIN_DEBUG_RX);
+    Serial.begin(400000);
+
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 
 #ifdef TARGET_R9M_TX
-  HardwareSerial(USART2);
-  Serial.setTx(GPIO_PIN_DEBUG_TX);
-  Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.begin(400000);
-  R9DAC.init();
-
 // Annoying startup beeps
-#ifndef JUST_BEEP_ONCE
+  #ifndef JUST_BEEP_ONCE
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
   const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
   const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
@@ -538,16 +536,16 @@ void setup()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
-#else
+  #else
   tone(GPIO_PIN_BUZZER, 400, 200);
   delay(200);
   tone(GPIO_PIN_BUZZER, 480, 200);
+  #endif
+
+  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+  R9DAC.init();
 #endif
 
-  pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-  pinMode(GPIO_PIN_LED_RED, OUTPUT);
-  digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -610,7 +608,8 @@ void setup()
 
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
-  //hwTimer.init(); //enable this for debug
+  hwTimer.init(); //enable this for debug
+  Radio.SetOutputPower(0b1000);
 }
 
 void loop()
@@ -627,14 +626,14 @@ HandleUpdateParameter();
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     isRXconnected = false;
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
 #endif
   }
   else
   {
     isRXconnected = true;
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
 #endif
   }
@@ -650,13 +649,15 @@ HandleUpdateParameter();
   }
   packetCounteRX_TX = 0;
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
   crsf.STM32handleUARTin();
 #ifdef FEATURE_OPENTX_SYNC
   crsf.sendSyncPacketToTX();
 #endif
   crsf.UARTwdt();
+  #ifdef TARGET_R9M_TX
   button.handle();
+  #endif
 #endif
 
 #ifdef PLATFORM_ESP32
