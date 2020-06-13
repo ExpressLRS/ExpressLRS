@@ -18,7 +18,6 @@ volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0
 SX127xDriver::SX127xDriver()
 {
   instance = this;
-  instance->currOpmode = SX127x_OPMODE_STANDBY;
 }
 
 void SX127xDriver::Begin()
@@ -42,7 +41,7 @@ void SX127xDriver::ConfigLoraDefaults()
 {
   Serial.println("Setting ExpressLRS LoRa reg defaults");
 
-  SetMode(SX127x_OPMODE_SLEEP);
+  hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP);
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
 
@@ -118,6 +117,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
+  instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
   currPWR = Power;
 }
@@ -210,7 +210,7 @@ void SX127xDriver::DetectChip()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-  hal.TXRXdisable();
+  //hal.TXRXdisable();
   instance->IRQneedsClear = true;
   instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   instance->ClearIRQFlags();
@@ -244,7 +244,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-  hal.TXRXdisable();
+  //hal.TXRXdisable();
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);

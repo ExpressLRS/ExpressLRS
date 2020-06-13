@@ -608,8 +608,7 @@ void setup()
 
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
-  hwTimer.init(); //enable this for debug
-  Radio.SetOutputPower(0b1000);
+  //hwTimer.init(); //enable this for debug
 }
 
 void loop()
@@ -651,9 +650,9 @@ HandleUpdateParameter();
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
   crsf.STM32handleUARTin();
-#ifdef FEATURE_OPENTX_SYNC
+  #ifdef FEATURE_OPENTX_SYNC
   crsf.sendSyncPacketToTX();
-#endif
+  #endif
   crsf.UARTwdt();
   #ifdef TARGET_R9M_TX
   button.handle();

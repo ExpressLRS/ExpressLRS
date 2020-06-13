@@ -21,24 +21,29 @@ void SX127xHal::init()
 {
   Serial.println("Hal Init");
 
-  if ((GPIO_PIN_RX_ENABLE > -1) || (GPIO_PIN_TX_ENABLE > -1))
-  {
-    Serial.print("This Target uses seperate TX/RX enable pins: ");
-    Serial.print("TX: ");
-    Serial.print(GPIO_PIN_TX_ENABLE);
-    Serial.print(" RX: ");
-    Serial.println(GPIO_PIN_RX_ENABLE);
-    if (GPIO_PIN_RX_ENABLE > -1)
-    {
-      pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
-      digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-    }
-    if (GPIO_PIN_TX_ENABLE > -1)
-    {
-      pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
-      digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-    }
-  }
+#if defined(GPIO_PIN_RX_ENABLE) || defined(GPIO_PIN_TX_ENABLE)
+  Serial.print("This Target uses seperate TX/RX enable pins: ");
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+  Serial.print("TX: ");
+  Serial.print(GPIO_PIN_TX_ENABLE);
+#endif
+
+#if defined(GPIO_PIN_RX_ENABLE)
+  Serial.print(" RX: ");
+  Serial.println(GPIO_PIN_RX_ENABLE);
+#endif
+
+#if defined(GPIO_PIN_RX_ENABLE)
+  pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
+  digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+  pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
 
 #ifdef PLATFORM_ESP32
   SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
@@ -73,8 +78,7 @@ void SX127xHal::init()
   delay(100);
   digitalWrite(GPIO_PIN_RST, 0);
   delay(100);
-  digitalWrite(GPIO_PIN_RST, 1);
-  delay(100);
+  pinMode(GPIO_PIN_RST, INPUT); // leave floating
 
   attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }
@@ -218,43 +222,40 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 void ICACHE_RAM_ATTR SX127xHal::TXenable()
 {
   InterruptAssignment = SX127x_INTERRUPT_TX_DONE;
-  if (GPIO_PIN_RX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-  }
+#if defined(GPIO_PIN_RX_ENABLE)
+  digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
 
-  if (GPIO_PIN_TX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
-  }
+#if defined(GPIO_PIN_TX_ENABLE)
+  digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+#endif
+  return;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
   InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
 
-  if (GPIO_PIN_RX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
-  }
+#if defined(GPIO_PIN_RX_ENABLE)
+  digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
+#endif
 
-  if (GPIO_PIN_TX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-  }
+#if defined(GPIO_PIN_TX_ENABLE)
+  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
+  return;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
-  if (GPIO_PIN_RX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-  }
+#if defined(GPIO_PIN_RX_ENABLE)
+  digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
 
-  if (GPIO_PIN_TX_ENABLE > -1)
-  {
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-  }
+#if defined(GPIO_PIN_TX_ENABLE)
+  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
+  return;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()
