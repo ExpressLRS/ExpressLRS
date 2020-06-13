@@ -22,7 +22,7 @@
 
 #ifdef TARGET_R9M_LITE_TX
 #define MaxPower 2
-#define DefaultPowerEnum 0
+#define DefaultPowerEnum 2
 #endif
 
 typedef enum
