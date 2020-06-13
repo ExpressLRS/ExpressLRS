@@ -46,5 +46,4 @@ public:
 
 private:
     SX127x_InterruptAssignment InterruptAssignment = SX127x_INTERRUPT_NONE;
-    bool UsePApins = false; //uses seperate pins to toggle RX and TX (for external PA)
 };

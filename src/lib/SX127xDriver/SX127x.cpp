@@ -1,6 +1,5 @@
 #include "SX127x.h"
 
-//SX127xHal hal(GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_SCK, GPIO_PIN_NSS, GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1, GPIO_PIN_RX_ENABLE, GPIO_PIN_TX_ENABLE);
 SX127xHal hal;
 
 void inline SX127xDriver::nullCallback(void){};
@@ -18,8 +17,8 @@ volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0
 
 SX127xDriver::SX127xDriver()
 {
-  SetMode(SX127x_OPMODE_SLEEP);
   instance = this;
+  instance->currOpmode = SX127x_OPMODE_STANDBY;
 }
 
 void SX127xDriver::Begin()
@@ -119,12 +118,8 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
-  //todo make function turn on PA_BOOST ect
-  //if (currPWR != Power)
-  //{
   hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
   currPWR = Power;
-  //}
 }
 
 void SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
