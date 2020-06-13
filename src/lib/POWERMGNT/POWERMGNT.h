@@ -38,14 +38,6 @@ typedef enum
 
 } PowerLevels_e;
 
-// typedef enum
-// {
-//     PWR_10mW = 0,
-//     PWR_25mW = 1,
-//     PWR_50mW = 2,
-
-// } SX127x_PA_Boost_PowerLevels_e;
-
 class POWERMGNT
 {
 
