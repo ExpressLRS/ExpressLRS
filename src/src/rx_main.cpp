@@ -597,15 +597,33 @@ void loop()
 {
     //crsf.RXhandleUARTout(); //empty the UART out buffer
     //yield(); // to be safe
-
     //Serial.println(linkQuality);
-    //
     //Serial.print(headroom);
     //Serial.println(" Head2:");
     //Serial.println(headroom2);
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
-    if ((connectionState == tentative) && (linkQuality < 85) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    #if defined(PLATFORM_ESP8266) && defined(Auto_WiFi_On_Boot)
+    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
+    {
+        beginWebsever();
+    }
+
+    if (webUpdateMode)
+    {
+        HandleWebUpdate();
+        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+        {
+            digitalWrite(GPIO_PIN_LED, LED);
+            LED = !LED;
+            webUpdateLedFlashIntervalLast = millis();
+        }
+        yield();
+        return;
+    }
+    #endif
+
+    if (connectionState == tentative && linkQuality < 85 && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -671,27 +689,7 @@ void loop()
         #endif
     }
 
-    #ifdef Auto_WiFi_On_Boot
-    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
-    {
-        beginWebsever();
-    }
-    #endif
-
     #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
-    #endif
-
-    #ifdef PLATFORM_ESP8266
-    if (webUpdateMode)
-    {
-        HandleWebUpdate();
-        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
-        {
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
-            webUpdateLedFlashIntervalLast = millis();
-        }
-    }
     #endif
 }
