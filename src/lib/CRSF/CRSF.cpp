@@ -334,10 +334,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     return true;
                 }
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
