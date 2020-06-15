@@ -208,7 +208,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     uint32_t __rx_last_valid_us = rx_last_valid_us;
     rx_last_valid_us = 0;
 
-#if PRINT_TIMER
+#if PRINT_TIMER && PRINT_HW_ISR
     DEBUG_PRINT("HW us ");
     DEBUG_PRINT(us);
 #endif
@@ -217,7 +217,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     if (__rx_last_valid_us)
     {
         int32_t diff_us = (int32_t)(us - __rx_last_valid_us);
-#if PRINT_TIMER
+#if PRINT_TIMER && PRINT_HW_ISR
         DEBUG_PRINT(" - rx ");
         DEBUG_PRINT(__rx_last_valid_us);
         DEBUG_PRINT(" = ");
@@ -244,7 +244,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     fhss_config_rx |= RadioFreqErrorCorr();
     fhss_config_rx |= HandleFHSS();
 
-#if PRINT_TIMER
+#if PRINT_TIMER && PRINT_HW_ISR
     //DEBUG_PRINT(" nonce ");
     //DEBUG_PRINT(NonceRXlocal);
 #endif
@@ -274,7 +274,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     if (fhss_config_rx)
         Radio.RXnb(FHSSgetCurrFreq()); // 260us => 148us => ~67us
 
-#if PRINT_TIMER || PRINT_FREQ_ERROR
+#if (PRINT_TIMER && PRINT_HW_ISR) || PRINT_FREQ_ERROR
     //DEBUG_PRINTLN("");
     DEBUG_PRINT(" took ");
     DEBUG_PRINTLN(micros() - us);
@@ -348,7 +348,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     const uint16_t crc_in = ((uint16_t)(rx_buffer[6] & 0x3f) << 8) + rx_buffer[7];
     const uint8_t type = TYPE_EXTRACT(rx_buffer[6]);
 
-#if PRINT_TIMER
+#if PRINT_TIMER && PRINT_RX_ISR
     DEBUG_PRINT("RX us ");
     DEBUG_PRINT(current_us);
 #endif
@@ -451,7 +451,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
     LQ_setPacketState(1);
     FillLinkStats();
 
-#if PRINT_TIMER
+#if PRINT_TIMER && PRINT_RX_ISR
     DEBUG_PRINT(" took ");
     DEBUG_PRINTLN(micros() - current_us);
 #endif
