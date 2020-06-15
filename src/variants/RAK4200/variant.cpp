@@ -31,8 +31,23 @@ const PinName digitalPin[] = {
   PA_12,
   PA_13,
   PA_14,
-  PB_6,
-  PB_7,
+  // I2C or GPIO
+  PB_6,  // SCL
+  PB_7,  // SDA
+  // SPI pins
+  PA_4,  // NSS
+  PA_5,  // CLK
+  PA_6,  // MISO
+  PA_7,  // MOSI
+  // SX, DIO pins
+  PB_0,
+  PB_1,
+  PB_5,
+  PB_4,
+  // RF, VCTL
+  PA_11,
+  PA_8,
+  PA_0,  // SX, NRESET
 };
 
 #ifdef __cplusplus

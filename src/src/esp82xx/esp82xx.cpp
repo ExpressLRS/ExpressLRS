@@ -22,7 +22,7 @@ void beginWebsever(void)
     webUpdateLedFlashIntervalNext = 0;
 }
 
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 Button button;
 
@@ -47,10 +47,10 @@ void platform_setup(void)
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
 
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
     pinMode(GPIO_PIN_LED, OUTPUT);
 #endif
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.buttonShortPress = button_event_short;
     button.buttonLongPress = button_event_long;
     button.init(GPIO_PIN_BUTTON, true);
@@ -65,7 +65,7 @@ void platform_loop(int state)
         HandleWebUpdate();
         if (WEB_UPDATE_LED_FLASH_INTERVAL < (now - webUpdateLedFlashIntervalNext))
         {
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
             // toggle led
             digitalWrite(GPIO_PIN_LED, !digitalRead(GPIO_PIN_LED));
 #endif
@@ -74,7 +74,7 @@ void platform_loop(int state)
     }
     else
     {
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
         button.handle();
 #endif
     }
@@ -92,7 +92,7 @@ void platform_connection_state(int state)
 
 void platform_set_led(bool state)
 {
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED, (uint32_t)(!state)); // Invert led
 #endif
 }

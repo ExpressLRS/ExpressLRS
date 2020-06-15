@@ -76,7 +76,7 @@ void platform_setup(void)
 
     EEPROM.begin(sizeof(struct platform_config));
 
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
     pinMode(GPIO_PIN_LED, OUTPUT);
     platform_set_led(0);
 #endif
@@ -131,7 +131,7 @@ void platform_connection_state(int state)
 
 void platform_set_led(bool state)
 {
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED, (uint32_t)(state));
 #endif
 }

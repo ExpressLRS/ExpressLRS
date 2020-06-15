@@ -30,16 +30,32 @@ extern "C" {
 #define PA3  0  // USART2_RX
 #define PA2  1  // USART2_TX
 #define PA1  2  // USART2_DE
-#define PA9  3  // USART1_RX
-#define PA10 4  // USART1_TX
+#define PA9  3  // USART1_TX
+#define PA10 4  // USART1_RX
 #define PA12 5  // USART1_DE
 #define PA13 6  // SWDIO
 #define PA14 7  // SWCLK
 #define PB6  8  // I2C_SCL
 #define PB7  9  // I2C_SDA
 
+#define PA4  10 // NSS
+#define PA5  11 // CLK
+#define PA6  12 // MISO
+#define PA7  13 // MOSI
+
+#define PB0  14 // DIO0
+#define PB1  15 // DIO1
+#define PB5  16 // DIO2
+#define PB4  17 // DIO3
+
+#define PA11 18 // VCTL1, RF_LOW
+#define PA8  19 // VCTL2, RF_HIGH
+
+#define PA0  20 // NRST
+
+
 // This must be a literal
-#define NUM_DIGITAL_PINS        10
+#define NUM_DIGITAL_PINS        21
 
 // On-board LED pin number
 #define LED_BUILTIN             PA12

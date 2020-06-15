@@ -1,7 +1,7 @@
 #pragma once
 
 #define EMPTY()
-#define UNDEF_PIN (0xff)
+#define UNDEF_PIN (-1)
 
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
@@ -23,8 +23,6 @@
 #define GPIO_PIN_MISO        19
 #define GPIO_PIN_SCK         5
 #define GPIO_PIN_RST         14
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
 #define GPIO_PIN_OLED_SDA    4
 #define GPIO_PIN_OLED_SCK    15
 #define GPIO_PIN_RCSIGNAL_RX 13
@@ -43,8 +41,6 @@
 #define GPIO_PIN_MISO        19
 #define GPIO_PIN_SCK         5
 #define GPIO_PIN_RST         14
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
 #define GPIO_PIN_OLED_SDA    21
 #define GPIO_PIN_OLED_SCK    22
 #define GPIO_PIN_RCSIGNAL_RX 13
@@ -62,8 +58,6 @@
 #define GPIO_PIN_MISO        19
 #define GPIO_PIN_SCK         18
 #define GPIO_PIN_RST         14
-#define GPIO_PIN_RX_ENABLE   13
-#define GPIO_PIN_TX_ENABLE   12
 #define GPIO_PIN_OLED_SDA    -1
 #define GPIO_PIN_OLED_SCK    -1
 #define GPIO_PIN_RCSIGNAL_RX 2
@@ -78,8 +72,6 @@
 #define GPIO_PIN_MISO      19 // V_SPI
 #define GPIO_PIN_SCK       18 // V_SPI
 #define GPIO_PIN_RST       -1 //14  // not connected ATM
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
 #define GPIO_PIN_OLED_SDA  -1
 #define GPIO_PIN_OLED_SCK  -1
 // so we don't have to solder the extra resistor,
@@ -101,8 +93,6 @@
 #define GPIO_PIN_SCK         14
 #define GPIO_PIN_RST         2
 #define GPIO_PIN_LED         16
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
 #define GPIO_PIN_OLED_SDA    -1
 #define GPIO_PIN_OLED_SCK    -1
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
@@ -137,58 +127,41 @@
 */
 #define GPIO_SELECT_RFIO_HIGH PA2
 #define GPIO_SELECT_RFIO_LOW  PA1
-//#define GPIO_PIN_RX_ENABLE   -1
-//#define GPIO_PIN_TX_ENABLE   -1
-#define BUFFER_OE            -1
 // USART1: TX=PA9, RX=PA10 (AF4) or TX=PB6, RX=PB7 (AF0)
-#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1, PIN23
-#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1, PIN22
-#define GPIO_PIN_LED         PB4  // on board led (green), PIN16
-#define GPIO_PIN_LED_GREEN   -1   //
-#define GPIO_PIN_BUTTON      -1   // Note: pullup!
+#define GPIO_PIN_RCSIGNAL_RX  PB7  // USART1, PIN23
+#define GPIO_PIN_RCSIGNAL_TX  PB6  // USART1, PIN22
+#define GPIO_PIN_LED          PB4  // on board led (green), PIN16
 // USART2: TX=PA2, RX=PA3 or TX=PA14, RX=PA15. Both AF4
 //#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN??
 //#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN??
-
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
 #endif // TARGET_RHF76_052
 
 #ifdef TARGET_RAK4200
 
-
 #define GPIO_PIN_NSS         PA4
-#define GPIO_PIN_DIO0        PB10
-#define GPIO_PIN_DIO1        PB2
-#define GPIO_PIN_DIO2        PB0  // not used at the moment
-#define GPIO_PIN_DIO3        PB1  // not used at the moment
+#define GPIO_PIN_DIO0        PB0
+#define GPIO_PIN_DIO1        PB1
+#define GPIO_PIN_DIO2        PB5  // not used at the moment
+#define GPIO_PIN_DIO3        PB4  // not used at the moment
 #define GPIO_PIN_MOSI        PA7
 #define GPIO_PIN_MISO        PA6
 #define GPIO_PIN_SCK         PA5
-#define GPIO_PIN_RST         PB11
+#define GPIO_PIN_RST         PA0
 /* PA1 and PA2 is used to selct HIGH or LOW RF band! */
 /*
     LOW 0 : HIGH 0 = OFF
     LOW 1 : HIGH 0 = LOW BAND (433)
     LOW 0 : HIGH 1 = HIGH BAND (868 / 915)
 */
-#define GPIO_SELECT_RFIO_HIGH PA2
-#define GPIO_SELECT_RFIO_LOW  PA1
-//#define GPIO_PIN_RX_ENABLE   -1
-//#define GPIO_PIN_TX_ENABLE   -1
-#define BUFFER_OE            -1
-// RAK4200 USART1: TX=PA9, RX=PA10 
-#define GPIO_PIN_RCSIGNAL_RX PA10  // USART1, PIN23
-#define GPIO_PIN_RCSIGNAL_TX PA9  // USART1, PIN22
-#define GPIO_PIN_LED         PA12  // RAK Pin6/UART1_DE
-#define GPIO_PIN_LED_GREEN   -1   //
-#define GPIO_PIN_BUTTON      -1   // Note: pullup!
-// USART2: TX=PA2, RX=PA3 
-//#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN??
-//#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN??
-
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
+#define GPIO_SELECT_RFIO_HIGH PA8
+#define GPIO_SELECT_RFIO_LOW  PA11
+// RAK4200 USART1: TX=PA9, RX=PA10
+#define GPIO_PIN_RCSIGNAL_RX  PA10   // USART1, PIN5
+#define GPIO_PIN_RCSIGNAL_TX  PA9    // USART1, PIN4
+#define GPIO_PIN_LED          PA12   // Pin6/UART1_DE
+// USART2: TX=PA2, RX=PA3
+//#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN1
+//#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN2
 #endif // TARGET_RAK4200
 
 
@@ -209,19 +182,17 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO        PB14
 #define GPIO_PIN_SCK         PB13
 #define GPIO_PIN_RST         PC14
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
 #define GPIO_PIN_OLED_SDA    -1
 #define GPIO_PIN_OLED_SCK    -1
-#define BUFFER_OE            -1
 #define GPIO_PIN_RCSIGNAL_RX PA10 // USART1
 #define GPIO_PIN_RCSIGNAL_TX PA9  // USART1
-#define GPIO_PIN_LED         PC1  // Red
-#define GPIO_PIN_LED_GREEN   PB3  // Green - Currently unused
+#define GPIO_PIN_LED_RED     PC1
+#define GPIO_PIN_LED_GREEN   PB3
+#define GPIO_PIN_LED         GPIO_PIN_LED_RED
 #define GPIO_PIN_BUTTON      PC13 // pullup e.g. LOW when pressed
 
-#define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
-#define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2
+#define GPIO_PIN_DEBUG_RX    PA3 // confirmed, USART2
+#define GPIO_PIN_DEBUG_TX    PA2 // confirmed, USART2
 
 // External pads
 // #define R9m_Ch1    PA8
@@ -231,16 +202,6 @@ https://github.com/jaxxzer
 // #define R9m_sbus   PA2
 // #define R9m_sport  PA5
 // #define R9m_isport PB11
-
-//method to set HSE and clock speed correctly//
-// #if defined(HSE_VALUE)
-// /* Redefine the HSE value; it's equal to 8 MHz on the STM32F4-DISCOVERY Kit */
-//#undef HSE_VALUE
-//#define HSE_VALUE ((uint32_t)16000000).
-//#define HSE_VALUE    25000000U
-// #endif /* HSE_VALUE */
-
-//#define SYSCLK_FREQ_72MHz
 #endif
 
 #ifdef TARGET_R9M_TX
@@ -250,8 +211,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO        PB14
 #define GPIO_PIN_SCK         PB13
 #define GPIO_PIN_RST         PC14
-#define GPIO_PIN_RX_ENABLE   -1
-#define GPIO_PIN_TX_ENABLE   -1
 #define GPIO_PIN_SDA         PB7
 #define GPIO_PIN_SCL         PB6
 #define GPIO_PIN_RCSIGNAL_RX PB11 // USART3 RX for S.Port
@@ -259,10 +218,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_RED     PA11 // Red LED
 #define GPIO_PIN_LED_GREEN   PA12 // Green LED
 #define GPIO_PIN_LED         GPIO_PIN_LED_RED
-#define GPIO_PIN_BUTTON PA8       // pullup e.g. LOW when pressed
-#define GPIO_PIN_BUZZER PB1  // confirmed
-#define GPIO_PIN_DIP1   PA12 // dip switch 1
-#define GPIO_PIN_DIP2   PA11 // dip switch 2
+#define GPIO_PIN_BUTTON      PA8       // pullup e.g. LOW when pressed
+#define GPIO_PIN_BUZZER      PB1  // confirmed
+#define GPIO_PIN_DIP1        PA12 // dip switch 1
+#define GPIO_PIN_DIP2        PA11 // dip switch 2
 
 //#define GPIO_PIN_DEBUG_RX PA3 // confirmed, USART2
 //#define GPIO_PIN_DEBUG_TX PA2 // confirmed, USART2
@@ -283,4 +242,50 @@ class R9DAC;
 extern R9DAC r9dac;
 
 #define CTRL_SERIAL Serial1
+#endif
+
+
+#ifndef GPIO_PIN_RX_ENABLE
+#define GPIO_PIN_RX_ENABLE  UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_TX_ENABLE
+#define GPIO_PIN_TX_ENABLE  UNDEF_PIN
+#endif
+#ifndef BUFFER_OE
+#define BUFFER_OE           UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_LED_RED
+#define GPIO_PIN_LED_RED    UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_LED_GREEN
+#define GPIO_PIN_LED_GREEN  UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_LED
+#define GPIO_PIN_LED        GPIO_PIN_LED_RED
+#endif
+#ifndef GPIO_PIN_BUTTON
+#define GPIO_PIN_BUTTON     UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_BUZZER
+#define GPIO_PIN_BUZZER     UNDEF_PIN
+#endif
+
+#ifndef GPIO_PIN_DIO0
+#error "DIO0 is mandatory!"
+#endif
+#ifndef GPIO_PIN_DIO1
+#define GPIO_PIN_DIO1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO2
+#define GPIO_PIN_DIO2 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO3
+#define GPIO_PIN_DIO3 UNDEF_PIN
+#endif
+
+#ifndef GPIO_PIN_DEBUG_RX
+#define GPIO_PIN_DEBUG_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DEBUG_TX
+#define GPIO_PIN_DEBUG_TX UNDEF_PIN
 #endif

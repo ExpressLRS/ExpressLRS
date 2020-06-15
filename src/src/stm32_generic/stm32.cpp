@@ -10,23 +10,24 @@
 
 uint8_t rate_config_dips = 0xff;
 
-#ifdef GPIO_PIN_LED
-#ifdef TARGET_RHF76_052
-#define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, !(_x))
-#else // R9Mx
+#if (GPIO_PIN_LED != UNDEF_PIN)
+#if defined(TARGET_R9M_RX) || defined(TARGET_R9M_TX)
+// Led is inverted
 #define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, (_x))
+#else // others
+#define LED_STATE_RED(_x) digitalWrite(GPIO_PIN_LED, !(_x))
 #endif
 #else
-#define LED_STATE_RED(_x)
+#define LED_STATE_RED(_x) (void)(_x);
 #endif
 
-#ifdef GPIO_PIN_LED_GREEN
+#if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
 #define LED_STATE_GREEN(_x) digitalWrite(GPIO_PIN_LED_GREEN, (_x))
 #else
-#define LED_STATE_GREEN(_x)
+#define LED_STATE_GREEN(_x) (void)(_x);
 #endif
 
-#ifdef GPIO_PIN_BUZZER
+#if (GPIO_PIN_BUZZER != UNDEF_PIN)
 static inline void PLAY_SOUND(uint32_t wait = 244, uint32_t cnt = 50)
 {
     for (uint32_t x = 0; x < cnt; x++)
@@ -60,7 +61,7 @@ void play_tone_loop(uint32_t ms)
 }
 #endif /* TARGET_R9M_TX */
 
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
 #if defined(TX_MODULE) && NEW_BUTTON
 #include "ClickButton.h"
 
@@ -163,15 +164,15 @@ void platform_setup(void)
         ((void *)&DEBUG_SERIAL != (void *)&Serial1))
     {
         // init debug serial
-#ifdef GPIO_PIN_DEBUG_TX
+#if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
         DEBUG_SERIAL.setTx(GPIO_PIN_DEBUG_TX);
 #endif
-#ifdef GPIO_PIN_DEBUG_RX
+#if (GPIO_PIN_DEBUG_RX != UNDEF_PIN)
         DEBUG_SERIAL.setRx(GPIO_PIN_DEBUG_RX);
 #endif
         DEBUG_SERIAL.begin(400000);
     }
-#endif
+#endif /* DEBUG_SERIAL */
     // Serial1 is connected to internal ESP module if in use
     Serial1.begin(460800);
     Serial1.setTimeout(5);
@@ -190,16 +191,16 @@ void platform_setup(void)
 #endif
 
     /*************** CONFIGURE LEDs *******************/
-#ifdef GPIO_PIN_LED
+#if (GPIO_PIN_LED != UNDEF_PIN)
     pinMode(GPIO_PIN_LED, OUTPUT);
     LED_STATE_RED(LOW);
 #endif
-#ifdef GPIO_PIN_LED_GREEN
+#if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     LED_STATE_GREEN(LOW);
 #endif
 
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
     /*************** CONFIGURE BUTTON *******************/
 #if defined(TX_MODULE) && NEW_BUTTON
 #else // NEW_BUTTON
@@ -223,7 +224,7 @@ void platform_setup(void)
     r9dac.init(GPIO_PIN_SDA, GPIO_PIN_SCL, 0b0001100, GPIO_PIN_RFswitch_CONTROL,
                GPIO_PIN_RFamp_APC1); // used to control ADC which sets PA output
 #endif // TARGET_R9M_TX
-#ifdef GPIO_PIN_BUZZER
+#if (GPIO_PIN_BUZZER != UNDEF_PIN)
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 
 #define STARTUP_BEEPS 0
@@ -276,7 +277,7 @@ void platform_mode_notify(void)
 void platform_loop(int state)
 {
     (void)state;
-#ifdef GPIO_PIN_BUTTON
+#if (GPIO_PIN_BUTTON != UNDEF_PIN)
 #if defined(TX_MODULE)
     button_handle();
     play_tone_loop(millis());

@@ -2,7 +2,7 @@
   "build": {
     "core": "stm32",
     "cpu": "cortex-m0plus",
-    "extra_flags": "-DSTM32L0xx -DSTM32L071xx -DHAL_ADC_MODULE_DISABLED -DHAL_I2C_MODULE_DISABLED",
+    "extra_flags": "-DSTM32L0xx -DSTM32L071xx -DHAL_ADC_MODULE_DISABLED",
     "f_cpu": "32000000L",
     "framework_extra_flags": {
       "arduino": "-D__CORTEX_SC=0"
