@@ -58,8 +58,6 @@
 #define GPIO_PIN_MISO        19
 #define GPIO_PIN_SCK         18
 #define GPIO_PIN_RST         14
-#define GPIO_PIN_OLED_SDA    -1
-#define GPIO_PIN_OLED_SCK    -1
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #endif
@@ -72,8 +70,6 @@
 #define GPIO_PIN_MISO      19 // V_SPI
 #define GPIO_PIN_SCK       18 // V_SPI
 #define GPIO_PIN_RST       -1 //14  // not connected ATM
-#define GPIO_PIN_OLED_SDA  -1
-#define GPIO_PIN_OLED_SCK  -1
 // so we don't have to solder the extra resistor,
 // we switch rx/tx using gpio mux
 #define GPIO_PIN_RCSIGNAL_RX 2
@@ -93,10 +89,8 @@
 #define GPIO_PIN_SCK         14
 #define GPIO_PIN_RST         2
 #define GPIO_PIN_LED         16
-#define GPIO_PIN_OLED_SDA    -1
-#define GPIO_PIN_OLED_SCK    -1
-#define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
-#define GPIO_PIN_RCSIGNAL_TX -1
+#define GPIO_PIN_RCSIGNAL_RX UNDEF_PIN //not relevant, can use only default for esp8266 or esp8285
+#define GPIO_PIN_RCSIGNAL_TX UNDEF_PIN
 #define GPIO_PIN_BUTTON      0
 #endif
 
@@ -158,7 +152,7 @@
 // RAK4200 USART1: TX=PA9, RX=PA10
 #define GPIO_PIN_RCSIGNAL_RX  PA10   // USART1, PIN5
 #define GPIO_PIN_RCSIGNAL_TX  PA9    // USART1, PIN4
-#define GPIO_PIN_LED          PA12   // Pin6/UART1_DE
+#define GPIO_PIN_LED          PA12   // PIN6 (UART1_DE)
 // USART2: TX=PA2, RX=PA3
 //#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN1
 //#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN2
@@ -182,8 +176,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO        PB14
 #define GPIO_PIN_SCK         PB13
 #define GPIO_PIN_RST         PC14
-#define GPIO_PIN_OLED_SDA    -1
-#define GPIO_PIN_OLED_SCK    -1
 #define GPIO_PIN_RCSIGNAL_RX PA10 // USART1
 #define GPIO_PIN_RCSIGNAL_TX PA9  // USART1
 #define GPIO_PIN_LED_RED     PC1
@@ -244,6 +236,24 @@ extern R9DAC r9dac;
 #define CTRL_SERIAL Serial1
 #endif
 
+
+/**********************************
+           DEFAULTS
+ **********************************/
+
+#ifndef GPIO_PIN_OLED_SDA
+#define GPIO_PIN_OLED_SDA UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_OLED_SCK
+#define GPIO_PIN_OLED_SCK UNDEF_PIN
+#endif
+
+#ifndef GPIO_PIN_RCSIGNAL_RX
+#define GPIO_PIN_RCSIGNAL_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RCSIGNAL_TX
+#define GPIO_PIN_RCSIGNAL_TX UNDEF_PIN
+#endif
 
 #ifndef GPIO_PIN_RX_ENABLE
 #define GPIO_PIN_RX_ENABLE  UNDEF_PIN

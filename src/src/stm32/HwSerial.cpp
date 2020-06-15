@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 
-#if defined(GPIO_PIN_RCSIGNAL_RX) && defined(GPIO_PIN_RCSIGNAL_TX)
+#if (GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN) && (GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN)
 #define SPORT_RX_TX GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX
 #else
 #if (SPORT == PB10)
