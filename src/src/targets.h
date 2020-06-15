@@ -233,6 +233,7 @@ https://github.com/jaxxzer
 class R9DAC;
 extern R9DAC r9dac;
 
+// Serial1 is connected to internal ESP module if in use
 #define CTRL_SERIAL Serial1
 #endif
 

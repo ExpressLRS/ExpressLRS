@@ -173,9 +173,11 @@ void platform_setup(void)
         DEBUG_SERIAL.begin(400000);
     }
 #endif /* DEBUG_SERIAL */
-    // Serial1 is connected to internal ESP module if in use
-    Serial1.begin(460800);
-    Serial1.setTimeout(5);
+
+#if defined(CTRL_SERIAL)
+    CTRL_SERIAL.begin(460800);
+    CTRL_SERIAL.setTimeout(5);
+#endif // CTRL_SERIAL
 
     /**** SWTICHES ****/
 #if defined(GPIO_PIN_DIP1) && defined(GPIO_PIN_DIP2)
