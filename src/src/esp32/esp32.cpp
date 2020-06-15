@@ -32,10 +32,12 @@ int8_t platform_config_load(struct platform_config &config)
 #if STORE_TO_FLASH
     struct platform_config temp;
 
+    //taskDISABLE_INTERRUPTS();
     temp.key = EEPROM.readUInt(offsetof(struct platform_config, key));
     temp.mode = EEPROM.readUInt(offsetof(struct platform_config, mode));
     temp.power = EEPROM.readUInt(offsetof(struct platform_config, power));
     temp.tlm = EEPROM.readUInt(offsetof(struct platform_config, tlm));
+    //taskENABLE_INTERRUPTS();
 
     if (temp.key == ELRS_EEPROM_KEY)
     {
@@ -55,6 +57,7 @@ int8_t platform_config_load(struct platform_config &config)
 
 int8_t platform_config_save(struct platform_config &config)
 {
+    int8_t retval;
     if (config.key != ELRS_EEPROM_KEY)
         return -1;
 #if STORE_TO_FLASH
@@ -62,7 +65,10 @@ int8_t platform_config_save(struct platform_config &config)
     EEPROM.writeUInt(offsetof(struct platform_config, mode), config.mode);
     EEPROM.writeUInt(offsetof(struct platform_config, power), config.power);
     EEPROM.writeUInt(offsetof(struct platform_config, tlm), config.tlm);
-    return EEPROM.commit() ? 0 : -1;
+    //taskDISABLE_INTERRUPTS();
+    retval = EEPROM.commit() ? 0 : -1;
+    //taskENABLE_INTERRUPTS();
+    return retval;
 #else
     return 0;
 #endif
@@ -85,7 +91,8 @@ void platform_setup(void)
     DEBUG_SERIAL.begin(115200);
 #endif
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+//#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+#if 1
     //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
     //strip.Begin();
@@ -96,8 +103,6 @@ void platform_setup(void)
     // Print base mac address
     // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
     // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-    DEBUG_PRINTLN("");
-    DEBUG_PRINTLN("Copy the below line into common.h.");
     DEBUG_PRINT("uint8_t UID[6] = {");
     DEBUG_PRINT(baseMac[0]);
     DEBUG_PRINT(", ");
@@ -111,7 +116,6 @@ void platform_setup(void)
     DEBUG_PRINT(", ");
     DEBUG_PRINT(baseMac[5]);
     DEBUG_PRINTLN("};");
-    DEBUG_PRINTLN("");
 #endif
 }
 

@@ -316,9 +316,7 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
 
             if (tx_tlm_change_interval(value) >= 0)
             {
-#ifndef PLATFORM_ESP32
                 modified = (1 << 2);
-#endif
             }
             //DEBUG_PRINT("TLM: ");
             //DEBUG_PRINTLN(TLMinterval);
@@ -332,11 +330,7 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
             PowerMgmt.setPower((PowerLevels_e)value);
             DEBUG_PRINT("Power: ");
             DEBUG_PRINTLN(PowerMgmt.currPower());
-#if PLATFORM_ESP32
-            modified = 0;
-#else
             modified = (modified != PowerMgmt.currPower()) ? (1 << 3) : 0;
-#endif
             break;
 
         case 4:
@@ -367,6 +361,13 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
 
     if (modified)
     {
+#if PLATFORM_ESP32
+        if ((modified & (1 << 1)) == 0) {
+            // ESP crash to flash access, so stop timer before save
+            TxTimer.stop();
+            Radio.StopContRX();
+        }
+#endif
         // Save modified values
         pl_config.key = ELRS_EEPROM_KEY;
         pl_config.mode = ExpressLRS_currAirRate->enum_rate;
@@ -375,7 +376,9 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
         platform_config_save(pl_config);
 
         // and start timer if rate was changed
+#if !PLATFORM_ESP32
         if (modified & (1 << 1))
+#endif
             TxTimer.start();
     }
 

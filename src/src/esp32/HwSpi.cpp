@@ -19,12 +19,16 @@ void HwSpi::platform_init(void)
 
 void HwSpi::write(uint8_t data)
 {
+    taskDISABLE_INTERRUPTS();
     SPIClass::write(data);
+    taskENABLE_INTERRUPTS();
 }
 
 void HwSpi::write(uint8_t *data, uint8_t numBytes)
 {
+    taskDISABLE_INTERRUPTS();
     SPIClass::writeBytes((uint8_t *)data, numBytes);
+    taskENABLE_INTERRUPTS();
 }
 
 HwSpi RadioSpi;
