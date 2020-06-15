@@ -26,6 +26,7 @@ enum isr_states
     TX_DONE,
     CRC_ERROR,
     CAD_DETECTED,
+    CAD_DONE,
     ISR_RCVD,
 };
 
@@ -49,6 +50,8 @@ static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio0(void)
             p_state_dio0_isr = RX_DONE;
         else if (irqs & SX127X_CLEAR_IRQ_FLAG_CAD_DETECTED)
             p_state_dio0_isr = CAD_DETECTED;
+        else if (irqs & SX127X_CLEAR_IRQ_FLAG_CAD_DONE)
+            p_state_dio0_isr = CAD_DONE;
     }
     Radio.ClearIRQFlags();
 }
@@ -61,14 +64,14 @@ static void ICACHE_RAM_ATTR _rxtx_isr_handler_dio1(void)
 
 //////////////////////////////////////////////
 
-SX127xDriver::SX127xDriver(HwSpi &spi, int rst, int dio0, int dio1, int txpin, int rxpin):
+SX127xDriver::SX127xDriver(HwSpi &spi):
     RadioHalSpi(spi, SX127X_SPI_READ, SX127X_SPI_WRITE)
 {
-    _RXenablePin = rxpin;
-    _TXenablePin = txpin;
-    SX127x_dio0 = dio0;
-    SX127x_dio1 = dio1;
-    SX127x_RST = rst;
+    _RXenablePin = -1;
+    _TXenablePin = -1;
+    SX127x_dio0 = -1;
+    SX127x_dio1 = -1;
+    SX127x_RST = -1;
 
     headerExplMode = false;
     RFmodule = RFMOD_SX1276;
@@ -97,16 +100,17 @@ uint8_t SX127xDriver::Begin(int txpin, int rxpin)
 {
     uint8_t status;
 
-    pinMode(SX127x_dio0, INPUT);
-    pinMode(SX127x_dio1, INPUT);
-
     /* Attach interrupts to pins */
-    if (0xff != SX127x_dio0)
+    if (-1 != SX127x_dio0) {
+        pinMode(SX127x_dio0, INPUT);
         attachInterrupt(digitalPinToInterrupt(SX127x_dio0), _rxtx_isr_handler_dio0, RISING);
-    if (0xff != SX127x_dio1)
+    }
+    if (-1 != SX127x_dio1) {
+        pinMode(SX127x_dio1, INPUT);
         attachInterrupt(digitalPinToInterrupt(SX127x_dio1), _rxtx_isr_handler_dio1, RISING);
+    }
 
-    if (-1 < SX127x_RST)
+    if (-1 != SX127x_RST)
     {
         pinMode(SX127x_RST, OUTPUT);
         digitalWrite(SX127x_RST, 0);
@@ -115,19 +119,19 @@ uint8_t SX127xDriver::Begin(int txpin, int rxpin)
         delay(100);
     }
 
+    if (-1 != txpin)
+    {
+        pinMode(txpin, OUTPUT);
+        digitalWrite(txpin, LOW);
+    }
+    if (-1 != rxpin)
+    {
+        pinMode(rxpin, OUTPUT);
+        digitalWrite(rxpin, LOW);
+    }
+
     _TXenablePin = txpin;
     _RXenablePin = rxpin;
-
-    if (-1 != _TXenablePin)
-    {
-        pinMode(_TXenablePin, OUTPUT);
-        digitalWrite(_RXenablePin, LOW);
-    }
-    if (-1 != _RXenablePin)
-    {
-        pinMode(_RXenablePin, OUTPUT);
-        digitalWrite(_RXenablePin, LOW);
-    }
 
     // initialize low-level drivers
     RadioHalSpi::Begin();
@@ -474,14 +478,14 @@ uint8_t SX127xDriver::RunCAD(uint32_t timeout)
 
     uint32_t startTime = millis();
 
-    while (p_state_dio0_isr != CAD_DETECTED)
+    while ((p_state_dio0_isr != CAD_DETECTED) && (p_state_dio0_isr != CAD_DONE))
     {
         if (timeout <= (millis() - startTime))
         {
             return (CHANNEL_FREE);
         }
     }
-    return (PREAMBLE_DETECTED);
+    return (p_state_dio0_isr == CAD_DETECTED) ? (PREAMBLE_DETECTED) : (CHANNEL_FREE);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

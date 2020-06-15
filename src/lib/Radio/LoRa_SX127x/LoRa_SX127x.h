@@ -51,7 +51,7 @@ typedef enum
 class SX127xDriver: public RadioHalSpi
 {
 public:
-    SX127xDriver(HwSpi &spi, int rst = -1, int dio0 = -1, int dio1 = -1, int txpin = -1, int rxpin = -1);
+    SX127xDriver(HwSpi &spi);
 
     ///////Callback Function Pointers/////
     static void rx_nullCallback(uint8_t *){};
@@ -67,8 +67,8 @@ public:
     volatile int8_t _RXenablePin;
     volatile int8_t _TXenablePin;
 
-    volatile uint8_t SX127x_dio0;
-    volatile uint8_t SX127x_dio1;
+    volatile int8_t SX127x_dio0;
+    volatile int8_t SX127x_dio1;
     volatile int8_t SX127x_RST;
 
     /////////////////////////////
