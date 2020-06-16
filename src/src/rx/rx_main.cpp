@@ -203,6 +203,9 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
 void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 {
     //DEBUG_PRINT("H");
+#if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
+    digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 1);
+#endif
     rx_hw_isr_running = 1;
     uint_fast8_t fhss_config_rx = 0;
     uint32_t __rx_last_valid_us = rx_last_valid_us;
@@ -256,7 +259,13 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
         LQ_nextPacket();
         if (tlm_check_ratio && (NonceRXlocal & tlm_check_ratio) == 0)
         {
+#if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
+            digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 0);
+#endif
             HandleSendTelemetryResponse();
+#if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
+            digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 1);
+#endif
             fhss_config_rx = 0;
         }
 #if NUM_FAILS_TO_RESYNC
@@ -271,8 +280,9 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 #endif
     }
 
-    if (fhss_config_rx)
+    if (fhss_config_rx) {
         Radio.RXnb(FHSSgetCurrFreq()); // 260us => 148us => ~67us
+    }
 
 #if (PRINT_TIMER && PRINT_HW_ISR) || PRINT_FREQ_ERROR
     //DEBUG_PRINTLN("");
@@ -280,6 +290,9 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     DEBUG_PRINTLN(micros() - us);
 #endif
     rx_hw_isr_running = 0;
+#if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
+    digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 0);
+#endif
 }
 
 void ICACHE_RAM_ATTR LostConnection()
@@ -341,6 +354,10 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
         // Skip if hw isr is triggered already (e.g. TX has some weird latency)
         return;
 
+#if (DBG_PIN_RX_ISR_FAST != UNDEF_PIN)
+    digitalWriteFast(DBG_PIN_RX_ISR_FAST, 1);
+#endif
+
     //DEBUG_PRINT("I");
     const connectionState_e _conn_state = connectionState;
     const uint32_t current_us = Radio.LastPacketIsrMicros;
@@ -355,6 +372,9 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 
     if (crc_in != (crc & 0x3FFF))
     {
+#if (DBG_PIN_RX_ISR_FAST != UNDEF_PIN)
+        digitalWriteFast(DBG_PIN_RX_ISR_FAST, 0);
+#endif
         DEBUG_PRINT(" !");
         //DEBUG_PRINTLN(FHSSgetCurrFreq());
         return;
@@ -417,7 +437,13 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
             if (STATE_disconnected < _conn_state)
             {
                 rc_ch.channels_extract(rx_buffer, crsf.ChannelsPacked);
+#if (DBG_PIN_RX_ISR_FAST != UNDEF_PIN)
+                digitalWriteFast(DBG_PIN_RX_ISR_FAST, 0);
+#endif
                 crsf.sendRCFrameToFC();
+#if (DBG_PIN_RX_ISR_FAST != UNDEF_PIN)
+                digitalWriteFast(DBG_PIN_RX_ISR_FAST, 1);
+#endif
             }
             break;
 
@@ -454,6 +480,9 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
 #if PRINT_TIMER && PRINT_RX_ISR
     DEBUG_PRINT(" took ");
     DEBUG_PRINTLN(micros() - current_us);
+#endif
+#if (DBG_PIN_RX_ISR_FAST != UNDEF_PIN)
+    digitalWriteFast(DBG_PIN_RX_ISR_FAST, 0);
 #endif
 }
 
@@ -552,6 +581,15 @@ static void msp_data_cb(uint8_t const *const input)
 
 void setup()
 {
+#if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
+    pinMode(DBG_PIN_TMR_ISR, OUTPUT);
+    digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 0);
+#endif
+#if (DBG_PIN_RX_ISR != UNDEF_PIN)
+    pinMode(DBG_PIN_RX_ISR, OUTPUT);
+    digitalWriteFast(DBG_PIN_RX_ISR_FAST, 0);
+#endif
+
     CRCCaesarCipher = CalcCRC16(UID, sizeof(UID), 0);
 
     CrsfSerial.Begin(CRSF_RX_BAUDRATE);

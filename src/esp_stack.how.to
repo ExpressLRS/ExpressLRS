@@ -1,0 +1,2 @@
+java -jar EspStackTraceDecoder.jar c:\platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line.exe .pio\build\TX_TTGO_LORA_V1\firmware.elf dump.txt
+

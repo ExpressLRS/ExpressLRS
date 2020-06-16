@@ -156,6 +156,11 @@
 // USART2: TX=PA2, RX=PA3
 //#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN1
 //#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN2
+
+//#define DBG_PIN_TMR_ISR       PB6  // SCL
+//#define DBG_PIN_TMR_ISR_FAST  PB_6 // SCL
+//#define DBG_PIN_RX_ISR        PB7  // SDA
+//#define DBG_PIN_RX_ISR_FAST   PB_7 // SDA
 #endif // TARGET_RAK4200
 
 
@@ -299,4 +304,15 @@ extern R9DAC r9dac;
 #endif
 #ifndef GPIO_PIN_DEBUG_TX
 #define GPIO_PIN_DEBUG_TX UNDEF_PIN
+#endif
+
+#ifndef DBG_PIN_TMR_ISR
+#define DBG_PIN_TMR_ISR         UNDEF_PIN
+#undef DBG_PIN_TMR_ISR_FAST
+#define DBG_PIN_TMR_ISR_FAST    UNDEF_PIN
+#endif
+#ifndef DBG_PIN_RX_ISR
+#define DBG_PIN_RX_ISR          UNDEF_PIN
+#undef DBG_PIN_RX_ISR_FAST
+#define DBG_PIN_RX_ISR_FAST     UNDEF_PIN
 #endif
