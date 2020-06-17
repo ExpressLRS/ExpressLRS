@@ -1,6 +1,10 @@
 
 #ifdef TARGET_R9M_TX
+
 #include "DAC.h"
+#include "SX127xDriver.h"
+
+extern SX127xDriver Radio;
 
 int R9DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
@@ -22,13 +26,15 @@ uint8_t R9DAC::ADDR = 0;
 
 DAC_STATE_ R9DAC::DAC_STATE = UNKNOWN;
 
-void R9DAC::init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_)
+void R9DAC::init()
 {
-    R9DAC::SDA = SDA_;
-    R9DAC::SCL = SCL_;
-    R9DAC::ADDR = ADDR_;
+    Serial.println("Wire.h begin()");
 
-    Wire.setSDA(SDA); // set is needed or it wont work :/
+    R9DAC::SDA = GPIO_PIN_SDA;
+    R9DAC::SCL = GPIO_PIN_SCL;
+    R9DAC::ADDR = 0b0001100;
+
+    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
     Wire.setSCL(SCL);
     Wire.begin();
     R9DAC::DAC_STATE = UNKNOWN;
@@ -52,7 +58,6 @@ void R9DAC::resume()
     {
         Radio.SetOutputPower(0b0000);
         R9DAC::setVoltageRegDirect(CurrVoltageRegVal);
-        R9DAC::DAC_STATE = RUNNING;
     }
 }
 
@@ -61,6 +66,7 @@ void R9DAC::setVoltageMV(uint32_t voltsMV)
     uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
     setVoltageRegDirect(ScaledVolts);
     CurrVoltageMV = voltsMV;
+    Serial.println(CurrVoltageMV);
 }
 
 void R9DAC::setVoltageRegDirect(uint8_t voltReg)

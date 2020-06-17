@@ -8,7 +8,8 @@
 # Define need to start with '-D' keyword
 #
 
-### Enable one of these regulatory domains
+### STEP1: ### 
+### Enable one of these regulatory domains ###
 
 ### Bands for SX1276 (900MHz) ###
 #-DRegulatory_Domain_AU_915
@@ -20,11 +21,12 @@
 ### Bands for SX1280 (2400MHz) ###
 -DRegulatory_Domain_ISM_2400
 
-### ONLY DEFINE ONE OF THE SWITCH ENCODING OPTIONS
+### STEP2: ### 
+### DEFINE ONE AND ONLY ONE OF THE SWITCH ENCODING OPTIONS ##
+# The TX and RX must be compiled with matching switch protocols!
+# If neither of the below are set the code defaults to 1bit switches
 
-# if neither of the below are set the code defaults to 1bit switches
-
-# NB The TX and RX must be compiled with matching switch protocols!
+#-DSEQ_SWITCHES
 
 # Sequential switches
 # 5 bits are used in each rc packet to encode 8 3 position switches
@@ -34,7 +36,7 @@
 # Channel 4 is reduced to 10bit resolution in order to get the 5th bit needed
 # for sequential switch encoding.
 
-#-DSEQ_SWITCHES
+#-DHYBRID_SWITCHES_8
 
 # Hybrid switches
 # The first switch is treated as a low-latency switch to be used for arm/disarm.
@@ -44,11 +46,15 @@
 # channels are reduced to 10bit resolution to free up space in the rc packet
 # for switches.
 
-#-DHYBRID_SWITCHES_8
-
-# Uncomment to use UART2 for MSP comms on the TX module
-#-DUSE_UART2
-
-### Set your UID here. Must be 6 bytes!
-
+### STEP3: ### 
+### Set your custom UID here. Use 6 random bytes! ###
 -DMY_UID=0xBA,0xBE,0xCA,0xFE,0xAC,0xDC
+#-DMY_UID=180,230,45,234,66,4
+
+### OTHER OPTIONS: ### 
+
+-DAuto_WiFi_On_Boot   # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
+
+-DJUST_BEEP_ONCE     #B eep only once (applies to TX modules with buzzer)
+
+-DUSE_UART2    # Uncomment to use UART2 for MSP comms on the TX module

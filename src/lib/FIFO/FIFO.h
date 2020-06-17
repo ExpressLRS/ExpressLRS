@@ -34,14 +34,14 @@
 #include <Arduino.h>
 #include "../../src/targets.h"
 
-#define FIFO_SIZE 512
+#define FIFO_SIZE 256
 
 class FIFO
 {
 private:
-    int head;
-    int tail;
-    int numElements;
+    uint8_t head;
+    uint8_t tail;
+    uint8_t numElements;
     uint8_t buffer[FIFO_SIZE] = {0};
 
 public:

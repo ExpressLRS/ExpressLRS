@@ -27,8 +27,8 @@ local binding = false
 
 local AirRate = {
     selected = 5,
-    list = {'AUTO', '200 Hz', '100 Hz', '50 Hz', '------'},
-    dataId = {0x10, 0x00, 0x01, 0x02, 0xFF},
+    list = {'AUTO', '200 Hz', '100 Hz', '50 Hz', '25 Hz', '4 Hz', '------'},
+    dataId = {0x10, 0x00, 0x01, 0x02, 0x03, 0x04, 0xFF},
     elements = 5
 }
 local TLMinterval = {

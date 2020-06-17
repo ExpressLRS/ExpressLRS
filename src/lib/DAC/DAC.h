@@ -51,7 +51,7 @@ public:
     static uint32_t CurrVoltageMV;
     static uint8_t CurrVoltageRegVal;
 
-    static void init(uint8_t SDA_, uint8_t SCL_, uint8_t ADDR_);
+    static void init();
     static void standby();
     static void resume();
     static void setVoltageMV(uint32_t voltsMV);
