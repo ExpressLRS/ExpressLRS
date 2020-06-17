@@ -1,9 +1,9 @@
 import numpy as np
 
 start = 2400000000
-stop = 2450000000
+stop = 2483000000
 bandwidth = 800000
-numfreqs = 50
+numfreqs = 80
 stopband = bandwidth*0.25
 
 output = np.linspace(start, stop, numfreqs)
