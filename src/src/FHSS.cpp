@@ -73,6 +73,8 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     Serial.println("Setting 868MHz Mode");
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
+#elif defined Regulatory_Domain_ISM_2400
+    Serial.println("Setting 2400MHz Mode");
 #else
 #error No regulatory domain defined, please define one in common.h
 #endif
