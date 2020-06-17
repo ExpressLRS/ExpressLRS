@@ -5,7 +5,7 @@ import math
 X = []
 length = 256
 
-n = 31
+n = 20
 limit = math.floor(length/n)
 print(limit)
 

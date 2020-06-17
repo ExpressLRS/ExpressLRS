@@ -93,7 +93,7 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
     // The 0 index is special - the 'sync' channel. The sync channel appears every
     // syncInterval hops. The other channels are randomly distributed between the
     // sync channels
-    const int SYNC_INTERVAL = 20;
+    const int SYNC_INTERVAL = NR_FHSS_ENTRIES -1;
 
     int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
     unsigned int prev = 0;           // needed to prevent repeats of the same index
