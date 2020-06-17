@@ -62,6 +62,7 @@ public:
     
 
     void init();
+    void end();
     void SetSpiSpeed(uint32_t spiSpeed);
     void reset();
 

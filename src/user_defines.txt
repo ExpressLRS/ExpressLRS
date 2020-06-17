@@ -53,7 +53,7 @@
 
 ### OTHER OPTIONS: ### 
 
--DAuto_WiFi_On_Boot   # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
+#-DAuto_WiFi_On_Boot   # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
 
 -DJUST_BEEP_ONCE     #B eep only once (applies to TX modules with buzzer)
 

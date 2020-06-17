@@ -8,7 +8,7 @@ SX1280Driver Radio;
 
 uint8_t testdata[8] = {0x80};
 
-void ICACHE_RAM_ATTR TXdoneCallback1()
+void ICACHE_RAM_ATTR TXdoneCallback()
 {
     Serial.println("TXdoneCallback1");
     //delay(1000);
@@ -17,7 +17,7 @@ void ICACHE_RAM_ATTR TXdoneCallback1()
 
 void ICACHE_RAM_ATTR RXdoneCallback1()
 {
-    Serial.println("RXdoneCallback1");
+    Serial.println("RXdoneCallback");
 }
 
 void setup()
@@ -26,9 +26,8 @@ void setup()
     Serial.println("Begin SX1280 testing...");
 
     Radio.Begin();
-    //Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF10, SX1280_LORA_CR_4_8, 2420000000, SX1280_PREAMBLE_LENGTH_32_BITS);
-    Radio.TXdoneCallback1 = &TXdoneCallback1;
-    Radio.RXdoneCallback1 = &RXdoneCallback1;
+    Radio.Config(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7, 2420000000, 12);
+    Radio.TXdoneCallback = &TXdoneCallback;
     //Radio.TXnb(testdata, sizeof(testdata));
     Radio.SetFrequency(FHSSfreqs[0]);
     Radio.RXnb();

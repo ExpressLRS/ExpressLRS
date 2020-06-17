@@ -277,9 +277,9 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint8_t preambleLen)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen)
 {
-  Config(bw, sf, cr, currFreq, preambleLen, currSyncWord);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord);
 }
 
 void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord)

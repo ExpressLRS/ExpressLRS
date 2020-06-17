@@ -261,7 +261,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
 
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, ModParams->PreambleLen);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
   hwTimer.updateInterval(ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
@@ -375,15 +375,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   }
 
-  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
+  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
   //if ((millis() > ((SyncPacketLastSent + SYNC_PACKET_SEND_INTERVAL_RX_CONN)) && (Radio.currFreq == GetInitialFreq())) || ((isRXconnected == false) && (Radio.currFreq == GetInitialFreq())))
-  //if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    //Serial.println("sync");
+    Serial.println("sync");
     //Serial.println(Radio.currFreq);
   }
   else
@@ -609,14 +609,14 @@ void setup()
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
-  Radio.SetSyncWord(UID[3]);
+  //Radio.SetSyncWord(UID[3]);
   POWERMGNT.setDefaultPower();
 
 
   SetRFLinkRate(RATE_200HZ);
   hwTimer.init();
   crsf.Begin();
-  //hwTimer.init(); //enable this for debug
+  hwTimer.init(); //enable this for debug
 }
 
 void loop()

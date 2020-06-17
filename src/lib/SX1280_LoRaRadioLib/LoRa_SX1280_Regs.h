@@ -72,17 +72,18 @@ typedef enum
     SX1280_PACKET_TYPE_NONE = 0x0F,
 } SX1280_RadioPacketTypes_t;
 
-typedef enum
-{
-    SX1280_PREAMBLE_LENGTH_04_BITS = 0x00, //!< Preamble length: 04 bits
-    SX1280_PREAMBLE_LENGTH_08_BITS = 0x10, //!< Preamble length: 08 bits
-    SX1280_PREAMBLE_LENGTH_12_BITS = 0x20, //!< Preamble length: 12 bits
-    SX1280_PREAMBLE_LENGTH_16_BITS = 0x30, //!< Preamble length: 16 bits
-    SX1280_PREAMBLE_LENGTH_20_BITS = 0x40, //!< Preamble length: 20 bits
-    SX1280_PREAMBLE_LENGTH_24_BITS = 0x50, //!< Preamble length: 24 bits
-    SX1280_PREAMBLE_LENGTH_28_BITS = 0x60, //!< Preamble length: 28 bits
-    SX1280_PREAMBLE_LENGTH_32_BITS = 0x70, //!< Preamble length: 32 bits
-} SX1280_RadioPreambleLengths_t;
+//only for GFSK
+// typedef enum
+// {
+//     SX1280_PREAMBLE_LENGTH_04_BITS = 0x00, //!< Preamble length: 04 bits
+//     SX1280_PREAMBLE_LENGTH_08_BITS = 0x10, //!< Preamble length: 08 bits
+//     SX1280_PREAMBLE_LENGTH_12_BITS = 0x20, //!< Preamble length: 12 bits
+//     SX1280_PREAMBLE_LENGTH_16_BITS = 0x30, //!< Preamble length: 16 bits
+//     SX1280_PREAMBLE_LENGTH_20_BITS = 0x40, //!< Preamble length: 20 bits
+//     SX1280_PREAMBLE_LENGTH_24_BITS = 0x50, //!< Preamble length: 24 bits
+//     SX1280_PREAMBLE_LENGTH_28_BITS = 0x60, //!< Preamble length: 28 bits
+//     SX1280_PREAMBLE_LENGTH_32_BITS = 0x70, //!< Preamble length: 32 bits
+// } SX1280_RadioPreambleLengths_t;
 
 typedef enum
 {

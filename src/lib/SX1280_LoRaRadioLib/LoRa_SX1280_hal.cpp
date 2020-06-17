@@ -29,6 +29,13 @@ SX1280Hal::SX1280Hal()
     instance = this;
 }
 
+void SX1280Hal::end()
+{
+  SPI.end();
+  detachInterrupt(GPIO_PIN_DIO0);
+}
+
+
 void SX1280Hal::init()
 {
     Serial.println("Spi Begin");
@@ -40,7 +47,7 @@ void SX1280Hal::init()
 
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
-    SPI.setFrequency(8000000);
+    SPI.setFrequency(18000000);
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -49,7 +56,7 @@ void SX1280Hal::init()
     //SPI.pins(this->SX1280_SCK, this->SX1280_MISO, this->SX1280_MOSI, -1);
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setFrequency(10000000);
+    SPI.setFrequency(18000000);
 #endif
 
 #ifdef PLATFORM_STM32
@@ -325,7 +332,7 @@ void ICACHE_RAM_ATTR SX1280Hal::busyISR()
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 {
-    Serial.println("DIOISR");
+    //Serial.println("DIOISR");
     if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
         //Serial.println("HalRXdone");
