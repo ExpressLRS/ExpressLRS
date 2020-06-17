@@ -9,11 +9,21 @@
 #define BLOCK_SIZE 128
 #define BOOT0_PIN 4
 #define RESET_PIN 5
-#define BEGIN_ADDRESS 0x08000000
 
-uint8_t reset_stm32_to_isp_mode();
+#define FLASH_START 0x08000000
+#define FLASH_SIZE 0x10000
+#define FLASH_PAGE_SIZE 0x400
+#ifndef FLASH_OFFSET
+//#define FLASH_OFFSET 0x2000 // enable this to skip bootloader
+#define FLASH_OFFSET 0x0
+#endif
+#define BEGIN_ADDRESS (FLASH_START + FLASH_OFFSET)
 
-uint8_t reset_stm32_to_app_mode();
+uint8_t start_key_pressed();
+
+void reset_stm32_to_isp_mode();
+
+void reset_stm32_to_app_mode();
 
 void stm32flasher_hardware_init();
 
@@ -39,8 +49,8 @@ uint8_t cmd_read_memory(uint32_t address, uint8_t length);
 
 uint8_t cmd_write_memory(uint32_t address, uint8_t length);
 
-uint8_t cmd_erase_all_memory();
+uint8_t cmd_erase(uint32_t filesize, uint8_t bootloader_ver);
 
 uint8_t cmd_go(uint32_t address);
 
-uint8_t esp8266_spifs_write_file(char *filename);
+uint8_t esp8266_spifs_write_file(const char *filename);

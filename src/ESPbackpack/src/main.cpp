@@ -6,10 +6,9 @@
 #include <ESP8266mDNS.h>
 #include <WiFiManager.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include <FS.h>
 #include "stm32Updater.h"
 #include "elrs_eeprom.h"
-
-#include "FS.h"
 
 //reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
@@ -35,12 +34,9 @@ uint32_t TotalUploadedBytes;
 uint8_t socketNumber;
 
 String inputString = "";
-bool stringComplete = false;
 
 ELRS_EEPROM eeprom;
 uint16_t eppromPointer = 0;
-
-bool webUpdateMode = false;
 
 static const char PROGMEM GO_BACK[] = R"rawliteral(
 <!DOCTYPE html>
@@ -90,15 +86,17 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
             websock.onerror = function (evt) { console.log(evt); };
             websock.onmessage = function (evt) {
                 console.log(evt);
-                var d = new Date();
-                var n = d.toISOString();
-                document.getElementById("logField").value += n + ' ' + evt.data + '\n';
-                document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
+                var logger = document.getElementById("logField");
+                var date = new Date();
+                // match to timezone
+                var n=new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
+                logger.value += n + ' ' + evt.data + '\n';
+                logger.scrollTop = logger.scrollHeight;
             };
         }
 
         function saveTextAsFile() {
-            var textToWrite = document.getElementById('logField').innerHTML;
+            var textToWrite = document.getElementById('logField').value;
             var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
             var fileNameToSaveAs = "tx_log.txt";
 
@@ -224,9 +222,7 @@ bool flashR9M()
   webSocket.broadcastTXT("R9M Firmware Flash Requested!");
   stm32flasher_hardware_init();
   webSocket.broadcastTXT("Going to flash the following file: " + uploadedfilename);
-  char filename[31];
-  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
-  bool result = esp8266_spifs_write_file(filename);
+  bool result = esp8266_spifs_write_file(uploadedfilename.c_str());
   Serial.begin(460800);
   return result;
 }
@@ -322,6 +318,7 @@ void handleNotFound()
 
 void setup()
 {
+  IPAddress my_ip;
 
 #ifdef INVERTED_SERIAL
   Serial.begin(460800, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
@@ -337,6 +334,7 @@ void setup()
   WiFiManager wifiManager;
   Serial.println("Starting ESP WiFiManager captive portal...");
   wifiManager.autoConnect("ESP WiFiManager");
+  my_ip = WiFi.localIP();
 #else
   Serial.println("Starting ESP softAP...");
   WiFi.softAP(ssid, password);
@@ -344,11 +342,10 @@ void setup()
   Serial.print(ssid);
   Serial.println("\" started");
 
-  Serial.print("IP address:\t");
-  Serial.println(WiFi.softAPIP());
+  my_ip = WiFi.softAPIP();
 #endif
 
-  if (mdns.begin("elrs_tx", WiFi.localIP()))
+  if (mdns.begin("elrs_tx", my_ip))
   {
     Serial.println("MDNS responder started");
     mdns.addService("http", "tcp", 80);
@@ -360,11 +357,7 @@ void setup()
   }
 
   Serial.print("Connect to http://elrs_tx.local or http://");
-#ifdef USE_WIFI_MANAGER
-  Serial.println(WiFi.localIP());
-#else
-  Serial.println(WiFi.softAPIP());
-#endif
+  Serial.println(my_ip);
 
   server.on("/", handleRoot);
   server.on("/return", sendReturn);
@@ -383,29 +376,28 @@ void setup()
   webSocket.onEvent(webSocketEvent);
 }
 
-void serialEvent()
+int serialEvent()
 {
+  char inChar;
   while (Serial.available())
   {
-    char inChar = (char)Serial.read();
-    inputString += inChar;
-    if (inChar == '\n')
-    {
-      stringComplete = true;
-      return;
+    inChar = (char)Serial.read();
+    if (inChar == '\r') {
+      continue;
+    } else if (inChar == '\n') {
+      return 0;
     }
+    inputString += inChar;
   }
+  return -1;
 }
 
 void loop()
 {
-  serialEvent();
-  if (stringComplete)
+  if (0 <= serialEvent())
   {
-    String line = inputString;
+    webSocket.broadcastTXT(inputString);
     inputString = "";
-    stringComplete = false;
-    webSocket.broadcastTXT(line);
   }
 
   server.handleClient();
