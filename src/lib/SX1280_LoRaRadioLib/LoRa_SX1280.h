@@ -106,6 +106,7 @@ public:
 
     bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
     void ICACHE_RAM_ATTR SetPPMoffsetReg(int32_t offset);
+    uint8_t ICACHE_RAM_ATTR GetRxBufferAddr();
 
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();

@@ -96,7 +96,7 @@ typedef struct expresslrs_mod_settings_s
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-#define RATE_MAX 3
+#define RATE_MAX 1
 typedef struct expresslrs_mod_settings_s
 {
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.

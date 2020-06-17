@@ -7,7 +7,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-
 #ifdef TARGET_R9M_TX
 extern R9DAC R9DAC;
 #endif
@@ -39,10 +38,10 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-    #ifdef TARGET_R9M_TX
+#ifdef TARGET_R9M_TX
     Serial.println("Init TARGET_R9M_TX DAC Driver");
-    //R9DAC.init();
-    #endif
+//R9DAC.init();
+#endif
 }
 
 void POWERMGNT::setDefaultPower()
@@ -50,18 +49,24 @@ void POWERMGNT::setDefaultPower()
     setPower((PowerLevels_e)DefaultPowerEnum);
 }
 
-
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
+
+#if defined(TARGET_TX_EXPRESSLRS_SX1280_V1) || defined(TARGET_RX_EXPRESSLRS_SX1280_V1)
+    Radio.SetOutputPower(13);
+    CurrentPower = Power;
+    return;
+#endif
+
 
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
     R9DAC.setPower((DAC_PWR_)Power);
     CurrentPower = Power;
+    return;
 #endif
 
 #if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
-
     if (Power <= PWR_50mW)
     {
         if (Power == PWR_10mW)
@@ -79,6 +84,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
             Radio.SetOutputPower(0b1111); //15
             CurrentPower = PWR_50mW;
         }
+        return;
     }
 
 #endif

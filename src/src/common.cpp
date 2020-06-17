@@ -5,7 +5,6 @@
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 
-#define RATE_MAX 5
 #include "SX127xDriver.h"
 extern SX127xDriver Radio;
 
@@ -18,29 +17,27 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 };
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {RATE_200HZ, -112, 4380, 2500, 1000, 2000, 5000}, // ~ 3 sync packets
-    {RATE_100HZ, -117, 8770, 2500, 2000, 2000, 5000},
-    {RATE_50HZ, -120, 17540, 2500, 4000, 2000, 5000},
-    {RATE_25HZ, -123, 17540, 5000, 8000, 2000, 5000},
+    {RATE_200HZ, -112, 4380, 3000, 1500, 2500, 5000}, // ~ 3 sync packets
+    {RATE_100HZ, -117, 8770, 3000, 3000, 2500, 5000},
+    {RATE_50HZ, -120, 17540, 3000, 5000, 2500, 5000},
+    {RATE_25HZ, -123, 17540, 3000, 8000, 2500, 5000},
     {RATE_4HZ, -131, 239620, 30000, 60000, 0, 250}}; // this means always send sync on ch[0] as soon as we can 
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-
-#define RATE_MAX 3
 #include "SX1280RadioLib.h"
 extern SX1280Driver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {RATE_200HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7, 5000, 200, TLM_RATIO_1_64, 2, 12},
-    {RATE_100HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_4_7, 10000, 100, TLM_RATIO_1_32, 2, 12},
-    {RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF8, SX1280_LORA_CR_4_7, 20000, 50, TLM_RATIO_1_32, 2, 12},
+    {RATE_200HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, 250, TLM_RATIO_1_64, 2, 14},
+    // {RATE_100HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 10000, 100, TLM_RATIO_1_32, 2, 14},
+    // {RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF8, SX1280_LORA_CR_LI_4_7, 20000, 50, TLM_RATIO_1_32, 2, 14},
 };
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {RATE_200HZ, -112, 4380, 5000, 3000, 100, 5000}, // ~ 3 sync packets
-    {RATE_100HZ, -117, 8770, 1000, 4000, 2000, 5000},
-    {RATE_50HZ, -120, 17540, 1000, 6000, 2000, 5000}}; // this means always send sync on ch[0] as soon as we can 
+    {RATE_200HZ, -112, 4380, 2500, 3000, 2500, 5000}}; // ~ 3 sync packets
+    // {RATE_100HZ, -117, 8770, 2500, 4000, 2000, 5000},
+    // {RATE_50HZ, -120, 17540, 2500, 6000, 2000, 5000}}; // this means always send sync on ch[0] as soon as we can 
 
 #endif
 

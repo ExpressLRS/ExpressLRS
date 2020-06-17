@@ -50,7 +50,7 @@ typedef enum
     SX127x_CR_4_5 = 0b00000010,
     SX127x_CR_4_6 = 0b00000100,
     SX127x_CR_4_7 = 0b00000110,
-    SX127x_CR_4_8 = 0b00001000
+    SX127x_CR_4_8 = 0b00001000,
 } SX127x_CodingRate;
 
 // SX127x series common registers

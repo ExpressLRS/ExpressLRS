@@ -38,7 +38,7 @@ SX1280Driver Radio;
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-//#define DEBUG_SUPPRESS // supresses debug messages on uart
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
 
@@ -219,6 +219,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
+    //Serial.println(FreqCorrection);
     if (!value)
     {
         if (FreqCorrection < FreqCorrectionMax)
@@ -593,7 +594,7 @@ void setup()
 #endif
 
     // Serial.begin(230400); // for linux debugging
-    Serial.begin(115200);
+    Serial.begin(420000);
 
     FHSSrandomiseFHSSsequence();
 
@@ -678,7 +679,7 @@ void loop()
             
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
-            //Radio.SetFrequency(GetInitialFreq());
+            Radio.SetFrequency(GetInitialFreq());
             LQreset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;

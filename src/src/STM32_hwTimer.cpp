@@ -6,7 +6,7 @@ void (*hwTimer::callbackTick)() = &nullCallback; // function is called whenever 
 void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::TickTock = false;
+volatile bool hwTimer::TickTock = true;
 volatile int16_t hwTimer::PhaseShift = 0;
 volatile bool hwTimer::ResetNextLoop = false;
 
@@ -29,7 +29,7 @@ void hwTimer::stop()
 {
     MyTim->pause();
     ResetNextLoop = false;
-    TickTock = false;
+    TickTock = true;
 }
 
 void hwTimer::pause()
