@@ -285,8 +285,6 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
 
-static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
-
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
 static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 2, 188, 1795)); };
 
@@ -342,40 +340,20 @@ class CRSF
 {
 
 public:
-    //CRSF(HardwareSerial& serial);
-
-#if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
+    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {
     }
+
     CRSF(Stream &dev) : _dev(&dev) {}
 
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-
-#endif
-
-#ifdef TARGET_R9M_RX
-
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-#endif
+    #endif
 
     static HardwareSerial Port;
-    //static Stream *Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
+    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only 
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values
@@ -426,25 +404,19 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
-    static void ICACHE_RAM_ATTR duplex_set_RX();
-    static void ICACHE_RAM_ATTR duplex_set_TX();
-    static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
-    static void ICACHE_RAM_ATTR FlushSerial();
-
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
     static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
+    static void ICACHE_RAM_ATTR duplex_set_RX();
+    static void ICACHE_RAM_ATTR duplex_set_TX();
 #endif
-#ifdef PLATFORM_ESP8266
-    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
-#endif
-#ifdef TARGET_R9M_TX
+
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     static void ICACHE_RAM_ATTR STM32initUART();
     static void ICACHE_RAM_ATTR UARTwdt();
     static void ICACHE_RAM_ATTR STM32handleUARTin();
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
-
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
@@ -460,7 +432,7 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
-#define OpenTXsyncPacketInterval 200 // in ms
+    #define OpenTXsyncPacketInterval 200 // in ms
     static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
@@ -474,6 +446,7 @@ public:
     static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
+    bool RXhandleUARTout();
 
     static void inline nullCallback(void);
 

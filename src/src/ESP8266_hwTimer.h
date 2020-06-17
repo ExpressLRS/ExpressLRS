@@ -29,6 +29,6 @@ public:
 	static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
 
 	static void inline nullCallback(void);
-	static void (*callbackTick)();
-	static void (*callbackTock)();
+	static void ICACHE_RAM_ATTR (*callbackTick)();
+	static void ICACHE_RAM_ATTR (*callbackTock)();
 };

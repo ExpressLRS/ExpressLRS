@@ -1,3 +1,8 @@
+//void DetectOtherRadios()
+//{
+ // Radio.SetFrequency(GetInitialFreq());
+//}
+
 // void BeginFastSync()
 // { //sync and get lock to reciever
 //   Serial.println("Begin fastsync");
