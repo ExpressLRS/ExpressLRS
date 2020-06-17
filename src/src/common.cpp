@@ -58,13 +58,14 @@ bool ExpressLRS_AirRateNeedsUpdate = false;
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
 
-#ifndef MY_UID
-//uint8_t UID[6] = {48, 174, 164, 200, 100, 50};
-//uint8_t UID[6] = {180, 230, 45, 152, 126, 65}; //sandro unique ID
-uint8_t UID[6] = {180, 230, 45, 152, 125, 173}; // Wez's unique ID
-#else
-uint8_t UID[6] = {MY_UID};
-#endif
+uint32_t HashedBindingPhrase = HASH(My_Binding_Phrase);
+uint8_t UID[6] = {0,
+                  0,
+                  HashedBindingPhrase & 0b11111111,
+                  (HashedBindingPhrase >> 8) & 0b11111111,
+                  (HashedBindingPhrase >> 16) & 0b11111111,
+                  (HashedBindingPhrase >> 24) & 0b11111111
+                 };
 
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged

@@ -13,6 +13,8 @@ def parse_flags(path):
                     if define.startswith("-D"):
                         if "MY_UID" in define and len(define.split(",")) != 6:
                             raise Exception("UID must be 6 bytes long")
+                        if "My_Binding_Phrase" in define:
+                            define = "'" + define + "'"
                         build_flags.append(define)
     except IOError:
         print("File '%s' does not exist" % path)
