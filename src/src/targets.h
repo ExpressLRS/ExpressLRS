@@ -90,7 +90,7 @@
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 2
-#define timerOffset -3
+#define timerOffset -1
 #endif
 
 #ifdef TARGET_R9M_RX

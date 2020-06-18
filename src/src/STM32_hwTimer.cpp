@@ -7,8 +7,11 @@ void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever 
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
 volatile bool hwTimer::TickTock = true;
-volatile int16_t hwTimer::PhaseShift = 0;
+volatile int32_t hwTimer::PhaseShift = 0;
+volatile int32_t hwTimer::FreqShift = 0;
 volatile bool hwTimer::ResetNextLoop = false;
+bool hwTimer::running = false;
+bool hwTimer::alreadyInit = false;
 
 volatile uint32_t hwTimer::LastCallbackMicrosTick = 0;
 volatile uint32_t hwTimer::LastCallbackMicrosTock = 0;
@@ -17,36 +20,50 @@ HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
 
 void hwTimer::init()
 {
-    noInterrupts();
-    MyTim->attachInterrupt(hwTimer::callback);
-    MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
-    MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-    MyTim->resume();
-    interrupts();
+    if (!alreadyInit)
+    {
+        MyTim->attachInterrupt(hwTimer::callback);
+        MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
+        MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+        alreadyInit = true;
+    }
 }
 
 void hwTimer::stop()
 {
-    MyTim->pause();
-    ResetNextLoop = false;
-    TickTock = true;
+    if (running)
+    {
+        MyTim->pause();
+        MyTim->setCount(0, MICROSEC_FORMAT);
+        running = false;
+        TickTock = true;
+    }
 }
 
-void hwTimer::pause()
+void hwTimer::resume()
 {
-    MyTim->pause();
+    if (!running)
+    {
+        TickTock = true;
+        running = true;
+        MyTim->resume();
+        
+    }
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval;
+    //if (running)
+    //{
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+    //}
 }
 
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
     //Serial.println(newPhaseShift);
-    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
+    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 2;
 
     if (newPhaseShift > MaxPhaseShift)
     {

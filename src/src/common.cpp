@@ -11,16 +11,15 @@ extern SX127xDriver Radio;
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, 200, TLM_RATIO_1_64, 2, 8},
     {RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, 100, TLM_RATIO_1_64, 2, 8},
-    {RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, 50, TLM_RATIO_NO_TLM, 2, 8},
+    {RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, 50, TLM_RATIO_NO_TLM, 2, 10},
     {RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, 25, TLM_RATIO_NO_TLM, 2, 10},
     {RATE_4HZ, SX127x_BW_500_00_KHZ, SX127x_SF_12, SX127x_CR_4_7, 250000, 4, TLM_RATIO_1_4, 2, 10}}; // for model recovery 
-};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {RATE_200HZ, -112, 4380, 3100, 1500, 3000, 5000}, // ~ 3 sync packets
-    {RATE_100HZ, -117, 8770, 3100, 2500, 3000, 5000},
-    {RATE_50HZ, -120, 17540, 3100, 4000, 3000, 5000},
-    {RATE_25HZ, -123, 17540, 3100, 8000, 3000, 5000},
+    {RATE_200HZ, -112, 4380, 3100, 5000, 2000, 5000}, // ~ 3 sync packets
+    {RATE_100HZ, -117, 8770, 3100, 5000, 2000, 5000},
+    {RATE_50HZ, -120, 17540, 3100, 5000, 2000, 5000},
+    {RATE_25HZ, -123, 17540, 3500, 6000, 2000, 5000},
     {RATE_4HZ, -131, 239620, 30000, 60000, 0, 250}}; // this means always send sync on ch[0] as soon as we can 
 #endif
 
@@ -35,7 +34,7 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 };
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {RATE_200HZ, -112, 4380, 3100, 1000, 3000, 5000}}; // ~ 3 sync packets
+    {RATE_200HZ, -112, 4380, 3100, 1000, 2000, 5000}}; // ~ 3 sync packets
     // {RATE_100HZ, -117, 8770, 2500, 4000, 2000, 5000},
     // {RATE_50HZ, -120, 17540, 2500, 6000, 2000, 5000}}; // this means always send sync on ch[0] as soon as we can 
 
