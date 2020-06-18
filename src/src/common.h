@@ -8,7 +8,7 @@
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-#include "SX1280RadioLib.h"
+#include "SX1280Driver.h"
 #endif
 
 #define One_Bit_Switches

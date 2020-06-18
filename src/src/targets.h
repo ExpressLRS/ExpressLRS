@@ -175,7 +175,8 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
-#define GPIO_PIN_DIO1           -1    //unused 
+#define GPIO_PIN_DIO1           -1    //unused for sx1280 
+#define GPIO_PIN_BUSY           -1    //unused for sx1280 
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
@@ -213,7 +214,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define timerOffset -3
+#define timerOffset -1
 #endif
 
 
@@ -251,7 +252,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define timerOffset -3
+#define timerOffset -1
 #endif
 
 #ifdef TARGET_TX_EXPRESSLRS_SX1280_V1

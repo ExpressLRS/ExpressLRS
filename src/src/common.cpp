@@ -24,7 +24,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-#include "SX1280RadioLib.h"
+#include "SX1280Driver.h"
 extern SX1280Driver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {

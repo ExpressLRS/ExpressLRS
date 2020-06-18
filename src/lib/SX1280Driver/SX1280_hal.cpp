@@ -13,8 +13,8 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 
 Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 */
-#include "LoRa_SX1280_Regs.h"
-#include "LoRa_SX1280_hal.h"
+#include "SX1280_Regs.h"
+#include "SX1280_hal.h"
 #include <SPI.h>
 
 SX1280Hal *SX1280Hal::instance = NULL;

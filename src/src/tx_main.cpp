@@ -7,7 +7,7 @@
 #include "SX127xDriver.h"
 SX127xDriver Radio;
 #elif Regulatory_Domain_ISM_2400
-#include "SX1280RadioLib.h"
+#include "SX1280Driver.h"
 SX1280Driver Radio;
 #endif
 
@@ -383,8 +383,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    Serial.println("sync");
-    Serial.println(Radio.currFreq);
+    //Serial.println("sync");
+    //Serial.println(Radio.currFreq);
   }
   else
   {

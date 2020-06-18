@@ -18,8 +18,8 @@ Maintainer: Miguel Luis and Gregory Cristian
 Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project 
 */
 
-#include "LoRa_SX1280_Regs.h"
-#include "LoRa_SX1280.h"
+#include "SX1280_Regs.h"
+#include "SX1280.h"
 #include <SPI.h>
 
 enum SX1280_InterruptAssignment_

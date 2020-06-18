@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "targets.h"
-#include "SX1280RadioLib.h"
+#include "SX1280Driver.h"
 #include "esp32-hal.h"
 #include "common.h"
 #include "FHSS.h"

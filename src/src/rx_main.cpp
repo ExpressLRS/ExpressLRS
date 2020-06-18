@@ -8,7 +8,7 @@
 #include "SX127xDriver.h"
 SX127xDriver Radio;
 #elif Regulatory_Domain_ISM_2400
-#include "SX1280RadioLib.h"
+#include "SX1280Driver.h"
 SX1280Driver Radio;
 #endif
 
@@ -38,7 +38,7 @@ SX1280Driver Radio;
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
-//#define DEBUG_SUPPRESS // supresses debug messages on uart
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
 
@@ -364,7 +364,6 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //noInterrupts();
     beginProcessing = micros();
     uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -373,7 +372,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (inCRC != calculatedCRC)
     {
-#ifndef DEBUG_SUPPRESS
+        #ifndef DEBUG_SUPPRESS
         Serial.print("CRC error on RF packet: ");
         for (int i = 0; i < 8; i++)
         {
@@ -381,15 +380,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Serial.print(",");
         }
         Serial.println("");
-#endif
+        #endif
         return;
     }
 
     if (packetAddr != DeviceAddr)
     {
-#ifndef DEBUG_SUPPRESS
+        #ifndef DEBUG_SUPPRESS
         Serial.println("Wrong device address on RF packet");
-#endif
+        #endif
         return;
     }
 
@@ -402,14 +401,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-#if defined SEQ_SWITCHES
+        #if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(&Radio, &crsf);
-#elif defined HYBRID_SWITCHES_8
+        #elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(&Radio, &crsf);
-#else
+        #else
         UnpackChannelData_11bit();
-#endif
-        crsf.sendRCFrameToFC();
+        #endif
+        if (connectionState == connected)
+            crsf.sendRCFrameToFC();
         break;
 
     case MSP_DATA_PACKET:
@@ -428,7 +428,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if (connectionState == tentative && NonceRX == Radio.RXdataBuffer[2] && FHSSgetCurrIndex() == Radio.RXdataBuffer[1] && abs(OffsetDx) <= 10 && linkQuality > 75)
+            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (linkQuality > 75))
                 GotConnection();
 
             expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11100000) >> 5);
@@ -445,24 +445,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
             }
 
-            //if (connectionState == disconnected)
             if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
             {
+                Serial.println("renttent");
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                 NonceRX = Radio.RXdataBuffer[2];
                 TentativeConnection();
                 //return;
             }
 
-            if (connectionState == tentative && abs(OffsetDx) > 10)
-            {
-                //TentativeConnection();
-                //return;
-                //LostConnection();
-                //Radio.SetFrequency(GetInitialFreq());
-                //Radio.RXnb();
-                //hwTimer.resume();
-            }
         }
         break;
 
@@ -632,7 +623,7 @@ void setup()
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
     SetRFLinkRate(RATE_200HZ);
-    //Radio.RXnb();
+    Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
     hwTimer.stop();
@@ -715,6 +706,11 @@ void loop()
         LostConnection();
     }
 
+    if ((connectionState == tentative) && linkQuality >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    {
+        GotConnection();
+    }
+
     if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
     {
         crsf.sendLinkStatisticsToFC();
@@ -730,12 +726,12 @@ void loop()
     if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)) && (OffsetDx <= 5))
     {
         RXtimerState = tim_locked;
-#ifndef DEBUG_SUPPRESS
+        #ifndef DEBUG_SUPPRESS
         Serial.println("Timer Considered Locked");
-#endif
+        #endif
     }
 
-#ifdef PLATFORM_STM32
+    #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
-#endif
+    #endif
 }

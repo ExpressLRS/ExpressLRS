@@ -3,8 +3,8 @@
 #include <Arduino.h>
 
 #include "../../src/targets.h"
-#include "LoRa_SX1280_Regs.h"
-#include "LoRA_SX1280_hal.h"
+#include "SX1280_Regs.h"
+#include "SX1280_hal.h"
 
 void ICACHE_RAM_ATTR TXnbISR();
 
