@@ -5,3 +5,4 @@
 .vscode/ipch
 *.code-workspace
 .vscode
+__pycache__
