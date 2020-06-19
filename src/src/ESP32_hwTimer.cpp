@@ -29,7 +29,7 @@ void hwTimer::init()
     timerAlarmEnable(timer);
 }
 
-void ICACHE_RAM_ATTR hwTimer::start()
+void ICACHE_RAM_ATTR hwTimer::resume()
 {
     if (running)
         return;

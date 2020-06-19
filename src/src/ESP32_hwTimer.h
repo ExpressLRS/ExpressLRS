@@ -14,9 +14,8 @@ class hwTimer
 {
 public:
     static void init();
-    static void ICACHE_RAM_ATTR start();
+    static void ICACHE_RAM_ATTR resume();
     static void ICACHE_RAM_ATTR stop();
-    static void ICACHE_RAM_ATTR pause();
     static void ICACHE_RAM_ATTR updateInterval(uint32_t time = 0);
 
     static void (*callbackTock)();

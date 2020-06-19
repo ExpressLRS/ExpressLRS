@@ -520,8 +520,6 @@ void setup()
   #endif
 #endif
 
-
-
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
 
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -604,7 +602,7 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
-  crsf.connected = &hwTimer.init; // it will auto init when it detects UART connection
+  crsf.connected = &hwTimer.resume; // it will auto init when it detects UART connection
   crsf.disconnected = &hwTimer.stop;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &TimerCallbackISR;
@@ -618,6 +616,7 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   hwTimer.init();
+  hwTimer.stop();
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
 }
@@ -691,9 +690,7 @@ HandleUpdateParameter();
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-
   SendRCdataToRF();
-  //NonceTX++;
 }
 
 void OnRFModePacket(mspPacket_t *packet)
