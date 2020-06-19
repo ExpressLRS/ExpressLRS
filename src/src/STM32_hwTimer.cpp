@@ -19,7 +19,7 @@ void hwTimer::init()
 {
     noInterrupts();
     MyTim->attachInterrupt(hwTimer::callback);
-    MyTim->setMode(2, TIMER_OUTPUT_COMPARE);
+    MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
     MyTim->resume();
     interrupts();
@@ -28,6 +28,8 @@ void hwTimer::init()
 void hwTimer::stop()
 {
     MyTim->pause();
+    ResetNextLoop = false;
+    TickTock = false;
 }
 
 void hwTimer::pause()
@@ -75,9 +77,9 @@ void hwTimer::callback(HardwareTimer *)
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
+        if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < 1)
         {
-            MyTim->setOverflow((hwTimer::HWtimerInterval + hwTimer::PhaseShift) >> 1, MICROSEC_FORMAT);
+            MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift, MICROSEC_FORMAT);
 
             hwTimer::ResetNextLoop = true;
             hwTimer::PhaseShift = 0;

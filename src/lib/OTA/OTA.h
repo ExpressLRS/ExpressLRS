@@ -1,7 +1,7 @@
 #ifndef H_OTA
 #define H_OTA
 
-#include "LoRaRadioLib.h" // this has to come before CRSF.h when compiling on R9
+#include "SX127xDriver.h" // this has to come before CRSF.h when compiling on R9
 #include "CRSF.h"
 
 // expresslrs packet header types

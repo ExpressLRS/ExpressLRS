@@ -1,11 +1,12 @@
 #include "POWERMGNT.h"
+#include "../../src/targets.h"
 
 extern SX127xDriver Radio;
 #ifdef TARGET_R9M_TX
 extern R9DAC R9DAC;
 #endif
 
-    PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
 
 PowerLevels_e POWERMGNT::incPower()
 {
@@ -30,10 +31,19 @@ PowerLevels_e POWERMGNT::currPower()
     return CurrentPower;
 }
 
-void POWERMGNT::defaultPower()
+void POWERMGNT::init()
+{
+    #ifdef TARGET_R9M_TX
+    Serial.println("Init TARGET_R9M_TX DAC Driver");
+    //R9DAC.init();
+    #endif
+}
+
+void POWERMGNT::setDefaultPower()
 {
     setPower((PowerLevels_e)DefaultPowerEnum);
 }
+
 
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
@@ -44,7 +54,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 #endif
 
-#ifdef TARGET_100mW_MODULE
+#if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
 
     if (Power <= PWR_50mW)
     {

@@ -2,7 +2,7 @@
 
 #include "Arduino.h"
 #include "../../src/targets.h"
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 #include "DAC.h"
 
 #ifdef TARGET_R9M_TX
@@ -20,6 +20,11 @@
 #define DefaultPowerEnum 2
 #endif
 
+#ifdef TARGET_R9M_LITE_TX
+#define MaxPower 2
+#define DefaultPowerEnum 2
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,
@@ -33,14 +38,6 @@ typedef enum
 
 } PowerLevels_e;
 
-// typedef enum
-// {
-//     PWR_10mW = 0,
-//     PWR_25mW = 1,
-//     PWR_50mW = 2,
-
-// } SX127x_PA_Boost_PowerLevels_e;
-
 class POWERMGNT
 {
 
@@ -52,5 +49,6 @@ public:
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
-    static void defaultPower();
+    static void setDefaultPower();
+    static void init();
 };

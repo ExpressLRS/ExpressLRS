@@ -5,7 +5,10 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
-extern float PacketRate;
+#include "SX127xDriver.h"
+#include "ESP8266_hwTimer.h"
+
+extern SX127xDriver Radio;
 
 #define STASSID "ExpressLRS RX"
 #define STAPSK "expresslrs"
@@ -14,13 +17,23 @@ const char *host = "esp8266-webupdate";
 const char *ssid = STASSID;
 const char *password = STAPSK;
 
+extern hwTimer hwTimer;
+extern SX127xDriver Radio;
+
 ESP8266WebServer httpServer(80);
 ESP8266HTTPUpdateServer httpUpdater;
 
 void BeginWebUpdate(void)
 {
+  hwTimer.stop();
+
+  Radio.RXdoneCallback = NULL;
+  Radio.TXdoneCallback = NULL;
 
   Serial.println("Begin Webupdater");
+  Serial.println("Stopping Radio");
+  Radio.End();
+  
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
 

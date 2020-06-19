@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "LoRaRadioLib.h"
+#include "SX127xDriver.h"
 
 extern SX127xDriver Radio;
 

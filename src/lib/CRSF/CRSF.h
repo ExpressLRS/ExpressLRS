@@ -75,24 +75,6 @@ static const unsigned char crc8tab[256] = {
     0xD6, 0x03, 0xA9, 0x7C, 0x28, 0xFD, 0x57, 0x82, 0xFF, 0x2A, 0x80, 0x55, 0x01, 0xD4, 0x7E, 0xAB,
     0x84, 0x51, 0xFB, 0x2E, 0x7A, 0xAF, 0x05, 0xD0, 0xAD, 0x78, 0xD2, 0x07, 0x53, 0x86, 0x2C, 0xF9};
 
-static const unsigned char crc8tabcmd[256] =
-    {0x00, 0xBA, 0xCE, 0x74, 0x26, 0x9C, 0xE8, 0x52, 0x4C, 0xF6, 0x82, 0x38, 0x6A, 0xD0, 0xA4, 0x1E,
-     0x98, 0x22, 0x56, 0xEC, 0xBE, 0x04, 0x70, 0xCA, 0xD4, 0x6E, 0x1A, 0xA0, 0xF2, 0x48, 0x3C, 0x86,
-     0x8A, 0x30, 0x44, 0xFE, 0xAC, 0x16, 0x62, 0xD8, 0xC6, 0x7C, 0x08, 0xB2, 0xE0, 0x5A, 0x2E, 0x94,
-     0x12, 0xA8, 0xDC, 0x66, 0x34, 0x8E, 0xFA, 0x40, 0x5E, 0xE4, 0x90, 0x2A, 0x78, 0xC2, 0xB6, 0x0C,
-     0xAE, 0x14, 0x60, 0xDA, 0x88, 0x32, 0x46, 0xFC, 0xE2, 0x58, 0x2C, 0x96, 0xC4, 0x7E, 0x0A, 0xB0,
-     0x36, 0x8C, 0xF8, 0x42, 0x10, 0xAA, 0xDE, 0x64, 0x7A, 0xC0, 0xB4, 0x0E, 0x5C, 0xE6, 0x92, 0x28,
-     0x24, 0x9E, 0xEA, 0x50, 0x02, 0xB8, 0xCC, 0x76, 0x68, 0xD2, 0xA6, 0x1C, 0x4E, 0xF4, 0x80, 0x3A,
-     0xBC, 0x06, 0x72, 0xC8, 0x9A, 0x20, 0x54, 0xEE, 0xF0, 0x4A, 0x3E, 0x84, 0xD6, 0x6C, 0x18, 0xA2,
-     0xE6, 0x5C, 0x28, 0x92, 0xC0, 0x7A, 0x0E, 0xB4, 0xAA, 0x10, 0x64, 0xDE, 0x8C, 0x36, 0x42, 0xF8,
-     0x7E, 0xC4, 0xB0, 0x0A, 0x58, 0xE2, 0x96, 0x2C, 0x32, 0x88, 0xFC, 0x46, 0x14, 0xAE, 0xDA, 0x60,
-     0x6C, 0xD6, 0xA2, 0x18, 0x4A, 0xF0, 0x84, 0x3E, 0x20, 0x9A, 0xEE, 0x54, 0x06, 0xBC, 0xC8, 0x72,
-     0xF4, 0x4E, 0x3A, 0x80, 0xD2, 0x68, 0x1C, 0xA6, 0xB8, 0x02, 0x76, 0xCC, 0x9E, 0x24, 0x50, 0xEA,
-     0x48, 0xF2, 0x86, 0x3C, 0x6E, 0xD4, 0xA0, 0x1A, 0x04, 0xBE, 0xCA, 0x70, 0x22, 0x98, 0xEC, 0x56,
-     0xD0, 0x6A, 0x1E, 0xA4, 0xF6, 0x4C, 0x38, 0x82, 0x9C, 0x26, 0x52, 0xE8, 0xBA, 0x00, 0x74, 0xCE,
-     0xC2, 0x78, 0x0C, 0xB6, 0xE4, 0x5E, 0x2A, 0x90, 0x8E, 0x34, 0x40, 0xFA, 0xA8, 0x12, 0x66, 0xDC,
-     0x5A, 0xE0, 0x94, 0x2E, 0x7C, 0xC6, 0xB2, 0x08, 0x16, 0xAC, 0xD8, 0x62, 0x30, 0x8A, 0xFE, 0x44};
-
 static const unsigned int VTXtable[6][8] =
     {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
      {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866},  /* Band B */
@@ -303,8 +285,6 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); };
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); };
 
-static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 7, 188, 1795)); };
-
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
 static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(map(Val, 0, 2, 188, 1795)); };
 
@@ -346,15 +326,6 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
     return crc;
 }
 
-static inline uint8_t ICACHE_RAM_ATTR CalcCRCcmd(uint8_t *data, int length)
-{
-    uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
-    {
-        crc = crc8tabcmd[crc ^ *data++];
-    }
-    return crc;
-}
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
 {
@@ -369,40 +340,20 @@ class CRSF
 {
 
 public:
-    //CRSF(HardwareSerial& serial);
-
-#if defined(PLATFORM_ESP8266) || defined(UNIT_TEST)
+    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {
     }
+
     CRSF(Stream &dev) : _dev(&dev) {}
 
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-
-#endif
-
-#ifdef TARGET_R9M_RX
-
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    void InitSerial()
-    {
-        _dev->println("CRSF Lib Ready!");
-    }
-#endif
+    #endif
 
     static HardwareSerial Port;
-    //static Stream *Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data
+    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only 
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values
@@ -453,25 +404,19 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
-    static void ICACHE_RAM_ATTR duplex_set_RX();
-    static void ICACHE_RAM_ATTR duplex_set_TX();
-    static void ICACHE_RAM_ATTR duplex_set_HIGHZ();
-    static void ICACHE_RAM_ATTR FlushSerial();
-
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
     static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
+    static void ICACHE_RAM_ATTR duplex_set_RX();
+    static void ICACHE_RAM_ATTR duplex_set_TX();
 #endif
-#ifdef PLATFORM_ESP8266
-    // static void ICACHE_RAM_ATTR ESP8266ReadUart();
-#endif
-#ifdef TARGET_R9M_TX
+
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     static void ICACHE_RAM_ATTR STM32initUART();
     static void ICACHE_RAM_ATTR UARTwdt();
     static void ICACHE_RAM_ATTR STM32handleUARTin();
     static void ICACHE_RAM_ATTR STM32handleUARTout();
 #endif
-
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
@@ -487,7 +432,7 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
-#define OpenTXsyncPacketInterval 200 // in ms
+    #define OpenTXsyncPacketInterval 200 // in ms
     static volatile uint32_t OpenTXsyncLastSent;
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
@@ -501,6 +446,7 @@ public:
     static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
+    bool RXhandleUARTout();
 
     static void inline nullCallback(void);
 
