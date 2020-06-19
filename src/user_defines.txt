@@ -54,3 +54,5 @@
 -DJUST_BEEP_ONCE     #B eep only once (applies to TX modules with buzzer)
 
 -DUSE_UART2    # Uncomment to use UART2 for MSP comms on the TX module
+
+#-DUSE_ESP8266_BACKPACK
