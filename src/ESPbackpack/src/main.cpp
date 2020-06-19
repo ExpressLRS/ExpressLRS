@@ -8,7 +8,6 @@
 #include <ESP8266HTTPUpdateServer.h>
 #include <FS.h>
 #include "stm32Updater.h"
-#include "elrs_eeprom.h"
 
 //reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
@@ -35,7 +34,6 @@ uint8_t socketNumber;
 
 String inputString = "";
 
-ELRS_EEPROM eeprom;
 uint16_t eppromPointer = 0;
 
 static const char PROGMEM GO_BACK[] = R"rawliteral(
@@ -216,13 +214,14 @@ void handleRoot()
   server.send_P(200, "text/html", INDEX_HTML);
 }
 
-
-bool flashR9M()
+bool flashSTM32()
 {
-  webSocket.broadcastTXT("R9M Firmware Flash Requested!");
+  webSocket.broadcastTXT("Multimodule Firmware Flash Requested!");
   stm32flasher_hardware_init();
-  webSocket.broadcastTXT("Going to flash the following file: " + uploadedfilename);
-  bool result = esp8266_spifs_write_file(uploadedfilename.c_str());
+  webSocket.broadcastTXT("Going to flash the firmware file: " + uploadedfilename);
+  char filename[31];
+  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
+  bool result = esp8266_spifs_write_file("/firmware.bin");
   Serial.begin(460800);
   return result;
 }
@@ -234,12 +233,19 @@ void handleFileUpload()
   {
     if (SPIFFS.info(fs_info))
     {
+      SPIFFS.remove("/firmware.bin");
       String output;
       output += "Filesystem: used: ";
       output += String(fs_info.usedBytes);
       output += " / free: ";
       output += String(fs_info.totalBytes);
       webSocket.broadcastTXT(output);
+
+      if (fs_info.usedBytes > 0)
+      {
+        webSocket.broadcastTXT("formatting filesystem");
+        SPIFFS.format();
+      }
     }
     else
     {
@@ -254,7 +260,7 @@ void handleFileUpload()
     {
       uploadedfilename = "/" + uploadedfilename;
     }
-    fsUploadFile = SPIFFS.open(uploadedfilename, "w"); // Open the file for writing in SPIFFS (create if it doesn't exist)
+    fsUploadFile = SPIFFS.open("/firmware.bin", "w"); // Open the file for writing in SPIFFS (create if it doesn't exist)
   }
   else if (upload.status == UPLOAD_FILE_WRITE)
   {
@@ -278,7 +284,7 @@ void handleFileUpload()
       webSocket.broadcastTXT("Total uploaded size: " + totsize);
       TotalUploadedBytes = 0;
       server.send(100);
-      if (flashR9M())
+      if (flashSTM32())
       {
         server.sendHeader("Location", "/return"); // Redirect the client to the success page
         server.send(303);
@@ -294,7 +300,6 @@ void handleFileUpload()
     else
     {
       server.send(500, "text/plain", "500: couldn't create file");
-      SPIFFS.format();
     }
   }
 }
@@ -321,9 +326,9 @@ void setup()
   IPAddress my_ip;
 
 #ifdef INVERTED_SERIAL
-  Serial.begin(460800, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
+  Serial.begin(115200, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
 #else
-  Serial.begin(460800); // non-inverted serial
+  Serial.begin(115200); // non-inverted serial
 #endif
 
   SPIFFS.begin();
@@ -355,9 +360,13 @@ void setup()
   {
     Serial.println("MDNS.begin failed");
   }
-
   Serial.print("Connect to http://elrs_tx.local or http://");
   Serial.println(my_ip);
+#ifdef USE_WIFI_MANAGER
+  Serial.println(WiFi.localIP());
+#else
+  Serial.println(WiFi.softAPIP());
+#endif
 
   server.on("/", handleRoot);
   server.on("/return", sendReturn);
