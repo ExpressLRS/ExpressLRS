@@ -397,9 +397,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     else
     {
 #if defined HYBRID_SWITCHES_8
-      GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
 #elif defined SEQ_SWITCHES
-      GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+      GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
 #else
       Generate4ChannelData_11bit();
 #endif

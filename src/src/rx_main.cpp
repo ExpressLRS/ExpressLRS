@@ -402,9 +402,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
         #if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches(&Radio, &crsf);
+        UnpackChannelDataSeqSwitches(Radio.TXdataBuffer, &crsf);
         #elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8(&Radio, &crsf);
+        UnpackChannelDataHybridSwitches8(Radio.TXdataBuffer, &crsf);
         #else
         UnpackChannelData_11bit();
         #endif
@@ -447,7 +447,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
             if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
             {
-                Serial.println("renttent");
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                 NonceRX = Radio.RXdataBuffer[2];
                 TentativeConnection();
@@ -489,7 +488,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #endif
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
     }
-
     doneProcessing = micros();
 #ifndef DEBUG_SUPPRESS
     Serial.print(RawOffset);
@@ -500,7 +498,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(":");
     Serial.println(linkQuality);
 #endif
-    //interrupts();
 }
 
 void beginWebsever()
@@ -513,7 +510,7 @@ void beginWebsever()
 #endif
 }
 
-void ICACHE_RAM_ATTR sampleButton()
+void sampleButton()
 {
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
