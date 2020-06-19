@@ -216,7 +216,7 @@ void handleRoot()
 
 bool flashSTM32()
 {
-  webSocket.broadcastTXT("Multimodule Firmware Flash Requested!");
+  webSocket.broadcastTXT("Firmware Flash Requested!");
   stm32flasher_hardware_init();
   webSocket.broadcastTXT("Going to flash the firmware file: " + uploadedfilename);
   char filename[31];
@@ -301,6 +301,7 @@ void handleFileUpload()
     {
       server.send(500, "text/plain", "500: couldn't create file");
     }
+    SPIFFS.remove("/firmware.bin");
   }
 }
 
