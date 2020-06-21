@@ -81,7 +81,8 @@ int8_t timer_end(void);
 #define LED_RED_Pin GPIO_PIN_4
 #define LED_RED_GPIO_Port GPIOB
 #elif TARGET_RAK4200
-
+#define LED_RED_Pin GPIO_PIN_12
+#define LED_RED_GPIO_Port GPIOA
 #elif TARGET_RAK811
 
 #endif

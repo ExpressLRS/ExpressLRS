@@ -12,7 +12,7 @@
 ### Enable one of these regulatory domains ###
 
 ### Bands for SX1276 (900MHz) ###
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -58,3 +58,5 @@
 -DJUST_BEEP_ONCE     #B eep only once (applies to TX modules with buzzer)
 
 -DUSE_UART2    # Uncomment to use UART2 for MSP comms on the TX module
+
+-DUSE_ESP8266_BACKPACK
