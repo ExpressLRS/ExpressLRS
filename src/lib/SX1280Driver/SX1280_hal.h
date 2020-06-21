@@ -49,7 +49,7 @@ private:
     // const uint8_t SX1280_RST = GPIO_PIN_RST;
 
     // const uint8_t SX1280_RXenb = GPIO_PIN_RX_ENABLE;
-    // const uint8_t SX1280_TXenb = GPIO_PIN_RX_ENABLE;
+    // const uint8_t SX1280_TXenb = GPIO_PIN_TX_ENABLE;
 
     SX1280_InterruptAssignment_ InterruptAssignment = SX1280_INTERRUPT_NONE;
     SX1280_BusyState_ BusyState = SX1280_NOT_BUSY;

@@ -71,7 +71,17 @@ void SX1280Driver::Begin()
     this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
     this->SetFrequency(this->currFreq); //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);      //Step 4: Config FIFO addr
-    this->SetOutputPower(13); //13dbm is max power
+    
+    #ifdef TARGET_TX_EXPRESSLRS_SX1280_V1
+        this->SetOutputPower(13); //13dbm is max power for SX1280
+    #endif
+    #ifdef TARGET_TX_EXPRESSLRS_E28_V1
+        this->SetOutputPower(0); //0dbm is max power (pre-PA) for E28
+    #endif
+    #ifdef TARGET_RX_EXPRESSLRS_SX1280_V1
+        this->SetOutputPower(13);
+    #endif
+
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); // set DIO1 to trigger on TxDone and RxDone, disable other DIOs
 }
 

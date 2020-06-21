@@ -45,6 +45,15 @@ void SX1280Hal::init()
     pinMode(GPIO_PIN_RST, OUTPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
 
+    #ifdef TARGET_TX_EXPRESSLRS_E28_V1
+        // TODO: Remove this once TX/RX enable are wired in correctly - TESTING ONLY!!
+        pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+        digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+
+        pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
+        digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    #endif
+
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     SPI.setFrequency(18000000);
