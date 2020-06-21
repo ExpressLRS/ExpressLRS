@@ -12,7 +12,10 @@ Description: Handling of the node configuration protocol
 License: Revised BSD License, see LICENSE.TXT file include in the project
 
 Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
+
+Modified and adapted by Alessandro Carcione for ELRS project 
 */
+
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include <SPI.h>
@@ -78,7 +81,7 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
-    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE);
+    //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm 
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
 
@@ -117,12 +120,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.write((uint8_t)command);
     SPI.write(val);
 #endif
-    digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    if (command != SX1280_RADIO_SET_SLEEP)
-    {
-        WaitOnBusy();
-    }
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint16_t size)
@@ -143,17 +142,12 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
         SPI.write(buffer[i]);
 #endif
     }
-    digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    if (command != SX1280_RADIO_SET_SLEEP)
-    {
-        WaitOnBusy();
-    }
+    digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint16_t size)
 {
-
     WaitOnBusy();
     digitalWrite(GPIO_PIN_NSS, LOW);
 
@@ -183,13 +177,10 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         }
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint16_t size)
 {
-
     WaitOnBusy();
     digitalWrite(GPIO_PIN_NSS, LOW);
 
@@ -211,8 +202,6 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
 #endif
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
@@ -223,8 +212,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
 void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint16_t size)
 {
     WaitOnBusy();
-
     digitalWrite(GPIO_PIN_NSS, LOW);
+
 #ifdef PLATFORM_STM32
     SPI.transfer(SX1280_RADIO_READ_REGISTER);
     SPI.transfer((address & 0xFF00) >> 8);
@@ -241,8 +230,6 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
         buffer[i] = SPI.transfer(0);
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    WaitOnBusy();
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address)
@@ -273,8 +260,6 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 #endif
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size)
@@ -296,8 +281,6 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
         buffer[i] = SPI.transfer(0);
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    WaitOnBusy();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
