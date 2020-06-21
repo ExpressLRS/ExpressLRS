@@ -34,28 +34,42 @@ SX1280Hal::SX1280Hal()
 
 void SX1280Hal::end()
 {
-  SPI.end();
-  detachInterrupt(GPIO_PIN_DIO0);
+    SPI.end();
+    detachInterrupt(GPIO_PIN_DIO0);
 }
-
 
 void SX1280Hal::init()
 {
-    Serial.println("Spi Begin");
+    Serial.println("Hal Init");
     pinMode(GPIO_PIN_BUSY, INPUT);
     pinMode(GPIO_PIN_DIO1, INPUT);
 
     pinMode(GPIO_PIN_RST, OUTPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
 
-    #ifdef TARGET_TX_EXPRESSLRS_E28_V1
-        // TODO: Remove this once TX/RX enable are wired in correctly - TESTING ONLY!!
-        pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
-        digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+#if defined(GPIO_PIN_RX_ENABLE) || defined(GPIO_PIN_TX_ENABLE)
+    Serial.print("This Target uses seperate TX/RX enable pins: ");
+#endif
 
-        pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
-        digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-    #endif
+#if defined(GPIO_PIN_TX_ENABLE)
+    Serial.print("TX: ");
+    Serial.print(GPIO_PIN_TX_ENABLE);
+#endif
+
+#if defined(GPIO_PIN_RX_ENABLE)
+    Serial.print(" RX: ");
+    Serial.println(GPIO_PIN_RX_ENABLE);
+#endif
+
+#if defined(GPIO_PIN_RX_ENABLE)
+    pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+    pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
 
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
@@ -81,7 +95,7 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
-    //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm 
+    //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
 
@@ -355,4 +369,40 @@ void ICACHE_RAM_ATTR SX1280Hal::setIRQassignment(SX1280_InterruptAssignment_ new
         this->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
     }
     //}
+}
+
+void ICACHE_RAM_ATTR SX1280Hal::TXenable()
+{
+#if defined(GPIO_PIN_RX_ENABLE)
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+    digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+#endif
+    return;
+}
+
+void ICACHE_RAM_ATTR SX1280Hal::RXenable()
+{
+#if defined(GPIO_PIN_RX_ENABLE)
+    digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
+    return;
+}
+
+void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
+{
+#if defined(GPIO_PIN_RX_ENABLE)
+    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+#endif
+
+#if defined(GPIO_PIN_TX_ENABLE)
+    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
+    return;
 }

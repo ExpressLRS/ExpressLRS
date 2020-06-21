@@ -125,7 +125,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         return;
     }
 
-    uint8_t buf3[3]; //TODO make word alignmed
+    WORD_ALIGNED_ATTR uint8_t buf3[3]; //TODO make word alignmed
 
     switch (OPmode)
     {
@@ -179,7 +179,7 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
     // Care must therefore be taken to ensure that modulation parameters are set using the command
     // SetModulationParam() only after defining the packet type SetPacketType() to be used
 
-    uint8_t rfparams[3] = {0}; //TODO make word alignmed
+    WORD_ALIGNED_ATTR uint8_t rfparams[3] = {0}; //TODO make word alignmed
 
     rfparams[0] = (uint8_t)sf;
     rfparams[1] = (uint8_t)bw;
@@ -191,7 +191,7 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
 void SX1280Driver::SetFrequency(uint32_t Reqfreq)
 {
     //Serial.println(Reqfreq);
-    uint8_t buf[3] = {0}; //TODO make word alignmed
+    WORD_ALIGNED_ATTR uint8_t buf[3] = {0}; //TODO make word alignmed
 
     uint32_t freq = (uint32_t)((double)Reqfreq / (double)SX1280_FREQ_STEP);
     buf[0] = (uint8_t)((freq >> 16) & 0xFF);
@@ -204,7 +204,7 @@ void SX1280Driver::SetFrequency(uint32_t Reqfreq)
 
 int32_t SX1280Driver::GetFrequencyError()
 {
-    uint8_t efeRaw[3] = {0}; //TODO make word alignmed
+    WORD_ALIGNED_ATTR uint8_t efeRaw[3] = {0}; //TODO make word alignmed
     uint32_t efe = 0;
     double efeHz = 0.0;
 
@@ -271,6 +271,7 @@ void SX1280Driver::TXnbISR()
 
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
+    hal.TXenable(); // do first to allow PA stablise 
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.setIRQassignment(SX1280_INTERRUPT_TX_DONE);
     instance->SetFIFOaddr(0x00, 0x00);              // not 100% sure if needed again
@@ -288,6 +289,7 @@ void SX1280Driver::RXnbISR()
 
 void SX1280Driver::RXnb()
 {
+    hal.RXenable();
     hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     //instance->SetFIFOaddr(0x00, 0x00);
