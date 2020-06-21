@@ -402,9 +402,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
         #if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches(Radio.TXdataBuffer, &crsf);
+        UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
         #elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8(Radio.TXdataBuffer, &crsf);
+        UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
         #else
         UnpackChannelData_11bit();
         #endif
