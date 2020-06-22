@@ -69,16 +69,9 @@ void SX1280Driver::Begin()
     this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                        //enable auto FS
     this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
-    this->SetFrequency(this->currFreq); //Step 3: Set Freq
-    this->SetFIFOaddr(0x00, 0x00);      //Step 4: Config FIFO addr
-    
-    #if defined(TARGET_TX_EXPRESSLRS_SX1280_V1) || defined(TARGET_RX_ESP32_SX1280_V1)
-        this->SetOutputPower(13); //13dbm is max power for bare SX1280
-    #endif
-    #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-        this->SetOutputPower(0); //0dbm is max power (pre-PA) for E28
-    #endif
-    
+    this->SetFrequency(this->currFreq);                                                                                                 //Step 3: Set Freq
+    this->SetFIFOaddr(0x00, 0x00);                                                                                                      //Step 4: Config FIFO addr
+    this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); // set DIO1 to trigger on TxDone and RxDone, disable other DIOs
 }
 
@@ -96,6 +89,8 @@ void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
     buf[0] = power + 18;
     buf[1] = (uint8_t)SX1280_RADIO_RAMP_04_US;
     hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, 2);
+    Serial.print("SetPower: ");
+    Serial.println(buf[0]);
     return;
 }
 
@@ -268,9 +263,8 @@ void SX1280Driver::TXnbISR()
 
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
-    hal.TXenable(); // do first to allow PA stablise 
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    hal.setIRQassignment(SX1280_INTERRUPT_TX_DONE);
+    hal.TXenable();                                 // do first to allow PA stablise
     instance->SetFIFOaddr(0x00, 0x00);              // not 100% sure if needed again
     hal.WriteBuffer(0x00, (uint8_t *)data, length); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
@@ -287,7 +281,6 @@ void SX1280Driver::RXnbISR()
 void SX1280Driver::RXnb()
 {
     hal.RXenable();
-    hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     //instance->SetFIFOaddr(0x00, 0x00);
     instance->SetMode(SX1280_MODE_RX);
@@ -327,7 +320,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
     //uint8_t val2 = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB + 2);
     uint8_t regEFI[3];
 
-     hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, regEFI, 3);
+    hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, regEFI, 3);
 
     //Serial.println(val);
     //Serial.println(val1);

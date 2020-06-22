@@ -64,13 +64,10 @@ public:
     void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size); // Writes and Reads to FIFO
     void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size);
 
-    void ICACHE_RAM_ATTR setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment);
-
     static void ICACHE_RAM_ATTR nullCallback(void);
     
     void ICACHE_RAM_ATTR WaitOnBusy();
     static ICACHE_RAM_ATTR void dioISR();
-    static ICACHE_RAM_ATTR void busyISR();
     
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();

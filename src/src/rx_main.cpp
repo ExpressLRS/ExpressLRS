@@ -606,7 +606,11 @@ void setup()
     Radio.currFreq = GetInitialFreq();
     Radio.Begin();
     //Radio.SetSyncWord(UID[3]);
-    Radio.SetOutputPower(0b1111); //default is max power (17dBm for RX always)
+    #ifdef TARGET_RX_ESP8266_SX1280_V1
+    Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
+    #else
+    Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
+    #endif
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
     // Serial.print("RF noise floor: ");

@@ -196,7 +196,7 @@ https://github.com/jaxxzer
 
 #endif
 
-#ifdef TARGET_RX_ESP32_SX1280_V1
+#ifdef TARGET_RX_ESP8266_SX1280_V1
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_BUSY 5
 #define GPIO_PIN_DIO0 -1 // does not exist on sx1280
@@ -205,14 +205,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO 12
 #define GPIO_PIN_SCK 14
 #define GPIO_PIN_RST 2
+#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1 
+#define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 0
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
-#define GPIO_PIN_OLED_SDA -1
-#define GPIO_PIN_OLED_SCK -1
-#define GPIO_PIN_RCSIGNAL_RX -1 //not relevant, can use only default for esp8266 or esp8285
-#define GPIO_PIN_RCSIGNAL_TX -1
 #define timerOffset -1
 #endif
 
@@ -225,10 +221,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO 19
 #define GPIO_PIN_SCK 18
 #define GPIO_PIN_RST 14
-#define GPIO_PIN_RX_ENABLE -1
-#define GPIO_PIN_TX_ENABLE -1
-#define GPIO_PIN_OLED_SDA -1
-#define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #endif

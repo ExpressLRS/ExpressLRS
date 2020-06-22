@@ -52,24 +52,17 @@ void POWERMGNT::setDefaultPower()
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
 
-#ifdef TARGET_TX_EXPRESSLRS_SX1280_V1
+#if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     Radio.SetOutputPower(13);
     CurrentPower = Power;
     return;
 #endif
 
-#ifdef TARGET_TX_EXPRESSLRS_E28_V1
+#ifdef TARGET_TX_ESP32_E28_SX1280_V1
     Radio.SetOutputPower(0);
     CurrentPower = Power;
     return;
 #endif
-
-#ifdef TARGET_RX_EXPRESSLRS_SX1280_V1
-    Radio.SetOutputPower(13);
-    CurrentPower = Power;
-    return;
-#endif
-
 
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
