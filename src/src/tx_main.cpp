@@ -616,7 +616,7 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   hwTimer.init();
-  hwTimer.stop();
+  hwTimer.resume();
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
 }
