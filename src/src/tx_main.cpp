@@ -616,7 +616,7 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   hwTimer.init();
-  hwTimer.resume();
+  //hwTimer.resume(); uncomment to automatically start the RX timer 
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
 }
