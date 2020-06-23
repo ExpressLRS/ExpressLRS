@@ -248,6 +248,7 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 void SX1280Driver::TXnbISR()
 {
     //endTX = micros();
+    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     instance->currOpmode = SX1280_MODE_FS; // radio goes to FS
     //Serial.print("TOA: ");
     //Serial.println(endTX - beginTX);
@@ -255,17 +256,15 @@ void SX1280Driver::TXnbISR()
 
     // Serial.println("TXnbISR!");
     //instance->GetStatus();
-    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+    
     //instance->GetStatus();
     instance->TXdoneCallback();
 }
 
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
-    hal.TXenable();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    hal.setIRQassignment(SX1280_INTERRUPT_TX_DONE);
-    // do first to allow PA stablise
+    hal.TXenable(); // do first to allow PA stablise
     instance->SetFIFOaddr(0x00, 0x00);   // not 100% sure if needed again
     hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
@@ -285,8 +284,8 @@ void SX1280Driver::RXnbISR()
 void SX1280Driver::RXnb()
 {
     //Serial.println("Start RX nb");
-    hal.RXenable();
     hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
+    hal.RXenable();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     //instance->SetFIFOaddr(0x00, 0x00);
     instance->SetMode(SX1280_MODE_RX);
