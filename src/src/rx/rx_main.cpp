@@ -610,7 +610,7 @@ void setup()
 #endif
     Radio.SetPins(GPIO_PIN_RST, GPIO_PIN_DIO0, GPIO_PIN_DIO1);
     Radio.SetSyncWord(getSyncWord());
-    Radio.Begin();
+    Radio.Begin(GPIO_PIN_TX_ENABLE, GPIO_PIN_RX_ENABLE);
     Radio.SetOutputPower(0b1111); // default is max power (17dBm for RX)
     Radio.RXdoneCallback1 = ProcessRFPacketCallback;
     Radio.TXdoneCallback1 = tx_done_cb;

@@ -141,18 +141,21 @@
 #define GPIO_PIN_MISO        PA6
 #define GPIO_PIN_SCK         PA5
 #define GPIO_PIN_RST         PA0
-/* PA1 and PA2 is used to selct HIGH or LOW RF band! */
-/*
-    LOW 0 : HIGH 0 = OFF
-    LOW 1 : HIGH 0 = LOW BAND (433)
-    LOW 0 : HIGH 1 = HIGH BAND (868 / 915)
+/** RF Switch config (https://www.njr.com/electronic_device/PDF/NJG1801K75_E.pdf)
+ *
+ * PA8 (VCTL2) and PA11 (VCTL1) is used to selct RF_IN or RF_OUT
+ *   RF_IN  : VCTL1 LOW  , VCTL2 HIGH
+ *   RF_OUT : VCTL1 HIGH , VCTL2 LOW
+ *
+ * Note: This is inverted, LOW = ENABLED!
 */
-#define GPIO_SELECT_RFIO_HIGH PA8
-#define GPIO_SELECT_RFIO_LOW  PA11
+#define GPIO_PIN_TX_ENABLE   PA11
+#define GPIO_PIN_RX_ENABLE   PA8
+
 // RAK4200 USART1: TX=PA9, RX=PA10
-#define GPIO_PIN_RCSIGNAL_RX  PA10   // USART1, PIN5
-#define GPIO_PIN_RCSIGNAL_TX  PA9    // USART1, PIN4
-#define GPIO_PIN_LED          PA12   // PIN6 (UART1_DE)
+#define GPIO_PIN_RCSIGNAL_RX PA10   // USART1, PIN5
+#define GPIO_PIN_RCSIGNAL_TX PA9    // USART1, PIN4
+#define GPIO_PIN_LED         PA12   // PIN6 (UART1_DE)
 // USART2: TX=PA2, RX=PA3
 //#define GPIO_PIN_DEBUG_RX    PA3 // USART2, PIN1
 //#define GPIO_PIN_DEBUG_TX    PA2 // USART2, PIN2
