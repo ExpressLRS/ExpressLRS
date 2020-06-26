@@ -9,5 +9,7 @@
 
 #define _DISABLE_IRQ()
 #define _ENABLE_IRQ()
+#define _SAVE_IRQ() 0
+#define _RESTORE_IRQ(_x)
 
 #endif /* __PLATFORM_H_ */

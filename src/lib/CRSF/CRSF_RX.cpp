@@ -7,9 +7,9 @@ void ICACHE_RAM_ATTR CRSF_RX::sendFrameToFC(uint8_t *buff, uint8_t size)
 {
     buff[size - 1] = CalcCRC(&buff[2], (buff[1] - 1));
 #if !NO_DATA_TO_FC
-    _DISABLE_IRQ();
+    uint32_t irq = _SAVE_IRQ();
     _dev->write(buff, size);
-    _ENABLE_IRQ();
+    _RESTORE_IRQ(irq);
 #endif
 }
 
