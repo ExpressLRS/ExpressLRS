@@ -78,6 +78,7 @@ static void ICACHE_RAM_ATTR HandleTLM();
 
 int8_t tx_tlm_change_interval(uint8_t value, uint8_t init = 0)
 {
+    uint32_t ratio = 0;
     if (value == TLM_RATIO_DEFAULT)
     {
         // Default requested
@@ -95,18 +96,19 @@ int8_t tx_tlm_change_interval(uint8_t value, uint8_t init = 0)
             Radio.RXdoneCallback1 = ProcessTLMpacket;
             Radio.TXdoneCallback1 = HandleTLM;
             connectionState = STATE_disconnected;
-            tlm_check_ratio = TLMratioEnumToValue(value) - 1;
-            DEBUG_PRINT("TLM changed to ");
-            DEBUG_PRINTLN(value);
+            ratio = TLMratioEnumToValue(value);
+            DEBUG_PRINT("TLM ratio ");
+            DEBUG_PRINTLN(ratio);
+            ratio -= 1;
         } else {
             Radio.RXdoneCallback1 = SX127xDriver::rx_nullCallback;
             Radio.TXdoneCallback1 = SX127xDriver::tx_nullCallback;
             // Set connected if telemetry is not used
             connectionState = STATE_connected;
-            tlm_check_ratio = 0;
             DEBUG_PRINTLN("TLM disabled");
         }
         TLMinterval = value;
+        tlm_check_ratio = ratio;
         return 0;
     }
     return -1;
@@ -143,6 +145,8 @@ static void process_rx_buffer()
         return;
     }
 
+    //DEBUG_PRINT(" PROC_RX ");
+
     connectionState = STATE_connected;
     //sync_send_interval = SYNC_PACKET_SEND_INTERVAL_RX_CONN;
     platform_connection_state(STATE_connected);
@@ -154,7 +158,7 @@ static void process_rx_buffer()
     {
         case DL_PACKET_TLM_MSP:
         {
-            DEBUG_PRINTLN("DL MSP junk");
+            //DEBUG_PRINTLN("DL MSP junk");
             rc_ch.tlm_receive(rx_buffer, msp_packet_rx);
             break;
         }
@@ -188,17 +192,19 @@ static void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t *buff)
     volatile_memcpy(rx_buffer, buff, sizeof(rx_buffer));
     rx_buffer_handle = 1;
 
-    //DEBUG_PRINT(" R");
+    //DEBUG_PRINT(" R ");
 }
 
 static void ICACHE_RAM_ATTR HandleTLM()
 {
+    //DEBUG_PRINT("X ");
     if (tlm_check_ratio && (_rf_rxtx_counter & tlm_check_ratio) == 0)
     {
         // receive tlm package
         PowerMgmt.pa_off();
         Radio.RXnb(FHSSgetCurrFreq());
         expected_tlm_counter++;
+        //DEBUG_PRINT(" RX ");
     }
 }
 
@@ -235,8 +241,6 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
 
-    //DEBUG_PRINT("I");
-
     crsf.UpdateOpenTxSyncOffset(current_us); // tells the crsf that we want to send data now - this allows opentx packet syncing
 
     // Check if telemetry RX ongoing
@@ -263,7 +267,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
         {
             msp_packet_tx.reset();
             tlm_msp_send = 0;
-            DEBUG_PRINTLN("<< MSP sent");
+            //DEBUG_PRINTLN("<< MSP sent");
         }
     }
     else
@@ -284,6 +288,7 @@ static void ICACHE_RAM_ATTR SendRCdataToRF(uint32_t current_us)
     Radio.TXnb(tx_buffer, 8, freq);
     // Increase TX counter
     HandleFHSS_TX();
+    //DEBUG_PRINT(" T");
 }
 
 ///////////////////////////////////////
@@ -318,8 +323,6 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
             {
                 modified = (1 << 2);
             }
-            //DEBUG_PRINT("TLM: ");
-            //DEBUG_PRINTLN(TLMinterval);
             break;
 
         case 3:
@@ -361,13 +364,12 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
 
     if (modified)
     {
-#if PLATFORM_ESP32
+        // Stop timer before save if not already done
         if ((modified & (1 << 1)) == 0) {
-            // ESP crash to flash access, so stop timer before save
             TxTimer.stop();
             Radio.StopContRX();
         }
-#endif
+
         // Save modified values
         pl_config.key = ELRS_EEPROM_KEY;
         pl_config.mode = ExpressLRS_currAirRate->enum_rate;
@@ -375,11 +377,8 @@ static int8_t SettingsCommandHandle(uint8_t const cmd, uint8_t const len, uint8_
         pl_config.tlm = TLMinterval;
         platform_config_save(pl_config);
 
-        // and start timer if rate was changed
-#if !PLATFORM_ESP32
-        if (modified & (1 << 1))
-#endif
-            TxTimer.start();
+        // and restart timer
+        TxTimer.start();
     }
 
     return 0;

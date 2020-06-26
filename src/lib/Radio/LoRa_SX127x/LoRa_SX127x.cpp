@@ -419,7 +419,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR(uint8_t irqs)
 
 void ICACHE_RAM_ATTR SX127xDriver::StopContRX()
 {
-    SetMode(SX127X_SLEEP);
+    SetMode(SX127X_STANDBY);
     p_state_dio0_isr = NONE;
 }
 
