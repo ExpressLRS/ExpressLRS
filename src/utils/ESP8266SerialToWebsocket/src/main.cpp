@@ -94,10 +94,12 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
                   setting_set(res[0], res[1]);
                 } else {
                   var logger = document.getElementById("logField");
+                  var autoscroll = document.getElementById("autoscroll").checked;
                   var date = new Date();
                   var n=new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
                   logger.value += n + ' ' + text + '\n';
-                  logger.scrollTop = logger.scrollHeight;
+                  if (autoscroll)
+                    logger.scrollTop = logger.scrollHeight;
                 }
             };
         }
@@ -171,6 +173,10 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
           }
         }
 
+        function command_stm32(type) {
+          websock.send("stm32_cmd=" + type);
+        }
+
     </script>
 </head>
 
@@ -179,7 +185,8 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
     <h2>TX Log Messages</h2>
     <textarea id="logField" rows="40" cols="100" style="margin: 0px; height: 621px; width: 968px;"></textarea>
     <br>
-    <button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file...</button>
+    <button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file...</button> |
+    <input type="checkbox" id="autoscroll" checked><label for="autoscroll"> Auto scroll</label>
     <hr/>
     <h2>Settings</h2>
     <table>
@@ -276,6 +283,10 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
           <input type='file' accept='.bin' name='filesystem'>
           <input type='submit' value='Upload and Flash R9M'>
       </form>
+    </div>
+    <br>
+    <div>
+    <button onclick="command_stm32('reset')">R9M Reset</button>
     </div>
 
   </center>
@@ -451,21 +462,30 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     // send data to all connected clients
     //webSocket.broadcastTXT(payload, length);
 
-    temp = strstr((char*)payload, "S_rate");
+    temp = strstr((char*)payload, "stm32_cmd=");
     if (temp) {
-      handleSettingRate(&temp[6], num);
-      break;
+      // Command STM32
+      if (strstr((char*)&temp[10], "reset")) {
+        // Reset STM32
+        reset_stm32_to_app_mode();
+      }
+    } else {
+      // ExLRS setting commands
+      temp = strstr((char*)payload, "S_rate");
+      if (temp) {
+        handleSettingRate(&temp[6], num);
+        break;
+      }
+      temp = strstr((char*)payload, "S_power");
+      if (temp) {
+        handleSettingPower(&temp[7], num);
+        break;
+      }
+      temp = strstr((char*)payload, "S_telemetry");
+      if (temp) {
+        handleSettingTlm(&temp[11], num);
+      }
     }
-    temp = strstr((char*)payload, "S_power");
-    if (temp) {
-      handleSettingPower(&temp[7], num);
-      break;
-    }
-    temp = strstr((char*)payload, "S_telemetry");
-    if (temp) {
-      handleSettingTlm(&temp[11], num);
-    }
-
     break;
   case WStype_BIN:
     //Serial.printf("[%u] get binary length: %u\r\n", num, length);
