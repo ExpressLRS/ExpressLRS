@@ -32,8 +32,8 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    uint8_t TXdataBuffer[256];
-    uint8_t RXdataBuffer[256];
+    volatile uint8_t TXdataBuffer[256];
+    volatile uint8_t RXdataBuffer[256];
 
     uint8_t TXbuffLen;
     uint8_t RXbuffLen;
@@ -80,7 +80,6 @@ public:
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
     void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
     void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
-
     void SetOutputPower(int8_t power);
 
     int32_t ICACHE_RAM_ATTR GetFrequencyError();

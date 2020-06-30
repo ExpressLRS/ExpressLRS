@@ -81,7 +81,8 @@ uint8_t linkQuality = 0;
 uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
 
-bool UpdateParamReq = false;
+volatile bool UpdateParamReq = false;
+volatile bool RadioIsIdle = false;
 
 bool Channels5to8Changed = false;
 
@@ -258,6 +259,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
 {
+  hwTimer.stop();
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
 
@@ -269,6 +271,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
 
   crsf.RequestedRCpacketInterval = ModParams->interval;
   isRXconnected = false;
+  hwTimer.resume();
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
@@ -424,7 +427,8 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void HandleUpdateParameter()
 {
-  if (!UpdateParamReq)
+
+  if (UpdateParamReq == false || RadioIsIdle == false)
   {
     return;
   }
@@ -436,6 +440,7 @@ void HandleUpdateParameter()
     break;
 
   case 1:
+  Serial.println("Link rate");
     if (crsf.ParameterUpdateData[1] == 0)
     {
       /*uint8_t newRate =*/decRFLinkRate();
@@ -509,6 +514,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
   NonceTX++; // must be done before callback
   HandleFHSS();
   HandleTLM();
+  RadioIsIdle = true;
 }
 
 void setup()
@@ -616,35 +622,36 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   hwTimer.init();
-  hwTimer.stop();
+  //hwTimer.resume(); uncomment to automatically start the RX timer 
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
 }
 
 void loop()
 {
+  if(UpdateParamReq){
+    HandleUpdateParameter();
+  }
 
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
 #endif
-
-HandleUpdateParameter();
 
   //updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     isRXconnected = false;
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
-#endif
+    #endif
   }
   else
   {
     isRXconnected = true;
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
-#endif
+    #endif
   }
 
   float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
@@ -690,7 +697,11 @@ HandleUpdateParameter();
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  SendRCdataToRF();
+  if (!UpdateParamReq)
+  {
+    RadioIsIdle = false;
+    SendRCdataToRF();
+  }
 }
 
 void OnRFModePacket(mspPacket_t *packet)
