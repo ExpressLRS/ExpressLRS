@@ -272,6 +272,10 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
   crsf.RequestedRCpacketInterval = ModParams->interval;
   isRXconnected = false;
   hwTimer.resume();
+
+  #ifdef PLATFORM_ESP32
+  updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
+  #endif
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
@@ -566,7 +570,7 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
-  //strip.Begin();
+  strip.Begin();
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // Print base mac address
@@ -622,7 +626,7 @@ void setup()
   POWERMGNT.setDefaultPower();
 
   hwTimer.init();
-  //hwTimer.resume(); uncomment to automatically start the RX timer 
+  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
 }
@@ -636,8 +640,6 @@ void loop()
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
 #endif
-
-  //updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
