@@ -1,4 +1,3 @@
-  
 #pragma once
 
 #include <stdint.h>
@@ -8,7 +7,7 @@
 #include <esp32-hal-timer.h>
 #include "debug.h"
 
-#define TimerIntervalUSDefault 5000
+#define TimerIntervalUSDefault 4000
 
 class hwTimer
 {
@@ -16,7 +15,7 @@ public:
     static void init();
     static void ICACHE_RAM_ATTR resume();
     static void ICACHE_RAM_ATTR stop();
-    static void ICACHE_RAM_ATTR updateInterval(uint32_t time = 0);
+    static void ICACHE_RAM_ATTR updateInterval(uint32_t time = TimerIntervalUSDefault);
 
     static void (*callbackTock)();
     static void ICACHE_RAM_ATTR nullCallback(void);

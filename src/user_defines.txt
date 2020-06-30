@@ -19,7 +19,7 @@
 #-DRegulatory_Domain_FCC_915
 
 ### Bands for SX1280 (2400MHz) ###
--DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400
 
 ### STEP2: ### 
 ### DEFINE ONE AND ONLY ONE OF THE SWITCH ENCODING OPTIONS ##
