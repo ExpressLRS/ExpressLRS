@@ -31,24 +31,17 @@ void hwTimer::init()
 
 void hwTimer::stop()
 {
-    if (running)
-    {
-        MyTim->pause();
-        MyTim->setCount(0, MICROSEC_FORMAT);
-        running = false;
-        TickTock = true;
-    }
+    MyTim->pause();
+    MyTim->setCount(0, MICROSEC_FORMAT);
+    running = false;
+    TickTock = true;
 }
 
 void hwTimer::resume()
 {
-    if (!running)
-    {
-        TickTock = true;
-        running = true;
-        MyTim->resume();
-        
-    }
+    TickTock = true;
+    running = true;
+    MyTim->resume();
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)

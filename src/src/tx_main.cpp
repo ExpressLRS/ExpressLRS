@@ -625,10 +625,10 @@ void setup()
   //Radio.SetSyncWord(UID[3]);
   POWERMGNT.setDefaultPower();
 
-  hwTimer.init();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   SetRFLinkRate(RATE_200HZ);
   crsf.Begin();
+  hwTimer.init();
+  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
 }
 
 void loop()
