@@ -58,20 +58,24 @@ typedef enum
 
 typedef enum
 {
-    RATE_200HZ = 0,
-    RATE_100HZ = 1,
-    RATE_50HZ = 2,
-    RATE_25HZ = 3,
-    RATE_4HZ = 4
+    RATE_500HZ = 0,
+    RATE_250HZ = 1,
+    RATE_200HZ = 2,
+    RATE_150HZ = 3,
+    RATE_100HZ = 4,
+    RATE_50HZ = 5,
+    RATE_25HZ = 6,
+    RATE_4HZ = 7
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 typedef struct expresslrs_rf_pref_params_s
 {
+    int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     int32_t RXsensitivity;          //expected RF sensitivity based on
     uint32_t TOA;                   //time on air in microseconds
     uint32_t RFmodeCycleInterval;
-    uint32_t RFmodeCycleAddtionalTime; 
+    uint32_t RFmodeCycleAddtionalTime;
     uint32_t SyncPktIntervalDisconnected;
     uint32_t SyncPktIntervalConnected;
 
@@ -79,8 +83,10 @@ typedef struct expresslrs_rf_pref_params_s
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #define RATE_MAX 5
+#define RATE_DEFAULT 0
 typedef struct expresslrs_mod_settings_s
 {
+    int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     SX127x_Bandwidth bw;
     SX127x_SpreadingFactor sf;
@@ -96,15 +102,16 @@ typedef struct expresslrs_mod_settings_s
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-#define RATE_MAX 1
+#define RATE_MAX 4
+#define RATE_DEFAULT 1
 typedef struct expresslrs_mod_settings_s
 {
+    uint8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     SX1280_RadioLoRaBandwidths_t bw;
     SX1280_RadioLoRaSpreadingFactors_t sf;
     SX1280_RadioLoRaCodingRates_t cr;
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
-    uint8_t rate;                       // rate in hz
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
@@ -113,8 +120,8 @@ typedef struct expresslrs_mod_settings_s
 
 #endif
 
-expresslrs_mod_settings_s *get_elrs_airRateConfig(expresslrs_RFrates_e rate);
-expresslrs_rf_pref_params_s *get_elrs_RFperfParams(expresslrs_RFrates_e rate);
+expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
+expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index);
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 

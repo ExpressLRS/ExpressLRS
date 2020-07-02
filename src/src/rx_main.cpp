@@ -51,7 +51,7 @@ LPF LPF_OffsetDx(4);
 LPF LPF_UplinkRSSI(5);
 ////////////////////////////
 
-uint8_t scanIndex = 0;
+uint8_t scanIndex = RATE_DEFAULT;
 uint8_t CURR_RATE_MAX;
 
 int32_t HWtimerError;
@@ -123,15 +123,15 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
-    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
+    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
     hwTimer.updateInterval(ModParams->interval);
@@ -434,7 +434,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11100000) >> 5);
             uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00011100) >> 2);
 
-            if ((ExpressLRS_currAirRate_Modparams->enum_rate != rateIn) || (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
+            if ((ExpressLRS_currAirRate_Modparams->index != rateIn) || (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
             { // change link parameters if required
                 #ifndef DEBUG_SUPPRESS
                 Serial.println("New TLMrate: ");
@@ -481,7 +481,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
     }
 
-    if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->enum_rate > 2))
+    if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
     {
         #ifndef TARGET_SX1280
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
@@ -623,7 +623,7 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(0);
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
@@ -666,7 +666,7 @@ void loop()
         Serial.println("Bad sync, aborting");
         Radio.SetFrequency(GetInitialFreq());
         Radio.RXnb();
-        scanIndex = (RATE_MAX - 1) - ExpressLRS_currAirRate_Modparams->enum_rate;
+        //scanIndex = (RATE_MAX - 1) - ExpressLRS_currAirRate_Modparams->index;
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
     }
@@ -689,7 +689,6 @@ void loop()
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
-            
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
             Radio.RXnb();
