@@ -15,15 +15,15 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
-void GenerateChannelDataHybridSwitch8(uint8_t *Buffer, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataHybridSwitches8(uint8_t *Buffer, CRSF *crsf);
+void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // HYBRID_SWITCHES_8
 
 #if defined SEQ_SWITCHES or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(uint8_t *Buffer, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataSeqSwitches(uint8_t *Buffer, CRSF *crsf);
+void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // SEQ_SWITCHES
 
