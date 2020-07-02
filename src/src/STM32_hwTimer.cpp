@@ -18,7 +18,7 @@ HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
 void hwTimer::init()
 {
     noInterrupts();
-    MyTim->attachInterrupt(hwTimer::callback);
+    MyTim->attachInterrupt(callback);
     MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
     MyTim->resume();
@@ -67,7 +67,7 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
     }
 }
 
-void hwTimer::callback(HardwareTimer *)
+void hwTimer::callback()
 {
     if (hwTimer::TickTock)
     {

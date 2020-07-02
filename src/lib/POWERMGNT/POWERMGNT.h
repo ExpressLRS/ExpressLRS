@@ -25,6 +25,13 @@
 #define DefaultPowerEnum 2
 #endif
 
+#ifdef TARGET_R9M_LITE_PRO_TX
+#define MaxPower 2
+#define DefaultPowerEnum 2
+#endif
+
+
+
 typedef enum
 {
     PWR_10mW = 0,
