@@ -214,7 +214,7 @@ https://github.com/jaxxzer
 
 #ifdef TARGET_TX_ESP32_SX1280_V1
 #define GPIO_PIN_NSS 5
-#define GPIO_PIN_BUSY 26
+#define GPIO_PIN_BUSY 21
 #define GPIO_PIN_DIO0 -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1 4
 #define GPIO_PIN_MOSI 23
