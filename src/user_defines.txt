@@ -45,7 +45,7 @@
 ### STEP3: ### 
 ### Set your custom binding phrase here. This unique string is used to pair your ExpressLRS tx and rx. ###
 
--DMy_Binding_Phrase="default ExpressLRS binding phrase "
+-DMy_Binding_Phrase="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
 
