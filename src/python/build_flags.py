@@ -9,7 +9,7 @@ def parse_flags(path):
             for define in _f:
                 define = define.strip()
                 if define.startswith("-D"):
-                    if "My_Binding_Phrase" in define:
+                    if "MY_BINDING_PHRASE" in define:
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
                         define = "-DMY_UID=" + str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5])
                     build_flags.append(define)

@@ -44,13 +44,12 @@
 
 ### STEP3: ### 
 ### Set your custom binding phrase here. This unique string is used to pair your ExpressLRS tx and rx. ###
-
--DMy_Binding_Phrase="default ExpressLRS binding phrase"
+-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
 
 # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
--DAuto_WiFi_On_Boot
+-DAUTO_WIFI_ON_BOOT
 
 # Beep only once (applies to TX modules with buzzer)
 -DJUST_BEEP_ONCE

@@ -603,7 +603,7 @@ void loop()
     //Serial.println(headroom2);
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
-    #if defined(PLATFORM_ESP8266) && defined(Auto_WiFi_On_Boot)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
     if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
     {
         beginWebsever();
