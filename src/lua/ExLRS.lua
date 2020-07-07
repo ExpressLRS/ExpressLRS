@@ -26,10 +26,10 @@ local gotFirstResp = false
 local binding = false
 
 local AirRate = {
-    selected = 5,
-    list = {'AUTO', '200 Hz', '100 Hz', '50 Hz', '25 Hz', '4 Hz', '------'},
-    dataId = {0xFE, 0x00, 0x01, 0x02, 0x03, 0x04, 0xFF},
-    elements = 7
+    selected = 1,
+    list = {'------', 'AUTO', '500 Hz', '250 Hz', '200 Hz', '150 Hz', '100 Hz', '50 Hz', '25 Hz', '4 Hz'},
+    dataId = {0xFF, 0xFE, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    elements = 10
 }
 local TLMinterval = {
     selected = 9,

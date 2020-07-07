@@ -82,6 +82,8 @@ uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
 
 volatile bool UpdateParamReq = false;
+volatile bool UpdateRFparamReq = false;
+
 volatile bool RadioIsIdle = false;
 
 bool Channels5to8Changed = false;
@@ -163,7 +165,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
     crsf.LinkStatistics.downlink_Link_quality = linkQuality;
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
@@ -189,7 +191,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->enum_rate & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
+  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->index & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -257,11 +259,10 @@ void ICACHE_RAM_ATTR GenerateMSPData()
   }
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-  hwTimer.stop();
-  expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
-  expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
+  expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+  expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
   hwTimer.updateInterval(ModParams->interval);
@@ -271,9 +272,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF
 
   crsf.RequestedRCpacketInterval = ModParams->interval;
   isRXconnected = false;
-  hwTimer.resume();
 
-  #ifdef PLATFORM_ESP32
+  if (UpdateRFparamReq)
+    UpdateRFparamReq = false;
+
+#ifdef PLATFORM_ESP32
   updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
   #endif
 }
@@ -303,24 +306,16 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
   return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 }
 
-uint8_t ICACHE_RAM_ATTR decRFLinkRate()
+void ICACHE_RAM_ATTR decRFLinkRate()
 {
   Serial.println("dec RFrate");
-  if ((uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate < (RATE_MAX - 1))
-  {
-    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate_Modparams->enum_rate + 1));
-  }
-  return (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index + 1);
 }
 
-uint8_t ICACHE_RAM_ATTR incRFLinkRate()
+void ICACHE_RAM_ATTR incRFLinkRate()
 {
   Serial.println("inc RFrate");
-  if ((uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate > RATE_200HZ)
-  {
-    SetRFLinkRate((expresslrs_RFrates_e)(ExpressLRS_currAirRate_Modparams->enum_rate - 1));
-  }
-  return (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index - 1);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -427,12 +422,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
+
+  if (crsf.ParameterUpdateData[0] == 1)
+  {
+    UpdateRFparamReq = true;
+  }
 }
 
 void HandleUpdateParameter()
 {
 
-  if (UpdateParamReq == false || RadioIsIdle == false)
+  if (UpdateParamReq == false)
   {
     return;
   }
@@ -447,11 +447,11 @@ void HandleUpdateParameter()
   Serial.println("Link rate");
     if (crsf.ParameterUpdateData[1] == 0)
     {
-      /*uint8_t newRate =*/decRFLinkRate();
+      decRFLinkRate();
     }
     else if (crsf.ParameterUpdateData[1] == 1)
     {
-      /*uint8_t newRate =*/incRFLinkRate();
+      incRFLinkRate();
     }
     Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
     break;
@@ -505,7 +505,7 @@ void HandleUpdateParameter()
   UpdateParamReq = false;
   //Serial.println("Power");
   //Serial.println(POWERMGNT.currPower());
-  crsf.sendLUAresponse((ExpressLRS_currAirRate_Modparams->enum_rate + 2), ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
+  crsf.sendLUAresponse((ExpressLRS_currAirRate_Modparams->enum_rate + 3), ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -625,7 +625,7 @@ void setup()
   //Radio.SetSyncWord(UID[3]);
   POWERMGNT.setDefaultPower();
 
-  SetRFLinkRate(RATE_200HZ);
+  SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -633,7 +633,7 @@ void setup()
 
 void loop()
 {
-  if(UpdateParamReq){
+  while(UpdateParamReq){
     HandleUpdateParameter();
   }
 
@@ -656,10 +656,10 @@ void loop()
     #endif
   }
 
-  float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
-  PacketRateLastChecked = millis();
-  PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
-  linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+  // float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
+  // PacketRateLastChecked = millis();
+  // PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
+  // linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
 
   if (linkQuality > 99)
   {
@@ -699,10 +699,14 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  if (!UpdateParamReq)
+  if (!UpdateRFparamReq)
   {
     RadioIsIdle = false;
     SendRCdataToRF();
+  }
+  else
+  {
+    NonceTX++;
   }
 }
 

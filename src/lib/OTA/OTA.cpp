@@ -24,7 +24,7 @@
  * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(uint8_t *Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
@@ -63,7 +63,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(uint8_t *Buffer, CRSF *crs
  * Input: Buffer
  * Output: crsf->PackedRCdataOut
  */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(uint8_t *Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf)
 {
     // The analog channels
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11000000) >> 5);
@@ -118,7 +118,7 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(uint8_t *Buffer, CRSF *crs
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  */
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(uint8_t *Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
@@ -146,7 +146,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(uint8_t *Buffer, CRSF *crsf, u
  *
  * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
  */
-void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(uint8_t *Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11100000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) + ((Buffer[5] & 0b00011100) >> 2);
