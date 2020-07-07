@@ -1,21 +1,18 @@
 Import("env")
 import os
+import hashlib
 
 def parse_flags(path):
     build_flags = env['BUILD_FLAGS']
     try:
         with open(path, "r") as _f:
-            for line in _f:
-                defines = " ".join(line.split())
-                defines = defines.replace(" = ", "=").split()
-                for define in defines:
-                    define = define.strip()
-                    if define.startswith("-D"):
-                        if "MY_UID" in define and len(define.split(",")) != 6:
-                            raise Exception("UID must be 6 bytes long")
-                        if "My_Binding_Phrase" in define:
-                            define = "'" + define + "'"
-                        build_flags.append(define)
+            for define in _f:
+                define = define.strip()
+                if define.startswith("-D"):
+                    if "My_Binding_Phrase" in define:
+                        bindingPhraseHash = hashlib.md5(define.encode()).digest()
+                        define = "-DMY_UID=" + str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5])
+                    build_flags.append(define)
     except IOError:
         print("File '%s' does not exist" % path)
 

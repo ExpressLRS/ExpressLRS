@@ -58,14 +58,7 @@ bool ExpressLRS_AirRateNeedsUpdate = false;
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
 
-uint32_t HashedBindingPhrase = HASH(My_Binding_Phrase);
-uint8_t UID[6] = {0,
-                  0,
-                  HashedBindingPhrase & 0b11111111,
-                  (HashedBindingPhrase >> 8) & 0b11111111,
-                  (HashedBindingPhrase >> 16) & 0b11111111,
-                  (HashedBindingPhrase >> 24) & 0b11111111
-                 };
+uint8_t UID[6] = {MY_UID};
 
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
