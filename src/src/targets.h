@@ -103,8 +103,13 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST            PC14
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
-#define GPIO_PIN_RCSIGNAL_RX    PA10
-#define GPIO_PIN_RCSIGNAL_TX    PA9
+#ifdef USE_R9MM_R9MINI_SBUS
+    #define GPIO_PIN_RCSIGNAL_RX    PA3
+    #define GPIO_PIN_RCSIGNAL_TX    PA2
+#else
+    #define GPIO_PIN_RCSIGNAL_RX    PA10
+    #define GPIO_PIN_RCSIGNAL_TX    PA9
+#endif
 #define GPIO_PIN_LED            PC1 // Red
 #define GPIO_PIN_LED_RED        PC1 // Red
 #define GPIO_PIN_LED_GREEN      PB3 // Green 
