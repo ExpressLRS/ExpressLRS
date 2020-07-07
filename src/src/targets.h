@@ -154,8 +154,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIP1           PA12 // dip switch 1
 #define GPIO_PIN_DIP2           PA11 // dip switch 2
 
-#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
-#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
+#define GPIO_PIN_DEBUG_RX    PA10 // confirmed
+#define GPIO_PIN_DEBUG_TX    PA9 // confirmed
 
 #define GPIO_PIN_BUZZER      PB1 // confirmed
 

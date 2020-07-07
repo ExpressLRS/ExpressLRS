@@ -513,19 +513,25 @@ void setup()
   #endif
 #endif
 
+
+
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
-    HardwareSerial(USART2);
-    Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.setRx(GPIO_PIN_DEBUG_RX);
-    Serial.begin(400000);
 
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 
-#ifdef TARGET_R9M_TX
-// Annoying startup beeps
-  #ifndef JUST_BEEP_ONCE
+#ifdef USE_ESP8266_BACKPACK
+    HardwareSerial(USART1);
+    Serial.begin(460800);
+#else
+    HardwareSerial(USART2);
+    Serial.begin(400000);
+#endif
+
+#if defined(TARGET_R9M_TX)
+    // Annoying startup beeps
+#ifndef JUST_BEEP_ONCE
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
   const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
   const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
@@ -541,7 +547,6 @@ void setup()
   delay(200);
   tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
-
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
   R9DAC.init();
 #endif

@@ -57,3 +57,5 @@
 
 # Uncomment to use UART2 for MSP comms on the TX module
 -DUSE_UART2
+
+#-DUSE_ESP8266_BACKPACK

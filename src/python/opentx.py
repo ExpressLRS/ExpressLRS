@@ -1,5 +1,6 @@
 Import("env", "projenv")
 import os
+import sys
 import stlink
 
 def gen_multi_bin(source, target, env):
@@ -11,11 +12,14 @@ def gen_multi_bin(source, target, env):
         # append version information (24bytes) to end of the bin file
         _out.write("multi-x00000b81-01030073".encode('utf-8'))
         _out.close()
-    print("Copy %s to SD card and choose flash external multi" % bin_target)
+    sys.stdout.write("Copy %s to SD card and choose flash external multi" % bin_target)
 
 def gen_frsky(source, target, env):
+    sys.stdout.write("\n")
+    sys.stdout.write("\n")
+    sys.stdout.write("Building flashable .frk file...\n")
     target_bin = source[0] # target[0]
-    print("Source bin: %s" % target_bin)
+    sys.stdout.write("Source bin: %s \n" % target_bin)
     bin_path = os.path.dirname(target_bin.rstr())
     bin_target = os.path.join(bin_path, 'elrs.frk')
     with open(bin_target, "wb+") as _out:
@@ -34,7 +38,7 @@ def gen_frsky(source, target, env):
                 uint16_t crc;
             };
         '''
-        print(" Bin size: %u" % len(bin_content))
+        sys.stdout.write("Bin size: %u \n" % len(bin_content))
         _out.write(b"\x46\x52\x53\x4B") # fourcc
         _out.write(b"\x01") # header version
         _out.write(b"\x00\x00\x00")  # fw versions
@@ -45,9 +49,12 @@ def gen_frsky(source, target, env):
         _out.write(b"\x00\x00") # crc
         _out.write(bin_content)
         _out.close()
-    print("Copy %s to SD card and choose flash external" % bin_target)
+    sys.stdout.write("\n")
+    sys.stdout.write("=====================================================================================================================================\n")
+    sys.stdout.write("|| !!! Copy %s to SD card and choose flash external in order to flash via OpenTX !!! ||\n" % bin_target)
+    sys.stdout.write("=====================================================================================================================================\n")
+    sys.stdout.write("\n")
 
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", gen_frsky)
 env.AddPostAction("buildprog", gen_frsky)
-
 env.Replace(UPLOADCMD=stlink.on_upload)
