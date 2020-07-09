@@ -1,35 +1,43 @@
-volatile uint8_t linkQuality = 0;
-volatile uint8_t linkQualityArray[100] = {0};
+#define LQ_BUFF_SIZE 100
+
+//volatile uint8_t linkQuality = 0;
+volatile uint8_t linkQualityArray[LQ_BUFF_SIZE] = {0};
 volatile uint8_t linkQualityArrayIndex = 0;
 
 void ICACHE_RAM_ATTR LQ_nextPacket()
 {
-    linkQualityArrayIndex = (linkQualityArrayIndex + 1) % sizeof(linkQualityArray);
-    linkQualityArray[linkQualityArrayIndex] = 0;
+    uint8_t index = linkQualityArrayIndex + 1;
+    index %= LQ_BUFF_SIZE;
+    linkQualityArray[index] = 0;
+    linkQualityArrayIndex = index;
+
+    //linkQualityArrayIndex = (++index) % LQ_BUFF_SIZE;
 }
 
-void ICACHE_RAM_ATTR LQ_setPacketState(uint8_t state = 1)
+void ICACHE_RAM_ATTR LQ_packetAck(void)
 {
-    linkQualityArray[linkQualityArrayIndex] = state;
+    linkQualityArray[linkQualityArrayIndex] = 1;
+}
+
+void ICACHE_RAM_ATTR LQ_packetNack(void)
+{
+    linkQualityArray[linkQualityArrayIndex] = 0;
 }
 
 int ICACHE_RAM_ATTR LQ_getlinkQuality()
 {
-    int LQ = 0;
-
-    for (int i = 0; i < 100; i++)
-    {
-        LQ += linkQualityArray[i];
+    int LQ = 0, size = LQ_BUFF_SIZE;
+    while (0 <= (--size)) {
+        LQ += linkQualityArray[size];
     }
-
     return LQ;
 }
 
-int ICACHE_RAM_ATTR LQ_reset()
+void ICACHE_RAM_ATTR LQ_reset()
 {
-    for (int i = 0; i < 100; i++)
-    {
-        linkQualityArray[i] = 1; // set all good by default
-    }
-    return 0;
+    int size = LQ_BUFF_SIZE;
+    //for (int i = 0; i < LQ_BUFF_SIZE; i++)
+    while (0 <= (--size)) {
+        linkQualityArray[size] = 1; // set all good by default
+    };
 }

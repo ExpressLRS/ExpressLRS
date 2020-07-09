@@ -156,26 +156,21 @@ uint8_t ICACHE_RAM_ATTR RadioFreqErrorCorr(void)
 
 uint8_t ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t fhss = 0;
-    if (connectionState > STATE_disconnected) // don't hop if we lost
+    uint8_t fhss = 0, nonce = NonceRXlocal;
+    if ((nonce % ExpressLRS_currAirRate->FHSShopInterval) == 0)
     {
-        if ((NonceRXlocal % ExpressLRS_currAirRate->FHSShopInterval) == 0)
-        {
-            FHSSincCurrIndex();
-            fhss = 1;
-        }
-        NonceRXlocal++;
+        FHSSincCurrIndex();
+        fhss = 1;
     }
+    NonceRXlocal = ++nonce;
     return fhss;
 }
 
-void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
+void ICACHE_RAM_ATTR HandleSendTelemetryResponse(uint_fast8_t lq) // total ~79us
 {
     DEBUG_PRINT(" X");
     uint32_t __tx_buffer[2]; // esp requires aligned buffer
     uint8_t *tx_buffer = (uint8_t *)__tx_buffer;
-
-    LQ_setPacketState(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
 
     if ((tlm_msp_send == 1) && (msp_packet_tx.type == MSP_PACKET_TLM_OTA))
     {
@@ -189,7 +184,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     }
     else
     {
-        crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
+        crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality;
         crsf.LinkStatisticsPack(tx_buffer);
         tx_buffer[6] = TYPE_PACK(DL_PACKET_TLM_LINK);
     }
@@ -200,6 +195,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse() // total ~79us
     Radio.TXnb(tx_buffer, 8, FHSSgetCurrFreq());
 }
 
+void tx_done_cb(void)
+{
+    // Configure RX only next is not hopping time
+    if (((NonceRXlocal + 1) % ExpressLRS_currAirRate->FHSShopInterval) != 0)
+        Radio.RXnb(FHSSgetCurrFreq());
+}
+
 void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
 {
     //DEBUG_PRINT("H");
@@ -207,7 +209,7 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 1);
 #endif
     rx_hw_isr_running = 1;
-    uint_fast8_t fhss_config_rx = 0;
+    uint_fast8_t fhss_config_rx = 0, tlm_send, tlm_ratio = tlm_check_ratio;
     uint32_t __rx_last_valid_us = rx_last_valid_us;
     rx_last_valid_us = 0;
 
@@ -238,6 +240,8 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
         /* Adjust the timer */
         if ((TIMER_OFFSET_LIMIT < diff_us) || (diff_us < 0))
             TxTimer.reset(diff_us - TIMER_OFFSET);
+
+        //LQ_packetAck(); // RX ack
     }
     else
     {
@@ -252,33 +256,35 @@ void ICACHE_RAM_ATTR HWtimerCallback(uint32_t us)
     //DEBUG_PRINT(NonceRXlocal);
 #endif
 
-    uplink_Link_quality = LQ_getlinkQuality();
-    // Check if connected before sending tlm resp
-    if (STATE_disconnected < connectionState)
+    tlm_send = ((0 < tlm_ratio) && ((NonceRXlocal & tlm_ratio) == 0));
+    uint_fast8_t lq = LQ_getlinkQuality();
+    uplink_Link_quality = lq;
+    LQ_nextPacket();
+
+    if (tlm_send)
     {
-        LQ_nextPacket();
-        if (tlm_check_ratio && (NonceRXlocal & tlm_check_ratio) == 0)
-        {
 #if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
-            digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 0);
+        digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 0);
 #endif
-            HandleSendTelemetryResponse();
+        // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+        LQ_packetAck();
+
+        HandleSendTelemetryResponse(lq);
 #if (DBG_PIN_TMR_ISR_FAST != UNDEF_PIN)
-            digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 1);
+        digitalWriteFast(DBG_PIN_TMR_ISR_FAST, 1);
 #endif
-            fhss_config_rx = 0;
-        }
-#if NUM_FAILS_TO_RESYNC
-        else if (!__rx_last_valid_us)
-        {
-            if (NUM_FAILS_TO_RESYNC < (++rx_lost_packages)) {
-                // consecutive losts => trigger connection lost to resync
-                LostConnection();
-                DEBUG_PRINT("RESYNC!");
-            }
-        }
-#endif
+        fhss_config_rx = 0;
     }
+#if NUM_FAILS_TO_RESYNC
+    else if (!__rx_last_valid_us)
+    {
+        if (NUM_FAILS_TO_RESYNC < (++rx_lost_packages)) {
+            // consecutive losts => trigger connection lost to resync
+            LostConnection();
+            DEBUG_PRINT("RESYNC!");
+        }
+    }
+#endif
 
     if (fhss_config_rx) {
         Radio.RXnb(FHSSgetCurrFreq()); // 260us => 148us => ~67us
@@ -325,6 +331,7 @@ void ICACHE_RAM_ATTR TentativeConnection(int32_t freqerror)
     /* Do initial freq correction */
     FreqCorrection += freqerror;
     Radio.setPPMoffsetReg(freqerror, 0);
+    LPF_FreqError.init(freqerror);
     rx_freqerror = 0;
     rx_last_valid_us = 0;
 
@@ -474,7 +481,7 @@ void ICACHE_RAM_ATTR ProcessRFPacketCallback(uint8_t *rx_buffer)
             break;
     }
 
-    LQ_setPacketState(1);
+    LQ_packetAck();
     FillLinkStats();
 
 #if PRINT_TIMER && PRINT_RX_ISR
@@ -544,11 +551,6 @@ static void SetRFLinkRate(uint8_t rate) // Set speed of RF link (hz)
     crsf.LinkStatistics.rf_Mode = RATE_GET_OSD_NUM(config->enum_rate); //RATE_MAX - config->enum_rate;
     Radio.RXnb();
     TxTimer.init();
-}
-
-void tx_done_cb(void)
-{
-    Radio.RXnb(FHSSgetCurrFreq()); // ~67us
 }
 
 /* FC sends v1 MSPs */
@@ -668,7 +670,7 @@ void loop()
         {
             if (SEND_LINK_STATS_TO_FC_INTERVAL <= (uint32_t)(now - SendLinkStatstoFCintervalNextSend))
             {
-                crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality; //LQ_getlinkQuality();
+                crsf.LinkStatistics.uplink_Link_quality = uplink_Link_quality;
                 crsf.LinkStatisticsSend();
                 SendLinkStatstoFCintervalNextSend = now;
             }
