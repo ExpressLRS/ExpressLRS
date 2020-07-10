@@ -526,6 +526,8 @@ void setup()
     Serial.begin(460800);
 #else
     HardwareSerial(USART2);
+    Serial.setTx(PA2);
+    Serial.setRx(PA3);
     Serial.begin(400000);
 #endif
 
