@@ -160,6 +160,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
     crsf.sendLinkStatisticsToTX();
+    crsf.sendLinkBattSensorToTX();
   }
 }
 
