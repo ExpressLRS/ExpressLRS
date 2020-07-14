@@ -43,6 +43,8 @@ R9DAC R9DAC;
 #include "STM32_hwTimer.h"
 #endif
 
+char thisCommit[] = LATEST_COMMIT;
+
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500

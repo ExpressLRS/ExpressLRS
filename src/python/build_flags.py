@@ -1,8 +1,15 @@
 Import("env")
 import os
 
+try:
+    from git import Repo
+except ImportError:
+    env.Execute("$PYTHONEXE -m pip install GitPython")
+    from git import Repo
+
+build_flags = env['BUILD_FLAGS']
+
 def parse_flags(path):
-    build_flags = env['BUILD_FLAGS']
     try:
         with open(path, "r") as _f:
             for line in _f:
@@ -19,4 +26,13 @@ def parse_flags(path):
 
 parse_flags("user_defines.txt")
 
+git_repo = Repo(os.getcwd(), search_parent_directories=True)
+git_root = git_repo.git.rev_parse("--show-toplevel")
+ExLRS_Repo = Repo(git_root)
+sha = ExLRS_Repo.head.object.hexsha
+short_sha = ExLRS_Repo.git.rev_parse(sha, short=7)
+# build_flags.append("-DLATEST_COMMIT='"+short_sha[0]+"','"+short_sha[1]+"','"+short_sha[2]+"','"+short_sha[3]+"','"+short_sha[4]+"','"+short_sha[5]+"','"+short_sha[6]+"'")
+build_flags.append("-DLATEST_COMMIT=\""+short_sha+"\"")
+# cb143f9
+# LATEST_COMMIT='c','b','1','4','3','f','9'
 print("build flags: %s" % env['BUILD_FLAGS'])
