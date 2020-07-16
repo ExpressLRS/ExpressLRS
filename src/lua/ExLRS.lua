@@ -174,7 +174,6 @@ end
 
 local function refreshHorus()
     lcd.clear()
-    -- lcd.drawText(1, 1, 'ExpressLRS CFG v.01', INVERS)
     lcd.drawText(1, 1, 'ExpressLRS ' .. commitSha, INVERS)
     lcd.drawText(1, 25, 'Pkt. Rate', 0)
     lcd.drawText(1, 45, 'TLM Ratio', 0)
@@ -204,7 +203,6 @@ end
 
 local function refreshTaranis()
     lcd.clear()
-    -- lcd.drawScreenTitle('ExpressLRS CFG ' .. version, 1, 1)
     lcd.drawScreenTitle('ExpressLRS ' .. commitSha, 1, 1)
     lcd.drawText(1, 11, 'Pkt. Rate', 0)
     lcd.drawText(1, 21, 'TLM Ratio', 0)

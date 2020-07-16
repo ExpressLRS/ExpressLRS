@@ -195,7 +195,7 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
 
     for (uint8_t i = 0; i < dataLength; ++i)
     {
-        outBuffer[5+i] = val[i];
+        outBuffer[5 + i] = val[i];
     }
 
     uint8_t crc = CalcCRC(&outBuffer[2], LUArespLength + 1);
