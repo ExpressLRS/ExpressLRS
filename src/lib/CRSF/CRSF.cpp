@@ -179,9 +179,10 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4)
+void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
 {
-#define LUArespLength 6
+    uint8_t dataLength = sizeof(val);
+    uint8_t LUArespLength = dataLength + 2;
 
     uint8_t outBuffer[LUArespLength + 4] = {0};
 
@@ -192,10 +193,10 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t v
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-    outBuffer[5] = val1;
-    outBuffer[6] = val2;
-    outBuffer[7] = val3;
-    outBuffer[8] = val4;
+    for (uint8_t i = 0; i < dataLength; ++i)
+    {
+        outBuffer[5+i] = val[i];
+    }
 
     uint8_t crc = CalcCRC(&outBuffer[2], LUArespLength + 1);
 

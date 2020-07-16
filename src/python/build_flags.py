@@ -30,9 +30,6 @@ git_repo = Repo(os.getcwd(), search_parent_directories=True)
 git_root = git_repo.git.rev_parse("--show-toplevel")
 ExLRS_Repo = Repo(git_root)
 sha = ExLRS_Repo.head.object.hexsha
-short_sha = ExLRS_Repo.git.rev_parse(sha, short=7)
-# build_flags.append("-DLATEST_COMMIT='"+short_sha[0]+"','"+short_sha[1]+"','"+short_sha[2]+"','"+short_sha[3]+"','"+short_sha[4]+"','"+short_sha[5]+"','"+short_sha[6]+"'")
-build_flags.append("-DLATEST_COMMIT=\""+short_sha+"\"")
-# cb143f9
-# LATEST_COMMIT='c','b','1','4','3','f','9'
+build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
+
 print("build flags: %s" % env['BUILD_FLAGS'])
