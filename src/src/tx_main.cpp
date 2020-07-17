@@ -43,6 +43,8 @@ R9DAC R9DAC;
 #include "STM32_hwTimer.h"
 #endif
 
+uint8_t thisCommit[6] = {LATEST_COMMIT};
+
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
 #define PACKET_RATE_INTERVAL 500
@@ -492,7 +494,8 @@ void HandleUpdateParameter()
     if (crsf.ParameterUpdateData[1] == 1)
     {
       Serial.println("Binding Requested!");
-      crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00);
+      uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
+      crsf.sendLUAresponse(luaBindingRequestedPacket);
 
       //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done
     }
@@ -505,7 +508,15 @@ void HandleUpdateParameter()
   UpdateParamReq = false;
   //Serial.println("Power");
   //Serial.println(POWERMGNT.currPower());
-  crsf.sendLUAresponse((ExpressLRS_currAirRate_Modparams->enum_rate + 3), ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4);
+  
+  uint8_t luaDataPacket[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4};
+  crsf.sendLUAresponse(luaDataPacket);
+  
+  uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
+  crsf.sendLUAresponse(luaCommitPacket);
+  
+  uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
+  crsf.sendLUAresponse(luaCommitOtherHalfPacket);
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
