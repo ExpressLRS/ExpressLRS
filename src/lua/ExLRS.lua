@@ -12,6 +12,7 @@
   Change Frsky sensor Id
 
 ]] --
+local commitSha = 'xxxxxx'
 local version = 'v0.1'
 local refresh = 0
 local lcdChange = true
@@ -60,6 +61,8 @@ local selection = {
     list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq', "Bind"},
     elements = 5
 }
+
+local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 
 -- returns flags to pass to lcd.drawText for inverted and flashing text
 local function getFlags(element)
@@ -150,7 +153,11 @@ local function processResp()
 					else
 						bindmode = 0
 					end
-				else	
+                elseif(data[3] == 0xFE) then -- First half of commit sha
+                    commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. string.sub(commitSha, 4, 6)
+                elseif(data[3] == 0xFD) then -- Second half of commit sha
+                    commitSha = string.sub(commitSha, 1, 3) .. shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1]
+                else	
 					AirRate.selected = data[3]
 					TLMinterval.selected = data[4]
 					MaxPower.selected = data[5]
@@ -167,7 +174,7 @@ end
 
 local function refreshHorus()
     lcd.clear()
-    lcd.drawText(1, 1, 'ExpressLRS CFG v.01', INVERS)
+    lcd.drawText(1, 1, 'ExpressLRS ' .. commitSha, INVERS)
     lcd.drawText(1, 25, 'Pkt. Rate', 0)
     lcd.drawText(1, 45, 'TLM Ratio', 0)
     lcd.drawText(1, 65, 'Set Power', 0)
@@ -196,7 +203,7 @@ end
 
 local function refreshTaranis()
     lcd.clear()
-    lcd.drawScreenTitle('ExpressLRS CFG ' .. version, 1, 1)
+    lcd.drawScreenTitle('ExpressLRS ' .. commitSha, 1, 1)
     lcd.drawText(1, 11, 'Pkt. Rate', 0)
     lcd.drawText(1, 21, 'TLM Ratio', 0)
     lcd.drawText(1, 31, 'Set Power', 0)

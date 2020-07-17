@@ -624,6 +624,7 @@ void setup()
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
     SetRFLinkRate((uint8_t)RATE_DEFAULT);
+
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
