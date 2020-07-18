@@ -101,17 +101,17 @@ uint32_t RFmodeLastCycled = 0;
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int8_t LastRSSI = Radio.GetLastPacketRSSI();
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
-
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -65, 0, 1023)); //TODO scale RSSI logarithmically 
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
+    
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
         rssiDBM = 0;
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
 
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
