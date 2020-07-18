@@ -565,6 +565,9 @@ void setup()
     Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_STM32
+    #ifdef USE_R9MM_R9MINI_SBUS
+    HardwareSerial(USART2);
+    #endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -641,7 +644,7 @@ void loop()
     //Serial.println(headroom2);
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
-#if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
     if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
     {
         beginWebsever();
@@ -659,7 +662,7 @@ void loop()
         yield();
         return;
     }
-#endif
+    #endif
 
     if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
