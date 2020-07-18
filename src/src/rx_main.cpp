@@ -123,7 +123,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
     crsf.LinkStatistics.uplink_Link_quality = linkQuality;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
+    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -565,6 +565,9 @@ void setup()
     Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_STM32
+    #ifdef USE_R9MM_R9MINI_SBUS
+    HardwareSerial(USART2);
+    #endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -623,7 +626,8 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    SetRFLinkRate(0);
+    SetRFLinkRate((uint8_t)RATE_DEFAULT);
+  
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
@@ -640,7 +644,7 @@ void loop()
     //Serial.println(headroom2);
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
-#if defined(PLATFORM_ESP8266) && defined(Auto_WiFi_On_Boot)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
     if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
     {
         beginWebsever();
@@ -658,7 +662,7 @@ void loop()
         yield();
         return;
     }
-#endif
+    #endif
 
     if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
