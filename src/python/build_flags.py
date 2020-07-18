@@ -12,6 +12,14 @@ except ImportError:
 
 build_flags = env['BUILD_FLAGS']
 
+try:
+    from git import Repo
+except ImportError:
+    env.Execute("$PYTHONEXE -m pip install GitPython")
+    from git import Repo
+
+build_flags = env['BUILD_FLAGS']
+
 def parse_flags(path):
     try:
         with open(path, "r") as _f:
