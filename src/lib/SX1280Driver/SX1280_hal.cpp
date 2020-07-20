@@ -79,7 +79,6 @@ void SX1280Hal::init()
 #ifdef PLATFORM_ESP8266
     Serial.println("PLATFORM_ESP8266");
     SPI.begin();
-    //SPI.pins(this->SX1280_SCK, this->SX1280_MISO, this->SX1280_MOSI, -1);
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     SPI.setFrequency(18000000);
@@ -109,13 +108,13 @@ void ICACHE_RAM_ATTR SX1280Hal::reset(void)
 
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
-#ifdef PLATFORM_STM32
+        #ifdef PLATFORM_STM32
         __NOP();
-#elif PLATFORM_ESP32
+        #elif PLATFORM_ESP32
         _NOP();
-#elif PLATFORM_ESP8266
+        #elif PLATFORM_ESP8266
         _NOP();
-#endif
+        #endif
     }
 
     //this->BusyState = SX1280_NOT_BUSY;
@@ -158,7 +157,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         OutBuffer[0] = (uint8_t)command;
         OutBuffer[1] = 0x00;
         OutBuffer[2] = 0x00;
-        SPI.transfer(OutBuffer, 3);
+        SPI.transfer(OutBuffer, sizeof(OutBuffer));
         buffer[0] = OutBuffer[0];
     }
     else
@@ -271,11 +270,11 @@ void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
     while (digitalRead(GPIO_PIN_BUSY) == HIGH)
     {
-#ifdef PLATFORM_STM32
+        #ifdef PLATFORM_STM32
         __NOP();
-#elif PLATFORM_ESP32
+        #elif PLATFORM_ESP32
         _NOP();
-#elif PLATFORM_ESP8266
+        #elif PLATFORM_ESP8266
         _NOP();
 #endif
     }
@@ -347,13 +346,6 @@ void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 
 void ICACHE_RAM_ATTR SX1280Hal::setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment)
 {
-
-    // if (InterruptAssignment == newInterruptAssignment)
-    // {
-    //     return;
-    // }
-    // else
-    // {
     if (newInterruptAssignment == SX1280_INTERRUPT_TX_DONE)
     {
         this->InterruptAssignment = SX1280_INTERRUPT_TX_DONE;
@@ -362,5 +354,4 @@ void ICACHE_RAM_ATTR SX1280Hal::setIRQassignment(SX1280_InterruptAssignment_ new
     {
         this->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
     }
-    //}
 }

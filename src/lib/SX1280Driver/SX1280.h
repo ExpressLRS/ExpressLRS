@@ -32,11 +32,10 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    volatile uint8_t TXdataBuffer[256];
-    volatile uint8_t RXdataBuffer[256];
+    #define TXRXBuffSize 8 
 
-    uint8_t TXbuffLen;
-    uint8_t RXbuffLen;
+    volatile uint8_t TXdataBuffer[TXRXBuffSize]; // ELRS uses max of 8 bytes
+    volatile uint8_t RXdataBuffer[TXRXBuffSize];
 
     static uint8_t _syncWord;
 
@@ -95,14 +94,7 @@ public:
     void ICACHE_RAM_ATTR GetStatus();
 
     void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
-
-    // uint8_t SetBandwidth(SX1280_RadioLoRaBandwidths_t bw);
-    // uint32_t getCurrBandwidth();
-    // uint8_t SetOutputPower(uint8_t Power);
-    // uint8_t SetPreambleLength(uint8_t PreambleLen);
-    // uint8_t SetSpreadingFactor(SX1280_RadioLoRaSpreadingFactors_t sf);
-    // uint8_t SetCodingRate(SX1280_RadioLoRaCodingRates_t cr);
-
+    
     bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
     void ICACHE_RAM_ATTR SetPPMoffsetReg(int32_t offset);
     uint8_t ICACHE_RAM_ATTR GetRxBufferAddr();

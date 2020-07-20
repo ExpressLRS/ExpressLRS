@@ -40,7 +40,6 @@ class SX1280Hal
 
 private:
     volatile SX1280_InterruptAssignment_ InterruptAssignment = SX1280_INTERRUPT_NONE;
-    //SX1280_BusyState_ BusyState = SX1280_NOT_BUSY;
 
 public:
     static SX1280Hal *instance;

@@ -1,7 +1,7 @@
 /// LED SUPPORT ///////
 #ifdef PLATFORM_ESP32
 #include <NeoPixelBus.h>
-const uint16_t PixelCount = 1; // this example assumes 4 pixels, making it smaller will cause a failure
+const uint16_t PixelCount = 1; // this example assumes 1 pixel
 const uint8_t PixelPin = 27;   // make sure to set this to the correct pin, ignored for Esp8266
 #define colorSaturation 50
 NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);

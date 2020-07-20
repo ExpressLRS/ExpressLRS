@@ -156,7 +156,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
     if ((modresult != 0) || (connectionState == disconnected)) // don't hop if disconnected
     {
-        
         return;
     }
 
@@ -409,7 +408,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         UnpackChannelData_11bit();
         #endif
         if (connectionState == connected)
+        {
             crsf.sendRCFrameToFC();
+        }
         break;
 
     case MSP_DATA_PACKET:
@@ -429,7 +430,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Serial.println("sync");
             #endif
             if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (linkQuality > 75))
+            {
                 GotConnection();
+            }
 
             expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11100000) >> 5);
             uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00011100) >> 2);
@@ -450,7 +453,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                 NonceRX = Radio.RXdataBuffer[2];
                 TentativeConnection();
-                //return;
             }
 
         }
@@ -472,7 +474,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
         prevOffset = Offset;
 
-        if(RXtimerState == tim_locked){
+        if (RXtimerState == tim_locked)
+        {
             hwTimer.phaseShift((Offset >> 3) + timerOffset);
         }
         else
@@ -589,16 +592,12 @@ void setup()
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
-    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_FCC_915
     Serial.println("Setting 915MHz Mode");
-    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_EU_868
     Serial.println("Setting 868MHz Mode");
-    //Radio.RFmodule = RFMOD_SX1276; //define radio module here
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
-    //Radio.RFmodule = RFMOD_SX1278; //define radio module here
 #endif
 
     // Serial.begin(230400); // for linux debugging

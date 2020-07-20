@@ -51,12 +51,12 @@ ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
     // Protect against out of bounds rate
     if (index < 0)
     {
-        // Set to first entry in the array (200HZ)
+        // Set to first entry in the array
         return &ExpressLRS_AirRateConfig[0];
     }
     else if (index > (RATE_MAX - 1))
     {
-        // Set to last usable entry in the array (currently 50HZ)
+        // Set to last usable entry in the array
         return &ExpressLRS_AirRateConfig[RATE_MAX - 1];
     }
     return &ExpressLRS_AirRateConfig[index];
@@ -67,12 +67,12 @@ ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
     // Protect against out of bounds rate
     if (index < 0)
     {
-        // Set to first entry in the array (200HZ)
+        // Set to first entry in the array
         return &ExpressLRS_AirRateRFperf[0];
     }
     else if (index > (RATE_MAX - 1))
     {
-        // Set to last usable entry in the array (currently 50HZ)
+        // Set to last usable entry in the array
         return &ExpressLRS_AirRateRFperf[RATE_MAX - 1];
     }
     return &ExpressLRS_AirRateRFperf[index];

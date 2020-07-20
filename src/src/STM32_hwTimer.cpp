@@ -47,10 +47,7 @@ void hwTimer::resume()
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval;
-    //if (running)
-    //{
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-    //}
 }
 
 void hwTimer::phaseShift(int32_t newPhaseShift)

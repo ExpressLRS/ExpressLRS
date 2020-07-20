@@ -277,9 +277,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   isRXconnected = false;
 
   if (UpdateRFparamReq)
+  {
     UpdateRFparamReq = false;
+  }
 
-#ifdef PLATFORM_ESP32
+  #ifdef PLATFORM_ESP32
   updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
   #endif
 }
@@ -380,8 +382,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   }
 
-  //if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
-  //if ((millis() > ((SyncPacketLastSent + SYNC_PACKET_SEND_INTERVAL_RX_CONN)) && (Radio.currFreq == GetInitialFreq())) || ((isRXconnected == false) && (Radio.currFreq == GetInitialFreq())))
   if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
@@ -633,7 +633,9 @@ void setup()
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   Radio.Begin();
-  //Radio.SetSyncWord(UID[3]);
+  #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1))
+  Radio.SetSyncWord(UID[3]);
+  #endif 
   POWERMGNT.setDefaultPower();
 
   SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
@@ -644,13 +646,15 @@ void setup()
 
 void loop()
 {
-  while(UpdateParamReq){
+
+  while (UpdateParamReq)
+  {
     HandleUpdateParameter();
   }
 
-#ifdef FEATURE_OPENTX_SYNC
+  #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
-#endif
+  #endif
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {

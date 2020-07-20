@@ -223,7 +223,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   // if (instance->currOpmode == SX127x_OPMODE_TX)
   // {
   //   Serial.println("abort TX");
-  //   return; // we were already TXing so abort
+  //   return; // we were already TXing so abort. this should never happen!!!
   // }
   instance->SetMode(SX127x_OPMODE_STANDBY);
 
