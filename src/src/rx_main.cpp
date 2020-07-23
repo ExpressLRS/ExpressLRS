@@ -109,11 +109,11 @@ uint32_t RFmodeLastCycled = 0;
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int8_t LastRSSI = Radio.GetLastPacketRSSI();
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(LastRSSI, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
-
+    int8_t LastRSSI = Radio.LastPacketRSSI;
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
@@ -607,7 +607,9 @@ void setup()
 
     Radio.currFreq = GetInitialFreq();
     Radio.Begin();
-    //Radio.SetSyncWord(UID[3]);
+    #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
+    Radio.SetSyncWord(UID[3]);
+    #endif 
     #ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
     #else
@@ -669,7 +671,6 @@ void loop()
         Serial.println("Bad sync, aborting");
         Radio.SetFrequency(GetInitialFreq());
         Radio.RXnb();
-        //scanIndex = (RATE_MAX - 1) - ExpressLRS_currAirRate_Modparams->index;
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
     }
@@ -684,7 +685,7 @@ void loop()
         }
         else
         {
-            CURR_RATE_MAX = 4; //switch between 200hz, 100hz, 50hz, rates
+            CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
         }
     }
 
