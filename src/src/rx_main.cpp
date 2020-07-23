@@ -486,13 +486,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
     {
-        #ifndef TARGET_SX1280
+        #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
         #endif
-        
     }
+    
     doneProcessing = micros();
+
 #ifndef DEBUG_SUPPRESS
     Serial.print(RawOffset);
     Serial.print(":");
