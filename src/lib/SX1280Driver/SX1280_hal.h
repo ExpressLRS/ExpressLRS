@@ -48,7 +48,6 @@ public:
 
     void init();
     void end();
-    void SetSpiSpeed(uint32_t spiSpeed);
     void reset();
 
     void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size);
@@ -71,8 +70,6 @@ public:
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
-
-    void ICACHE_RAM_ATTR setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment);
 
     static void (*TXdoneCallback)(); //function pointer for callback
     static void (*RXdoneCallback)(); //function pointer for callback

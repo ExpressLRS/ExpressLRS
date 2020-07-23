@@ -61,6 +61,7 @@ void SX1280Driver::Begin()
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA); //Step 2: set packet type to LoRa
     this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                        //enable auto FS
+    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));           //default is low power mode, switch to high sensitivity instead
     this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); //default params
     this->SetFrequency(this->currFreq);                                     //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
@@ -170,6 +171,20 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
     rfparams[2] = (uint8_t)cr;
 
     hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams));
+
+    switch (sf)
+    {
+    case SX1280_LORA_SF5:
+    case SX1280_LORA_SF6:
+        hal.WriteRegister(0x925, 0x1E); // for SF5 or SF6
+        break;
+    case SX1280_LORA_SF7:
+    case SX1280_LORA_SF8:
+        hal.WriteRegister(0x925, 0x37); // for SF7 or SF8
+        break;
+    default:
+        hal.WriteRegister(0x925, 0x32); // for SF9, SF10, SF11, SF12
+    }
 }
 
 void SX1280Driver::SetFrequency(uint32_t Reqfreq)
@@ -254,11 +269,14 @@ void SX1280Driver::TXnbISR()
     instance->TXdoneCallback();
 }
 
+uint8_t FIFOaddr = 0;
+
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable(); // do first to allow PA stablise
-    instance->SetFIFOaddr(0x00, 0x00);   // not 100% sure if needed again
+    //instance->SetFIFOaddr(0x00, 0x00);   // not 100% sure if needed again
+    //uint8_t FIFOaddr = instance->GetRxBufferAddr();
     hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
     beginTX = micros();
@@ -269,6 +287,7 @@ void SX1280Driver::RXnbISR()
     instance->currOpmode = SX1280_MODE_FS;
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     uint8_t FIFOaddr = instance->GetRxBufferAddr();
+    Serial.println(FIFOaddr);
     hal.ReadBuffer(FIFOaddr, instance->RXdataBuffer, TXRXBuffSize);
     instance->GetLastPacketStats();
     instance->RXdoneCallback();
@@ -276,8 +295,6 @@ void SX1280Driver::RXnbISR()
 
 void SX1280Driver::RXnb()
 {
-    //Serial.println("Start RX nb");
-    hal.setIRQassignment(SX1280_INTERRUPT_RX_DONE);
     hal.RXenable();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     //instance->SetFIFOaddr(0x00, 0x00);
@@ -286,7 +303,7 @@ void SX1280Driver::RXnb()
 
 uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr()
 {
-    WORD_ALIGNED_ATTR uint8_t status[2];
+    WORD_ALIGNED_ATTR uint8_t status[2] = {0};
     hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2);
     return status[1];
 }

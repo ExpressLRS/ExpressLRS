@@ -101,8 +101,8 @@ typedef struct expresslrs_mod_settings_s
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
-#define RATE_MAX 4
-#define RATE_DEFAULT 1
+#define RATE_MAX 3
+#define RATE_DEFAULT 0
 typedef struct expresslrs_mod_settings_s
 {
     uint8_t index;

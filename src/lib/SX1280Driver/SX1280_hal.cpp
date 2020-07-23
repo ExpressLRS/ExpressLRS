@@ -73,7 +73,8 @@ void SX1280Hal::init()
 
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
-    SPI.setFrequency(18000000);
+    gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
+    SPI.setFrequency(10000000);
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -81,7 +82,7 @@ void SX1280Hal::init()
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setFrequency(18000000);
+    SPI.setFrequency(10000000);
 #endif
 
 #ifdef PLATFORM_STM32
@@ -157,7 +158,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         OutBuffer[0] = (uint8_t)command;
         OutBuffer[1] = 0x00;
         OutBuffer[2] = 0x00;
-        SPI.transfer(OutBuffer, sizeof(OutBuffer));
+        SPI.transfer(OutBuffer, 3);
         buffer[0] = OutBuffer[0];
     }
     else
@@ -268,15 +269,25 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-    while (digitalRead(GPIO_PIN_BUSY) == HIGH)
+    #define wtimeoutUS 5000
+    uint32_t startTime = micros();
+
+    while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS
     {
-        #ifdef PLATFORM_STM32
-        __NOP();
-        #elif PLATFORM_ESP32
-        _NOP();
-        #elif PLATFORM_ESP8266
-        _NOP();
-#endif
+        if (micros() > startTime + wtimeoutUS)
+        {
+            return;
+        }
+        else
+        {
+            #ifdef PLATFORM_STM32
+            __NOP();
+            #elif PLATFORM_ESP32
+            _NOP();
+            #elif PLATFORM_ESP8266
+            _NOP();
+            #endif
+        }
     }
 }
 
@@ -284,12 +295,10 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 {
     if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
-        //Serial.println("HalRXdone");
         RXdoneCallback();
     }
     else if (instance->InterruptAssignment == SX1280_INTERRUPT_TX_DONE)
     {
-        //Serial.println("HalTXdone");
         TXdoneCallback();
     }
 }
@@ -302,13 +311,13 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable()
         //Serial.println("TXenb");
     }
 
-#if defined(GPIO_PIN_RX_ENABLE)
+    #if defined(GPIO_PIN_RX_ENABLE)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
+    #endif
 
-#if defined(GPIO_PIN_TX_ENABLE)
+    #if defined(GPIO_PIN_TX_ENABLE)
     digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
-#endif
+    #endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
@@ -320,13 +329,13 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
         //Serial.println("RXenb");
     }
 
-#if defined(GPIO_PIN_RX_ENABLE)
+    #if defined(GPIO_PIN_RX_ENABLE)
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
-#endif
+    #endif
 
-#if defined(GPIO_PIN_TX_ENABLE)
+    #if defined(GPIO_PIN_TX_ENABLE)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
+    #endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
@@ -335,23 +344,11 @@ void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
     {
         this->InterruptAssignment = SX1280_INTERRUPT_NONE;
     }
-#if defined(GPIO_PIN_RX_ENABLE)
+    #if defined(GPIO_PIN_RX_ENABLE)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
+    #endif
 
-#if defined(GPIO_PIN_TX_ENABLE)
+    #if defined(GPIO_PIN_TX_ENABLE)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
-}
-
-void ICACHE_RAM_ATTR SX1280Hal::setIRQassignment(SX1280_InterruptAssignment_ newInterruptAssignment)
-{
-    if (newInterruptAssignment == SX1280_INTERRUPT_TX_DONE)
-    {
-        this->InterruptAssignment = SX1280_INTERRUPT_TX_DONE;
-    }
-    else if (newInterruptAssignment == SX1280_INTERRUPT_RX_DONE)
-    {
-        this->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
-    }
+    #endif
 }

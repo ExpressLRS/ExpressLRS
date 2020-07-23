@@ -343,7 +343,12 @@ void ICACHE_RAM_ATTR HandleTLM()
       return;
     }
     Radio.RXnb();
+    RadioIsIdle = false;
     WaitRXresponse = true;
+  }
+  else
+  {
+    RadioIsIdle = true;
   }
 }
 
@@ -435,7 +440,7 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 void HandleUpdateParameter()
 {
 
-  if (UpdateParamReq == false)
+  if (UpdateParamReq == false || RadioIsIdle == false)
   {
     return;
   }
@@ -527,9 +532,9 @@ void ICACHE_RAM_ATTR RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
   NonceTX++; // must be done before callback
+  RadioIsIdle = true;
   HandleFHSS();
   HandleTLM();
-  RadioIsIdle = true;
 }
 
 void setup()
