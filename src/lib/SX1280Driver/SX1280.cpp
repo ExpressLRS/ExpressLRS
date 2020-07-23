@@ -275,8 +275,6 @@ void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable(); // do first to allow PA stablise
-    //instance->SetFIFOaddr(0x00, 0x00);   // not 100% sure if needed again
-    //uint8_t FIFOaddr = instance->GetRxBufferAddr();
     hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
     beginTX = micros();
@@ -296,7 +294,6 @@ void SX1280Driver::RXnb()
 {
     hal.RXenable();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    //instance->SetFIFOaddr(0x00, 0x00);
     instance->SetMode(SX1280_MODE_RX);
 }
 
@@ -351,5 +348,3 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     instance->LastPacketRSSI = -(int8_t)(status[0] / 2);
     instance->LastPacketSNR = (int8_t)(status[1] / 4);
 }
-
-void ICACHE_RAM_ATTR SX1280Driver::SetPPMoffsetReg(int32_t offset) {return;}

@@ -488,8 +488,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
         #ifndef TARGET_SX1280
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        #endif
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+        #endif
+        
     }
     doneProcessing = micros();
 #ifndef DEBUG_SUPPRESS

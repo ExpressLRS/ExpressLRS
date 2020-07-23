@@ -96,7 +96,6 @@ public:
     void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
     
     bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
-    void ICACHE_RAM_ATTR SetPPMoffsetReg(int32_t offset);
     uint8_t ICACHE_RAM_ATTR GetRxBufferAddr();
 
     void ICACHE_RAM_ATTR GetLastPacketStats();
