@@ -230,7 +230,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
-#ifdef TARGET_TX_ESP32_E28_SX1280_V1
+#if defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
 #define GPIO_PIN_DIO0 -1
