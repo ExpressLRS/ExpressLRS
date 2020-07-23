@@ -287,7 +287,6 @@ void SX1280Driver::RXnbISR()
     instance->currOpmode = SX1280_MODE_FS;
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     uint8_t FIFOaddr = instance->GetRxBufferAddr();
-    Serial.println(FIFOaddr);
     hal.ReadBuffer(FIFOaddr, instance->RXdataBuffer, TXRXBuffSize);
     instance->GetLastPacketStats();
     instance->RXdoneCallback();
