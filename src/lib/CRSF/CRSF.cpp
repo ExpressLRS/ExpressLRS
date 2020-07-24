@@ -407,9 +407,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             // CRSF frame crc
             outBuffer[totalBufferLen - 1] = CalcCRC(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
 
-            SerialOutFIFO.push(totalBufferLen);
-            SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
-            //this->_dev->write(outBuffer, totalBufferLen);
+            // SerialOutFIFO.push(totalBufferLen);
+            // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
+            this->_dev->write(outBuffer, totalBufferLen);
         }
 #endif
 
