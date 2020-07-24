@@ -149,6 +149,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
+    #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
 
     WaitOnBusy();
     digitalWrite(GPIO_PIN_NSS, LOW);
@@ -158,7 +159,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         OutBuffer[0] = (uint8_t)command;
         OutBuffer[1] = 0x00;
         OutBuffer[2] = 0x00;
-        SPI.transfer(OutBuffer, 3);
+        SPI.transfer(OutBuffer, RADIO_GET_STATUS_BUF_SIZEOF);
         buffer[0] = OutBuffer[0];
     }
     else
@@ -174,7 +175,6 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size)
 {
-
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
 
     OutBuffer[0] = (SX1280_RADIO_WRITE_REGISTER);
