@@ -22,6 +22,9 @@
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
 
+### Bands for SX1280 (2400MHz) ###
+#-DRegulatory_Domain_ISM_2400
+
 ### STEP2: ### 
 ### DEFINE ONE AND ONLY ONE OF THE SWITCH ENCODING OPTIONS ##
 # The TX and RX must be compiled with matching switch protocols!
@@ -62,6 +65,7 @@
 # Uncomment to use UART2 for MSP comms on the TX module
 -DUSE_UART2
 
+#ESP8266 Backpack is a debugging tool mainly for use with R9M, most users will not have it
 #-DUSE_ESP8266_BACKPACK
 
 # Uncomment to use the inverted sbus pad on the r9mm receiver and flight controller.  'set serialrx_inverted = ON' may also need to be set within Betaflight.

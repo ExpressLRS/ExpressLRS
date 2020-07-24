@@ -243,11 +243,11 @@ void ICACHE_RAM_ATTR SX127xHal::RXenable()
 #if defined(GPIO_PIN_TX_ENABLE)
   digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
-  return;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
+  InterruptAssignment = SX127x_INTERRUPT_NONE;
 #if defined(GPIO_PIN_RX_ENABLE)
   digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
@@ -255,7 +255,6 @@ void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 #if defined(GPIO_PIN_TX_ENABLE)
   digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
-  return;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()

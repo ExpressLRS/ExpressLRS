@@ -40,6 +40,9 @@ jobs:
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433
         platformio run
         mv .pio/build ~/artifcats/EU_433
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400
+        platformio run
+        mv .pio/build ~/artifcats/EU_433
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview

@@ -4,8 +4,6 @@
 #include "DAC.h"
 #include "SX127xDriver.h"
 
-extern SX127xDriver Radio;
-
 int R9DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 11, 9, 725},

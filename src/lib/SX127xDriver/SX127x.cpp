@@ -220,11 +220,11 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 {
-  if (instance->currOpmode == SX127x_OPMODE_TX)
-  {
-    Serial.println("abort TX");
-    return; // we were already TXing so abort
-  }
+  // if (instance->currOpmode == SX127x_OPMODE_TX)
+  // {
+  //   Serial.println("abort TX");
+  //   return; // we were already TXing so abort. this should never happen!!!
+  // }
   instance->SetMode(SX127x_OPMODE_STANDBY);
 
   hal.TXenable();
@@ -277,18 +277,19 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint8_t preambleLen)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen)
 {
-  Config(bw, sf, cr, currFreq, preambleLen, currSyncWord);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord);
 }
 
 void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord)
 {
-  SetFrequency(freq);
+  ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetOutputPower(currPWR);
   SetSpreadingFactor(sf);
   SetBandwidthCodingRate(bw, cr);
+  SetFrequency(freq);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()

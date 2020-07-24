@@ -327,9 +327,9 @@ void setup()
   IPAddress my_ip;
 
 #ifdef INVERTED_SERIAL
-  Serial.begin(115200, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
+  Serial.begin(460800, SERIAL_8N1, SERIAL_FULL, 1, true); // inverted serial
 #else
-  Serial.begin(115200); // non-inverted serial
+  Serial.begin(460800); // non-inverted serial
 #endif
 
   SPIFFS.begin();

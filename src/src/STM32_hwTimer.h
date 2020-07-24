@@ -16,14 +16,17 @@ public:
 
     static volatile uint32_t HWtimerInterval;
     static volatile bool TickTock;
-    static volatile int16_t PhaseShift;
+    static volatile int32_t PhaseShift;
+    static volatile int32_t FreqShift;
     static volatile bool ResetNextLoop;
+    static bool running;
+    static bool alreadyInit;
     static volatile uint32_t LastCallbackMicrosTick;
     static volatile uint32_t LastCallbackMicrosTock;
 
     static void init();
-    static void pause();
     static void stop();
+    static void resume();
     static void callback(HardwareTimer *);
     static void updateInterval(uint32_t newTimerInterval);
     static void phaseShift(int32_t newPhaseShift);

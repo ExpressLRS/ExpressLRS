@@ -21,6 +21,7 @@
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
@@ -38,6 +39,7 @@
 
 #ifdef TARGET_TTGO_LORA_V2_AS_TX
 #define GPIO_PIN_NSS 18
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
@@ -56,6 +58,7 @@
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #define GPIO_PIN_NSS 5
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 25
 #define GPIO_PIN_MOSI 23
@@ -75,6 +78,7 @@
 
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
 #define GPIO_PIN_NSS 15
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0 4
 #define GPIO_PIN_DIO1 5
 #define GPIO_PIN_MOSI 13
@@ -86,7 +90,7 @@
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 2
-#define timerOffset -3
+#define timerOffset -1
 #endif
 
 #ifdef TARGET_R9M_RX
@@ -95,6 +99,7 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 #define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_DIO1           PA1 // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
 #define GPIO_PIN_MOSI           PB15
@@ -141,6 +146,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
@@ -174,6 +180,8 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
+#define GPIO_PIN_DIO1           -1    //unused for sx1280 
+#define GPIO_PIN_BUSY           -1    //unused for sx1280 
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
@@ -193,56 +201,48 @@ https://github.com/jaxxzer
 
 #endif
 
+#ifdef TARGET_RX_ESP8266_SX1280_V1
+#define GPIO_PIN_NSS 15
+#define GPIO_PIN_BUSY 5
+#define GPIO_PIN_DIO0 -1 // does not exist on sx1280
+#define GPIO_PIN_DIO1 4
+#define GPIO_PIN_MOSI 13
+#define GPIO_PIN_MISO 12
+#define GPIO_PIN_SCK 14
+#define GPIO_PIN_RST 2
+#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1 
+#define GPIO_PIN_RCSIGNAL_TX -1
+#define GPIO_PIN_LED 16
+#define GPIO_PIN_BUTTON 0
+#define timerOffset -1
+#endif
 
-//// If Target Doesn't Have these defs we define as -1 ////
-// #ifndef GPIO_PIN_RX_ENABLE
-// #define GPIO_PIN_RX_ENABLE -1
-// #endif
+#ifdef TARGET_TX_ESP32_SX1280_V1
+#define GPIO_PIN_NSS 5
+#define GPIO_PIN_BUSY 21
+#define GPIO_PIN_DIO0 -1 // does not exist on sx1280
+#define GPIO_PIN_DIO1 4
+#define GPIO_PIN_MOSI 23
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 18
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RCSIGNAL_RX 13
+#define GPIO_PIN_RCSIGNAL_TX 13
+#endif
 
-// #ifndef GPIO_PIN_TX_ENABLE
-// #define GPIO_PIN_TX_ENABLE -1
-// #endif
-
-// #ifndef GPIO_PIN_OLED_SDA
-// #define GPIO_PIN_OLED_SDA -1
-// #endif
-
-// #ifndef GPIO_PIN_OLED_SCK
-// #define GPIO_PIN_OLED_SCK -1
-// #endif
-
-// #ifndef GPIO_PIN_RCSIGNAL_RX
-// #define GPIO_PIN_RCSIGNAL_RX -1
-// #endif
-
-// #ifndef GPIO_PIN_RCSIGNAL_TX
-// #define GPIO_PIN_RCSIGNAL_TX -1
-// #endif
-
-// #ifndef GPIO_PIN_LED_RED
-// #define GPIO_PIN_LED_RED -1
-// #endif
-
-// #ifndef GPIO_PIN_LED_RED
-// #define GPIO_PIN_LED_RED -1
-// #endif
-
-// #ifndef GPIO_PIN_LED
-// #define GPIO_PIN_LED -1
-// #endif
-
-// #ifndef GPIO_PIN_BUTTON
-// #define GPIO_PIN_BUTTON -1
-// #endif
-
-// #ifndef GPIO_PIN_BUZZER
-// #define GPIO_PIN_BUZZER -1
-// #endif
-
-// #ifndef GPIO_PIN_DIP1
-// #define GPIO_PIN_DIP1 -1
-// #endif
-
-// #ifndef GPIO_PIN_DIP2
-// #define GPIO_PIN_DIP2 -1
-// #endif
+#if defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
+#define GPIO_PIN_NSS 5
+#define GPIO_PIN_BUSY 21
+#define GPIO_PIN_DIO0 -1
+#define GPIO_PIN_DIO1 4
+#define GPIO_PIN_MOSI 23
+#define GPIO_PIN_MISO 19
+#define GPIO_PIN_SCK 18
+#define GPIO_PIN_RST 14
+#define GPIO_PIN_RX_ENABLE 27
+#define GPIO_PIN_TX_ENABLE 26
+#define GPIO_PIN_OLED_SDA -1
+#define GPIO_PIN_OLED_SCK -1
+#define GPIO_PIN_RCSIGNAL_RX 13
+#define GPIO_PIN_RCSIGNAL_TX 13
+#endif

@@ -2,8 +2,13 @@
 
 #include "Arduino.h"
 #include "../../src/targets.h"
-#include "SX127xDriver.h"
 #include "DAC.h"
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#include "SX127xDriver.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280Driver.h"
+#endif
 
 #ifdef TARGET_R9M_TX
 #define MaxPower 7
@@ -23,6 +28,11 @@
 #ifdef TARGET_R9M_LITE_TX
 #define MaxPower 2
 #define DefaultPowerEnum 2
+#endif
+
+#ifdef TARGET_TX_ESP32_LORA1280F27
+#define MaxPower 6
+#define DefaultPowerEnum 3
 #endif
 
 typedef enum

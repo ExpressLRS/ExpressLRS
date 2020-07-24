@@ -1,7 +1,6 @@
 #ifndef H_OTA
 #define H_OTA
 
-#include "SX127xDriver.h" // this has to come before CRSF.h when compiling on R9
 #include "CRSF.h"
 
 // expresslrs packet header types
@@ -16,15 +15,15 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
-void GenerateChannelDataHybridSwitch8(SX127xDriver *Radio, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataHybridSwitches8(SX127xDriver *Radio, CRSF *crsf);
+void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // HYBRID_SWITCHES_8
 
 #if defined SEQ_SWITCHES or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(SX127xDriver *Radio, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataSeqSwitches(SX127xDriver *Radio, CRSF *crsf);
+void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // SEQ_SWITCHES
 

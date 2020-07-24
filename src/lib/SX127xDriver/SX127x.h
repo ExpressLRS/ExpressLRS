@@ -50,8 +50,6 @@ public:
     /////////////Packet Stats//////////
     int8_t LastPacketRSSI;
     int8_t LastPacketSNR;
-    volatile uint8_t NonceTX;
-    volatile uint8_t NonceRX;
     uint32_t TimeOnAir;
     uint32_t TXstartMicros;
     uint32_t TXspiTime;
@@ -66,7 +64,7 @@ public:
     void End();
     void DetectChip();
     void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint8_t preambleLen);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen);
     void SetMode(SX127x_RadioOPmodes mode);
     void ConfigLoraDefaults();
 
