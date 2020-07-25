@@ -72,6 +72,6 @@
 # TLM is not available.  Flashing via the BetaflightPassthrough target will not work!!!
 #-DUSE_R9MM_R9MINI_SBUS
 
-# Channel 11 can be used for setting the TX power level by uncommenting the option below.
+# Any OpenTX channel (defaults to ch16) can be used for setting the TX power level by uncommenting the option below.
 # This allows you to change the TX power level during flight using a switch / pot in OpenTX
 #-DUSE_DYNAMIC_POWER
