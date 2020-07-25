@@ -1,3 +1,5 @@
+
+#ifdef PLATFORM_ESP32
 #include "ESP32_hwTimer.h"
 
 static hw_timer_t *timer = NULL;
@@ -61,3 +63,4 @@ void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
         timerAlarmWrite(timer, HWtimerInterval, true);
     }
 }
+#endif

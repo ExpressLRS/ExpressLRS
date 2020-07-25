@@ -19,15 +19,14 @@ SX1280Driver Radio;
 #include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "hwTimer.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#include "ESP8266_hwTimer.h"
 #endif
 
 #ifdef PLATFORM_STM32
 #include "STM32_UARTinHandler.h"
-#include "STM32_hwTimer.h"
 #endif
 
 //// CONSTANTS ////

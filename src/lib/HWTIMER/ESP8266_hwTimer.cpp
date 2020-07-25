@@ -1,3 +1,4 @@
+#ifdef PLATFORM_ESP8266
 #include "ESP8266_hwTimer.h"
 
 void inline hwTimer::nullCallback(void){};
@@ -110,3 +111,4 @@ void ICACHE_RAM_ATTR hwTimer::callback()
     }
     hwTimer::TickTock = !hwTimer::TickTock;
 }
+#endif
