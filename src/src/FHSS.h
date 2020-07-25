@@ -18,13 +18,13 @@
 #elif defined Regulatory_Domain_EU_868
 #define Regulatory_Domain_Index 3
 #elif defined Regulatory_Domain_AU_433
-#define Regulatory_Domain_Index 1]4
+#define Regulatory_Domain_Index 4
 #elif defined Regulatory_Domain_EU_433
 #define Regulatory_Domain_Index 5
 #elif defined Regulatory_Domain_ISM_2400
 #define Regulatory_Domain_Index 6
 #else
-#define Regulatory_Domain_Index 0
+#define Regulatory_Domain_Index 7
 #endif
 
 extern volatile uint8_t FHSSptr;
