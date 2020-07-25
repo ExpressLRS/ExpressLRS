@@ -49,10 +49,10 @@ local MaxPower = {
     elements = 9
 }
 local RFfreq = {
-    selected = 4,
-    list = {'915 MHz', '868 MHz', '433 MHz', '------'},
-    dataId = {0x00, 0x01, 0x02, 0xFF},
-    elements = 4
+    selected = 7,
+    list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM', '------'},
+    dataId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0xFF},
+    elements = 7
 }
 
 local selection = {

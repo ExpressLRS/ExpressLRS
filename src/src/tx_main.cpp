@@ -43,7 +43,7 @@ R9DAC R9DAC;
 #include "STM32_hwTimer.h"
 #endif
 
-uint8_t thisCommit[6] = {LATEST_COMMIT};
+const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
@@ -514,7 +514,7 @@ void HandleUpdateParameter()
   UpdateParamReq = false;
   //Serial.println("Power");
   //Serial.println(POWERMGNT.currPower());
-  uint8_t luaDataPacket[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, 4};
+  uint8_t luaDataPacket[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
   crsf.sendLUAresponse(luaDataPacket);
   
   uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
