@@ -11,6 +11,22 @@
 #include "utils.h"
 #include "common.h"
 
+#ifdef Regulatory_Domain_AU_915
+#define Regulatory_Domain_Index 1
+#elif defined Regulatory_Domain_FCC_915
+#define Regulatory_Domain_Index 2
+#elif defined Regulatory_Domain_EU_868
+#define Regulatory_Domain_Index 3
+#elif defined Regulatory_Domain_AU_433
+#define Regulatory_Domain_Index 1]4
+#elif defined Regulatory_Domain_EU_433
+#define Regulatory_Domain_Index 5
+#elif defined Regulatory_Domain_ISM_2400
+#define Regulatory_Domain_Index 6
+#else
+#define Regulatory_Domain_Index 0
+#endif
+
 extern volatile uint8_t FHSSptr;
 
 extern uint8_t NumOfFHSSfrequencies;
