@@ -236,8 +236,7 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
 
-#ifdef USE_DYNAMIC_POWER
-  #define DYNAMIC_POWER_CHANNEL 15
+#ifdef DYNAMIC_POWER_CHANNEL
   if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 250)
   {
     POWERMGNT.setPower(PWR_10mW);
