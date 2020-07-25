@@ -66,22 +66,16 @@ void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
 {
 
 #ifdef Regulatory_Domain_AU_915
-#define Regulatory_Domain_Index 1
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915
-#define Regulatory_Domain_Index 2
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_EU_868
-#define Regulatory_Domain_Index 3
     Serial.println("Setting 868MHz Mode");
 #elif defined Regulatory_Domain_AU_433
-#define Regulatory_Domain_Index 1]4
     Serial.println("Setting 433MHz EU Mode");
 #elif defined Regulatory_Domain_EU_433
-#define Regulatory_Domain_Index 5
     Serial.println("Setting 433MHz EU Mode");
 #elif defined Regulatory_Domain_ISM_2400
-#define Regulatory_Domain_Index 6
     Serial.println("Setting 2400MHz Mode");
 #else
 #error No regulatory domain defined, please define one in common.h
