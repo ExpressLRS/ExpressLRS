@@ -235,6 +235,49 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
+
+#ifdef USE_DYNAMIC_POWER
+  #define DYNAMIC_POWER_CHANNEL 15
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 250)
+  {
+    POWERMGNT.setPower(PWR_10mW);
+  }
+  
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 250 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 500)
+  {
+    POWERMGNT.setPower(PWR_25mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 500 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 750)
+  {
+    POWERMGNT.setPower(PWR_50mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 750 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 1000)
+  {
+    POWERMGNT.setPower(PWR_100mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 1000 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 1250)
+  {
+    POWERMGNT.setPower(PWR_250mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 1250 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 1500)
+  {
+    POWERMGNT.setPower(PWR_500mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 1500 && crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] < 1750)
+  {
+    POWERMGNT.setPower(PWR_1000mW);
+  }
+
+  if (crsf.ChannelDataIn[DYNAMIC_POWER_CHANNEL] >= 1750)
+  {
+    POWERMGNT.setPower(PWR_2000mW);
+  }
+#endif
 }
 
 void ICACHE_RAM_ATTR GenerateMSPData()

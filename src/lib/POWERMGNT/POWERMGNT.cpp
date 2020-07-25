@@ -89,6 +89,16 @@ void POWERMGNT::setPower(PowerLevels_e Power)
             Radio.SetOutputPower(0b1111); //15
             CurrentPower = PWR_50mW;
         }
+        if (Power == PWR_100mW
+            || Power == PWR_250mW
+            || Power == PWR_500mW
+            || Power == PWR_1000mW
+            || Power == PWR_2000mW)
+        {
+            // For all other higher levels, set the max of 50mW
+            Radio.SetOutputPower(0b1111); //15
+            CurrentPower = PWR_50mW;
+        }
         return;
     }
 
