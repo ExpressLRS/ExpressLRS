@@ -21,7 +21,7 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include <OTA.h>
 //#include "elrs_eeprom.h"
-#include "hwtimer.h"
+#include "hwTimer.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
