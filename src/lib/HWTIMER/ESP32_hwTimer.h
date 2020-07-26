@@ -1,9 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <Arduino.h>
+#include <stdio.h>
 #include "../../src/targets.h"
-#include <FreeRTOS.h>
-#include <esp32-hal-timer.h>
 
 #define TimerIntervalUSDefault 4000
 
