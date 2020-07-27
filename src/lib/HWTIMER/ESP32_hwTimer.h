@@ -1,11 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-#include "targets.h"
-#include "SX127xDriver.h"
-#include <FreeRTOS.h>
-#include <esp32-hal-timer.h>
-#include "debug.h"
+#include <Arduino.h>
+#include <stdio.h>
+#include "../../src/targets.h"
 
 #define TimerIntervalUSDefault 4000
 
