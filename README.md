@@ -11,16 +11,15 @@ Please join at
 
 ![Build Status](https://github.com/gretel/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)
 
-ExpressLRS is an open source RC link for RC aircraft. It is based on **SX127x** hardware combined with an **ESP8285**, **ESP32** or **STM32** for RX and TX respectively.
+ExpressLRS is an open source RC link for RC aircraft. It is based on **SX127x**/**SX1280** hardware combined with an **ESP8285**, **ESP32** or **STM32** for RX and TX respectively. ExpressLRS supports both 900 MHz and 2.4 GHz hardware options.
 
-ExpressLRS can be flashed into existing Frsky R9M hardware (RX and TX) or custom PCBs can be make to suit. It can run at 200 Hz, 100 Hz or 50 Hz depending on if you prefer range or low latency. This system does FHSS over a configurable number of channels. 
-At 200 Hz it is the fastest 900/433 MHz RC link on the market with a Stick -> OpenTX > RF -> RX -> Serial Packet Latency of ~10ms or ~6.5ms on firmwares with **crsfshot** support. 
+ExpressLRS can be flashed into existing Frsky R9M hardware (RX and TX) or custom PCBs can be make to suit. It can run at up to 250hz or down to 50hz depending on if you prefer range or low latency.
 
-Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported. 
+At 900 MHz a maximum of 200 Hz packet rate is support. This should make it the fastest long-range RC link on the market. Stick latency of downto 6.5ms is seen on firmware with **crsfshot** (aka openTX 2.4 mixer scheduler) support. At 2.4 GHz a blistering 250 Hz is supported with plans to extend this to 500 Hz once OpenTX support is added.  
 
-TX and RX modules communicate via the standard CRSF serial protocol for easy use with Betaflight and openTX.
+Due to the optimized packet structure only basic telemetry that gives uplink/downlink information is currently supported. Compared to commercial systems ExpressLRS is also very affordable, a TX module can be built for $30 and receivers for $15-20. Likewise, new/second hand Frsky R9M gear is compatible and can be acquired inexpensively.
 
-Compared to commerical systems ExpressLRS is also very affordable, a TX module can be built for $30 and recievers for $15-20.
+More information can be found in the wiki. 
 
 ### TTGO LoRa boards
 
