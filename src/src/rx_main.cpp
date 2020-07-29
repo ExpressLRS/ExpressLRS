@@ -19,15 +19,14 @@ SX1280Driver Radio;
 #include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "hwTimer.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#include "ESP8266_hwTimer.h"
 #endif
 
 #ifdef PLATFORM_STM32
 #include "STM32_UARTinHandler.h"
-#include "STM32_hwTimer.h"
 #endif
 
 //// CONSTANTS ////
@@ -649,7 +648,7 @@ void loop()
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000)
+    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000 && LastSyncPacket == 0)
     {
         beginWebsever();
     }
