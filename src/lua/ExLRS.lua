@@ -75,7 +75,7 @@ local function getFlags(element)
 end
 
 local function increase(data)
-    if data.selected < data.elements then
+    if data.selected > 1 then
         data.selected = data.selected - 1
         --playTone(2000, 50, 0)
     end
@@ -83,7 +83,7 @@ local function increase(data)
 end
 
 local function decrease(data)
-    if data.selected > 1 then
+    if data.selected < data.elements then
         data.selected = data.selected + 1
         --playTone(2000, 50, 0)
     end
