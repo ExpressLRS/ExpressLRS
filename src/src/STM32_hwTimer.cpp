@@ -73,8 +73,11 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
         hwTimer::PhaseShift = newPhaseShift;
     }
 }
-
+#ifdef TARGET_R9MX_RX
+void hwTimer::callback(void)
+#else
 void hwTimer::callback(HardwareTimer *)
+#endif
 {
     if (hwTimer::TickTock)
     {

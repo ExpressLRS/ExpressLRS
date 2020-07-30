@@ -115,10 +115,17 @@ https://github.com/jaxxzer
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
 #endif
-#define GPIO_PIN_LED            PC1 // Red
-#define GPIO_PIN_LED_RED        PC1 // Red
-#define GPIO_PIN_LED_GREEN      PB3 // Green 
-#define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+#ifdef TARGET_R9MX_RX
+    #define GPIO_PIN_LED            PB2 // Red
+    #define GPIO_PIN_LED_RED        PB2 // Red
+    #define GPIO_PIN_LED_GREEN      PB3 // Green 
+    #define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
+#else
+    #define GPIO_PIN_LED            PC1 // Red
+    #define GPIO_PIN_LED_RED        PC1 // Red
+    #define GPIO_PIN_LED_GREEN      PB3 // Green 
+    #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+#endif
 #define timerOffset             2
 
 // External pads
@@ -138,36 +145,6 @@ https://github.com/jaxxzer
 //#define HSE_VALUE    25000000U
 // #endif /* HSE_VALUE */
 //#define SYSCLK_FREQ_72MHz
-#endif
-
-#ifdef TARGET_R9MX_RX
-/*
-Credit to Jacob Walser (jaxxzer) for the pinout!!!
-https://github.com/jaxxzer
-*/
-#define GPIO_PIN_NSS            PB12
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
-#define GPIO_PIN_DIO0           PA15
-#define GPIO_PIN_DIO1           PA1 // NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
-#define GPIO_PIN_MOSI           PB15
-#define GPIO_PIN_MISO           PB14
-#define GPIO_PIN_SCK            PB13
-#define GPIO_PIN_RST            PC14
-#define GPIO_PIN_SDA            PB7
-#define GPIO_PIN_SCL            PB6
-#ifdef USE_R9MM_R9MINI_SBUS
-    #define GPIO_PIN_RCSIGNAL_RX    PA3 // NEEDS TO BE FOUND
-    #define GPIO_PIN_RCSIGNAL_TX    PA2 // NEEDS TO BE FOUND
-#else
-    #define GPIO_PIN_RCSIGNAL_RX    PA10
-    #define GPIO_PIN_RCSIGNAL_TX    PA9
-#endif
-#define GPIO_PIN_LED            PB2 // Red
-#define GPIO_PIN_LED_RED        PB2 // Red
-#define GPIO_PIN_LED_GREEN      PB3 // Green 
-#define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
-#define timerOffset             2
-
 #endif
 
 #ifdef TARGET_R9M_TX
