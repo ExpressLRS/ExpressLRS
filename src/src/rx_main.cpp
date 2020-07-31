@@ -72,6 +72,7 @@ uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
 
 bool webUpdateMode = false;
+bool disableWebServer = false;
 uint32_t webUpdateLedFlashIntervalLast;
 ///////////////////////////////////////////////
 
@@ -313,6 +314,7 @@ void ICACHE_RAM_ATTR GotConnection()
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
+    disableWebServer = true;
     RXtimerState = tim_tentative;
     GotConnectionMillis = millis();
 
@@ -648,7 +650,7 @@ void loop()
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && millis() < 21000 && LastSyncPacket == 0)
+    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && !disableWebServer)
     {
         beginWebsever();
     }
