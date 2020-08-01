@@ -650,7 +650,7 @@ void loop()
     //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if ((connectionState == disconnected) && !webUpdateMode && millis() > 20000 && !disableWebServer)
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)
     {
         beginWebsever();
     }
