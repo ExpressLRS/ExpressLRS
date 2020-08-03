@@ -44,4 +44,4 @@ https://www.aliexpress.com/item/4000197347021.html
 
 I made the below image as a quick reference to help when placing components.
 
-<img src="img/antenna.jpg" width="40%"> <img src="img/build_cheat_sheet.png" width="40%">
+<img src="img/build_cheat_sheet.png" width="40%">
