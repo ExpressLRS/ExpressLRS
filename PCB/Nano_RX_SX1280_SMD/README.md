@@ -15,9 +15,7 @@ https://youtu.be/33BSITaKFUY
 
 ### PCB manufacturing
 
-Upload the Gerber file to https://jlcpcb.com/ and below are the order options.  Red is clearly the only acceptable colour!
-
-It is recommended to also get a solder paste stencil.
+Upload the Gerber file to https://jlcpcb.com/ and below are the order options.  Red is clearly the only acceptable colour! It is recommended to also get a solder paste stencil, and check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
 
 <img src="img/jlc_order_details.PNG" width="30%">
 
