@@ -19,7 +19,7 @@ Upload the Gerber file to https://jlcpcb.com/ and below are the order options.  
 
 It is recommended to also get a solder paste stencil.
 
-<img src="img/jlc_order_details.png" width="30%">
+<img src="img/jlc_order_details.PNG" width="30%">
 
 ### BOM
 
@@ -39,3 +39,9 @@ The antennas linked below when cut to an end-to-end length of 49.8mm will be tun
 https://www.aliexpress.com/item/4000197347021.html
 
 <img src="img/antenna.jpg" width="40%"> <img src="img/antenna_on_quad.jpg" width="40%">
+
+### Build layout cheat sheet
+
+I made the below image as a quick reference to help when placing components.
+
+<img src="img/antenna.jpg" width="40%"> <img src="img/build_cheat_sheet.png" width="40%">
