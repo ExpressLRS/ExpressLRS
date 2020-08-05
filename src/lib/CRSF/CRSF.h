@@ -207,8 +207,6 @@ union inBuffer_U
     rcPacket_t asRCPacket_t;    // access the memory as RC data
                                 // add other packet types here
 };
-
-
 typedef struct crsf_channels_s crsf_channels_t;
 
 // Used by extended header frames (type in range 0x28 to 0x96)
@@ -219,8 +217,18 @@ typedef struct crsf_sensor_battery_s
     unsigned capacity : 24; // mah
     unsigned remaining : 8; // %
 } PACKED crsf_sensor_battery_s;
-
 typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
+
+typedef struct crsf_sensor_gps_s
+{
+    int32_t latitude : 32;  
+    int32_t longitude : 32;  
+    uint16_t speed : 16; 
+    uint16_t headng : 16; 
+    uint16_t alt : 16;
+    uint8_t sats : 8;
+} PACKED crsf_sensor_gps_s;
+typedef struct crsf_sensor_gps_s crsf_sensor_gps_t;
 
 /*
  * 0x14 Link statistics
@@ -350,6 +358,7 @@ public:
     static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
     static volatile crsf_sensor_battery_s TLMbattSensor;
+    static volatile crsf_sensor_gps_s TLMGPSsensor;
 
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc

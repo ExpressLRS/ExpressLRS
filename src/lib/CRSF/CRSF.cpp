@@ -80,6 +80,7 @@ volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
+volatile crsf_sensor_gps_s CRSF::TLMGPSsensor;
 
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
