@@ -1,14 +1,19 @@
 Import("env")
 import os
 import sys
+import subprocess
 import hashlib
 import fnmatch
 import time
 
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
 try:
     from git import Repo
 except ImportError:
-    env.Execute("$PYTHONEXE -m pip install GitPython")
+    sys.stdout.write("Installing GitPython")
+    install("GitPython")
     from git import Repo
 
 build_flags = env['BUILD_FLAGS']
@@ -23,6 +28,7 @@ build_flags = env['BUILD_FLAGS']
 
 UIDbytes = ""
 define = ""
+
 
 def parse_flags(path):
     try:

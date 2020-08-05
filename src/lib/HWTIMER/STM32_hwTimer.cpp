@@ -1,3 +1,4 @@
+#ifdef PLATFORM_STM32
 #include "STM32_hwTimer.h"
 
 void inline hwTimer::nullCallback(void){};
@@ -104,3 +105,4 @@ void hwTimer::callback(HardwareTimer *)
     }
     hwTimer::TickTock = !hwTimer::TickTock;
 }
+#endif
