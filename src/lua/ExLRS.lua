@@ -75,16 +75,16 @@ local function getFlags(element)
 end
 
 local function increase(data)
-    if data.selected < data.elements then
-        data.selected = data.selected + 1
+    if data.selected > 1 then
+        data.selected = data.selected - 1
         --playTone(2000, 50, 0)
     end
     -- if data.selected > data.elements then data.selected = 1 end
 end
 
 local function decrease(data)
-    if data.selected > 1 then
-        data.selected = data.selected - 1
+    if data.selected < data.elements then
+        data.selected = data.selected + 1
         --playTone(2000, 50, 0)
     end
     -- if data.selected < 1 then data.selected = data.elements end
@@ -287,7 +287,7 @@ local function run_func(event)
 
     -- now process key events
     if event == EVT_ROT_LEFT or 
-       event == EVT_MINUS_BREAK or 
+       event == EVT_PLUS_BREAK or 
        event == EVT_DOWN_BREAK then
         if selection.state == false then
             decrease(selection)
@@ -312,7 +312,7 @@ local function run_func(event)
             end
 	end
     elseif event == EVT_ROT_RIGHT or 
-           event == EVT_PLUS_BREAK or 
+           event == EVT_MINUS_BREAK or 
 	   event == EVT_UP_BREAK then
         if selection.state == false then
             increase(selection)
