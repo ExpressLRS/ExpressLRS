@@ -36,6 +36,8 @@ The antennas linked below when cut to an end-to-end length of 49.8mm will be tun
 
 https://www.aliexpress.com/item/4000197347021.html
 
+https://youtu.be/bOKTOFyyGHo
+
 <img src="img/antenna.jpg" width="40%"> <img src="img/antenna_on_quad.jpg" width="40%">
 
 ### Build layout cheat sheet
