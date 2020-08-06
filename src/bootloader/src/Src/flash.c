@@ -30,7 +30,11 @@ flash_status flash_erase(uint32_t address)
   uint32_t error = 0u;
 
   erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
+#if defined(STM32L4xx)
+  erase_init.Page = (address - FLASH_BASE) / FLASH_PAGE_SIZE;
+#else
   erase_init.PageAddress = address;
+#endif
 #ifdef FLASH_BANK_1
   erase_init.Banks = FLASH_BANK_1;
 #endif
@@ -59,7 +63,11 @@ flash_status flash_erase_page(uint32_t address)
   uint32_t error = 0u;
 
   erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
+#if defined(STM32L4xx)
+  erase_init.Page = (address - FLASH_BASE) / FLASH_PAGE_SIZE;
+#else
   erase_init.PageAddress = address;
+#endif
 #ifdef FLASH_BANK_1
   erase_init.Banks = FLASH_BANK_1;
 #endif
@@ -83,8 +91,45 @@ flash_status flash_erase_page(uint32_t address)
  * @param   *length: Size of the array.
  * @return  status: Report about the success of the writing.
  */
-flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length)
-{
+#if defined(STM32L4xx)
+flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length) {
+  flash_status status = FLASH_OK;
+
+  length = (length + 1) >> 1; // roundup and convert to double words
+
+  HAL_FLASH_Unlock();
+
+  /* Loop through the array. */
+  for (uint32_t i = 0u; (i < length) && (FLASH_OK == status); i++) {
+    /* If we reached the end of the memory, then report an error and don't
+     * do anything else.*/
+    if (FLASH_APP_END_ADDRESS <= address) {
+      status |= FLASH_ERROR_SIZE;
+    } else {
+      /* The actual flashing. If there is an error, then report it. */
+      if (HAL_OK != HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, address,
+                                      *(uint64_t *)data)) {
+        status |= FLASH_ERROR_WRITE;
+      }
+      /* Read back the content of the memory. If it is wrong, then report an
+       * error. */
+      if (((*data++) != (*(volatile uint32_t *)address)) ||
+          ((*data++) != (*(volatile uint32_t *)(address + sizeof(uint32_t))))) {
+        status |= FLASH_ERROR_READBACK;
+      }
+
+      /* Shift the address by a double word. */
+      address += sizeof(uint64_t);
+    }
+  }
+
+  HAL_FLASH_Lock();
+
+  return status;
+}
+
+#else // !STM32L4xx
+flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length) {
   flash_status status = FLASH_OK;
 
   HAL_FLASH_Unlock();
@@ -101,9 +146,7 @@ flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length)
     else
     {
       /* The actual flashing. If there is an error, then report it. */
-      if (HAL_OK !=
-          HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data[i]))
-      {
+      if (HAL_OK != HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data[i])) {
         status |= FLASH_ERROR_WRITE;
       }
       /* Read back the content of the memory. If it is wrong, then report an
@@ -122,6 +165,7 @@ flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length)
 
   return status;
 }
+#endif // STM32L4xx
 
 /**
  * @brief   This function flashes the memory.

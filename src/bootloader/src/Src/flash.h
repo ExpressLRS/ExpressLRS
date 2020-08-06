@@ -14,6 +14,8 @@
 #include "stm32l0xx_hal.h"
 #elif defined(STM32L1xx)
 #include "stm32l1xx_hal.h"
+#elif defined(STM32L4xx)
+#include "stm32l4xx_hal.h"
 #elif defined(STM32F1)
 #include "stm32f1xx_hal.h"
 #endif
@@ -29,12 +31,18 @@
 #define FLASH_APP_START_ADDRESS (FLASH_BASE + FLASH_APP_OFFSET)
 #define FLASH_APP_END_ADDRESS ((uint32_t)FLASH_BANK1_END - 0x10u) /**< Leave a little extra space at the end. */
 
+#if !defined(FLASH_END) && defined(STM32L4xx)
+#define FLASH_END (FLASH_BASE + 0x20000) // default to 128kB just in case
+#endif
 #ifndef FLASH_BANK1_END
 #define FLASH_BANK1_END FLASH_END
 #endif
 
 /* Status report for the functions. */
 #define FLASH_OK 0x00u             /**< The action was successful. */
+#ifndef HAL_FLASH_ERROR_SIZE
+#define HAL_FLASH_ERROR_SIZE 0x01
+#endif
 #ifndef FLASH_ERROR_SIZE
 #define FLASH_ERROR_SIZE 0x01u     /**< The binary is too big. */
 #endif

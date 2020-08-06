@@ -31,6 +31,9 @@
 #elif defined(STM32F1)
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal.h"
+#elif defined(STM32L4xx)
+#include "stm32l4xx.h"
+#include "stm32l4xx_hal.h"
 #else
 #error "Not supported CPU type!"
 #endif
@@ -58,8 +61,13 @@ int8_t timer_end(void);
 
 /* Private defines -----------------------------------------------------------*/
 #ifdef BUTTON
+#if TARGET_R9MX
+#define BTN_Pin GPIO_PIN_0
+#define BTN_GPIO_Port GPIOB
+#elif TARGET_R9MM
 #define BTN_Pin GPIO_PIN_13
 #define BTN_GPIO_Port GPIOC
+#endif
 #endif /* BUTTON */
 #ifdef LED_GRN
 #if TARGET_R9MM
@@ -68,6 +76,9 @@ int8_t timer_end(void);
 #elif TARGET_R9M
 #define LED_GRN_Pin GPIO_PIN_12
 #define LED_GRN_GPIO_Port GPIOA
+#elif TARGET_R9MX
+#define LED_GRN_Pin GPIO_PIN_3
+#define LED_GRN_GPIO_Port GPIOB
 #endif
 #endif /* LED_GRN */
 #ifdef LED_RED
@@ -85,6 +96,12 @@ int8_t timer_end(void);
 #define LED_RED_GPIO_Port GPIOA
 #elif TARGET_RAK811
 
+#elif TARGET_SX1280_RX_v02
+#define LED_RED_Pin GPIO_PIN_15
+#define LED_RED_GPIO_Port GPIOB
+#elif TARGET_R9MX
+#define LED_RED_Pin GPIO_PIN_2
+#define LED_RED_GPIO_Port GPIOB
 #endif
 #endif /* LED_RED */
 

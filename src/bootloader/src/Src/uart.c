@@ -250,16 +250,16 @@ void uart_init(void)
   GPIO_InitStruct.Pin = (1 << pin_rx);
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#ifdef STM32L0xx
+#if defined(STM32L0xx)
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  if (huart1.Instance == USART1 && pin_rx == 7)
-  {
+  if (huart1.Instance == USART1 && pin_rx == 7) {
     GPIO_InitStruct.Alternate = GPIO_AF0_USART1;
-  }
-  else
-  {
+  } else {
     GPIO_InitStruct.Alternate = GPIO_AF4_USART1;
   }
+#elif defined(STM32L4xx)
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
 #else
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
 #endif
@@ -270,14 +270,14 @@ void uart_init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#ifdef STM32L0xx
+#if defined(STM32L0xx)
   if (huart1.Instance == USART1 && pin_tx == 6) {
     GPIO_InitStruct.Alternate = GPIO_AF0_USART1;
-  }
-  else
-  {
+  } else {
     GPIO_InitStruct.Alternate = GPIO_AF4_USART1;
   }
+#elif defined(STM32L4xx)
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
 #endif
   HAL_GPIO_Init(gpio_ptr, &GPIO_InitStruct);
 
