@@ -55,6 +55,9 @@
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
+ 
+ # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
+-DUART_INVERTED
 
 # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
 -DAUTO_WIFI_ON_BOOT
