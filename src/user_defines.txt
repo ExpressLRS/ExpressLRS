@@ -63,7 +63,7 @@
 -DAUTO_WIFI_ON_BOOT
 
 # Beep only once (applies to TX modules with buzzer)
--DJUST_BEEP_ONCE
+#-DJUST_BEEP_ONCE
 
 # Uncomment to use UART2 for MSP comms on the TX module
 -DUSE_UART2
