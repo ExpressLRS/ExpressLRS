@@ -16,7 +16,7 @@
 ### STEP1: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -74,3 +74,7 @@
 # Uncomment to use the inverted sbus pad on the r9mm receiver and flight controller.  'set serialrx_inverted = ON' may also need to be set within Betaflight.
 # TLM is not available.  Flashing via the BetaflightPassthrough target will not work!!!
 #-DUSE_R9MM_R9MINI_SBUS
+
+# RF Mode Locking - 
+#-DLOCK_ON_FIRST_CONNECTION
+-DLOCKED_ON_50HZ

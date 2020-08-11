@@ -105,6 +105,7 @@ uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
+bool LockRFmode = false;
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -131,14 +132,17 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    if (!LockRFmode)
+    {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+        expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
-    hwTimer.updateInterval(ModParams->interval);
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
+        hwTimer.updateInterval(ModParams->interval);
 
-    ExpressLRS_currAirRate_Modparams = ModParams;
-    ExpressLRS_currAirRate_RFperfParams = RFperf;
+        ExpressLRS_currAirRate_Modparams = ModParams;
+        ExpressLRS_currAirRate_RFperfParams = RFperf;
+    }
 }
 
 void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
@@ -311,6 +315,10 @@ void ICACHE_RAM_ATTR GotConnection()
     {
         return; // Already connected
     }
+
+    #ifdef LOCK_ON_FIRST_CONNECTION
+        LockRFmode = true;
+    #endif
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
@@ -631,8 +639,13 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    SetRFLinkRate((uint8_t)RATE_DEFAULT);
-  
+    #ifdef LOCKED_ON_50HZ
+        LockRFmode = true;
+        SetRFLinkRate(RATE_50HZ);
+    #else
+        SetRFLinkRate((uint8_t)RATE_DEFAULT);
+    #endif
+
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
