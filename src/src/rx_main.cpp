@@ -640,8 +640,15 @@ void setup()
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
     #ifdef LOCKED_ON_50HZ
-        LockRFmode = true;
-        SetRFLinkRate(RATE_50HZ);
+        for (int i = 0; i < RATE_MAX; i++)
+        {
+            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
+            if (ModParams->enum_rate == RATE_50HZ)
+            {
+                SetRFLinkRate(ModParams->index);
+                LockRFmode = true;
+            }
+        }
     #else
         SetRFLinkRate((uint8_t)RATE_DEFAULT);
     #endif

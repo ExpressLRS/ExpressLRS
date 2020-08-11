@@ -16,7 +16,7 @@
 ### STEP1: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
--DRegulatory_Domain_AU_915
+#-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -75,6 +75,9 @@
 # TLM is not available.  Flashing via the BetaflightPassthrough target will not work!!!
 #-DUSE_R9MM_R9MINI_SBUS
 
-# RF Mode Locking - 
+# RF Mode Locking - Default mode is for the Rx to cycle through the available RF modes and find
+# which mode the Tx transmitting.  LOCK_ON_FIRST_CONNECTION allows the Rx to cycle, but once a connection
+# is made the Rx will no longer cycle through the RF modes.  LOCK_ON_50HZ sets the Rx to only 50Hz
+# mode from the powerup.
 #-DLOCK_ON_FIRST_CONNECTION
--DLOCKED_ON_50HZ
+#-DLOCK_ON_50HZ
