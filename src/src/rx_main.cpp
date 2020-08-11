@@ -639,7 +639,7 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    #ifdef LOCKED_ON_50HZ
+    #ifdef LOCK_ON_50HZ
         for (int i = 0; i < RATE_MAX; i++)
         {
             expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
