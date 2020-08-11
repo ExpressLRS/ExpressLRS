@@ -28,4 +28,5 @@
 ## Build
 
 * Build should be self-explanatory given PCB labeling + Schematic diagram.
-* BOM: <https://bit.ly/SX1280elrsBOM> (passives not included)
+* **[BOM](https://docs.google.com/spreadsheets/d/1T2mhwylJRkJdaq0IyqfzjkTpoj9uZ8fdSAFEOPCxJ9Y/edit#gid=1826098941)**(passives not included)
+
