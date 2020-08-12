@@ -1,14 +1,14 @@
 #pragma once
 
 #include "../../src/targets.h"
-//#include <Wire.h>
+#include <Wire.h>
 #ifdef PLATFORM_STM32
     #include <extEEPROM.h>
 #else
     #include <EEPROM.h>
 #endif
 
-#define RESERVED_EEPROM_SIZE    32
+#define RESERVED_EEPROM_SIZE    512
 
 class ELRS_EEPROM
 {

@@ -20,7 +20,7 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
-//#include "elrs_eeprom.h"
+#include "elrs_eeprom.h"
 #include "hwTimer.h"
 
 #ifdef PLATFORM_ESP8266
@@ -52,6 +52,7 @@ hwTimer hwTimer;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
+ELRS_EEPROM eeprom;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
@@ -537,6 +538,8 @@ void setup()
     Serial2.begin(400000);
   #endif
 #endif
+
+eeprom.Begin();
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
 
