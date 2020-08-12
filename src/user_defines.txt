@@ -55,6 +55,9 @@
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
+
+# No sync on arm, don't transmit sync packet when armed (arm must be on channel 5, Aka AUX1)
+-DNO_SYNC_ON_ARM
  
  # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
 -DUART_INVERTED

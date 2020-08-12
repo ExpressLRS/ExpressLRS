@@ -370,7 +370,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
+  #ifdef NO_SYNC_ON_ARM
+  if(CRSF_to_BIT(crsf.ChannelDataIn[4]))
+  { // we are armed 
+    SyncInterval = 0xFFFFFFFF;
+  }
+  else if (isRXconnected)
+  #else
   if (isRXconnected)
+  #endif
   {
     SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected;
   }
