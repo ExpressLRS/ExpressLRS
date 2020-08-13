@@ -18,20 +18,24 @@ BootloaderInitSeq2 = bytes([0x62,0x62,0x62,0x62,0x62,0x62])
 
 sys.stdout.flush()
 
-try:
-    filename = sys.argv[1]
-except:
-    dbg_print("Filename not provided, going to use default firmware.bin")
-    filename = "firmware.bin"
-
-if not os.path.exists(filename):
-    msg = "[FAILED] bin file '%s' does not exist\n" % filename
-    dbg_print(msg)
-    raise EnvironmentError(msg)
-
-def dbg_print(line):
-    sys.stdout.write(line)
+def StatusCallback(total_packets, success_count, error_count):
+    #sys.stdout.write(".")
     sys.stdout.flush()
+
+    if(total_packets % 10 == 0):
+
+        if(error_count > 0):
+            sys.stdout.write(str(round((total_packets/filechunks)*100)) + "% err: " + str(error_count) + "\n")
+        else:
+            sys.stdout.write(str(round((total_packets/filechunks)*100)) + "%\n")
+
+        sys.stdout.flush()
+
+def getc(size, timeout=3):
+    return s.read(size)
+
+def putc(data, timeout=3):
+    s.write(data)
 
 def serial_ports():
     """ Lists serial port names
@@ -66,111 +70,101 @@ serial_ports()
 #sys.stdout.write(str(serial_ports())[1:-1])
 #sys.stdout.write("\n")
 
-if not result:
-    msg = "\n[FAILED] Cannot find suitable serial port\n\n"
-    dbg_print(msg)
-    raise EnvironmentError(msg)
+sys.stdout.write("Going to use "+ result[0] + "\n")
 
-dbg_print("Going to use "+ result[0]+"\n")
+s = serial.Serial(port=result[0], baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
-s = serial.Serial(port=result[0], baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=.5, xonxoff=0, rtscts=0)
+alreadyInBootloader = False
+s.flush()
+time.sleep(1)
 
-s.timeout = 1.
+
 try:
-    already_in_bl = s.read(3).decode('utf-8')
+    reading = s.read(3).decode('utf-8')
 except UnicodeDecodeError:
-    already_in_bl = ""
+    reading = ""
 
-if 'CC' not in already_in_bl:
-    s.timeout = .5
-    s.write_timeout = .5
+if('C' in reading):
+    alreadyInBootloader = True
 
-    currAttempt = 0
-    gotBootloader = False
+MaxBootloaderAttempts = 20
+currAttempt = 0
+gotBootloader = False
 
-    dbg_print("\nAttempting to reboot into bootloader...\n")
+if(alreadyInBootloader == False):
+
+    sys.stdout.write("\nAttempting to reboot into bootloader...\n")
 
     while gotBootloader == False:
 
-        currAttempt += 1
-        dbg_print("[%2u] retry...\n" % currAttempt)
-        time.sleep(.5)
-        if 10 < currAttempt:
-            msg = "Failed to get to BL in reasonable time\n"
-            dbg_print(msg)
-            raise EnvironmentError(msg)
-
-        # request reboot
-        s.write(BootloaderInitSeq1)
         s.flush()
-        start = time.time()
-        while ((time.time() - start) < 2):
+        s.write(BootloaderInitSeq1)
+        time.sleep(1)
+        s.write(BootloaderInitSeq2)
+
+        lines = []
+        inChars = ""
+
+        while s.in_waiting:
             try:
-                line = s.readline().decode('utf-8')
-                if not line and s.in_waiting:
-                    line = s.read(1000).decode('utf-8')
+                inChars += s.read().decode('utf-8')
             except UnicodeDecodeError:
-                continue
-            #dbg_print("line : '%s'\n" % (line.strip(), ))
-            if "'2bl', 'bbb'" in line:
-                # notify bootloader to start uploading
-                s.write(BootloaderInitSeq2)
-                s.flush()
-                dbg_print("Got into bootloader after: %u attempts\n" % (currAttempt))
+                pass
+
+        for line in inChars.split('\n'):
+            if "UART Bootloader for ExpressLRS" in line:
+                sys.stdout.write("Got into bootloader after: ")
+                sys.stdout.write(str(currAttempt+1))
+                sys.stdout.write(" attempts\n")
+                sys.stdout.flush()
                 gotBootloader = True
                 break
 
-    # change timeout to 30sec
-    s.timeout = 30.
-    s.write_timeout = 5.
+            if('C' in line):
+                gotBootloader = True
+                break
 
-    # sanity check! Make sure the bootloader is started
-    start = time.time()
-    while True:
-        char = s.read().decode('utf-8')
-        if char == 'C':
+        if(currAttempt == 20):
+            sys.stdout.write("Failed to get to BL in reasonable time\n")
+            raise SystemExit
             break
-        if ((time.time() - start) > 10):
-            msg = "[FAILED] Unable to communicate with bootloader...\n"
-            dbg_print(msg)
-            raise EnvironmentError(msg)
+
+        currAttempt = currAttempt + 1
+
+    s.write(BootloaderInitSeq2)
+
 else:
-    dbg_print("\nWe were already in bootloader\n")
+    sys.stdout.write("\nWe were already in bootloader\n")
+    sys.stdout.flush()
 
-# change timeout to 5sec
-s.timeout = 5.
-s.write_timeout = 5.
 
-# open binary
+time.sleep(0.2)
+s.close()
+s.open()
+
+
+try:
+    filename = sys.argv[1]
+except:
+    print("Filename not provided, going to use default firmware.bin")
+    filename = "firmware.bin"
+
 stream = open(filename, 'rb')
 filesize = os.stat(filename).st_size
 filechunks = filesize/128
 
-dbg_print("uploading %d bytes...\n" % (filesize,))
+sys.stdout.write("uploading ")
+sys.stdout.write(str(filesize)+" bytes...\n")
+sys.stdout.flush()
 
-def StatusCallback(total_packets, success_count, error_count):
-    sys.stdout.flush()
-    if (total_packets % 10 == 0):
-        if (error_count > 0):
-            dbg_print(str(round((total_packets/filechunks)*100)) + "% err: " + str(error_count) + "\n")
-        else:
-            dbg_print(str(round((total_packets/filechunks)*100)) + "%\n")
-
-def getc(size, timeout=3):
-    return s.read(size) or None
-
-def putc(data, timeout=3):
-    return s.write(data)
-
-modem = XMODEM(getc, putc, mode='xmodem')
-#modem.log.setLevel(logging.DEBUG)
+modem = XMODEM(getc, putc)
 status = modem.send(stream, retry=10, callback=StatusCallback)
+
+if(status):
+    print("100%\nSuccess!!!!")
+else:
+    print("FAILED")
+    raise EnvironmentError('Failed to Upload')
 
 s.close()
 stream.close()
-
-if (status):
-    dbg_print("Success!!!!\n\n")
-else:
-    dbg_print("[FAILED] Upload failed!\n\n")
-    raise EnvironmentError('Failed to Upload')
