@@ -20,7 +20,7 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
-#include "elrs_eeprom.h"
+#include "config.h"
 #include "hwTimer.h"
 
 #ifdef PLATFORM_ESP8266
@@ -52,7 +52,7 @@ hwTimer hwTimer;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
-ELRS_EEPROM eeprom;
+Config config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
@@ -301,6 +301,7 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
   {
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
   }
+
   return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 }
 
@@ -515,6 +516,11 @@ void HandleUpdateParameter()
   
   uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
   crsf.sendLUAresponse(luaCommitOtherHalfPacket);
+
+  config.SetRate(ExpressLRS_currAirRate_Modparams->index);
+  config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
+  config.SetPower(POWERMGNT.currPower());
+  // config.Commit();
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -538,8 +544,6 @@ void setup()
     Serial2.begin(400000);
   #endif
 #endif
-
-eeprom.Begin();
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
 
@@ -640,7 +644,15 @@ eeprom.Begin();
   #endif 
   POWERMGNT.setDefaultPower();
 
-  SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
+  config.Load();
+
+  // SetRFLinkRate(RATE_DEFAULT);
+  Serial.println("------------- GET ---------------");
+  Serial.println(config.GetRate());
+  SetRFLinkRate(config.GetRate());
+  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
+  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -712,6 +724,8 @@ void loop()
       msp.markPacketReceived();
     }
   }
+
+  config.Commit();
 }
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
