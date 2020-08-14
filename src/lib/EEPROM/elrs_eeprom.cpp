@@ -1,6 +1,5 @@
 #include "elrs_eeprom.h"
 #include <Arduino.h>
-// #include "../../src/debug.h"
 
 #ifdef PLATFORM_STM32
 extEEPROM EEPROM(kbits_2, 1, 1);
