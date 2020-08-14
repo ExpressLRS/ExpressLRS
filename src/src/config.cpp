@@ -1,5 +1,6 @@
 #include "config.h"
 #include "common.h"
+#include "POWERMGNT.h"
 
 #include <Wire.h>
 #ifdef PLATFORM_STM32
@@ -74,7 +75,6 @@ Config::Commit()
     #ifdef PLATFORM_ESP32
         EEPROM.put(0, m_config);
         EEPROM.commit();
-        Serial.println("====== EEPROM.commit(); ======");
     #else
         int addr = 0;
         const byte* p = (const byte*)(const void*)&m_config;
@@ -107,6 +107,12 @@ Config::GetPower()
     return m_config.power;
 }
 
+bool
+Config::IsModified()
+{
+    return m_config.modified;
+}
+
 // Setters
 void ICACHE_RAM_ATTR
 Config::SetRate(uint32_t rate)
@@ -115,9 +121,6 @@ Config::SetRate(uint32_t rate)
     {
         m_config.rate = rate;
         m_config.modified = true;
-        Serial.print("====== SetRate ");
-        Serial.print(m_config.rate);
-        Serial.println(" ======");
     }
 }
 
@@ -144,9 +147,10 @@ Config::SetPower(uint32_t power)
 void
 Config::SetDefaults()
 {
+    expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     m_config.version = CONFIG_VERSION;
-    SetRate(RATE_DEFAULT);
-    SetTlm(2);
-    SetPower(3);
+    SetRate(modParams->index);
+    SetTlm(modParams->TLMinterval);
+    SetPower(DefaultPowerEnum);
     Commit();
 }

@@ -520,7 +520,16 @@ void HandleUpdateParameter()
   config.SetRate(ExpressLRS_currAirRate_Modparams->index);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
   config.SetPower(POWERMGNT.currPower());
-  // config.Commit();
+
+  if (config.IsModified())
+  {
+    // Stop the timer during eeprom writes
+    hwTimer.stop();
+    // Write the new values
+    config.Commit();
+    // Resume the timer
+    hwTimer.resume();
+  }
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -644,11 +653,10 @@ void setup()
   #endif 
   POWERMGNT.setDefaultPower();
 
+  // Init the eeprom
   config.Load();
 
-  // SetRFLinkRate(RATE_DEFAULT);
-  Serial.println("------------- GET ---------------");
-  Serial.println(config.GetRate());
+  // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -724,8 +732,6 @@ void loop()
       msp.markPacketReceived();
     }
   }
-
-  config.Commit();
 }
 
 void ICACHE_RAM_ATTR TimerCallbackISR()

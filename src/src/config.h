@@ -26,6 +26,7 @@ public:
     uint32_t GetRate();
     uint32_t GetTlm();
     uint32_t GetPower();
+    bool     IsModified();
 
     // Setters
     void ICACHE_RAM_ATTR SetRate(uint32_t rate);
