@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "targets.h"
+#include "elrs_eeprom.h"
 
 #define CONFIG_VERSION          1
 #define RESERVED_EEPROM_SIZE    512
@@ -17,7 +18,6 @@ typedef struct {
 class Config
 {
 public:
-    Config();
     void Load();
     void Commit();
 
@@ -32,8 +32,9 @@ public:
     void ICACHE_RAM_ATTR SetTlm(uint32_t tlm);
     void ICACHE_RAM_ATTR SetPower(uint32_t power);
     void SetDefaults();
+    void SetStorageProvider(ELRS_EEPROM *eeprom);
 
 private:
     config_t    m_config;
-    bool        m_isLoaded;
+    ELRS_EEPROM *m_eeprom;
 };

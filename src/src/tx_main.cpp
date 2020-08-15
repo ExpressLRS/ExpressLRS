@@ -20,6 +20,7 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
+#include "elrs_eeprom.h"
 #include "config.h"
 #include "hwTimer.h"
 
@@ -52,6 +53,7 @@ hwTimer hwTimer;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
+ELRS_EEPROM eeprom;
 Config config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
@@ -653,8 +655,9 @@ void setup()
   #endif 
   POWERMGNT.setDefaultPower();
 
-  // Init the eeprom
-  config.Load();
+  eeprom.Begin(); // Init the eeprom
+  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+  config.Load(); // Load the stored values from eeprom
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
