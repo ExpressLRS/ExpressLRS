@@ -8,7 +8,6 @@
 
 typedef struct {
     uint32_t    version;
-    uint8_t     uid[6];
     uint32_t    rate;
     uint32_t    tlm;
     uint32_t    power;
