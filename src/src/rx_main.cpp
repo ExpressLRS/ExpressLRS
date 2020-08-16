@@ -719,8 +719,12 @@ void loop()
         GotConnection();
     }
 
-    if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
+    if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
+        if (connectionState == disconnected)
+        {
+            getRFlinkInfo();
+        }
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }
