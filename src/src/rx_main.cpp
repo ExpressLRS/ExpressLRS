@@ -30,12 +30,14 @@ SX1280Driver Radio;
 #endif
 
 //// CONSTANTS ////
-#define BUTTON_SAMPLE_INTERVAL 150
+#define BUTTON_SAMPLE_INTERVAL 50
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
+
+uint32_t localSyncWord = 1;
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
 
@@ -281,10 +283,10 @@ void ICACHE_RAM_ATTR LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-    digitalWrite(GPIO_PIN_LED, 0);        // turn off led
+    digitalWrite(GPIO_PIN_LED, 0); // turn off led
+
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
-    hwTimer.stop();
-    Serial.println("lost conn");
+    Radio.RXnb();
 
 #ifdef PLATFORM_STM32
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
@@ -521,12 +523,22 @@ void sampleButton()
 {
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
+    // if (buttonValue == false && buttonPrevValue == true)
+    // { //falling edge
+    //     buttonLastPressed = millis();
+    //     buttonDown = true;
+    //     Serial.println("Manual Start");
+    //     Radio.SetFrequency(GetInitialFreq());
+    //     Radio.RXnb();
+    // }
+
     if (buttonValue == false && buttonPrevValue == true)
     { //falling edge
-        buttonLastPressed = millis();
-        buttonDown = true;
-        Serial.println("Manual Start");
-        Radio.SetFrequency(GetInitialFreq());
+        Serial.println("increase sync");
+        hwTimer.stop();
+        Radio.currSyncWord++;
+        SetRFLinkRate((uint8_t)RATE_DEFAULT);
+        Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Radio.RXnb();
     }
 
@@ -587,6 +599,7 @@ void setup()
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
     pinMode(GPIO_PIN_LED, OUTPUT);
+    pinMode(GPIO_PIN_BUTTON, INPUT_PULLUP);
 #endif
 
 #ifdef PLATFORM_STM32
@@ -669,45 +682,45 @@ void loop()
     }
     #endif
 
-    if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
-    {
-        LostConnection();
-        Serial.println("Bad sync, aborting");
-        Radio.SetFrequency(GetInitialFreq());
-        Radio.RXnb();
-        RFmodeLastCycled = millis();
-        LastSyncPacket = millis();
-    }
+    // if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    // {
+    //     LostConnection();
+    //     Serial.println("Bad sync, aborting");
+    //     Radio.SetFrequency(GetInitialFreq());
+    //     Radio.RXnb();
+    //     RFmodeLastCycled = millis();
+    //     LastSyncPacket = millis();
+    // }
 
-    if (lowRateMode == false) // this makes it latch to ON if it ever gets triggered
-    {
-        if (millis() > (LastValidPacket + 60000))
-        {
-            lowRateMode = true;
-            CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
-            scanIndex = 3;
-        }
-        else
-        {
-            CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
-        }
-    }
+    // if (lowRateMode == false) // this makes it latch to ON if it ever gets triggered
+    // {
+    //     if (millis() > (LastValidPacket + 60000))
+    //     {
+    //         lowRateMode = true;
+    //         CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
+    //         scanIndex = 3;
+    //     }
+    //     else
+    //     {
+    //         CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
+    //     }
+    // }
 
-    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
-    {
-        if ((connectionState == disconnected) && !webUpdateMode)
-        {
-            LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
-            Radio.RXnb();
-            LQreset();
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
-            Serial.println(ExpressLRS_currAirRate_Modparams->interval);
-            scanIndex++;
-        }
-        RFmodeLastCycled = millis();
-    }
+    // if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
+    // {
+    //     if ((connectionState == disconnected) && !webUpdateMode)
+    //     {
+    //         LastSyncPacket = millis();                                        // reset this variable
+    //         SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
+    //         Radio.RXnb();
+    //         LQreset();
+    //         digitalWrite(GPIO_PIN_LED, LED);
+    //         LED = !LED;
+    //         Serial.println(ExpressLRS_currAirRate_Modparams->interval);
+    //         scanIndex++;
+    //     }
+    //     RFmodeLastCycled = millis();
+    // }
 
     if ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && linkQuality < 10)) // check if we lost conn.
     {

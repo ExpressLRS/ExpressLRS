@@ -16,7 +16,7 @@
 ### STEP1: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -52,7 +52,8 @@
 
 ### STEP3: ### 
 ### Set your custom binding phrase here. This unique string is used to pair your ExpressLRS tx and rx. ###
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+-DMY_UID=115,42,64,1,32,149
 
 ### OTHER OPTIONS: ### 
  
@@ -60,7 +61,7 @@
 -DUART_INVERTED
 
 # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
--DAUTO_WIFI_ON_BOOT
+#-DAUTO_WIFI_ON_BOOT
 
 # Beep only once (applies to TX modules with buzzer)
 #-DJUST_BEEP_ONCE

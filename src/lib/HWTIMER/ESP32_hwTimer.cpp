@@ -25,7 +25,7 @@ void hwTimer::init()
     {
         timer = timerBegin(0, (APB_CLK_FREQ / 1000000), true); // us timer
         timerAttachInterrupt(timer, &callback, true);
-        Serial.println("hwTimer Init");
+        //Serial.println("hwTimer Init");
     }
     updateInterval(HWtimerInterval);
     timerAlarmEnable(timer);
@@ -46,7 +46,7 @@ void ICACHE_RAM_ATTR hwTimer::resume()
 
 void ICACHE_RAM_ATTR hwTimer::stop()
 {
-    Serial.println("hwTimer stop");
+    //Serial.println("hwTimer stop");
     if (timer)
     {
         timerEnd(timer);

@@ -47,6 +47,11 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 String DebugOutput;
 
+//// sync word debugging ////
+uint32_t syncWordchangeInterval = 10000;
+uint32_t syncWordchangeLast = 0;
+uint8_t localSyncWord = 1;
+
 /// define some libs to use ///
 hwTimer hwTimer;
 CRSF crsf;
@@ -372,11 +377,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   if (isRXconnected)
   {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected;
+    SyncInterval = 250;
   }
   else
   {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+    SyncInterval = 250;
   }
 
   if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
@@ -523,6 +528,18 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  if (((millis() + 5000) > (syncWordchangeInterval + syncWordchangeLast)))
+  {
+    hwTimer.stop();
+    digitalWrite(2, HIGH);
+    return;
+  }
+
+  if (((millis() + 5500) > (syncWordchangeInterval + syncWordchangeLast)))
+  {
+    digitalWrite(2, LOW);
+  }
+
   NonceTX++; // must be done before callback
   RadioIsIdle = true;
   HandleFHSS();
@@ -531,6 +548,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
+
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
   #ifdef USE_UART2
@@ -640,75 +658,95 @@ void setup()
   SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
   crsf.Begin();
   hwTimer.init();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  //hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+
+    pinMode(2, OUTPUT);
+  digitalWrite(2, HIGH);
 }
 
 void loop()
 {
-
-  while (UpdateParamReq)
+  if ((millis() > (syncWordchangeInterval + syncWordchangeLast)))
   {
-    HandleUpdateParameter();
+    syncWordchangeLast = millis();
+    Serial.print("SyncWord: ");
+    Serial.print(Radio.currSyncWord, DEC);
+    Serial.print(" LQ: ");
+    Serial.print(crsf.LinkStatistics.uplink_Link_quality);
+    Serial.print(" RSSI: ");
+    Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
+    Radio.currSyncWord++;
+    Radio.SetMode(SX127x_OPMODE_STANDBY);
+    Radio.SetSyncWord(Radio.currSyncWord);
+    //SetRFLinkRate((uint8_t)RATE_DEFAULT);
+    crsf.LinkStatistics.uplink_Link_quality = 0;
+    crsf.LinkStatistics.uplink_RSSI_1 = 0;
+    hwTimer.resume();
   }
 
-  #ifdef FEATURE_OPENTX_SYNC
-  // Serial.println(crsf.OpenTXsyncOffset);
-  #endif
+//   while (UpdateParamReq)
+//   {
+//     HandleUpdateParameter();
+//   }
 
-  if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
-  {
-    isRXconnected = false;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
-    #endif
-  }
-  else
-  {
-    isRXconnected = true;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
-    #endif
-  }
+//   #ifdef FEATURE_OPENTX_SYNC
+//   // Serial.println(crsf.OpenTXsyncOffset);
+//   #endif
 
-  // float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
-  // PacketRateLastChecked = millis();
-  // PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
-  // linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
+//   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
+//   {
+//     isRXconnected = false;
+//     #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+//     digitalWrite(GPIO_PIN_LED_RED, LOW);
+//     #endif
+//   }
+//   else
+//   {
+//     isRXconnected = true;
+//     #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+//     digitalWrite(GPIO_PIN_LED_RED, HIGH);
+//     #endif
+//   }
 
-  if (linkQuality > 99)
-  {
-    linkQuality = 99;
-  }
-  packetCounteRX_TX = 0;
+//   // float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
+//   // PacketRateLastChecked = millis();
+//   // PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
+//   // linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
-  crsf.STM32handleUARTin();
-  #ifdef FEATURE_OPENTX_SYNC
-  crsf.sendSyncPacketToTX();
-  #endif
-  crsf.UARTwdt();
-  #ifdef TARGET_R9M_TX
-  button.handle();
-  #endif
-#endif
+//   if (linkQuality > 99)
+//   {
+//     linkQuality = 99;
+//   }
+//   packetCounteRX_TX = 0;
 
-#ifdef PLATFORM_ESP32
-  if (Serial2.available())
-  {
-    uint8_t c = Serial2.read();
-#else
-  if (Serial.available())
-  {
-    uint8_t c = Serial.read();
-#endif
+// #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+//   crsf.STM32handleUARTin();
+//   #ifdef FEATURE_OPENTX_SYNC
+//   crsf.sendSyncPacketToTX();
+//   #endif
+//   crsf.UARTwdt();
+//   #ifdef TARGET_R9M_TX
+//   button.handle();
+//   #endif
+// #endif
 
-    if (msp.processReceivedByte(c))
-    {
-      // Finished processing a complete packet
-      ProcessMSPPacket(msp.getReceivedPacket());
-      msp.markPacketReceived();
-    }
-  }
+// #ifdef PLATFORM_ESP32
+//   if (Serial2.available())
+//   {
+//     uint8_t c = Serial2.read();
+// #else
+//   if (Serial.available())
+//   {
+//     uint8_t c = Serial.read();
+// #endif
+
+//     if (msp.processReceivedByte(c))
+//     {
+//       // Finished processing a complete packet
+//       ProcessMSPPacket(msp.getReceivedPacket());
+//       msp.markPacketReceived();
+//     }
+//   }
 }
 
 void ICACHE_RAM_ATTR TimerCallbackISR()

@@ -46,6 +46,8 @@ void SX127xDriver::ConfigLoraDefaults()
   SetMode(SX127x_OPMODE_STANDBY);
 
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
+  Serial.print("Curr Sync Word:");
+  Serial.println(currSyncWord);
   SetSyncWord(currSyncWord);
   hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
@@ -105,13 +107,13 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
   uint8_t _syncWord = syncWord;
 
-  if (_syncWord == SX127X_SYNC_WORD_LORAWAN)
+  if ((_syncWord == SX127X_SYNC_WORD_LORAWAN) || (_syncWord == 0x08) || (_syncWord == 0x00))
   {
     _syncWord++;
-    Serial.println("Reserved Syncword detected in UID config, Using 0x35 instead");
+    Serial.println("Reserved Syncword detected in UID config");
   }
 
-  hal.writeRegister(SX127X_REG_SYNC_WORD, syncWord);
+  hal.writeRegister(SX127X_REG_SYNC_WORD, _syncWord);
   currSyncWord = _syncWord;
 }
 

@@ -3,7 +3,7 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
 
-//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
@@ -85,8 +85,8 @@ void CRSF::Begin()
 
 #ifdef PLATFORM_ESP32
     mutexOutFIFO = xSemaphoreCreateMutex();
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
-    xTaskCreatePinnedToCore(UARTwdt, "ESP32uartWDTTask", 2000, NULL, 10, &xESP32uartWDT, 1);
+    //xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
+    //xTaskCreatePinnedToCore(UARTwdt, "ESP32uartWDTTask", 2000, NULL, 10, &xESP32uartWDT, 1);
 #endif
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     // TODO: Find out if xTaskCreate is a substitute for xTaskCreatePinnedToCore
@@ -453,10 +453,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         Serial.print(UARTrequestedBaud);
                         Serial.println(" baud");
                     }
-                    Serial.print("UART STATS Bad:Good = ");
-                    Serial.print(BadPktsCount);
-                    Serial.print(":");
-                    Serial.println(GoodPktsCount);
+                    // Serial.print("UART STATS Bad:Good = ");
+                    // Serial.print(BadPktsCount);
+                    // Serial.print(":");
+                    // Serial.println(GoodPktsCount);
 
                     UARTwdtLastChecked = millis();
                     BadPktsCount = 0;
