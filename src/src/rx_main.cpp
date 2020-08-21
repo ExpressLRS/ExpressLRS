@@ -618,10 +618,10 @@ void setup()
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
-    Radio.Begin();
     #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
-    Radio.SetSyncWord(UID[3]);
+    Radio.currSyncWord = UID[3];
     #endif 
+    Radio.Begin();
     #ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
     #else
