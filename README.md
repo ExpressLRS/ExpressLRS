@@ -49,7 +49,7 @@ STLs for printing your own enclosure are available in the [STL folder](https://g
 ### Building a RX
 
 - [Mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 900MHz RX
-- [20x20 SX120 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convinient Stack Mounted DIY 2.4GHz RX
+- [20x20 SX120 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
 
 Building should be self explanatory given the schematic and BOM for each.
 
