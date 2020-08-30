@@ -60,6 +60,7 @@ Note - The board I bought came with a female SMA pigtail. Check if your antenna 
 #### Enclosures
 
 STLs for printing your own enclosure are available in the [STL folder](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/STL).
+
 <img src="img/ttgo_lora_wiring_diagram.png" width="50%"><img src="img/TTGO_BOARD_2.png" width="50%">
 
 ### Legal Stuff
