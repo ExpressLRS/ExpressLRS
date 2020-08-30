@@ -24,21 +24,31 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 ![2.4GHz Hardware](img/24Ghardware.jpg)
 
 Links:
-- [Nano 2.4G RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Nano_RX_SX1280_SMD) Currently Smallest DIY 2.4Ghz RX
-- [20x20 SX120 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
+- [Nano 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Nano_RX_SX1280_SMD) Currently Smallest DIY 2.4Ghz RX
+- [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
 
 ### 868/915MHz DIY Receiver and Transmitter
 ![2.4GHz Hardware](img/900Mhardware.jpg)
 
 Links:
-- [Mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 868/915MHz RX
-- [20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
+- [Mini 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 868/915MHz RX
+- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
 
+## Compatible "Off-The-Shelf" Hardware
+
+ℹ️ Development is ongoing but we the following hardware is currently compatible
+
+| Brand | Type | Name      | Notes |
+| ----- | ---- | --------- | ----- |
+| FrSky | TX   | R9M       | 2018 and 2019 versions, up to 2W ⚠️(Cooling mod needed) |
+| FrSky | TX   | R9M Lite  | output power 50mw in accordance with chip specification |
+| TTGO  | TX   | LoRa v1   | __not__ recommended due to bad RF design (~10mW) |
+| TTGO  | TX   | LoRa v2   | power output 50mW |
+| FrSky | RX   | R9mm      |       |
+| FrSky | RX   | R9mini    |       |
 
 ### TTGO LoRa boards
-ExpressLRS supports using easily available TTGO LoRa boards as TX modules for much easier assembly! Build information below.
-![TTGO LoRa](img/TTGO_BOARD.jpg)
-
+ExpressLRS supports using easily available TTGO LoRa boards as TX modules for much easier assembly!
 #### Building a TX Module using a TTGO Board
 
 For the build you will need a TTGO LoRa board, with or without an OLED. These boards are readily available from ebay, aliexpress, and banggood. The only others parts required are some wire, 5 pin female header, and your favourite 5V regulator that can take the transmitters battery voltage range.
