@@ -24,7 +24,7 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 ## Hardware Examaples
 
 ### 2.4GHz DIY Receiver and Transmitter
-<img src="img/24Ghardware.jpg" width=100%">
+![1.4GHz Hardware](img/24Ghardware.jpg)
 
 ### TTGO LoRa boards
 
