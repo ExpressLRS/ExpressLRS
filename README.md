@@ -1,9 +1,6 @@
-# ExpressLRS
+![2.4GHz Hardware](img/banner.png)
 
-## Community
-
-Please join at
-
+## Need help? Confused? Join the Community!
  * [RCGroups Discussion](https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system)
  * [Discord Chat](https://discord.gg/dS6ReFY)
 
