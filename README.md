@@ -53,9 +53,13 @@ For the build you will need a TTGO LoRa board, with or without an OLED. These bo
 
 Note - The board I bought came with a female SMA pigtail. Check if your antenna is suitable.
 
+**V1 Hardware, (not recommended)**
  * [LILYGO TTGO LoRa](http://www.lilygo.cn/prod_view.aspx?TypeId=50003&Id=1134&FId=t3:50003:3)
  * [AliExpress TTGO LoRa (no OLED)](https://www.aliexpress.com/item/4000059700341.html)
  * [AliExpress TTGO LoRa (with OLED)](https://www.aliexpress.com/item/32840238513.html)
+ 
+**V2 Hardware** 
+* [TTGO LORA32 V2.0](https://www.aliexpress.com/item/32847443952.html)
 
 #### Enclosures
 
