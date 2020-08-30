@@ -40,13 +40,9 @@ Links:
 
 ### TTGO LoRa boards
 ExpressLRS supports using easily available TTGO LoRa boards as TX modules for much easier assembly! Build information below.
-
 ![TTGO LoRa](img/TTGO_BOARD.jpg)
 
-<img src="img/R9M_and_ExpressLRS_modules.jpg" width="50%"><img src="img/module_inhousing.jpg" width="50%">
-<img src="img/IMG_20181025_210516.jpg" width="50%"><img src="img/IMG_20181025_210535.jpg" width="50%">
-
-#### Building a TX Module
+#### Building a TX Module using a TTGO Board
 
 For the build you will need a TTGO LoRa board, with or without an OLED. These boards are readily available from ebay, aliexpress, and banggood. The only others parts required are some wire, 5 pin female header, and your favourite 5V regulator that can take the transmitters battery voltage range.
 
@@ -62,10 +58,7 @@ STLs for printing your own enclosure are available in the [STL folder](https://g
 
 <img src="img/ttgo_lora_wiring_diagram.png" width="50%"><img src="img/TTGO_BOARD_2.png" width="50%">
 
-
-
-
 Building should be self explanatory given the schematic and BOM for each.
 
 ### Legal Stuff
-The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability.
+The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
