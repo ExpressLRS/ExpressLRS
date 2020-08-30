@@ -14,7 +14,7 @@ ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)** or **
 
 At `900 MHz` a maximum of `200 Hz` packet rate is supported. This makes it the fastest long-range RC link currently on the market. Stick latency of down to `6.5ms` is seen on firmware with **crsfshot** (aka openTX 2.4 mixer scheduler) support. At `2.4 GHz` a blistering `250 Hz` is supported with plans to extend this to `500 Hz` once OpenTX support is added.  
 
-Due to the optimized packet structure only basic telemetry that gives up/downlink information is currently supported. Compared to commercial systems ExpressLRS is also very affordable, a TX module can be built for $30 and receivers for $15-20. Likewise, new/second hand Frsky R9M gear is compatible and can be acquired inexpensively.
+Due to the optimized packet structure only basic telemetry is provided. If you want MavLink this is not for you. We used a compressed packet structure allows us to achieve better raw preformance compard to other solutions. ExpressLRS is also very affordable, a TX module can be built for $30 and receivers for $15-20. Likewise, new/second hand Frsky R9M gear is compatible and can be acquired inexpensively.
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
@@ -36,7 +36,7 @@ Links:
 
 ## Compatible "Off-The-Shelf" Hardware
 
-ℹ️ Development is ongoing but we the following hardware is currently compatible
+ℹ️ Development is ongoing but the following hardware is currently compatible
 
 | Brand | Type | Name      | Notes |
 | ----- | ---- | --------- | ----- |
@@ -47,8 +47,6 @@ Links:
 | FrSky | RX   | R9mm      |       |
 | FrSky | RX   | R9mini    |       |
 
-### TTGO LoRa boards
-ExpressLRS supports using easily available TTGO LoRa boards as TX modules for much easier assembly!
 #### Building a TX Module using a TTGO Board
 
 For the build you will need a TTGO LoRa board, with or without an OLED. These boards are readily available from ebay, aliexpress, and banggood. The only others parts required are some wire, 5 pin female header, and your favourite 5V regulator that can take the transmitters battery voltage range.
