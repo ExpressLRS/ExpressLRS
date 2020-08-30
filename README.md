@@ -21,6 +21,11 @@ Due to the optimized packet structure only basic telemetry that gives up/downlin
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
+## Hardware Examaples
+
+### 2.4GHz DIY Receiver and Transmitter
+![1.4GHz Hardware](img/24Ghardware.jpg)
+
 ### TTGO LoRa boards
 
 Now supports using easily available TTGO LoRa boards as TX modules for much easier assembly! Build information below.
