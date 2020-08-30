@@ -21,14 +21,25 @@ Due to the optimized packet structure only basic telemetry that gives up/downlin
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
-## Hardware Examaples
+## Hardware Examples
 
 ### 2.4GHz DIY Receiver and Transmitter
-![1.4GHz Hardware](img/24Ghardware.jpg)
+![2.4GHz Hardware](img/24Ghardware.jpg)
+
+Links:
+- [Nano 2.4G RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Nano_RX_SX1280_SMD) Currently Smallest DIY 2.4Ghz RX
+- [20x20 SX120 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
+
+### 868/915MHz DIY Receiver and Transmitter
+![2.4GHz Hardware](img/900Mhardware.jpg)
+
+Links:
+- [Mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 868/915MHz RX
+- [20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
+
 
 ### TTGO LoRa boards
-
-Now supports using easily available TTGO LoRa boards as TX modules for much easier assembly! Build information below.
+ExpressLRS supports using easily available TTGO LoRa boards as TX modules for much easier assembly! Build information below.
 
 ![TTGO LoRa](img/TTGO_BOARD.jpg)
 
@@ -45,16 +56,14 @@ Note - The board I bought came with a female SMA pigtail. Check if your antenna 
  * [AliExpress TTGO LoRa (no OLED)](https://www.aliexpress.com/item/4000059700341.html)
  * [AliExpress TTGO LoRa (with OLED)](https://www.aliexpress.com/item/32840238513.html)
 
-#### Enclosure
+#### Enclosures
 
 STLs for printing your own enclosure are available in the [STL folder](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/STL).
 
 <img src="img/ttgo_lora_wiring_diagram.png" width="50%"><img src="img/TTGO_BOARD_2.png" width="50%">
 
-### Building a RX
 
-- [Mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 900MHz RX
-- [20x20 SX120 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
+
 
 Building should be self explanatory given the schematic and BOM for each.
 
