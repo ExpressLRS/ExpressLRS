@@ -3,7 +3,6 @@
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
-
 # This file can be used to pass defines for compiler
 #
 # Purpose is mainly to define user specific variables
@@ -16,7 +15,7 @@
 ### STEP1: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -56,8 +55,9 @@
 
 ### OTHER OPTIONS: ### 
 
-# No sync on arm, don't transmit sync packet when armed (arm must be on channel 5, Aka AUX1)
+# No sync on arm, don't transmit sync packet when armed (if different please define arm channel you use, IE channel 5 (AUX1))
 -DNO_SYNC_ON_ARM
+-DARM_CHANNEL 5
  
  # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
 -DUART_INVERTED

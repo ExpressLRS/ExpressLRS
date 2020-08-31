@@ -361,30 +361,21 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-  #ifdef NO_SYNC_ON_ARM
-  if(CRSF_to_BIT(crsf.ChannelDataIn[4]))
-  { // we are armed 
-    SyncInterval = 0xFFFFFFFF;
-  }
-  else if (isRXconnected)
-  #else
-  if (isRXconnected)
-  #endif
-  {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected;
-  }
-  else
-  {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  }
+#ifdef NO_SYNC_ON_ARM
+    SyncInterval = (isRXconnected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+    bool skipSync = false;
+#else
+    SyncInterval = 200;
+    uint8_t armChannel = 4;
+    bool skipSync = CRSF_to_BIT(crsf.ChannelDataIn[armChannel]);
+#endif
 
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  if ((!skipSync) && (millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
-
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    //Serial.println("sync");
+    Serial.println("sync");
     //Serial.println(Radio.currFreq);
   }
   else
@@ -402,7 +393,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
-      Generate4ChannelData_11bit();
+        Generate4ChannelData_11bit();
 #endif
     }
   }

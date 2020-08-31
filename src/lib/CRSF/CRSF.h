@@ -290,7 +290,7 @@ static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return r
 
 static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val)
 {
-    if (Val > 1000)
+    if (Val > 820)
         return 1;
     else
         return 0;
