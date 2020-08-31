@@ -424,7 +424,7 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
-    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val1, uint8_t val2, uint8_t val3, uint8_t val4);
+    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val[]);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 

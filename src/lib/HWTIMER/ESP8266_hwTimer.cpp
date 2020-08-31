@@ -1,41 +1,59 @@
+#ifdef PLATFORM_ESP8266
 #include "ESP8266_hwTimer.h"
 
 void inline hwTimer::nullCallback(void){};
 
-void (*hwTimer::callbackTick)() = &nullCallback; 
-void (*hwTimer::callbackTock)() = &nullCallback; 
+void (*hwTimer::callbackTick)() = &nullCallback;
+void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::TickTock = false;
+volatile bool hwTimer::TickTock = true;
 volatile int16_t hwTimer::PhaseShift = 0;
 bool hwTimer::ResetNextLoop = false;
+bool hwTimer::running = false;
 
 uint32_t hwTimer::LastCallbackMicrosTick = 0;
 uint32_t hwTimer::LastCallbackMicrosTock = 0;
 
 void hwTimer::init()
 {
-    timer1_attachInterrupt(hwTimer::callback);
-    timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
-    timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
+    if (!running)
+    {
+        timer1_attachInterrupt(hwTimer::callback);
+        timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
+        timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
+        ResetNextLoop = false;
+        TickTock = true;
+        running = true;
+    }
 }
 
 void hwTimer::stop()
 {
-    timer1_detachInterrupt();
-    ResetNextLoop = false;
-    TickTock = false;
+    if (running)
+    {
+        timer1_disable();
+        timer1_detachInterrupt();
+        running = false;
+    }
 }
 
-void hwTimer::pause()
+void hwTimer::resume()
 {
-    timer1_detachInterrupt();
+    if (!running)
+    {
+        init();
+        running = true;
+    }
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval * 5;
-    timer1_write(hwTimer::HWtimerInterval >> 1);
+    if (running)
+    {
+        timer1_write(hwTimer::HWtimerInterval >> 1);
+    }
 }
 
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
@@ -74,10 +92,10 @@ void ICACHE_RAM_ATTR hwTimer::callback()
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
+        if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < 1)
         {
 
-            timer1_write((hwTimer::HWtimerInterval + hwTimer::PhaseShift) >> 1);
+            timer1_write((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift);
 
             hwTimer::ResetNextLoop = true;
             hwTimer::PhaseShift = 0;
@@ -93,3 +111,4 @@ void ICACHE_RAM_ATTR hwTimer::callback()
     }
     hwTimer::TickTock = !hwTimer::TickTock;
 }
+#endif

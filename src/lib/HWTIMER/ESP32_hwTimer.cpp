@@ -1,3 +1,5 @@
+
+#ifdef PLATFORM_ESP32
 #include "ESP32_hwTimer.h"
 
 static hw_timer_t *timer = NULL;
@@ -29,7 +31,7 @@ void hwTimer::init()
     timerAlarmEnable(timer);
 }
 
-void ICACHE_RAM_ATTR hwTimer::start()
+void ICACHE_RAM_ATTR hwTimer::resume()
 {
     if (running)
         return;
@@ -55,9 +57,10 @@ void ICACHE_RAM_ATTR hwTimer::stop()
 
 void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
 {
+    HWtimerInterval = time;
     if (timer)
     {
-        HWtimerInterval = time;
         timerAlarmWrite(timer, HWtimerInterval, true);
     }
 }
+#endif

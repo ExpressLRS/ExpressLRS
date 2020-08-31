@@ -12,6 +12,7 @@
   Change Frsky sensor Id
 
 ]] --
+local commitSha = 'xxxxxx'
 local version = 'v0.1'
 local refresh = 0
 local lcdChange = true
@@ -26,10 +27,10 @@ local gotFirstResp = false
 local binding = false
 
 local AirRate = {
-    selected = 5,
-    list = {'AUTO', '200 Hz', '100 Hz', '50 Hz', '25 Hz', '4 Hz', '------'},
-    dataId = {0x10, 0x00, 0x01, 0x02, 0x03, 0x04, 0xFF},
-    elements = 5
+    selected = 1,
+    list = {'------', 'AUTO', '500 Hz', '250 Hz', '200 Hz', '150 Hz', '100 Hz', '50 Hz', '25 Hz', '4 Hz'},
+    dataId = {0xFF, 0xFE, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    elements = 10
 }
 local TLMinterval = {
     selected = 9,
@@ -48,10 +49,10 @@ local MaxPower = {
     elements = 9
 }
 local RFfreq = {
-    selected = 4,
-    list = {'915 MHz', '868 MHz', '433 MHz', '------'},
-    dataId = {0x00, 0x01, 0x02, 0xFF},
-    elements = 4
+    selected = 7,
+    list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM', '------'},
+    dataId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0xFF},
+    elements = 7
 }
 
 local selection = {
@@ -60,6 +61,8 @@ local selection = {
     list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq', "Bind"},
     elements = 5
 }
+
+local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 
 -- returns flags to pass to lcd.drawText for inverted and flashing text
 local function getFlags(element)
@@ -72,16 +75,16 @@ local function getFlags(element)
 end
 
 local function increase(data)
-    if data.selected < data.elements then
-        data.selected = data.selected + 1
+    if data.selected > 1 then
+        data.selected = data.selected - 1
         --playTone(2000, 50, 0)
     end
     -- if data.selected > data.elements then data.selected = 1 end
 end
 
 local function decrease(data)
-    if data.selected > 1 then
-        data.selected = data.selected - 1
+    if data.selected < data.elements then
+        data.selected = data.selected + 1
         --playTone(2000, 50, 0)
     end
     -- if data.selected < 1 then data.selected = data.elements end
@@ -150,7 +153,11 @@ local function processResp()
 					else
 						bindmode = 0
 					end
-				else	
+                elseif(data[3] == 0xFE) then -- First half of commit sha
+                    commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. string.sub(commitSha, 4, 6)
+                elseif(data[3] == 0xFD) then -- Second half of commit sha
+                    commitSha = string.sub(commitSha, 1, 3) .. shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1]
+                else	
 					AirRate.selected = data[3]
 					TLMinterval.selected = data[4]
 					MaxPower.selected = data[5]
@@ -167,7 +174,7 @@ end
 
 local function refreshHorus()
     lcd.clear()
-    lcd.drawText(1, 1, 'ExpressLRS CFG v.01', INVERS)
+    lcd.drawText(1, 1, 'ExpressLRS ' .. commitSha, INVERS)
     lcd.drawText(1, 25, 'Pkt. Rate', 0)
     lcd.drawText(1, 45, 'TLM Ratio', 0)
     lcd.drawText(1, 65, 'Set Power', 0)
@@ -196,7 +203,7 @@ end
 
 local function refreshTaranis()
     lcd.clear()
-    lcd.drawScreenTitle('ExpressLRS CFG ' .. version, 1, 1)
+    lcd.drawScreenTitle('ExpressLRS ' .. commitSha, 1, 1)
     lcd.drawText(1, 11, 'Pkt. Rate', 0)
     lcd.drawText(1, 21, 'TLM Ratio', 0)
     lcd.drawText(1, 31, 'Set Power', 0)
@@ -217,6 +224,10 @@ local function refreshTaranis()
 				crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
 			end
         end
+		if (selection.state == false) and (bindmode == 1) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+			bindmode = 0
+		end
     end
 
     lcdChange = false
@@ -276,7 +287,7 @@ local function run_func(event)
 
     -- now process key events
     if event == EVT_ROT_LEFT or 
-       event == EVT_MINUS_BREAK or 
+       event == EVT_PLUS_BREAK or 
        event == EVT_DOWN_BREAK then
         if selection.state == false then
             decrease(selection)
@@ -301,7 +312,7 @@ local function run_func(event)
             end
 	end
     elseif event == EVT_ROT_RIGHT or 
-           event == EVT_PLUS_BREAK or 
+           event == EVT_MINUS_BREAK or 
 	   event == EVT_UP_BREAK then
         if selection.state == false then
             increase(selection)

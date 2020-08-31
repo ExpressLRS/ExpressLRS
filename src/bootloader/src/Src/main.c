@@ -226,7 +226,7 @@ int main(void)
   boot_code();
 }
 
-#ifdef STM32L0xx
+#if defined(STM32L0xx) || defined(STM32L4xx)
 void SysTick_Handler(void)
 {
   HAL_IncTick();
@@ -246,8 +246,7 @@ void SystemClock_Config(void)
   memset(&RCC_OscInitStruct, 0, sizeof(RCC_OscInitTypeDef));
   memset(&RCC_ClkInitStruct, 0, sizeof(RCC_ClkInitTypeDef));
 
-
-#ifdef STM32L0xx
+#if defined(STM32L0xx) || defined(STM32L4xx)
   /* Enable Power Control clock */
   __HAL_RCC_PWR_CLK_ENABLE();
 
@@ -262,8 +261,16 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+#if defined(STM32L4xx)
+  RCC_OscInitStruct.PLL.PLLM = 1;  // 16MHz
+  RCC_OscInitStruct.PLL.PLLN = 10; // 10 * 16MHz
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2; // 160MHz / 2
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7; // 160MHz / 7
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2; // 160MHz / 2
+#else
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
   RCC_OscInitStruct.PLL.PLLDIV = RCC_PLL_DIV2;
+#endif
   RCC_OscInitStruct.HSICalibrationValue = 0x10;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     Error_Handler();
@@ -275,7 +282,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+#if defined(STM32L4xx)
+  uint32_t flash_latency = FLASH_LATENCY_4;
+#else
+  uint32_t flash_latency = FLASH_LATENCY_1;
+#endif
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, flash_latency) != HAL_OK)
     Error_Handler();
 
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {};
@@ -288,6 +300,7 @@ void SystemClock_Config(void)
   HAL_ResumeTick();
 
 #elif defined(STM32L1xx)
+#warning "Clock setup is missing! Should use HSI!"
 
 #elif defined(STM32F1)
 
