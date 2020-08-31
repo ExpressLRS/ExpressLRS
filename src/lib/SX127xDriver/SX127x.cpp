@@ -36,14 +36,22 @@ SX127xDriver::SX127xDriver()
   instance = this;
 }
 
-void SX127xDriver::Begin()
+bool SX127xDriver::Begin()
 {
   Serial.println("SX127x Driver Begin");
   hal.TXdoneCallback = &TXnbISR;
   hal.RXdoneCallback = &RXnbISR;
   hal.init();
-  DetectChip();
-  ConfigLoraDefaults();
+
+  if (DetectChip())
+  {
+    ConfigLoraDefaults();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void SX127xDriver::End()
@@ -202,11 +210,11 @@ void SX127xDriver::SetFrequency(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
-void SX127xDriver::DetectChip()
+bool SX127xDriver::DetectChip()
 {
   uint8_t i = 0;
   bool flagFound = false;
-  while ((i < 10) && !flagFound)
+  while ((i < 3) && !flagFound)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION);
     Serial.println(version, HEX);
@@ -232,12 +240,14 @@ void SX127xDriver::DetectChip()
   if (!flagFound)
   {
     Serial.println(" not found!");
+    return false;
   }
   else
   {
     Serial.println(" found! (match by REG_VERSION == 0x12)");
   }
   hal.setRegValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, 2, 0);
+  return true;
 }
 
 /////////////////////////////////////TX functions/////////////////////////////////////////

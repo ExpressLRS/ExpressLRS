@@ -620,9 +620,15 @@ void setup()
     Radio.currFreq = GetInitialFreq();
     #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
     Radio.currSyncWord = UID[3];
-    #endif 
-    Radio.Begin();
-    #ifdef TARGET_RX_ESP8266_SX1280_V1
+    #endif
+    bool init_success = Radio.Begin();
+    while (!init_success)
+    {
+        digitalWrite(GPIO_PIN_LED, LED);
+        LED = !LED;
+        delay(200);
+    }
+#ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
     #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
