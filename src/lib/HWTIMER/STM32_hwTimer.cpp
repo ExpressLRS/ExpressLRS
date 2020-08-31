@@ -35,14 +35,12 @@ void hwTimer::stop()
     MyTim->pause();
     MyTim->setCount(0, MICROSEC_FORMAT);
     running = false;
-    TickTock = true;
 }
 
 void hwTimer::resume()
 {
     TickTock = true;
     running = true;
-    MyTim->setCount(0, MICROSEC_FORMAT);
     MyTim->resume();
 }
 

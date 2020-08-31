@@ -699,8 +699,11 @@ void loop()
         return;
     }
     #endif
-
-    if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+#ifdef NO_SYNC_ON_ARM
+    if (connectionState == tentative && (linkQuality <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime/4)))
+#else
+    if (connectionState == tentative && (linkQuality <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+#endif
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -720,7 +723,11 @@ void loop()
         }
         else
         {
+            #ifdef NO_SYNC_ON_ARM
+            CURR_RATE_MAX = 4; //switch between 200hz, 100hz, 50hz, rates
+            #else
             CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
+            #endif
         }
     }
 #ifdef NO_SYNC_ON_ARM
@@ -736,6 +743,7 @@ void loop()
             LED = !LED;
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
+            Radio.SetFrequency(GetInitialFreq());
             Radio.RXnb();
             LQreset();
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
