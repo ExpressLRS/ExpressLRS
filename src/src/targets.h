@@ -214,6 +214,8 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
+#define GPIO_PIN_DIO1           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
