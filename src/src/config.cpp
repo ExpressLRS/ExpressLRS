@@ -30,6 +30,7 @@ Config::Commit()
 
     // Write the struct to eeprom
     m_eeprom->Put(0, m_config);
+    m_eeprom->Commit();
 
     m_config.modified = false;
 }

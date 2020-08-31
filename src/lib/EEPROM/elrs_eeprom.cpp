@@ -2,16 +2,13 @@
 #include <Arduino.h>
 
 #ifdef PLATFORM_STM32
-    extEEPROM EEPROM(kbits_2, 1, 1);
+    extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
 #endif
 
 void
 ELRS_EEPROM::Begin()
 {
 #ifdef PLATFORM_STM32
-    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
-    Wire.setSCL(GPIO_PIN_SCK);
-    Wire.begin();
     EEPROM.begin();
 #else
     EEPROM.begin(RESERVED_EEPROM_SIZE);
@@ -40,7 +37,11 @@ ELRS_EEPROM::WriteByte(const unsigned long address, const uint8_t value)
         return;
     }
     EEPROM.write(address, value);
+}
 
+void
+ELRS_EEPROM::Commit()
+{
 #ifdef PLATFORM_ESP32
     if (!EEPROM.commit())
     {
