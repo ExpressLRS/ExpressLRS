@@ -566,10 +566,10 @@ void setup()
     // Annoying startup beeps
 #ifndef JUST_BEEP_ONCE
   pinMode(GPIO_PIN_BUZZER, OUTPUT);
-  const int beepFreq[] = {659, 659, 659, 523, 659, 783, 392};
-  const int beepDurations[] = {150, 300, 300, 100, 300, 550, 575};
+  const int beepFreq[] = {659, 659, 523, 659, 783, 392};
+  const int beepDurations[] = {300, 300, 100, 300, 550, 575};
 
-  for (int i = 0; i < 7; i++)
+  for (int i = 0; i < 6; i++)
   {
     tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
     delay(beepDurations[i]);
@@ -639,12 +639,23 @@ void setup()
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  Radio.Begin();
   #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
-  Radio.SetSyncWord(UID[3]);
-  #endif 
+  Radio.currSyncWord = UID[3];
+  #endif
+  bool init_success = Radio.Begin();
+  while (!init_success)
+  {
+    #if defined(TARGET_R9M_TX)
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    tone(GPIO_PIN_BUZZER, 480, 200);
+    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    delay(200);
+    tone(GPIO_PIN_BUZZER, 400, 200);
+    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    delay(1000);
+    #endif
+  }
   POWERMGNT.setDefaultPower();
-
   SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
   crsf.Begin();
   hwTimer.init();

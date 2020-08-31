@@ -60,9 +60,9 @@ public:
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
-    void Begin();
+    bool Begin();
     void End();
-    void DetectChip();
+    bool DetectChip();
     void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord);
     void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen);
     void SetMode(SX127x_RadioOPmodes mode);
