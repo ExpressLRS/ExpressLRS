@@ -57,7 +57,7 @@
 
 # No sync on arm, don't transmit sync packet when armed (if different please define arm channel you use, IE channel 5 (AUX1))
 -DNO_SYNC_ON_ARM
--DARM_CHANNEL 5
+-DARM_CHANNEL=5
  
  # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
 -DUART_INVERTED

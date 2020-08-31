@@ -42,6 +42,7 @@ void hwTimer::resume()
 {
     TickTock = true;
     running = true;
+    MyTim->setCount(0, MICROSEC_FORMAT);
     MyTim->resume();
 }
 

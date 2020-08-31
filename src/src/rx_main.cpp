@@ -297,6 +297,11 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
+    if (connectionState == !disconnected)
+    {
+        return; // Already connected
+    }
+    
     hwTimer.resume();
     connectionStatePrev = connectionState;
     connectionState = tentative;
@@ -327,7 +332,7 @@ void ICACHE_RAM_ATTR GotConnection()
     GotConnectionMillis = millis();
 
     RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
-    digitalWrite(GPIO_PIN_LED, 1); // turn on led
+    digitalWrite(GPIO_PIN_LED, HIGH); // turn on led
     Serial.println("got conn");
 
 #ifdef PLATFORM_STM32
@@ -718,17 +723,21 @@ void loop()
             CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
         }
     }
-
+#ifdef NO_SYNC_ON_ARM
+    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/8)) //we can cycle WAYY faster when NO_SYNC_ON_ARM is used
+#else
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
+#endif
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
+            hwTimer.stop();
+            digitalWrite(GPIO_PIN_LED, LED);
+            LED = !LED;
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
             Radio.RXnb();
             LQreset();
-            digitalWrite(GPIO_PIN_LED, LED);
-            LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
         }
