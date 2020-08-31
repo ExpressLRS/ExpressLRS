@@ -76,9 +76,10 @@ uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
 
 volatile bool UpdateParamReq = false;
-volatile bool UpdateRFparamReq = false;
+uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
+uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
 
-volatile bool RadioIsIdle = false;
+uint32_t PacketLastSentMicros = 0;
 
 bool Channels5to8Changed = false;
 
@@ -268,11 +269,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   crsf.RequestedRCpacketInterval = ModParams->interval;
   isRXconnected = false;
 
-  if (UpdateRFparamReq)
-  {
-    UpdateRFparamReq = false;
-  }
-
   #ifdef PLATFORM_ESP32
   updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
   #endif
@@ -335,12 +331,7 @@ void ICACHE_RAM_ATTR HandleTLM()
       return;
     }
     Radio.RXnb();
-    RadioIsIdle = false;
     WaitRXresponse = true;
-  }
-  else
-  {
-    RadioIsIdle = true;
   }
 }
 
@@ -398,11 +389,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-#if defined HYBRID_SWITCHES_8
+      #if defined HYBRID_SWITCHES_8
       GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
-#elif defined SEQ_SWITCHES
+      #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
-#else
+      #else
       Generate4ChannelData_11bit();
 #endif
     }
@@ -425,35 +416,44 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
   if (crsf.ParameterUpdateData[0] == 1)
   {
-    UpdateRFparamReq = true;
+    hwTimer.stop();
   }
 }
 
 void HandleUpdateParameter()
 {
-
-  if (UpdateParamReq == false || RadioIsIdle == false)
+  if (UpdateParamReq == false)
   {
     return;
   }
-
+  
   switch (crsf.ParameterUpdateData[0])
   {
   case 0: // send all params
     Serial.println("send all lua params");
+    crsf.sendLUAresponse(luaCommitPacket);
+    crsf.sendLUAresponse(luaCommitOtherHalfPacket);
     break;
 
   case 1:
-  Serial.println("Link rate");
-    if (crsf.ParameterUpdateData[1] == 0)
+    Serial.println("Change Link rate");
+    if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit. 
     {
-      decRFLinkRate();
+      if (crsf.ParameterUpdateData[1] == 0)
+      {
+        decRFLinkRate();
+      }
+      else if (crsf.ParameterUpdateData[1] == 1)
+      {
+        incRFLinkRate();
+      }
+      Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
+      hwTimer.resume();
     }
-    else if (crsf.ParameterUpdateData[1] == 1)
+    else
     {
-      incRFLinkRate();
+      return;
     }
-    Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
     break;
 
   case 2:
@@ -504,16 +504,8 @@ void HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
-  //Serial.println("Power");
-  //Serial.println(POWERMGNT.currPower());
-  uint8_t luaDataPacket[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
-  crsf.sendLUAresponse(luaDataPacket);
-  
-  uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
-  crsf.sendLUAresponse(luaCommitPacket);
-  
-  uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
-  crsf.sendLUAresponse(luaCommitOtherHalfPacket);
+  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
+  crsf.sendLUAresponse(luaCurrParams);
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -524,7 +516,6 @@ void ICACHE_RAM_ATTR RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
   NonceTX++; // must be done before callback
-  RadioIsIdle = true;
   HandleFHSS();
   HandleTLM();
 }
@@ -657,10 +648,8 @@ void setup()
 void loop()
 {
 
-  while (UpdateParamReq)
-  {
-    HandleUpdateParameter();
-  }
+  HandleUpdateParameter();
+
 
   #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
@@ -724,15 +713,8 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  if (!UpdateRFparamReq)
-  {
-    RadioIsIdle = false;
-    SendRCdataToRF();
-  }
-  else
-  {
-    NonceTX++;
-  }
+  PacketLastSentMicros = micros();
+  SendRCdataToRF();
 }
 
 void OnRFModePacket(mspPacket_t *packet)
