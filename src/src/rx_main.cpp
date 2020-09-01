@@ -632,6 +632,7 @@ void setup()
         digitalWrite(GPIO_PIN_LED, LED);
         LED = !LED;
         delay(200);
+        Serial.println("Failed to detect RF chipset!!!");
     }
 #ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
