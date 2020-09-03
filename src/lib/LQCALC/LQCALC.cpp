@@ -1,16 +1,12 @@
 #include "LQCALC.h"
 
-LQCALC *LQCALC::instance = NULL;
-
 void ICACHE_RAM_ATTR LQCALC::init()
 {
-    instance = this;
     this->init(100);
 }
 
 void ICACHE_RAM_ATTR LQCALC::init(uint8_t depth)
 {
-    instance = this;
     this->LQcalcDepth = depth;
 }
 

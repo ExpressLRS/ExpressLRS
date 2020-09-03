@@ -7,7 +7,6 @@
 class LQCALC
 {
 public:
-    static LQCALC *instance;
     void init(uint8_t depth);
     void init();
     void ICACHE_RAM_ATTR add();
