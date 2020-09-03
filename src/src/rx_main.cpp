@@ -272,22 +272,24 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     HandleSendTelemetryResponse();
 }
 
+void ICACHE_RAM_ATTR ResetTimerVars()
+{
+    FreqCorrection = 0;
+    HWtimerError = ExpressLRS_currAirRate_Modparams->interval >> 1;
+    RawOffset = 0;
+    Offset = 0;
+    OffsetDx = 0;
+    prevOffset = 0;
+    LPF_Offset.init(0);
+    LQCALC.reset();
+}
+
 void ICACHE_RAM_ATTR LostConnection()
 {
-    if (connectionState == disconnected)
-    {
-        return; // Already disconnected
-    }
-
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
-    FreqCorrection = 0;
-    HWtimerError = 0;
-    Offset = 0;
-    prevOffset = 0;
-    LPF_Offset.init(0);
-
+    ResetTimerVars();
     digitalWrite(GPIO_PIN_LED, 0);        // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
@@ -304,17 +306,13 @@ void ICACHE_RAM_ATTR TentativeConnection()
     {
         return; // Already connected
     }
-    
+
     hwTimer.resume();
     connectionStatePrev = connectionState;
     connectionState = tentative;
     RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
-    FreqCorrection = 0;
-    HWtimerError = 0;
-    Offset = 0;
-    prevOffset = 0;
-    LPF_Offset.init(0);
+    ResetTimerVars();
 }
 
 void ICACHE_RAM_ATTR GotConnection()
@@ -447,7 +445,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > 75))
+            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))))
             {
                 GotConnection();
             }
@@ -705,9 +703,10 @@ void loop()
     }
     #endif
     
-    if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || abs(Offset) > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
+        ResetTimerVars();
         Serial.println("Bad sync, aborting");
         Radio.SetFrequency(GetInitialFreq());
         Radio.RXnb();
@@ -715,61 +714,34 @@ void loop()
         LastSyncPacket = millis();
     }
 
-    if (lowRateMode == false) // this makes it latch to ON if it ever gets triggered
-    {
-        if (millis() > (LastValidPacket + 60000))
-        {
-            lowRateMode = true;
-            CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
-            scanIndex = 3;
-        }
-        else
-        {
-            #ifdef NO_SYNC_ON_ARM
-            CURR_RATE_MAX = 4; //switch between 200hz, 100hz, 50hz, rates
-            #else
-            CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
-            #endif
-        }
-    }
-
     if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             hwTimer.stop();
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            ResetTimerVars();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
             LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
+            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % RATE_MAX)); //switch between rates
             Radio.SetFrequency(GetInitialFreq());
             Radio.RXnb();
-            LQCALC.reset();
-
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
+            RFmodeLastCycled = millis();
         }
-        RFmodeLastCycled = millis();
     }
 
-    if ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10)) // check if we lost conn.
+    if ((connectionState == connected) && (millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))) // check if we lost conn.
     {
         LostConnection();
     }
 
-    if ((connectionState == tentative) && uplinkLQ >= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    if ((connectionState == tentative) && uplinkLQ > (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))) // quicker way to get to good conn state of the sync and link is great off the bat. 
     {
         GotConnection();
-    }
-
-    if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
-    {
-        if (connectionState == disconnected)
-        {
-            getRFlinkInfo();
-        }
-        crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalLastSent = millis();
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
