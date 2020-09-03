@@ -302,7 +302,7 @@ void ICACHE_RAM_ATTR LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    if (connectionState == !disconnected)
+    if (connectionState != disconnected)
     {
         return; // Already connected
     }
