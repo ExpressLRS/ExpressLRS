@@ -264,6 +264,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
+    crsf.RXhandleUARTout();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -677,6 +678,10 @@ void setup()
 
 void loop()
 {
+    if (hwTimer.running == false)
+    {
+        crsf.RXhandleUARTout();
+    }
     //crsf.RXhandleUARTout(); //empty the UART out buffer
     //yield(); // to be safe
     //Serial.println(uplinkLQ);
@@ -722,16 +727,23 @@ void loop()
         {
             hwTimer.stop();
             ResetTimerVars();
+            LastSyncPacket = millis(); // reset this variable
+
+            SendLinkStatstoFCintervalLastSent = millis();
+            LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
-            LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
-            Radio.SetFrequency(GetInitialFreq());
-            getRFlinkInfo();
-            crsf.sendLinkStatisticsToFC();
-            Radio.RXnb();
+
             scanIndex++;
             RFmodeLastCycled = millis();
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            delay(100);
+            crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
+
+            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+            Radio.SetFrequency(GetInitialFreq());
+            Radio.RXnb();
         }
     }
 
