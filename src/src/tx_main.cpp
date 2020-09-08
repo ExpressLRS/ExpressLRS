@@ -164,7 +164,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
     crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
+    crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->arrayIndex;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
 
@@ -309,13 +309,13 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
 void ICACHE_RAM_ATTR decRFLinkRate()
 {
   Serial.println("dec RFrate");
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index + 1);
+  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex + 1);
 }
 
 void ICACHE_RAM_ATTR incRFLinkRate()
 {
   Serial.println("inc RFrate");
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index - 1);
+  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex - 1);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
