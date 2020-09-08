@@ -308,14 +308,28 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
 
 void ICACHE_RAM_ATTR decRFLinkRate()
 {
-  Serial.println("dec RFrate");
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex + 1);
+  if (ExpressLRS_currAirRate_Modparams->arrayIndex != RATE_MAX)
+  {
+    Serial.println("dec RFrate");
+    SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex + 1);
+  }
+  else
+  {
+    Serial.println("dec RFrate denied");
+  }
 }
 
 void ICACHE_RAM_ATTR incRFLinkRate()
 {
-  Serial.println("inc RFrate");
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex - 1);
+  if (ExpressLRS_currAirRate_Modparams->arrayIndex != 0)
+  {
+    Serial.println("inc RFrate");
+    SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex - 1);
+  }
+  else
+  {
+    Serial.println("inc RFrate denied");
+  }
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -424,6 +438,11 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
   if (crsf.ParameterUpdateData[0] == 1)
   {
+    if (((ExpressLRS_currAirRate_Modparams->arrayIndex == 0) && (crsf.ParameterUpdateData[1] == 1)) || ((ExpressLRS_currAirRate_Modparams->arrayIndex == RATE_MAX) && (crsf.ParameterUpdateData[1] == 0))) // if we are at the upper bounds of the linkrate don't stop the timer.
+      return;
+  }
+  else
+  {
     hwTimer.stop();
   }
 }
@@ -444,6 +463,12 @@ void HandleUpdateParameter()
     break;
 
   case 1:
+    if ((ExpressLRS_currAirRate_Modparams->arrayIndex == 0) || (ExpressLRS_currAirRate_Modparams->arrayIndex == RATE_MAX))
+    {
+      Serial.println("Change Link Dedined, already at min/max rate");
+      return;
+    }
+
     Serial.println("Change Link rate");
     if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit. 
     {
