@@ -308,7 +308,7 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
 
 void ICACHE_RAM_ATTR decRFLinkRate()
 {
-  if (ExpressLRS_currAirRate_Modparams->arrayIndex != RATE_MAX)
+  if (ExpressLRS_currAirRate_Modparams->arrayIndex != RATE_MAX-1)
   {
     Serial.println("dec RFrate");
     SetRFLinkRate(ExpressLRS_currAirRate_Modparams->arrayIndex + 1);
