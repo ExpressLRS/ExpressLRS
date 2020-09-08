@@ -728,20 +728,21 @@ void loop()
             hwTimer.stop();
             ResetTimerVars();
             LastSyncPacket = millis(); // reset this variable
-
+            RFmodeLastCycled = millis();
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
+
+            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
 
-            scanIndex++;
-            RFmodeLastCycled = millis();
             getRFlinkInfo();
             crsf.sendLinkStatisticsToFC();
-            delay(100);
+            delay(200);
             crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
 
-            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+            scanIndex++;
             Radio.SetFrequency(GetInitialFreq());
             Radio.RXnb();
         }
