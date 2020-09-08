@@ -338,7 +338,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             return false;
         }
 
-        void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
+        void CRSF::sendLinkStatisticsToFC()
         {
             uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
 

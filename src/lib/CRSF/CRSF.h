@@ -420,7 +420,7 @@ public:
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
-    void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
+    void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
