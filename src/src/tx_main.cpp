@@ -187,11 +187,14 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
+  uint8_t index = (ExpressLRS_currAirRate_Modparams->arrayIndex & 0b11);
+  uint8_t TLmrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+
   PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->index & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
+  Radio.TXdataBuffer[3] = (index << 6) + (TLmrate << 3);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -367,7 +370,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint32_t SyncInterval;
 
 #ifdef NO_SYNC_ON_ARM
-  SyncInterval = 250;
+  SyncInterval = 200;
   bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[ARM_CHANNEL-1]);
 #else
   SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
@@ -379,10 +382,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
     ChangeAirRateSentUpdate = true;
-    #ifdef NO_SYNC_ON_ARM
-    Serial.println("Nosyncarm");
-    #else
-    Serial.println("normal sync");
+    #ifndef DEBUG_SUPPRESS
+    Serial.println("sync");
     #endif
     //Serial.println(Radio.currFreq);
   }
