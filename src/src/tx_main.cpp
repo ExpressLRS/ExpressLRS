@@ -463,12 +463,6 @@ void HandleUpdateParameter()
     break;
 
   case 1:
-    if ((ExpressLRS_currAirRate_Modparams->arrayIndex == 0) || (ExpressLRS_currAirRate_Modparams->arrayIndex == RATE_MAX))
-    {
-      Serial.println("Change Link Dedined, already at min/max rate");
-      return;
-    }
-
     Serial.println("Change Link rate");
     if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit. 
     {
