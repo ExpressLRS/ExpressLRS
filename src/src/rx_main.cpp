@@ -264,6 +264,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
+    crsf.RXhandleUARTout();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -730,6 +731,10 @@ void loop()
         {
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            crsf.RXhandleUARTout();
+            SendLinkStatstoFCintervalLastSent = millis();
             Radio.RXnb();
             LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
@@ -752,12 +757,13 @@ void loop()
 
     if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
-        if (connectionState == disconnected)
+        if (connectionState != disconnected)
         {
             getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            SendLinkStatstoFCintervalLastSent = millis();
         }
-        crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalLastSent = millis();
+
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
