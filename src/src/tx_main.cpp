@@ -438,7 +438,7 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
   if (crsf.ParameterUpdateData[0] == 1)
   {
-    if (((ExpressLRS_currAirRate_Modparams->arrayIndex > 0) && (crsf.ParameterUpdateData[1] == 1)) || ((ExpressLRS_currAirRate_Modparams->arrayIndex < RATE_MAX) && (crsf.ParameterUpdateData[1] == 0))) // if we are at the upper bounds of the linkrate don't stop the timer.
+    if (((ExpressLRS_currAirRate_Modparams->arrayIndex > 0) && (crsf.ParameterUpdateData[1] == 1)) || ((ExpressLRS_currAirRate_Modparams->arrayIndex < (RATE_MAX-1)) && (crsf.ParameterUpdateData[1] == 0))) // if we are at the upper bounds of the linkrate don't stop the timer.
       hwTimer.stop();
   }
 }
