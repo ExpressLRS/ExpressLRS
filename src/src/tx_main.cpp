@@ -262,7 +262,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
   }
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(int8_t index) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);

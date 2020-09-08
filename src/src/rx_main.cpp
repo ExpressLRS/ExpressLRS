@@ -53,7 +53,7 @@ LPF LPF_UplinkRSSI(5);
 LQCALC LQCALC;
 uint8_t uplinkLQ;
 
-uint8_t scanIndex = RATE_DEFAULT;
+int8_t scanIndex = RATE_DEFAULT;
 uint8_t CURR_RATE_MAX;
 
 int32_t HWtimerError;
@@ -133,7 +133,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void ICACHE_RAM_ATTR SetRFLinkRate(int8_t index) // Set speed of RF link (hz)
 {
     if (!LockRFmode)
     {
@@ -658,7 +658,7 @@ void setup()
     #ifdef LOCK_ON_50HZ
         for (int i = 0; i < RATE_MAX; i++)
         {
-            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
+            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(i);
             if (ModParams->enum_rate == RATE_50HZ)
             {
                 SetRFLinkRate(ModParams->arrayIndex);
@@ -666,7 +666,7 @@ void setup()
             }
         }
     #else
-        SetRFLinkRate((uint8_t)RATE_DEFAULT);
+        SetRFLinkRate(RATE_DEFAULT);
     #endif
 
     Radio.RXnb();
@@ -732,7 +732,7 @@ void loop()
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
 
-            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+            SetRFLinkRate(int8_t(scanIndex % RATE_MAX)); //switch between rates
 
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
