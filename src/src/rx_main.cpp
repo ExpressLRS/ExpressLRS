@@ -732,7 +732,8 @@ void loop()
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
 
-            SetRFLinkRate(int8_t(scanIndex % RATE_MAX)); //switch between rates
+            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+            Serial.println(ExpressLRS_currAirRate_Modparams->interval);
 
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
