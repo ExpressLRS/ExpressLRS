@@ -673,6 +673,10 @@ void setup()
 
 void loop()
 {
+    if (hwTimer.running == false)
+    {
+        crsf.RXhandleUARTout();
+    }
     //crsf.RXhandleUARTout(); //empty the UART out buffer
     //yield(); // to be safe
     //Serial.println(uplinkLQ);
@@ -731,16 +735,17 @@ void loop()
         {
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
-            getRFlinkInfo();
-            crsf.sendLinkStatisticsToFC();
-            crsf.RXhandleUARTout();
             SendLinkStatstoFCintervalLastSent = millis();
-            Radio.RXnb();
             LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            delay(100);
+            crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
+            Radio.RXnb();
         }
         RFmodeLastCycled = millis();
     }
@@ -763,7 +768,6 @@ void loop()
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = millis();
         }
-
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
