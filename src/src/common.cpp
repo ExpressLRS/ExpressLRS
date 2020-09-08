@@ -48,25 +48,31 @@ expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
-ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
+ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
 {
-    Serial.print("index req: ");
-    Serial.println(index);
-    expresslrs_mod_settings_s ModParams = ExpressLRS_AirRateConfig[index];
-    Serial.println(ModParams.arrayIndex);
-    
-    if (index > (RATE_MAX - 1))
+    // Protect against out of bounds rate
+    if (index < 0)
+    {
+        // Set to first entry in the array
+        return &ExpressLRS_AirRateConfig[0];
+    }
+    else if (index > (RATE_MAX - 1))
     {
         // Set to last usable entry in the array
-        Serial.println("b");
         return &ExpressLRS_AirRateConfig[RATE_MAX - 1];
     }
     return &ExpressLRS_AirRateConfig[index];
 }
 
-ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index)
+ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
 {
-    if (index > (RATE_MAX - 1))
+    // Protect against out of bounds rate
+    if (index < 0)
+    {
+        // Set to first entry in the array
+        return &ExpressLRS_AirRateRFperf[0];
+    }
+    else if (index > (RATE_MAX - 1))
     {
         // Set to last usable entry in the array
         return &ExpressLRS_AirRateRFperf[RATE_MAX - 1];
