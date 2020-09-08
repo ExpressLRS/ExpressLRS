@@ -285,7 +285,7 @@ void ICACHE_RAM_ATTR ResetTimerVars()
     LQCALC.reset();
 }
 
-void ICACHE_RAM_ATTR LostConnection()
+void LostConnection() // ICACHE_RAM_ATTR not needed as it is never run from ISR
 {
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
