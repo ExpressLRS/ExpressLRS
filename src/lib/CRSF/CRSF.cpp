@@ -77,11 +77,12 @@ volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-#define AutosyncWaitPeriod 500
+#define AutosyncWaitPeriod 1000
 int32_t CRSF::OpenTXsyncOffetFLTR = 0;
 uint32_t CRSF::AutosyncWaitPeriodCounter = 0;
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us 
 LPF LPF_OPENTX_SYNC_MARGIN(3);
+LPF LPF_OPENTX_SYNC_OFFSET(3);
 #else
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 5000; // 500us 
 #endif
@@ -268,6 +269,7 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
     CRSF::AutosyncWaitPeriodCounter = millis();
     CRSF::OpenTXsyncOffsetSafeMargin = 1000;
     LPF_OPENTX_SYNC_MARGIN.init(0);
+    LPF_OPENTX_SYNC_OFFSET.init(0);
 #endif
 }
 
@@ -279,7 +281,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     {
         if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
         {
-            CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
+            CRSF::OpenTXsyncOffset = LPF_OPENTX_SYNC_OFFSET.update(-(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval));
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
             OpenTXsyncOffetFLTR = LPF_OPENTX_SYNC_MARGIN.update(CRSF::OpenTXsyncOffset);
 
@@ -295,13 +297,20 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
         }
 
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        if ((CRSF::OpenTXsyncOffset > 800 && CRSF::OpenTXsyncOffset < CRSF::RequestedRCpacketInterval) && (CRSF::OpenTXsyncOffsetSafeMargin > 1000)) // higher than 800us but not less than 50us
-        {                                                                                                                                         // should never get this high unless out of sync
+        if ((CRSF::OpenTXsyncOffset > 500 && CRSF::OpenTXsyncOffset < CRSF::RequestedRCpacketInterval) && (CRSF::OpenTXsyncOffsetSafeMargin > 1500)) // higher than 800us but not less than 50us
+        {                                                                                                                                            // should never get this high unless out of sync
             CRSF::OpenTXsyncOffsetSafeMargin = CRSF::OpenTXsyncOffsetSafeMargin - 10;
-            Serial.print("Autotune Sync Offset --: ");
-            Serial.print(CRSF::OpenTXsyncOffset);
-            Serial.print(",");
-            Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
+            // Serial.print("Autotune Sync Offset --: ");
+            // Serial.print(CRSF::OpenTXsyncOffset);
+            // Serial.print(",");
+            // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
+        }
+
+        int32_t limit = (CRSF::RequestedRCpacketInterval >> 2) * 10;
+
+        if (OpenTXsyncOffsetSafeMargin > limit)
+        {
+            OpenTXsyncOffsetSafeMargin = limit;
         }
 #endif
     }
@@ -691,6 +700,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
 #endif
                     AutosyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation 
+                    LPF_OPENTX_SYNC_MARGIN.init(0);
+                    LPF_OPENTX_SYNC_OFFSET.init(0);
                     connected();
                 }
 
