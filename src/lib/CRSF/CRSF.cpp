@@ -56,6 +56,8 @@ uint32_t CRSF::UARTwdtInterval = 1000; // for the UART wdt, every 1000ms we chan
 
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
+uint32_t CRSF::GoodPktsCountResult = 0;
+uint32_t CRSF::BadPktsCountResult = 0;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
@@ -199,12 +201,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
+void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 {
-    uint8_t dataLength = sizeof(val);
-    uint8_t LUArespLength = dataLength + 2;
+    Serial.println(len);
+    uint8_t LUArespLength = len + 2;
 
-    uint8_t outBuffer[LUArespLength + 4] = {0};
+    uint8_t outBuffer[LUArespLength + 5] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
@@ -213,7 +215,7 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-    for (uint8_t i = 0; i < dataLength; ++i)
+    for (uint8_t i = 0; i < len; ++i)
     {
         outBuffer[5 + i] = val[i];
     }
@@ -521,6 +523,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     Serial.println(GoodPktsCount);
 
                     UARTwdtLastChecked = millis();
+                    GoodPktsCountResult = GoodPktsCount;
+                    BadPktsCountResult = BadPktsCount;
                     BadPktsCount = 0;
                     GoodPktsCount = 0;
 
@@ -705,6 +709,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
+                        
+
                 if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
                 {
                     const volatile uint8_t *buffer = CRSF::inBuffer.asUint8_t;
@@ -712,6 +718,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     {
                         ParameterUpdateData[0] = buffer[5];
                         ParameterUpdateData[1] = buffer[6];
+                                        Serial.print(buffer[5]);
+                Serial.print(",");
+                Serial.println(buffer[6]);     
                         RecvParameterUpdate();
                     }
                     Serial.println("Got Other Packet"); // TODO use debug macro?

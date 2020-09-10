@@ -77,8 +77,10 @@ LQCALC LQCALC;
 LPF LPD_DownlinkLQ(1);
 
 volatile bool UpdateParamReq = false;
-uint8_t luaCommitPacket[] = {(uint8_t)0xF0, thisCommit[0], thisCommit[1], thisCommit[2]};
-uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xF1, thisCommit[3], thisCommit[4], thisCommit[5]};
+#define OPENTX_LUA_UPDATE_INTERVAL 1000
+uint32_t LuaLastUpdated = 0;
+uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
+uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
 
@@ -266,48 +268,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
 }
 
-uint8_t ICACHE_RAM_ATTR decTLMrate()
-{
-  Serial.println("dec TLM");
-  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
-
-  if (currTLMinterval < (uint8_t)TLM_RATIO_1_2)
-  {
-    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval + 1);
-    Serial.println(currTLMinterval);
-  }
-  return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
-}
-
-uint8_t ICACHE_RAM_ATTR incTLMrate()
-{
-  Serial.println("inc TLM");
-  uint8_t currTLMinterval = (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
-
-  if (currTLMinterval > (uint8_t)TLM_RATIO_NO_TLM)
-  {
-    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
-  }
-
-  return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
-}
-
-void ICACHE_RAM_ATTR decRFLinkRate()
-{
-  Serial.println("dec RFrate");
-  expresslrs_tlm_ratio_e currentTlmInterval = ExpressLRS_currAirRate_Modparams->TLMinterval;
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index + 1);
-  ExpressLRS_currAirRate_Modparams->TLMinterval = currentTlmInterval;
-}
-
-void ICACHE_RAM_ATTR incRFLinkRate()
-{
-  Serial.println("inc RFrate");
-  expresslrs_tlm_ratio_e currentTlmInterval = ExpressLRS_currAirRate_Modparams->TLMinterval;
-  SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index - 1);
-  ExpressLRS_currAirRate_Modparams->TLMinterval = currentTlmInterval;
-}
-
 void ICACHE_RAM_ATTR HandleFHSS()
 {
   uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
@@ -414,11 +374,16 @@ void ICACHE_RAM_ATTR RadioUARTconnected()
   }
 }
 
+void sendLuaParams()
+{
+  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 1, Regulatory_Domain_Index, (uint8_t)crsf.BadPktsCountResult, (uint8_t)(crsf.GoodPktsCountResult & 0xFF00), (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
+  crsf.sendLUAresponse(luaCurrParams, 7);
+}
+
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
-
-  if (crsf.ParameterUpdateData[0] == 1)
+  if (crsf.ParameterUpdateData[0] == 1 && (ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
   {
     hwTimer.stop();
   }
@@ -426,70 +391,54 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void HandleUpdateParameter()
 {
+  if (millis() > LuaLastUpdated + OPENTX_LUA_UPDATE_INTERVAL)
+  {
+    sendLuaParams();
+    LuaLastUpdated = millis();
+  }
+
   if (UpdateParamReq == false)
   {
     return;
   }
-  
+
   switch (crsf.ParameterUpdateData[0])
   {
   case 0: // send all params
     Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket);
-    crsf.sendLUAresponse(luaCommitOtherHalfPacket);
+    crsf.sendLUAresponse(luaCommitPacket, 4);
+    crsf.sendLUAresponse(luaCommitOtherHalfPacket, 4);
     break;
 
   case 1:
     Serial.println("Change Link rate");
-    if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit. 
+    if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
-      if (crsf.ParameterUpdateData[1] == 0)
+      if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
       {
-        decRFLinkRate();
+        SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+        Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
+        hwTimer.resume();
       }
-      else if (crsf.ParameterUpdateData[1] == 1)
-      {
-        incRFLinkRate();
-      }
-      Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
-      hwTimer.resume();
-    }
-    else
-    {
-      return;
     }
     break;
 
   case 2:
-
-    if (crsf.ParameterUpdateData[1] == 0)
+    if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      decTLMrate();
+      ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1];
+      Serial.print("TLM interval: ");
+      Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
     }
-    else if (crsf.ParameterUpdateData[1] == 1)
-    {
-      incTLMrate();
-    }
-
     break;
 
   case 3:
-
-    if (crsf.ParameterUpdateData[1] == 0)
-    {
-      Serial.println("Decrease RF power");
-      POWERMGNT.decPower();
-    }
-    else if (crsf.ParameterUpdateData[1] == 1)
-    {
-      Serial.println("Increase RF power");
-      POWERMGNT.incPower();
-    }
-
+    Serial.print("Request Power: ");
+    Serial.println(crsf.ParameterUpdateData[1]);
+    POWERMGNT.setPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     break;
 
   case 4:
-
     break;
 
   case 0xFE:
@@ -516,8 +465,7 @@ void HandleUpdateParameter()
     {
       Serial.println("Binding Requested!");
       uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
-      crsf.sendLUAresponse(luaBindingRequestedPacket);
-
+      crsf.sendLUAresponse(luaBindingRequestedPacket, 4);
       //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done
     }
     break;
@@ -525,7 +473,7 @@ void HandleUpdateParameter()
   default:
     break;
   }
-
+  sendLuaParams();
   UpdateParamReq = false;
   uint8_t luaCurrParams[] = {
     (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate + 3), 

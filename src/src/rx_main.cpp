@@ -637,19 +637,25 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    #ifdef LOCK_ON_50HZ
-        for (int i = 0; i < RATE_MAX; i++)
-        {
-            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
-            if (ModParams->enum_rate == RATE_50HZ)
-            {
-                SetRFLinkRate(ModParams->index);
-                LockRFmode = true;
-            }
-        }
-    #else
-        SetRFLinkRate(RATE_DEFAULT);
-    #endif
+    // #ifdef LOCK_ON_50HZ // to do check if needed or delete
+    //     for (int i = 0; i < RATE_MAX; i++)
+    //     {
+    //         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
+    //         if (ModParams->enum_rate == RATE_50HZ)
+    //         {
+    //             SetRFLinkRate(ModParams->index);
+    //             LockRFmode = true;
+    //         }
+    //     }
+    // #else
+    //     SetRFLinkRate(RATE_DEFAULT);
+    // #endif
+
+#ifdef LOCK_ON_50HZ
+    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
+#else
+    SetRFLinkRate(RATE_DEFAULT);
+#endif
 
     Radio.RXnb();
     crsf.Begin();
