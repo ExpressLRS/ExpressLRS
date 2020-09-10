@@ -270,12 +270,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
 
-  crsf.RequestedRCpacketInterval = ModParams->interval;
+  crsf.setSyncParams(ModParams->interval);
   connectionState = connected;
 
-  #ifdef PLATFORM_ESP32
+#ifdef PLATFORM_ESP32
   updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
-  #endif
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
