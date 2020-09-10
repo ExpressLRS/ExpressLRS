@@ -6,6 +6,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include "../../src/targets.h"
+#include "../../src/LowPassFilter.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -437,6 +438,7 @@ public:
     static volatile uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
+    static uint32_t OpenTXsyncOffsetSafeMargin;
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
