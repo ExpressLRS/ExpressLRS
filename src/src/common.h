@@ -65,7 +65,8 @@ typedef enum
     RATE_100HZ = 4,
     RATE_50HZ = 5,
     RATE_25HZ = 6,
-    RATE_4HZ = 7
+    RATE_4HZ = 7,
+    RATE_ENUM_MAX = 8
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 typedef struct expresslrs_rf_pref_params_s
@@ -128,5 +129,6 @@ extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 //extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
 extern bool ExpressLRS_AirRateNeedsUpdate;

@@ -404,6 +404,9 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
+    static uint32_t GoodPktsCountResult; // need to latch the results 
+    static uint32_t BadPktsCountResult; // need to latch the results 
+
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
     static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
@@ -424,7 +427,7 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
-    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val[]);
+    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val[], uint8_t len);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 

@@ -49,43 +49,56 @@ void POWERMGNT::setDefaultPower()
     setPower((PowerLevels_e)DefaultPowerEnum);
 }
 
-void POWERMGNT::setPower(PowerLevels_e Power)
+PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 {
+    if (Power > MaxPower)
+    {
+        Power = (PowerLevels_e)MaxPower;
+    }
 
 #if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
-    Radio.SetOutputPower(13);
-    CurrentPower = Power;
-    return;
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(8);
+        CurrentPower = PWR_10mW;
+        break;
+    case PWR_25mW:
+    default:
+        Radio.SetOutputPower(13);
+        CurrentPower = PWR_25mW;
+        break;
+    }
+    return CurrentPower;
 #endif
 
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
     R9DAC.setPower((DAC_PWR_)Power);
     CurrentPower = Power;
-    return;
+    return CurrentPower;
 #endif
 
 #if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
-    if (Power <= PWR_50mW)
+    switch (Power)
     {
-        if (Power == PWR_10mW)
-        {
-            Radio.SetOutputPower(0b1000);
-            CurrentPower = PWR_10mW;
-        }
-        if (Power == PWR_25mW)
-        {
-            Radio.SetOutputPower(0b1100);
-            CurrentPower = PWR_25mW;
-        }
-        if (Power == PWR_50mW)
-        {
-            Radio.SetOutputPower(0b1111); //15
-            CurrentPower = PWR_50mW;
-        }
-        return;
+    case PWR_10mW:
+        Radio.SetOutputPower(0b1000);
+        CurrentPower = PWR_10mW;
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(0b1100);
+        CurrentPower = PWR_25mW;
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(0b1111); //15
+        CurrentPower = PWR_50mW;
+        break;
+    default:
+        CurrentPower = PWR_50mW;
+        Radio.SetOutputPower(0b1111); //15
+        break;
     }
-
 #endif
 
 #ifdef TARGET_1000mW_MODULE
@@ -93,26 +106,23 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
     case PWR_100mW:
         Radio.SetOutputPower(0b0101);
-        CurrentPower = PWR_100mW;
         break;
     case PWR_250mW:
         Radio.SetOutputPower(0b1000);
-        CurrentPower = PWR_250mW;
         break;
     case PWR_500mW:
         Radio.SetOutputPower(0b1100);
-        CurrentPower = PWR_500mW;
         break;
     case PWR_1000mW:
         Radio.SetOutputPower(0b1111);
-        CurrentPower = PWR_1000mW;
         break;
     case PWR_50mW:
     default:
         Radio.SetOutputPower(0b0010);
-        CurrentPower = PWR_50mW;
+        Power = PWR_50mW;
         break;
     }
+    CurrentPower = Power;
 #endif
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
@@ -178,4 +188,5 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     }
     CurrentPower = Power;
 #endif
+    return CurrentPower;
 }

@@ -30,6 +30,11 @@
 #define DefaultPowerEnum 2
 #endif
 
+#ifdef TARGET_TX_ESP32_SX1280_V1
+#define MaxPower 1
+#define DefaultPowerEnum 1
+#endif
+
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
 #define MaxPower 6
 #define DefaultPowerEnum 3
@@ -60,7 +65,7 @@ private:
     static PowerLevels_e CurrentPower;
 
 public:
-    static void setPower(PowerLevels_e Power);
+    static PowerLevels_e setPower(PowerLevels_e Power);
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
