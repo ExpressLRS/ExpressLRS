@@ -80,8 +80,7 @@ volatile int32_t CRSF::OpenTXsyncOffset = 0;
 uint32_t CRSF::SyncWaitPeriodCounter = 0;
 LPF LPF_OPENTX_SYNC_OFFSET(3);
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-int32_t CRSF::OpenTXsyncOffetFLTR = 0;
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us 
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
 LPF LPF_OPENTX_SYNC_MARGIN(3);
 #else
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us 
@@ -277,33 +276,26 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
 
-
-        if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
-        {
-            CRSF::OpenTXsyncOffset = LPF_OPENTX_SYNC_OFFSET.update(-(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval));
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
+    if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
     {
-            OpenTXsyncOffetFLTR = LPF_OPENTX_SYNC_MARGIN.update(CRSF::OpenTXsyncOffset);
-
-            if (CRSF::OpenTXsyncOffetFLTR <= 0 && CRSF::OpenTXsyncOffetFLTR > -(CRSF::RequestedRCpacketInterval / 2))
-            {
-                CRSF::OpenTXsyncOffsetSafeMargin = -(CRSF::OpenTXsyncOffetFLTR * 10) + 1000; // take worst case plus 1000us
-            }
-    }
-#endif
-        }
-
+        CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
         if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
         {
-            uint32_t limit = (CRSF::RequestedRCpacketInterval >> 2) * 10;
-
-            if (OpenTXsyncOffsetSafeMargin > limit)
-            {
-                OpenTXsyncOffsetSafeMargin = limit;
-            }
+            CRSF::OpenTXsyncOffsetSafeMargin = LPF_OPENTX_SYNC_MARGIN.update((CRSF::OpenTXsyncOffsetSafeMargin - OpenTXsyncOffset) + 100); // take worst case plus 50us
         }
+#endif
+    }
+
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    if (CRSF::OpenTXsyncOffsetSafeMargin > 4000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 4000; // hard limit at no tune default
+    }
+    else if (CRSF::OpenTXsyncOffsetSafeMargin < 1000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
+    }
 #endif
     // Serial.print(CRSF::OpenTXsyncOffset);
     // Serial.print(",");
