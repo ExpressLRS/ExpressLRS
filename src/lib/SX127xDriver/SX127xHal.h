@@ -35,7 +35,7 @@ public:
 
     uint8_t ICACHE_RAM_ATTR getRegValue(uint8_t reg, uint8_t msb = 7, uint8_t lsb = 0);
     uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg);
-    uint8_t ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes);
+    void ICACHE_RAM_ATTR readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes);
 
     uint8_t ICACHE_RAM_ATTR setRegValue(uint8_t reg, uint8_t value, uint8_t msb = 7, uint8_t lsb = 0);
 
@@ -45,5 +45,5 @@ public:
     void ICACHE_RAM_ATTR writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes);
 
 private:
-    SX127x_InterruptAssignment InterruptAssignment = SX127x_INTERRUPT_NONE;
+    volatile SX127x_InterruptAssignment InterruptAssignment = SX127x_INTERRUPT_NONE;
 };
