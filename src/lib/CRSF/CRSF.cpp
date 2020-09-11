@@ -288,10 +288,10 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
             if (CRSF::OpenTXsyncOffetFLTR <= 0 && CRSF::OpenTXsyncOffetFLTR > -(CRSF::RequestedRCpacketInterval / 2))
             {
                 CRSF::OpenTXsyncOffsetSafeMargin = -(CRSF::OpenTXsyncOffetFLTR * 10) + 1000; // take worst case plus 50us
-                Serial.print("Autotune Sync Offset ++: ");
-                Serial.print(CRSF::OpenTXsyncOffset);
-                Serial.print(",");
-                Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
+                // Serial.print("Autotune Sync Offset ++: ");
+                // Serial.print(CRSF::OpenTXsyncOffset);
+                // Serial.print(",");
+                // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
             }
 #endif
         }
