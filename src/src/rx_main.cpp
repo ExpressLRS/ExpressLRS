@@ -747,6 +747,17 @@ void loop()
             Radio.SetFrequency(GetInitialFreq());
             Radio.RXnb();
         }
+        RFmodeLastCycled = millis();
+    }
+
+    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
+    {
+        LostConnection();
+    }
+
+    if ((connectionState == tentative) && uplinkLQ >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    {
+        GotConnection();
     }
 
     if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))

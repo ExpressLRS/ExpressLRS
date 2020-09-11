@@ -61,12 +61,7 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
     {
         hwTimer::PhaseShift = MaxPhaseShift;
     }
-    else
-    {
-        hwTimer::PhaseShift = newPhaseShift;
-    }
-
-    if (newPhaseShift < -MaxPhaseShift)
+    else if (newPhaseShift < -MaxPhaseShift)
     {
         hwTimer::PhaseShift = -MaxPhaseShift;
     }
