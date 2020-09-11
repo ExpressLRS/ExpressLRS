@@ -28,9 +28,9 @@ public:
     bool     IsModified();
 
     // Setters
-    void ICACHE_RAM_ATTR SetRate(uint32_t rate);
-    void ICACHE_RAM_ATTR SetTlm(uint32_t tlm);
-    void ICACHE_RAM_ATTR SetPower(uint32_t power);
+    void SetRate(uint32_t rate);
+    void SetTlm(uint32_t tlm);
+    void SetPower(uint32_t power);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
 

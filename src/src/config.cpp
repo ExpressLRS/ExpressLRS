@@ -61,7 +61,7 @@ Config::IsModified()
 }
 
 // Setters
-void ICACHE_RAM_ATTR
+void
 Config::SetRate(uint32_t rate)
 {
     if (m_config.rate != rate)
@@ -71,7 +71,7 @@ Config::SetRate(uint32_t rate)
     }
 }
 
-void ICACHE_RAM_ATTR
+void
 Config::SetTlm(uint32_t tlm)
 {
     if (m_config.tlm != tlm)
@@ -81,7 +81,7 @@ Config::SetTlm(uint32_t tlm)
     }
 }
 
-void ICACHE_RAM_ATTR
+void
 Config::SetPower(uint32_t power)
 {
     if (m_config.power != power)
