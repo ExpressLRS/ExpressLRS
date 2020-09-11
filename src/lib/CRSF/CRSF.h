@@ -6,6 +6,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include "../../src/targets.h"
+#include "../../src/LowPassFilter.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -434,9 +435,13 @@ public:
 ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
     static volatile uint32_t OpenTXsyncLastSent;
-    static volatile uint32_t RequestedRCpacketInterval;
+    static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
+    static uint32_t OpenTXsyncOffsetSafeMargin;
+    static int32_t OpenTXsyncOffetFLTR;
+    static uint32_t SyncWaitPeriodCounter;
+    static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
