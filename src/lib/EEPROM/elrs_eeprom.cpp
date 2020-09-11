@@ -5,7 +5,7 @@
     extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
 #endif
 
-#ifdef TARGET_R9M_TX
+#ifdef TARGET_R9M_RX
     extEEPROM EEPROM(kbits_2, 1, 1, 0x50);
 #endif
 
