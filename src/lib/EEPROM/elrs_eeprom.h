@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Arduino.h>
 #include "../../src/targets.h"
 #include <Wire.h>
 #ifdef PLATFORM_STM32
