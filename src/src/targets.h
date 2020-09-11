@@ -5,11 +5,7 @@
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
 
-#ifdef PLATFORM_STM32
-#define WORD_ALIGNED_ATTR //nothing//
-#else
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
-#endif
 
 #ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
