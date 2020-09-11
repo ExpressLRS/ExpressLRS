@@ -13,6 +13,22 @@ void (*SX127xDriver::RXtimeout)() = &nullCallback;
 
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[TXRXBuffSize] = {0};
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0};
+
+uint8_t SX127x_AllowedSyncwords[105] =
+    {0, 5, 6, 7, 11, 12, 13, 15, 18,
+     21, 23, 26, 29, 30, 31, 33, 34,
+     37, 38, 39, 40, 42, 44, 50, 51,
+     54, 55, 57, 58, 59, 61, 63, 65,
+     67, 68, 71, 77, 78, 79, 80, 82,
+     84, 86, 89, 92, 94, 96, 97, 99,
+     101, 102, 105, 106, 109, 111, 113, 115,
+     117, 118, 119, 121, 122, 124, 126, 127,
+     129, 130, 138, 143, 161, 170, 172, 173,
+     175, 180, 181, 182, 187, 190, 191, 192,
+     193, 196, 199, 201, 204, 205, 208, 209,
+     212, 213, 219, 220, 221, 223, 227, 229,
+     235, 239, 240, 242, 243, 246, 247, 255};
+     
 //////////////////////////////////////////////
 
 SX127xDriver::SX127xDriver()
@@ -20,14 +36,22 @@ SX127xDriver::SX127xDriver()
   instance = this;
 }
 
-void SX127xDriver::Begin()
+bool SX127xDriver::Begin()
 {
   Serial.println("SX127x Driver Begin");
   hal.TXdoneCallback = &TXnbISR;
   hal.RXdoneCallback = &RXnbISR;
   hal.init();
-  DetectChip();
-  ConfigLoraDefaults();
+
+  if (DetectChip())
+  {
+    ConfigLoraDefaults();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void SX127xDriver::End()
@@ -101,14 +125,32 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
   }
 }
 
+bool SyncWordOk(uint8_t syncWord)
+{
+  for (int i = 0; i < sizeof(SX127x_AllowedSyncwords); i++)
+  {
+    if (syncWord == SX127x_AllowedSyncwords[i])
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SX127xDriver::SetSyncWord(uint8_t syncWord)
 {
   uint8_t _syncWord = syncWord;
 
-  if (_syncWord == SX127X_SYNC_WORD_LORAWAN)
+  while (SyncWordOk(_syncWord) == false)
   {
     _syncWord++;
-    Serial.println("Reserved Syncword detected in UID config, Using 0x35 instead");
+  }
+
+  if(syncWord != _syncWord){
+    Serial.print("Using syncword: ");
+    Serial.print(_syncWord);
+    Serial.print(" instead of: ");
+    Serial.println(syncWord);
   }
 
   hal.writeRegister(SX127X_REG_SYNC_WORD, syncWord);
@@ -168,11 +210,11 @@ void SX127xDriver::SetFrequency(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
-void SX127xDriver::DetectChip()
+bool SX127xDriver::DetectChip()
 {
   uint8_t i = 0;
   bool flagFound = false;
-  while ((i < 10) && !flagFound)
+  while ((i < 3) && !flagFound)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION);
     Serial.println(version, HEX);
@@ -198,12 +240,14 @@ void SX127xDriver::DetectChip()
   if (!flagFound)
   {
     Serial.println(" not found!");
+    return false;
   }
   else
   {
     Serial.println(" found! (match by REG_VERSION == 0x12)");
   }
   hal.setRegValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, 2, 0);
+  return true;
 }
 
 /////////////////////////////////////TX functions/////////////////////////////////////////

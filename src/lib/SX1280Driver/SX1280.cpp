@@ -43,7 +43,7 @@ void SX1280Driver::End()
     instance->RXdoneCallback = &nullCallback;
 }
 
-void SX1280Driver::Begin()
+bool SX1280Driver::Begin()
 {
     hal.init();
     hal.TXdoneCallback = &SX1280Driver::TXnbISR;

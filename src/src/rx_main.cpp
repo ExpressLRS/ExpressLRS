@@ -105,6 +105,7 @@ uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
+bool LockRFmode = false;
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -131,14 +132,17 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    if (!LockRFmode)
+    {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+        expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
-    hwTimer.updateInterval(ModParams->interval);
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
+        hwTimer.updateInterval(ModParams->interval);
 
-    ExpressLRS_currAirRate_Modparams = ModParams;
-    ExpressLRS_currAirRate_RFperfParams = RFperf;
+        ExpressLRS_currAirRate_Modparams = ModParams;
+        ExpressLRS_currAirRate_RFperfParams = RFperf;
+    }
 }
 
 void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
@@ -311,6 +315,10 @@ void ICACHE_RAM_ATTR GotConnection()
     {
         return; // Already connected
     }
+
+    #ifdef LOCK_ON_FIRST_CONNECTION
+        LockRFmode = true;
+    #endif
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
@@ -610,11 +618,18 @@ void setup()
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
-    Radio.Begin();
     #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
-    Radio.SetSyncWord(UID[3]);
-    #endif 
-    #ifdef TARGET_RX_ESP8266_SX1280_V1
+    Radio.currSyncWord = UID[3];
+    #endif
+    bool init_success = Radio.Begin();
+    while (!init_success)
+    {
+        digitalWrite(GPIO_PIN_LED, LED);
+        LED = !LED;
+        delay(200);
+        Serial.println("Failed to detect RF chipset!!!");
+    }
+#ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
     #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
@@ -631,8 +646,20 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    SetRFLinkRate((uint8_t)RATE_DEFAULT);
-  
+    #ifdef LOCK_ON_50HZ
+        for (int i = 0; i < RATE_MAX; i++)
+        {
+            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
+            if (ModParams->enum_rate == RATE_50HZ)
+            {
+                SetRFLinkRate(ModParams->index);
+                LockRFmode = true;
+            }
+        }
+    #else
+        SetRFLinkRate((uint8_t)RATE_DEFAULT);
+    #endif
+
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
@@ -719,8 +746,12 @@ void loop()
         GotConnection();
     }
 
-    if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
+    if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
+        if (connectionState == disconnected)
+        {
+            getRFlinkInfo();
+        }
         crsf.sendLinkStatisticsToFC();
         SendLinkStatstoFCintervalLastSent = millis();
     }

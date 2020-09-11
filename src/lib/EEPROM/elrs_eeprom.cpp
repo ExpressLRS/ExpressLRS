@@ -1,8 +1,12 @@
 #include "elrs_eeprom.h"
 #include <Arduino.h>
 
-#ifdef PLATFORM_STM32
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
     extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
+#endif
+
+#ifdef TARGET_R9M_TX
+    extEEPROM EEPROM(kbits_2, 1, 1, 0x50);
 #endif
 
 void
