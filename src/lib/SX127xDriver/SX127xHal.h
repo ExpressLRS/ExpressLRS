@@ -44,6 +44,5 @@ public:
     void ICACHE_RAM_ATTR readRegisterFIFO(volatile uint8_t *data, uint8_t numBytes);
     void ICACHE_RAM_ATTR writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes);
 
-private:
-    volatile SX127x_InterruptAssignment InterruptAssignment = SX127x_INTERRUPT_NONE;
+    static volatile SX127x_InterruptAssignment InterruptAssignment;
 };
