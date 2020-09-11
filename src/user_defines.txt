@@ -16,7 +16,7 @@
 ### STEP1: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -58,7 +58,7 @@
 #Use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 -DFEATURE_OPENTX_SYNC
 # Automatically calculate the safe offset for OpenTXsync (needs OpenTX 2.4 or later)
-#-DFEATURE_OPENTX_SYNC_AUTOTUNE
+-DFEATURE_OPENTX_SYNC_AUTOTUNE
  
  # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
 -DUART_INVERTED

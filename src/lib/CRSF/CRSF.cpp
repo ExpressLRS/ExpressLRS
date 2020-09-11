@@ -295,20 +295,15 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
         }
 
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
-    {
-        if ((CRSF::OpenTXsyncOffset > 500 && CRSF::OpenTXsyncOffset < CRSF::RequestedRCpacketInterval) && (CRSF::OpenTXsyncOffsetSafeMargin > 1500)) // higher than 800us but not less than 50us
-        {                                                                                                                                            // should never get this high unless out of sync
-            CRSF::OpenTXsyncOffsetSafeMargin = CRSF::OpenTXsyncOffsetSafeMargin - 10;
-        }
-
-        int32_t limit = (CRSF::RequestedRCpacketInterval >> 2) * 10;
-
-        if (OpenTXsyncOffsetSafeMargin > limit)
+        if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
         {
-            OpenTXsyncOffsetSafeMargin = limit;
+            uint32_t limit = (CRSF::RequestedRCpacketInterval >> 2) * 10;
+
+            if (OpenTXsyncOffsetSafeMargin > limit)
+            {
+                OpenTXsyncOffsetSafeMargin = limit;
+            }
         }
-    }
 #endif
     // Serial.print(CRSF::OpenTXsyncOffset);
     // Serial.print(",");
