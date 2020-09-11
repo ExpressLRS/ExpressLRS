@@ -15,11 +15,11 @@ SX1280Driver Radio;
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "Debug.h"
-#include "rx_LinkQuality.h"
 #include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "hwTimer.h"
+#include "LQCALC.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -48,7 +48,10 @@ LPF LPF_PacketInterval(3);
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 LPF LPF_UplinkRSSI(5);
-////////////////////////////
+
+/// LQ Calculation //////////
+LQCALC LQCALC;
+uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t CURR_RATE_MAX;
@@ -114,7 +117,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
   
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
@@ -124,7 +127,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
-    crsf.LinkStatistics.uplink_Link_quality = linkQuality;
+    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
@@ -259,8 +262,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 {
     NonceRX++;
     alreadyFHSS = false;
-    linkQuality = getRFlinkQuality();
-    incrementLQArray();
+    uplinkLQ = LQCALC.getLQ();
+    LQCALC.inc();
+    crsf.RXhandleUARTout();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -439,7 +443,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (linkQuality > 75))
+            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > 75))
             {
                 GotConnection();
             }
@@ -474,7 +478,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     HandleFHSS();
     HandleSendTelemetryResponse();
-    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 
     if (connectionState != disconnected)
     {
@@ -511,7 +515,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(":");
     Serial.print(OffsetDx);
     Serial.print(":");
-    Serial.println(linkQuality);
+    Serial.println(uplinkLQ);
 #endif
 }
 
@@ -570,7 +574,7 @@ void ICACHE_RAM_ATTR RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     alreadyTLMresp = false;
-    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
     Radio.RXnb();
 }
 
@@ -664,13 +668,18 @@ void setup()
     crsf.Begin();
     hwTimer.init();
     hwTimer.stop();
+    LQCALC.init();
 }
 
 void loop()
 {
+    if (hwTimer.running == false)
+    {
+        crsf.RXhandleUARTout();
+    }
     //crsf.RXhandleUARTout(); //empty the UART out buffer
     //yield(); // to be safe
-    //Serial.println(linkQuality);
+    //Serial.println(uplinkLQ);
     //Serial.print(headroom);
     //Serial.println(" Head2:");
     //Serial.println(headroom2);
@@ -696,7 +705,7 @@ void loop()
     }
     #endif
 
-    if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (uplinkLQ <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -726,34 +735,39 @@ void loop()
         {
             LastSyncPacket = millis();                                        // reset this variable
             SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
-            Radio.RXnb();
-            LQreset();
+            SendLinkStatstoFCintervalLastSent = millis();
+            LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            delay(100);
+            crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
+            Radio.RXnb();
         }
         RFmodeLastCycled = millis();
     }
 
-    if ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && linkQuality < 10)) // check if we lost conn.
+    if ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10)) // check if we lost conn.
     {
         LostConnection();
     }
 
-    if ((connectionState == tentative) && linkQuality >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    if ((connectionState == tentative) && uplinkLQ >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
     {
         GotConnection();
     }
 
     if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
-        if (connectionState == disconnected)
+        if (connectionState != disconnected)
         {
             getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            SendLinkStatstoFCintervalLastSent = millis();
         }
-        crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalLastSent = millis();
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))

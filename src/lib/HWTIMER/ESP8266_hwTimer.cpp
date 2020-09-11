@@ -82,6 +82,10 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 
 void ICACHE_RAM_ATTR hwTimer::callback()
 {
+    if (!running)
+    {
+        return;
+    }
 
     if (hwTimer::TickTock)
     {

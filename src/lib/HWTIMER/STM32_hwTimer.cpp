@@ -26,15 +26,16 @@ void hwTimer::init()
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+        MyTim->setPreloadEnable(true);
         alreadyInit = true;
     }
 }
 
 void hwTimer::stop()
 {
-    MyTim->pause();
-    MyTim->setCount(0, MICROSEC_FORMAT);
     running = false;
+    MyTim->pause();
+    MyTim->setCount(0);
     TickTock = true;
 }
 
@@ -77,6 +78,11 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
 
 void hwTimer::callback(void)
 {
+    if (!running)
+    {
+        return;
+    }
+
     if (hwTimer::TickTock)
     {
         if (hwTimer::ResetNextLoop)

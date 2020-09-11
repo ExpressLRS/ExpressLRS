@@ -352,9 +352,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            //SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-            //SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-            this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+            //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
         }
 
@@ -710,6 +710,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
                         {
                             SerialInPacketPtr = 0;
+                            SerialInPacketLen = 0;
                             CRSFframeActive = false;
                             return;
                         }
@@ -744,10 +745,14 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     lastUARTpktTime = millis();
                                     delayMicroseconds(50);
                                     CRSF::STM32handleUARTout();
+                                    while (CRSF::Port.available())
+                                    {
+                                        CRSF::Port.read(); // empty any remaining garbled data 
+                                    }
                                     GoodPktsCount++;
                                 }
-
                                 SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                                 CRSFframeActive = false;
                             }
                             else
@@ -755,6 +760,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 Serial.println("UART CRC failure");
                                 CRSFframeActive = false;
                                 SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                                 while (CRSF::Port.available())
                                 {
                                     CRSF::Port.read(); // empty any remaining garbled data 
