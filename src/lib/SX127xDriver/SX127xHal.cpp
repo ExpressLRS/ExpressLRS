@@ -100,11 +100,7 @@ void ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes,
   buf[0] = reg | SPI_READ;
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-#ifdef PLATFORM_STM32
   SPI.transfer(buf, numBytes + 1);
-#else
-  SPI.writeBytes(buf, numBytes + 1);
-#endif
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
   memcpy(inBytes, buf + 1, numBytes);
@@ -117,11 +113,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg)
   buf[0] = reg | SPI_READ;
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-#ifdef PLATFORM_STM32
   SPI.transfer(buf, 2);
-#else
-  SPI.writeBytes(buf, 2);
-#endif
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
   return (buf[1]);
