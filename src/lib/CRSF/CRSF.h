@@ -440,7 +440,7 @@ public:
     static volatile int32_t OpenTXsyncOffset;
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static int32_t OpenTXsyncOffetFLTR;
-    static uint32_t AutosyncWaitPeriodCounter;
+    static uint32_t SyncWaitPeriodCounter;
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
