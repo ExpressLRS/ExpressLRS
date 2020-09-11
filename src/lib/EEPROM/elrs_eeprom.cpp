@@ -13,6 +13,9 @@ void
 ELRS_EEPROM::Begin()
 {
 #ifdef PLATFORM_STM32
+    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
+    Wire.setSCL(GPIO_PIN_SCL);
+    Wire.begin();
     EEPROM.begin();
 #else
     EEPROM.begin(RESERVED_EEPROM_SIZE);
