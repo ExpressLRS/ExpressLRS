@@ -78,8 +78,17 @@ volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
+#define SyncWaitPeriod 2000
+uint32_t CRSF::SyncWaitPeriodCounter = 0;
+LPF LPF_OPENTX_SYNC_OFFSET(3);
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+LPF LPF_OPENTX_SYNC_MARGIN(3);
+#else
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us 
+#endif
 volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
-volatile uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 
 void CRSF::Begin()
 {
@@ -254,16 +263,51 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
     }
 }
 
+void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
+{
+    CRSF::RequestedRCpacketInterval = PacketInterval;
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    CRSF::SyncWaitPeriodCounter = millis();
+    CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+    LPF_OPENTX_SYNC_MARGIN.init(0);
+    LPF_OPENTX_SYNC_OFFSET.init(0);
+#endif
+}
+
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
-    //Serial.println(CRSF::OpenTXsyncOffset);
+
+    if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
+    {
+        CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+        if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
+        {
+            CRSF::OpenTXsyncOffsetSafeMargin = LPF_OPENTX_SYNC_MARGIN.update((CRSF::OpenTXsyncOffsetSafeMargin - OpenTXsyncOffset) + 100); // take worst case plus 50us
+        }
+#endif
+    }
+
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    if (CRSF::OpenTXsyncOffsetSafeMargin > 4000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 4000; // hard limit at no tune default
+    }
+    else if (CRSF::OpenTXsyncOffsetSafeMargin < 1000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
+    }
+#endif
+    // Serial.print(CRSF::OpenTXsyncOffset);
+    // Serial.print(",");
+    // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
 
 #ifdef PLATFORM_ESP32
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
 {
-    vTaskDelay(500);
+    //vTaskDelay(500);
     for (;;)
     {
 #endif
@@ -275,7 +319,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
 #endif
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-                int32_t offset = CRSF::OpenTXsyncOffset * 10 - 8000;        // + offset that seems to be needed
+                int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
+
                 uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
                 outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
@@ -426,7 +471,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
-            void  CRSF::UARTwdt()
+            void CRSF::UARTwdt()
             {
                 if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
                 {
@@ -438,6 +483,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         if (CRSFstate == true)
                         {
                             Serial.println("CRSF UART Disconnected");
+                            SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                            CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+                            CRSF::OpenTXsyncOffset = 0;
+                            CRSF::OpenTXsyncLastSent = 0;
+#endif
                             disconnected();
                             CRSFstate = false;
                         }
@@ -628,7 +679,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #ifdef PLATFORM_ESP32
-
             void ICACHE_RAM_ATTR CRSF::ESP32ProcessPacket()
             {
                 if (CRSFstate == false)
@@ -637,6 +687,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     Serial.println("CRSF UART Connected");
 #ifdef FEATURE_OPENTX_SYNC
                     xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
+#endif
+                    SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                    LPF_OPENTX_SYNC_MARGIN.init(0);
+                    LPF_OPENTX_SYNC_OFFSET.init(0);
 #endif
                     connected();
                 }
@@ -808,6 +863,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     CRSFstate = true;
                     Serial.println("CRSF UART Connected");
+                    SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                    LPF_OPENTX_SYNC_MARGIN.init(0);
+                    LPF_OPENTX_SYNC_OFFSET.init(0);
+#endif
                     connected();
                 }
 
