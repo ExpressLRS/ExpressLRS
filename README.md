@@ -14,7 +14,7 @@ ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)** or **
 
 At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `250 Hz` is currently supported with plans to extend this to `500 Hz` once OpenTX support is added. This makes ExpressLRS one of the fastest RC links available while still offering long-range preformance. 
 
-![LatencyChart](img/Average Total Latency.png)
+![LatencyChart](https://raw.githubusercontent.com/AlessandroAU/ExpressLRS/master-dev/img/Average%20Total%20Latency.png)
 
 ExpressLRS aims to achieve the best possible link preformance in both speed/latency and range. However, due to the optimized packet structure only basic telemetry is provided. If you want MavLink this project is not for you. ExpressLRS uses a compressed packet structure which priorities the first 4 control channels, this allows it to achieve better raw performance than other commercial solutions. ExpressLRS is also very affordable, a TX module can be built for $30 and receivers for $15-20. Likewise, new/second hand Frsky R9M gear is compatible and can be acquired inexpensively.
 
