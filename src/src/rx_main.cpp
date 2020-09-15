@@ -467,6 +467,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                 NonceRX = Radio.RXdataBuffer[2];
                 TentativeConnection();
+                return;
             }
 
         }
@@ -697,7 +698,7 @@ void loop()
     }
     #endif
 
-    if (connectionState == tentative && (uplinkLQ <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -742,12 +743,12 @@ void loop()
         RFmodeLastCycled = millis();
     }
 
-    if ((connectionState == connected) && (millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10)) // check if we lost conn.
+    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
     {
         LostConnection();
     }
 
-    if ((connectionState == tentative) && uplinkLQ >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    if ((connectionState == tentative) && uplinkLQ >= 90) // quicker way to get to good conn state of the sync and link is great off the bat. 
     {
         GotConnection();
     }

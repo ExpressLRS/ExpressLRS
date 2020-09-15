@@ -121,7 +121,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_GREEN      PB3 // Green 
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #endif
-#define timerOffset             2
+#define timerOffset             1
 
 // External pads
 // #define R9m_Ch1    PA8

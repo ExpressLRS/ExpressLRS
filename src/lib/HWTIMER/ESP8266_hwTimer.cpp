@@ -92,7 +92,7 @@ void ICACHE_RAM_ATTR hwTimer::callback()
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < 1)
+        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
         {
 
             timer1_write((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift);
