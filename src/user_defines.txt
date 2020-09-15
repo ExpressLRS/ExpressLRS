@@ -55,6 +55,10 @@
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
+# No sync on arm, don't transmit sync packet when armed (if different please define arm channel you use, IE channel 5 (AUX1))
+-DNO_SYNC_ON_ARM
+-DARM_CHANNEL=5
+
 #Use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 -DFEATURE_OPENTX_SYNC
 # Automatically calculate the safe offset for OpenTXsync (needs OpenTX 2.4 or later)

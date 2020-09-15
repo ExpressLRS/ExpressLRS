@@ -85,7 +85,6 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 //expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
-bool ExpressLRS_AirRateNeedsUpdate = false;
 
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;

@@ -421,11 +421,11 @@ public:
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
-    void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
+    void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
-    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val[]);
+    void sendLUAresponse(uint8_t val[]);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 

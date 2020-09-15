@@ -383,6 +383,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+
     if (inCRC != calculatedCRC)
     {
         #ifndef DEBUG_SUPPRESS
@@ -437,28 +440,26 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-        if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
+         TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
+
+        if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > 75))
+            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))))
             {
                 GotConnection();
             }
 
-            expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11100000) >> 5);
-            uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00011100) >> 2);
-
-            if ((ExpressLRS_currAirRate_Modparams->index != rateIn) || (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
+            if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
             { // change link parameters if required
                 #ifndef DEBUG_SUPPRESS
                 Serial.println("New TLMrate: ");
                 Serial.println(TLMrateIn);
                 #endif
-                ExpressLRS_AirRateNeedsUpdate = true;
-                ExpressLRS_currAirRate_Modparams = get_elrs_airRateConfig((expresslrs_RFrates_e)rateIn);
                 ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
             }
 
@@ -662,7 +663,7 @@ void setup()
             }
         }
     #else
-        SetRFLinkRate((uint8_t)RATE_DEFAULT);
+        SetRFLinkRate(RATE_DEFAULT);
     #endif
 
     Radio.RXnb();
@@ -735,7 +736,7 @@ void loop()
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
+            SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
