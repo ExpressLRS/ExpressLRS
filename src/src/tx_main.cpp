@@ -41,13 +41,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
-#define PACKET_RATE_INTERVAL 500
-#define RF_MODE_CYCLE_INTERVAL 1000
 #define MSP_PACKET_SEND_INTERVAL 200
-#define SYNC_PACKET_SEND_INTERVAL_RX_LOST 1000 // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-#define SYNC_PACKET_SEND_INTERVAL_RX_CONN 5000 // how often to send the SYNC_PACKET packet (ms) when there we have a connection
-
-String DebugOutput;
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -70,10 +64,6 @@ uint32_t LastTLMpacketRecvMillis = 0;
 LQCALC LQCALC;
 LPF LPD_DownlinkLQ(1);
 
-/// Variables for Sync Behaviour ////
-uint32_t RFmodeLastCycled = 0;
-///////////////////////////////////////
-
 volatile bool UpdateParamReq = false;
 uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
 uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
@@ -82,23 +72,7 @@ uint32_t PacketLastSentMicros = 0;
 
 bool Channels5to8Changed = false;
 
-bool ChangeAirRateRequested = false;
-bool ChangeAirRateSentUpdate = false;
-
 bool WaitRXresponse = false;
-
-///// Not used in this version /////////////////////////////////////////////////////////////////////////////////////////////////////////
-uint8_t TelemetryWaitBuffer[7] = {0};
-
-uint32_t LinkSpeedIncreaseDelayFactor = 500; // wait for the connection to be 'good' for this long before increasing the speed.
-uint32_t LinkSpeedDecreaseDelayFactor = 200; // this long wait this long for connection to be below threshold before dropping speed
-
-uint32_t LinkSpeedDecreaseFirstMetCondition = 0;
-uint32_t LinkSpeedIncreaseFirstMetCondition = 0;
-
-uint8_t LinkSpeedReduceSNR = 20;   //if the SNR (times 10) is lower than this we drop the link speed one level
-uint8_t LinkSpeedIncreaseSNR = 60; //if the SNR (times 10) is higher than this we increase the link speed
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -115,7 +89,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
-
   //Serial.println("TLMpacket0");
 
   if (packetAddr != DeviceAddr)
@@ -380,7 +353,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
     GenerateSyncPacketData();
     SyncPacketLastSent = millis();
-    ChangeAirRateSentUpdate = true;
     //Serial.println("sync");
     //Serial.println(Radio.currFreq);
   }
@@ -408,11 +380,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 8);
-
-  if (ChangeAirRateRequested)
-  {
-    ChangeAirRateSentUpdate = true;
-  }
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -579,42 +546,15 @@ void setup()
 #endif
 
 #ifdef PLATFORM_ESP32
-  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
   strip.Begin();
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-  Serial.println("");
-  Serial.println("Copy the below line into common.h.");
-  Serial.print("uint8_t UID[6] = {");
-  Serial.print(baseMac[0]);
-  Serial.print(", ");
-  Serial.print(baseMac[1]);
-  Serial.print(", ");
-  Serial.print(baseMac[2]);
-  Serial.print(", ");
-  Serial.print(baseMac[3]);
-  Serial.print(", ");
-  Serial.print(baseMac[4]);
-  Serial.print(", ");
-  Serial.print(baseMac[5]);
-  Serial.println("};");
-  Serial.println("");
 #endif
 
   FHSSrandomiseFHSSsequence();
-
-#if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_EU_868 || defined Regulatory_Domain_FCC_915
-#ifdef Regulatory_Domain_EU_868
-  Serial.println("Setting 868MHz Mode");
-#else
-  Serial.println("Setting 915MHz Mode");
-#endif
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
-  Serial.println("Setting 433MHz Mode");
-#endif
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;

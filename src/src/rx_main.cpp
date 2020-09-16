@@ -44,7 +44,6 @@ hwTimer hwTimer;
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 
 /// Filters ////////////////
-LPF LPF_PacketInterval(3);
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 LPF LPF_UplinkRSSI(5);
@@ -84,8 +83,6 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
-uint32_t headroom;
-uint32_t headroom2;
 uint32_t beginProcessing;
 uint32_t doneProcessing;
 
@@ -102,9 +99,6 @@ uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 ///////////////////////////////////////////////////////////////
-
-uint32_t PacketIntervalError;
-uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
@@ -678,13 +672,6 @@ void loop()
     {
         crsf.RXhandleUARTout();
     }
-    //crsf.RXhandleUARTout(); //empty the UART out buffer
-    //yield(); // to be safe
-    //Serial.println(uplinkLQ);
-    //Serial.print(headroom);
-    //Serial.println(" Head2:");
-    //Serial.println(headroom2);
-    //crsf.RXhandleUARTout(); using interrupt based printing at the moment
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
     if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)

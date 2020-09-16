@@ -375,8 +375,6 @@ public:
 
     static volatile uint8_t ParameterUpdateData[2];
 
-    static bool firstboot;
-
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
 
