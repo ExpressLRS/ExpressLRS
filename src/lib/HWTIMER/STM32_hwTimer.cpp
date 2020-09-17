@@ -7,7 +7,7 @@ void (*hwTimer::callbackTick)() = &nullCallback; // function is called whenever 
 void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::TickTock = true;
+volatile bool hwTimer::TickTock = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqShift = 0;
 volatile bool hwTimer::ResetNextLoop = false;
@@ -26,7 +26,7 @@ void hwTimer::init()
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-        MyTim->setPreloadEnable(true);
+        MyTim->setPreloadEnable(false);
         alreadyInit = true;
     }
 }
@@ -36,14 +36,14 @@ void hwTimer::stop()
     running = false;
     MyTim->pause();
     MyTim->setCount(0);
-    TickTock = true;
 }
 
 void hwTimer::resume()
 {
-    TickTock = true;
+    TickTock = false;
     running = true;
     MyTim->resume();
+    MyTim->refresh();
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
@@ -55,18 +55,13 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
     //Serial.println(newPhaseShift);
-    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 2;
+    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
 
     if (newPhaseShift > MaxPhaseShift)
     {
         hwTimer::PhaseShift = MaxPhaseShift;
     }
-    else
-    {
-        hwTimer::PhaseShift = newPhaseShift;
-    }
-
-    if (newPhaseShift < -MaxPhaseShift)
+    else if (newPhaseShift < -MaxPhaseShift)
     {
         hwTimer::PhaseShift = -MaxPhaseShift;
     }
@@ -91,7 +86,7 @@ void hwTimer::callback(void)
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < 1)
+        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
         {
             MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift, MICROSEC_FORMAT);
 

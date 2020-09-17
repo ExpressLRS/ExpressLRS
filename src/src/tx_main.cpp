@@ -273,12 +273,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
 
-  crsf.RequestedRCpacketInterval = ModParams->interval;
+  crsf.setSyncParams(ModParams->interval);
   connectionState = connected;
 
-  #ifdef PLATFORM_ESP32
+#ifdef PLATFORM_ESP32
   updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
-  #endif
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
@@ -379,7 +379,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   }
 
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
     GenerateSyncPacketData();

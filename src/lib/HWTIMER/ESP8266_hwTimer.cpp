@@ -64,12 +64,7 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
     {
         hwTimer::PhaseShift = MaxPhaseShift;
     }
-    else
-    {
-        hwTimer::PhaseShift = newPhaseShift;
-    }
-
-    if (newPhaseShift < -MaxPhaseShift)
+    else if (newPhaseShift < -MaxPhaseShift)
     {
         hwTimer::PhaseShift = -MaxPhaseShift;
     }
@@ -77,6 +72,7 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
     {
         hwTimer::PhaseShift = newPhaseShift;
     }
+    
     hwTimer::PhaseShift = hwTimer::PhaseShift * 5;
 }
 
@@ -96,7 +92,7 @@ void ICACHE_RAM_ATTR hwTimer::callback()
             hwTimer::ResetNextLoop = false;
         }
 
-        if (hwTimer::PhaseShift > 1 || hwTimer::PhaseShift < 1)
+        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
         {
 
             timer1_write((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift);

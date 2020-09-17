@@ -2,6 +2,8 @@
 
 SX127xHal *SX127xHal::instance = NULL;
 
+volatile SX127x_InterruptAssignment SX127xHal::InterruptAssignment = SX127x_INTERRUPT_NONE;
+
 void inline SX127xHal::nullCallback(void) { return; };
 void (*SX127xHal::TXdoneCallback)() = &nullCallback;
 void (*SX127xHal::RXdoneCallback)() = &nullCallback;
@@ -94,43 +96,29 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t
   return (maskedValue);
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
+void ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
 {
-  char OutByte;
+  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  buf[0] = reg | SPI_READ;
+
   digitalWrite(GPIO_PIN_NSS, LOW);
-  OutByte = (reg | SPI_READ);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(OutByte);
-#else
-  SPI.write(OutByte);
-#endif
-
-  SPI.transfer(inBytes, numBytes);
+  SPI.transfer(buf, numBytes + 1);
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
-  return (ERR_NONE);
+  memcpy(inBytes, buf + 1, numBytes);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg)
 {
-  uint8_t InByte;
-  uint8_t OutByte;
+  WORD_ALIGNED_ATTR uint8_t buf[2];
+
+  buf[0] = reg | SPI_READ;
+
   digitalWrite(GPIO_PIN_NSS, LOW);
-
-  OutByte = (reg | SPI_READ);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(OutByte);
-#else
-  SPI.write(OutByte);
-#endif
-
-  InByte = SPI.transfer(0x00);
-
+  SPI.transfer(buf, 2);
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
-  return (InByte);
+  return (buf[1]);
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::setRegValue(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb)
@@ -149,79 +137,72 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::setRegValue(uint8_t reg, uint8_t value, uint8
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
 {
-  uint8_t localbuf[numBytes];
+  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  buf[0] = (SX127X_REG_FIFO | SPI_WRITE);
 
   for (int i = 0; i < numBytes; i++) // todo check if this is the right want to handle volatiles
   {
-    localbuf[i] = data[i];
+    buf[i + 1] = data[i];
   }
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-
 #ifdef PLATFORM_STM32
-  SPI.transfer(SX127X_REG_FIFO | SPI_WRITE);
-  SPI.transfer(localbuf, numBytes);
+  SPI.transfer(buf, numBytes + 1);
 #else
-  SPI.write(SX127X_REG_FIFO | SPI_WRITE);
-  SPI.writeBytes(localbuf, numBytes);
+  SPI.writeBytes(buf, numBytes + 1);
 #endif
-
   digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::readRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
 {
-  uint8_t localbuf[numBytes];
+  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  buf[0] = SX127X_REG_FIFO | SPI_READ;
+
   digitalWrite(GPIO_PIN_NSS, LOW);
-
-#ifdef PLATFORM_STM32
-  SPI.transfer(SX127X_REG_FIFO | SPI_READ);
-#else
-  SPI.write(SX127X_REG_FIFO | SPI_READ);
-#endif
-
-  SPI.transfer(localbuf, numBytes);
+  SPI.transfer(buf, numBytes + 1);
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
   for (int i = 0; i < numBytes; i++) // todo check if this is the right want to handle volatiles
   {
-    data[i] = localbuf[i];
+    data[i] = buf[i + 1];
   }
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes)
 {
+  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  buf[0] = reg | SPI_WRITE;
+  memcpy(buf + 1,  data, numBytes);
+
   digitalWrite(GPIO_PIN_NSS, LOW);
-
 #ifdef PLATFORM_STM32
-  SPI.transfer(reg | SPI_WRITE);
-  SPI.transfer(data, numBytes);
+  SPI.transfer(buf, numBytes + 1);
 #else
-  SPI.write(reg | SPI_WRITE);
-  SPI.writeBytes(data, numBytes);
+  SPI.writeBytes(buf, numBytes + 1);
 #endif
-
   digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 {
+  WORD_ALIGNED_ATTR uint8_t buf[2];
+
+  buf[0] = reg | SPI_WRITE;
+  buf[1] = data;
+
   digitalWrite(GPIO_PIN_NSS, LOW);
-
 #ifdef PLATFORM_STM32
-  SPI.transfer(reg | SPI_WRITE);
-  SPI.transfer(data);
+  SPI.transfer(buf, 2);
 #else
-  SPI.write(reg | SPI_WRITE);
-  SPI.write(data);
+  SPI.writeBytes(buf, 2);
 #endif
-
   digitalWrite(GPIO_PIN_NSS, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::TXenable()
 {
-  InterruptAssignment = SX127x_INTERRUPT_TX_DONE;
+  instance->InterruptAssignment = SX127x_INTERRUPT_TX_DONE;
 #if defined(GPIO_PIN_RX_ENABLE)
   digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
@@ -234,7 +215,7 @@ void ICACHE_RAM_ATTR SX127xHal::TXenable()
 
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
-  InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
+  instance->InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
 
 #if defined(GPIO_PIN_RX_ENABLE)
   digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
@@ -247,7 +228,7 @@ void ICACHE_RAM_ATTR SX127xHal::RXenable()
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
-  InterruptAssignment = SX127x_INTERRUPT_NONE;
+  instance->InterruptAssignment = SX127x_INTERRUPT_NONE;
 #if defined(GPIO_PIN_RX_ENABLE)
   digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
