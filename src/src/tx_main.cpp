@@ -368,7 +368,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-#ifdef NO_SYNC_ON_ARM
+#if defined(NO_SYNC_ON_ARM) && defined(ARM_CHANNEL)
   SyncInterval = 250;
   bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[ARM_CHANNEL - 1]);
 #else

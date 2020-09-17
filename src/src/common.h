@@ -128,3 +128,12 @@ extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 //extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
+
+#define AUX1 5
+#define AUX2 6
+#define AUX3 7
+#define AUX4 8
+#define AUX5 9
+#define AUX6 10
+#define AUX7 11
+#define AUX8 12
