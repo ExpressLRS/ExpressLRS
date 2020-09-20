@@ -133,7 +133,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
     if (!LockRFmode)
     {
@@ -146,11 +146,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
     }
-}
-
-void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
-{
-    ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -273,7 +268,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     HandleSendTelemetryResponse();
 }
 
-void ICACHE_RAM_ATTR LostConnection()
+void LostConnection()
 {
     if (connectionState == disconnected)
     {
