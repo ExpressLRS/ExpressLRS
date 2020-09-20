@@ -201,7 +201,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
+void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 {
     uint8_t LUArespLength = len + 2;
     uint8_t outBuffer[LUArespLength + 5] = {0};
