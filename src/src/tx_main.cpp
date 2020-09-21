@@ -37,6 +37,9 @@ button button;
 R9DAC R9DAC;
 #endif
 
+#if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
+#include "STM32_hwTimer.h"
+#endif
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
@@ -539,7 +542,7 @@ void setup()
   #endif
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
@@ -671,19 +674,19 @@ void loop()
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
   crsf.STM32handleUARTin();
   #ifdef FEATURE_OPENTX_SYNC
   crsf.sendSyncPacketToTX();

@@ -205,6 +205,33 @@ https://github.com/jaxxzer
 
 #endif
 
+#ifdef TARGET_R9M_LITE_PRO_TX
+
+#define GPIO_PIN_RFswitch_CONTROL     PC13  // need to confirm  //HIGH = RX, LOW = TX
+
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PC15
+#define GPIO_PIN_DIO1           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm 
+#define GPIO_PIN_SDA            PB7
+#define GPIO_PIN_SCL            PB6
+#define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
+#define GPIO_PIN_LED_RED        PA1 // Red LED // not yet confirmed
+#define GPIO_PIN_LED_GREEN      PA4 // Green LED // not yet confirmed
+
+#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
+#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
+
+#define BUFFER_OE               PA5  //CONFIRMED
+
+#endif
+
 #ifdef TARGET_RX_ESP8266_SX1280_V1
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_BUSY 5
