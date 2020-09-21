@@ -76,11 +76,14 @@ extern "C" {
 #define SERIAL_UART_INSTANCE    2 //Connected to ST-Link
 
 // Serial Pin Firmata
-#define PIN_SERIAL_RX           PA15 // 22
-#define PIN_SERIAL_TX           PA2  // 21
+#define PIN_SERIAL_RX           PA10
+#define PIN_SERIAL_TX           PA9
 
 /* Extra HAL modules */
-#define HAL_DAC_MODULE_ENABLED
+//#define HAL_DAC_MODULE_ENABLED
+#define HAL_DAC_MODULE_DISABLED
+#define HAL_ADC_MODULE_DISABLED
+//#define HAL_I2C_MODULE_DISABLED
 
 #ifdef __cplusplus
 } // extern "C"
