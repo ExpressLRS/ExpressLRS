@@ -86,13 +86,14 @@ void SX1280Hal::init()
 #endif
 
 #ifdef PLATFORM_STM32
+    Serial.println("Config SPI");
     SPI.setMOSI(GPIO_PIN_MOSI);
     SPI.setMISO(GPIO_PIN_MISO);
     SPI.setSCLK(GPIO_PIN_SCK);
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     SPI.begin();
-    SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+    SPI.setClockDivider(SPI_CLOCK_DIV16); // 72 / 8 = 9 MHz
 #endif
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm

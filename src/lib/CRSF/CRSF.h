@@ -341,7 +341,7 @@ class CRSF
 {
 
 public:
-    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
+    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) ||defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {

@@ -1,0 +1,47 @@
+{ 
+    "build": {
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F303x8",
+    "f_cpu": "72000000L",
+	"ldscript": "",
+    "mcu": "stm32f303k8t6",
+    "product_line": "STM32F303x8",
+	"variants_dir": "variants",
+    "variant": "GHOST_ATTO"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F303K8",
+    "onboard_tools": [
+      "stlink"
+    ],
+    "openocd_board": "st_nucleo_f3",
+    "svd_path": "STM32F30x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "mbed",
+    "stm32cube",
+    "libopencm3"
+  ],
+  "name": "ST Nucleo F303K8",
+  "upload": {
+    "maximum_ram_size": 12288,
+    "maximum_size": 65536,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "mbed"
+    ]
+  },
+  "url": "https://developer.mbed.org/platforms/ST-Nucleo-F303K8/",
+  "vendor": "ST"
+}
