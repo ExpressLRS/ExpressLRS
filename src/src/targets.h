@@ -27,6 +27,7 @@
 #define GPIO_PIN_OLED_SCK 15
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#define GPIO_PIN_LED 2
 #endif
 
 #ifdef TARGET_TTGO_LORA_V1_AS_RX
@@ -64,6 +65,7 @@
 #define GPIO_PIN_TX_ENABLE 12
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
+#define GPIO_PIN_LED 27
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
