@@ -278,13 +278,17 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-    digitalWrite(GPIO_PIN_LED, 0);        // turn off led
+    
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
     Serial.println("lost conn");
 
-#ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+#endif
+
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, 0); // turn off led
 #endif
 }
 
@@ -320,12 +324,15 @@ void GotConnection()
     GotConnectionMillis = millis();
 
     RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
-    digitalWrite(GPIO_PIN_LED, 1); // turn on led
     Serial.println("got conn");
 
-#ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 #endif
+
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, HIGH); // turn on led
+#endif 
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit()
@@ -518,6 +525,7 @@ void beginWebsever()
 
 void sampleButton()
 {
+#ifdef GPIO_PIN_BUTTON
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
     if (buttonValue == false && buttonPrevValue == true)
@@ -550,6 +558,7 @@ void sampleButton()
     }
 
     buttonPrevValue = buttonValue;
+#endif
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -576,10 +585,18 @@ void setup()
     #endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
+#ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+ #endif   
+ #ifdef GPIO_PIN_LED_RED
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
+ #endif   
+ #ifdef GPIO_PIN_LED
     pinMode(GPIO_PIN_LED, OUTPUT);
+#endif   
+#ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
+#endif    
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -589,9 +606,13 @@ void setup()
 #endif
 
 #ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
 #endif
+#endif
+#ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_BUTTON, INPUT);
+#endif
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
@@ -615,7 +636,9 @@ void setup()
     bool init_success = Radio.Begin();
     while (!init_success)
     {
+        #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED);
+        #endif
         LED = !LED;
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
@@ -676,7 +699,9 @@ void loop()
         HandleWebUpdate();
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
+            #endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
@@ -716,7 +741,9 @@ void loop()
             SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
+            #endif
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
