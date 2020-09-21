@@ -1,12 +1,12 @@
-{ 
-    "build": {
+{
+  "build": {
     "cpu": "cortex-m4",
-    "extra_flags": "-DSTM32F303x8",
+    "extra_flags": "-DSTM32F301x8=1 -DSTM32F3xx=1 -DSTM32F301=1",
     "f_cpu": "72000000L",
-	"ldscript": "",
-    "mcu": "stm32f303k8t6",
-    "product_line": "STM32F303x8",
-	"variants_dir": "variants",
+    "ldscript": "",
+    "mcu": "stm32f301k8",
+    "product_line": "STM32F301x8",
+    "variants_dir": "variants",
     "variant": "GHOST_ATTO"
   },
   "connectivity": [
@@ -16,7 +16,7 @@
     "default_tools": [
       "stlink"
     ],
-    "jlink_device": "STM32F303K8",
+    "jlink_device": "STM32F301K8",
     "onboard_tools": [
       "stlink"
     ],
@@ -30,9 +30,9 @@
     "stm32cube",
     "libopencm3"
   ],
-  "name": "ST Nucleo F303K8",
+  "name": "STM32F301K8",
   "upload": {
-    "maximum_ram_size": 12288,
+    "maximum_ram_size": 16384,
     "maximum_size": 65536,
     "protocol": "stlink",
     "protocols": [
@@ -42,6 +42,6 @@
       "mbed"
     ]
   },
-  "url": "https://developer.mbed.org/platforms/ST-Nucleo-F303K8/",
+  "url": "https://www.st.com/content/st_com/en/products/microcontrollers-microprocessors/stm32-32-bit-arm-cortex-mcus/stm32-mainstream-mcus/stm32f3-series/stm32f301/stm32f301k8.html",
   "vendor": "ST"
 }
