@@ -266,4 +266,4 @@ extern uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES];
 uint32_t ICACHE_RAM_ATTR GetInitialFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq();
 uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq();
-void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence();
+void FHSSrandomiseFHSSsequence();

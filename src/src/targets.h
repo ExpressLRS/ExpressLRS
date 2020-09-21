@@ -1,15 +1,10 @@
 #pragma once
 
 /// General Features ///
-#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
 
-#ifdef PLATFORM_STM32
-#define WORD_ALIGNED_ATTR //nothing//
-#else
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
-#endif
 
 #ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
@@ -126,7 +121,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_GREEN      PB3 // Green 
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #endif
-#define timerOffset             2
+#define timerOffset             1
 
 // External pads
 // #define R9m_Ch1    PA8

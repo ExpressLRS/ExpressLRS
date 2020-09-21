@@ -304,17 +304,17 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   Serial.println("abort RX");
   //   return; // we were already TXing so abort
   // }
+  instance->SetMode(SX127x_OPMODE_STANDBY);
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   hal.RXenable();
-  instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
-  if (!(currOpmode == mode))
+  if (currOpmode != mode)
   {
     hal.writeRegister(ModFSKorLoRa | SX127X_REG_OP_MODE, mode);
     currOpmode = mode;

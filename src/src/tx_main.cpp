@@ -22,6 +22,8 @@ SX1280Driver Radio;
 #include <OTA.h>
 //#include "elrs_eeprom.h"
 #include "hwTimer.h"
+#include "LQCALC.h"
+#include "LowPassFilter.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
@@ -68,11 +70,8 @@ mspPacket_t MSPPacket;
 uint32_t SyncPacketLastSent = 0;
 
 uint32_t LastTLMpacketRecvMillis = 0;
-bool isRXconnected = false;
-int packetCounteRX_TX = 0;
-uint32_t PacketRateLastChecked = 0;
-float PacketRate = 0.0;
-uint8_t linkQuality = 0;
+LQCALC LQCALC;
+LPF LPD_DownlinkLQ(1);
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
@@ -138,8 +137,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     return;
   }
 
-  packetCounteRX_TX++;
-
   if (type != TLM_PACKET)
   {
 #ifndef DEBUG_SUPPRESS
@@ -149,8 +146,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     return;
   }
 
-  isRXconnected = true;
+  if (connectionState != connected)
+  {
+    connectionState = connected;
+    LPD_DownlinkLQ.init(100);
+    Serial.println("got downlink conn");
+  }
+
   LastTLMpacketRecvMillis = millis();
+  LQCALC.add();
 
   if (TLMheader == CRSF_FRAMETYPE_LINK_STATISTICS)
   {
@@ -161,7 +165,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
     crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
-    crsf.LinkStatistics.downlink_Link_quality = linkQuality;
+    crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
     crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
 
@@ -186,11 +190,13 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
+  uint8_t index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
+  uint8_t TLmrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->index & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
+  Radio.TXdataBuffer[3] = (index << 6) + (TLmrate << 3);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -269,12 +275,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
 
-  crsf.RequestedRCpacketInterval = ModParams->interval;
-  isRXconnected = false;
+  crsf.setSyncParams(ModParams->interval);
+  connectionState = connected;
 
-  #ifdef PLATFORM_ESP32
-  updateLEDs(isRXconnected, ExpressLRS_currAirRate_Modparams->TLMinterval);
-  #endif
+#ifdef PLATFORM_ESP32
+  updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR decTLMrate()
@@ -353,6 +359,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       if (WaitRXresponse == true)
       {
         WaitRXresponse = false;
+        LQCALC.inc();
         return;
       }
       else
@@ -364,16 +371,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-  if (isRXconnected)
-  {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected;
-  }
-  else
-  {
-    SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  }
+#if defined(NO_SYNC_ON_ARM) && defined(ARM_CHANNEL)
+  SyncInterval = 250;
+  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[ARM_CHANNEL - 1]);
+#else
+  SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  bool skipSync = false;
+#endif
 
-  if ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 1)) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
     GenerateSyncPacketData();
@@ -650,6 +656,7 @@ void setup()
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  LQCALC.init(10);
 }
 
 void loop()
@@ -664,29 +671,18 @@ void loop()
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
-    isRXconnected = false;
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+    connectionState = disconnected;
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
-    isRXconnected = true;
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+    connectionState = connected;
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
-
-  // float targetFrameRate = (ExpressLRS_currAirRate_Modparams->rate * (1.0 / TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)));
-  // PacketRateLastChecked = millis();
-  // PacketRate = (float)packetCounteRX_TX / (float)(PACKET_RATE_INTERVAL);
-  // linkQuality = int((((float)PacketRate / (float)targetFrameRate) * 100000.0));
-
-  if (linkQuality > 99)
-  {
-    linkQuality = 99;
-  }
-  packetCounteRX_TX = 0;
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
   crsf.STM32handleUARTin();
