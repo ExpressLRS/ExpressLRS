@@ -42,8 +42,8 @@
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
-#define MaxPower 6
-#define DefaultPowerEnum 3
+#define MaxPower 4
+#define DefaultPowerEnum 2
 #endif
 
 typedef enum
