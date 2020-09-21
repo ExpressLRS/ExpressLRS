@@ -634,9 +634,9 @@ void setup()
     bool init_success = Radio.Begin();
     while (!init_success)
     {
-#ifdef GPIO_PIN_LED
+        #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED);
-#endif
+        #endif
         LED = !LED;
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
@@ -703,9 +703,9 @@ void loop()
         HandleWebUpdate();
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
-#ifdef GPIO_PIN_LED
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
-#endif
+            #endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
@@ -745,9 +745,9 @@ void loop()
             SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
-#ifdef GPIO_PIN_LED
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
-#endif
+            #endif
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;

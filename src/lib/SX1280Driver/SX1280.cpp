@@ -52,8 +52,9 @@ bool SX1280Driver::Begin()
     hal.reset();
     Serial.println("SX1280 Begin");
     delay(100);
-
+    Serial.println("Read Vers");
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
+    Serial.println("Read Vers Done");
     Serial.print("Firmware Revision: ");
     Serial.println(firmwareRev);
 
