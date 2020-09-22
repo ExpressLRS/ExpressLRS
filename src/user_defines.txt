@@ -8,14 +8,12 @@
 # SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND 
  
 
-### STEP 1: ### 
-### Set your custom binding phrase here.
+### BINDING PHRASE: ### 
 
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
-### STEP 2: ### 
-### Enable one of these regulatory domains by removing a leading '#' ###
+### REGULATORY DOMAIN: ### 
 
 #-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
@@ -25,8 +23,7 @@
 #-DRegulatory_Domain_ISM_2400
 
 
-### STEP 3: ### 
-### Choose Hybrid Switches (versus 1bit switches) ###
+### SWITCHES: ### 
 
 #-DHYBRID_SWITCHES_8
 
