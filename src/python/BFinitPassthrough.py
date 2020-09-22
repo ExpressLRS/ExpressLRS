@@ -3,52 +3,17 @@ from xmodem import XMODEM
 import time
 import sys, glob
 
-result = []
-
+import serials_find
 
 try:
     requestedBaudrate = int(sys.argv[1])
 except:
     requestedBaudrate = 420000
 
-def serial_ports():
-    """ Lists serial port names
+port = serials_find.get_serial_port()
+print("Going to use %s\n" % port)
 
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of the serial ports available on the system
-    """
-    if sys.platform.startswith('win'):
-        ports = ['COM%s' % (i + 1) for i in range(256)]
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # this excludes your current terminal "/dev/tty"
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty.*')
-    else:
-        raise EnvironmentError('Unsupported platform')
-
-    for port in ports:
-        try:
-            s = serial.Serial(port)
-            s.close()
-            result.append(port)
-        except (OSError, serial.SerialException):
-            pass
-    return result
-
-print(serial_ports())
-sys.stdout.write("Dected the following serial ports on this system: \n")
-sys.stdout.write(str(serial_ports())[1:-1])
-sys.stdout.write("\n")
-
-if(len(result) == 0):
-    raise EnvironmentError('No valid serial port detected or port already open')
-
-print("Going to try using "+ result[0])
-
-s = serial.Serial(port=result[0], baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
+s = serial.Serial(port=port, baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
 s.write(chr(0x23).encode())
 time.sleep(1)
