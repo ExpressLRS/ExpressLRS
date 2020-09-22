@@ -3,7 +3,7 @@
     "cpu": "cortex-m4",
     "extra_flags": "-DSTM32F301x8=1 -DSTM32F3xx=1 -DSTM32F301=1",
     "f_cpu": "72000000L",
-    "ldscript": "",
+    "ldscript": "ldscript.ld",
     "mcu": "stm32f301k8",
     "product_line": "STM32F301x8",
     "variants_dir": "variants",

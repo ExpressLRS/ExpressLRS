@@ -27,25 +27,25 @@ const PinName digitalPin[] = {
   PA_10, //D0
   PA_9,  //D1
   PA_12, //D2
-  PB_0,  //D3/A8
+  PB_0,  //D3/A7
   PB_7,  //D4
   PB_6,  //D5
-  PB_1,  //D6/A9
+  PB_1,  //D6/A8
   PF_0,  //D7
   PF_1,  //D8
   PA_8,  //D9
   PA_11, //D10
   PB_5,  //D11
   PB_4,  //D12
-  PB_3,  //D13 - LED
+  PB_3,  //D13
   PA_0,  //D14/A0
   PA_1,  //D15/A1
   PA_3,  //D16/A2
   PA_4,  //D17/A3
-  PA_5,  //D18/A4
-  PA_6,  //D19/A5
-  PA_7,  //D20/A6
-  PA_2,  //D21/A7 - STLink Tx
+  PA_5,  //D18
+  PA_6,  //D19/A4
+  PA_7,  //D20/A5
+  PA_2,  //D21/A6 - STLink Tx
   PA_15  //D22    - STLink Rx
 };
 
@@ -58,12 +58,11 @@ const uint32_t analogInputPin[] = {
   15, //A1
   16, //A2
   17, //A3
-  18, //A4
-  19, //A5
-  20, //A6
-  21, //A7
-  3,  //A8
-  6   //A9
+  19, //A4
+  20, //A5
+  21, //A6
+  3,  //A7
+  6,  //A8
 };
 
 #ifdef __cplusplus
