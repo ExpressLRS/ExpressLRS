@@ -31,6 +31,11 @@ SX1280Driver Radio;
 #endif
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
+uint8_t LEDfadeDiv;
+uint8_t LEDfade;
+bool LEDfadeDir;
+uint32_t LEDupdateInterval = 1;
+uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
@@ -144,12 +149,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
-
-#ifdef TARGET_RX_GHOST_ATTO_V1
-        uint8_t LEDcolor[3] = {0};
-        LEDcolor[2 - ModParams->index] = 0xFF;
-        WS281BsetLED(LEDcolor);
-#endif
     }
 }
 
@@ -314,6 +313,13 @@ void ICACHE_RAM_ATTR TentativeConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+
+#ifdef TARGET_RX_GHOST_ATTO_V1
+    uint8_t LEDcolor[3] = {0};
+    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
+    WS281BsetLED(LEDcolor);
+    LEDupdateCounterMillis = millis();
+#endif
 }
 
 void GotConnection()
@@ -323,9 +329,9 @@ void GotConnection()
         return; // Already connected
     }
 
-    #ifdef LOCK_ON_FIRST_CONNECTION
-        LockRFmode = true;
-    #endif
+#ifdef LOCK_ON_FIRST_CONNECTION
+    LockRFmode = true;
+#endif
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
@@ -335,6 +341,13 @@ void GotConnection()
 
     RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
+
+#ifdef TARGET_RX_GHOST_ATTO_V1
+    uint8_t LEDcolor[3] = {0};
+    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
+    WS281BsetLED(LEDcolor);
+    LEDupdateCounterMillis = millis();
+#endif
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
@@ -625,6 +638,20 @@ void setup()
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
 
+#ifdef TARGET_RX_GHOST_ATTO_V1 // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
+#endif
+
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915
@@ -803,6 +830,29 @@ void loop()
         Serial.println("Timer Considered Locked");
         #endif
     }
+
+#ifdef TARGET_RX_GHOST_ATTO_V1
+    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis)) // quicker way to get to good conn state of the sync and link is great off the bat.
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 25 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        if (LEDfadeDir)
+        {
+            LEDfade = LEDfade + 1;
+        }
+        else
+        {
+            LEDfade = LEDfade - 1;
+        }
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDupdateCounterMillis = millis();
+    }
+#endif
 
 #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
