@@ -1,18 +1,20 @@
-#### The Legal Stuff ###
+### The Legal Stuff ###
+
 # The use and operation of this type of device may require a license and some countries may forbid its use entirely.
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
-# This file can be used to pass defines for compiler
-#
-# Purpose is mainly to define user specific variables
-# without modifying the actual source codes. These
-# flags are passed for all build targets.
-#
-# Define need to start with '-D' keyword
-#
+# HOW TO USE THIS FILE: https://github.com/AlessandroAU/ExpressLRS/wiki/User-Defines
+# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND 
+ 
 
-### STEP1: ### 
+### STEP 1: ### 
+### Set your custom binding phrase here.
+
+-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+
+
+### STEP 2: ### 
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
 #-DRegulatory_Domain_AU_915
@@ -20,73 +22,45 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
-
-### Bands for SX1280 (2400MHz) ###
 #-DRegulatory_Domain_ISM_2400
 
-### STEP2: ### 
-### DEFINE ONE AND ONLY ONE OF THE SWITCH ENCODING OPTIONS ##
-# The TX and RX must be compiled with matching switch protocols!
-# If neither of the below are set the code defaults to 1bit switches
 
-#-DSEQ_SWITCHES
-
-# Sequential switches
-# 5 bits are used in each rc packet to encode 8 3 position switches
-# first 3 bits are the switch ID, followed by 2 bits for the switch value.
-# Switches that have changed are given priority, otherwise each switch value
-# is sent in round-robin.
-# Channel 4 is reduced to 10bit resolution in order to get the 5th bit needed
-# for sequential switch encoding.
+### STEP 3: ### 
+### Choose Hybrid Switches (versus 1bit switches) ###
 
 #-DHYBRID_SWITCHES_8
 
-# Hybrid switches
-# The first switch is treated as a low-latency switch to be used for arm/disarm.
-# It is sent with every packet. The remaining 7 switch channels are sent
-# in the same change-prioritized round-robin fashion as described for sequential
-# switches above. All switches are encoded for 3 position support. All analog
-# channels are reduced to 10bit resolution to free up space in the rc packet
-# for switches.
 
-### STEP3: ### 
-### Set your custom binding phrase here. This unique string is used to pair your ExpressLRS tx and rx. ###
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+### PERFORMANCE OPTIONS: ### 
 
-### OTHER OPTIONS: ### 
-# No sync on arm, don't transmit sync packet when armed (if using a different arm channel you NEED to edit, default is AUX1 (Channel 5).
-# This is useful if you are a racer and want the best possible RC link (no packets wasted on sending sync packets), this is not reconmened for LR as complete 
-# and sustained RXloss will require you to disarm to regain link. 
 #-DNO_SYNC_ON_ARM
 #-DARM_CHANNEL=AUX1
 
-#Use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 -DFEATURE_OPENTX_SYNC
-# Automatically calculate the safe offset for OpenTXsync (needs OpenTX 2.4 or later)
 #-DFEATURE_OPENTX_SYNC_AUTOTUNE
- 
- # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
--DUART_INVERTED
 
-# Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
--DAUTO_WIFI_ON_BOOT
-
-# Beep only once (applies to TX modules with buzzer)
-#-DJUST_BEEP_ONCE
-
-# Uncomment to use UART2 for MSP comms on the TX module
--DUSE_UART2
-
-#ESP8266 Backpack is a debugging tool mainly for use with R9M, most users will not have it
-#-DUSE_ESP8266_BACKPACK
-
-# Uncomment to use the inverted sbus pad on the r9mm receiver and flight controller.  'set serialrx_inverted = ON' may also need to be set within Betaflight.
-# TLM is not available.  Flashing via the BetaflightPassthrough target will not work!!!
-#-DUSE_R9MM_R9MINI_SBUS
-
-# RF Mode Locking - Default mode is for the Rx to cycle through the available RF modes and find
-# which mode the Tx transmitting.  LOCK_ON_FIRST_CONNECTION allows the Rx to cycle, but once a connection
-# is made the Rx will no longer cycle through the RF modes.  LOCK_ON_50HZ sets the Rx to only 50Hz
-# mode from the powerup.
 #-DLOCK_ON_FIRST_CONNECTION
 #-DLOCK_ON_50HZ
+
+
+### COMPATIBILITY OPTIONS: ###
+ 
+-DUART_INVERTED
+
+-DUSE_UART2
+
+#-DUSE_R9MM_R9MINI_SBUS
+
+
+### OTHER OPTIONS: ###
+
+-DAUTO_WIFI_ON_BOOT
+
+#-DUSE_ESP8266_BACKPACK
+
+#-DJUST_BEEP_ONCE
+
+
+
+
+
