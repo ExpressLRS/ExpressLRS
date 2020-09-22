@@ -17,7 +17,7 @@
 ### Enable one of these regulatory domains by removing a leading '#' ###
 
 #-DRegulatory_Domain_AU_915
--DRegulatory_Domain_EU_868
+#-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
