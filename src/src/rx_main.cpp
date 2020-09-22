@@ -29,6 +29,10 @@ SX1280Driver Radio;
 #include "STM32_UARTinHandler.h"
 #endif
 
+#ifdef TARGET_RX_GHOST_ATTO_V1
+#include "STM32F3_WS2812B_LED.h"
+#endif
+
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
@@ -139,6 +143,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
+
+#ifdef TARGET_RX_GHOST_ATTO_V1
+        uint8_t LEDcolor[3] = {0};
+        LEDcolor[2 - ModParams->index] = 0xFF;
+        WS281BsetLED(LEDcolor);
+#endif
     }
 }
 

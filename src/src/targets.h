@@ -263,15 +263,18 @@ https://github.com/jaxxzer
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
 #define GPIO_PIN_NSS            PA15
-#define GPIO_PIN_BUSY           PA4
+#define GPIO_PIN_BUSY           PA3
 #define GPIO_PIN_DIO0           -1 // does not exist on sx1280
-#define GPIO_PIN_DIO1           PA2
+#define GPIO_PIN_DIO1           PA1
 #define GPIO_PIN_MOSI           PB5
 #define GPIO_PIN_MISO           PB4
 #define GPIO_PIN_SCK            PB3
-#define GPIO_PIN_RST            PB1
+#define GPIO_PIN_RST            PB0
+//#define GPIO_PIN_RCSIGNAL_RX    PA2
 #define GPIO_PIN_RCSIGNAL_RX    PB7
 #define GPIO_PIN_RCSIGNAL_TX    PB6
+//#define GPIO_PIN_LED            PA7
+//#define GPIO_PIN_BUTTON         PA12
 #define timerOffset             1
 #endif
 
