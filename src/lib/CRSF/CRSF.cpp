@@ -471,7 +471,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         }
 #endif
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 
 #ifdef PLATFORM_ESP32
     void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
