@@ -71,7 +71,7 @@ public:
     ////////////////Configuration Functions/////////////
     SX1280Driver();
     static SX1280Driver *instance;
-    void Begin();
+    bool Begin();
     void End();
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
     void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength);

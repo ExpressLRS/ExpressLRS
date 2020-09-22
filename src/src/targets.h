@@ -1,15 +1,10 @@
 #pragma once
 
 /// General Features ///
-#define FEATURE_OPENTX_SYNC //uncomment to use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
 
-#ifdef PLATFORM_STM32
-#define WORD_ALIGNED_ATTR //nothing//
-#else
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
-#endif
 
 #ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
@@ -32,6 +27,7 @@
 #define GPIO_PIN_OLED_SCK 15
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#define GPIO_PIN_LED 2
 #endif
 
 #ifdef TARGET_TTGO_LORA_V1_AS_RX
@@ -69,6 +65,7 @@
 #define GPIO_PIN_TX_ENABLE 12
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
+#define GPIO_PIN_LED 27
 #endif
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
@@ -126,7 +123,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_GREEN      PB3 // Green 
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #endif
-#define timerOffset             2
+#define timerOffset             1
 
 // External pads
 // #define R9m_Ch1    PA8
@@ -189,6 +186,33 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIO0           PC15
 #define GPIO_PIN_DIO1           -1    //unused for sx1280 
 #define GPIO_PIN_BUSY           -1    //unused for sx1280 
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm 
+#define GPIO_PIN_SDA            PB7
+#define GPIO_PIN_SCL            PB6
+#define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
+#define GPIO_PIN_LED_RED        PA1 // Red LED // not yet confirmed
+#define GPIO_PIN_LED_GREEN      PA4 // Green LED // not yet confirmed
+
+#define GPIO_PIN_DEBUG_RX    PA3 // confirmed
+#define GPIO_PIN_DEBUG_TX    PA2 // confirmed
+
+#define BUFFER_OE               PA5  //CONFIRMED
+
+#endif
+
+#ifdef TARGET_R9M_LITE_PRO_TX
+
+#define GPIO_PIN_RFswitch_CONTROL     PC13  // need to confirm  //HIGH = RX, LOW = TX
+
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PC15
+#define GPIO_PIN_DIO1           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13

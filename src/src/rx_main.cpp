@@ -15,11 +15,11 @@ SX1280Driver Radio;
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "Debug.h"
-#include "rx_LinkQuality.h"
 #include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "hwTimer.h"
+#include "LQCALC.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -48,7 +48,10 @@ LPF LPF_PacketInterval(3);
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 LPF LPF_UplinkRSSI(5);
-////////////////////////////
+
+/// LQ Calculation //////////
+LQCALC LQCALC;
+uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t CURR_RATE_MAX;
@@ -105,6 +108,7 @@ uint32_t PacketInterval;
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
+bool LockRFmode = false;
 ///////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -113,7 +117,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkQuality, 0, 100, 0, 1023));
+    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
   
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
@@ -123,27 +127,25 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
-    crsf.LinkStatistics.uplink_Link_quality = linkQuality;
+    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    if (!LockRFmode)
+    {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+        expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
-    hwTimer.updateInterval(ModParams->interval);
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
+        hwTimer.updateInterval(ModParams->interval);
 
-    ExpressLRS_currAirRate_Modparams = ModParams;
-    ExpressLRS_currAirRate_RFperfParams = RFperf;
-}
-
-void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
-{
-    ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
+        ExpressLRS_currAirRate_Modparams = ModParams;
+        ExpressLRS_currAirRate_RFperfParams = RFperf;
+    }
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -255,8 +257,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 {
     NonceRX++;
     alreadyFHSS = false;
-    linkQuality = getRFlinkQuality();
-    incrementLQArray();
+    uplinkLQ = LQCALC.getLQ();
+    LQCALC.inc();
+    crsf.RXhandleUARTout();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -265,7 +268,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     HandleSendTelemetryResponse();
 }
 
-void ICACHE_RAM_ATTR LostConnection()
+void LostConnection()
 {
     if (connectionState == disconnected)
     {
@@ -311,6 +314,10 @@ void ICACHE_RAM_ATTR GotConnection()
     {
         return; // Already connected
     }
+
+    #ifdef LOCK_ON_FIRST_CONNECTION
+        LockRFmode = true;
+    #endif
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
@@ -371,6 +378,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+
     if (inCRC != calculatedCRC)
     {
         #ifndef DEBUG_SUPPRESS
@@ -425,28 +435,26 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-        if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
+         TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
+
+        if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
         {
             LastSyncPacket = millis();
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (linkQuality > 75))
+            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))))
             {
                 GotConnection();
             }
 
-            expresslrs_RFrates_e rateIn = (expresslrs_RFrates_e)((Radio.RXdataBuffer[3] & 0b11100000) >> 5);
-            uint8_t TLMrateIn = ((Radio.RXdataBuffer[3] & 0b00011100) >> 2);
-
-            if ((ExpressLRS_currAirRate_Modparams->index != rateIn) || (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn))
+            if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
             { // change link parameters if required
                 #ifndef DEBUG_SUPPRESS
                 Serial.println("New TLMrate: ");
                 Serial.println(TLMrateIn);
                 #endif
-                ExpressLRS_AirRateNeedsUpdate = true;
-                ExpressLRS_currAirRate_Modparams = get_elrs_airRateConfig((expresslrs_RFrates_e)rateIn);
                 ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
             }
 
@@ -455,6 +463,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                 NonceRX = Radio.RXdataBuffer[2];
                 TentativeConnection();
+                return;
             }
 
         }
@@ -466,7 +475,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     HandleFHSS();
     HandleSendTelemetryResponse();
-    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 
     if (connectionState != disconnected)
     {
@@ -503,7 +512,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(":");
     Serial.print(OffsetDx);
     Serial.print(":");
-    Serial.println(linkQuality);
+    Serial.println(uplinkLQ);
 #endif
 }
 
@@ -562,7 +571,7 @@ void ICACHE_RAM_ATTR RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     alreadyTLMresp = false;
-    addPacketToLQ(); // Adds packet to LQ otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
     Radio.RXnb();
 }
 
@@ -610,11 +619,18 @@ void setup()
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
-    Radio.Begin();
     #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
-    Radio.SetSyncWord(UID[3]);
-    #endif 
-    #ifdef TARGET_RX_ESP8266_SX1280_V1
+    Radio.currSyncWord = UID[3];
+    #endif
+    bool init_success = Radio.Begin();
+    while (!init_success)
+    {
+        digitalWrite(GPIO_PIN_LED, LED);
+        LED = !LED;
+        delay(200);
+        Serial.println("Failed to detect RF chipset!!!");
+    }
+#ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
     #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
@@ -631,19 +647,36 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    SetRFLinkRate((uint8_t)RATE_DEFAULT);
-  
+    #ifdef LOCK_ON_50HZ
+        for (int i = 0; i < RATE_MAX; i++)
+        {
+            expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
+            if (ModParams->enum_rate == RATE_50HZ)
+            {
+                SetRFLinkRate(ModParams->index);
+                LockRFmode = true;
+            }
+        }
+    #else
+        SetRFLinkRate(RATE_DEFAULT);
+    #endif
+
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
     hwTimer.stop();
+    LQCALC.init();
 }
 
 void loop()
 {
+    if (hwTimer.running == false)
+    {
+        crsf.RXhandleUARTout();
+    }
     //crsf.RXhandleUARTout(); //empty the UART out buffer
     //yield(); // to be safe
-    //Serial.println(linkQuality);
+    //Serial.println(uplinkLQ);
     //Serial.print(headroom);
     //Serial.println(" Head2:");
     //Serial.println(headroom2);
@@ -669,7 +702,7 @@ void loop()
     }
     #endif
 
-    if (connectionState == tentative && (linkQuality <= 75 || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -698,31 +731,40 @@ void loop()
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate((expresslrs_RFrates_e)(scanIndex % CURR_RATE_MAX)); //switch between rates
-            Radio.RXnb();
-            LQreset();
+            SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
+            SendLinkStatstoFCintervalLastSent = millis();
+            LQCALC.reset();
             digitalWrite(GPIO_PIN_LED, LED);
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            delay(100);
+            crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
+            Radio.RXnb();
         }
         RFmodeLastCycled = millis();
     }
 
-    if ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && linkQuality < 10)) // check if we lost conn.
+    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
     {
         LostConnection();
     }
 
-    if ((connectionState == tentative) && linkQuality >= 99) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    if ((connectionState == tentative) && uplinkLQ >= 90) // quicker way to get to good conn state of the sync and link is great off the bat. 
     {
         GotConnection();
     }
 
-    if ((millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL)) && connectionState != disconnected)
+    if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
-        crsf.sendLinkStatisticsToFC();
-        SendLinkStatstoFCintervalLastSent = millis();
+        if (connectionState != disconnected)
+        {
+            getRFlinkInfo();
+            crsf.sendLinkStatisticsToFC();
+            SendLinkStatstoFCintervalLastSent = millis();
+        }
     }
 
     if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))

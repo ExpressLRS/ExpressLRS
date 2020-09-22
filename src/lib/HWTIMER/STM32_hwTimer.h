@@ -27,11 +27,8 @@ public:
     static void init();
     static void stop();
     static void resume();
-    #ifdef TARGET_R9MX_RX
     static void callback(void);
-    #else
-    static void callback(HardwareTimer *);
-    #endif
+
     static void updateInterval(uint32_t newTimerInterval);
     static void phaseShift(int32_t newPhaseShift);
 

@@ -15,10 +15,15 @@ TaskHandle_t xESP32uartWDT = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 HardwareSerial CRSF::Port(USART3);
+#ifndef TARGET_R9M_LITE_PRO_TX
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
+#else
+#include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_gpio.h"
+#endif
 #endif
 
 ///Out FIFO to buffer messages///
@@ -76,8 +81,17 @@ volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
+#define SyncWaitPeriod 2000
+uint32_t CRSF::SyncWaitPeriodCounter = 0;
+LPF LPF_OPENTX_SYNC_OFFSET(3);
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+LPF LPF_OPENTX_SYNC_MARGIN(3);
+#else
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us 
+#endif
 volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
-volatile uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 
 void CRSF::Begin()
 {
@@ -88,7 +102,7 @@ void CRSF::Begin()
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
     xTaskCreatePinnedToCore(UARTwdt, "ESP32uartWDTTask", 2000, NULL, 10, &xESP32uartWDT, 1);
 #endif
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     // TODO: Find out if xTaskCreate is a substitute for xTaskCreatePinnedToCore
     Serial.println("STM32 Platform Detected...");
     CRSF::STM32initUART();
@@ -151,7 +165,7 @@ void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
     sentSwitches[index] = value;
 }
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -252,16 +266,51 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
     }
 }
 
+void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
+{
+    CRSF::RequestedRCpacketInterval = PacketInterval;
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    CRSF::SyncWaitPeriodCounter = millis();
+    CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+    LPF_OPENTX_SYNC_MARGIN.init(0);
+    LPF_OPENTX_SYNC_OFFSET.init(0);
+#endif
+}
+
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
-    //Serial.println(CRSF::OpenTXsyncOffset);
+
+    if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
+    {
+        CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+        if (millis() > CRSF::SyncWaitPeriodCounter + SyncWaitPeriod) // wait until we stablize after changing pkt rate
+        {
+            CRSF::OpenTXsyncOffsetSafeMargin = LPF_OPENTX_SYNC_MARGIN.update((CRSF::OpenTXsyncOffsetSafeMargin - OpenTXsyncOffset) + 100); // take worst case plus 50us
+        }
+#endif
+    }
+
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    if (CRSF::OpenTXsyncOffsetSafeMargin > 4000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 4000; // hard limit at no tune default
+    }
+    else if (CRSF::OpenTXsyncOffsetSafeMargin < 1000)
+    {
+        CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
+    }
+#endif
+    // Serial.print(CRSF::OpenTXsyncOffset);
+    // Serial.print(",");
+    // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
 
 #ifdef PLATFORM_ESP32
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values in us.
 {
-    vTaskDelay(500);
+    //vTaskDelay(500);
     for (;;)
     {
 #endif
@@ -273,7 +322,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
 #endif
                 uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-                int32_t offset = CRSF::OpenTXsyncOffset * 10 - 8000;        // + offset that seems to be needed
+                int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
+
                 uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
                 outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
@@ -352,9 +402,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
             outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-            //SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-            //SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-            this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
+            SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+            //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
         }
 
@@ -413,7 +463,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         }
 #endif
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 
 #ifdef PLATFORM_ESP32
     void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
@@ -423,7 +473,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
             void  CRSF::UARTwdt()
             {
                 if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
@@ -436,6 +486,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         if (CRSFstate == true)
                         {
                             Serial.println("CRSF UART Disconnected");
+                            SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                            CRSF::OpenTXsyncOffsetSafeMargin = 1000;
+                            CRSF::OpenTXsyncOffset = 0;
+                            CRSF::OpenTXsyncLastSent = 0;
+#endif
                             disconnected();
                             CRSFstate = false;
                         }
@@ -475,6 +531,15 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
                 ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
                 gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+                #ifdef UART_INVERTED
+                gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+                gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+                gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+                #else
+                gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, false);
+                gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+                gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+                #endif
             }
             void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
             {
@@ -483,7 +548,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
                 ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
                 ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+                #ifdef UART_INVERTED
                 gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+                #else
+                gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
+                #endif
             }
 
             void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
@@ -611,7 +680,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #endif
 
 #ifdef PLATFORM_ESP32
-
             void ICACHE_RAM_ATTR CRSF::ESP32ProcessPacket()
             {
                 if (CRSFstate == false)
@@ -621,6 +689,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 #ifdef FEATURE_OPENTX_SYNC
                     xTaskCreatePinnedToCore(sendSyncPacketToTX, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
 #endif
+                    SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                    LPF_OPENTX_SYNC_MARGIN.init(0);
+                    LPF_OPENTX_SYNC_OFFSET.init(0);
+#endif
                     connected();
                 }
 
@@ -628,7 +701,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
                 {
-                    Serial.println("Got Other Packet"); // TODO use debug macro?
                     const volatile uint8_t *buffer = CRSF::inBuffer.asUint8_t;
                     if (buffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && buffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
                     {
@@ -636,6 +708,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         ParameterUpdateData[1] = buffer[6];
                         RecvParameterUpdate();
                     }
+                    Serial.println("Got Other Packet"); // TODO use debug macro?
                 }
 
                 if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -648,7 +721,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             }
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 
             void ICACHE_RAM_ATTR CRSF::STM32initUART() //RTOS task to read and write CRSF packets to the serial port
             {
@@ -697,6 +770,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
                         {
                             SerialInPacketPtr = 0;
+                            SerialInPacketLen = 0;
                             CRSFframeActive = false;
                             return;
                         }
@@ -731,10 +805,14 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     lastUARTpktTime = millis();
                                     delayMicroseconds(50);
                                     CRSF::STM32handleUARTout();
+                                    while (CRSF::Port.available())
+                                    {
+                                        CRSF::Port.read(); // empty any remaining garbled data 
+                                    }
                                     GoodPktsCount++;
                                 }
-
                                 SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                                 CRSFframeActive = false;
                             }
                             else
@@ -742,6 +820,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 Serial.println("UART CRC failure");
                                 CRSFframeActive = false;
                                 SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                                 while (CRSF::Port.available())
                                 {
                                     CRSF::Port.read(); // empty any remaining garbled data 
@@ -780,6 +859,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     CRSFstate = true;
                     Serial.println("CRSF UART Connected");
+                    SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+                    LPF_OPENTX_SYNC_MARGIN.init(0);
+                    LPF_OPENTX_SYNC_OFFSET.init(0);
+#endif
                     connected();
                 }
 
@@ -787,7 +871,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
                 {
-                    Serial.println("Got Other Packet");
                     const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
                     if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER && SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
                     {
@@ -796,6 +879,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         RecvParameterUpdate();
                         return true;
                     }
+                    Serial.println("Got Other Packet");
                 }
 
                 if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)

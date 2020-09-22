@@ -3,7 +3,6 @@
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
-
 # This file can be used to pass defines for compiler
 #
 # Purpose is mainly to define user specific variables
@@ -55,12 +54,25 @@
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
+# No sync on arm, don't transmit sync packet when armed (if using a different arm channel you NEED to edit, default is AUX1 (Channel 5).
+# This is useful if you are a racer and want the best possible RC link (no packets wasted on sending sync packets), this is not reconmened for LR as complete 
+# and sustained RXloss will require you to disarm to regain link. 
+#-DNO_SYNC_ON_ARM
+#-DARM_CHANNEL=AUX1
+
+#Use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
+-DFEATURE_OPENTX_SYNC
+# Automatically calculate the safe offset for OpenTXsync (needs OpenTX 2.4 or later)
+#-DFEATURE_OPENTX_SYNC_AUTOTUNE
+ 
+ # Serial connection to module is inverted by default, uninvert (comment out by #) for some radios eg T8SG V2
+-DUART_INVERTED
 
 # Wifi starts if no connection is found between 10 and 11 seconds after boot (for ESP8285 Modules)
 -DAUTO_WIFI_ON_BOOT
 
 # Beep only once (applies to TX modules with buzzer)
--DJUST_BEEP_ONCE
+#-DJUST_BEEP_ONCE
 
 # Uncomment to use UART2 for MSP comms on the TX module
 -DUSE_UART2
@@ -71,3 +83,10 @@
 # Uncomment to use the inverted sbus pad on the r9mm receiver and flight controller.  'set serialrx_inverted = ON' may also need to be set within Betaflight.
 # TLM is not available.  Flashing via the BetaflightPassthrough target will not work!!!
 #-DUSE_R9MM_R9MINI_SBUS
+
+# RF Mode Locking - Default mode is for the Rx to cycle through the available RF modes and find
+# which mode the Tx transmitting.  LOCK_ON_FIRST_CONNECTION allows the Rx to cycle, but once a connection
+# is made the Rx will no longer cycle through the RF modes.  LOCK_ON_50HZ sets the Rx to only 50Hz
+# mode from the powerup.
+#-DLOCK_ON_FIRST_CONNECTION
+#-DLOCK_ON_50HZ

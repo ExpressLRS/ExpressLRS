@@ -58,12 +58,6 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     return;
 #endif
 
-#ifdef TARGET_TX_ESP32_E28_SX1280_V1
-    Radio.SetOutputPower(0);
-    CurrentPower = Power;
-    return;
-#endif
-
 #ifdef TARGET_R9M_TX
     Radio.SetOutputPower(0b0000);
     R9DAC.setPower((DAC_PWR_)Power);
@@ -121,33 +115,59 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     }
 #endif
 
+#ifdef TARGET_TX_ESP32_E28_SX1280_V1
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-18);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-16);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(-13);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-11);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(-7);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(-5);
+        break;
+    case PWR_1000mW:
+        Radio.SetOutputPower(-1);
+        break;
+    default:
+        Power = PWR_100mW;
+        Radio.SetOutputPower(-11);
+        break;
+    }
+    CurrentPower = Power;
+#endif
+
 #ifdef TARGET_TX_ESP32_LORA1280F27
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(-10);
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(-7);
-        break;
-    case PWR_50mW:
         Radio.SetOutputPower(-4);
         break;
+    case PWR_25mW:
+        Radio.SetOutputPower(0);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(3);
+        break;
     case PWR_100mW:
-        Radio.SetOutputPower(-1);
+        Radio.SetOutputPower(6);
         break;
     case PWR_250mW:
-        Radio.SetOutputPower(2);
-        break;
-    case PWR_500mW:
-        Radio.SetOutputPower(5);
-        break;
-    case PWR_1000mW:
-        Radio.SetOutputPower(13);
+        Radio.SetOutputPower(12);
         break;
     default:
-        Power = PWR_100mW;
-        Radio.SetOutputPower(-1);
+        Power = PWR_50mW;
+        Radio.SetOutputPower(3);
         break;
     }
     CurrentPower = Power;
