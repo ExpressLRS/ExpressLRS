@@ -3,7 +3,6 @@
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
-
 # This file can be used to pass defines for compiler
 #
 # Purpose is mainly to define user specific variables

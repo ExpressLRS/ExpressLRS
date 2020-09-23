@@ -133,7 +133,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
     if (!LockRFmode)
     {
@@ -146,11 +146,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
     }
-}
-
-void ICACHE_RAM_ATTR SetTLMRate(expresslrs_tlm_ratio_e TLMrateIn)
-{
-    ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -273,7 +268,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     HandleSendTelemetryResponse();
 }
 
-void ICACHE_RAM_ATTR LostConnection()
+void LostConnection()
 {
     if (connectionState == disconnected)
     {
@@ -313,7 +308,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     LPF_Offset.init(0);
 }
 
-void ICACHE_RAM_ATTR GotConnection()
+void GotConnection()
 {
     if (connectionState == connected)
     {
@@ -449,10 +444,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             #ifndef DEBUG_SUPPRESS
             Serial.println("sync");
             #endif
-            if ((NonceRX == Radio.RXdataBuffer[2]) && (FHSSgetCurrIndex() == Radio.RXdataBuffer[1]) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval))))
-            {
-                GotConnection();
-            }
 
             if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
             { // change link parameters if required
@@ -637,9 +628,9 @@ void setup()
     }
 #ifdef TARGET_RX_ESP8266_SX1280_V1
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
-    #else
+#else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
-    #endif
+#endif
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
     // Serial.print("RF noise floor: ");
@@ -757,7 +748,7 @@ void loop()
         LostConnection();
     }
 
-    if ((connectionState == tentative) && uplinkLQ >= 90) // quicker way to get to good conn state of the sync and link is great off the bat. 
+    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100 - (100 / (ExpressLRS_currAirRate_Modparams->FHSShopInterval + 1))))) //detects when we are connected
     {
         GotConnection();
     }

@@ -37,6 +37,9 @@ button button;
 R9DAC R9DAC;
 #endif
 
+#if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
+#include "STM32_hwTimer.h"
+#endif
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
@@ -490,7 +493,7 @@ void setup()
   #endif
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
 
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
@@ -532,7 +535,9 @@ void setup()
 
 #ifdef PLATFORM_ESP32
   //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector needed for debug, shouldn't need to be actually used in practise.
+#ifdef GPIO_PIN_LED
   strip.Begin();
+#endif
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // Print base mac address
@@ -620,19 +625,19 @@ void loop()
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
   crsf.STM32handleUARTin();
   #ifdef FEATURE_OPENTX_SYNC
   crsf.sendSyncPacketToTX();
