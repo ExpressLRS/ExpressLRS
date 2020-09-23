@@ -34,8 +34,8 @@ elif "linux" in platform_name:
         sys.stdout.flush()
         raise SystemExit
     
-elif "os x" in platform_name:
-    sys.stdout.write("Mac operating system detected\n")
+elif "darwin" in platform_name:
+    sys.stdout.write("darwin operating system detected\n")
     sys.stdout.flush()
     try:
         os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))

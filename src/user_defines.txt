@@ -3,7 +3,6 @@
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
-
 # This file can be used to pass defines for compiler
 #
 # Purpose is mainly to define user specific variables
@@ -55,6 +54,12 @@
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 ### OTHER OPTIONS: ### 
+# No sync on arm, don't transmit sync packet when armed (if using a different arm channel you NEED to edit, default is AUX1 (Channel 5).
+# This is useful if you are a racer and want the best possible RC link (no packets wasted on sending sync packets), this is not reconmened for LR as complete 
+# and sustained RXloss will require you to disarm to regain link. 
+#-DNO_SYNC_ON_ARM
+#-DARM_CHANNEL=AUX1
+
 #Use OpenTX packet sync feature (requires OpenTX 2.4 onwards) - this reduces latency.
 -DFEATURE_OPENTX_SYNC
 # Automatically calculate the safe offset for OpenTXsync (needs OpenTX 2.4 or later)
