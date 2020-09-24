@@ -874,7 +874,6 @@ void loop()
         LEDupdateCounterMillis = millis();
     }
 #endif
-#ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-#endif
+    RX_UARTinHandle();
 }
+

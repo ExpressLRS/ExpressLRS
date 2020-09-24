@@ -15,7 +15,7 @@ void RX_UARTinProcessPacket()
 {
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_COMMAND)
     {
-        #ifdef PLATFORM_STM32
+#ifdef PLATFORM_STM32
         Serial.println("Got CMD Packet");
         if (UARTinBuffer[3] == 0x62 && UARTinBuffer[4] == 0x6c)
         {
@@ -24,7 +24,7 @@ void RX_UARTinProcessPacket()
             delay(100);
             HAL_NVIC_SystemReset();
         }
-        #endif
+#endif
     }
 
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_BATTERY_SENSOR)
@@ -37,14 +37,13 @@ void RX_UARTinProcessPacket()
 
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_GPS)
     {
-        crsf.TLMGPSsensor.latitude = (UARTinBuffer[3] << 24) + (UARTinBuffer[4] << 16)+ (UARTinBuffer[5] << 8) + (UARTinBuffer[6] << 0);
-        crsf.TLMGPSsensor.longitude = (UARTinBuffer[7] << 24) + (UARTinBuffer[8] << 16)+ (UARTinBuffer[9] << 8) + (UARTinBuffer[10] << 0);
+        crsf.TLMGPSsensor.latitude = (UARTinBuffer[3] << 24) + (UARTinBuffer[4] << 16) + (UARTinBuffer[5] << 8) + (UARTinBuffer[6] << 0);
+        crsf.TLMGPSsensor.longitude = (UARTinBuffer[7] << 24) + (UARTinBuffer[8] << 16) + (UARTinBuffer[9] << 8) + (UARTinBuffer[10] << 0);
         crsf.TLMGPSsensor.speed = (UARTinBuffer[11] << 8) + (UARTinBuffer[12] << 0);
         crsf.TLMGPSsensor.headng = (UARTinBuffer[13] << 8) + (UARTinBuffer[14] << 0);
         crsf.TLMGPSsensor.alt = (UARTinBuffer[15] << 8) + (UARTinBuffer[16] << 0);
         crsf.TLMGPSsensor.sats = (UARTinBuffer[17]);
     }
-
 }
 
 void RX_UARTinHandle()
@@ -72,10 +71,10 @@ void RX_UARTinHandle()
             if (UARTinPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
             {
                 UARTinPacketPtr = 0;
+                UARTinPacketLen = 0;
                 UARTframeActive = false;
                 return;
             }
-
             // special case where we save the expected pkt len to buffer //
             if (UARTinPacketPtr == 1)
             {
@@ -104,12 +103,14 @@ void RX_UARTinHandle()
                     UARTinLastPacketTime = millis();
                     RX_UARTinProcessPacket();
                     UARTinPacketPtr = 0;
+                    UARTinPacketLen = 0;
                     UARTframeActive = false;
                 }
                 else
                 {
-                    UARTframeActive = false;
                     UARTinPacketPtr = 0;
+                    UARTinPacketLen = 0;
+                    UARTframeActive = false;
                     Serial.println("UART in CRC failure");
                     while (Serial.available())
                     {
