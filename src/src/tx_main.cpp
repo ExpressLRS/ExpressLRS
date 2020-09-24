@@ -30,6 +30,10 @@ SX1280Driver Radio;
 #include "soc/rtc_cntl_reg.h"
 #endif
 
+#ifdef PLATFORM_ESP32
+#include "ESP32_WebUpdate.h"
+#endif
+
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
 #include "button.h"
@@ -61,6 +65,8 @@ MSP msp;
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
 
+bool webUpdateMode = false;
+
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
 uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
@@ -78,8 +84,8 @@ uint32_t RFmodeLastCycled = 0;
 ///////////////////////////////////////
 
 volatile bool UpdateParamReq = false;
-uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
-uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
+uint8_t luaCommitPacket[] = {(uint8_t)0xF0, thisCommit[0], thisCommit[1], thisCommit[2]};
+uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xF1, thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
 
@@ -419,6 +425,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
+void ICACHE_RAM_ATTR RadioUARTconnected()
+{
+  hwTimer.resume();
+  //inital state variables, maybe move elsewhere?
+  for (int i = 0; i < 3; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
+  {
+    uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
+    crsf.sendLUAresponse(LUAdisableWebupdate);
+    uint8_t LUAbindDone[4] = {0xFF, 0x00, 0x00, 0x00};
+    crsf.sendLUAresponse(LUAbindDone);
+  }
+}
+
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
@@ -496,6 +515,25 @@ void HandleUpdateParameter()
   case 4:
 
     break;
+
+  case 0xFE:
+    if (crsf.ParameterUpdateData[1] == 1)
+    {
+#ifdef PLATFORM_ESP32
+      uint8_t LUAdisableWebupdate[4] = {0xFE, 0x01, 0x00, 0x00};
+      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
+      delay(500);
+      Serial.println("Wifi Update Mode Requested!");
+      webUpdateMode = true;
+      BeginWebUpdate();
+      return; // no need to do anything else
+#else
+      uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
+      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
+      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+#endif
+      break;
+    }
 
   case 0xFF:
     if (crsf.ParameterUpdateData[1] == 1)
@@ -628,7 +666,7 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
-  crsf.connected = &hwTimer.resume; // it will auto init when it detects UART connection
+  crsf.connected = &RadioUARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &hwTimer.stop;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &TimerCallbackISR;
@@ -664,12 +702,19 @@ void setup()
 void loop()
 {
 
+#if defined(PLATFORM_ESP32)
+  if (webUpdateMode)
+  {
+    HandleWebUpdate();
+    return;
+  }
+#endif
+
   HandleUpdateParameter();
 
-
-  #ifdef FEATURE_OPENTX_SYNC
-  // Serial.println(crsf.OpenTXsyncOffset);
-  #endif
+#ifdef FEATURE_OPENTX_SYNC
+// Serial.println(crsf.OpenTXsyncOffset);
+#endif
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {

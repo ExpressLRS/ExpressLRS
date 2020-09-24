@@ -111,6 +111,14 @@ void CRSF::Begin()
     //The Reciever uses seperate rx and tx pins
 }
 
+void CRSF::End()
+{
+#ifdef PLATFORM_ESP32
+    vTaskDelete(xESP32uartTask);
+    vTaskDelete(xESP32uartWDT);
+#endif
+}
+
 /**
  * Determine which switch to send next.
  * If any switch has changed since last sent, we send the lowest index changed switch
