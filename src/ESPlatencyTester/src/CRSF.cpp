@@ -18,8 +18,6 @@ void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
 
-bool CRSF::firstboot = true;
-
 /// UART Handling ///
 bool CRSF::CRSFstate = false;
 uint32_t CRSF::UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;

@@ -45,8 +45,6 @@ void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is rega
 
 void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
 
-bool CRSF::firstboot = true;
-
 /// UART Handling ///
 bool CRSF::CRSFstate = false;
 uint32_t CRSF::UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;

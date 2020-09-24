@@ -76,8 +76,8 @@ typedef struct expresslrs_rf_pref_params_s
     uint32_t TOA;                   //time on air in microseconds
     uint32_t RFmodeCycleInterval;
     uint32_t RFmodeCycleAddtionalTime;
-    uint32_t SyncPktIntervalDisconnected;
-    uint32_t SyncPktIntervalConnected;
+    uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
+    uint32_t SyncPktIntervalConnected; // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
 
