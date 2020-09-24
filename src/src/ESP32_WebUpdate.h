@@ -34,7 +34,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(<!DOCTYPE HTML>
 <div align=left>
 <fieldset>
 Here you can update module firmware,
-be careful to upload the correct file as it is possible to brick the module. A bricked moduled will require reflashing with a serial cable.
+be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need to reflash via USB/Serial.
 <br><br>
 <legend><h2>Firmware Update:</h2></legend>
 <form method=POST action=/update enctype=multipart/form-data> <input type=file name=update> <input type=submit value=Update></form>
