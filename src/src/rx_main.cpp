@@ -680,7 +680,6 @@ void loop()
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
-        yield();
         return;
     }
     #endif

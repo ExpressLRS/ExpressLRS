@@ -91,7 +91,7 @@ void WebUpdateSendReturn()
 void WebUpdateHandleRoot()
 {
     if (captivePortal())
-    { // If caprive portal redirect instead of displaying the page.
+    { // If captive portal redirect instead of displaying the page.
         return;
     }
     server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -103,7 +103,7 @@ void WebUpdateHandleRoot()
 void WebUpdateHandleNotFound()
 {
     if (captivePortal())
-    { // If caprive portal redirect instead of displaying the error page.
+    { // If captive portal redirect instead of displaying the error page.
         return;
     }
     String message = F("File Not Found\n\n");
