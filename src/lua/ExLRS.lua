@@ -21,6 +21,8 @@ local readIdState = 0
 local sendIdState = 0
 local timestamp = 0
 local bindmode = 0
+local WebupdateReq = 0
+local WebupdateReqWaitResp = false
 
 local gotFirstResp = false
 
@@ -58,8 +60,8 @@ local RFfreq = {
 local selection = {
     selected = 1,
     state = false,
-    list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq', "Bind"},
-    elements = 5
+    list = {'AirRate', 'TLMinterval', 'MaxPower', 'RFfreq', "Bind", "WebUpdate"},
+    elements = 6
 }
 
 local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
@@ -90,40 +92,6 @@ local function decrease(data)
     -- if data.selected < 1 then data.selected = data.elements end
 end
 
-local function readId()
-    -- stop sensors
-    if readIdState >= 1 and readIdState <= 15 and getTime() - timestamp > 11 then
-        sportTelemetryPush(sensorIdTx, 0x21, 0xFFFF, 0x80)
-        timestamp = getTime()
-        readIdState = readIdState + 1
-    end
-    -- request/read id
-    if readIdState >= 16 and readIdState <= 30 then
-        if getTime() - timestamp > 11 then
-            sportTelemetryPush(sensorIdTx, 0x30,
-                               sensor.sensorType.dataId[sensor.sensorType
-                                   .selected], 0x01)
-            timestamp = getTime()
-            readIdState = readIdState + 1
-        else
-            local physicalId, primId, dataId, value = sportTelemetryPop() -- frsky/lua: phys_id/sensor id, type/frame_id, sensor_id/data_id
-            if primId == 0x32 and dataId ==
-                sensor.sensorType.dataId[sensor.sensorType.selected] then
-                if bit32.band(value, 0xFF) == 1 then
-                    sensor.sensorId.selected = ((value - 1) / 256) + 1
-                    readIdState = 0
-                    lcdChange = true
-                end
-            end
-        end
-    end
-    if readIdState == 31 then
-        readIdState = 0
-        lcdChange = true
-    end
-end
-
-
 --[[
 
 It's unclear how the telemetry push/pop system works. We don't always seem to get
@@ -153,9 +121,17 @@ local function processResp()
 					else
 						bindmode = 0
 					end
-                elseif(data[3] == 0xFE) then -- First half of commit sha
+				elseif(data[3] == 0xFE) then
+						WebupdateReq = data[4]
+						WebupdateReqWaitResp = false
+						if (WebupdateReq == 0) and (selection.selected == 6) then
+							selection.state = false
+							selection.selected = 1; 
+						end
+						
+                elseif(data[3] == 0xF0) then -- First half of commit sha
                     commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. string.sub(commitSha, 4, 6)
-                elseif(data[3] == 0xFD) then -- Second half of commit sha
+                elseif(data[3] == 0xF1) then -- Second half of commit sha
                     commitSha = string.sub(commitSha, 1, 3) .. shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1]
                 else	
 					AirRate.selected = data[3]
@@ -186,7 +162,7 @@ local function refreshHorus()
     lcd.drawText(100, 85, RFfreq.list[RFfreq.selected], getFlags(4))
 
     lcd.drawText(20, 110, '[Bind]', getFlags(5) + SMLSIZE)
-    lcd.drawText(60, 110, '[Web Server]', getFlags(6) + SMLSIZE)
+    lcd.drawText(60, 110, '[Wifi Update]', getFlags(6) + SMLSIZE)
 
     if selection.selected == 5 then
         if selection.state == true then
@@ -195,7 +171,25 @@ local function refreshHorus()
 				crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
 			end
         end
+		if (selection.state == false) and (bindmode == 1) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x00})
+			bindmode = 0
+		end
     end
+	
+	if selection.selected == 6 then
+        if (selection.state == true) and (WebupdateReq == 0) and (WebupdateReqWaitResp == false) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFE, 0x01})
+			WebupdateReqWaitResp = true
+        end
+		if (selection.state == false) and (WebupdateReq == 1) and (WebupdateReqWaitResp == false) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFE, 0x00})
+			WebupdateReqWaitResp = true
+		end
+    end
+	if (WebupdateReq == 1) then
+		lcd.drawText(3, 110, 'Wifi Update, Upload File', MEDSIZE)
+	end
 
     lcdChange = false
 
@@ -215,7 +209,7 @@ local function refreshTaranis()
     lcd.drawText(60, 41, RFfreq.list[RFfreq.selected], getFlags(4))
 
     lcd.drawText(18, 54, '[Bind]', getFlags(5) + SMLSIZE)
-    lcd.drawText(55, 54, '[Web Server]', getFlags(6) + SMLSIZE)
+    lcd.drawText(55, 54, '[Wifi Update]', getFlags(6) + SMLSIZE)
 
     if selection.selected == 5 then
         if selection.state == true then
@@ -225,10 +219,25 @@ local function refreshTaranis()
 			end
         end
 		if (selection.state == false) and (bindmode == 1) then
-			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x00})
 			bindmode = 0
 		end
     end
+	
+	if selection.selected == 6 then
+        if (selection.state == true) and (WebupdateReq == 0) and (WebupdateReqWaitResp == false) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFE, 0x01})
+			WebupdateReqWaitResp = true
+
+        end
+		if (selection.state == false) and (WebupdateReq == 1) and (WebupdateReqWaitResp == false) then
+			crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFE, 0x00})
+			WebupdateReqWaitResp = true
+		end
+    end
+	if (WebupdateReq == 1) then
+		lcd.drawText(3, 53, 'Wifi Update, Upload File', MEDSIZE)
+	end
 
     lcdChange = false
 

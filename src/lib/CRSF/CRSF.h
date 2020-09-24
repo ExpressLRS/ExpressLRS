@@ -388,6 +388,7 @@ public:
     static volatile crsf_sensor_battery_s TLMbattSensor;
 
     static void Begin(); //setup timers etc
+    static void End(); //stop timers etc
 
     /// UART Handling ///
 
