@@ -37,8 +37,8 @@
 
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-#define MaxPower 6
-#define DefaultPowerEnum 3
+#define MaxPower 4
+#define DefaultPowerEnum 2
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
