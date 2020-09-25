@@ -119,29 +119,23 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(-18);
+        Radio.SetOutputPower(-15);
         break;
     case PWR_25mW:
-        Radio.SetOutputPower(-16);
-        break;
-    case PWR_50mW:
-        Radio.SetOutputPower(-13);
-        break;
-    case PWR_100mW:
         Radio.SetOutputPower(-11);
         break;
-    case PWR_250mW:
-        Radio.SetOutputPower(-7);
+    case PWR_50mW:
+        Radio.SetOutputPower(-8);
         break;
-    case PWR_500mW:
+    case PWR_100mW:
         Radio.SetOutputPower(-5);
         break;
-    case PWR_1000mW:
+    case PWR_250mW:
         Radio.SetOutputPower(-1);
         break;
     default:
-        Power = PWR_100mW;
-        Radio.SetOutputPower(-11);
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-8);
         break;
     }
     CurrentPower = Power;
