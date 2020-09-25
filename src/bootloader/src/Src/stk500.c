@@ -13,7 +13,7 @@
 #define OPTIBOOT_MAJVER 4
 #define OPTIBOOT_MINVER 5
 
-uint16_t Buff[256];
+uint32_t Buff[128];
 uint8_t insync;
 
 uint8_t getch(void)
@@ -56,9 +56,9 @@ static int8_t stk500_update(void)
   for (retval = 0; retval == 0;)
   {
     /* get character from UART */
-    if (uart_receive_timeout(&ch, 1u, 5) == UART_ERROR)
+    if (uart_receive_timeout(&ch, 1u, 20) == UART_ERROR)
     {
-      if (timer_end())
+      if (!insync && timer_end())
         return -1;
       continue;
     }
@@ -143,7 +143,7 @@ static int8_t stk500_update(void)
       }
       count = page_size;
       count += 1;
-      count /= 2;
+      count /= 4;
       memAddress = (uint8_t *)(address + FLASH_APP_START_ADDRESS);
 
       // Read command terminator, start reply
@@ -156,9 +156,9 @@ static int8_t stk500_update(void)
           if (((uint32_t)memAddress & (FLASH_PAGE_SIZE - 1)) == 0)
           {
             // At page start so erase it
-            flash_erase((uint32_t)memAddress);
+            flash_erase_page((uint32_t)memAddress);
           }
-          flash_write_halfword((uint32_t)memAddress, Buff, count);
+          flash_write((uint32_t)memAddress, Buff, count);
         }
       }
     }
@@ -209,33 +209,5 @@ static int8_t stk500_update(void)
 
 int8_t stk500_check(void)
 {
-#if 0
-  int8_t ret = -1;
-  uint8_t in = 0;
-
-  /* seach possible sync requests to start upload */
-  for (;;)
-  {
-    if (uart_receive_timeout(&in, 1u, 10) == UART_ERROR)
-    {
-      if (timer_end())
-        goto exit_check; // timer end, start app
-    }
-    else if (in == STK_GET_SYNC)
-    {
-      uart_receive_timeout(&in, 1u, 10);
-      if (in == CRC_EOP)
-      {
-        uart_transmit_ch(STK_INSYNC);
-        uart_transmit_ch(STK_OK);
-        ret = stk500_update();
-        goto exit_check;
-      }
-    }
-  }
-exit_check:
-  return ret;
-#else
   return stk500_update();
-#endif
 }
