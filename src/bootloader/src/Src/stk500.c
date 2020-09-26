@@ -49,6 +49,7 @@ static int8_t stk500_update(void)
   uint32_t address = 0;
   uint8_t ch, GPIOR0, led = 1;
   int8_t retval;
+  int8_t initial_sync = 0;
 
   insync = 0;
   led_red_state_set(led);
@@ -56,6 +57,7 @@ static int8_t stk500_update(void)
   for (retval = 0; retval == 0;)
   {
     /* get character from UART */
+    ch = 0;
     if (uart_receive_timeout(&ch, 1u, 20) == UART_ERROR)
     {
       if (!insync && timer_end())
@@ -63,14 +65,21 @@ static int8_t stk500_update(void)
       continue;
     }
 
+    // avoid misunderstanding CRSF for STK500
+    // STK500 MUST start with STK_GET_SYNC first
+    if (!initial_sync && (ch != STK_GET_SYNC))
+      return -1;
+    
     led ^= 1;
     led_red_state_set(led);
 
     if (ch == STK_GET_SYNC)
     {
       verifySpace();
-      if (insync)
+      if (insync) {
         led_green_state_set(1);
+        initial_sync = 1;
+      }
     }
     else if (ch == STK_GET_PARAMETER)
     {
@@ -192,13 +201,14 @@ static int8_t stk500_update(void)
       verifySpace();
       retval = -1; // flash end, boot to app
     }
-#if 0
     else
     {
-      // This covers the response to commands like STK_ENTER_PROGMODE
-      verifySpace();
+      // wrong command, exit!
+      if (!insync)
+        return -1;
+      /* // This covers the response to commands like STK_ENTER_PROGMODE */
+      /* verifySpace(); */
     }
-#endif
 
     if (insync)
       uart_transmit_ch(STK_OK);

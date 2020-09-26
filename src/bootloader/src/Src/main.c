@@ -166,7 +166,7 @@ static void boot_code(void)
 
 #else // TARGET_XMODEM == 0
 
-#define BOOT_WAIT 2000 // ms
+#define BOOT_WAIT 300 // ms
 
 static uint32_t boot_end_time;
 
