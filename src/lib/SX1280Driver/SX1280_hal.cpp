@@ -35,7 +35,7 @@ SX1280Hal::SX1280Hal()
 void SX1280Hal::end()
 {
     SPI.end();
-    detachInterrupt(GPIO_PIN_DIO0);
+    detachInterrupt(GPIO_PIN_DIO1);
 }
 
 void SX1280Hal::init()
