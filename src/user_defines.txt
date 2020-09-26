@@ -57,7 +57,4 @@
 
 #-DJUST_BEEP_ONCE
 
-
-
-
-
+#-DUSE_500HZ
