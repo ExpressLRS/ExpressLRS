@@ -633,6 +633,9 @@ void setup()
   }
   POWERMGNT.setDefaultPower();
   SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
+  #if defined DEFAULT_NO_TLM
+  ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_NO_TLM;
+  #endif
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
