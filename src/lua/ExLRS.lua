@@ -79,6 +79,9 @@ end
 local function increase(data)
     if data.selected > 1 then
         data.selected = data.selected - 1
+        if data.selected == 4 then -- skip RF Mode which is defined at compilation
+            data.selected = 3
+        end
         --playTone(2000, 50, 0)
     end
     -- if data.selected > data.elements then data.selected = 1 end
@@ -87,6 +90,9 @@ end
 local function decrease(data)
     if data.selected < data.elements then
         data.selected = data.selected + 1
+        if data.selected == 4 then -- skip RF Mode which is defined at compilation
+            data.selected = 5
+        end
         --playTone(2000, 50, 0)
     end
     -- if data.selected < 1 then data.selected = data.elements end
