@@ -29,7 +29,7 @@ void STM32_RX_UARTprocessPacket()
         crsf.TLMbattSensor.voltage = (UARTinBuffer[3] << 8) + UARTinBuffer[4];
         crsf.TLMbattSensor.current = (UARTinBuffer[5] << 8) + UARTinBuffer[6];
         crsf.TLMbattSensor.capacity = (UARTinBuffer[7] << 16) + (UARTinBuffer[8] << 8) + UARTinBuffer[9];
-        crsf.TLMbattSensor.remaining = UARTinBuffer[9];
+        crsf.TLMbattSensor.remaining = UARTinBuffer[10];
     }
 }
 
