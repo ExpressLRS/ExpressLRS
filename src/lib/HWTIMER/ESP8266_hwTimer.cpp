@@ -1,7 +1,7 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_hwTimer.h"
 
-void inline hwTimer::nullCallback(void){};
+void inline hwTimer::nullCallback(void) {}
 
 void (*hwTimer::callbackTick)() = &nullCallback;
 void (*hwTimer::callbackTock)() = &nullCallback;

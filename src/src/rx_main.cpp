@@ -107,7 +107,7 @@ bool LockRFmode = false;
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int8_t LastRSSI = Radio.LastPacketRSSI;
+    //int8_t LastRSSI = Radio.LastPacketRSSI;
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));

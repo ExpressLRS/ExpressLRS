@@ -7,7 +7,7 @@ unsigned long seed = 0;
 // behaviour rngN will need updating
 long rng(void)
 {
-    long m = 2147483648;
+    unsigned long m = 2147483648;
     long a = 214013;
     long c = 2531011;
     seed = (a * seed + c) % m;

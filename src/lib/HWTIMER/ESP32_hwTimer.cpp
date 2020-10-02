@@ -5,7 +5,7 @@
 static hw_timer_t *timer = NULL;
 static portMUX_TYPE isrMutex = portMUX_INITIALIZER_UNLOCKED;
 
-void hwTimer::nullCallback(void){};
+void hwTimer::nullCallback(void) {}
 void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;

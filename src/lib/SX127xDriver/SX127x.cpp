@@ -2,7 +2,7 @@
 
 SX127xHal hal;
 
-void inline SX127xDriver::nullCallback(void){};
+void inline SX127xDriver::nullCallback(void) {}
 SX127xDriver *SX127xDriver::instance = NULL;
 
 void (*SX127xDriver::RXdoneCallback)() = &nullCallback;
@@ -127,7 +127,7 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
 
 bool SyncWordOk(uint8_t syncWord)
 {
-  for (int i = 0; i < sizeof(SX127x_AllowedSyncwords); i++)
+  for (unsigned int i = 0; i < sizeof(SX127x_AllowedSyncwords); i++)
   {
     if (syncWord == SX127x_AllowedSyncwords[i])
     {

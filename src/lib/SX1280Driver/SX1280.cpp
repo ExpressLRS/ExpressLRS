@@ -66,6 +66,8 @@ bool SX1280Driver::Begin()
     this->SetFrequency(this->currFreq);                                     //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
+
+    return true;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
