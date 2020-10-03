@@ -28,22 +28,22 @@ jobs:
         platformio platform update
         mkdir -p ~/artifcats
         cd src
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/AU_915
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_FCC_915
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_FCC_915 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/FCC_915
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_868
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_868 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/EU_868
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_433
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_433 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/AU_433
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/EU_433
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400
+        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400 -DMY_BINDING_PHRASE="not the default ExpressLRS binding phrase"
         platformio run
         mv .pio/build ~/artifcats/ISM_2400
 

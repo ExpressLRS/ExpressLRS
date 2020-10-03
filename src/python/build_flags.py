@@ -16,8 +16,6 @@ except ImportError:
     install("GitPython")
     from git import Repo
 
-build_flags = env['BUILD_FLAGS']
-
 try:
     from git import Repo
 except ImportError:
@@ -54,8 +52,6 @@ def parse_flags(path):
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
                         UIDbytes = (str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5]))
                         define = "-DMY_UID=" + UIDbytes
-                        sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
-                        sys.stdout.flush()
                     build_flags.append(define)
     except IOError:
         print("File '%s' does not exist" % path)
@@ -69,6 +65,17 @@ sha = ExLRS_Repo.head.object.hexsha
 build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
 
 print("build flags: %s" % env['BUILD_FLAGS'])
+
+if not fnmatch.filter(env['BUILD_FLAGS'], '-DMY_UID*'):
+    time.sleep(1)
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;31m!!!             ExpressLRS Warning Below             !!!\n")
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;30m Please uncomment MY_BINDING_PHRASE in user_defines.txt \n")
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.flush()
+    time.sleep(3)
+    raise Exception('!!!  Please uncomment MY_BINDING_PHRASE in user_defines.txt !!!')
 
 if not fnmatch.filter(env['BUILD_FLAGS'], '-DRegulatory_Domain*'):
     time.sleep(1)
