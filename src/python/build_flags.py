@@ -37,6 +37,20 @@ def parse_flags(path):
                 define = define.strip()
                 if define.startswith("-D"):
                     if "MY_BINDING_PHRASE" in define:
+                        if define == "-DMY_BINDING_PHRASE=\"default ExpressLRS binding phrase\"":
+                            time.sleep(1)
+                            sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+                            sys.stdout.write("\033[47;31m!!!                        ExpressLRS Warning Below                        !!!\n")
+                            sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+                            sys.stdout.write("\033[47;30m                                                                              \n")
+                            sys.stdout.write("\033[47;30m         Please change the default MY_BINDING_PHRASE in user_defines.txt      \n")
+                            sys.stdout.write("\033[47;30m                                                                              \n")
+                            sys.stdout.write("\033[47;30m  https://github.com/AlessandroAU/ExpressLRS/wiki/User-Defines#binding-phrase \n")
+                            sys.stdout.write("\033[47;30m                                                                              \n")
+                            sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+                            sys.stdout.flush()
+                            time.sleep(3)
+                            raise Exception('!!!  Please change the default MY_BINDING_PHRASE in user_defines.txt !!!')
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
                         UIDbytes = (str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5]))
                         define = "-DMY_UID=" + UIDbytes
