@@ -2,7 +2,7 @@
 
 There are 3 different PCB design based on the G-NiceRF_LoRa1280 (12.5dBm), G-NiceRF_LORA1280F27 (27dBm), and EBYTE_E28-2G4M27S (27dBm).
 
-*At the moment on the EBYTE_E28-2G4M27S has been built and confirmed to work.*
+*The G-NiceRF_LoRa1280 and EBYTE_E28-2G4M27S have been built and confirmed to work.*
 
 ### PCB manufacturing
 
