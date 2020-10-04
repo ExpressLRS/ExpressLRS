@@ -4,6 +4,8 @@
 #include "common.h"
 #include "LowPassFilter.h"
 
+#define TARGET_R9M_RX 1
+#define Regulatory_Domain_EU_868 1
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
@@ -16,6 +18,7 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
+#include <Telemetry.h>
 #include "FHSS.h"
 // #include "Debug.h"
 #include "OTA.h"
@@ -60,6 +63,7 @@ GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
+Telemetry telemetry;
 
 /// Filters ////////////////
 LPF LPF_Offset(2);
@@ -932,6 +936,7 @@ void loop()
         #endif
     }
 
+<<<<<<< HEAD
 #if WS2812_LED_IS_USED
     if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
     {
@@ -1096,4 +1101,10 @@ void OnELRSBindMSP(mspPacket_t *packet)
 
     disableWebServer = true;
     ExitBindingMode();
+=======
+    while (Serial.available())
+    {
+        telemetry.RXhandleUARTin(Serial.read());
+    }
+>>>>>>> use new telemetry lib
 }
