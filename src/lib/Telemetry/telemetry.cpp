@@ -3,6 +3,11 @@
 #include <telemetry.h>
 #include <crsf_protocol.h>
 
+#if defined(UNIT_TEST)
+#include <iostream>
+using namespace std;
+#endif
+#define TARGET_R9M_RX
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
@@ -12,10 +17,38 @@ uint8_t Telemetry::currentTelemetryByte = 0;
 volatile crsf_telemetry_package_t* Telemetry::telemetryPackageHead = 0;
 bool Telemetry::callBootloader = false;
 
+volatile crsf_telemetry_package_t* Telemetry::GetPackageHead()
+{
+    telemetryPackageHead->locked = true;
+    return telemetryPackageHead;
+}
+
+uint8_t Telemetry::QueueLength()
+{
+    uint8_t count = 0;
+    volatile crsf_telemetry_package_t *current = telemetryPackageHead;
+
+    while (current != 0)
+    {
+        count++;
+        current = current->next;
+    }
+
+    return count;
+}
+
+void Telemetry::DeleteHead()
+{
+    volatile crsf_telemetry_package_t *next = telemetryPackageHead->next;
+    delete [] telemetryPackageHead->data;
+    delete telemetryPackageHead;
+    telemetryPackageHead = next;
+}
+
 void Telemetry::AppendToPackage(volatile crsf_telemetry_package_t *current)
 {
     current->data = new uint8_t[CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES];
-    memcpy(CRSFinBuffer, current->data, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES);
+    memcpy(current->data, CRSFinBuffer, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES);
 }
 
 void Telemetry::AppendTelemetryPackage()
@@ -31,10 +64,14 @@ void Telemetry::AppendTelemetryPackage()
     }
     
     while (current != 0) {
-        if (current->data[CRSF_TELEMETRY_TYPE_INDEX] == CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] && !current->locked)
+        if (current->data[CRSF_TELEMETRY_TYPE_INDEX] == CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX])
         {
-            delete [] current->data;
-            AppendToPackage(current);
+            if (!current->locked)
+            {
+                delete [] current->data;
+                AppendToPackage(current);
+            }
+            
             found = true;
         }
         tail = current;
@@ -62,6 +99,11 @@ void Telemetry::ResetState()
 {
     telemtry_state = TELEMTRY_IDLE;
     currentTelemetryByte = 0;
+
+    while (telemetryPackageHead != 0)  
+    {  
+        DeleteHead();
+    }
 }
 
 bool Telemetry::RXhandleUARTin(uint8_t data)
@@ -98,12 +140,21 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
             if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte) 
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
-                if (data == CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH))
+                uint8_t crc = CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
+                telemtry_state = TELEMTRY_IDLE;
+
+                if (data == crc)
                 {
                     AppendTelemetryPackage();
                     return true;
                 }
-                telemtry_state = TELEMTRY_IDLE;
+                #if defined(UNIT_TEST)
+                if (data != crc) 
+                {
+                    cout << "invalid " << (int)crc  << '\n';   
+                }
+                #endif
+                
                 return false;
             }
             

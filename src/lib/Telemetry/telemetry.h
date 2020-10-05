@@ -15,17 +15,14 @@ typedef struct crsf_telemetry_package_t {
     volatile struct crsf_telemetry_package_t* next;
 } crsf_telemetry_package_t;
 
-enum {
-    CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
-    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
-    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
-};
-
 class Telemetry
 {
 public:
     bool RXhandleUARTin(uint8_t data);
     void ResetState();
+    volatile crsf_telemetry_package_t* GetPackageHead();
+    void DeleteHead();
+    uint8_t QueueLength();
     static bool callBootloader;
 
 private:
