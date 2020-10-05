@@ -11,6 +11,7 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#include <crsf_protocol.h>
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
