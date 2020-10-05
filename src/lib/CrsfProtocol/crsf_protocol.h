@@ -115,6 +115,12 @@ typedef enum
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
 } crsf_frame_type_e;
 
+enum {
+    CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
+    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
+    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
+};
+
 typedef enum
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
