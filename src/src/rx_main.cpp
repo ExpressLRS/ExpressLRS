@@ -33,10 +33,6 @@ SX1280Driver Radio;
 #include "ESP8266_WebUpdate.h"
 #endif
 
-#ifdef PLATFORM_STM32
-#include "STM32_UARTinHandler.h"
-#endif
-
 #ifdef TARGET_RX_GHOST_ATTO_V1
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
