@@ -1,17 +1,21 @@
-#include "telemetry.h"
+#include <cstdint>
 #include <cstring>
+#include <telemetry.h>
+#include <crsf_protocol.h>
+
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
 telemetry_state_s Telemetry::telemtry_state = TELEMTRY_IDLE;
-char Telemetry::CRSFinBuffer[CRSF_MAX_PACKET_LEN + TELEMETRY_CRC_LENGTH] = {0};
-char Telemetry::currentTelemetryByte = 0;
+uint8_t Telemetry::CRSFinBuffer[CRSF_MAX_PACKET_LEN] = {0};
+uint8_t Telemetry::currentTelemetryByte = 0;
 volatile crsf_telemetry_package_t* Telemetry::telemetryPackageHead = 0;
+bool Telemetry::callBootloader = false;
 
 void Telemetry::AppendToPackage(volatile crsf_telemetry_package_t *current)
 {
-    current->data = new char[CRSFinBuffer[TELEMETRY_LENGTH_INDEX] + TELEMETRY_ADDITIONAL_LENGTH];
-    memcpy(CRSFinBuffer, current->data, CRSFinBuffer[TELEMETRY_LENGTH_INDEX] + TELEMETRY_ADDITIONAL_LENGTH);
+    current->data = new uint8_t[CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES];
+    memcpy(CRSFinBuffer, current->data, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES);
 }
 
 void Telemetry::AppendTelemetryPackage()
@@ -20,23 +24,14 @@ void Telemetry::AppendTelemetryPackage()
     volatile crsf_telemetry_package_t *tail = telemetryPackageHead;
     bool found = false;
 
-    if (CRSFinBuffer[2] == CRSF_FRAMETYPE_COMMAND)
+    if (CRSFinBuffer[2] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
     {
-        #if defined(PLATFORM_STM32)
-            Serial.println("Got CMD Packet");
-            if (CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
-            {
-                delay(100);
-                Serial.println("Jumping to Bootloader...");
-                delay(100);
-                HAL_NVIC_SystemReset();
-            }
-        #endif
+        callBootloader = true;
         return;
     }
     
     while (current != 0) {
-        if (current->data[TELEMETRY_TYPE_INDEX] == CRSFinBuffer[TELEMETRY_TYPE_INDEX] && !current->locked)
+        if (current->data[CRSF_TELEMETRY_TYPE_INDEX] == CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] && !current->locked)
         {
             delete [] current->data;
             AppendToPackage(current);
@@ -63,7 +58,13 @@ void Telemetry::AppendTelemetryPackage()
     }
 }
 
-bool Telemetry::RXhandleUARTin(char data)
+void Telemetry::ResetState()
+{
+    telemtry_state = TELEMTRY_IDLE;
+    currentTelemetryByte = 0;
+}
+
+bool Telemetry::RXhandleUARTin(uint8_t data)
 {
     switch(telemtry_state) {
         case TELEMTRY_IDLE:
@@ -72,6 +73,9 @@ bool Telemetry::RXhandleUARTin(char data)
                 currentTelemetryByte = 0;
                 telemtry_state = RECEIVING_LEGNTH;
                 CRSFinBuffer[0] = data;
+            }
+            else {
+                return false;
             }
 
             break;
@@ -84,25 +88,23 @@ bool Telemetry::RXhandleUARTin(char data)
             else 
             {
                 telemtry_state = RECEIVING_DATA;
-                CRSFinBuffer[TELEMETRY_LENGTH_INDEX] = data;
+                CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] = data;
             }
 
             break;
         case RECEIVING_DATA:
-            CRSFinBuffer[currentTelemetryByte + TELEMETRY_ADDITIONAL_LENGTH] = data;
-
-            if (CRSFinBuffer[TELEMETRY_LENGTH_INDEX] == currentTelemetryByte) 
+            CRSFinBuffer[currentTelemetryByte + CRSF_FRAME_NOT_COUNTED_BYTES] = data;
+            currentTelemetryByte++;
+            if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte) 
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
-                /*if (data == CalcCRC((char *)CRSFinBuffer + TELEMETRY_ADDITIONAL_LENGTH, CRSFinBuffer[TELEMETRY_LENGTH_INDEX] - TELEMETRY_CRC_LENGTH))
+                if (data == CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH))
                 {
                     AppendTelemetryPackage();
-                }*/
+                    return true;
+                }
                 telemtry_state = TELEMTRY_IDLE;
-            }
-            else
-            {
-                currentTelemetryByte++;
+                return false;
             }
             
             break;

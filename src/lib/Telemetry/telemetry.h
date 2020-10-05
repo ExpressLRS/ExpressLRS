@@ -1,13 +1,7 @@
 #pragma once
 
-#define TELEMETRY_LENGTH_INDEX 1
-#define TELEMETRY_TYPE_INDEX 2
-#define TELEMETRY_ADDITIONAL_LENGTH 2
-#define TELEMETRY_CRC_LENGTH 1
-#define CRSF_MAX_PACKET_LEN 64
-#define CRSF_SYNC_BYTE 0xC8
-#define CRSF_FRAMETYPE_COMMAND 0x32
-#define CRSF_ADDRESS_CRSF_RECEIVER 0xEC
+#include <cstdint>
+#include <crsf_protocol.h>
 
 typedef enum {
     TELEMTRY_IDLE = 0,
@@ -16,7 +10,7 @@ typedef enum {
 } telemetry_state_s;
 
 typedef struct crsf_telemetry_package_t {
-    char *data;
+    uint8_t *data;
     volatile bool locked;
     volatile struct crsf_telemetry_package_t* next;
 } crsf_telemetry_package_t;
@@ -30,13 +24,15 @@ enum {
 class Telemetry
 {
 public:
-    bool RXhandleUARTin(char data);
+    bool RXhandleUARTin(uint8_t data);
+    void ResetState();
+    static bool callBootloader;
 
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     void AppendTelemetryPackage();
     static telemetry_state_s telemtry_state;
-    static char CRSFinBuffer[CRSF_MAX_PACKET_LEN + TELEMETRY_CRC_LENGTH];
-    static char currentTelemetryByte;
+    static uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
+    static uint8_t currentTelemetryByte;
     static volatile crsf_telemetry_package_t *telemetryPackageHead;
 };
