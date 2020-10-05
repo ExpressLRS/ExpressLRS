@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <crsf_protocol.h>
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
 #include "HardwareSerial.h"
