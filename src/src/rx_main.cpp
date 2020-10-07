@@ -242,10 +242,10 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     openTxRSSI = 255 - openTxRSSI;
     Radio.TXdataBuffer[2] = openTxRSSI;
 
-    Radio.TXdataBuffer[3] = telemetry.ReceivedPackagesCount();
+    Radio.TXdataBuffer[3] = 0;
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-    Radio.TXdataBuffer[6] = telemetry.UpdatedPayloadCount();
+    Radio.TXdataBuffer[6] = telemetry.UpdatedPayloadCount() * 10;
 
     uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;

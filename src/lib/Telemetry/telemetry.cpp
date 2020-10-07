@@ -17,7 +17,7 @@ uint8_t Telemetry::currentTelemetryByte = 0;
 uint8_t Telemetry::currentPayloadIndex = 0;
 bool Telemetry::callBootloader = false;
 uint8_t Telemetry::receivedPackages = 0;
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE,DEVICE_INFO, FLIGHT_MODE);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE);
 
 uint8_t* Telemetry::GetNextPayload()
 {
