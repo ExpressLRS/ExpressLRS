@@ -290,13 +290,17 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
 void ICACHE_RAM_ATTR decRFLinkRate()
 {
   Serial.println("dec RFrate");
+  expresslrs_tlm_ratio_e currentTlmInterval = ExpressLRS_currAirRate_Modparams->TLMinterval;
   SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index + 1);
+  ExpressLRS_currAirRate_Modparams->TLMinterval = currentTlmInterval;
 }
 
 void ICACHE_RAM_ATTR incRFLinkRate()
 {
   Serial.println("inc RFrate");
+  expresslrs_tlm_ratio_e currentTlmInterval = ExpressLRS_currAirRate_Modparams->TLMinterval;
   SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index - 1);
+  ExpressLRS_currAirRate_Modparams->TLMinterval = currentTlmInterval;
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
