@@ -51,6 +51,7 @@
 #define CRSF_TELEMETRY_LENGTH_INDEX 1
 #define CRSF_TELEMETRY_TYPE_INDEX 2
 #define CRSF_TELEMETRY_CRC_LENGTH 1
+#define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
 // Macros for big-endian (assume little endian host for now) etc
 #define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
@@ -119,6 +120,8 @@ enum {
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
+    CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
+    CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = 10,
 };
 
 typedef enum
