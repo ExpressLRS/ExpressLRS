@@ -4,11 +4,11 @@
 
 Telemetry telemetry;
 
-int sendData(uint8_t *data, int length) 
+int sendData(uint8_t *data, int length)
 {
-    for(int i = 0; i < length; i++) 
+    for(int i = 0; i < length; i++)
     {
-        if (!telemetry.RXhandleUARTin(data[i])) 
+        if (!telemetry.RXhandleUARTin(data[i]))
         {
             return i;
         }
@@ -17,9 +17,9 @@ int sendData(uint8_t *data, int length)
     return length;
 }
 
-int sendDataWithoutCheck(uint8_t *data, int length) 
+int sendDataWithoutCheck(uint8_t *data, int length)
 {
-    for(int i = 0; i < length; i++) 
+    for(int i = 0; i < length; i++)
     {
         telemetry.RXhandleUARTin(data[i]);
     }

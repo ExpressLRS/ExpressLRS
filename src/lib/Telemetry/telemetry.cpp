@@ -117,7 +117,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 telemtry_state = TELEMTRY_IDLE;
                 return false;
             }
-            else 
+            else
             {
                 telemtry_state = RECEIVING_DATA;
                 CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] = data;
@@ -127,7 +127,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
         case RECEIVING_DATA:
             CRSFinBuffer[currentTelemetryByte + CRSF_FRAME_NOT_COUNTED_BYTES] = data;
             currentTelemetryByte++;
-            if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte) 
+            if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte)
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
                 uint8_t crc = CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
@@ -140,15 +140,15 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     return true;
                 }
                 #if defined(UNIT_TEST)
-                if (data != crc) 
+                if (data != crc)
                 {
-                    cout << "invalid " << (int)crc  << '\n';   
+                    cout << "invalid " << (int)crc  << '\n';
                 }
                 #endif
-                
+
                 return false;
             }
-            
+
             break;
     }
 
@@ -167,13 +167,13 @@ void Telemetry::AppendTelemetryPackage()
     {
         if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
         {
-            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size) 
+            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
             {
                 memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
                 payloadTypes[i].updated = true;
             }
             #if defined(UNIT_TEST)
-                cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';   
+                cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
             #endif
             return;
         }
