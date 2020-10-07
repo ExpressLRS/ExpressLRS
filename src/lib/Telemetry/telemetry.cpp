@@ -14,95 +14,85 @@ using namespace std;
 telemetry_state_s Telemetry::telemtry_state = TELEMTRY_IDLE;
 uint8_t Telemetry::CRSFinBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t Telemetry::currentTelemetryByte = 0;
-volatile crsf_telemetry_package_t* Telemetry::telemetryPackageHead = 0;
+uint8_t Telemetry::currentPayloadIndex = 0;
 bool Telemetry::callBootloader = false;
+uint8_t Telemetry::receivedPackages = 0;
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE,DEVICE_INFO, FLIGHT_MODE);
 
-volatile crsf_telemetry_package_t* Telemetry::GetPackageHead()
+uint8_t* Telemetry::GetNextPayload()
 {
-    telemetryPackageHead->locked = true;
-    return telemetryPackageHead;
+    uint8_t checks = 0;
+    uint8_t oldPayloadIndex = currentPayloadIndex;
+
+    payloadTypes[currentPayloadIndex].locked = false;
+    payloadTypes[currentPayloadIndex].updated = false;
+
+    do
+    {
+        currentPayloadIndex = (currentPayloadIndex + 1) % payloadTypesCount;
+        checks++;
+    } while(!payloadTypes[currentPayloadIndex].updated && checks < payloadTypesCount);
+
+    if (payloadTypes[currentPayloadIndex].updated)
+    {
+        payloadTypes[currentPayloadIndex].locked = true;
+        return payloadTypes[currentPayloadIndex].data;
+    }
+
+    currentPayloadIndex = oldPayloadIndex;
+    return 0;
 }
 
-uint8_t Telemetry::QueueLength()
+uint8_t* Telemetry::GetCurrentPayload()
+{
+    if (payloadTypes[currentPayloadIndex].updated)
+    {
+        return payloadTypes[currentPayloadIndex].data;
+    }
+
+    return 0;
+}
+
+uint8_t Telemetry::UpdatedPayloadCount()
 {
     uint8_t count = 0;
-    volatile crsf_telemetry_package_t *current = telemetryPackageHead;
-
-    while (current != 0)
+    for (int8_t i = 0; i < payloadTypesCount; i++)
     {
-        count++;
-        current = current->next;
+        if (payloadTypes[i].updated)
+        {
+            count++;
+        }
     }
 
     return count;
 }
 
-void Telemetry::DeleteHead()
+uint8_t Telemetry::ReceivedPackagesCount()
 {
-    volatile crsf_telemetry_package_t *next = telemetryPackageHead->next;
-    delete [] telemetryPackageHead->data;
-    delete telemetryPackageHead;
-    telemetryPackageHead = next;
-}
-
-void Telemetry::AppendToPackage(volatile crsf_telemetry_package_t *current)
-{
-    current->data = new uint8_t[CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES];
-    memcpy(current->data, CRSFinBuffer, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES);
-}
-
-void Telemetry::AppendTelemetryPackage()
-{
-    volatile crsf_telemetry_package_t *current = telemetryPackageHead;
-    volatile crsf_telemetry_package_t *tail = telemetryPackageHead;
-    bool found = false;
-
-    if (CRSFinBuffer[2] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
-    {
-        callBootloader = true;
-        return;
-    }
-    
-    while (current != 0) {
-        if (current->data[CRSF_TELEMETRY_TYPE_INDEX] == CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX])
-        {
-            if (!current->locked)
-            {
-                delete [] current->data;
-                AppendToPackage(current);
-            }
-            
-            found = true;
-        }
-        tail = current;
-        current = current->next;
-    }
-
-    if (!found) 
-    {
-        if (telemetryPackageHead != 0) {
-            tail->next = new crsf_telemetry_package_t;
-            current = tail->next;
-        }
-        else 
-        {
-            telemetryPackageHead = new crsf_telemetry_package_t;
-            current = telemetryPackageHead;
-        }
-        current->next = 0;
-        AppendToPackage(current);
-        current->locked = false;
-    }
+    return receivedPackages;
 }
 
 void Telemetry::ResetState()
 {
     telemtry_state = TELEMTRY_IDLE;
     currentTelemetryByte = 0;
+    currentPayloadIndex = 0;
+    receivedPackages = 0;
 
-    while (telemetryPackageHead != 0)  
-    {  
-        DeleteHead();
+    uint8_t offset = 0;
+
+    for (int8_t i = 0; i < payloadTypesCount; i++)
+    {
+        payloadTypes[i].locked = false;
+        payloadTypes[i].updated = false;
+        payloadTypes[i].data = PayloadData + offset;
+        offset += payloadTypes[i].size;
+
+        #if defined(UNIT_TEST)
+        if (offset > sizeof(PayloadData)) {
+            cout << "data not large enough\n";
+        }
+        #endif
     }
 }
 
@@ -146,6 +136,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 if (data == crc)
                 {
                     AppendTelemetryPackage();
+                    receivedPackages++;
                     return true;
                 }
                 #if defined(UNIT_TEST)
@@ -162,5 +153,30 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
     }
 
     return true;
+}
+
+void Telemetry::AppendTelemetryPackage()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
+    {
+        callBootloader = true;
+        return;
+    }
+
+    for (int8_t i = 0; i < payloadTypesCount; i++)
+    {
+        if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
+        {
+            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size) 
+            {
+                memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
+                payloadTypes[i].updated = true;
+            }
+            #if defined(UNIT_TEST)
+                cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';   
+            #endif
+            return;
+        }
+    }
 }
 #endif
