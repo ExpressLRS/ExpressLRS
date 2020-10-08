@@ -13,4 +13,4 @@ insert_final_newline = true
 indent_style = tab
 
 [*.{c,h,cpp,hpp}]
-indent_size = 2
+indent_size = 4
