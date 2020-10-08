@@ -18,7 +18,7 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
-#include <Telemetry.h>
+#include <telemetry.h>
 #include "FHSS.h"
 // #include "Debug.h"
 #include "OTA.h"

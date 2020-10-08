@@ -23,11 +23,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install platformio
 
+    - name: Setup C++ compiler
+          run: |
+            apt install build-essential
+            
     - name: Run PlatformIO
       run: |
         platformio platform update
         mkdir -p ~/artifcats
         cd src
+        platformio test -e native
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
         pio run --environment Frsky_TX_R9M_via_STLINK 
         pio run --environment Frsky_TX_R9M_via_stock_BL 
