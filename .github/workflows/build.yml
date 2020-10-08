@@ -25,7 +25,7 @@ jobs:
 
     - name: Setup C++ compiler
       run: |
-        apt install build-essential
+        sudo apt install build-essential
             
     - name: Run PlatformIO
       run: |
