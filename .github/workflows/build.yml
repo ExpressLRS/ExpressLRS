@@ -24,8 +24,8 @@ jobs:
         pip install platformio
 
     - name: Setup C++ compiler
-          run: |
-            apt install build-essential
+      run: |
+        apt install build-essential
             
     - name: Run PlatformIO
       run: |
