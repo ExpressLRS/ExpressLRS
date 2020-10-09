@@ -1,16 +1,17 @@
 #include <cstdint>
 #include "stubborn_link.h"
 
-uint8_t* StubbornLink::data = 0;
-uint8_t StubbornLink::length = 0;
-uint8_t StubbornLink::bytesPerCall = 1;
-uint8_t StubbornLink::currentOffset = 0;
+#if defined(UNIT_TEST)
+#include <iostream>
+using namespace std;
+#endif
 
 void StubbornLink::ResetState()
 {
     data = 0;
     bytesPerCall = 1;
     currentOffset = 0;
+    currentPackage = 0;
 }
 
 void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit)
@@ -18,11 +19,22 @@ void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTr
     length = lengthToTransmit;
     data = dataToTransmit;
     currentOffset = 0;
+    currentPackage = 1;
 }
 
-void StubbornLink::GetCurrentPayload(uint8_t *count, uint8_t **currentData)
+void StubbornLink::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData)
 {
     *currentData = data + currentOffset;
+
+    if (currentOffset >= length)
+    {
+        *count = 0;
+        *currentData = 0;
+        *packageIndex = 0;
+        return;
+    }
+
+    *packageIndex = currentPackage;
     if (bytesPerCall > 1)
     {
         if (currentOffset + bytesPerCall <= length)
@@ -42,13 +54,51 @@ void StubbornLink::GetCurrentPayload(uint8_t *count, uint8_t **currentData)
 
 void StubbornLink::ConfirmCurrentPayload()
 {
-    if (currentOffset + bytesPerCall < length)
-    {
-        currentOffset += bytesPerCall;
-    }
+    currentOffset += bytesPerCall;
+    currentPackage++;
 }
 
 void StubbornLink::SetBytesPerCall(uint8_t count)
 {
     bytesPerCall = count;
+}
+
+void StubbornLink::SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive)
+{
+    length = maxLength;
+    data = dataToReceive;
+    currentPackage = 1;
+    currentOffset = 0;
+    finishedData = false;
+}
+
+bool StubbornLink::ReceiveData(uint8_t packageIndex, uint8_t receiveData)
+{
+    if  (packageIndex == 0 && currentPackage > 1)
+    {
+        finishedData = true;
+    }
+
+    if (packageIndex == currentPackage)
+    {
+        currentPackage++;
+        currentOffset++;
+        data[currentOffset] = receiveData;
+        return true;
+    }
+
+    return false;
+}
+
+uint8_t StubbornLink::GetReceivedData()
+{
+    if (finishedData)
+    {
+        uint8_t receivedLength = currentOffset;
+        currentPackage = 1;
+        currentOffset = 0;
+        finishedData = false;
+        return receivedLength;
+    }
+    return 0;
 }
