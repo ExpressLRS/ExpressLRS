@@ -20,11 +20,11 @@
  * If any of the round-robin switches have changed
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
- * 
+ *
  * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
@@ -33,13 +33,13 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
   Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) + 
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) +
                            ((crsf->ChannelDataIn[1] & 0b110) << 3) +
-                           ((crsf->ChannelDataIn[2] & 0b110) << 1) + 
+                           ((crsf->ChannelDataIn[2] & 0b110) << 1) +
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
   // switch 0 is sent on every packet - intended for low latency arm/disarm
-  Buffer[6] = (crsf->currentSwitches[0] & 0b11) << 5; // note this leaves the top bit of byte 6 unused
+  Buffer[6] = (TelemetryStatus << 7) & (crsf->currentSwitches[0] & 0b11) << 5;
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
