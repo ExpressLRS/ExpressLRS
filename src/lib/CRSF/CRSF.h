@@ -75,7 +75,7 @@ public:
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
     void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
-    void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
+    void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t size, uint8_t *data);
 
     void sendLUAresponse(uint8_t val[], uint8_t len);
 
