@@ -28,6 +28,7 @@ jobs:
         platformio platform update
         mkdir -p ~/artifcats
         cd src
+        platformio test -e native
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
         platformio run
         mv .pio/build ~/artifcats/AU_915

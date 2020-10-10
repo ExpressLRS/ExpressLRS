@@ -16,6 +16,7 @@
 #include "SX1280Driver.h"
 #endif
 
+#include <crsf_protocol.h>
 #include "CRSF.h"       // has to come after SX127xDriver.h for R9
 #include "targets.h"
 #include "common.h"

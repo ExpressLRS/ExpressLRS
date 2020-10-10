@@ -12,7 +12,9 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#include <crsf_protocol.h>
 #include "CRSF.h"
+#include <telemetry.h>
 #include "FHSS.h"
 // #include "Debug.h"
 #include "OTA.h"
@@ -23,10 +25,6 @@ SX1280Driver Radio;
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#endif
-
-#ifdef PLATFORM_STM32
-#include "STM32_UARTinHandler.h"
 #endif
 
 //// CONSTANTS ////
@@ -42,6 +40,7 @@ SX1280Driver Radio;
 hwTimer hwTimer;
 
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
+Telemetry telemetry;
 
 /// Filters ////////////////
 LPF LPF_Offset(2);
@@ -651,6 +650,7 @@ void setup()
         SetRFLinkRate(RATE_DEFAULT);
     #endif
 
+    telemetry.ResetState();
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
@@ -763,7 +763,26 @@ void loop()
         #endif
     }
 
-    #ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-    #endif
+    while (Serial.available())
+    {
+        telemetry.RXhandleUARTin(Serial.read());
+
+        if (telemetry.callBootloader)
+        {
+            #if defined(PLATFORM_STM32)
+                delay(100);
+                Serial.println("Jumping to Bootloader...");
+                delay(100);
+                HAL_NVIC_SystemReset();
+            #endif
+
+            telemetry.callBootloader = false;
+        }
+
+        uint8_t* battery = telemetry.GetBatteryPayload();
+        if (battery)
+        {
+            crsf.TLMbattSensor.voltage = (battery[3] << 8) + battery[4];
+        }
+    }
 }

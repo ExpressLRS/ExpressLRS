@@ -15,6 +15,7 @@ extern SX1280Driver Radio;
 #include "ESP32_hwTimer.h"
 extern hwTimer hwTimer;
 
+#include <crsf_protocol.h>
 #include "CRSF.h"
 extern CRSF crsf;
 
