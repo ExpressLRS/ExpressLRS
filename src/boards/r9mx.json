@@ -1,0 +1,43 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32L433xx",
+    "f_cpu": "72000000L",
+    "mcu": "stm32l433rc",
+    "product_line": "STM32L433xx",
+    "variants_dir": "variants",
+    "variant": "r9mx"
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32L433RC",
+    "onboard_tools": [
+      "stlink"
+    ],
+    "openocd_board": "st_nucleo_l4",
+    "svd_path": "STM32L4x3.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "mbed",
+    "stm32cube"
+  ],
+  "name": "ST Nucleo L433RC-P",
+  "upload": {
+    "maximum_ram_size": 65536,
+    "maximum_size": 262144,
+    "protocol": "custom",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "mbed"
+    ]
+  },
+  "url": "https://www.st.com/en/evaluation-tools/nucleo-l433rc-p.html",
+  "vendor": "ST"
+}

@@ -20,7 +20,7 @@ def serial_ports():
         ports = glob.glob('/dev/ttyACM*')
         ports.extend(glob.glob('/dev/ttyUSB*'))
     elif platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty.*')
+        ports = glob.glob('/dev/tty.usbmodem*')
     else:
         raise EnvironmentError('Unsupported platform')
 

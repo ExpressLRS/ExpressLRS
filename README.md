@@ -3,6 +3,8 @@
 ## Need help? Confused? Join the Community!
  * [RCGroups Discussion](https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system)
  * [Discord Chat](https://discord.gg/dS6ReFY)
+ * [Facebook Group](https://www.facebook.com/groups/636441730280366)
+
 
 ## ESP32/ESP8285/STM32 based LoRa Radio Link
 

@@ -62,7 +62,7 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 20K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = FLASH_APP_OFFSET
+FLASH (rx)      : ORIGIN = FLASH_START, LENGTH = FLASH_APP_OFFSET
 }
 
 /* Define output sections */
@@ -72,6 +72,7 @@ SECTIONS
   .isr_vector :
   {
     . = ALIGN(4);
+    __ISR_VECTOR = .;
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >FLASH

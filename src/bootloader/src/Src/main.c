@@ -166,7 +166,7 @@ static void boot_code(void)
 
 #else // TARGET_XMODEM == 0
 
-#define BOOT_WAIT 2000 // ms
+#define BOOT_WAIT 300 // ms
 
 static uint32_t boot_end_time;
 
@@ -201,6 +201,8 @@ static void boot_code(void)
 
 #endif /* TARGET_XMODEM */
 
+extern int FLASH_START;
+
 /**
  * @brief  The application entry point.
  * @retval int
@@ -212,6 +214,7 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the
    * Systick.
    */
+  SCB->VTOR = (uint32_t)&FLASH_START;
   HAL_Init();
 
   /* Configure the system clock */

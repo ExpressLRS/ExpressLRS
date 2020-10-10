@@ -2,7 +2,7 @@
 
 There are 3 different PCB design based on the G-NiceRF_LoRa1280 (12.5dBm), G-NiceRF_LORA1280F27 (27dBm), and EBYTE_E28-2G4M27S (27dBm).
 
-*At the moment on the EBYTE_E28-2G4M27S has been built and confirmed to work.*
+*The G-NiceRF_LoRa1280 and EBYTE_E28-2G4M27S have been built and confirmed to work.*
 
 ### PCB manufacturing
 
@@ -20,6 +20,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - 10k 0805 resistor https://www.aliexpress.com/item/4000049692396.html
 - SMA or RPSMA connector https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
 - KK 254 PC Board Connector https://www.molex.com/molex/products/part-detail/pcb_receptacles/0022142044
+                            https://www.digikey.com/en/products/detail/molex/0022142044/26523
 
 ### Build order
 

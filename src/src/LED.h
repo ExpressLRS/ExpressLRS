@@ -1,10 +1,9 @@
 /// LED SUPPORT ///////
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
 #include <NeoPixelBus.h>
 const uint16_t PixelCount = 1; // this example assumes 1 pixel
-const uint8_t PixelPin = 27;   // make sure to set this to the correct pin, ignored for Esp8266
 #define colorSaturation 50
-NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
+NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
 
 RgbColor red(colorSaturation, 0, 0);
 RgbColor green(0, colorSaturation, 0);
@@ -21,7 +20,7 @@ HslColor hslBlack(black);
 
 void updateLEDs(uint8_t isRXconnected, uint8_t tlm)
 {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
     if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_200HZ)
     {
         strip.ClearTo(RgbColor(0, 0, LED_MAX_BRIGHTNESS));

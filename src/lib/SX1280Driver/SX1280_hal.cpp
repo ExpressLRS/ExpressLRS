@@ -35,7 +35,7 @@ SX1280Hal::SX1280Hal()
 void SX1280Hal::end()
 {
     SPI.end();
-    detachInterrupt(GPIO_PIN_DIO0);
+    detachInterrupt(GPIO_PIN_DIO1);
 }
 
 void SX1280Hal::init()
@@ -99,7 +99,7 @@ void SX1280Hal::init()
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::reset(void)
+void SX1280Hal::reset(void)
 {
     Serial.println("SX1280 Reset");
     delay(50);

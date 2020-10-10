@@ -11,7 +11,7 @@
 #endif
 
 #ifdef TARGET_R9M_TX
-#define MaxPower 7
+#define MaxPower 6
 #define DefaultPowerEnum 2
 #endif
 
@@ -30,14 +30,24 @@
 #define DefaultPowerEnum 2
 #endif
 
+#ifdef TARGET_R9M_LITE_PRO_TX
+#define MaxPower 2
+#define DefaultPowerEnum 2
+#endif
+
+#ifdef TARGET_TX_ESP32_SX1280_V1
+#define MaxPower 0 // Output is actually 14mW
+#define DefaultPowerEnum 0
+#endif
+
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-#define MaxPower 6
-#define DefaultPowerEnum 3
+#define MaxPower 4
+#define DefaultPowerEnum 2
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
-#define MaxPower 6
-#define DefaultPowerEnum 3
+#define MaxPower 4
+#define DefaultPowerEnum 2
 #endif
 
 typedef enum

@@ -35,7 +35,7 @@ uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
 // Set all of the flags in the array to true, except for the first one
 // which corresponds to the sync channel and is never available for normal
 // allocation.
-void ICACHE_RAM_ATTR resetIsAvailable(uint8_t *array)
+void resetIsAvailable(uint8_t *array)
 {
     // channel 0 is the sync channel and is never considered available
     array[0] = 0;
@@ -62,7 +62,7 @@ Approach:
     if the index is not a repeat, assing it to the FHSSsequence array, clear the availability flag and decrement the available count
     if there are no available channels left, reset the flags array and the count
 */
-void ICACHE_RAM_ATTR FHSSrandomiseFHSSsequence()
+void FHSSrandomiseFHSSsequence()
 {
 
 #ifdef Regulatory_Domain_AU_915

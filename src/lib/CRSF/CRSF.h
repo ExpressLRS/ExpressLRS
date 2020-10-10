@@ -375,8 +375,6 @@ public:
 
     static volatile uint8_t ParameterUpdateData[2];
 
-    static bool firstboot;
-
     static uint8_t CSFR_TXpin_Module;
     static uint8_t CSFR_RXpin_Module;
 
@@ -390,6 +388,7 @@ public:
     static volatile crsf_sensor_battery_s TLMbattSensor;
 
     static void Begin(); //setup timers etc
+    static void End(); //stop timers etc
 
     /// UART Handling ///
 
@@ -412,7 +411,7 @@ public:
     static void ICACHE_RAM_ATTR duplex_set_TX();
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     static void ICACHE_RAM_ATTR STM32initUART();
     static void ICACHE_RAM_ATTR UARTwdt();
     static void ICACHE_RAM_ATTR STM32handleUARTin();
@@ -421,11 +420,11 @@ public:
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
-    void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
+    void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendLinkBattSensorToTX();
 
-    void ICACHE_RAM_ATTR sendLUAresponse(uint8_t val[]);
+    void sendLUAresponse(uint8_t val[]);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
