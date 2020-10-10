@@ -5,7 +5,6 @@
 #include "elrs_eeprom.h"
 
 #define CONFIG_VERSION          1
-#define RESERVED_EEPROM_SIZE    512
 
 typedef struct {
     uint32_t    version;
