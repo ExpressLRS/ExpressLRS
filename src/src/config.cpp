@@ -16,13 +16,13 @@ Config::Load()
         SetDefaults();
     }
 
-    m_config.modified = false;
+    m_modified = false;
 }
 
 void
 Config::Commit()
 {    
-    if (!m_config.modified)
+    if (!m_modified)
     {
         // No changes
         return;
@@ -32,7 +32,7 @@ Config::Commit()
     m_eeprom->Put(0, m_config);
     m_eeprom->Commit();
 
-    m_config.modified = false;
+    m_modified = false;
 }
 
 // Getters
@@ -57,7 +57,7 @@ Config::GetPower()
 bool
 Config::IsModified()
 {
-    return m_config.modified;
+    return m_modified;
 }
 
 // Setters
@@ -67,7 +67,7 @@ Config::SetRate(uint32_t rate)
     if (m_config.rate != rate)
     {
         m_config.rate = rate;
-        m_config.modified = true;
+        m_modified = true;
     }
 }
 
@@ -77,7 +77,7 @@ Config::SetTlm(uint32_t tlm)
     if (m_config.tlm != tlm)
     {
         m_config.tlm = tlm;
-        m_config.modified = true;
+        m_modified = true;
     }
 }
 
@@ -87,7 +87,7 @@ Config::SetPower(uint32_t power)
     if (m_config.power != power)
     {
         m_config.power = power;
-        m_config.modified = true;
+        m_modified = true;
     }
 }
 

@@ -12,7 +12,6 @@ typedef struct {
     uint32_t    rate;
     uint32_t    tlm;
     uint32_t    power;
-    bool        modified;
 } config_t;
 
 class Config
@@ -37,4 +36,5 @@ public:
 private:
     config_t    m_config;
     ELRS_EEPROM *m_eeprom;
+    bool        m_modified;
 };

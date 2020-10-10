@@ -1,7 +1,7 @@
 #include "elrs_eeprom.h"
 #include <Arduino.h>
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
 #endif
 

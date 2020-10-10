@@ -85,6 +85,7 @@ uint32_t PacketLastSentMicros = 0;
 bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
+bool WaitEepromCommit = false;
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -538,10 +539,10 @@ void HandleUpdateParameter()
   {
     // Stop the timer during eeprom writes
     hwTimer.stop();
-    // Write the new values
-    config.Commit();
-    // Resume the timer
-    hwTimer.resume();
+
+    // Set a flag that will trigger the eeprom commit in the main loop
+    // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
+    WaitEepromCommit = true;
   }
 }
 
@@ -676,7 +677,6 @@ void setup()
 
 void loop()
 {
-
 #if defined(PLATFORM_ESP32)
   if (webUpdateMode)
   {
@@ -686,6 +686,17 @@ void loop()
 #endif
 
   HandleUpdateParameter();
+
+  // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
+  if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
+  {
+    // Write the values, and restart the timer
+    WaitEepromCommit = false;
+    // Write the uncommitted eeprom values
+    config.Commit();
+    // Resume the timer
+    hwTimer.resume();
+  }
 
 #ifdef FEATURE_OPENTX_SYNC
 // Serial.println(crsf.OpenTXsyncOffset);
