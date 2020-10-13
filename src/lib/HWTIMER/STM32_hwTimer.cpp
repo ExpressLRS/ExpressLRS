@@ -1,7 +1,7 @@
 #ifdef PLATFORM_STM32
 #include "STM32_hwTimer.h"
 
-void inline hwTimer::nullCallback(void){};
+void inline hwTimer::nullCallback(void) {}
 
 void (*hwTimer::callbackTick)() = &nullCallback; // function is called whenever there is new RC data.
 void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.

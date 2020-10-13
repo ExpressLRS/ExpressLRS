@@ -1,6 +1,6 @@
 #include "button.h"
 
-void inline button::nullCallback(void){};
+void inline button::nullCallback(void) {}
 void (*button::buttonShortPress)() = &nullCallback; // callbacks
 void (*button::buttonLongPress)() = &nullCallback;  // callbacks
 

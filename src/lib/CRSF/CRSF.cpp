@@ -35,7 +35,7 @@ uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 volatile bool CRSF::ignoreSerialData = false;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
-void inline CRSF::nullCallback(void){};
+void inline CRSF::nullCallback(void) {}
 
 void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
 void (*CRSF::RCdataCallback2)() = &nullCallback; // null placeholder callback
@@ -287,7 +287,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
 
-    if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
+    if (CRSF::OpenTXsyncOffset > (int32_t)CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
     {
         CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE

@@ -522,7 +522,12 @@ void HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
-  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
+  uint8_t luaCurrParams[] = {
+    (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate + 3), 
+    (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1), 
+    (uint8_t)(POWERMGNT.currPower() + 2),
+    Regulatory_Domain_Index
+  };
   crsf.sendLUAresponse(luaCurrParams);
 }
 
@@ -778,7 +783,7 @@ void OnTxPowerPacket(mspPacket_t *packet)
 void OnTLMRatePacket(mspPacket_t *packet)
 {
   // Parse the TLM rate
-  uint8_t tlmRate = packet->readByte();
+  // uint8_t tlmRate = packet->readByte();
   CHECK_PACKET_PARSING();
 
   // TODO: Implement dynamic TLM rates
