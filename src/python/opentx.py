@@ -70,4 +70,5 @@ def gen_frsky(source, target, env):
     sys.stdout.write("\n")
 
 env.AddPostAction("buildprog", gen_elrs)
+env.AddPostAction("buildprog", gen_frsky)
 env.Replace(UPLOADCMD=stlink.on_upload)
