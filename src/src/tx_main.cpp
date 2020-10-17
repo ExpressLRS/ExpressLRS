@@ -547,13 +547,6 @@ void setup()
 {
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
-  #ifdef USE_UART2
-    #ifndef TARGET_TTGO_LORA_V2_AS_TX
-    Serial2.begin(400000);
-    #else
-    Serial.println("USE_UART2 was enable but is not supported on TTGOv2");
-    #endif
-  #endif
 #endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
@@ -641,6 +634,7 @@ void setup()
   }
   POWERMGNT.setDefaultPower();
   SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
+  ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_NO_TLM;
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -691,9 +685,9 @@ void loop()
 #endif
 
 #ifdef PLATFORM_ESP32
-  if (Serial2.available())
+  if (Serial.available())
   {
-    uint8_t c = Serial2.read();
+    uint8_t c = Serial.read();
 #else
   if (Serial.available())
   {
