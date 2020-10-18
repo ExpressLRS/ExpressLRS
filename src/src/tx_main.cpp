@@ -683,15 +683,9 @@ void loop()
   #endif
 #endif
 
-#ifdef PLATFORM_ESP32
   if (Serial.available())
   {
     uint8_t c = Serial.read();
-#else
-  if (Serial.available())
-  {
-    uint8_t c = Serial.read();
-#endif
 
     if (msp.processReceivedByte(c))
     {
