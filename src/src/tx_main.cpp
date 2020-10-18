@@ -20,7 +20,8 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
-//#include "elrs_eeprom.h"
+#include "elrs_eeprom.h"
+#include "config.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
 #include "LowPassFilter.h"
@@ -55,6 +56,8 @@ hwTimer hwTimer;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
+ELRS_EEPROM eeprom;
+Config config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
@@ -82,6 +85,7 @@ uint32_t PacketLastSentMicros = 0;
 bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
+bool WaitEepromCommit = false;
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -284,6 +288,7 @@ uint8_t ICACHE_RAM_ATTR incTLMrate()
   {
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)(currTLMinterval - 1);
   }
+
   return (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
 }
 
@@ -529,6 +534,20 @@ void HandleUpdateParameter()
     Regulatory_Domain_Index
   };
   crsf.sendLUAresponse(luaCurrParams);
+
+  config.SetRate(ExpressLRS_currAirRate_Modparams->index);
+  config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
+  config.SetPower(POWERMGNT.currPower());
+
+  if (config.IsModified())
+  {
+    // Stop the timer during eeprom writes
+    hwTimer.stop();
+
+    // Set a flag that will trigger the eeprom commit in the main loop
+    // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
+    WaitEepromCommit = true;
+  }
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -640,7 +659,16 @@ void setup()
     #endif
   }
   POWERMGNT.setDefaultPower();
-  SetRFLinkRate(RATE_DEFAULT); // fastest rate by default
+
+  eeprom.Begin(); // Init the eeprom
+  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+  config.Load(); // Load the stored values from eeprom
+
+  // Set the pkt rate, TLM ratio, and power from the stored eeprom values
+  SetRFLinkRate(config.GetRate());
+  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
+  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+
   crsf.Begin();
   hwTimer.init();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -649,7 +677,6 @@ void setup()
 
 void loop()
 {
-
 #if defined(PLATFORM_ESP32)
   if (webUpdateMode)
   {
@@ -659,6 +686,17 @@ void loop()
 #endif
 
   HandleUpdateParameter();
+
+  // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
+  if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
+  {
+    // Write the values, and restart the timer
+    WaitEepromCommit = false;
+    // Write the uncommitted eeprom values
+    config.Commit();
+    // Resume the timer
+    hwTimer.resume();
+  }
 
 #ifdef FEATURE_OPENTX_SYNC
 // Serial.println(crsf.OpenTXsyncOffset);
