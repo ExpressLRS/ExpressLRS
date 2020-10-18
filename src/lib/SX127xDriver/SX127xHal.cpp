@@ -4,7 +4,7 @@ SX127xHal *SX127xHal::instance = NULL;
 
 volatile SX127x_InterruptAssignment SX127xHal::InterruptAssignment = SX127x_INTERRUPT_NONE;
 
-void inline SX127xHal::nullCallback(void) { return; };
+void inline SX127xHal::nullCallback(void) { return; }
 void (*SX127xHal::TXdoneCallback)() = &nullCallback;
 void (*SX127xHal::RXdoneCallback)() = &nullCallback;
 

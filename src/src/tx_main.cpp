@@ -527,8 +527,17 @@ void HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
+<<<<<<< HEAD
 
   uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
+=======
+  uint8_t luaCurrParams[] = {
+    (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate + 3), 
+    (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1), 
+    (uint8_t)(POWERMGNT.currPower() + 2),
+    Regulatory_Domain_Index
+  };
+>>>>>>> master-dev
   crsf.sendLUAresponse(luaCurrParams);
 
   config.SetRate(ExpressLRS_currAirRate_Modparams->index);
@@ -664,10 +673,6 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-
-  #if defined DEFAULT_NO_TLM
-  ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_NO_TLM;
-  #endif
 
   crsf.Begin();
   hwTimer.init();
@@ -818,7 +823,7 @@ void OnTxPowerPacket(mspPacket_t *packet)
 void OnTLMRatePacket(mspPacket_t *packet)
 {
   // Parse the TLM rate
-  uint8_t tlmRate = packet->readByte();
+  // uint8_t tlmRate = packet->readByte();
   CHECK_PACKET_PARSING();
 
   // TODO: Implement dynamic TLM rates

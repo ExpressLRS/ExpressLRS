@@ -22,7 +22,7 @@ Modified and adapted by Alessandro Carcione for ELRS project
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
-void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void){};
+void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void) {}
 
 void (*SX1280Hal::TXdoneCallback)() = &nullCallback;
 void (*SX1280Hal::RXdoneCallback)() = &nullCallback;
