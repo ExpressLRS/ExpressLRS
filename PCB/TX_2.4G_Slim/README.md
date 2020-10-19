@@ -30,6 +30,13 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 - Print STLs standing on the end. For best results use 0.12 layer thickness, and 40% infill for the base, and 0.12 layer thickness, and 100% infill for the top.
 
+### Build Pics
+
 <img src="img/1.jpg" width="30%"> <img src="img/2.jpg" width="30%"> <img src="img/3.jpg" width="30%">
 <img src="img/4.jpg" width="30%"> <img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
 <img src="img/7.jpg" width="30%"> <img src="img/8.jpg" width="30%"> <img src="img/9.jpg" width="30%">
+
+### Schematic and PCB layout
+
+<img src="img/schm.png" width="30%">
+<img src="img/pcb.png" width="30%">
