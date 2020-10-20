@@ -58,7 +58,7 @@ CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
-Config config;
+TxConfig config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
@@ -89,6 +89,11 @@ bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
+
+bool InBindingMode = false;
+void EnterBindingMode();
+void ExitBindingMode();
+void SendUIDOverMSP();
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -277,6 +282,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+  if (InBindingMode)
+  {
+    return;
+  }
+  
   uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
@@ -348,7 +358,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       GenerateMSPData();
       MSPPacketLastSent = millis();
-      MSPPacketSendCount--;
+      if (!InBindingMode)
+      {
+        MSPPacketSendCount--;
+      }
     }
     else
     {
@@ -491,12 +504,18 @@ void HandleUpdateParameter()
     if (crsf.ParameterUpdateData[1] == 1)
     {
       Serial.println("Binding Requested!");
-      bindMode = true;
+      uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
+      crsf.sendLUAresponse(luaBindingRequestedPacket);
+      EnterBindingMode();
     }
-    else
+
+    if (crsf.ParameterUpdateData[1] == 0)
     {
-      Serial.println("Binding Stopped!");
-      bindMode = false;
+      Serial.println("Binding Cancelled!");
+      uint8_t luaBindingCancelledPacket[] = {(uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00};
+      crsf.sendLUAresponse(luaBindingCancelledPacket);
+
+      ExitBindingMode();
     }
     break;
 
@@ -843,4 +862,92 @@ void ProcessMSPPacket(mspPacket_t *packet)
     MSPPacket = *packet;
     MSPPacketSendCount = 6;
   }
+}
+
+void EnterBindingMode()
+{
+  if (InBindingMode) {
+      // Don't enter binding if we're already binding
+      return;
+  }
+
+  // Start periodically sending the current UID as MSP packets
+  SendUIDOverMSP();
+
+  // Set UID to special binding values
+  UID[0] = BindingUID[0];
+  UID[1] = BindingUID[1];
+  UID[2] = BindingUID[2];
+  UID[3] = BindingUID[3];
+  UID[4] = BindingUID[4];
+  UID[5] = BindingUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = true;
+
+  // Start attempting to bind
+  // Lock the RF rate and freq while binding
+  SetRFLinkRate(RATE_50HZ);
+  Radio.SetFrequency(GetInitialFreq());
+
+  // isRXconnected = false;
+
+  Serial.print("Entered binding mode at freq = ");
+  Serial.print(Radio.currFreq);
+  Serial.print(" and rfmode = ");
+  // Serial.print(ExpressLRS_currAirRate->rate);
+  Serial.println("Hz");
+}
+
+void ExitBindingMode()
+{
+  if (!InBindingMode)
+  {
+    // Not in binding mode
+    return;
+  }
+
+  // Reset UID to defined values
+  uint8_t definedUID[6] = {MY_UID};
+  UID[0] = definedUID[0];
+  UID[1] = definedUID[1];
+  UID[2] = definedUID[2];
+  UID[3] = definedUID[3];
+  UID[4] = definedUID[4];
+  UID[5] = definedUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = false;
+
+  // Revert to original packet rate
+  // and go to initial freq
+  SetRFLinkRate(RATE_200HZ);
+  Radio.SetFrequency(GetInitialFreq());
+
+  uint8_t LUAbindDone[4] = {0xFF, 0x00, 0x00, 0x00};
+  crsf.sendLUAresponse(LUAbindDone);
+
+  Serial.print("Exit binding mode at freq = ");
+  Serial.print(Radio.currFreq);
+  Serial.print(" and rfmode = ");
+  // Serial.print(ExpressLRS_currAirRate->rate);
+  Serial.println("Hz");
+}
+
+void SendUIDOverMSP()
+{
+  MSPPacket.reset();
+
+  MSPPacket.makeCommand();
+  MSPPacket.function = MSP_ELRS_BIND;
+  MSPPacket.addByte(UID[2]);
+  MSPPacket.addByte(UID[3]);
+  MSPPacket.addByte(UID[4]);
+  MSPPacket.addByte(UID[5]);
+
+  MSPPacketSendCount = 1;
 }

@@ -23,6 +23,8 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
+#include "elrs_eeprom.h"
+#include "elrs_eeprom_schema.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -52,8 +54,8 @@ uint32_t LEDupdateCounterMillis;
 #define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
+ELRS_EEPROM eeprom;
 
 /// Filters ////////////////
 LPF LPF_Offset(2);
@@ -118,6 +120,14 @@ uint8_t RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
+bool InBindingMode = false;
+
+void EnterBindingMode();
+void ExitBindingMode();
+void OnELRSBindMSP(mspPacket_t *packet);
+
+//////////////////////////////////////////////////////////////
+
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     //int8_t LastRSSI = Radio.LastPacketRSSI;
@@ -143,6 +153,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
+    if (InBindingMode)
+    {
+        return;
+    }
+    
     if (!LockRFmode)
     {
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
@@ -295,8 +310,12 @@ void LostConnection()
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
     #endif
 
-    Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
-    hwTimer.stop();
+    if (!InBindingMode)
+    {
+        Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        hwTimer.stop();
+    }
+
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -406,7 +425,15 @@ void ICACHE_RAM_ATTR UnpackMSPData()
     packet.addByte(Radio.RXdataBuffer[4]);
     packet.addByte(Radio.RXdataBuffer[5]);
     packet.addByte(Radio.RXdataBuffer[6]);
-    crsf.sendMSPFrameToFC(&packet);
+    
+    if (packet.function == MSP_ELRS_BIND)
+    {
+        OnELRSBindMSP(&packet);
+    }
+    else
+    {
+        crsf.sendMSPFrameToFC(&packet);
+    }
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
@@ -588,12 +615,13 @@ void sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) 
-    { // button held down for WEB_UPDATE_PRESS_INTERVAL
-        if (!webUpdateMode)
-        {
-            beginWebsever();
-        }
+    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) // button held down
+    {
+        // if (!webUpdateMode)
+        // {
+        //     beginWebsever();
+        // }
+        EnterBindingMode();
     }
     if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
@@ -697,6 +725,51 @@ void setup()
 #elif defined Regulatory_Domain_ISM_2400
     Serial.println("Setting 2.4GHz Mode");
 #endif
+
+    eeprom.Begin();
+
+    Serial.print("UID = ");
+    Serial.print(UID[0]);
+    Serial.print(", ");
+    Serial.print(UID[1]);
+    Serial.print(", ");
+    Serial.print(UID[2]);
+    Serial.print(", ");
+    Serial.print(UID[3]);
+    Serial.print(", ");
+    Serial.print(UID[4]);
+    Serial.print(", ");
+    Serial.println(UID[5]);
+
+    // Read out the byte that indicates if RX has been bound
+    uint8_t bindingState = eeprom.ReadByte(EEPROM_INDEX_BINDING);
+
+    // If the byte matches the reserved value
+    if (bindingState == EEPROM_IS_BOUND)
+    {
+        Serial.println("RX has been bound previously, reading the UID from eeprom...");
+        for (uint8_t i = 2; i < 6; ++i)
+        {
+            UID[i] = eeprom.ReadByte(EEPROM_INDEX_UID + (i - 2));
+        }
+
+        Serial.print("UID = ");
+        Serial.print(UID[0]);
+        Serial.print(", ");
+        Serial.print(UID[1]);
+        Serial.print(", ");
+        Serial.print(UID[2]);
+        Serial.print(", ");
+        Serial.print(UID[3]);
+        Serial.print(", ");
+        Serial.print(UID[4]);
+        Serial.print(", ");
+        Serial.println(UID[5]);
+    }
+    else {
+        Serial.println("RX has not been bound, enter binding mode...");
+        EnterBindingMode();
+    }
 
     FHSSrandomiseFHSSsequence();
 
@@ -877,4 +950,95 @@ void loop()
 #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
 #endif
+}
+
+void EnterBindingMode()
+{
+    if ((connectionState == connected) || InBindingMode || webUpdateMode) {
+        // Don't enter binding if:
+        // - we're already connected
+        // - we're already binding
+        // - we're in web update mode
+        Serial.println("Cannot enter binding mode!");
+        return;
+    }
+
+    // Set UID to special binding values
+    UID[0] = BindingUID[0];
+    UID[1] = BindingUID[1];
+    UID[2] = BindingUID[2];
+    UID[3] = BindingUID[3];
+    UID[4] = BindingUID[4];
+    UID[5] = BindingUID[5];
+
+    CRCCaesarCipher = UID[4];
+    DeviceAddr = UID[5] & 0b111111;
+
+    // Start attempting to bind
+    // Lock the RF rate and freq while binding
+    SetRFLinkRate(RATE_50HZ);
+    Radio.SetFrequency(GetInitialFreq());
+
+    InBindingMode = true;
+
+    Serial.print("Entered binding mode at freq = ");
+    Serial.print(Radio.currFreq);
+    Serial.print(" and rfmode = ");
+    // Serial.print(ExpressLRS_currAirRate->rate);
+    Serial.println("Hz");
+}
+
+void ExitBindingMode()
+{
+    if (!InBindingMode) {
+        // Not in binding mode
+        Serial.println("Cannot exit binding mode!");
+        return;
+    }
+
+    InBindingMode = false;
+
+    // Revert to original packet rate
+    // and go to initial freq
+    SetRFLinkRate(RATE_200HZ);
+    Radio.SetFrequency(GetInitialFreq());
+
+    Serial.print("Exit binding mode at freq = ");
+    Serial.print(Radio.currFreq);
+    Serial.print(" and rfmode = ");
+    // Serial.print(ExpressLRS_currAirRate->rate);
+    Serial.println("Hz");
+}
+
+void OnELRSBindMSP(mspPacket_t *packet)
+{
+    UID[2] = packet->readByte();
+    UID[3] = packet->readByte();
+    UID[4] = packet->readByte();
+    UID[5] = packet->readByte();
+    CRCCaesarCipher = UID[4];
+    DeviceAddr = UID[5] & 0b111111;
+
+    Serial.print("New UID = ");
+    Serial.print(UID[0]);
+    Serial.print(", ");
+    Serial.print(UID[1]);
+    Serial.print(", ");
+    Serial.print(UID[2]);
+    Serial.print(", ");
+    Serial.print(UID[3]);
+    Serial.print(", ");
+    Serial.print(UID[4]);
+    Serial.print(", ");
+    Serial.println(UID[5]);
+
+    for (uint8_t i = 2; i < 6; ++i) {
+        eeprom.WriteByte(EEPROM_INDEX_UID + (i - 2), UID[i]);
+    }
+
+    // Set eeprom byte to indicate RX is bound
+    eeprom.WriteByte(EEPROM_INDEX_BINDING, EEPROM_IS_BOUND);
+
+    FHSSrandomiseFHSSsequence();
+    ExitBindingMode();
 }
