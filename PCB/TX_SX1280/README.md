@@ -1,8 +1,6 @@
 # 2.4 GHz Tx
 
-There are 3 different PCB design based on the G-NiceRF_LoRa1280 (12.5dBm), G-NiceRF_LORA1280F27 (27dBm), and EBYTE_E28-2G4M27S (27dBm).
-
-*The G-NiceRF_LoRa1280 and EBYTE_E28-2G4M27S have been built and confirmed to work.*
+There are 2 different PCB design based on the G-NiceRF_LoRa1280 (12.5dBm) and EBYTE_E28-2G4M27S (27dBm).
 
 ### PCB manufacturing
 
@@ -10,7 +8,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 *PCB Thickness: 1mm*
 
-*Remove Order Number:Specify a location*
+*Remove Order Number: Specify a location*
 
 ### BOM E28-2G4M27S
 
@@ -19,8 +17,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - 3.3V DC-DC Step Down Power Supply https://www.aliexpress.com/item/32880983608.html
 - 10k 0805 resistor https://www.aliexpress.com/item/4000049692396.html
 - SMA or RPSMA connector https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
-- KK 254 PC Board Connector https://www.molex.com/molex/products/part-detail/pcb_receptacles/0022142044
-                            https://www.digikey.com/en/products/detail/molex/0022142044/26523
+- KK 254 PC Board Connector https://www.molex.com/molex/products/part-detail/pcb_receptacles/0022142044 https://www.digikey.com/en/products/detail/molex/0022142044/26523
 
 ### Build order
 
