@@ -37,7 +37,7 @@ class Telemetry
 public:
     bool RXhandleUARTin(uint8_t data);
     void ResetState();
-    uint8_t* GetNextPayload();
+    bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t* GetCurrentPayload();
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();

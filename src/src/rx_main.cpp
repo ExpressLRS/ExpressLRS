@@ -967,9 +967,6 @@ void loop()
         LEDupdateCounterMillis = millis();
     }
 #endif
-#ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-#endif
 
     // If the eeprom is indicating that we're not bound
     // and we're not already in binding mode, enter binding
@@ -1027,6 +1024,8 @@ void loop()
         }
     }
 
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
     while (Serial.available())
     {
         telemetry.RXhandleUARTin(Serial.read());
@@ -1041,6 +1040,11 @@ void loop()
             #endif
 
             telemetry.callBootloader = false;
+        }
+
+        if (!telemetryLink.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            telemetryLink.SetDataToTransmit(nextPlayloadSize, nextPayload);
         }
     }
 }

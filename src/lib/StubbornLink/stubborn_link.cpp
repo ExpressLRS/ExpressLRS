@@ -12,6 +12,7 @@ void StubbornLink::ResetState()
     bytesPerCall = 1;
     currentOffset = 0;
     currentPackage = 0;
+    length = 0;
 }
 
 void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit)
@@ -20,6 +21,11 @@ void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTr
     data = dataToTransmit;
     currentOffset = 0;
     currentPackage = 1;
+}
+
+bool StubbornLink::IsActive()
+{
+    return length == 0;
 }
 
 void StubbornLink::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData)
@@ -79,11 +85,16 @@ bool StubbornLink::ReceiveData(uint8_t packageIndex, uint8_t receiveData)
         finishedData = true;
     }
 
+    if (finishedData)
+    {
+        return false;
+    }
+
     if (packageIndex == currentPackage)
     {
+        data[currentOffset] = receiveData;
         currentPackage++;
         currentOffset++;
-        data[currentOffset] = receiveData;
         return true;
     }
 

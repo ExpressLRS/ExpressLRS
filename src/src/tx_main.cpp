@@ -185,11 +185,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         // flip bit in radio message
         TelemetryConfirm = !TelemetryConfirm;
     }
-    uint8_t receivedLength = telemetryInLink.GetReceivedData();
-    if (receivedLength > 0)
-    {
-        crsf.sendTelemetryToTX(receivedLength, CRSFinBuffer);
-    }
   }
 }
 
@@ -807,6 +802,8 @@ void loop()
     }
   }
 
+#if 0
+  /* !!!! FIXME FIXME FIXME !!!! */
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
@@ -815,6 +812,13 @@ void loop()
     crsf.sendLinkBattSensorToTX();
     TLMpacketReported = now;
   }
+#else
+  uint8_t receivedLength = telemetryInLink.GetReceivedData();
+  if (receivedLength > 0)
+  {
+      crsf.sendTelemetryToTX(receivedLength, CRSFinBuffer);
+  }
+#endif
 }
 
 void ICACHE_RAM_ATTR TimerCallbackISR()

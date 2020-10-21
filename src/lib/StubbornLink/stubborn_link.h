@@ -8,6 +8,7 @@ public:
     void ResetState();
     void SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit);
     void GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData);
+    bool IsActive();
     void ConfirmCurrentPayload();
     void SetBytesPerCall(uint8_t count);
 

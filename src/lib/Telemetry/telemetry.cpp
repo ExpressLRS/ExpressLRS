@@ -19,7 +19,7 @@ bool Telemetry::callBootloader = false;
 uint8_t Telemetry::receivedPackages = 0;
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE);
 
-uint8_t* Telemetry::GetNextPayload()
+bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
     uint8_t checks = 0;
     uint8_t oldPayloadIndex = currentPayloadIndex;
@@ -36,11 +36,15 @@ uint8_t* Telemetry::GetNextPayload()
     if (payloadTypes[currentPayloadIndex].updated)
     {
         payloadTypes[currentPayloadIndex].locked = true;
-        return payloadTypes[currentPayloadIndex].data;
+        *nextPayloadSize = CRSF_FRAME_SIZE(payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        *payloadData = payloadTypes[currentPayloadIndex].data;
+        return true;
     }
 
     currentPayloadIndex = oldPayloadIndex;
-    return 0;
+    *nextPayloadSize = 0;
+    *payloadData = 0;
+    return false;
 }
 
 uint8_t* Telemetry::GetCurrentPayload()
