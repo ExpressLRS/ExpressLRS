@@ -39,7 +39,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
   // switch 0 is sent on every packet - intended for low latency arm/disarm
-  Buffer[6] = (TelemetryStatus << 7) & (crsf->currentSwitches[0] & 0b11) << 5;
+  Buffer[6] = (TelemetryStatus << 7) + ((crsf->currentSwitches[0] & 0b11) << 5);
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
