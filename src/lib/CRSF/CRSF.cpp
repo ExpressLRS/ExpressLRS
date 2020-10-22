@@ -290,6 +290,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t size, uint8_t *data)
 {
     if (CRSF::CRSFstate)
     {
+        data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
 #ifdef PLATFORM_ESP32
         xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
 #endif
