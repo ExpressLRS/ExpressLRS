@@ -13,6 +13,7 @@ void StubbornLink::ResetState()
     currentOffset = 0;
     currentPackage = 0;
     length = 0;
+    waitNextConfirmation = false;
 }
 
 void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit)
@@ -21,24 +22,31 @@ void StubbornLink::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTr
     data = dataToTransmit;
     currentOffset = 0;
     currentPackage = 1;
+    waitNextConfirmation = false;
 }
 
 bool StubbornLink::IsActive()
 {
-    return length == 0;
+    return length != 0;
 }
 
 void StubbornLink::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData)
 {
-    *currentData = data + currentOffset;
+    *count = 0;
+    *currentData = 0;
+    *packageIndex = 0;
+    if (!IsActive())
+    {
+        return;
+    }
 
     if (currentOffset >= length)
     {
-        *count = 0;
-        *currentData = 0;
-        *packageIndex = 0;
+        waitNextConfirmation = true;
         return;
     }
+
+    *currentData = data + currentOffset;
 
     *packageIndex = currentPackage;
     if (bytesPerCall > 1)
@@ -60,8 +68,15 @@ void StubbornLink::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint
 
 void StubbornLink::ConfirmCurrentPayload()
 {
-    currentOffset += bytesPerCall;
-    currentPackage++;
+    if (waitNextConfirmation)
+    {
+        length = 0;
+    }
+    else
+    {
+        currentOffset += bytesPerCall;
+        currentPackage++;
+    }
 }
 
 void StubbornLink::SetBytesPerCall(uint8_t count)
@@ -83,6 +98,7 @@ bool StubbornLink::ReceiveData(uint8_t packageIndex, uint8_t receiveData)
     if  (packageIndex == 0 && currentPackage > 1)
     {
         finishedData = true;
+        return true;
     }
 
     if (finishedData)
@@ -105,11 +121,22 @@ uint8_t StubbornLink::GetReceivedData()
 {
     if (finishedData)
     {
-        uint8_t receivedLength = currentOffset;
+        return currentOffset;
+    }
+    return 0;
+}
+
+void StubbornLink::Unlock()
+{
+    if (finishedData)
+    {
         currentPackage = 1;
         currentOffset = 0;
         finishedData = false;
-        return receivedLength;
     }
-    return 0;
+}
+
+uint8_t StubbornLink::WaitingFor()
+{
+    return currentPackage;
 }

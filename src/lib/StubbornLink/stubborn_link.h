@@ -15,6 +15,8 @@ public:
     void SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive);
     bool ReceiveData(uint8_t packageIndex, uint8_t data);
     uint8_t GetReceivedData();
+    uint8_t WaitingFor();
+    void Unlock();
 private:
     uint8_t *data;
     bool finishedData;
@@ -22,4 +24,5 @@ private:
     volatile uint8_t bytesPerCall;
     volatile uint8_t currentOffset;
     volatile uint8_t currentPackage;
+    volatile bool waitNextConfirmation;
 };
