@@ -21,7 +21,7 @@ const char *password = STAPSK;
 extern hwTimer hwTimer;
 
 const byte DNS_PORT = 53;
-IPAddress apIP(8, 8, 8, 8);
+IPAddress apIP(10, 0, 0, 1);
 DNSServer dnsServer;
 ESP8266WebServer server(80);
 

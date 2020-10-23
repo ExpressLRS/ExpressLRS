@@ -34,7 +34,7 @@ const char *myHostname = "expresslrs";
 unsigned int status = WL_IDLE_STATUS;
 
 const byte DNS_PORT = 53;
-IPAddress apIP(8, 8, 8, 8);
+IPAddress apIP(10, 0, 0, 1);
 DNSServer dnsServer;
 WebServer server(80);
 
