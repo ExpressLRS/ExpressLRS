@@ -286,7 +286,7 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 #endif
 }
 
-void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t size, uint8_t *data)
+void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
     if (CRSF::CRSFstate)
     {
@@ -294,8 +294,8 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t size, uint8_t *data)
 #ifdef PLATFORM_ESP32
         xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
 #endif
-        SerialOutFIFO.push(size); // length
-        SerialOutFIFO.pushBytes(data, size);
+        SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
+        SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
 #ifdef PLATFORM_ESP32
         xSemaphoreGive(mutexOutFIFO);
 #endif
