@@ -4,11 +4,15 @@ import time
 import sys, glob
 
 import serials_find
-
 try:
     requestedBaudrate = int(sys.argv[1])
 except:
     requestedBaudrate = 420000
+    
+try:
+    requestedParity = sys.argv[2]
+except:
+    requestedParity = " "
 
 port = serials_find.get_serial_port()
 print("Going to use %s\n" % port)
@@ -74,8 +78,8 @@ else:
     sys.exit()
 
 sys.stdout.write("Setting serial passthrough...\n")
-s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n').encode())
-sys.stdout.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+'\n'))
+s.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+" 0 "+str(requestedParity)+'\n').encode())
+sys.stdout.write(("serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)+" 0 "+str(requestedParity)+'\n'))
 time.sleep(1)
 
 

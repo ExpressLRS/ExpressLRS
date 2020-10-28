@@ -16,7 +16,10 @@ if "windows" in platform_name:
     sys.stdout.write("Windows based operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
+        try:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]+" "+sys.argv[4]))
+        except:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
@@ -27,7 +30,10 @@ elif "linux" in platform_name:
     sys.stdout.write("Linux operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
+        try:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]+" "+sys.argv[4]))
+        except:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
@@ -38,7 +44,10 @@ elif "darwin" in platform_name:
     sys.stdout.write("darwin operating system detected\n")
     sys.stdout.flush()
     try:
-        os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
+        try:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]+" "+sys.argv[4]))
+        except:
+            os.system((sys.argv[1]+" "+sys.argv[2]+" "+sys.argv[3]))
         sys.stdout.flush()
     except:
         sys.stdout.write("no syscall provided, exiting...\n")
