@@ -13,6 +13,10 @@
 
 static UART_HandleTypeDef huart1;
 
+#ifndef UART_BAUD
+#define UART_BAUD 420000
+#endif
+
 #ifdef DEBUG_UART
 #if (DEBUG_UART == UART_NUM)
 #error "Same uart cannot be used for debug and comminucation!"

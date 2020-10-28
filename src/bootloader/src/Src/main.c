@@ -23,15 +23,15 @@
 #include "main.h"
 #include "uart.h"
 #include "flash.h"
-#if (TARGET_XMODEM == 1)
+#if XMODEM
 #include "xmodem.h"
-#else
-#if STK500
+#elif STK500
 #include "stk500.h"
-#else // STK500
+#elif FRSKY
 #include "frsky.h"
-#endif // STK500
-#endif // TARGET_XMODEM
+#else
+#error "Upload protocol not defined!"
+#endif
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -81,7 +81,7 @@ void duplex_state_set(const enum duplex_state state)
 #endif
 }
 
-#if (TARGET_XMODEM == 1)
+#if XMODEM
 static void boot_code(void)
 {
 #ifdef BTN_Pin
@@ -151,12 +151,6 @@ static void boot_code(void)
   /* Infinite loop */
   while (1)
   {
-
-    /* Turn on the green LED to indicate, that we are in bootloader mode.*/
-    // HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-    /* Ask for new data and start the Xmodem protocol. */
-    // uart_transmit_str((uint8_t*)"Please send a new binary file with Xmodem
-    // protocol to update the firmware.\n\r");
     xmodem_receive();
     /* We only exit the xmodem protocol, if there are any errors.
      * In that case, notify the user and start over. */
@@ -164,7 +158,7 @@ static void boot_code(void)
   }
 }
 
-#else // TARGET_XMODEM == 0
+#else // !XMODEM
 
 #define BOOT_WAIT 300 // ms
 
@@ -199,9 +193,7 @@ static void boot_code(void)
   }
 }
 
-#endif /* TARGET_XMODEM */
-
-extern int FLASH_START;
+#endif /* XMODEM */
 
 /**
  * @brief  The application entry point.
@@ -211,10 +203,12 @@ int main(void)
 {
   /* MCU Configuration---------------------------------------------*/
 
+  /* Make sure the vectors are set correctly */
+  SCB->VTOR = BL_FLASH_START;
+
   /* Reset of all peripherals, Initializes the Flash interface and the
    * Systick.
    */
-  SCB->VTOR = (uint32_t)&FLASH_START;
   HAL_Init();
 
   /* Configure the system clock */
@@ -229,13 +223,6 @@ int main(void)
   boot_code();
 }
 
-#if defined(STM32L0xx) || defined(STM32L4xx)
-void SysTick_Handler(void)
-{
-  HAL_IncTick();
-  HAL_SYSTICK_IRQHandler();
-}
-#endif
 
 /**
  * @brief System Clock Configuration

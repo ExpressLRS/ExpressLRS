@@ -10,7 +10,7 @@ def rename_bin(source, target, env):
     print("Source bin: %s" % src_bin)
     bin_path = os.path.dirname(src_bin)
     #dst_bin = os.path.join(bin_path, 'bootloader_'+env['PIOENV']+'.bin')
-    dst_bin = os.path.join("binaries", 'bootloader_'+env['PIOENV']+'.bin')
+    dst_bin = os.path.join("..", 'bootloader_'+env['PIOENV']+'.bin')
     print("Destination bin: %s" % dst_bin)
     shutil.copyfile(src_bin, dst_bin)
 

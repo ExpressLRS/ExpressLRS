@@ -10,13 +10,12 @@
 #include "xmodem.h"
 #include "main.h"
 
-uint16_t flashcounter = 0;
+uint16_t flashcounter;
 
 /* Global variables. */
-static uint8_t xmodem_packet_number = 1u; /**< Packet number counter. */
-static uint32_t xmodem_actual_flash_address =
-    0u; /**< Address where we have to write. */
-static uint8_t x_first_packet_received = false; /**< First packet or not. */
+static uint8_t xmodem_packet_number; /**< Packet number counter. */
+static uint32_t xmodem_actual_flash_address; /**< Address where we have to write. */
+static uint8_t x_first_packet_received; /**< First packet or not. */
 
 /* Local functions. */
 static uint16_t xmodem_calc_crc(uint8_t *data, uint16_t length);
@@ -24,7 +23,7 @@ static xmodem_status xmodem_handle_packet(uint8_t size);
 static xmodem_status xmodem_error_handler(uint8_t *error_number,
                                           uint8_t max_error_number);
 
-bool ledState = false;
+bool ledState;
 
 /**
  * @brief   This function is the base of the Xmodem protocol.

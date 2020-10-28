@@ -60,6 +60,10 @@ void duplex_state_set(const enum duplex_state state);
 int8_t timer_end(void);
 
 /* Private defines -----------------------------------------------------------*/
+#if !defined(XMODEM) && !STK500 && !FRSKY
+#define XMODEM 1 // Default is XMODEM protocol
+#endif
+
 #ifdef BUTTON
 #if TARGET_R9MX
 #define BTN_Pin GPIO_PIN_0
@@ -108,7 +112,7 @@ int8_t timer_end(void);
 #if TARGET_R9M
 #define DUPLEX_Pin GPIO_PIN_5
 #define DUPLEX_Port GPIOA
-#endif
+#endif /* TARGET_R9M */
 
 #endif /* __MAIN_H */
 

@@ -21,12 +21,18 @@
 #endif
 #include <stdint.h>
 
+/* Extern vertor start address */
+extern uint32_t g_pfnVectors;
+#define BL_FLASH_START ((uint32_t)&g_pfnVectors)
+
+/* Application space offset */
+#ifndef FLASH_APP_OFFSET
+#error "FLASH_APP_OFFSET is mandatory parameter!"
+#endif // FLASH_APP_OFFSET
+
 /* Start and end addresses of the user application. */
 #ifndef FLASH_BASE
 #define FLASH_BASE ((uint32_t)0x08000000u)
-#endif
-#ifndef FLASH_APP_OFFSET
-#define FLASH_APP_OFFSET ((uint32_t)0x8000u)
 #endif
 #define FLASH_APP_START_ADDRESS (FLASH_BASE + FLASH_APP_OFFSET)
 #define FLASH_APP_END_ADDRESS ((uint32_t)FLASH_BANK1_END - 0x10u) /**< Leave a little extra space at the end. */
