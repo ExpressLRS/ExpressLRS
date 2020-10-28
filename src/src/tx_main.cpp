@@ -261,6 +261,9 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
+#ifdef ENABLE_TELMETRY
+  Radio.TXdataBuffer[6] =  Radio.TXdataBuffer[6] & ~1 | TelementryReceiver.GetCurrentConfirm();
+#endif
 }
 
 void ICACHE_RAM_ATTR GenerateMSPData()
