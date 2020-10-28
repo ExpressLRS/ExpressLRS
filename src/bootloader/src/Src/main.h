@@ -31,12 +31,18 @@
 #elif defined(STM32F1)
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal.h"
+#elif defined(STM32F3xx)
+#include "stm32f3xx.h"
+#include "stm32f3xx_hal.h"
 #elif defined(STM32L4xx)
 #include "stm32l4xx.h"
 #include "stm32l4xx_hal.h"
 #else
 #error "Not supported CPU type!"
 #endif
+
+#define STRINGIFY(str) #str
+#define BUILD_MCU_TYPE(type) STRINGIFY(BL_TYPE: type)
 
 /* Private includes ----------------------------------------------------------*/
 
@@ -71,8 +77,12 @@ int8_t timer_end(void);
 #elif TARGET_R9MM
 #define BTN_Pin GPIO_PIN_13
 #define BTN_GPIO_Port GPIOC
+#elif TARGET_GHOST_RX_V1_2
+//#define BTN_Pin GPIO_PIN_3
+//#define BTN_GPIO_Port GPIOA
 #endif
 #endif /* BUTTON */
+
 #ifdef LED_GRN
 #if TARGET_R9MM
 #define LED_GRN_Pin GPIO_PIN_3
@@ -85,6 +95,7 @@ int8_t timer_end(void);
 #define LED_GRN_GPIO_Port GPIOB
 #endif
 #endif /* LED_GRN */
+
 #ifdef LED_RED
 #if TARGET_R9MM
 #define LED_RED_Pin GPIO_PIN_1
@@ -100,12 +111,13 @@ int8_t timer_end(void);
 #define LED_RED_GPIO_Port GPIOA
 #elif TARGET_RAK811
 
-#elif TARGET_SX1280_RX_v02
-#define LED_RED_Pin GPIO_PIN_15
-#define LED_RED_GPIO_Port GPIOB
 #elif TARGET_R9MX
 #define LED_RED_Pin GPIO_PIN_2
 #define LED_RED_GPIO_Port GPIOB
+#elif TARGET_GHOST_RX_V1_2
+// TODO: WX2812, needs special handling!
+//#define LED_RED_Pin GPIO_PIN_5
+//#define LED_RED_GPIO_Port GPIOB
 #endif
 #endif /* LED_RED */
 

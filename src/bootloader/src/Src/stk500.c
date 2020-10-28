@@ -69,7 +69,7 @@ static int8_t stk500_update(void)
     // STK500 MUST start with STK_GET_SYNC first
     if (!initial_sync && (ch != STK_GET_SYNC))
       return -1;
-    
+
     led ^= 1;
     led_red_state_set(led);
 
@@ -158,7 +158,7 @@ static int8_t stk500_update(void)
       // Read command terminator, start reply
       verifySpace();
 
-      if ((uint32_t)memAddress < FLASH_BANK1_END)
+      if ((uint32_t)memAddress < FLASH_APP_END_ADDRESS)
       {
         if ((uint32_t)memAddress >= FLASH_APP_START_ADDRESS)
         {

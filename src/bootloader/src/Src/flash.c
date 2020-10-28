@@ -14,6 +14,33 @@
 #define FLASH_TYPEPROGRAM_HALFWORD 0 // should fail
 #endif
 
+#if /*defined(STM32F3xx) &&*/ defined(FLASH_SIZE_DATA_REGISTER)
+uint32_t get_flash_end(void) {
+  uint32_t end = FLASH_BASE;
+  switch ((*((uint16_t *)FLASH_SIZE_DATA_REGISTER))) {
+  case 0x200U:
+    end += 0x7FFFFU;
+    break;
+  case 0x100U:
+    end += 0x3FFFFU;
+    break;
+  case 0x80U:
+    end += 0x1FFFFU;
+    break;
+  case 0x40U:
+    end += 0xFFFFU;
+    break;
+  case 0x20U:
+    end += 0x7FFFU;
+    break;
+  default:
+    end += 0x3FFFU;
+    break;
+  }
+  return end;
+}
+#endif /* FLASH_SIZE_DATA_REGISTER */
+
 /* Function pointer for jumping to user application. */
 typedef void (*fnc_ptr)(void);
 
@@ -39,7 +66,7 @@ flash_status flash_erase(uint32_t address)
   erase_init.Banks = FLASH_BANK_1;
 #endif
   /* Calculate the number of pages from "address" and the end of flash. */
-  erase_init.NbPages = (FLASH_BANK1_END - address + 1) / FLASH_PAGE_SIZE;
+  erase_init.NbPages = (FLASH_APP_END_ADDRESS - address + 1) / FLASH_PAGE_SIZE;
   /* Do the actual erasing. */
   HAL_FLASH_Unlock();
   if (HAL_OK == HAL_FLASHEx_Erase(&erase_init, &error))
