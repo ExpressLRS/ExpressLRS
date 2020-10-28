@@ -17,6 +17,7 @@ uint8_t Telemetry::currentTelemetryByte = 0;
 uint8_t Telemetry::currentPayloadIndex = 0;
 bool Telemetry::callBootloader = false;
 uint8_t Telemetry::receivedPackages = 0;
+#ifdef ENABLE_TELEMETRY
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
@@ -75,6 +76,7 @@ uint8_t Telemetry::ReceivedPackagesCount()
 {
     return receivedPackages;
 }
+#endif
 
 void Telemetry::ResetState()
 {
@@ -83,6 +85,7 @@ void Telemetry::ResetState()
     currentPayloadIndex = 0;
     receivedPackages = 0;
 
+    #ifdef ENABLE_TELEMETRY
     uint8_t offset = 0;
 
     for (int8_t i = 0; i < payloadTypesCount; i++)
@@ -98,6 +101,7 @@ void Telemetry::ResetState()
         }
         #endif
     }
+    #endif
 }
 
 bool Telemetry::RXhandleUARTin(uint8_t data)
@@ -166,7 +170,7 @@ void Telemetry::AppendTelemetryPackage()
         callBootloader = true;
         return;
     }
-
+    #ifdef ENABLE_TELEMETRY
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
         if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
@@ -185,5 +189,6 @@ void Telemetry::AppendTelemetryPackage()
             return;
         }
     }
+    #endif
 }
 #endif
