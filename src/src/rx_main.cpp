@@ -223,6 +223,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t *data;
     uint8_t maxLength;
     uint8_t packageIndex;
+    static uint8_t telemetryDataCount = 0;
     #endif
     uint8_t openTxRSSI;
 
@@ -270,7 +271,16 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             break;
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
-            NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
+            if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_1_16 && telemetryDataCount < 2)
+            {
+                telemetryDataCount++;
+            }
+            else
+            {
+                NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
+                telemetryDataCount = 0;
+            }
+
             TelementrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
             Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
             Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
