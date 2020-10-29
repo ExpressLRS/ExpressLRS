@@ -86,8 +86,8 @@ s.close() # Must be closed for stm32flash to open
 print()
 print()
 
-subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', 'COM6', '-k'])
-subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', 'COM6', '-u'])
-subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', 'COM6', '-w', 'bootloader\Bootloader.hex'])
+subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', port, '-k'])
+subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', port, '-u'])
+subprocess.call([env['PROJECT_PACKAGES_DIR']+'/tool-stm32duino/stm32flash/stm32flash', port, '-w', 'bootloader\Bootloader.hex'])
 
 sys.exit()
