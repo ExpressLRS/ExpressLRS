@@ -12,9 +12,9 @@
 
 ExpressLRS is an open source RC link for RC applications. It is based on **SX127x**/**SX1280** hardware combined with an **ESP8285**, **ESP32** or **STM32** for RX and TX respectively. ExpressLRS supports both `900 MHz` and `2.4 GHz` hardware options.
 
-ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)** or **custom PCBs** can be make to suit. It can run at up to `250hz` or down to `50hz` depending on your preference of range or low latency.
+ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)** or **custom PCBs** can be make to suit. It can run at up to `500hz` or down to `50hz` depending on your preference of range or low latency.
 
-At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `250 Hz` is currently supported with plans to extend this to `500 Hz` once OpenTX support is added. This makes ExpressLRS one of the fastest RC links available while still offering long-range preformance. 
+At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `500 Hz` is currently supported with a custom openTX binary with plans to extend this to `1000 Hz` once OpenTX support is added. This makes ExpressLRS one of the fastest RC links available while still offering long-range preformance. 
 
 ![LatencyChart](https://raw.githubusercontent.com/AlessandroAU/ExpressLRS/master-dev/img/Average%20Total%20Latency.png)
 
