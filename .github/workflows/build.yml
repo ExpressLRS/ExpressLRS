@@ -28,6 +28,7 @@ jobs:
         platformio platform update
         mkdir -p ~/artifcats
         cd src
+        export PLATFORMIO_DEFAULT_ENVS = Frsky_TX_R9M_via_STLINK, Frsky_TX_R9M_via_stock_BL, Frsky_TX_R9M_via_WIFI, Frsky_TX_R9M_LITE_via_STLINK, Frsky_TX_R9M_LITE_PRO_via_STLINK, Frsky_RX_R9MM_R9MINI_via_STLINK, Frsky_RX_R9MM_R9MINI_via_BetaflightPassthrough, Frsky_RX_R9MX_via_STLINK, Frsky_RX_R9MX_via_BetaflightPassthrough, DIY_900_TX_TTGO_V1_SX127x_via_UART, DIY_900_TX_TTGO_V2_SX127x_via_UART, DIY_900_TX_ESP32_SX127x_E19_via_UART, DIY_900_TX_ESP32_SX127x_RFM95_via_UART, DIY_900_RX_ESP8285_SX127x_via_UART, DIY_900_RX_ESP8285_SX127x_via_BetaflightPassthrough
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
         platformio run
         mv .pio/build ~/artifcats/AU_915
@@ -43,6 +44,7 @@ jobs:
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_EU_433
         platformio run
         mv .pio/build ~/artifcats/EU_433
+        export PLATFORMIO_DEFAULT_ENVS = DIY_2400_TX_ESP32_SX1280_Mini_via_UART, DIY_2400_TX_ESP32_SX1280_E28_via_UART, DIY_2400_TX_ESP32_SX1280_LORA1280F27_via_UART, DIY_2400_RX_ESP8285_SX1280_via_UART, DIY_2400_RX_ESP8285_SX1280_via_BetaflightPassthrough
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400
         platformio run
         mv .pio/build ~/artifcats/ISM_2400
