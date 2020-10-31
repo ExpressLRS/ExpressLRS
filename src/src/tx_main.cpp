@@ -389,6 +389,12 @@ void RadioUARTconnected()
   hwTimer.resume();
 }
 
+void sendLuaParams()
+{
+  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 1, Regulatory_Domain_Index, (uint8_t)crsf.BadPktsCountResult, (uint8_t)(crsf.GoodPktsCountResult & 0xFF00), (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
+  crsf.sendLUAresponse(luaCurrParams, 7);
+}
+
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
@@ -482,7 +488,7 @@ void HandleUpdateParameter()
   default:
     break;
   }
-
+  sendLuaParams();
   UpdateParamReq = false;
   config.SetRate(ExpressLRS_currAirRate_Modparams->index);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
