@@ -7,8 +7,7 @@
 
   Original author: AlessandroAU + Cruwaller
 ]] --
-
-local commitSha = '      '
+local commitSha = '??????'
 local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 local version = 'v0.1'
 local gotFirstResp = false
@@ -18,6 +17,9 @@ local ReqWaitTime = 100;
 local UartGoodPkts = 0;
 local UartBadPkts = 0;
 local StopUpdate = false;
+
+local bindmode = false;
+local wifiupdatemode = false;
 
 local SX127x_RATES = {
 	list = {'25 Hz', '50 Hz', '100 Hz', '200 Hz'},
@@ -69,8 +71,13 @@ local RFfreq = {
 }
 
 local function binding(item, event)
-    playTone(2000, 50, 0)
-	crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+	if (bindmode == true) then
+		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x00})
+	else
+		crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
+	end
+	
+	playTone(2000, 50, 0)
     item.exec = false
     return 0
 end
@@ -79,7 +86,7 @@ local Bind = {
     index = 5,
     editable = false,
     name = '[Bind]',
-    exec = true,
+    exec = false,
     func = binding,
     selected = 99,
     list = {},
@@ -89,8 +96,8 @@ local Bind = {
 }
 
 local function web_server_start(item, event)
-    crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 5, 1})
-    playTone(2000, 50, 0)
+	crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFE, 0x01})
+	playTone(2000, 50, 0)
     item.exec = false
     return 0
 end
@@ -98,7 +105,7 @@ end
 local WebServer = {
     index = 5,
     editable = false,
-    name = '[Web Server]',
+    name = '[Wifi Update]',
     exec = false,
     func = web_server_start,
     selected = 99,
@@ -108,17 +115,17 @@ local WebServer = {
     offsets = {left=65, right=0, top=5, bottom=5},
 }
 
-local exit_script = {
-    index = 6,
-    editable = false,
-    action = 'exit',
-    name = '[EXIT]',
-    selected = 99,
-    list = {},
-    values = {},
-    max_allowed = 0,
-    offsets = {left=5, right=0, top=5, bottom=5},
-}
+-- local exit_script = {
+    -- index = 7,
+    -- editable = false,
+    -- action = 'exit',
+    -- name = '[EXIT]',
+    -- selected = 99,
+    -- list = {},
+    -- values = {},
+    -- max_allowed = 0,
+    -- offsets = {left=5, right=0, top=5, bottom=5},
+-- }
 
 local menu = {
     selected = 1,
@@ -194,9 +201,16 @@ local function refreshLCD()
 
     local yOffset = radio_data.topOffset;
     local lOffset = radio_data.leftOffset;
-
+	
     lcd.clear()
-    lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
+	if wifiupdatemode == true then --make this less hacky later
+		lcd.drawText(lOffset, yOffset, "Goto http://10.0.0.1   ", INVERS)
+	elseif bindmode == true then
+		lcd.drawText(lOffset, yOffset, "Binding not yet needed...", INVERS)
+	else	
+		lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
+	end
+    
     yOffset = radio_data.yOffset_val
 
     for idx,item in pairs(menu.list) do
@@ -271,21 +285,15 @@ local function processResp()
 		return
 	else
 		if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
-			if(data[3] == 0xFF) then
-				if(data[4] ==  0x01) then -- bind mode active
-					bindmode = 1
-				else
-					bindmode = 0
-				end
-			elseif(data[3] == 0xFE) then -- First half of commit sha
-				commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. string.sub(commitSha, 4, 6)
-			elseif(data[3] == 0xFD) then -- Second half of commit sha
-				commitSha = string.sub(commitSha, 1, 3) .. shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1]
-			else
+		
+			if(data[3] == 0xFF) and #data == 11 then
+				bindmode = bit32.btest(0x01, data[4]) -- bind mode active 
+				wifiupdatemode = bit32.btest(0x02, data[4]) 
+				
 				if StopUpdate == false then 
-					TLMinterval.selected = data[4]
-					MaxPower.selected = data[5]
-					if data[6] == 6 then
+					TLMinterval.selected = data[6]
+					MaxPower.selected = data[7]
+					if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
 						AirRate.values = SX128x_RATES.values
@@ -296,15 +304,17 @@ local function processResp()
 						AirRate.values = SX127x_RATES.values
 						AirRate.max_allowed = #SX127x_RATES.values
 					end
-					RFfreq.selected = data[6]
-					AirRate.selected =  GetIndexOf(AirRate.values, data[3])
+					RFfreq.selected = data[8]
+					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
 				end
-				if(data[7] ~= nil and data[8] ~= nil and data[9] ~= nil) then
-					UartBadPkts = data[7]
-					UartGoodPkts = data[8] * 256 + data[9] 
-				end
+				
+				UartBadPkts = data[9]
+				UartGoodPkts = data[10] * 256 + data[11] 
 
+			elseif(data[3] == 0xFE) and #data == 9 then -- First half of commit sha
+				commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. shaLUT[data[7]+1] .. shaLUT[data[8]+1] .. shaLUT[data[9]+1]
 			end
+			
 			if gotFirstResp == false then -- detect when first contact is made with TX module
 				gotFirstResp = true
 			end
@@ -335,7 +345,7 @@ end
 ]]--
 local function run_func(event)
 
-    if gotFirstResp == false and (getTime() > (NewReqTime + ReqWaitTime)) then
+    if (gotFirstResp == false or commitSha == '??????') and (getTime() > (NewReqTime + ReqWaitTime)) then
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
 		NewReqTime = getTime()
     end

@@ -63,6 +63,7 @@ void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
+bool bindMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
@@ -79,8 +80,7 @@ LPF LPD_DownlinkLQ(1);
 volatile bool UpdateParamReq = false;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
-uint8_t luaCommitPacket[] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2]};
-uint8_t luaCommitOtherHalfPacket[] = {(uint8_t)0xFD, thisCommit[3], thisCommit[4], thisCommit[5]};
+uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
 
@@ -361,23 +361,32 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
 
-void ICACHE_RAM_ATTR RadioUARTconnected()
+void ICACHE_RAM_ATTR sendLuaParams()
 {
-  hwTimer.resume();
-  //inital state variables, maybe move elsewhere?
-  for (int i = 0; i < 3; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
-  {
-    uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
-    crsf.sendLUAresponse(LUAdisableWebupdate);
-    uint8_t LUAbindDone[4] = {0xFF, 0x00, 0x00, 0x00};
-    crsf.sendLUAresponse(LUAbindDone);
-  }
+  uint8_t luaParams[] = {0xFF,
+                         (uint8_t)(bindMode | (webUpdateMode << 1)),
+                         (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
+                         (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1),
+                         (uint8_t)(POWERMGNT.currPower() + 1),
+                         (uint8_t)Regulatory_Domain_Index,
+                         (uint8_t)crsf.BadPktsCountResult,
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF00) >> 8,
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
+
+  crsf.sendLUAresponse(luaParams, 9);
 }
 
-void sendLuaParams()
+void RadioUARTconnected()
 {
-  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 1, Regulatory_Domain_Index, (uint8_t)crsf.BadPktsCountResult, (uint8_t)(crsf.GoodPktsCountResult & 0xFF00), (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
-  crsf.sendLUAresponse(luaCurrParams, 7);
+  //inital state variables, maybe move elsewhere?
+  for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
+  {
+    crsf.sendLUAresponse(luaCommitPacket, 7);
+    delay(100);
+    sendLuaParams();
+    delay(100);
+  }
+  hwTimer.resume();
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -406,8 +415,8 @@ void HandleUpdateParameter()
   {
   case 0: // send all params
     Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket, 4);
-    crsf.sendLUAresponse(luaCommitOtherHalfPacket, 4);
+    sendLuaParams();
+    crsf.sendLUAresponse(luaCommitPacket, 7);
     break;
 
   case 1:
@@ -445,16 +454,13 @@ void HandleUpdateParameter()
     if (crsf.ParameterUpdateData[1] == 1)
     {
 #ifdef PLATFORM_ESP32
-      uint8_t LUAdisableWebupdate[4] = {0xFE, 0x01, 0x00, 0x00};
-      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
-      delay(500);
-      Serial.println("Wifi Update Mode Requested!");
       webUpdateMode = true;
+      Serial.println("Wifi Update Mode Requested!");
+      sendLuaParams();
+      delay(500);
       BeginWebUpdate();
-      return; // no need to do anything else
 #else
-      uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
-      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
+      webUpdateMode = false;
       Serial.println("Wifi Update Mode Requested but not supported on this platform!");
 #endif
       break;
@@ -464,28 +470,24 @@ void HandleUpdateParameter()
     if (crsf.ParameterUpdateData[1] == 1)
     {
       Serial.println("Binding Requested!");
-      uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
-      crsf.sendLUAresponse(luaBindingRequestedPacket, 4);
-      //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done
+      bindMode = true;
+    }
+    else
+    {
+      Serial.println("Binding Stopped!");
+      bindMode = false;
     }
     break;
 
   default:
     break;
   }
-  sendLuaParams();
-  UpdateParamReq = false;
-  uint8_t luaCurrParams[] = {
-    (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate + 3), 
-    (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1), 
-    (uint8_t)(POWERMGNT.currPower() + 2),
-    Regulatory_Domain_Index
-  };
-  crsf.sendLUAresponse(luaCurrParams);
 
+  UpdateParamReq = false;
   config.SetRate(ExpressLRS_currAirRate_Modparams->index);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
   config.SetPower(POWERMGNT.currPower());
+  sendLuaParams();
 
   if (config.IsModified())
   {
