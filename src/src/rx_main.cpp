@@ -18,8 +18,12 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
+#ifdef ENABLE_TELEMETRY
+#include <telemetry_protocol.h>
 #include <telemetry.h>
 #include <stubborn_sender.h>
+#endif
+
 #include "FHSS.h"
 // #include "Debug.h"
 #include "OTA.h"
@@ -63,7 +67,7 @@ RxConfig config;
 Telemetry telemetry;
 
 #ifdef ENABLE_TELEMETRY
-StubbornSender TelementrySender;
+StubbornSender TelementrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
 uint8_t NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
@@ -462,7 +466,7 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
 #endif
 #ifdef ENABLE_TELEMETRY
-    TelementrySender.ConfirmCurrentPayload(crsf.PackedRCdataOut.ch7 > 0);
+    TelementrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
     crsf.PackedRCdataOut.ch7 = 0;
 #endif
 }
@@ -513,7 +517,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
-    #ifdef ENABLE_TELEMETRY
+    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
     bool telemetryConfirmValue;
     #endif
 
