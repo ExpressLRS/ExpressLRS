@@ -1,6 +1,12 @@
 #include <cstdint>
 #include "stubborn_sender.h"
 
+StubbornSender::StubbornSender(uint8_t maxPackageIndex)
+{
+    this->maxPackageIndex = maxPackageIndex;
+    this->ResetState();
+}
+
 void StubbornSender::ResetState()
 {
     data = 0;
@@ -10,15 +16,24 @@ void StubbornSender::ResetState()
     length = 0;
     waitNextConfirmation = false;
     waitUntilTelemtryConfirm = true;
+    waitCount = 0;
+    resetState = false;
 }
 
 void StubbornSender::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit, uint8_t bytesPerCall)
 {
+    if (lengthToTransmit / bytesPerCall >= maxPackageIndex)
+    {
+        return;
+    }
+
     length = lengthToTransmit;
     data = dataToTransmit;
     currentOffset = 0;
     currentPackage = 1;
+    waitCount = 0;
     waitNextConfirmation = false;
+    resetState = false;
     this->bytesPerCall = bytesPerCall;
 }
 
@@ -34,6 +49,13 @@ void StubbornSender::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, ui
     *packageIndex = 0;
     if (!IsActive())
     {
+        return;
+    }
+
+    if (resetState)
+    {
+        *packageIndex = maxPackageIndex;
+        waitNextConfirmation = true;
         return;
     }
 
@@ -65,11 +87,19 @@ void StubbornSender::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, ui
 
 void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
 {
+    waitCount++;
     if (telemetryConfirmValue != waitUntilTelemtryConfirm)
     {
+        if (waitCount > WAIT_FOR_RESYNC)
+        {
+            waitUntilTelemtryConfirm = !telemetryConfirmValue;
+            resetState = true;
+        }
         return;
     }
+
     waitUntilTelemtryConfirm = !waitUntilTelemtryConfirm;
+    waitCount = 0;
     if (waitNextConfirmation)
     {
         length = 0;

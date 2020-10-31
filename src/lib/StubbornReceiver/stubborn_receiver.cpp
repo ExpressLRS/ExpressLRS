@@ -1,6 +1,12 @@
 #include <cstdint>
 #include "stubborn_receiver.h"
 
+StubbornReceiver::StubbornReceiver(uint8_t maxPackageIndex)
+{
+    this->maxPackageIndex = maxPackageIndex;
+    this->ResetState();
+}
+
 void StubbornReceiver::ResetState()
 {
     data = 0;
@@ -32,6 +38,15 @@ bool StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* recei
     {
         finishedData = true;
         telemetryConfirm = !telemetryConfirm;
+        return true;
+    }
+
+    if (packageIndex == maxPackageIndex)
+    {
+        telemetryConfirm = !telemetryConfirm;
+        currentPackage = 1;
+        currentOffset = 0;
+        finishedData = false;
         return true;
     }
 

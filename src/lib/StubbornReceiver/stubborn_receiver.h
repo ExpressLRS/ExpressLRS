@@ -5,6 +5,7 @@
 class StubbornReceiver
 {
 public:
+    StubbornReceiver(uint8_t maxPackageIndex);
     void ResetState();
     void SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive, uint8_t bytesPerCall);
     bool ReceiveData(uint8_t packageIndex, volatile uint8_t* data);
@@ -19,4 +20,5 @@ private:
     volatile uint8_t currentOffset;
     volatile uint8_t currentPackage;
     volatile bool telemetryConfirm;
+    volatile uint8_t maxPackageIndex;
 };
