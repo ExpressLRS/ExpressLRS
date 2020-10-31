@@ -361,7 +361,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
 
-void ICACHE_RAM_ATTR sendLuaParams()
+void sendLuaParams()
 {
   uint8_t luaParams[] = {0xFF,
                          (uint8_t)(bindMode | (webUpdateMode << 1)),
@@ -387,12 +387,6 @@ void RadioUARTconnected()
     delay(100);
   }
   hwTimer.resume();
-}
-
-void sendLuaParams()
-{
-  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 1, Regulatory_Domain_Index, (uint8_t)crsf.BadPktsCountResult, (uint8_t)(crsf.GoodPktsCountResult & 0xFF00), (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
-  crsf.sendLUAresponse(luaCurrParams, 7);
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()

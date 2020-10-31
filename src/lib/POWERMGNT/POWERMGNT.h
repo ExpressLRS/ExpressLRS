@@ -30,11 +30,6 @@
 #define DefaultPowerEnum 2
 #endif
 
-#ifdef TARGET_TX_ESP32_SX1280_V1
-#define MaxPower 1
-#define DefaultPowerEnum 1
-#endif
-
 #ifdef TARGET_R9M_LITE_PRO_TX
 #define MaxPower 2
 #define DefaultPowerEnum 2
