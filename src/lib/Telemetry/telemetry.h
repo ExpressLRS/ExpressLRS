@@ -35,23 +35,24 @@ typedef struct crsf_telemetry_package_t {
 class Telemetry
 {
 public:
+    Telemetry();
     bool RXhandleUARTin(uint8_t data);
     void ResetState();
+    bool ShouldCallBootloader();
     #ifdef ENABLE_TELEMETRY
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t* GetCurrentPayload();
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
     #endif
-    static bool callBootloader;
-
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     void AppendTelemetryPackage();
-    static uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
-    static telemetry_state_s telemtry_state;
-    static uint8_t currentTelemetryByte;
-    static uint8_t currentPayloadIndex;
-    static volatile crsf_telemetry_package_t *telemetryPackageHead;
-    static uint8_t receivedPackages;
+    uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
+    telemetry_state_s telemtry_state;
+    uint8_t currentTelemetryByte;
+    uint8_t currentPayloadIndex;
+    volatile crsf_telemetry_package_t *telemetryPackageHead;
+    uint8_t receivedPackages;
+    bool callBootloader;
 };

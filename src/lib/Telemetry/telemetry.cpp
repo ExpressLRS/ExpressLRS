@@ -7,16 +7,26 @@
 #include <iostream>
 using namespace std;
 #endif
-//#define TARGET_R9M_RX
+#define TARGET_R9M_RX
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 
-telemetry_state_s Telemetry::telemtry_state = TELEMTRY_IDLE;
-uint8_t Telemetry::CRSFinBuffer[CRSF_MAX_PACKET_LEN] = {0};
-uint8_t Telemetry::currentTelemetryByte = 0;
-uint8_t Telemetry::currentPayloadIndex = 0;
-bool Telemetry::callBootloader = false;
-uint8_t Telemetry::receivedPackages = 0;
+Telemetry::Telemetry()
+{
+    telemtry_state = TELEMTRY_IDLE;
+    currentTelemetryByte = 0;
+    currentPayloadIndex = 0;
+    callBootloader = false;
+    receivedPackages = 0;
+}
+
+bool Telemetry::ShouldCallBootloader()
+{
+    bool bootloader = callBootloader;
+    callBootloader = false;
+    return bootloader;
+}
+
 #ifdef ENABLE_TELEMETRY
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE);
 
