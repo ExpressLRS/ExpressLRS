@@ -121,7 +121,7 @@ void test_function_recover_from_junk(void)
         0xEC,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendDataWithoutCheck(bootloaderSequence, length);
-    TEST_ASSERT_EQUAL(true, telemetry.callBootloader);
+    TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
 }
 
 void test_function_bootloader_called(void)
@@ -131,7 +131,7 @@ void test_function_bootloader_called(void)
     int length = sizeof(bootloaderSequence);
     int sentLength = sendData(bootloaderSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
-    TEST_ASSERT_EQUAL(true, telemetry.callBootloader);
+    TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
 }
 
 void test_function_ignore_invalid_type(void)
