@@ -4,6 +4,14 @@
 
 #define WAIT_FOR_RESYNC 1000
 
+typedef enum {
+    SENDER_IDLE = 0,
+    SENDING,
+    SEND_NEXT,
+    WAIT_UNTIL_NEXT_CONFIRM,
+    RESYNC
+} stubborn_sender_state_s;
+
 class StubbornSender
 {
 public:
@@ -19,9 +27,9 @@ private:
     volatile uint8_t bytesPerCall;
     volatile uint8_t currentOffset;
     volatile uint8_t currentPackage;
-    volatile bool waitNextConfirmation;
     volatile bool waitUntilTelemtryConfirm;
     volatile bool resetState;
     volatile uint16_t waitCount;
     volatile uint8_t maxPackageIndex;
+    volatile stubborn_sender_state_s senderState;
 };

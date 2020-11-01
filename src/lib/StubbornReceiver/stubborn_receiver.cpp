@@ -32,13 +32,13 @@ void StubbornReceiver::SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceiv
     this->bytesPerCall = bytesPerCall;
 }
 
-bool StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* receiveData)
+void StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* receiveData)
 {
     if  (packageIndex == 0 && currentPackage > 1)
     {
         finishedData = true;
         telemetryConfirm = !telemetryConfirm;
-        return true;
+        return;
     }
 
     if (packageIndex == maxPackageIndex)
@@ -47,12 +47,12 @@ bool StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* recei
         currentPackage = 1;
         currentOffset = 0;
         finishedData = false;
-        return true;
+        return;
     }
 
     if (finishedData)
     {
-        return false;
+        return;
     }
 
     if (packageIndex == currentPackage)
@@ -64,10 +64,10 @@ bool StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* recei
 
         currentPackage++;
         telemetryConfirm = !telemetryConfirm;
-        return true;
+        return;
     }
 
-    return false;
+    return;
 }
 
 bool StubbornReceiver::HasFinishedData()

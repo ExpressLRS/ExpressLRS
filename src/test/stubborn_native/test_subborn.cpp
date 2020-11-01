@@ -32,6 +32,8 @@ void test_stubborn_link_sends_data(void)
     sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
     TEST_ASSERT_EQUAL(0, packageIndex);
     TEST_ASSERT_EQUAL(true, sender.IsActive());
+    sender.ConfirmCurrentPayload(!confirmValue);
+    TEST_ASSERT_EQUAL(true, sender.IsActive());
     sender.ConfirmCurrentPayload(confirmValue);
     TEST_ASSERT_EQUAL(false, sender.IsActive());
 }
@@ -121,10 +123,9 @@ void test_stubborn_link_receives_data(void)
 
     for(int i = 0; i < sizeof(batterySequence); i++)
     {
-        bool result = receiver.ReceiveData(i+1, batterySequence + i);
-        TEST_ASSERT_EQUAL(true, result);
+        receiver.ReceiveData(i+1, batterySequence + i);
     }
-    TEST_ASSERT_EQUAL(true, receiver.ReceiveData(0, 0));
+    receiver.ReceiveData(0, 0);
 
     for(int i = 0; i < sizeof(batterySequence); i++)
     {
@@ -143,10 +144,9 @@ void test_stubborn_link_receives_data_with_multiple_bytes(void)
 
     for(int i = 0; i < sizeof(batterySequence) / 3; i++)
     {
-        bool result = receiver.ReceiveData(i+1, batterySequence + (i * 5));
-        TEST_ASSERT_EQUAL(true, result);
+        receiver.ReceiveData(i+1, batterySequence + (i * 5));
     }
-    TEST_ASSERT_EQUAL(true, receiver.ReceiveData(0, 0));
+    receiver.ReceiveData(0, 0);
 
     for(int i = 0; i < sizeof(batterySequence); i++)
     {
@@ -159,7 +159,6 @@ void test_stubborn_link_receives_data_with_multiple_bytes(void)
 void test_stubborn_link_resyncs(void)
 {
     uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
-    uint8_t batterySequence2[] = {0xAC,10, 0x09,0,0,0,0,0,0,0,0,109};
     uint8_t buffer[100];
     uint8_t *data;
     uint8_t maxLength;
@@ -213,6 +212,64 @@ void test_stubborn_link_resyncs(void)
     receiver.Unlock();
 }
 
+void test_stubborn_link_sends_data_until_confirmation(void)
+{
+    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t *data;
+    uint8_t maxLength;
+    uint8_t packageIndex;
+    uint8_t buffer[100];
+
+    sender.ResetState();
+    sender.SetDataToTransmit(sizeof(batterySequence), batterySequence, 1);
+
+    receiver.ResetState();
+    receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
+
+    for(int i = 0; i < 100; i++)
+    {
+        sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        TEST_ASSERT_EQUAL(1, packageIndex);
+        receiver.ReceiveData(packageIndex, data);
+        sender.ConfirmCurrentPayload(!receiver.GetCurrentConfirm());
+    }
+
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    TEST_ASSERT_EQUAL(2, packageIndex);
+}
+
+void test_stubborn_link_multiple_packages(void)
+{
+    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t *data;
+    uint8_t maxLength;
+    uint8_t packageIndex;
+    uint8_t buffer[100];
+
+    receiver.ResetState();
+    receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
+    sender.ResetState();
+
+    for (int i = 0; i < 3; i++)
+    {
+        sender.SetDataToTransmit(sizeof(batterySequence), batterySequence, 1);
+        TEST_ASSERT_EQUAL(true, sender.IsActive());
+        for(int currentByte = 0; currentByte <= sizeof(batterySequence); currentByte++)
+        {
+            sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+            receiver.ReceiveData(packageIndex, data);
+            sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+        }
+
+        TEST_ASSERT_EQUAL(false, sender.IsActive());
+        TEST_ASSERT_EQUAL(true, receiver.HasFinishedData());
+        receiver.Unlock();
+        TEST_ASSERT_EQUAL(false, receiver.HasFinishedData());
+    }
+
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -223,6 +280,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_stubborn_link_receives_data);
     RUN_TEST(test_stubborn_link_receives_data_with_multiple_bytes);
     RUN_TEST(test_stubborn_link_resyncs);
+    RUN_TEST(test_stubborn_link_sends_data_until_confirmation);
+    RUN_TEST(test_stubborn_link_multiple_packages);
     UNITY_END();
 
     return 0;

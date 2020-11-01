@@ -14,15 +14,14 @@ void StubbornSender::ResetState()
     currentOffset = 0;
     currentPackage = 0;
     length = 0;
-    waitNextConfirmation = false;
     waitUntilTelemtryConfirm = true;
     waitCount = 0;
-    resetState = false;
+    senderState = SENDER_IDLE;
 }
 
 void StubbornSender::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit, uint8_t bytesPerCall)
 {
-    if (lengthToTransmit / bytesPerCall >= maxPackageIndex)
+    if (senderState != SENDER_IDLE || lengthToTransmit / bytesPerCall >= maxPackageIndex)
     {
         return;
     }
@@ -32,81 +31,89 @@ void StubbornSender::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataTo
     currentOffset = 0;
     currentPackage = 1;
     waitCount = 0;
-    waitNextConfirmation = false;
-    resetState = false;
     this->bytesPerCall = bytesPerCall;
+    senderState = SENDING;
 }
 
 bool StubbornSender::IsActive()
 {
-    return length != 0;
+    return senderState != SENDER_IDLE;
 }
 
 void StubbornSender::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData)
 {
-    *count = 0;
-    *currentData = 0;
-    *packageIndex = 0;
-    if (!IsActive())
+    switch (senderState)
     {
-        return;
-    }
-
-    if (resetState)
-    {
+    case RESYNC:
         *packageIndex = maxPackageIndex;
-        waitNextConfirmation = true;
-        return;
-    }
-
-    if (currentOffset >= length)
-    {
-        waitNextConfirmation = true;
-        return;
-    }
-
-    *currentData = data + currentOffset;
-
-    *packageIndex = currentPackage;
-    if (bytesPerCall > 1)
-    {
-        if (currentOffset + bytesPerCall <= length)
+        *count = 0;
+        *currentData = 0;
+        break;
+    case SENDING:
+        *currentData = data + currentOffset;
+        *packageIndex = currentPackage;
+        if (bytesPerCall > 1)
         {
-            *count = bytesPerCall;
+            if (currentOffset + bytesPerCall <= length)
+            {
+                *count = bytesPerCall;
+            }
+            else
+            {
+                *count = length-currentOffset;
+            }
         }
         else
         {
-            *count = length-currentOffset;
+            *count = 1;
         }
-    }
-    else
-    {
-        *count = 1;
+        break;
+    default:
+        *count = 0;
+        *currentData = 0;
+        *packageIndex = 0;
     }
 }
 
 void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
 {
-    waitCount++;
-    if (telemetryConfirmValue != waitUntilTelemtryConfirm)
-    {
-        if (waitCount > WAIT_FOR_RESYNC)
-        {
-            waitUntilTelemtryConfirm = !telemetryConfirmValue;
-            resetState = true;
-        }
-        return;
-    }
+    stubborn_sender_state_s nextSenderState = senderState;
 
-    waitUntilTelemtryConfirm = !waitUntilTelemtryConfirm;
-    waitCount = 0;
-    if (waitNextConfirmation)
+    switch (senderState)
     {
-        length = 0;
-    }
-    else
-    {
+    case SENDING:
+        if (telemetryConfirmValue != waitUntilTelemtryConfirm)
+        {
+            waitCount++;
+            if (waitCount > WAIT_FOR_RESYNC)
+            {
+                waitUntilTelemtryConfirm = !telemetryConfirmValue;
+                nextSenderState = RESYNC;
+            }
+            break;
+        }
+
         currentOffset += bytesPerCall;
         currentPackage++;
+        waitUntilTelemtryConfirm = !waitUntilTelemtryConfirm;
+        waitCount = 0;
+
+        if (currentOffset >= length)
+        {
+            nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
+        }
+
+        break;
+    case RESYNC:
+    case WAIT_UNTIL_NEXT_CONFIRM:
+        if (telemetryConfirmValue == waitUntilTelemtryConfirm)
+        {
+            nextSenderState = SENDER_IDLE;
+            waitUntilTelemtryConfirm = !telemetryConfirmValue;
+        }
+
+        break;
     }
+
+    senderState = nextSenderState;
 }
