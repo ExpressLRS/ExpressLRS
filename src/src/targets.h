@@ -1,5 +1,7 @@
 #pragma once
 
+#define UNDEF_PIN (-1)
+
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
@@ -270,10 +272,13 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO           PB4
 #define GPIO_PIN_SCK            PB3
 #define GPIO_PIN_RST            PB0
-//#define GPIO_PIN_RCSIGNAL_RX    PA2
-#define GPIO_PIN_RCSIGNAL_RX    PB7
-#define GPIO_PIN_RCSIGNAL_TX    PB6
+//#define GPIO_PIN_RCSIGNAL_RX    PB7
+//#define GPIO_PIN_RCSIGNAL_TX    PB6
+#define GPIO_PIN_RCSIGNAL_RX    PB6 // USART1, half duplex
+#define GPIO_PIN_RCSIGNAL_TX    PA2 // USART2, half duplex
 //#define GPIO_PIN_LED            PA7
+#define GPIO_PIN_LED_WS2812      PA7
+#define GPIO_PIN_LED_WS2812_FAST PA_7
 //#define GPIO_PIN_BUTTON         PA12
 #define timerOffset             1
 #endif
@@ -293,4 +298,13 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#endif
+
+#ifdef GPIO_PIN_LED_WS2812
+#ifndef GPIO_PIN_LED_WS2812_FAST
+#error "WS2812 support requires _FAST pin!"
+#endif
+#else
+#define GPIO_PIN_LED_WS2812         UNDEF_PIN
+#define GPIO_PIN_LED_WS2812_FAST    UNDEF_PIN
 #endif

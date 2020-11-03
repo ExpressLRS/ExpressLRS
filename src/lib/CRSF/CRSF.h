@@ -19,6 +19,7 @@
 
 #define PACKED __attribute__((packed))
 
+//#define CRSF_RX_BAUDRATE 230400 // for linux debugging
 #define CRSF_RX_BAUDRATE 420000
 #define CRSF_OPENTX_FAST_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
@@ -355,7 +356,7 @@ public:
     static HardwareSerial Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only 
+    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values

@@ -121,7 +121,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
-  
+
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
@@ -287,7 +287,7 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-    
+
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
     Serial.println("lost conn");
@@ -314,7 +314,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
     WS281BsetLED(LEDcolor);
@@ -342,7 +342,7 @@ void GotConnection()
     RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
     WS281BsetLED(LEDcolor);
@@ -522,7 +522,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
         #endif
     }
-    
+
     doneProcessing = micros();
 
 #ifndef DEBUG_SUPPRESS
@@ -600,44 +600,53 @@ void ICACHE_RAM_ATTR TXdoneISR()
 void setup()
 {
     delay(100);
-    Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_STM32
+#if defined(TARGET_RX_GHOST_ATTO_V1)
+    // USART1 is used for RX (half duplex)
+    CRSF_RX_SERIAL.setHalfDuplex();
+    CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.enableHalfDuplexRx();
+
+    // USART2 is used for TX (half duplex)
+    // Note: these must be set before begin()
+    Serial.setHalfDuplex();
+    Serial.setRx((PinName)NC);
+    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+#else /* !TARGET_RX_GHOST_ATTO_V1 */
     #ifdef USE_R9MM_R9MINI_SBUS
-    HardwareSerial(USART2);
+    //HardwareSerial(USART2); // This is useless call
     #endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
-#ifdef GPIO_PIN_LED_GREEN
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
- #endif   
- #ifdef GPIO_PIN_LED_RED
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
- #endif   
- #ifdef GPIO_PIN_LED
-    pinMode(GPIO_PIN_LED, OUTPUT);
-#endif   
-#ifdef GPIO_PIN_BUTTON
-    pinMode(GPIO_PIN_BUTTON, INPUT);
-#endif    
-#endif
+#endif /* TARGET_RX_GHOST_ATTO_V1 */
+#endif /* PLATFORM_STM32 */
+
+    Serial.begin(CRSF_RX_BAUDRATE);
+
+    Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_ESP8266
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
     pinMode(GPIO_PIN_LED, OUTPUT);
-#endif
+#endif /* PLATFORM_ESP8266 */
 
-#ifdef PLATFORM_STM32
 #ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-#endif
-#endif
-#ifdef GPIO_PIN_LED_GREEN
+#endif /* GPIO_PIN_LED_GREEN */
+#ifdef GPIO_PIN_LED_RED
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+#endif /* GPIO_PIN_LED_RED */
+#ifdef GPIO_PIN_LED
+    pinMode(GPIO_PIN_LED, OUTPUT);
+#endif /* GPIO_PIN_LED */
+#ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
-#endif
+#endif /* GPIO_PIN_BUTTON */
 
-#ifdef TARGET_RX_GHOST_ATTO_V1 // do startup blinkies for fun
+#if WS2812_LED_IS_USED // do startup blinkies for fun
     uint32_t col = 0x0000FF;
     for (uint8_t j = 0; j < 3; j++)
     {
@@ -660,9 +669,6 @@ void setup()
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
 #endif
-
-    // Serial.begin(230400); // for linux debugging
-    Serial.begin(420000);
 
     FHSSrandomiseFHSSsequence();
 
@@ -827,7 +833,7 @@ void loop()
         #endif
     }
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis)) // quicker way to get to good conn state of the sync and link is great off the bat.
     {
         uint8_t LEDcolor[3] = {0};
