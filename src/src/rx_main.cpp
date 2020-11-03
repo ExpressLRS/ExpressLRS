@@ -112,7 +112,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
-  
+
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
     if (rssiDBM > 0)
@@ -278,13 +278,16 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-    digitalWrite(GPIO_PIN_LED, 0);        // turn off led
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
     Serial.println("lost conn");
 
-#ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+#endif
+
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, 0); // turn off led
 #endif
 }
 
@@ -319,12 +322,15 @@ void GotConnection()
     RXtimerState = tim_tentative;
     GotConnectionMillis = millis();
 
-    RFmodeLastCycled = millis();   // give another 3 sec for loc to occur.
-    digitalWrite(GPIO_PIN_LED, 1); // turn on led
+    RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
 
-#ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+#endif
+
+#ifdef GPIO_PIN_LED
+    digitalWrite(GPIO_PIN_LED, HIGH); // turn on led
 #endif
 }
 
@@ -492,7 +498,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
         #endif
     }
-    
+
     doneProcessing = micros();
 
 #ifndef DEBUG_SUPPRESS
@@ -518,6 +524,7 @@ void beginWebsever()
 
 void sampleButton()
 {
+#ifdef GPIO_PIN_BUTTON
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
 
     if (buttonValue == false && buttonPrevValue == true)
@@ -550,6 +557,7 @@ void sampleButton()
     }
 
     buttonPrevValue = buttonValue;
+#endif
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -568,30 +576,43 @@ void ICACHE_RAM_ATTR TXdoneISR()
 void setup()
 {
     delay(100);
-    Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_STM32
+#if defined(TARGET_R9SLIMPLUS_RX)
+    CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+
+    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+#else /* !TARGET_R9SLIMPLUS_RX */
     #ifdef USE_R9MM_R9MINI_SBUS
-    HardwareSerial(USART2);
+    //HardwareSerial(USART2); // This is useless call
     #endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    pinMode(GPIO_PIN_LED, OUTPUT);
-    pinMode(GPIO_PIN_BUTTON, INPUT);
-#endif
+#endif /* TARGET_R9SLIMPLUS_RX */
+#endif /* PLATFORM_STM32 */
+
+    Serial.begin(CRSF_RX_BAUDRATE);
+
+    Serial.println("ExpressLRS Module Booting...");
 
 #ifdef PLATFORM_ESP8266
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
-    pinMode(GPIO_PIN_LED, OUTPUT);
-#endif
+#endif /* PLATFORM_ESP8266 */
 
-#ifdef PLATFORM_STM32
+#ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-#endif
+#endif /* GPIO_PIN_LED_GREEN */
+#ifdef GPIO_PIN_LED_RED
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+#endif /* GPIO_PIN_LED_RED */
+#if defined(GPIO_PIN_LED)
+    pinMode(GPIO_PIN_LED, OUTPUT);
+#endif /* GPIO_PIN_LED */
+#ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
+#endif /* GPIO_PIN_BUTTON */
 
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
@@ -603,9 +624,6 @@ void setup()
     Serial.println("Setting 433MHz Mode");
 #endif
 
-    // Serial.begin(230400); // for linux debugging
-    Serial.begin(420000);
-
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
@@ -615,7 +633,9 @@ void setup()
     bool init_success = Radio.Begin();
     while (!init_success)
     {
+#ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED);
+#endif
         LED = !LED;
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
@@ -682,7 +702,9 @@ void loop()
         HandleWebUpdate();
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
+#ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
+#endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
@@ -722,7 +744,9 @@ void loop()
             SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
+#ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
+#endif
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
@@ -769,7 +793,7 @@ void loop()
         #endif
     }
 
-    #ifdef PLATFORM_STM32
+#ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
-    #endif
+#endif
 }
