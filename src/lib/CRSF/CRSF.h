@@ -388,27 +388,6 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
     return crc;
 }
 
-// static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
-// {
-//     uint8_t crc = 0;
-//     for (uint8_t i = 0; i < length; i++)
-//     {
-//         crc = crc8tab[crc ^ *data++];
-//     }
-//     return crc;
-// }
-
-// static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
-// {
-//     uint8_t crc = 0;
-//     for (uint8_t i = 0; i < length; i++)
-//     {
-//         crc = crc8tab[crc ^ *data++];
-//     }
-//     return crc;
-// }
-
-
 static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
 {
     uint8_t crc = 0;
