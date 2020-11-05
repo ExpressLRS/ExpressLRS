@@ -15,6 +15,17 @@ print("Going to use %s\n" % port)
 
 s = serial.Serial(port=port, baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
+try:
+    already_in_bl = s.read(2).decode('utf-8')
+except UnicodeDecodeError:
+    already_in_bl = ""
+
+if 'CC' in already_in_bl:
+    msg = "Seems we were already in passthrough and bootloader is active..."
+    print(msg)
+    s.close()
+    sys.exit()
+
 s.write(chr(0x23).encode())
 time.sleep(1)
 s.write(("serial\n").encode())
