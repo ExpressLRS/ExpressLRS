@@ -62,7 +62,7 @@ if 'CC' not in already_in_bl:
         s.write(BootloaderInitSeq1)
         s.flush()
         time.sleep(0.5)
-        
+
         start = time.time()
         while ((time.time() - start) < 2):
             try:
@@ -78,11 +78,14 @@ if 'CC' not in already_in_bl:
                 dbg_print("Got into bootloader after: %u attempts\n" % (currAttempt))
                 gotBootloader = True
                 break
-   
+                
     # sanity check! Make sure the bootloader is started
     start = time.time()
     while True:
-        char = s.read(2).decode('utf-8')
+        try:
+            char = s.read(2).decode('utf-8')
+        except UnicodeDecodeError:
+            continue
         if char == 'CC':
             break
         if ((time.time() - start) > 10):
