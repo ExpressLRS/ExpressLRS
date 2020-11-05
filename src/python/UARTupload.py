@@ -34,18 +34,14 @@ if not os.path.exists(filename):
 
 port = serials_find.get_serial_port()
 dbg_print("Going to use %s\n" % port)
-s = serial.Serial(port=port, baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=.5, xonxoff=0, rtscts=0)
-s.timeout = 1.
+s = serial.Serial(port=port, baudrate=420000, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
 try:
     already_in_bl = s.read(2).decode('utf-8')
 except UnicodeDecodeError:
     already_in_bl = ""
-
+    
 if 'CC' not in already_in_bl:
-    s.timeout = .5
-    s.write_timeout = .5
-
     currAttempt = 0
     gotBootloader = False
 
@@ -66,7 +62,7 @@ if 'CC' not in already_in_bl:
         s.write(BootloaderInitSeq1)
         s.flush()
         time.sleep(0.5)
-        
+
         start = time.time()
         while ((time.time() - start) < 2):
             try:
@@ -82,15 +78,14 @@ if 'CC' not in already_in_bl:
                 dbg_print("Got into bootloader after: %u attempts\n" % (currAttempt))
                 gotBootloader = True
                 break
-
-    # change timeout to 3sec
-    s.timeout = 3
-    s.write_timeout = 3
-   
+                
     # sanity check! Make sure the bootloader is started
     start = time.time()
     while True:
-        char = s.read(2).decode('utf-8')
+        try:
+            char = s.read(2).decode('utf-8')
+        except UnicodeDecodeError:
+            continue
         if char == 'CC':
             break
         if ((time.time() - start) > 10):
@@ -99,10 +94,6 @@ if 'CC' not in already_in_bl:
             raise EnvironmentError(msg)
 else:
     dbg_print("\nWe were already in bootloader\n")
-
-# change timeout to 5sec
-s.timeout = 5.
-s.write_timeout = 5.
 
 # open binary
 stream = open(filename, 'rb')
