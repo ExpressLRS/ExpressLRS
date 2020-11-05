@@ -28,7 +28,7 @@
 #define CRSF_CHANNEL_VALUE_MAX 1811
 #define CRSF_MAX_PACKET_LEN 64
 #define CRSF_POLYGEN 0xd5
-#define OTA_POLYGEN 0x83
+#define OTA_POLYGEN 0x83 // https://users.ece.cmu.edu/~koopman/crc/
 
 #define CRSF_SYNC_BYTE 0xC8
 
@@ -292,10 +292,6 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); }
 //static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
-/*
-https://users.ece.cmu.edu/~koopman/crc/
-http://www.sunshine2k.de/coding/javascript/crc/crc_js.html
-*/
 static inline uint8_t ICACHE_RAM_ATTR CalcOTACRC(volatile uint8_t *data, int length)
 {
     uint8_t crc = 0;
