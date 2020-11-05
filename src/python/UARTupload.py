@@ -81,7 +81,7 @@ if 'CC' not in already_in_bl:
                 dbg_print("Got into bootloader after: %u attempts\n" % (currAttempt))
                 gotBootloader = True
                 break
-   
+                
     # sanity check! Make sure the bootloader is started
     start = time.time()
     while True:
