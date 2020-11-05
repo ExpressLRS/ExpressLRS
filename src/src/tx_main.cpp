@@ -487,7 +487,6 @@ void HandleUpdateParameter()
   config.SetRate(ExpressLRS_currAirRate_Modparams->index);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
   config.SetPower(POWERMGNT.currPower());
-  sendLuaParams();
 
   if (config.IsModified())
   {
