@@ -413,9 +413,8 @@ void HandleUpdateParameter()
 
   switch (crsf.ParameterUpdateData[0])
   {
-  case 0: // send all params
+  case 0: // special case for sending commit packet
     Serial.println("send all lua params");
-    sendLuaParams();
     crsf.sendLUAresponse(luaCommitPacket, 7);
     break;
 
