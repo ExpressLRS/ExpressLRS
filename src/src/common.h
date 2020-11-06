@@ -137,3 +137,6 @@ extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 #define AUX6 10
 #define AUX7 11
 #define AUX8 12
+
+//ELRS SPECIFIC OTA CRC 
+#define ELRS_CRC_POLY 0x83
