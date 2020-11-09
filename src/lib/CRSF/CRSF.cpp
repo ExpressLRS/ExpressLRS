@@ -56,6 +56,8 @@ uint32_t CRSF::UARTwdtInterval = 1000; // for the UART wdt, every 1000ms we chan
 
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
+uint32_t CRSF::GoodPktsCountResult = 0;
+uint32_t CRSF::BadPktsCountResult = 0;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
@@ -199,12 +201,10 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
+void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 {
-    uint8_t dataLength = sizeof(val);
-    uint8_t LUArespLength = dataLength + 2;
-
-    uint8_t outBuffer[LUArespLength + 4] = {0};
+    uint8_t LUArespLength = len + 2;
+    uint8_t outBuffer[LUArespLength + 5] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
@@ -213,7 +213,7 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-    for (uint8_t i = 0; i < dataLength; ++i)
+    for (uint8_t i = 0; i < len; ++i)
     {
         outBuffer[5 + i] = val[i];
     }
@@ -521,6 +521,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     Serial.println(GoodPktsCount);
 
                     UARTwdtLastChecked = millis();
+                    GoodPktsCountResult = GoodPktsCount;
+                    BadPktsCountResult = BadPktsCount;
                     BadPktsCount = 0;
                     GoodPktsCount = 0;
 
@@ -602,6 +604,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
                             {
                                 SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                                 CRSFframeActive = false;
                                 continue;
                             }
@@ -625,7 +628,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                             SerialInBuffer[SerialInPacketPtr] = inChar;
                             SerialInPacketPtr++;
 
-                            if ((SerialInPacketPtr == SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
+                            if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
                             {
                                 char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
@@ -633,9 +636,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 {
                                     GoodPktsCount++;
                                     ESP32ProcessPacket();
-                                    CRSFframeActive = false;
                                     lastUARTpktTime = millis();
-                                    SerialInPacketPtr = 0;
 
                                     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
                                     if (peekVal > 0)
@@ -659,10 +660,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                 {
                                     BadPktsCount++;
                                     Serial.println("UART CRC failure");
-                                    CRSFframeActive = false;
-                                    SerialInPacketPtr = 0;
-                                    memset((void *)SerialInBuffer, 0, sizeof(SerialInBuffer)); // either crc was good or not, either way zero the buffer
                                 }
+                                CRSFframeActive = false;
+                                SerialInPacketPtr = 0;
+                                SerialInPacketLen = 0;
                             }
                         }
                     }
@@ -754,7 +755,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                     UARTcurrentBaud = UARTrequestedBaud;
                 }
 
-                if (CRSF::Port.available())
+                while (CRSF::Port.available())
                 {
                     char inChar = CRSF::Port.read();
 
@@ -800,7 +801,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         SerialInBuffer[SerialInPacketPtr] = inChar;
                         SerialInPacketPtr++;
 
-                        if (SerialInPacketPtr == SerialInPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
+                        if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
                         {
                             char CalculatedCRC = CalcCRC((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
@@ -811,29 +812,18 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                                     lastUARTpktTime = millis();
                                     delayMicroseconds(50);
                                     CRSF::STM32handleUARTout();
-                                    while (CRSF::Port.available())
-                                    {
-                                        CRSF::Port.read(); // empty any remaining garbled data 
-                                    }
                                     GoodPktsCount++;
                                 }
-                                SerialInPacketPtr = 0;
-                                SerialInPacketLen = 0;
-                                CRSFframeActive = false;
                             }
                             else
                             {
                                 Serial.println("UART CRC failure");
-                                CRSFframeActive = false;
-                                SerialInPacketPtr = 0;
-                                SerialInPacketLen = 0;
-                                while (CRSF::Port.available())
-                                {
-                                    CRSF::Port.read(); // empty any remaining garbled data 
-                                }
+                                CRSF::Port.flush();
                                 BadPktsCount++;
-                                memset((void *)SerialInBuffer, 0, sizeof(SerialInBuffer)); // either crc was good or not, either way zero the buffer
                             }
+                            CRSFframeActive = false;
+                            SerialInPacketPtr = 0;
+                            SerialInPacketLen = 0;
                         }
                     }
                 }
@@ -855,6 +845,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         CRSF::Port.write(OutData, OutPktLen); // write the packet out
                         CRSF::Port.flush();
                         digitalWrite(BUFFER_OE, LOW);
+                        while (CRSF::Port.available())
+                        {
+                            CRSF::Port.read(); // measure sure there is no garbage on the UART at the start
+                        }
                     }
                 }
             }

@@ -92,6 +92,18 @@ ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
     return &ExpressLRS_AirRateRFperf[index];
 }
 
+ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
+{ // convert enum_rate to index
+    for (int i = 0; i < RATE_MAX; i++)
+    {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(i);
+        if (ModParams->enum_rate == rate)
+        {
+            return i;
+        }
+    }
+}
+
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
