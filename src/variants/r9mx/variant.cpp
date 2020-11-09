@@ -112,7 +112,7 @@ const uint32_t analogInputPin[] = {
 extern "C" {
 #endif
 
-
+extern void SystemCoreClockUpdate(void);
 
 /**
   * @brief  System Clock Configuration
@@ -136,9 +136,17 @@ extern "C" {
 void SystemClock_Config(void)
 {
 
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
-  RCC_OscInitTypeDef RCC_OscInitStruct = {};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+  RCC_PeriphCLKInitTypeDef PeriphClkInit;
+
+  /* Enable Power Control clock */
+  __HAL_RCC_PWR_CLK_ENABLE();
+
+  /* The voltage scaling allows optimizing the power consumption when the device is
+     clocked below the maximum system frequency, to update the voltage scaling value
+     regarding system frequency refer to product datasheet.  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   memset(&RCC_OscInitStruct, 0, sizeof(RCC_OscInitTypeDef));
   memset(&RCC_ClkInitStruct, 0, sizeof(RCC_ClkInitTypeDef));
@@ -150,11 +158,11 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 1;
-  RCC_OscInitStruct.PLL.PLLN = 10;
-  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV4;
+  RCC_OscInitStruct.PLL.PLLM = 1;  // 16MHz
+  RCC_OscInitStruct.PLL.PLLN = 10; // 10 * 16MHz
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2; // 160MHz / 2
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7; // 160MHz / 7
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV4; // 160MHz / 4
   RCC_OscInitStruct.HSICalibrationValue = 0x10;
 
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
@@ -181,6 +189,8 @@ void SystemClock_Config(void)
   {
     while (1);
   }
+
+  SystemCoreClockUpdate();
 
   HAL_ResumeTick();
 }
