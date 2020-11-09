@@ -130,6 +130,11 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    /* PB3: RX = HIGH, TX = LOW */
+    #define GPIO_PIN_RX_ENABLE      PB3
+    /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
+     * Note: Right Antenna is selected by default, LOW */
+    #define GPIO_PIN_ANTENNA_SELECT PB9
 #else //R9MM_R9MINI
     #define GPIO_PIN_LED            PC1 // Red
     #define GPIO_PIN_LED_RED        PC1 // Red

@@ -47,6 +47,11 @@ void SX127xHal::init()
   digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
 
+#if defined(GPIO_PIN_ANTENNA_SELECT)
+  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+#endif
+
 #ifdef PLATFORM_ESP32
   SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
   SPI.setBitOrder(MSBFIRST);
