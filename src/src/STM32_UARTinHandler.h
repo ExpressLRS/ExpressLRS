@@ -1,6 +1,13 @@
 #include "CRSF.h"
 #include "targets.h"
 
+#if defined(TARGET_R9SLIMPLUS_RX)
+#define CRSF_RX_SERIAL CrsfRxSerial
+HardwareSerial CrsfRxSerial(USART3);
+#else /* !TARGET_R9SLIMPLUS_RX */
+#define CRSF_RX_SERIAL Serial
+#endif /* TARGET_R9SLIMPLUS_RX */
+
 extern CRSF crsf;
 
 uint8_t UARTinPacketPtr;
@@ -35,10 +42,10 @@ void STM32_RX_UARTprocessPacket()
 
 void STM32_RX_HandleUARTin()
 {
-    while (Serial.available())
+    while (CRSF_RX_SERIAL.available())
     {
         UARTLastDataTime = millis();
-        char inChar = Serial.read();
+        char inChar = CRSF_RX_SERIAL.read();
 
         if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE) && UARTframeActive == false) // we got sync, reset write pointer
         {
@@ -58,11 +65,10 @@ void STM32_RX_HandleUARTin()
             {
                 UARTinPacketPtr = 0;
                 UARTframeActive = false;
-                while (Serial.available())
+                while (CRSF_RX_SERIAL.available())
                 {
-                    Serial.read();
+                    (void)CRSF_RX_SERIAL.read();
                 }
-                Serial.flush();
             }
         }
 
@@ -102,11 +108,12 @@ void STM32_RX_HandleUARTin()
                 //Serial.println();
                 UARTframeActive = false;
                 UARTinPacketPtr = 0;
-                while (Serial.available())
+                while (CRSF_RX_SERIAL.available())
                 {
-                    Serial.read(); // dunno why but the flush() method wasn't working
+                    // dunno why but the flush() method wasn't working
+                    // A: because flush() waits until all data is SENT aka TX buffer is empty
+                    (void)CRSF_RX_SERIAL.read();
                 }
-                Serial.flush();
             }
         }
     }

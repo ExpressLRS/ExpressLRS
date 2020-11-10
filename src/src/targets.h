@@ -1,5 +1,7 @@
 #pragma once
 
+#define UNDEF_PIN (-1)
+
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
@@ -16,7 +18,7 @@
 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
@@ -35,7 +37,7 @@
 
 #ifdef TARGET_TTGO_LORA_V2_AS_TX
 #define GPIO_PIN_NSS 18
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
@@ -54,7 +56,7 @@
 
 #ifdef TARGET_EXPRESSLRS_PCB_TX_V3
 #define GPIO_PIN_NSS 5
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 25
 #define GPIO_PIN_MOSI 23
@@ -75,14 +77,14 @@
 
 #ifdef TARGET_EXPRESSLRS_PCB_RX_V3
 #define GPIO_PIN_NSS 15
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 4
 #define GPIO_PIN_DIO1 5
 #define GPIO_PIN_MOSI 13
 #define GPIO_PIN_MISO 12
 #define GPIO_PIN_SCK 14
 #define GPIO_PIN_RST 2
-#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1 
+#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_LED 16
@@ -95,32 +97,48 @@
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
-#define GPIO_PIN_NSS            PB12
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
-#define GPIO_PIN_DIO0           PA15
-#define GPIO_PIN_DIO1           PA1 // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
-#define GPIO_PIN_MOSI           PB15
-#define GPIO_PIN_MISO           PB14
-#define GPIO_PIN_SCK            PB13
-#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_NSS            PB12 //confirmed on SLIMPLUS
+#define GPIO_PIN_BUSY           -1   // NOT USED ON THIS TARGET
+#define GPIO_PIN_DIO0           PA15 //confirmed on SLIMPLUS
+#define GPIO_PIN_DIO1           PA1  // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
+/////////////////////////////////////// NOT FOUND ON SLIMPLUS EITHER.
+#define GPIO_PIN_MOSI           PB15 //confirmed on SLIMPLUS
+#define GPIO_PIN_MISO           PB14 //confirmed on SLIMPLUS
+#define GPIO_PIN_SCK            PB13 //confirmed on SLIMPLUS
+#define GPIO_PIN_RST            PC14 //confirmed on SLIMPLUS
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
+
 #ifdef USE_R9MM_R9MINI_SBUS
     #define GPIO_PIN_RCSIGNAL_RX    PA3
     #define GPIO_PIN_RCSIGNAL_TX    PA2
-#else
+#elif TARGET_R9SLIMPLUS_RX               // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
+    #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
+    #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
+#else //default R9MM_R9MINI or R9MX
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
 #endif
+
 #ifdef TARGET_R9MX_RX
     #define GPIO_PIN_LED            PB2 // Red
     #define GPIO_PIN_LED_RED        PB2 // Red
-    #define GPIO_PIN_LED_GREEN      PB3 // Green 
+    #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
-#else
+#elif TARGET_R9SLIMPLUS_RX
+    #define GPIO_PIN_LED            PA11 // Red
+    #define GPIO_PIN_LED_RED        PA11 // Red
+    #define GPIO_PIN_LED_GREEN      PA12 // Green
+    #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    /* PB3: RX = HIGH, TX = LOW */
+    #define GPIO_PIN_RX_ENABLE      PB3
+    /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
+     * Note: Right Antenna is selected by default, LOW */
+    #define GPIO_PIN_ANTENNA_SELECT PB9
+#else //R9MM_R9MINI
     #define GPIO_PIN_LED            PC1 // Red
     #define GPIO_PIN_LED_RED        PC1 // Red
-    #define GPIO_PIN_LED_GREEN      PB3 // Green 
+    #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #endif
 #define timerOffset             1
@@ -150,7 +168,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
@@ -184,13 +202,13 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
-#define GPIO_PIN_DIO1           -1    //unused for sx1280 
-#define GPIO_PIN_BUSY           -1    //unused for sx1280 
+#define GPIO_PIN_DIO1           -1    //unused for sx1280
+#define GPIO_PIN_BUSY           -1    //unused for sx1280
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PC14
-#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm 
+#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
@@ -211,13 +229,13 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
-#define GPIO_PIN_DIO1           -1 // NOT USED ON THIS TARGET 
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET 
+#define GPIO_PIN_DIO1           -1 // NOT USED ON THIS TARGET
+#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PC14
-#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm 
+#define GPIO_PIN_RX_ENABLE      PC13 //PB3 // need to confirm
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
@@ -241,7 +259,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO 12
 #define GPIO_PIN_SCK 14
 #define GPIO_PIN_RST 2
-#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1 
+#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 0
