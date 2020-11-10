@@ -3,6 +3,8 @@
 
 #define UNDEF_PIN (-1)
 
+#define UNDEF_PIN (-1)
+
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
 /////////////////////////
