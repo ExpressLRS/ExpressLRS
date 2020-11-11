@@ -100,3 +100,10 @@ elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_FCC_915*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 915FCC\n")
 
 time.sleep(1)
+
+# Set upload_protovol = 'custom' for STM32 MCUs
+#  otherwise firmware.bin is not generated
+stm = env.get('PIOPLATFORM', '') in ['ststm32']
+if stm:
+    env['UPLOAD_PROTOCOL'] = 'custom'
+

@@ -1,7 +1,6 @@
-Import("env", "projenv")
 import os
 import sys
-import stlink
+
 
 def gen_multi_bin(source, target, env):
     target_bin = target[0]
@@ -13,6 +12,8 @@ def gen_multi_bin(source, target, env):
         _out.write("multi-x00000b81-01030073".encode('utf-8'))
         _out.close()
     sys.stdout.write("Copy %s to SD card and choose flash external multi" % bin_target)
+    sys.stdout.flush()
+
 
 def gen_elrs(source, target, env):
     source_bin = source[0]
@@ -26,8 +27,9 @@ def gen_elrs(source, target, env):
     sys.stdout.write("|| !!! Copy %s to SD card and choose flash ext. ELRS !!! ||\n" % bin_target)
     sys.stdout.write("=====================================================================================================================================\n")
     sys.stdout.write("\n")
-    
-        
+    sys.stdout.flush()
+
+
 def gen_frsky(source, target, env):
     sys.stdout.write("\n")
     sys.stdout.write("\n")
@@ -68,7 +70,4 @@ def gen_frsky(source, target, env):
     sys.stdout.write("|| !!! Copy %s to SD card and choose flash external in order to flash via OpenTX !!! ||\n" % bin_target)
     sys.stdout.write("=====================================================================================================================================\n")
     sys.stdout.write("\n")
-
-env.AddPostAction("buildprog", gen_elrs)
-env.AddPostAction("buildprog", gen_frsky)
-env.Replace(UPLOADCMD=stlink.on_upload)
+    sys.stdout.flush()
