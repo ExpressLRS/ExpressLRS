@@ -157,6 +157,7 @@ typedef enum
  */
 typedef enum
 {
+    SX1280_LORA_CR_OFF = 0x00,
     SX1280_LORA_CR_4_5 = 0x01,
     SX1280_LORA_CR_4_6 = 0x02,
     SX1280_LORA_CR_4_7 = 0x03,

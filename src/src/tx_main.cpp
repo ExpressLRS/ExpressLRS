@@ -11,6 +11,17 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#ifdef USE_RS_FEC
+#include "RS-FEC.h"
+
+#define rs_msg_len 8 //Max message length, Max corrected bytes ECC_LENGTH/2
+#define rs_parity_len 6
+
+RS::ReedSolomon<rs_msg_len, rs_parity_len> rs;
+uint8_t RS_PARITY_DATA[rs_parity_len] = {0};
+uint8_t RS_MSG_ENCODED[rs_msg_len + rs_parity_len] = {0};
+#endif
+
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
@@ -172,75 +183,75 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
   }
 }
 
-void ICACHE_RAM_ATTR GenerateSyncPacketData()
+void ICACHE_RAM_ATTR GenerateSyncPacketData(uint8_t * buf)
 {
   uint8_t PacketHeaderAddr;
   uint8_t index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   uint8_t TLmrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (index << 6) + (TLmrate << 3);
-  Radio.TXdataBuffer[4] = UID[3];
-  Radio.TXdataBuffer[5] = UID[4];
-  Radio.TXdataBuffer[6] = UID[5];
+  buf[0] = PacketHeaderAddr;
+  buf[1] = FHSSgetCurrIndex();
+  buf[2] = NonceTX;
+  buf[3] = (index << 6) + (TLmrate << 3);
+  buf[4] = UID[3];
+  buf[5] = UID[4];
+  buf[6] = UID[5];
 }
 
-void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
+void ICACHE_RAM_ATTR Generate4ChannelData_10bit(uint8_t * buf)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
+  buf[0] = PacketHeaderAddr;
+  buf[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
+  buf[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
+  buf[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
+  buf[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
+  buf[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
 }
 
-void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
+void ICACHE_RAM_ATTR Generate4ChannelData_11bit(uint8_t * buf)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
+  buf[0] = PacketHeaderAddr;
+  buf[1] = ((crsf.ChannelDataIn[0]) >> 3);
+  buf[2] = ((crsf.ChannelDataIn[1]) >> 3);
+  buf[3] = ((crsf.ChannelDataIn[2]) >> 3);
+  buf[4] = ((crsf.ChannelDataIn[3]) >> 3);
+  buf[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
                           ((crsf.ChannelDataIn[1] & 0b111) << 2) +
                           ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
+  buf[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
                           ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
+  buf[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
+  buf[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
+  buf[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
+  buf[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
 }
 
-void ICACHE_RAM_ATTR GenerateMSPData()
+void ICACHE_RAM_ATTR GenerateMSPData(uint8_t * buf)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = MSPPacket.function;
-  Radio.TXdataBuffer[2] = MSPPacket.payloadSize;
-  Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = 0;
-  Radio.TXdataBuffer[5] = 0;
-  Radio.TXdataBuffer[6] = 0;
+  buf[0] = PacketHeaderAddr;
+  buf[1] = MSPPacket.function;
+  buf[2] = MSPPacket.payloadSize;
+  buf[3] = 0;
+  buf[4] = 0;
+  buf[5] = 0;
+  buf[6] = 0;
   if (MSPPacket.payloadSize <= 4)
   {
     MSPPacket.payloadReadIterator = 0;
     for (int i = 0; i < MSPPacket.payloadSize; i++)
     {
-      Radio.TXdataBuffer[3 + i] = MSPPacket.readByte();
+      buf[3 + i] = MSPPacket.readByte();
     }
   }
   else
@@ -294,6 +305,9 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+
+uint8_t RF_OTA_DATA[8];
+
 #ifdef FEATURE_OPENTX_SYNC
   crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
@@ -330,7 +344,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
 
-    GenerateSyncPacketData();
+    GenerateSyncPacketData(RF_OTA_DATA);
     SyncPacketLastSent = millis();
     //Serial.println("sync");
     //Serial.println(Radio.currFreq);
@@ -339,7 +353,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      GenerateMSPData();
+      GenerateMSPData(RF_OTA_DATA);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
     }
@@ -350,15 +364,22 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
-      Generate4ChannelData_11bit();
+      Generate4ChannelData_11bit(RF_OTA_DATA);
 #endif
     }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[7] = crc;
-  Radio.TXnb(Radio.TXdataBuffer, 8);
+  uint8_t crc = CalcCRC(RF_OTA_DATA, 7) + CRCCaesarCipher;
+  RF_OTA_DATA[7] = crc;
+
+#ifdef USE_RS_FEC
+  rs.Encode(RF_OTA_DATA, RS_MSG_ENCODED);
+  Radio.SetTXBuff(RS_MSG_ENCODED);
+#else
+  Radio.SetTXBuff(RF_OTA_DATA);
+#endif
+  Radio.TXnb();
 }
 
 void sendLuaParams()

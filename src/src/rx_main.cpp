@@ -12,6 +12,20 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#ifdef USE_RS_FEC
+#include "RS-FEC.h"
+
+#define rs_msg_len 8 //Max message length, Max corrected bytes ECC_LENGTH/2
+#define rs_parity_len 6
+
+RS::ReedSolomon<rs_msg_len, rs_parity_len> rs;
+uint8_t RS_PARITY_DATA[rs_parity_len] = {0};
+uint8_t RS_MSG_ENCODED[rs_msg_len + rs_parity_len] = {0};
+#endif
+
+uint8_t OTA_DATA_BUF[8];
+uint8_t OTA_DATA_BUF_RAW[14];
+
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "Debug.h"
@@ -83,6 +97,7 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
+bool newRFdata = false;
 uint32_t beginProcessing;
 uint32_t doneProcessing;
 
@@ -110,7 +125,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //int8_t LastRSSI = Radio.LastPacketRSSI;
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(rssiDBM, -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(fmap(rssiDBM, -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
@@ -208,7 +223,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
-    Radio.TXnb(Radio.TXdataBuffer, 8);
+    Radio.TXnb();
     return;
 }
 
@@ -334,49 +349,218 @@ void GotConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_11bit()
+void ICACHE_RAM_ATTR UnpackChannelData_11bit(uint8_t *buf)
 {
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01110000) >> 4);
+    crsf.PackedRCdataOut.ch0 = (buf[1] << 3) + ((buf[5] & 0b11100000) >> 5);
+    crsf.PackedRCdataOut.ch1 = (buf[2] << 3) + ((buf[5] & 0b00011100) >> 2);
+    crsf.PackedRCdataOut.ch2 = (buf[3] << 3) + ((buf[5] & 0b00000011) << 1) + (buf[6] & 0b10000000 >> 7);
+    crsf.PackedRCdataOut.ch3 = (buf[4] << 3) + ((buf[6] & 0b01110000) >> 4);
 #ifdef One_Bit_Switches
-    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00001000);
-    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
-    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
-    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
+    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(buf[6] & 0b00001000);
+    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(buf[6] & 0b00000100);
+    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(buf[6] & 0b00000010);
+    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(buf[6] & 0b00000001);
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_10bit()
+void ICACHE_RAM_ATTR UnpackChannelData_10bit(uint8_t *buf)
 {
-    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));
-    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 2) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 4));
-    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 2));
-    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
+    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((buf[1] << 2) + ((buf[5] & 0b11000000) >> 6));
+    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((buf[2] << 2) + ((buf[5] & 0b00110000) >> 4));
+    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((buf[3] << 2) + ((buf[5] & 0b00001100) >> 2));
+    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((buf[4] << 2) + ((buf[5] & 0b00000011) >> 0));
 }
 
-void ICACHE_RAM_ATTR UnpackMSPData()
+void ICACHE_RAM_ATTR UnpackMSPData(uint8_t *buf)
 {
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
     packet.flags = 0;
-    packet.function = Radio.RXdataBuffer[1];
-    packet.addByte(Radio.RXdataBuffer[3]);
-    packet.addByte(Radio.RXdataBuffer[4]);
-    packet.addByte(Radio.RXdataBuffer[5]);
-    packet.addByte(Radio.RXdataBuffer[6]);
+    packet.function = buf[1];
+    packet.addByte(buf[3]);
+    packet.addByte(buf[4]);
+    packet.addByte(buf[5]);
+    packet.addByte(buf[6]);
     crsf.sendMSPFrameToFC(&packet);
+}
+
+void ProcessRFPacket_fromloop()
+{
+    #ifdef USE_RS_FEC
+    //uint32_t begin_rs = micros();
+    int rs_result = rs.Decode(OTA_DATA_BUF_RAW, OTA_DATA_BUF);
+    //uint32_t stop_rs = micros();
+
+    //Serial.println(stop_rs-begin_rs);
+
+     if(rs_result != 0){
+    // Serial.print("RS status: ");
+    // Serial.println(rs_result);
+     return;
+     }
+
+    #else
+    memcpy(OTA_DATA_BUF, OTA_DATA_BUF_RAW, 8);
+    #endif
+
+    uint8_t calculatedCRC = CalcCRC(OTA_DATA_BUF, 7) + CRCCaesarCipher;
+    uint8_t inCRC = OTA_DATA_BUF[7];
+    uint8_t type = OTA_DATA_BUF[0] & 0b11;
+    uint8_t packetAddr = (OTA_DATA_BUF[0] & 0b11111100) >> 2;
+
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+
+    if (inCRC != calculatedCRC)
+    {
+        #ifndef DEBUG_SUPPRESS
+        Serial.print("CRC error on RF packet: ");
+        for (int i = 0; i < 8; i++)
+        {
+            Serial.print(OTA_DATA_BUF[i], HEX);
+            Serial.print(",");
+        }
+        Serial.print("Expect/Got: ");
+        Serial.print(calculatedCRC, HEX);
+        Serial.print("-");
+        Serial.print(inCRC, HEX);
+        Serial.println("");
+        #endif
+        return;
+    }
+
+    if (packetAddr != DeviceAddr)
+    {
+        #ifndef DEBUG_SUPPRESS
+        Serial.println("Wrong device address on RF packet");
+        #endif
+        return;
+    }
+
+    LastValidPacketPrevMicros = LastValidPacketMicros;
+    LastValidPacketMicros = beginProcessing;
+    LastValidPacket = millis();
+
+    getRFlinkInfo();
+
+    switch (type)
+    {
+    case RC_DATA_PACKET: //Standard RC Data Packet
+        #if defined SEQ_SWITCHES
+        UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
+        #elif defined HYBRID_SWITCHES_8
+        UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
+        #else
+        UnpackChannelData_11bit(OTA_DATA_BUF);
+        #endif
+        if (connectionState == connected)
+        {
+            crsf.sendRCFrameToFC();
+        }
+        break;
+
+    case MSP_DATA_PACKET:
+        UnpackMSPData(OTA_DATA_BUF);
+        break;
+
+    case TLM_PACKET: //telemetry packet from master
+
+        // not implimented yet
+        break;
+
+    case SYNC_PACKET: //sync packet from master
+         indexIN = (OTA_DATA_BUF[3] & 0b11000000) >> 6;
+         TLMrateIn = (OTA_DATA_BUF[3] & 0b00111000) >> 3;
+
+        if (ExpressLRS_currAirRate_Modparams->index == indexIN && OTA_DATA_BUF[4] == UID[3] && OTA_DATA_BUF[5] == UID[4] && OTA_DATA_BUF[6] == UID[5])
+        {
+            LastSyncPacket = millis();
+            #ifndef DEBUG_SUPPRESS
+            Serial.println("sync");
+            #endif
+
+            if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
+            { // change link parameters if required
+                #ifndef DEBUG_SUPPRESS
+                Serial.println("New TLMrate: ");
+                Serial.println(TLMrateIn);
+                #endif
+                ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+            }
+
+            if (NonceRX != OTA_DATA_BUF[2] || FHSSgetCurrIndex() != OTA_DATA_BUF[1])
+            {
+                FHSSsetCurrIndex(OTA_DATA_BUF[1]);
+                NonceRX = OTA_DATA_BUF[2];
+                TentativeConnection();
+                return;
+            }
+
+        }
+        break;
+
+    default: // code to be executed if n doesn't match any cases
+        break;
+    }
+
+    HandleFHSS();
+    HandleSendTelemetryResponse();
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+
+    if (connectionState != disconnected)
+    {
+        HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate_Modparams->interval);
+        RawOffset = (HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1) + 50); // the offset is because we want the hwtimer tick to occur slightly after the packet would have otherwise been recv
+        OffsetDx = LPF_OffsetDx.update(abs(RawOffset - prevOffset));
+        Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+        prevOffset = Offset;
+
+        if (RXtimerState == tim_locked)
+        {
+            hwTimer.phaseShift((Offset >> 3) + timerOffset);
+        }
+        else
+        {
+            hwTimer.phaseShift((RawOffset >> 4) + timerOffset);
+        }
+    }
+
+    if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
+    {
+        #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
+        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+        #endif
+    }
+
+    doneProcessing = micros();
+
+#ifndef DEBUG_SUPPRESS
+    Serial.print(RawOffset);
+    Serial.print(":");
+    Serial.print(Offset);
+    Serial.print(":");
+    Serial.print(OffsetDx);
+    Serial.print(":");
+    Serial.println(uplinkLQ);
+#endif
+}
+
+void ICACHE_RAM_ATTR RFdataISR()
+{
+    beginProcessing = micros();
+    Radio.GetRXBuff(OTA_DATA_BUF_RAW);
+    newRFdata = true; 
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-    uint8_t calculatedCRC = CalcCRC(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t inCRC = Radio.RXdataBuffer[7];
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
+    uint8_t calculatedCRC = CalcCRC(OTA_DATA_BUF, 7) + CRCCaesarCipher;
+    uint8_t inCRC = OTA_DATA_BUF[7];
+    uint8_t type = OTA_DATA_BUF[0] & 0b11;
+    uint8_t packetAddr = (OTA_DATA_BUF[0] & 0b11111100) >> 2;
 
     uint8_t indexIN;
     uint8_t TLMrateIn;
@@ -417,7 +601,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
         #else
-        UnpackChannelData_11bit();
+        UnpackChannelData_11bit(OTA_DATA_BUF);
         #endif
         if (connectionState == connected)
         {
@@ -426,7 +610,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        UnpackMSPData();
+        UnpackMSPData(OTA_DATA_BUF);
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -435,10 +619,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-         indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
-         TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
+         indexIN = (OTA_DATA_BUF[3] & 0b11000000) >> 6;
+         TLMrateIn = (OTA_DATA_BUF[3] & 0b00111000) >> 3;
 
-        if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+        if (ExpressLRS_currAirRate_Modparams->index == indexIN && OTA_DATA_BUF[4] == UID[3] && OTA_DATA_BUF[5] == UID[4] && OTA_DATA_BUF[6] == UID[5])
         {
             LastSyncPacket = millis();
             #ifndef DEBUG_SUPPRESS
@@ -454,10 +638,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
             }
 
-            if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
+            if (NonceRX != OTA_DATA_BUF[2] || FHSSgetCurrIndex() != OTA_DATA_BUF[1])
             {
-                FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-                NonceRX = Radio.RXdataBuffer[2];
+                FHSSsetCurrIndex(OTA_DATA_BUF[1]);
+                NonceRX = OTA_DATA_BUF[2];
                 TentativeConnection();
                 return;
             }
@@ -562,7 +746,8 @@ void sampleButton()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-    ProcessRFPacket();
+    //ProcessRFPacket();
+    RFdataISR();
     //Serial.println("r");
 }
 
@@ -686,12 +871,19 @@ void setup()
 
 void loop()
 {
+    if (newRFdata)
+    {
+        ProcessRFPacket_fromloop();
+        newRFdata = false;
+        memset(OTA_DATA_BUF, 0x00, 8);
+    }
+
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
     }
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
+#if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
     if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)
     {
         beginWebsever();

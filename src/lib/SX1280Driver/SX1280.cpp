@@ -62,7 +62,7 @@ bool SX1280Driver::Begin()
     this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                        //enable auto FS
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));           //default is low power mode, switch to high sensitivity instead
-    this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); //default params
+    this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, TXRXBuffSize, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); //default params
     this->SetFrequency(this->currFreq);                                     //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
@@ -74,7 +74,7 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
 {
     this->SetMode(SX1280_MODE_STDBY_XOSC);
     ConfigModParams(bw, sf, cr);
-    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
+    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, TXRXBuffSize, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
     SetFrequency(freq);
 }
 
@@ -255,6 +255,10 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
     hal.WriteCommand(SX1280_RADIO_CLR_IRQSTATUS, buf, sizeof(buf));
 }
 
+void SX1280Driver::SetTXBuff(uint8_t* buf){
+    memcpy(instance->TXdataBuffer, buf, TXRXBuffSize);
+}
+
 void SX1280Driver::TXnbISR()
 {
     //endTX = micros();
@@ -271,15 +275,19 @@ void SX1280Driver::TXnbISR()
     instance->TXdoneCallback();
 }
 
-uint8_t FIFOaddr = 0;
 
-void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
+void SX1280Driver::TXnb()
 {
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable(); // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
+    hal.WriteBuffer(0x00, instance->TXdataBuffer, TXRXBuffSize); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
-    beginTX = micros();
+    //beginTX = micros();
+}
+
+void SX1280Driver::GetRXBuff(uint8_t *buf)
+{
+    memcpy(buf, instance->RXdataBuffer, TXRXBuffSize);
 }
 
 void SX1280Driver::RXnbISR()

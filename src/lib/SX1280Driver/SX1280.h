@@ -32,10 +32,14 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    #define TXRXBuffSize 8 
+    #ifdef USE_RS_FEC 
+    #define TXRXBuffSize 14
+    #else
+    #define TXRXBuffSize 8
+    #endif
 
-    volatile uint8_t TXdataBuffer[TXRXBuffSize]; // ELRS uses max of 8 bytes
-    volatile uint8_t RXdataBuffer[TXRXBuffSize];
+    uint8_t TXdataBuffer[TXRXBuffSize]; // ELRS uses max of 8 bytes
+    uint8_t RXdataBuffer[TXRXBuffSize];
 
     static uint8_t _syncWord;
 
@@ -76,6 +80,8 @@ public:
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
     void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength);
     void ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
+    void SetTXBuff(uint8_t* buf);
+    void GetRXBuff(uint8_t* buf);
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
     void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
     void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
@@ -83,7 +89,7 @@ public:
 
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
 
-    static void ICACHE_RAM_ATTR TXnb(volatile uint8_t *data, uint8_t length);
+    static void ICACHE_RAM_ATTR TXnb();
     static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
 
     static void ICACHE_RAM_ATTR RXnb();
