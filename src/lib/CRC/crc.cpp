@@ -4,9 +4,9 @@ GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
 {
     uint8_t i;
     uint8_t j;
-    unsigned char crc;
+    uint8_t crc;
 
-    for (i = 0; i < crclen; i++)
+    for (i = 0; i < crclen - 1; i++)
     {
         crc = i;
         for (j = 0; j < 8; j++)
