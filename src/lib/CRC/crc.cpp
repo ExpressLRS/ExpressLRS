@@ -2,8 +2,8 @@
 
 GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
 {
-    int i;
-    int j;
+    uint8_t i;
+    uint8_t j;
     unsigned char crc;
 
     for (i = 0; i < crclen; i++)
@@ -17,7 +17,7 @@ GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
     }
 }
 
-uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(uint8_t *data, int len)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(uint8_t *data, uint8_t len)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < len; i++)
@@ -27,7 +27,7 @@ uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(uint8_t *data, int len)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(volatile uint8_t *data, int len)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(volatile uint8_t *data, uint8_t len)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < len; i++)
