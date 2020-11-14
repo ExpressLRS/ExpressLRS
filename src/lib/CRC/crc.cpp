@@ -2,11 +2,11 @@
 
 GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
 {
-    uint8_t i;
+    uint32_t i;
     uint8_t j;
     uint8_t crc;
 
-    for (i = 0; i < crclen - 1; i++)
+    for (i = 0; i < crclen; i++)
     {
         crc = i;
         for (j = 0; j < 8; j++)
