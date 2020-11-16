@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 #define UNDEF_PIN (-1)
 
