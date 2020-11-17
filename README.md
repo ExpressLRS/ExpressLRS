@@ -1,4 +1,4 @@
-![2.4GHz Hardware](img/banner.png)
+![Banner](img/banner.png)
 
 ## Need help? Confused? Join the Community!
  * [RCGroups Discussion](https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system)
@@ -32,7 +32,7 @@ Links:
 - [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
 
 ### 868/915MHz DIY Receiver and Transmitter
-![2.4GHz Hardware](img/900Mhardware.jpg)
+![868/915MHz Hardware](img/900Mhardware.jpg)
 
 Links:
 - [Mini 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 868/915MHz RX
@@ -73,3 +73,5 @@ STLs for printing your own enclosure are available in the [STL folder](https://g
 
 ### Legal Stuff
 The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
+
+![Banner](img/footer.png)
