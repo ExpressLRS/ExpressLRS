@@ -63,7 +63,6 @@ LQCALC LQCALC;
 uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
-uint8_t CURR_RATE_MAX;
 
 int32_t HWtimerError;
 int32_t RawOffset;
@@ -112,6 +111,8 @@ int16_t RFnoiseFloor; //measurement of the current RF noise floor
 
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
+#define RFmodeCycleDivisorFastMode 10
+uint8_t RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
@@ -288,6 +289,7 @@ void LostConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
 
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
@@ -432,6 +434,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
 
+    if(RFmodeCycleDivisor != 1){
+        RFmodeCycleDivisor = 1;
+    }
+
     getRFlinkInfo();
 
     switch (type)
@@ -463,32 +469,31 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
 
-        if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
-        {
-            LastSyncPacket = millis();
-            #ifndef DEBUG_SUPPRESS
-            Serial.println("sync");
-            #endif
+         if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         {
+             LastSyncPacket = millis();
+#ifndef DEBUG_SUPPRESS
+             Serial.println("sync");
+#endif
 
-            if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
-            { // change link parameters if required
-                #ifndef DEBUG_SUPPRESS
-                Serial.println("New TLMrate: ");
-                Serial.println(TLMrateIn);
-                #endif
-                ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
-            }
+             if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
+             { // change link parameters if required
+#ifndef DEBUG_SUPPRESS
+                 Serial.println("New TLMrate: ");
+                 Serial.println(TLMrateIn);
+#endif
+                 ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+             }
 
-            if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
-            {
-                FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-                NonceRX = Radio.RXdataBuffer[2];
-                TentativeConnection();
-                return;
-            }
-
-        }
-        break;
+             if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
+             {
+                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+                 NonceRX = Radio.RXdataBuffer[2];
+                 TentativeConnection();
+                 return;
+             }
+         }
+         break;
 
     default: // code to be executed if n doesn't match any cases
         break;
@@ -768,26 +773,12 @@ void loop()
         LastSyncPacket = millis();
     }
 
-    if (lowRateMode == false) // this makes it latch to ON if it ever gets triggered
-    {
-        if (millis() > (LastValidPacket + 60000))
-        {
-            lowRateMode = true;
-            CURR_RATE_MAX = RATE_MAX; //switch between 200hz, 100hz, 50hz, 25hz, 4hz rates
-            scanIndex = 3;
-        }
-        else
-        {
-            CURR_RATE_MAX = 3; //switch between 200hz, 100hz, 50hz, rates
-        }
-    }
-
-    if (millis() > (RFmodeLastCycled + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) // connection = tentative we add alittle delay
+    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor))) // connection = tentative we add alittle delay
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
             LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
+            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
             #ifdef GPIO_PIN_LED

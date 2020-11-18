@@ -499,7 +499,6 @@ void HandleUpdateParameter()
   default:
     break;
   }
-  sendLuaParams();
   UpdateParamReq = false;
   config.SetRate(ExpressLRS_nextAirRateIndex);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
@@ -679,6 +678,7 @@ void loop()
     Serial.println("EEPROM COMMIT");
     // Resume the timer
     hwTimer.resume();
+    sendLuaParams();
   }
 
 #ifdef FEATURE_OPENTX_SYNC
