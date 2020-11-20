@@ -98,15 +98,15 @@
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
-#define GPIO_PIN_NSS            PB12 //confirmed on SLIMPLUS
+#define GPIO_PIN_NSS            PB12 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_BUSY           -1   // NOT USED ON THIS TARGET
-#define GPIO_PIN_DIO0           PA15 //confirmed on SLIMPLUS
+#define GPIO_PIN_DIO0           PA15 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_DIO1           PA1  // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
 /////////////////////////////////////// NOT FOUND ON SLIMPLUS EITHER.
-#define GPIO_PIN_MOSI           PB15 //confirmed on SLIMPLUS
-#define GPIO_PIN_MISO           PB14 //confirmed on SLIMPLUS
-#define GPIO_PIN_SCK            PB13 //confirmed on SLIMPLUS
-#define GPIO_PIN_RST            PC14 //confirmed on SLIMPLUS
+#define GPIO_PIN_MOSI           PB15 //confirmed on SLIMPLUS, R900MINI
+#define GPIO_PIN_MISO           PB14 //confirmed on SLIMPLUS, R900MINI
+#define GPIO_PIN_SCK            PB13 //confirmed on SLIMPLUS, R900MINI
+#define GPIO_PIN_RST            PC14 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 
@@ -116,6 +116,9 @@ https://github.com/jaxxzer
 #elif TARGET_R9SLIMPLUS_RX               // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
+#elif TARGET_R900MINI_RX                 
+    #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
+    #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
 #else //default R9MM_R9MINI or R9MX
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
@@ -136,6 +139,11 @@ https://github.com/jaxxzer
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
     #define GPIO_PIN_ANTENNA_SELECT PB9
+#elif TARGET_R900MINI_RX
+    #define GPIO_PIN_LED            PA11 // Red
+    #define GPIO_PIN_LED_RED        PA11 // Red
+    #define GPIO_PIN_LED_GREEN      PA12 // Green
+    #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
 #else //R9MM_R9MINI
     //#define GPIO_PIN_LED            PC1 // Red
     #define GPIO_PIN_LED_RED        PC1 // Red
