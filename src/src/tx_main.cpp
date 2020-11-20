@@ -423,7 +423,7 @@ void HandleUpdateParameter()
     Serial.println("Change Link rate");
     if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
-      if ((micros() + PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
+      if ((micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
       {
         SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
         Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
