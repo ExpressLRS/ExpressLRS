@@ -44,6 +44,7 @@ public:
     SX1280_RadioLoRaCodingRates_t currCR = SX1280_LORA_CR_4_7;
     uint32_t currFreq = 2400000000;
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+    bool IQinverted = false;
 
     // static uint8_t currPWR;
     // static uint8_t maxPWR;
@@ -74,7 +75,7 @@ public:
     bool Begin();
     void End();
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
-    void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength);
+    void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ);
     void ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
     void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);

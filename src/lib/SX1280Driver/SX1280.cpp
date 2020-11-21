@@ -5,6 +5,10 @@
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
 
+//DEBUG
+
+//DEBUG_SX1280_OTA_TIMING
+
 /* Steps for startup 
 
 1. If not in STDBY_RC mode, then go to this mode by sending the command:
@@ -70,11 +74,12 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
+void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ)
 {
+    IQinverted = InvertIQ;
     this->SetMode(SX1280_MODE_STDBY_XOSC);
     ConfigModParams(bw, sf, cr);
-    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
+    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)(IQinverted << 6)); // TODO don't make static etc.
     SetFrequency(freq);
 }
 
@@ -257,16 +262,15 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 
 void SX1280Driver::TXnbISR()
 {
-    //endTX = micros();
+#ifdef DEBUG_SX1280_OTA_TIMING
+    endTX = micros();
+#endif
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     instance->currOpmode = SX1280_MODE_FS; // radio goes to FS
-    //Serial.print("TOA: ");
-    //Serial.println(endTX - beginTX);
-    //instance->GetStatus();
-
-    // Serial.println("TXnbISR!");
-    //instance->GetStatus();
-    
+#ifdef DEBUG_SX1280_OTA_TIMING
+    Serial.print("TOA: ");
+    Serial.println(endTX - beginTX);
+#endif
     //instance->GetStatus();
     instance->TXdoneCallback();
 }
@@ -276,10 +280,12 @@ uint8_t FIFOaddr = 0;
 void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    hal.TXenable(); // do first to allow PA stablise
+    hal.TXenable();                      // do first to allow PA stablise
     hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
+#ifdef DEBUG_SX1280_OTA_TIMING
     beginTX = micros();
+#endif
 }
 
 void SX1280Driver::RXnbISR()
