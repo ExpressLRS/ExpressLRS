@@ -161,6 +161,16 @@ local supportedRadios =
         topOffset       = 1,
         leftOffset      = 1,
     },
+    ["128x96"]  =
+    {
+        --highRes         = false,
+        textSize        = SMLSIZE,
+        xOffset         = 60,
+        yOffset         = 8,
+        yOffset_val     = 3,
+        topOffset       = 1,
+        leftOffset      = 1,
+    },
     ["212x64"]  =
     {
         --highRes         = false,
