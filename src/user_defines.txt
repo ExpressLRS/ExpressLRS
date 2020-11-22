@@ -15,7 +15,7 @@
 
 ### REGULATORY DOMAIN: ### 
 
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
@@ -30,7 +30,8 @@
 
 ### PERFORMANCE OPTIONS: ### 
 
-#-DR9M_UNLOCK_HIGHER_POWER      #unlocks >250mw output power for R9M (Fan mod suggested) 
+#unlocks >250mw output power for R9M (Fan mod suggested) 
+-DR9M_UNLOCK_HIGHER_POWER
 
 #-DNO_SYNC_ON_ARM
 #-DARM_CHANNEL=AUX1
