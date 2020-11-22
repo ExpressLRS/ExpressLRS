@@ -31,7 +31,7 @@
 ### PERFORMANCE OPTIONS: ### 
 
 #unlocks >250mw output power for R9M (Fan mod suggested) 
--DR9M_UNLOCK_HIGHER_POWER
+#-DR9M_UNLOCK_HIGHER_POWER
 
 #-DNO_SYNC_ON_ARM
 #-DARM_CHANNEL=AUX1
