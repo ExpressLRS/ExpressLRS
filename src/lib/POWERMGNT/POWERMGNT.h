@@ -11,7 +11,11 @@
 #endif
 
 #ifdef TARGET_R9M_TX
+#ifdef R9M_UNLOCK_HIGHER_POWER
 #define MaxPower 6
+#else
+#define MaxPower 4
+#endif
 #define DefaultPowerEnum 2
 #endif
 
