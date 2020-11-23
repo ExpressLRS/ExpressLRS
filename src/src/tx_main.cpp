@@ -26,8 +26,6 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "LowPassFilter.h"
 
-#include "pitches.h"
-
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -42,6 +40,9 @@ SX1280Driver Radio;
 #include "button.h"
 button button;
 R9DAC R9DAC;
+#ifdef MELODY_EDITOR
+#include "pitches.h"
+#endif
 #endif
 
 #if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
