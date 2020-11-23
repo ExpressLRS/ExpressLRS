@@ -379,6 +379,16 @@ void sendLuaParams()
 
 void RadioUARTconnected()
 {
+  #ifdef TARGET_R9M_TX
+  const uint16_t beepFreq[] = {520, 676};
+  const uint16_t beepDurations[] = {150, 300};
+  for (int i = 0; i < 2; i++)
+  {
+    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+    delay(beepDurations[i]);
+    noTone(GPIO_PIN_BUZZER);
+  }
+  #endif
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
