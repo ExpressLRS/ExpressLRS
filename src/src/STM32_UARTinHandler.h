@@ -19,13 +19,6 @@ bool UARTframeActive = false;
 
 uint8_t UARTinBuffer[256];
 
-#if defined(TARGET_RX_GHOST_ATTO_V1)
-#define CRSF_RX_SERIAL CrsfRxSerial
-HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
-#else /* !TARGET_RX_GHOST_ATTO_V1 */
-#define CRSF_RX_SERIAL Serial
-#endif /* TARGET_RX_GHOST_ATTO_V1 */
-
 void STM32_RX_UARTprocessPacket()
 {
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_COMMAND)

@@ -288,10 +288,6 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-<<<<<<< HEAD
-=======
-
->>>>>>> b1f2974 (targets: Ghost ATTO to use dual uart (Serial In/Out pads) (#200))
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
     Serial.println("lost conn");
