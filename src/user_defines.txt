@@ -59,7 +59,7 @@
 ### uncomment MELODY_EDITOR and MELODY_EDITOR_BPM to specify your own startup jingle instead of the default
 ### see pitches.h for valid note names
 #-DJUST_BEEP_ONCE
--DMELODY_EDITOR="{{NOTE_B5, 16}, {NOTE_REST, 16}, {NOTE_B5, 16}, {NOTE_REST, 16}, {NOTE_B5, 16}, {NOTE_REST, 16}, {NOTE_B5, 2}, {NOTE_G5, 2}, {NOTE_A5, 2}, {NOTE_B5, 8}, {NOTE_REST, 4}, {NOTE_A5, 8}, {NOTE_B5, 1}}"
+-DMELODY_EDITOR="{{NOTE_G5, 16}, {NOTE_REST, 16}, {NOTE_G5, 16}, {NOTE_REST, 16}, {NOTE_G5, 16}, {NOTE_REST, 16}, {NOTE_G5, 2}, {NOTE_DS5, 2}, {NOTE_F5, 2}, {NOTE_G5, 8}, {NOTE_REST, 4}, {NOTE_F5, 8}, {NOTE_G5, 1}}"
 -DMELODY_EDITOR_BPM=140
 
 #-DUSE_500HZ
