@@ -37,6 +37,9 @@ Below are links to the more uncommon components.
 - RF output filter https://au.mouser.com/ProductDetail/johanson/2450fm07d0034t/?qs=%252bEew9%252b0nqrBEY7VUloPs4Q%3D%3D
 - Crystal https://au.mouser.com/ProductDetail/Diodes-Incorporated/FW520WFMT1?qs=%2Fha2pyFadugPDf0nhgewaMwLjNbxaY4Xr5XmslnYeZgOQCJm3ZvVpQ%3D%3D or https://www.digikey.com/product-detail/en/diodes-incorporated/FW520WFMT1/FW520WFMT1CT-ND/6173706
 
+If the FW520WFMT1 is out of stock, the FL520WFMT1 can be used. The FL is slightly larger and may require more skill to solder but it's been used before. 
+https://www.digikey.com/en/products/detail/diodes-incorporated/FL520WFMT1/6173685?s=N4IgTCBcDaIGIBkCsYAMB1OBZAKgRhAF0BfIA
+
 ### Antennas
 
 The antennas linked below when cut to an end-to-end length of 49.8mm will be tunned for the middle of the 2.4GHz range.  Ideally confirm this with a vector analyser.
