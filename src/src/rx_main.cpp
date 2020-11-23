@@ -794,7 +794,30 @@ void loop()
         #endif
     }
 
-#ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
+#ifdef TARGET_RX_GHOST_ATTO_V1
+    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis)) // quicker way to get to good conn state of the sync and link is great off the bat.
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 25 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        if (LEDfadeDir)
+        {
+            LEDfade = LEDfade + 1;
+        }
+        else
+        {
+            LEDfade = LEDfade - 1;
+        }
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDupdateCounterMillis = millis();
+    }
 #endif
+
+//#ifdef PLATFORM_STM32
+    STM32_RX_HandleUARTin();
+  //  #endif
 }
