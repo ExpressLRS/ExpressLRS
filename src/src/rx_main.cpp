@@ -288,6 +288,10 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b1f2974 (targets: Ghost ATTO to use dual uart (Serial In/Out pads) (#200))
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
     Serial.println("lost conn");
@@ -314,7 +318,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
     WS281BsetLED(LEDcolor);
@@ -342,7 +346,7 @@ void GotConnection()
     RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
     WS281BsetLED(LEDcolor);
@@ -608,12 +612,25 @@ void setup()
 
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    #ifdef USE_R9MM_R9MINI_SBUS
-    //HardwareSerial(USART2); // This is useless call
-    #endif
+#ifdef USE_R9MM_R9MINI_SBUS
+//HardwareSerial(USART2); // This is useless call
+#endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
+#if defined(TARGET_RX_GHOST_ATTO_V1)
+    // USART1 is used for RX (half duplex)
+    CRSF_RX_SERIAL.setHalfDuplex();
+    CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.enableHalfDuplexRx();
+
+    // USART2 is used for TX (half duplex)
+    // Note: these must be set before begin()
+    Serial.setHalfDuplex();
+    Serial.setRx((PinName)NC);
+    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+#endif /* TARGET_RX_GHOST_ATTO_V1 */
 #endif /* PLATFORM_STM32 */
 
     Serial.begin(CRSF_RX_BAUDRATE);
@@ -638,7 +655,7 @@ void setup()
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
 
-#ifdef TARGET_RX_GHOST_ATTO_V1 // do startup blinkies for fun
+#if WS2812_LED_IS_USED // do startup blinkies for fun
     uint32_t col = 0x0000FF;
     for (uint8_t j = 0; j < 3; j++)
     {
@@ -831,7 +848,7 @@ void loop()
         #endif
     }
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if WS2812_LED_IS_USED
     if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis)) // quicker way to get to good conn state of the sync and link is great off the bat.
     {
         uint8_t LEDcolor[3] = {0};

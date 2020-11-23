@@ -1,12 +1,12 @@
 #include "CRSF.h"
 #include "targets.h"
 
-#if defined(TARGET_R9SLIMPLUS_RX)
+#if defined(TARGET_RX_GHOST_ATTO_V1)
 #define CRSF_RX_SERIAL CrsfRxSerial
-HardwareSerial CrsfRxSerial(USART3);
-#else /* !TARGET_R9SLIMPLUS_RX */
+HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
+#else /* !TARGET_RX_GHOST_ATTO_V1 */
 #define CRSF_RX_SERIAL Serial
-#endif /* TARGET_R9SLIMPLUS_RX */
+#endif /* TARGET_RX_GHOST_ATTO_V1 */
 
 extern CRSF crsf;
 
