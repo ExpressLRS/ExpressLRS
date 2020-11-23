@@ -26,6 +26,8 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "LowPassFilter.h"
 
+#include "pitches.h"
+
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -552,21 +554,34 @@ void setup()
 
 #if defined(TARGET_R9M_TX)
     // Annoying startup beeps
-#ifndef JUST_BEEP_ONCE
-  pinMode(GPIO_PIN_BUZZER, OUTPUT);
-  const int beepFreq[] = {659, 659, 523, 659, 783, 392};
-  const int beepDurations[] = {300, 300, 100, 300, 550, 575};
+  #ifndef JUST_BEEP_ONCE
+    pinMode(GPIO_PIN_BUZZER, OUTPUT);
+    #if defined(MELODY_EDITOR)
+      // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
+      const int melody[][2] = MELODY_EDITOR;
 
-  for (int i = 0; i < 6; i++)
-  {
-    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-    delay(beepDurations[i]);
-    noTone(GPIO_PIN_BUZZER);
-  }
+      for(int i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
+        int noteDuration = (int)((1000 * (60 * 4 / MELODY_EDITOR_BPM)) / (float)melody[i][1]);
+        tone(GPIO_PIN_BUZZER, melody[i][0], noteDuration);
+        delay(noteDuration);
+        noTone(GPIO_PIN_BUZZER);
+      }
+    #else
+      // use default jingle
+      const int beepFreq[] = {659, 659, 523, 659, 783, 392};
+      const int beepDurations[] = {300, 300, 100, 300, 550, 575};
+
+      for (int i = 0; i < 6; i++)
+      {
+        tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+        delay(beepDurations[i]);
+        noTone(GPIO_PIN_BUZZER);
+      }
+    #endif
   #else
-  tone(GPIO_PIN_BUZZER, 400, 200);
-  delay(200);
-  tone(GPIO_PIN_BUZZER, 480, 200);
+    tone(GPIO_PIN_BUZZER, 400, 200);
+    delay(200);
+    tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
   R9DAC.init();
