@@ -13,6 +13,7 @@ filesize = 0
 filechunks = 0
 
 BootloaderInitSeq1 = bytes([0xEC,0x04,0x32,0x62,0x6c,0x0A])
+BootloaderInitSeq1_patch = bytes([0xEC,0x04,0x32,0x62,0x6c,0x41]) #needed to fix a bug, possibly remove in a few weeks once everyone has updated.
 BootloaderInitSeq2 = bytes([0x62,0x62,0x62,0x62,0x62,0x62])
 
 sys.stdout.flush()
@@ -59,8 +60,10 @@ if 'CC' not in already_in_bl:
 
         # request reboot
         line = ""
-        s.write(BootloaderInitSeq1)
-        s.flush()
+        if (currAttempt % 2) == 0:
+            s.write(BootloaderInitSeq1)
+        else:
+            s.write(BootloaderInitSeq1_patch)
         time.sleep(0.5)
 
         start = time.time()
