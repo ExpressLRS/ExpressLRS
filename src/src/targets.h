@@ -254,6 +254,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF2			PB1  // 26SU Sample RF2
 #define GPIO_PIN_VRF2			PA0  // SWR? ADC1_IN1
 
+#define BUFFER_OE               -1  //CONFIRMED
+
 #endif
 
 #ifdef TARGET_RX_ESP8266_SX1280_V1
