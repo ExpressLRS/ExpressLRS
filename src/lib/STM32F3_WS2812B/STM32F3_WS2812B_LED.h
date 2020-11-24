@@ -16,12 +16,11 @@ static inline void LEDsend_1(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP();
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP();
 }
 
 static inline void LEDsend_0(void) {
@@ -29,7 +28,7 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP();
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -40,7 +39,6 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP();
 }
 
 static inline uint32_t bitReverse(uint8_t input)
