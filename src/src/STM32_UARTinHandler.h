@@ -1,12 +1,15 @@
 #include "CRSF.h"
 #include "targets.h"
 
-#if defined(TARGET_R9SLIMPLUS_RX)
-#define CRSF_RX_SERIAL CrsfRxSerial
-HardwareSerial CrsfRxSerial(USART3);
-#else /* !TARGET_R9SLIMPLUS_RX */
-#define CRSF_RX_SERIAL Serial
-#endif /* TARGET_R9SLIMPLUS_RX */
+#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
+#elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART3);
+#else
+    #define CRSF_RX_SERIAL Serial
+#endif
 
 extern CRSF crsf;
 
@@ -23,11 +26,11 @@ void STM32_RX_UARTprocessPacket()
 {
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_COMMAND)
     {
-        Serial.println("Got CMD Packet");
+        CRSF_RX_SERIAL.println("Got CMD Packet");
         if (UARTinBuffer[3] == 0x62 && UARTinBuffer[4] == 0x6c)
         {
             delay(100);
-            Serial.println("Jumping to Bootloader...");
+            CRSF_RX_SERIAL.println("Jumping to Bootloader...");
             delay(100);
             HAL_NVIC_SystemReset();
         }
@@ -69,8 +72,9 @@ void STM32_RX_HandleUARTin()
                 UARTframeActive = false;
                 while (CRSF_RX_SERIAL.available())
                 {
-                    (void)CRSF_RX_SERIAL.read();
+                    CRSF_RX_SERIAL.read();
                 }
+                CRSF_RX_SERIAL.flush();
             }
         }
 
@@ -112,10 +116,9 @@ void STM32_RX_HandleUARTin()
                 UARTinPacketPtr = 0;
                 while (CRSF_RX_SERIAL.available())
                 {
-                    // dunno why but the flush() method wasn't working
-                    // A: because flush() waits until all data is SENT aka TX buffer is empty
-                    (void)CRSF_RX_SERIAL.read();
+                    CRSF_RX_SERIAL.read(); // dunno why but the flush() method wasn't working
                 }
+                CRSF_RX_SERIAL.flush();
             }
         }
     }
