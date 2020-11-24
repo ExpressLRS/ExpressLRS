@@ -15,12 +15,13 @@ static inline void LEDsend_1(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP();
+        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP();
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP();
+        __NOP(); __NOP(); __NOP(); __NOP();
 }
 
 static inline void LEDsend_0(void) {
@@ -28,7 +29,7 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP();
+        __NOP(); __NOP(); __NOP(); __NOP();
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -38,7 +39,8 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP();
+        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP();
 }
 
 static inline uint32_t bitReverse(uint8_t input)
@@ -62,8 +64,8 @@ void WS281BsetLED(uint8_t const * const RGB) // takes RGB data
 
     uint32_t LedColourData =
         bitReverse(RGB[1]) +       // Green
-        bitReverse(RGB[0]) << 8 +  // Red
-        bitReverse(RGB[2]) << 16;  // Blue
+        (bitReverse(RGB[0]) << 8) +  // Red
+        (bitReverse(RGB[2]) << 16);  // Blue
     uint8_t bits = 24;
     while (bits--)
     {

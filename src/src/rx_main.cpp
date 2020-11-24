@@ -34,7 +34,7 @@ SX1280Driver Radio;
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
-uint32_t LEDupdateInterval = 1;
+uint32_t LEDupdateInterval = 25;
 uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
@@ -845,22 +845,15 @@ void loop()
     }
 
 #if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis)) // quicker way to get to good conn state of the sync and link is great off the bat.
+    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
     {
         uint8_t LEDcolor[3] = {0};
-        if (LEDfade == 25 || LEDfade == 0)
+        if (LEDfade == 30 || LEDfade == 0)
         {
             LEDfadeDir = !LEDfadeDir;
         }
 
-        if (LEDfadeDir)
-        {
-            LEDfade = LEDfade + 1;
-        }
-        else
-        {
-            LEDfade = LEDfade - 1;
-        }
+        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
         LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
         WS281BsetLED(LEDcolor);
         LEDupdateCounterMillis = millis();
