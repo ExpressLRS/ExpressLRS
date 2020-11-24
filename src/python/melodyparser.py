@@ -11,18 +11,18 @@ def window(iterable, size=2):
 		win = win[1:] + [e]
 		yield win
 
-def parseMelody(melodyString, transposeBySemitones=0):
+def parseMelody(melodyString, bpm=120, transposeBySemitones=0):
 	# parse string to python list
 	tokenizedNotes = melodyString.split(' ')
 	operations = []
 	for token, nextToken in window(tokenizedNotes + [None], 2):
 		if token.startswith(pauseChar):
 			# Token is a pause operation, use frequency 0
-			operations.append([0, token[1:]])
+			operations.append([0, getDurationInMs(bpm, token[1:])])
 		elif token.startswith(tuple(notesChars)):
 			# Token is a note; next token will be duration of this note
-			frequency = int(getFrequency(token, transposeBySemitones))
-			duration = int(nextToken)
+			frequency = getFrequency(token, transposeBySemitones)
+			duration = getDurationInMs(bpm, nextToken)
 			operations.append([frequency, duration])
 		else:
 			continue
@@ -40,7 +40,10 @@ def getFrequency(note, transposeBy=0, A4=440):
 	else:
 		keyNumber = keyNumber + ((octave - 1) * 12) + 1
 	keyNumber += transposeBy
-	return A4 * 2 ** ((keyNumber - 49) / 12)
+	return int(A4 * 2 ** ((keyNumber - 49) / 12))
+
+def getDurationInMs(bpm, duration):
+	return int((1000 * (60 * 4 / bpm)) / float(duration))
 
 def generateArrayString(melodyArray):
 	# generate C-style array string from python list
