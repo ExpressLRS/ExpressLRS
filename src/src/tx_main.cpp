@@ -40,9 +40,6 @@ SX1280Driver Radio;
 #include "button.h"
 button button;
 R9DAC R9DAC;
-#if defined(MELODY_EDITOR) && defined(MELODY_EDITOR_BPM)
-#include "pitches.h"
-#endif
 #endif
 
 #if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
@@ -557,12 +554,12 @@ void setup()
     // Annoying startup beeps
   #ifndef JUST_BEEP_ONCE
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    #if defined(MELODY_EDITOR) && defined(MELODY_EDITOR_BPM)
+    #if defined(MY_STARTUP_MELODY_ARR) && defined(MY_STARTUP_MELODY_BPM)
       // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-      const int melody[][2] = MELODY_EDITOR;
+      const int melody[][2] = MY_STARTUP_MELODY_ARR;
 
       for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
-        int noteDuration = (int)((1000 * (60 * 4 / MELODY_EDITOR_BPM)) / (float)melody[i][1]);
+        int noteDuration = (int)((1000 * (60 * 4 / MY_STARTUP_MELODY_BPM)) / (float)melody[i][1]);
         tone(GPIO_PIN_BUZZER, melody[i][0], noteDuration);
         delay(noteDuration);
         noTone(GPIO_PIN_BUZZER);
