@@ -530,33 +530,27 @@ void sampleButton()
 
     if (buttonValue == false && buttonPrevValue == true)
     { //falling edge
-        buttonLastPressed = millis();
         buttonDown = true;
-        Serial.println("Manual Start");
-        Radio.SetFrequency(GetInitialFreq());
-        Radio.RXnb();
     }
 
-    if (buttonValue == true && buttonPrevValue == false) //rising edge
-    {
+    if (buttonValue == true && buttonPrevValue == false) 
+    { //rising edge
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) // button held down
-    {
+    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) 
+    { // button held down for WEB_UPDATE_PRESS_INTERVAL
         if (!webUpdateMode)
         {
             beginWebsever();
         }
     }
-
     if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
 #ifdef PLATFORM_ESP8266
         ESP.restart();
 #endif
     }
-
     buttonPrevValue = buttonValue;
 #endif
 }
