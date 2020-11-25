@@ -225,15 +225,14 @@ https://github.com/jaxxzer
 #endif
 
 #ifdef TARGET_R9M_LITE_PRO_TX
-
-#define GPIO_PIN_RFamp_APC1           PA4  //2.7V
-#define GPIO_PIN_RFamp_APC2           PA5  //100mW@590mV, 200mW@870mV, 500mW@1.093V, 1W@1.493V
+//#define GPIO_PIN_RFamp_APC1           PA4  //2.7V
+//#define GPIO_PIN_RFamp_APC2           PA5  //100mW@590mV, 200mW@870mV, 500mW@1.093V, 1W@1.493V
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12 // confirmed
 #define GPIO_PIN_DIO0           PA8  // confirmed
-#define GPIO_PIN_DIO1           -1   // NOT USED ON THIS TARGET
-#define GPIO_PIN_BUSY           -1   // NOT USED ON THIS TARGET
+#define GPIO_PIN_DIO1           UNDEF_PIN   // NOT USED ON THIS TARGET
+#define GPIO_PIN_BUSY           UNDEF_PIN   // NOT USED ON THIS TARGET
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
@@ -252,9 +251,9 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_VRF1			PA7  // 26SU Sample RF1
 #define GPIO_PIN_VRF2			PB1  // 26SU Sample RF2
-#define GPIO_PIN_VRF2			PA0  // SWR? ADC1_IN1
+#define GPIO_PIN_SWR			PA0  // SWR? ADC1_IN1
 
-#define BUFFER_OE               -1  //CONFIRMED
+#define BUFFER_OE               UNDEF_PIN  //CONFIRMED
 
 #endif
 
