@@ -685,7 +685,7 @@ void setup()
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
     }
-#ifdef TARGET_RX_ESP8266_SX1280_V1
+#if defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_RX_GHOST_ATTO_V1)
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
 #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
