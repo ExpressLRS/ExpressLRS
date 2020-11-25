@@ -30,6 +30,15 @@ SX1280Driver Radio;
 #include "STM32_UARTinHandler.h"
 #endif
 
+#ifdef TARGET_RX_GHOST_ATTO_V1
+uint8_t LEDfadeDiv;
+uint8_t LEDfade;
+bool LEDfadeDir;
+uint32_t LEDupdateInterval = 25;
+uint32_t LEDupdateCounterMillis;
+#include "STM32F3_WS2812B_LED.h"
+#endif
+
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
@@ -304,6 +313,13 @@ void ICACHE_RAM_ATTR TentativeConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+
+#if WS2812_LED_IS_USED
+    uint8_t LEDcolor[3] = {0};
+    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
+    WS281BsetLED(LEDcolor);
+    LEDupdateCounterMillis = millis();
+#endif
 }
 
 void GotConnection()
@@ -313,9 +329,9 @@ void GotConnection()
         return; // Already connected
     }
 
-    #ifdef LOCK_ON_FIRST_CONNECTION
-        LockRFmode = true;
-    #endif
+#ifdef LOCK_ON_FIRST_CONNECTION
+    LockRFmode = true;
+#endif
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
@@ -325,6 +341,13 @@ void GotConnection()
 
     RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
+
+#if WS2812_LED_IS_USED
+    uint8_t LEDcolor[3] = {0};
+    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
+    WS281BsetLED(LEDcolor);
+    LEDupdateCounterMillis = millis();
+#endif
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
@@ -579,12 +602,25 @@ void setup()
 
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    #ifdef USE_R9MM_R9MINI_SBUS
-    //HardwareSerial(USART2); // This is useless call
-    #endif
+#ifdef USE_R9MM_R9MINI_SBUS
+//HardwareSerial(USART2); // This is useless call
+#endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
+#if defined(TARGET_RX_GHOST_ATTO_V1)
+    // USART1 is used for RX (half duplex)
+    CRSF_RX_SERIAL.setHalfDuplex();
+    CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.enableHalfDuplexRx();
+
+    // USART2 is used for TX (half duplex)
+    // Note: these must be set before begin()
+    Serial.setHalfDuplex();
+    Serial.setRx((PinName)NC);
+    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+#endif /* TARGET_RX_GHOST_ATTO_V1 */
 #endif /* PLATFORM_STM32 */
 
     Serial.begin(CRSF_RX_BAUDRATE);
@@ -609,6 +645,20 @@ void setup()
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
 
+#if WS2812_LED_IS_USED // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
+#endif
+
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915
@@ -628,9 +678,9 @@ void setup()
     bool init_success = Radio.Begin();
     while (!init_success)
     {
-#ifdef GPIO_PIN_LED
+        #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED);
-#endif
+        #endif
         LED = !LED;
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
@@ -697,9 +747,9 @@ void loop()
         HandleWebUpdate();
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
-#ifdef GPIO_PIN_LED
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
-#endif
+            #endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
         }
@@ -739,9 +789,9 @@ void loop()
             SetRFLinkRate(scanIndex % CURR_RATE_MAX); //switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
-#ifdef GPIO_PIN_LED
+            #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
-#endif
+            #endif
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
@@ -788,6 +838,21 @@ void loop()
         #endif
     }
 
+#if WS2812_LED_IS_USED
+    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 30 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDupdateCounterMillis = millis();
+    }
+#endif
 #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
 #endif

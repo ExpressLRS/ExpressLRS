@@ -86,6 +86,7 @@ void SX1280Hal::init()
 #endif
 
 #ifdef PLATFORM_STM32
+    Serial.println("Config SPI");
     SPI.setMOSI(GPIO_PIN_MOSI);
     SPI.setMISO(GPIO_PIN_MISO);
     SPI.setSCLK(GPIO_PIN_SCK);

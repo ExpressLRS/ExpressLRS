@@ -280,6 +280,26 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
+#ifdef TARGET_RX_GHOST_ATTO_V1
+#define GPIO_PIN_NSS            PA15
+#define GPIO_PIN_BUSY           PA3
+#define GPIO_PIN_DIO0           -1 // does not exist on sx1280
+#define GPIO_PIN_DIO1           PA1
+#define GPIO_PIN_MOSI           PB5
+#define GPIO_PIN_MISO           PB4
+#define GPIO_PIN_SCK            PB3
+#define GPIO_PIN_RST            PB0
+//#define GPIO_PIN_RCSIGNAL_RX    PB7
+//#define GPIO_PIN_RCSIGNAL_TX    PB6
+#define GPIO_PIN_RCSIGNAL_RX    PB6 // USART1, half duplex
+#define GPIO_PIN_RCSIGNAL_TX    PA2 // USART2, half duplex
+//#define GPIO_PIN_LED            PA7
+#define GPIO_PIN_LED_WS2812      PA7
+#define GPIO_PIN_LED_WS2812_FAST PA_7
+//#define GPIO_PIN_BUTTON         PA12
+#define timerOffset             1
+#endif
+
 #if defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
@@ -295,4 +315,13 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#endif
+
+#ifdef GPIO_PIN_LED_WS2812
+#ifndef GPIO_PIN_LED_WS2812_FAST
+#error "WS2812 support requires _FAST pin!"
+#endif
+#else
+#define GPIO_PIN_LED_WS2812         UNDEF_PIN
+#define GPIO_PIN_LED_WS2812_FAST    UNDEF_PIN
 #endif
