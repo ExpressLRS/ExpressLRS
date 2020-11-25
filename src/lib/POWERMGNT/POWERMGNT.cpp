@@ -79,6 +79,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     return CurrentPower;
 #endif
 
+#ifdef TARGET_R9M_LITE_PRO_TX
+    Radio.SetOutputPower(0b0000);
+    CurrentPower = Power;
+    return;
+#endif
+
 #if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
     switch (Power)
     {
