@@ -120,7 +120,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //int8_t LastRSSI = Radio.LastPacketRSSI;
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, -100, -50), -100, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50), -100, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
