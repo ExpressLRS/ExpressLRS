@@ -44,7 +44,10 @@ def uart_upload(port, filename, baudrate):
         s.close()
 
         # Init Betaflight passthrough
-        BFinitPassthrough.bf_passthrough_init(port, baudrate)
+        try:
+            BFinitPassthrough.bf_passthrough_init(port, baudrate)
+        except BFinitPassthrough.PassthroughEnabled:
+            pass
 
         # Init bootloader next
         s = serial.Serial(port=port, baudrate=baudrate, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)

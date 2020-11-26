@@ -5,6 +5,10 @@ import sys
 
 import serials_find
 
+class PassthroughEnabled(Exception):
+    pass
+
+
 def dbg_print(line=''):
     sys.stdout.write(line + '\n')
     sys.stdout.flush()
@@ -68,7 +72,7 @@ def bf_passthrough_init(port, requestedBaudrate):
         dbg_print("Failed to make contact with Betaflight, possibly already in passthrough mode?")
         dbg_print("If the next step fails please reboot FC")
         dbg_print()
-        raise Exception("BF connection failed");
+        raise PassthroughEnabled("BF connection failed");
 
     cmd = "serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)
 
