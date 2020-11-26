@@ -377,7 +377,22 @@ void sendLuaParams()
   crsf.sendLUAresponse(luaParams, 9);
 }
 
-void RadioUARTconnected()
+void UARTdisconnected()
+{
+  #ifdef TARGET_R9M_TX
+  const uint16_t beepFreq[] = {676, 520};
+  const uint16_t beepDurations[] = {300, 150};
+  for (int i = 0; i < 2; i++)
+  {
+    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+    delay(beepDurations[i]);
+    noTone(GPIO_PIN_BUZZER);
+  }
+  #endif
+  hwTimer.stop();
+}
+
+void UARTconnected()
 {
   #ifdef TARGET_R9M_TX
   const uint16_t beepFreq[] = {520, 676};
@@ -605,8 +620,8 @@ void setup()
 #ifndef One_Bit_Switches
   crsf.RCdataCallback1 = &CheckChannels5to8Change;
 #endif
-  crsf.connected = &RadioUARTconnected; // it will auto init when it detects UART connection
-  crsf.disconnected = &hwTimer.stop;
+  crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
+  crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &TimerCallbackISR;
 
