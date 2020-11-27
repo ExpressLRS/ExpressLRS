@@ -4,7 +4,7 @@ import sys, glob
 def serial_ports():
     """ Lists serial port names
 
-        :raises EnvironmentError:
+        :raises Exception:
             On unsupported or unknown platforms
         :returns:
             A list of the serial ports available on the system
@@ -22,7 +22,7 @@ def serial_ports():
     elif platform.startswith('darwin'):
         ports = glob.glob('/dev/tty.usbmodem*')
     else:
-        raise EnvironmentError('Unsupported platform')
+        raise Exception('Unsupported platform')
 
     for port in ports:
         try:
@@ -31,18 +31,18 @@ def serial_ports():
             result.append(port)
         except (OSError, serial.SerialException) as error:
             if "permission denied" in str(error).lower():
-                raise EnvironmentError("You don't have persmission to use serial port!")
+                raise Exception("You don't have persmission to use serial port!")
             pass
     return result
 
 def get_serial_port(debug=True):
     result = serial_ports()
     if debug:
-        sys.stdout.write("Detected the following serial ports on this system: \n")
-        sys.stdout.write(str(result)[1:-1])
-        sys.stdout.write("\n")
+        print("Detected the following serial ports on this system: \n")
+        print(str(result)[1:-1])
+        print("\n")
 
     if len(result) == 0:
-        raise EnvironmentError('No valid serial port detected or port already open')
+        raise Exception('No valid serial port detected or port already open')
 
     return result[0]
