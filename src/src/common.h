@@ -127,6 +127,7 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+extern uint8_t ExpressLRS_nextAirRateEnum;
 //extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
