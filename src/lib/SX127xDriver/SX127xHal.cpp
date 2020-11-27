@@ -4,6 +4,10 @@ SX127xHal *SX127xHal::instance = NULL;
 
 volatile SX127x_InterruptAssignment SX127xHal::InterruptAssignment = SX127x_INTERRUPT_NONE;
 
+#ifdef PLATFORM_ESP32
+static portMUX_TYPE isrMutex = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
 void inline SX127xHal::nullCallback(void) { return; }
 void (*SX127xHal::TXdoneCallback)() = &nullCallback;
 void (*SX127xHal::RXdoneCallback)() = &nullCallback;
@@ -245,6 +249,9 @@ void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()
 {
+  #ifdef PLATFORM_ESP32
+  portENTER_CRITICAL_ISR(&isrMutex);
+  #endif
   if (instance->InterruptAssignment == SX127x_INTERRUPT_TX_DONE)
   {
     TXdoneCallback();
@@ -253,4 +260,7 @@ void ICACHE_RAM_ATTR SX127xHal::dioISR()
   {
     RXdoneCallback();
   }
+  #ifdef PLATFORM_ESP32
+  portEXIT_CRITICAL_ISR(&isrMutex);
+  #endif
 }

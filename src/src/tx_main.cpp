@@ -447,6 +447,22 @@ void HandleUpdateParameter()
       Serial.println("Change Link rate 0");
       ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
     }
+      // if ((micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
+      // {
+      //   Serial.println("Change Link rate");
+      //   SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+      //   Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
+
+      //   //Commenting out this reduces the "UART CRC failure" debug messages
+      // //hwTimer.resume(); 
+      // }
+      // else
+      // {
+      //    //Serial.println("Change Link rate postponed");
+      //    return; //try again later
+      // }
+      
+    //}
     break;
 
   case 2:
@@ -678,6 +694,7 @@ void loop()
     config.Commit();
     Serial.println("EEPROM COMMIT");
     // Resume the timer
+    sendLuaParams();
     hwTimer.resume();
   }
 
