@@ -107,7 +107,7 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
-uint8_t ExpressLRS_nextAirRateEnum = 0;
+uint8_t ExpressLRS_nextAirRateIndex = 0; 
 
 //expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //expresslrs_mod_settings_s *ExpressLRS_prevAirRate;

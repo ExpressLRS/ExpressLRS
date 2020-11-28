@@ -449,24 +449,8 @@ void HandleUpdateParameter()
     if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
       Serial.println("Change Link rate 0");
-      ExpressLRS_nextAirRateEnum = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
+      ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
     }
-      // if ((micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
-      // {
-      //   Serial.println("Change Link rate");
-      //   SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
-      //   Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
-
-      //   //Commenting out this reduces the "UART CRC failure" debug messages
-      // //hwTimer.resume(); 
-      // }
-      // else
-      // {
-      //    //Serial.println("Change Link rate postponed");
-      //    return; //try again later
-      // }
-      
-    //}
     break;
 
   case 2:
@@ -521,7 +505,7 @@ void HandleUpdateParameter()
   }
   sendLuaParams();
   UpdateParamReq = false;
-  config.SetRate(ExpressLRS_nextAirRateEnum);
+  config.SetRate(ExpressLRS_nextAirRateIndex);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
   config.SetPower(POWERMGNT.currPower());
 
@@ -659,6 +643,7 @@ void setup()
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
+  ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
@@ -683,10 +668,10 @@ void loop()
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
   if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
   {
-    if (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateEnum)
+    if (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)
     {
       Serial.println("Change Link rate");
-      SetRFLinkRate(ExpressLRS_nextAirRateEnum);
+      SetRFLinkRate(ExpressLRS_nextAirRateIndex);
       Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
       Serial.println(ExpressLRS_currAirRate_Modparams->index);
     }
@@ -694,8 +679,8 @@ void loop()
     WaitEepromCommit = false;
     // Write the uncommitted eeprom values
     config.Commit();
+    Serial.println("EEPROM COMMIT");
     // Resume the timer
-    sendLuaParams();
     hwTimer.resume();
   }
 
