@@ -558,12 +558,14 @@ void setup()
 
 #ifdef USE_ESP8266_BACKPACK
     HardwareSerial(USART1);
+    Serial.begin(460800);
 #else
     HardwareSerial(USART2);
     Serial.setTx(PA2);
     Serial.setRx(PA3);
-#endif
     Serial.begin(400000);
+#endif
+    
 
 #if defined(TARGET_R9M_TX)
     // Annoying startup beeps
