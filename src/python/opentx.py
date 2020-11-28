@@ -19,6 +19,7 @@ def gen_elrs(source, target, env):
     if not "_stock" in env['PIOENV']:
         return
     source_bin = source[0]
+    sys.stdout.write("Source bin: %s \n" % source_bin)
     bin_path = os.path.dirname(source_bin.rstr())
     bin_target = os.path.join(bin_path, 'firmware.elrs')
     with open(bin_target, "wb+") as _out:
