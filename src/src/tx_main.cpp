@@ -419,10 +419,6 @@ void UARTconnected()
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
-  //if (crsf.ParameterUpdateData[0] == 1 && (ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
-  //{
-    //hwTimer.stop();
-  //}
 }
 
 void HandleUpdateParameter()
@@ -649,7 +645,8 @@ void setup()
 
   crsf.Begin();
   hwTimer.init();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  hwTimer.resume();
+  //hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
 

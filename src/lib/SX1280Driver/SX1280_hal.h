@@ -64,7 +64,7 @@ public:
 
     static void ICACHE_RAM_ATTR nullCallback(void);
     
-    void ICACHE_RAM_ATTR WaitOnBusy();
+    bool ICACHE_RAM_ATTR WaitOnBusy();
     static ICACHE_RAM_ATTR void dioISR();
     
     void ICACHE_RAM_ATTR TXenable();
