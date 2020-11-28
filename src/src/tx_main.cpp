@@ -646,7 +646,7 @@ void setup()
   crsf.Begin();
   hwTimer.init();
   hwTimer.resume();
-  //hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
 
