@@ -12,7 +12,7 @@
 // reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
 //#define INVERTED_SERIAL                                  // Comment this out for non-inverted serial
-//#define USE_WIFI_MANAGER                                 // Comment this out to host an access point rather than use the WiFiManager
+#define USE_WIFI_MANAGER                                 // Comment this out to host an access point rather than use the WiFiManager
 
 const char *ssid = "ExpressLRS Tx";                        // The name of the Wi-Fi network that will be created
 const char *password = "expresslrs";                       // The password required to connect to it, leave blank for an open network

@@ -1,17 +1,16 @@
 import os
 import platform
-import sys
 
-platform.platform()
 
 def get_commands(env, firmware):
+    #platform.platform()
     platform_name = platform.system().lower()
 
     BL_CMD = []
     APP_CMD = []
 
     flash_start = app_start = 0x08000000
-    bootloader = None # env['UPLOAD_FLAGS'][0]
+    bootloader = None
     upload_flags = env.get('UPLOAD_FLAGS', [])
 
     for line in upload_flags:
