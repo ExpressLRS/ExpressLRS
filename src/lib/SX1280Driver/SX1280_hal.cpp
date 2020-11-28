@@ -298,9 +298,6 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 {
-    #ifdef PLATFORM_ESP32
-    portENTER_CRITICAL_ISR(&SX1280isrMutex);
-    #endif
     if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
     {
         RXdoneCallback();
@@ -309,10 +306,6 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
     {
         TXdoneCallback();
     }
-    #ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL_ISR(&SX1280isrMutex);
-    #endif
-}
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 {
