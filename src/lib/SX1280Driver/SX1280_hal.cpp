@@ -306,6 +306,7 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
     {
         TXdoneCallback();
     }
+}
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 {
