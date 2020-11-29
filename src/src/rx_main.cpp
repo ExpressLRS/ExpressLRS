@@ -808,7 +808,7 @@ void loop()
             getRFlinkInfo();
             crsf.sendLinkStatisticsToFC();
             delay(100);
-            crsf.sendLinkStatisticsToFC(); // nedd to send twice, not sure why, seems like a BF bug
+            crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
             Radio.RXnb();
         }
         RFmodeLastCycled = millis();
