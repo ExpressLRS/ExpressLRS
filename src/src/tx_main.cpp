@@ -444,7 +444,6 @@ void HandleUpdateParameter()
   case 1:
     if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
-      Serial.println("Change Link rate 0");
       ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
     }
     break;
