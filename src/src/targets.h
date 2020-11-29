@@ -122,12 +122,12 @@ https://github.com/jaxxzer
 #endif
 
 #ifdef TARGET_R9MX_RX
-    #define GPIO_PIN_LED            PB2 // Red
+    //#define GPIO_PIN_LED            PB2 // Red
     #define GPIO_PIN_LED_RED        PB2 // Red
     #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
 #elif TARGET_R9SLIMPLUS_RX
-    #define GPIO_PIN_LED            PA11 // Red
+    //#define GPIO_PIN_LED            PA11 // Red
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
@@ -137,7 +137,7 @@ https://github.com/jaxxzer
      * Note: Right Antenna is selected by default, LOW */
     #define GPIO_PIN_ANTENNA_SELECT PB9
 #else //R9MM_R9MINI
-    #define GPIO_PIN_LED            PC1 // Red
+    //#define GPIO_PIN_LED            PC1 // Red
     #define GPIO_PIN_LED_RED        PC1 // Red
     #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed

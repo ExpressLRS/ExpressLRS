@@ -289,7 +289,9 @@ void LostConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    #ifdef FAST_SYNC
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    #endif
 
     Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
     hwTimer.stop();
@@ -297,6 +299,10 @@ void LostConnection()
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+#endif
+
+#ifdef GPIO_PIN_LED_RED
+    digitalWrite(GPIO_PIN_LED_RED, LOW);
 #endif
 
 #ifdef GPIO_PIN_LED
@@ -354,6 +360,10 @@ void GotConnection()
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+#endif
+
+#ifdef GPIO_PIN_LED_RED
+    digitalWrite(GPIO_PIN_LED_RED, HIGH);
 #endif
 
 #ifdef GPIO_PIN_LED
@@ -434,9 +444,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
 
+    #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
         RFmodeCycleDivisor = 1;
     }
+    #endif
 
     getRFlinkInfo();
 
@@ -773,16 +785,22 @@ void loop()
         LastSyncPacket = millis();
     }
 
-    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor))) // connection = tentative we add alittle delay
+#ifdef FAST_SYNC
+    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor))) 
+#else
+        if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
+#endif
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
-            LastSyncPacket = millis();                                        // reset this variable
-            SetRFLinkRate(scanIndex % RATE_MAX); //switch between rates
+            LastSyncPacket = millis();           // reset this variable
+            SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
             #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
+            #elif GPIO_PIN_LED_GREEN
+            digitalWrite(GPIO_PIN_LED_GREEN, LED);
             #endif
             LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
@@ -790,7 +808,7 @@ void loop()
             getRFlinkInfo();
             crsf.sendLinkStatisticsToFC();
             delay(100);
-            crsf.sendLinkStatisticsToFC(); // send to send twice, not sure why, seems like a BF bug
+            crsf.sendLinkStatisticsToFC(); // nedd to send twice, not sure why, seems like a BF bug
             Radio.RXnb();
         }
         RFmodeLastCycled = millis();
