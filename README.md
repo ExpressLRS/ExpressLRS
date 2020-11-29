@@ -28,15 +28,16 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 ![2.4GHz Hardware](img/24Ghardware.jpg)
 
 Links:
-- [Nano 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Nano_RX_SX1280_SMD) Currently Smallest DIY 2.4Ghz RX
-- [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX_SX1280) Convenient Stack Mounted DIY 2.4GHz RX
+- [Nano 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_Nano) Currently Smallest DIY 2.4Ghz RX
+- [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_20x20) Convenient Stack Mounted DIY 2.4GHz RX
 
 ### 868/915MHz DIY Receiver and Transmitter
 ![868/915MHz Hardware](img/900Mhardware.jpg)
 
 Links:
-- [Mini 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/Mini_Rx_v0.1) Currently Smallest DIY 868/915MHz RX
-- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/20x20_RX) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
+- [Mini 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_Mini) Currently Smallest DIY 868/915MHz RX
+- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0603_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
+- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0805_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
 
 ## Compatible "Off-The-Shelf" Hardware
 
