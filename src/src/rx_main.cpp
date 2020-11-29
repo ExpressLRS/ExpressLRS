@@ -7,9 +7,11 @@
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
-#elif Regulatory_Domain_ISM_2400
+#elif defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
 SX1280Driver Radio;
+#else
+#error "Radio configuration is not valid!"
 #endif
 
 #include "crc.h"
@@ -516,13 +518,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
     }
 
+#if !defined(Regulatory_Domain_ISM_2400)
     if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
     {
-        #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-        #endif
     }
+#endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
 
@@ -668,14 +670,16 @@ void setup()
     Serial.println("Setting 868MHz Mode");
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
+#elif defined Regulatory_Domain_ISM_2400
+    Serial.println("Setting 2.4GHz Mode");
 #endif
 
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
-    #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
+#if !defined(Regulatory_Domain_ISM_2400)
     Radio.currSyncWord = UID[3];
-    #endif
+#endif
     bool init_success = Radio.Begin();
     while (!init_success)
     {
@@ -686,7 +690,7 @@ void setup()
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
     }
-#if defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_RX_GHOST_ATTO_V1)
+#ifdef Regulatory_Domain_ISM_2400
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
 #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)

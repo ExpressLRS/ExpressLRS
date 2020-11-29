@@ -324,6 +324,26 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX 13
 #endif
 
+#if defined(TARGET_SX1280_RX_CCG_NANO_v05)
+#define GPIO_PIN_NSS         PA4
+#define GPIO_PIN_MOSI        PA7
+#define GPIO_PIN_MISO        PA6
+#define GPIO_PIN_SCK         PA5
+
+#define GPIO_PIN_DIO0        PA10
+#define GPIO_PIN_DIO1        PA9
+//#define GPIO_PIN_DIO2        PA8
+#define GPIO_PIN_RST         PB4
+#define GPIO_PIN_BUSY        PA11
+
+#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1, AFAIO
+#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1, AFAIO
+
+#define GPIO_PIN_LED_RED     PB5
+
+#define timerOffset          1
+#endif /* TARGET_SX1280_RX_CCG_NANO_v05 */
+
 #ifdef GPIO_PIN_LED_WS2812
 #ifndef GPIO_PIN_LED_WS2812_FAST
 #error "WS2812 support requires _FAST pin!"
@@ -332,3 +352,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_WS2812         UNDEF_PIN
 #define GPIO_PIN_LED_WS2812_FAST    UNDEF_PIN
 #endif
+
+/* Set red led to default */
+#ifndef GPIO_PIN_LED
+#ifdef GPIO_PIN_LED_RED
+#define GPIO_PIN_LED GPIO_PIN_LED_RED
+#endif /* GPIO_PIN_LED_RED */
+#endif /* GPIO_PIN_LED */

@@ -305,7 +305,7 @@ class CRSF
 {
 
 public:
-    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) ||defined(UNIT_TEST)
+    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_SX1280_RX_CCG_NANO_v05) ||defined(UNIT_TEST)
 
     CRSF(Stream *dev) : _dev(dev)
     {
@@ -368,8 +368,8 @@ public:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
 
-    static uint32_t GoodPktsCountResult; // need to latch the results 
-    static uint32_t BadPktsCountResult; // need to latch the results 
+    static uint32_t GoodPktsCountResult; // need to latch the results
+    static uint32_t BadPktsCountResult; // need to latch the results
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);

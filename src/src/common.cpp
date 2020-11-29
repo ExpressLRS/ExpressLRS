@@ -29,7 +29,7 @@ extern SX1280Driver Radio;
 
 #ifdef USE_500HZ
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_4_5, 2000, TLM_RATIO_1_128, 2, 12}, // needs more work/debugging and it's not even supported in OTX yet 
+    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_4_5, 2000, TLM_RATIO_1_128, 2, 12}, // needs more work/debugging and it's not even supported in OTX yet
     {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 2, 14},
     {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 2, 12},
     {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 2, 12}};
@@ -94,7 +94,8 @@ ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
 
 ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
 { // convert enum_rate to index
-    for (int i = 0; i < RATE_MAX; i++)
+    int i;
+    for (i = 0; i < RATE_MAX; i++)
     {
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(i);
         if (ModParams->enum_rate == rate)
@@ -102,12 +103,13 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
             return i;
         }
     }
+    return i;
 }
 
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
-uint8_t ExpressLRS_nextAirRateIndex = 0; 
+uint8_t ExpressLRS_nextAirRateIndex = 0;
 
 //expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
