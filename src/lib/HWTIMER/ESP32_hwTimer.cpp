@@ -59,6 +59,7 @@ void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
     HWtimerInterval = time;
     if (timer)
     {
+        Serial.print("hwTimer interval: ");
         Serial.println(time);
         timerAlarmWrite(timer, HWtimerInterval, true);
     }
