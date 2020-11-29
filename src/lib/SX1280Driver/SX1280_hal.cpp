@@ -22,10 +22,6 @@ Modified and adapted by Alessandro Carcione for ELRS project
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
-#ifdef PLATFORM_ESP32
-static portMUX_TYPE SX1280isrMutex = portMUX_INITIALIZER_UNLOCKED;
-#endif
-
 void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void) {}
 
 void (*SX1280Hal::TXdoneCallback)() = &nullCallback;
