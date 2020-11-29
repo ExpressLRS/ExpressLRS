@@ -252,6 +252,7 @@ void ICACHE_RAM_ATTR GenerateMSPData()
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
+  Serial.println("set rate");
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
@@ -418,10 +419,6 @@ void UARTconnected()
 void ICACHE_RAM_ATTR ParamUpdateReq()
 {
   UpdateParamReq = true;
-  if (crsf.ParameterUpdateData[0] == 1 && (ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
-  {
-    hwTimer.stop();
-  }
 }
 
 void HandleUpdateParameter()
@@ -447,21 +444,8 @@ void HandleUpdateParameter()
   case 1:
     if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
-      if ((micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval) // special case, if we haven't waited long enough to ensure that the last packet hasn't been sent we exit.
-      {
-        Serial.println("Change Link rate");
-        SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
-        Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
-
-        //Commenting out this reduces the "UART CRC failure" debug messages
-        //hwTimer.resume(); 
-      }
-      else
-      {
-         //Serial.println("Change Link rate postponed");
-         return; //try again later
-      }
-      
+      Serial.println("Change Link rate 0");
+      ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
     }
     break;
 
@@ -517,7 +501,7 @@ void HandleUpdateParameter()
   }
   sendLuaParams();
   UpdateParamReq = false;
-  config.SetRate(ExpressLRS_currAirRate_Modparams->index);
+  config.SetRate(ExpressLRS_nextAirRateIndex);
   config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
   config.SetPower(POWERMGNT.currPower());
 
@@ -655,11 +639,13 @@ void setup()
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
+  ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
   crsf.Begin();
   hwTimer.init();
+  hwTimer.resume();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
@@ -679,10 +665,18 @@ void loop()
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
   if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
   {
+    if (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)
+    {
+      Serial.println("Change Link rate");
+      SetRFLinkRate(ExpressLRS_nextAirRateIndex);
+      Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
+      Serial.println(ExpressLRS_currAirRate_Modparams->index);
+    }
     // Write the values, and restart the timer
     WaitEepromCommit = false;
     // Write the uncommitted eeprom values
     config.Commit();
+    Serial.println("EEPROM COMMIT");
     // Resume the timer
     hwTimer.resume();
   }
@@ -732,8 +726,8 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  PacketLastSentMicros = micros();
   SendRCdataToRF();
+  PacketLastSentMicros = micros();
 }
 
 void OnRFModePacket(mspPacket_t *packet)

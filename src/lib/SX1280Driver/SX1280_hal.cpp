@@ -266,16 +266,17 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
     }
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
+bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-    #define wtimeoutUS 1500
+    #define wtimeoutUS 500
     uint32_t startTime = micros();
 
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS
     {
         if ((micros() - startTime) > wtimeoutUS)
         {
-            return;
+            //Serial.println("TO");
+            return false;
         }
         else
         {
@@ -288,6 +289,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
             #endif
         }
     }
+    return true;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR()
