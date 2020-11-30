@@ -45,7 +45,6 @@ void SX1280Driver::End()
 
 bool SX1280Driver::Begin()
 {
-    bool success = false;
     hal.init();
     hal.TXdoneCallback = &SX1280Driver::TXnbISR;
     hal.RXdoneCallback = &SX1280Driver::RXnbISR;
@@ -55,11 +54,13 @@ bool SX1280Driver::Begin()
     delay(100);
     Serial.print("Read Vers: ");
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
-    if ((firmwareRev != 0) || (firmwareRev != 65536))
-    {
-        success = true;
-    }
     Serial.println(firmwareRev);
+    if ((firmwareRev == 0) || (firmwareRev == 65536))
+    {
+        // SPI communication failed, just return without configuration
+        return false;
+    }
+
     this->SetMode(SX1280_MODE_STDBY_RC);                                    //step 1 put in STDBY_RC mode
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA); //Step 2: set packet type to LoRa
     this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
@@ -69,8 +70,7 @@ bool SX1280Driver::Begin()
     this->SetFrequency(this->currFreq);                                     //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
-    
-    return success;
+    return true;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
