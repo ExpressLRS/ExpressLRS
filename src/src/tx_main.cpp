@@ -176,13 +176,18 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
-  uint8_t index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
-  uint8_t TLmrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+#ifdef HYBRID_SWITCHES_8
+  uint8_t SwitchEncMode = 0b01;
+#else
+  uint8_t SwitchEncMode = 0b00;
+#endif
+  uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
+  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
   Radio.TXdataBuffer[0] = PacketHeaderAddr;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (index << 6) + (TLmrate << 3);
+  Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
