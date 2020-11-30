@@ -268,7 +268,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-    #define wtimeoutUS 500
+    #define wtimeoutUS 1000
     uint32_t startTime = micros();
 
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS

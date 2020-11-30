@@ -26,8 +26,8 @@ local SX127x_RATES = {
     values = {0x06, 0x05, 0x04, 0x02},
 }
 local SX128x_RATES = {
-	list = {'50 Hz', '150 Hz', '250 Hz', '500 Hz'},
-    values = {0x05, 0x03, 0x01, 0x00},
+	list = {'25 Hz', '50 Hz', '150 Hz', '250 Hz', '500 Hz'},
+    values = {0x06, 0x05, 0x03, 0x01, 0x00},
 }
 
 local AirRate = {
