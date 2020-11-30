@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 /* Timeout for HAL. */
-#define UART_TIMEOUT ((uint16_t)1000u)
+#define UART_TIMEOUT ((uint16_t)2000u)
 
 /* Status report for the functions. */
 typedef enum
@@ -24,16 +24,11 @@ typedef enum
 
 uart_status uart_receive(uint8_t *data, uint16_t length);
 uart_status uart_receive_timeout(uint8_t *data, uint16_t length, uint16_t timeout);
-uart_status uart_transmit_str(uint8_t *data);
+uart_status uart_transmit_str(char * data);
 uart_status uart_transmit_ch(uint8_t data);
 uart_status uart_transmit_bytes(uint8_t *data, uint32_t len);
 
-void uart_init(void);
-
-#ifdef DEBUG_UART
-void debug_send(uint8_t data);
-#else
-#define debug_send(data)
-#endif
+void uart_init(uint32_t baud, uint32_t uart_idx, uint32_t afio, int32_t duplexpin, uint8_t halfduplex);
+void uart_deinit(void);
 
 #endif /* UART_H_ */
