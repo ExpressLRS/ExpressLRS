@@ -134,7 +134,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR * 10;
+    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
