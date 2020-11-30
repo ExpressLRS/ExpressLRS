@@ -149,7 +149,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
     crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
-    crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
+    crsf.LinkStatistics.downlink_SNR = int8_t(Radio.LastPacketSNR);
     crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
     crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
     //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;

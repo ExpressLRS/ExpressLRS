@@ -417,6 +417,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
+#ifdef HYBRID_SWITCHES_8
+    uint8_t SwitchEncModeExpected = 0b01;
+#else
+    uint8_t SwitchEncModeExpected = 0b00;
+#endif
+    uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
 
@@ -482,8 +488,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case SYNC_PACKET: //sync packet from master
          indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
+         SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
 
-         if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
 #ifndef DEBUG_SUPPRESS
