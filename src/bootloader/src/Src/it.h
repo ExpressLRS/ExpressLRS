@@ -19,12 +19,12 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F1xx_IT_H
-#define __STM32F1xx_IT_H
+#ifndef __STM32_IT_H
+#define __STM32_IT_H
 
 #ifdef __cplusplus
  extern "C" {
-#endif 
+#endif
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -64,6 +64,6 @@ void SysTick_Handler(void);
 }
 #endif
 
-#endif /* __STM32F1xx_IT_H */
+#endif /* __STM32_IT_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

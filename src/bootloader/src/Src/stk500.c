@@ -52,7 +52,6 @@ static int8_t stk500_update(void)
   int8_t initial_sync = 0;
 
   insync = 0;
-  led_red_state_set(led);
 
   for (retval = 0; retval == 0;)
   {
@@ -60,7 +59,7 @@ static int8_t stk500_update(void)
     ch = 0;
     if (uart_receive_timeout(&ch, 1u, 20) == UART_ERROR)
     {
-      if (!insync && timer_end())
+      if (!insync && boot_wait_timer_end())
         return -1;
       continue;
     }
@@ -69,15 +68,14 @@ static int8_t stk500_update(void)
     // STK500 MUST start with STK_GET_SYNC first
     if (!initial_sync && (ch != STK_GET_SYNC))
       return -1;
-    
+
     led ^= 1;
-    led_red_state_set(led);
+    led_state_set(led ? LED_FLASHING : LED_FLASHING_ALT);
 
     if (ch == STK_GET_SYNC)
     {
       verifySpace();
       if (insync) {
-        led_green_state_set(1);
         initial_sync = 1;
       }
     }
@@ -158,7 +156,7 @@ static int8_t stk500_update(void)
       // Read command terminator, start reply
       verifySpace();
 
-      if ((uint32_t)memAddress < FLASH_BANK1_END)
+      if ((uint32_t)memAddress < FLASH_APP_END_ADDRESS)
       {
         if ((uint32_t)memAddress >= FLASH_APP_START_ADDRESS)
         {
