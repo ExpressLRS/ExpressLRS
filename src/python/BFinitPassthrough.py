@@ -15,7 +15,7 @@ def dbg_print(line=''):
 def bf_passthrough_init(port, requestedBaudrate):
     sys.stdout.flush()
     dbg_print("======== PASSTHROUGH INIT ========")
-    dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
+    dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
 
     s = serial.Serial(port=port, baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
