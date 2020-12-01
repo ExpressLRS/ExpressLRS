@@ -74,7 +74,6 @@ def uart_upload(port, filename, baudrate):
             s.flush()
             start = time.time()
             while ((time.time() - start) < 2):
-                line = ""
                 try:
                     line = s.readline().decode('utf-8')
                     if not line and s.in_waiting:
@@ -136,9 +135,6 @@ def uart_upload(port, filename, baudrate):
     filechunks = filesize/128
 
     dbg_print("\nuploading %d bytes...\n" % (filesize,))
-
-    #s.reset_input_buffer()
-    #s.reset_output_buffer()
 
     def StatusCallback(total_packets, success_count, error_count):
         sys.stdout.flush()
