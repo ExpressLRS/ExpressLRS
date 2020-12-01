@@ -30,7 +30,7 @@ Upload the Mini_Rx_v0.1_Gerber.zip file to https://jlcpcb.com/
 
 
 
-Most of it should be self explanatory except for a couple of the resistors.  
+Most of it should be self explanatory except for a couple of the resistors. The 10k Pull-Up Resistors are not necessarry and will be removed in a future version (EN and RST init HIGH).
 
 
 
