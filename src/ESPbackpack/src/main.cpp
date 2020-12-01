@@ -8,6 +8,7 @@
 #include <ESP8266HTTPUpdateServer.h>
 #include <FS.h>
 #include "stm32Updater.h"
+#include "stk500.h"
 
 // reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
@@ -188,7 +189,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       Serial.printf("[%u] Disconnected!\r\n", num);
       break;
     }
-  
+
     case WStype_CONNECTED:
     {
       IPAddress ip = webSocket.remoteIP(num);
@@ -204,7 +205,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       // webSocket.broadcastTXT(payload, length);
       break;
     }
-    
+
     case WStype_BIN:
     {
       Serial.printf("[%u] get binary length: %u\r\n", num, length);
@@ -214,7 +215,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       webSocket.sendBIN(num, payload, length);
       break;
     }
-    
+
     default:
     {
       Serial.printf("Invalid WStype [%d]\r\n", type);
@@ -240,12 +241,18 @@ void handleRoot()
 
 bool flashSTM32()
 {
+  bool result = 0;
   webSocket.broadcastTXT("Firmware Flash Requested!");
-  stm32flasher_hardware_init();
   webSocket.broadcastTXT("Going to flash the firmware file: " + uploadedfilename);
-  char filename[31];
-  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
-  bool result = esp8266_spifs_write_file("/firmware.bin");
+  if (uploadedfilename.endsWith(".elrs"))
+  {
+    result = stk500_write_file(uploadedfilename.c_str());
+  }
+  else if (uploadedfilename.endsWith(".bin"))
+  {
+    stm32flasher_hardware_init();
+    result = esp8266_spifs_write_file(uploadedfilename.c_str());
+  }
   Serial.begin(460800);
   return result;
 }
@@ -302,7 +309,7 @@ void handleFileUpload()
   else if (upload.status == UPLOAD_FILE_END)
   {
     if (fsUploadFile)                                      // If the file was successfully created
-    {                       
+    {
       fsUploadFile.close();                                // Close the file again
       String totsize = String(upload.totalSize);
       webSocket.broadcastTXT("Total uploaded size: " + totsize);

@@ -3,12 +3,14 @@
 
 //adapted from https://github.com/mengguang/esp8266_stm32_isp
 
+
+#define BLOCK_SIZE 128
+
+
 extern WebSocketsServer webSocket;
 
-uint8_t counter;
-uint8_t mod = 5;
+char log_buffer[256];
 
-char log_buffer[BLOCK_SIZE];
 uint8_t memory_buffer[BLOCK_SIZE];
 uint8_t file_buffer[BLOCK_SIZE];
 
@@ -54,15 +56,6 @@ void stm32flasher_hardware_init()
 	pinMode(BOOT0_PIN, INPUT);
 	Serial.begin(115200, SERIAL_8E1);
 	Serial.setTimeout(5000);
-}
-
-void debug_log_lite()
-{
-	counter++;
-	if (counter % mod == 0)
-	{
-		webSocket.broadcastTXT(log_buffer);
-	}
 }
 
 void debug_log()

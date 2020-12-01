@@ -1,14 +1,14 @@
 #pragma once
 #include "FS.h"
 
-//taken and adapted from https://github.com/mengguang/esp8266_stm32_isp
+// taken and adapted from https://github.com/mengguang/esp8266_stm32_isp
 
-//SoftwareSerial debugSerial(13, 12, false, 256); //rx tx inverse buffer
-
-//#define ispSerial Serial
-#define BLOCK_SIZE 128
+#ifndef BOOT0_PIN
 #define BOOT0_PIN 4
+#endif
+#ifndef RESET_PIN
 #define RESET_PIN 5
+#endif
 
 #define FLASH_START 0x08000000
 #define FLASH_SIZE 0x10000
