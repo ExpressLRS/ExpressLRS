@@ -3,10 +3,11 @@
 
 #include <stdint.h>
 
-#define STK_BAUD_RATE   57600
-#define STK_SYNC_CTN    10
-#define STK_TIMEOUT     1000
-#define STK_PAGE_SIZE   128
+#define STK_BAUD_RATE       115200
+#define STK_SYNC_CTN        30
+#define STK_SYNC_TIMEOUT    50
+#define STK_TIMEOUT         1000
+#define STK_PAGE_SIZE       128
 
 #define SIGNATURE_0 0x1E
 #if (STK_PAGE_SIZE == 256)

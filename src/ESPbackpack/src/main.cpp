@@ -79,11 +79,10 @@ document.getElementById("logField").scrollTop = document.getElementById("logFiel
 };
 }
 function saveTextAsFile() {
-var textToWrite = document.getElementById('logField').innerHTML;
+var textToWrite = document.getElementById('logField').value;
 var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
-var fileNameToSaveAs = "tx_log.txt";
 var downloadLink = document.createElement("a");
-downloadLink.download = fileNameToSaveAs;
+downloadLink.download = "tx_log.txt";
 downloadLink.innerHTML = "Download File";
 if (window.webkitURL != null) {
 downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
@@ -143,6 +142,7 @@ curl --include \
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
 <input type='file' accept='.bin,.elrs' name='filesystem'>
+<input type='text' value='0x0000' name='flash_address' size='6'>
 <input type='submit' value='Upload and Flash R9M Tx'>
 </form>
 <div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
@@ -236,32 +236,55 @@ void handleRoot()
   server.send_P(200, "text/html", INDEX_HTML);
 }
 
-bool flashSTM32()
+bool flashSTM32(uint32_t flash_addr)
 {
   bool result = 0;
   webSocket.broadcastTXT("Firmware Flash Requested!");
   webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
-  if (uploadedfilename.endsWith(".elrs"))
-  {
+  if (uploadedfilename.endsWith(".elrs")) {
     result = stk500_write_file(uploadedfilename.c_str());
-  }
-  else if (uploadedfilename.endsWith(".bin"))
-  {
-    stm32flasher_hardware_init();
-    result = esp8266_spifs_write_file(uploadedfilename.c_str());
+  } else if (uploadedfilename.endsWith(".bin")) {
+    result = esp8266_spifs_write_file(uploadedfilename.c_str(), flash_addr);
   }
   Serial.begin(460800);
   return result;
 }
+
+void handleFileUploadEnd()
+{
+  uint32_t flash_base = BEGIN_ADDRESS;
+  //String message = "\nRequest params:\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    String name = server.argName(i);
+    String value = server.arg(i);
+      //message += " " + name + ": " + value + "\n";
+      if (name == "flash_address") {
+        flash_base = strtol(&value.c_str()[2], NULL, 16);
+        break;
+      }
+  }
+  //webSocket.broadcastTXT(message);
+
+  bool success = flashSTM32(flash_base);
+
+  if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+    SPIFFS.remove(uploadedfilename);
+
+  server.sendHeader("Location", "/return");          // Redirect the client to the success page
+  server.send(303);
+  webSocket.broadcastTXT(
+    (success) ? "Update Successful!": "Update Failure!");
+  server.send(200);
+}
+
 void handleFileUpload()
 { // upload a new file to the SPIFFS
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START)
   {
+    /* Remove old file */
     if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
-    {
       SPIFFS.remove(uploadedfilename);
-    }
 
     FSInfo fs_info;
     if (SPIFFS.info(fs_info))
@@ -272,8 +295,7 @@ void handleFileUpload()
       output += fs_info.totalBytes;
       webSocket.broadcastTXT(output);
 
-      if (fs_info.usedBytes > 0)
-      {
+      if (fs_info.usedBytes > 0) {
         webSocket.broadcastTXT("formatting filesystem");
         SPIFFS.format();
       }
@@ -308,28 +330,13 @@ void handleFileUpload()
   {
     if (fsUploadFile)                                      // If the file was successfully created
     {
-      size_t file_pos = fsUploadFile.position();
       String totsize = "Total uploaded size ";
-      totsize += file_pos;
+      totsize += fsUploadFile.position();
       totsize += " of ";
       totsize += upload.totalSize;
       webSocket.broadcastTXT(totsize);
       server.send(100);
-
       fsUploadFile.close(); // Close the file again
-
-      bool success = false;
-
-      /* Make sure the all data is received */
-      if (file_pos == upload.totalSize)
-        success = flashSTM32();
-
-      server.sendHeader("Location", "/return");          // Redirect the client to the success page
-      server.send(303);
-      webSocket.broadcastTXT(
-        (success) ? "Update Successful!": "Update Failure!");
-
-      SPIFFS.remove(uploadedfilename);
     }
     else
     {
@@ -353,6 +360,22 @@ void handleNotFound()
     message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
   server.send(404, "text/plain", message);
+}
+
+void handleMacAddress()
+{
+  String message = "WiFi STA MAC: ";
+  message += WiFi.macAddress();
+  message += "\n  - channel in use: ";
+  message += wifi_get_channel();
+  message += "\n  - mode: ";
+  message += (uint8_t)WiFi.getMode();
+  message += "\n\nWiFi SoftAP MAC: ";
+  message += WiFi.softAPmacAddress();
+  message += "\n  - IP: ";
+  message += WiFi.softAPIP().toString();
+  message += "\n";
+  server.send(200, "text/plain", message);
 }
 
 void setup()
@@ -404,12 +427,13 @@ void setup()
 
   server.on("/", handleRoot);
   server.on("/return", sendReturn);
+  server.on("/mac", handleMacAddress);
   server.on("/main.css", sendMainCss);
 
   server.on(
-      "/upload", HTTP_POST,                                // if the client posts to the upload page
-      []() { server.send(200); },                          // Send status 200 (OK) to tell the client we are ready to receive
-      handleFileUpload                                     // Receive and save the file
+      "/upload", HTTP_POST,       // if the client posts to the upload page
+      handleFileUploadEnd,
+      handleFileUpload            // Receive and save the file
   );
 
   server.onNotFound(handleRoot);

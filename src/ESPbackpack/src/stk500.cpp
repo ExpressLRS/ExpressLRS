@@ -14,7 +14,6 @@ extern char log_buffer[256];
 uint8_t stk_data_buff[STK_PAGE_SIZE];
 
 
-void reset_mcu(void);
 int sync_get(void);
 int prog_params_set(void);
 int prog_params_ext_set(void);
@@ -23,6 +22,12 @@ int prog_mode_exit(void);
 int prog_flash(uint32_t offset, uint8_t* data, uint32_t length);
 int command_send(uint8_t cmd, uint8_t* params, size_t count, uint32_t timeout = STK_TIMEOUT);
 int verify_sync(uint32_t timeout = STK_TIMEOUT);
+
+void serial_empty_rx(void)
+{
+    while(Serial.available())
+        Serial.read();
+}
 
 
 uint8_t stk500_write_file(const char *filename)
@@ -41,10 +46,16 @@ uint8_t stk500_write_file(const char *filename)
         return 0;
     }
 
+    // Put MCU to reset
+    pinMode(RESET_PIN, OUTPUT);
+    digitalWrite(RESET_PIN, LOW);
+    delay(100);
     // Init UART
     Serial.begin(STK_BAUD_RATE);
-    // and reset MCU to access bootloader
-    reset_mcu();
+    serial_empty_rx();
+    // Release reset
+    digitalWrite(RESET_PIN, HIGH);
+    //pinMode(RESET_PIN, INPUT);
 
     // Try to get sync...
     for (sync_iter = 0; sync_iter < STK_SYNC_CTN; sync_iter++) {
@@ -57,6 +68,7 @@ uint8_t stk500_write_file(const char *filename)
         DEBUG_PRINT("[ERROR] no sync!");
         return 0;
     }
+    DEBUG_PRINT("Sync OK");
 
 #if 0 // These are not used at the moment
     if (prog_params_set() < 0) {
@@ -67,12 +79,11 @@ uint8_t stk500_write_file(const char *filename)
         DEBUG_PRINT("[ERROR] prog params!");
         return 0;
     }
-#endif
-
     if (prog_mode_enter() < 0) {
         DEBUG_PRINT("[ERROR] enter prog mode!");
         return 0;
     }
+#endif
 
     DEBUG_PRINT("begin to write.");
     uint32_t junks = (filesize + (sizeof(stk_data_buff) - 1)) / sizeof(stk_data_buff);
@@ -110,19 +121,10 @@ uint8_t stk500_write_file(const char *filename)
     return 1;
 }
 
-void reset_mcu(void)
-{
-    pinMode(RESET_PIN, OUTPUT);
-    digitalWrite(RESET_PIN, LOW);
-    delay(50);
-    digitalWrite(RESET_PIN, HIGH);
-    pinMode(RESET_PIN, INPUT);
-}
-
 int sync_get(void)
 {
-    // Sync timeout is 100ms
-    return command_send(STK_GET_SYNC, NULL, 0, 100);
+    serial_empty_rx(); // clean rx buffer
+    return command_send(STK_GET_SYNC, NULL, 0, STK_SYNC_TIMEOUT);
 }
 
 int prog_params_set(void)
@@ -201,5 +203,6 @@ int verify_sync(uint32_t timeout)
             return 0;
         }
     }
+    DEBUG_PRINT("[ERROR] protocol failed...");
     return -1;
 }
