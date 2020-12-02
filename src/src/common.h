@@ -94,7 +94,7 @@ typedef struct expresslrs_mod_settings_s
     SX127x_CodingRate cr;
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t FHSShopInterval;            // every X packets we hop to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
 
 } expresslrs_mod_settings_t;
@@ -113,7 +113,7 @@ typedef struct expresslrs_mod_settings_s
     SX1280_RadioLoRaCodingRates_t cr;
     uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t FHSShopInterval;            // every X packets we hop to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
 
 } expresslrs_mod_settings_t;
