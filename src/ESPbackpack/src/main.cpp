@@ -155,7 +155,7 @@ curl --include \
 <h2>WiFi Backpack Firmware Update:</h2>
 </legend>
 <form method='POST' action='/update' enctype='multipart/form-data'>
-<input type='file' accept='backpack.bin' name='firmware'>
+<input type='file' accept='.bin' name='firmware'>
 <input type='submit' value='Flash WiFi Backpack'>
 </form>
 <div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
@@ -253,7 +253,6 @@ bool flashSTM32()
   Serial.begin(460800);
   return result;
 }
-
 void handleFileUpload()
 { // upload a new file to the SPIFFS
   HTTPUpload &upload = server.upload();

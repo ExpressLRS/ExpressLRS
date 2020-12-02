@@ -21,8 +21,8 @@ int prog_params_ext_set(void);
 int prog_mode_enter(void);
 int prog_mode_exit(void);
 int prog_flash(uint32_t offset, uint8_t* data, uint32_t length);
-int command_send(uint8_t cmd, uint8_t* params, size_t count);
-int verify_sync(void);
+int command_send(uint8_t cmd, uint8_t* params, size_t count, uint32_t timeout = STK_TIMEOUT);
+int verify_sync(uint32_t timeout = STK_TIMEOUT);
 
 
 uint8_t stk500_write_file(const char *filename)
@@ -51,6 +51,7 @@ uint8_t stk500_write_file(const char *filename)
         if (0 <= sync_get()) {
             break;
         }
+        DEBUG_PRINT("waiting sync...");
     }
     if (STK_SYNC_CTN <= sync_iter) {
         DEBUG_PRINT("[ERROR] no sync!");
@@ -120,7 +121,8 @@ void reset_mcu(void)
 
 int sync_get(void)
 {
-    return command_send(STK_GET_SYNC, NULL, 0);
+    // Sync timeout is 100ms
+    return command_send(STK_GET_SYNC, NULL, 0, 100);
 }
 
 int prog_params_set(void)
@@ -169,14 +171,14 @@ int prog_flash(uint32_t offset, uint8_t* data, uint32_t length)
     return verify_sync();
 }
 
-int command_send(uint8_t const cmd, uint8_t* params, size_t const count)
+int command_send(uint8_t const cmd, uint8_t* params, size_t const count, uint32_t timeout)
 {
     Serial.write(cmd);
     if (params && count) {
         Serial.write(params, count);
     }
     Serial.write(CRC_EOP);
-    return verify_sync();
+    return verify_sync(timeout);
 }
 
 int wait_data_timeout(int const count, uint32_t timeout)
@@ -190,9 +192,9 @@ int wait_data_timeout(int const count, uint32_t timeout)
     return -1;
 }
 
-int verify_sync(void)
+int verify_sync(uint32_t timeout)
 {
-    if ( 0 <= wait_data_timeout(2, STK_TIMEOUT)) {
+    if ( 0 <= wait_data_timeout(2, timeout)) {
         uint8_t sync = Serial.read();
         uint8_t ok = Serial.read();
         if (sync == STK_INSYNC && ok == STK_OK) {
