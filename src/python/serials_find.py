@@ -19,8 +19,8 @@ def serial_ports():
             print("  ** Searching flight controllers **")
             __ports = list(comports())
             for port in __ports:
-                if port.manufacturer in ['FTDI', 'Betaflight', ] or \
-                        "STM32" in port.product or port.vid == 0x0483:
+                if (port.manufacturer and port.manufacturer in ['FTDI', 'Betaflight', ]) or \
+                        (port.product and "STM32" in port.product) or (port.vid and port.vid == 0x0483):
                     print("      > FC found from '%s'" % port.device)
                     ports.append(port.device)
     except ImportError:
