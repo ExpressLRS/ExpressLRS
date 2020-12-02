@@ -26,10 +26,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 ESP8266HTTPUpdateServer httpUpdater;
 
 File fsUploadFile;                                         // a File object to temporarily store the received file
-FSInfo fs_info;
 String uploadedfilename;                                   // filename of uploaded file
-
-uint32_t TotalUploadedBytes;
 
 uint8_t socketNumber;
 
@@ -145,7 +142,7 @@ curl --include \
 <h2>R9M Tx Firmware Update:</h2>
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
-<input type='file' accept='.bin' name='filesystem'>
+<input type='file' accept='.bin,.elrs' name='filesystem'>
 <input type='submit' value='Upload and Flash R9M Tx'>
 </form>
 <div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
@@ -158,7 +155,7 @@ curl --include \
 <h2>WiFi Backpack Firmware Update:</h2>
 </legend>
 <form method='POST' action='/update' enctype='multipart/form-data'>
-<input type='file' accept='.bin' name='firmware'>
+<input type='file' accept='backpack.bin' name='firmware'>
 <input type='submit' value='Flash WiFi Backpack'>
 </form>
 <div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
@@ -243,7 +240,7 @@ bool flashSTM32()
 {
   bool result = 0;
   webSocket.broadcastTXT("Firmware Flash Requested!");
-  webSocket.broadcastTXT("Going to flash the firmware file: " + uploadedfilename);
+  webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
   if (uploadedfilename.endsWith(".elrs"))
   {
     result = stk500_write_file(uploadedfilename.c_str());
@@ -262,14 +259,18 @@ void handleFileUpload()
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START)
   {
+    if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+    {
+      SPIFFS.remove(uploadedfilename);
+    }
+
+    FSInfo fs_info;
     if (SPIFFS.info(fs_info))
     {
-      SPIFFS.remove("/firmware.bin");
-      String output;
-      output += "Filesystem: used: ";
-      output += String(fs_info.usedBytes);
+      String output = "Filesystem: used: ";
+      output += fs_info.usedBytes;
       output += " / free: ";
-      output += String(fs_info.totalBytes);
+      output += fs_info.totalBytes;
       webSocket.broadcastTXT(output);
 
       if (fs_info.usedBytes > 0)
@@ -291,17 +292,15 @@ void handleFileUpload()
     {
       uploadedfilename = "/" + uploadedfilename;
     }
-    fsUploadFile = SPIFFS.open("/firmware.bin", "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
+    fsUploadFile = SPIFFS.open(uploadedfilename, "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
   }
   else if (upload.status == UPLOAD_FILE_WRITE)
   {
     if (fsUploadFile)
     {
       fsUploadFile.write(upload.buf, upload.currentSize);  // Write the received bytes to the file
-      TotalUploadedBytes += int(upload.currentSize);
-      String output = "";
-      output += "Uploaded: ";
-      output += String(TotalUploadedBytes);
+      String output = "Uploaded: ";
+      output += fsUploadFile.position();
       output += " bytes";
       webSocket.broadcastTXT(output);
     }
@@ -310,29 +309,33 @@ void handleFileUpload()
   {
     if (fsUploadFile)                                      // If the file was successfully created
     {
-      fsUploadFile.close();                                // Close the file again
-      String totsize = String(upload.totalSize);
-      webSocket.broadcastTXT("Total uploaded size: " + totsize);
-      TotalUploadedBytes = 0;
+      size_t file_pos = fsUploadFile.position();
+      String totsize = "Total uploaded size ";
+      totsize += file_pos;
+      totsize += " of ";
+      totsize += upload.totalSize;
+      webSocket.broadcastTXT(totsize);
       server.send(100);
-      if (flashSTM32())
-      {
-        server.sendHeader("Location", "/return");          // Redirect the client to the success page
-        server.send(303);
-        webSocket.broadcastTXT("Update Successful!");
-      }
-      else
-      {
-        server.sendHeader("Location", "/return");          // Redirect the client to the success page
-        server.send(303);
-        webSocket.broadcastTXT("Update Failure!");
-      }
+
+      fsUploadFile.close(); // Close the file again
+
+      bool success = false;
+
+      /* Make sure the all data is received */
+      if (file_pos == upload.totalSize)
+        success = flashSTM32();
+
+      server.sendHeader("Location", "/return");          // Redirect the client to the success page
+      server.send(303);
+      webSocket.broadcastTXT(
+        (success) ? "Update Successful!": "Update Failure!");
+
+      SPIFFS.remove(uploadedfilename);
     }
     else
     {
       server.send(500, "text/plain", "500: couldn't create file");
     }
-    SPIFFS.remove("/firmware.bin");
   }
 }
 
