@@ -52,7 +52,8 @@ def serial_ports():
             if "permission denied" in str(error).lower():
                 raise Exception("You don't have persmission to use serial port!")
             pass
-    return result.reverse()
+    result.reverse()
+    return result
 
 def get_serial_port(debug=True):
     result = serial_ports()
