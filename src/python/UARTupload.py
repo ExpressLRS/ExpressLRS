@@ -93,6 +93,7 @@ def uart_upload(port, filename, baudrate):
                             #break
                         elif "hold down button" in line.lower():
                             # this is last print before init cmd is expected
+                            time.sleep(.5)  # Sleep for older bootloader
                             break
                     # notify bootloader to start uploading
                     s.write(BootloaderInitSeq2)
