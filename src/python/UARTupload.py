@@ -84,7 +84,7 @@ def uart_upload(port, filename, baudrate):
                     dbg_print(" **DBG : '%s'\n" % (line.strip(), ))
                 if "Bootloader for ExpressLRS" in line:
                     # Read next couple of lines
-                    for idx in range(3):
+                    for idx in range(6):
                         line = s.readline().decode('utf-8')
                         if "BL_TYPE" in line:
                             # do check...
