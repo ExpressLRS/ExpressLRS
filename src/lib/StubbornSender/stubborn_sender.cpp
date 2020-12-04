@@ -113,6 +113,9 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         }
 
         break;
+    case SENDER_IDLE:
+    case SEND_NEXT:
+        break;
     }
 
     senderState = nextSenderState;

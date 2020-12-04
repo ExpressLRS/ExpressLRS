@@ -7,7 +7,6 @@
 #include <iostream>
 using namespace std;
 #endif
-#define TARGET_R9M_RX
 
 #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
 

@@ -4,8 +4,6 @@
 #include "common.h"
 #include "LowPassFilter.h"
 
-#define TARGET_R9M_RX 1
-#define Regulatory_Domain_EU_868 1
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
@@ -65,6 +63,16 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
+
+#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
+#elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART3);
+#else
+    #define CRSF_RX_SERIAL Serial
+#endif
 
 #ifdef ENABLE_TELEMETRY
 StubbornSender TelementrySender(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -1074,9 +1082,9 @@ void loop()
     }
 
 
-    while (Serial.available())
+    while (CRSF_RX_SERIAL.available())
     {
-        telemetry.RXhandleUARTin(Serial.read());
+        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
 
         if (telemetry.ShouldCallBootloader())
         {

@@ -23,6 +23,7 @@
 #define ICACHE_RAM_ATTR
 #endif
 
+#define CRSF_CRC_POLY 0xd5
 #define CRSF_RX_BAUDRATE 420000
 #define CRSF_OPENTX_FAST_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
