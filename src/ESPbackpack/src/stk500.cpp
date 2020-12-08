@@ -59,13 +59,13 @@ uint8_t stk500_write_file(const char *filename)
 
     // Try to get sync...
     for (sync_iter = 0; sync_iter < STK_SYNC_CTN; sync_iter++) {
+        DEBUG_PRINT("Waiting sync...");
         if (0 <= sync_get()) {
             break;
         }
-        DEBUG_PRINT("waiting sync...");
     }
     if (STK_SYNC_CTN <= sync_iter) {
-        DEBUG_PRINT("[ERROR] no sync!");
+        DEBUG_PRINT("[ERROR] no sync! stopping");
         return 0;
     }
     DEBUG_PRINT("Sync OK");
@@ -203,6 +203,6 @@ int verify_sync(uint32_t timeout)
             return 0;
         }
     }
-    DEBUG_PRINT("[ERROR] protocol failed...");
+    DEBUG_PRINT("[ERROR] sync fail...");
     return -1;
 }

@@ -175,29 +175,39 @@ curl --include \
 </html>
 )rawliteral";
 
+#define WEBSOCK_DEBUG 0
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
+#if WEBSOCK_DEBUG
   Serial.printf("webSocketEvent(%d, %d, ...)\r\n", num, type);
+#endif
 
   switch (type)
   {
     case WStype_DISCONNECTED:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] Disconnected!\r\n", num);
+#endif
       break;
     }
 
     case WStype_CONNECTED:
     {
+#if WEBSOCK_DEBUG
       IPAddress ip = webSocket.remoteIP(num);
       Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+#endif
       socketNumber = num;
       break;
     }
 
     case WStype_TEXT:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] get text: %s\r\n", num, payload);
+#endif
       // send data to all connected clients
       // webSocket.broadcastTXT(payload, length);
       break;
@@ -205,17 +215,21 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
     case WStype_BIN:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] get binary length: %u\r\n", num, length);
       hexdump(payload, length);
 
       // echo data back to browser
       webSocket.sendBIN(num, payload, length);
+#endif
       break;
     }
 
     default:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("Invalid WStype [%d]\r\n", type);
+#endif
       break;
     }
   }
@@ -236,15 +250,17 @@ void handleRoot()
   server.send_P(200, "text/html", INDEX_HTML);
 }
 
-bool flashSTM32(uint32_t flash_addr)
+int8_t flashSTM32(uint32_t flash_addr)
 {
-  bool result = 0;
-  webSocket.broadcastTXT("Firmware Flash Requested!");
+  int8_t result = -1;
+  webSocket.broadcastTXT("STM32 Firmware Flash Requested!");
   webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
-  if (uploadedfilename.endsWith(".elrs")) {
+  if (uploadedfilename.endsWith("firmware.elrs")) {
     result = stk500_write_file(uploadedfilename.c_str());
-  } else if (uploadedfilename.endsWith(".bin")) {
+  } else if (uploadedfilename.endsWith("firmware.bin")) {
     result = esp8266_spifs_write_file(uploadedfilename.c_str(), flash_addr);
+  } else {
+    webSocket.broadcastTXT("Invalid file!");
   }
   Serial.begin(460800);
   return result;
@@ -265,7 +281,7 @@ void handleFileUploadEnd()
   }
   //webSocket.broadcastTXT(message);
 
-  bool success = flashSTM32(flash_base);
+  int8_t success = flashSTM32(flash_base);
 
   if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
     SPIFFS.remove(uploadedfilename);
@@ -274,7 +290,7 @@ void handleFileUploadEnd()
   server.send(303);
   webSocket.broadcastTXT(
     (success) ? "Update Successful!": "Update Failure!");
-  server.send(200);
+  server.send((success < 0) ? 400 : 200);
 }
 
 void handleFileUpload()
@@ -429,12 +445,8 @@ void setup()
   server.on("/return", sendReturn);
   server.on("/mac", handleMacAddress);
   server.on("/main.css", sendMainCss);
-
-  server.on(
-      "/upload", HTTP_POST,       // if the client posts to the upload page
-      handleFileUploadEnd,
-      handleFileUpload            // Receive and save the file
-  );
+  server.on("/upload", HTTP_POST, // STM32 OTA upgrade
+    handleFileUploadEnd, handleFileUpload);
 
   server.onNotFound(handleRoot);
   httpUpdater.setup(&server);
