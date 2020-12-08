@@ -6,6 +6,7 @@ import logging
 import os
 import serials_find
 import BFinitPassthrough
+import re
 
 SCRIPT_DEBUG = 0
 BAUDRATE_DEFAULT = 420000
@@ -81,24 +82,22 @@ def uart_upload(port, filename, baudrate):
                 except UnicodeDecodeError:
                     continue
                 if SCRIPT_DEBUG and line:
-                    dbg_print(" **DBG : '%s'\n" % (line.strip(), ))
-                if "Bootloader for ExpressLRS" in line:
-                    # Read next couple of lines
-                    for idx in range(6):
-                        line = s.readline().decode('utf-8')
-                        if "BL_TYPE" in line:
-                            # do check...
-                            bl_ver = line.strip()[8:].strip()
-                            dbg_print("    Bootloader found : '%s'\n" % (bl_ver, ))
-                            #break
-                        elif "hold down button" in line.lower():
-                            # this is last print before init cmd is expected
-                            time.sleep(.5)  # Sleep for older bootloader
-                            break
-                    # notify bootloader to start uploading
+                    dbg_print(" **DBG : '%s'\n" % line.strip())
+                
+                if "BL_TYPE" in line:
+                    bl_type = line.strip()[8:].strip()
+                    dbg_print("    Bootloader type found : '%s'\n" % bl_type)
+
+                versionMatch = re.search('=== (v.*) ===', line, re.IGNORECASE)
+                if versionMatch:
+                    bl_version = versionMatch.group(1)
+                    dbg_print("    Bootloader version found : '%s'\n" % bl_version)
+
+                elif "hold down button" in line.lower():
+                    time.sleep(.5) # legacy bootloader requires a 500ms delay
                     s.write(BootloaderInitSeq2)
                     s.flush()
-                    dbg_print("    Got into bootloader after: %u attempts\n" % (currAttempt))
+                    dbg_print("    Got into bootloader after: %u attempts\n" % currAttempt)
                     gotBootloader = True
                     break
 
@@ -115,7 +114,7 @@ def uart_upload(port, filename, baudrate):
             except UnicodeDecodeError:
                 continue
             if SCRIPT_DEBUG and char:
-                dbg_print(" **DBG : '%s'\n" % (char, ))
+                dbg_print(" **DBG : '%s'\n" % char)
             if char == 'CCC':
                 break
             if ((time.time() - start) > 15):
@@ -135,7 +134,7 @@ def uart_upload(port, filename, baudrate):
     filesize = os.stat(filename).st_size
     filechunks = filesize/128
 
-    dbg_print("\nuploading %d bytes...\n" % (filesize,))
+    dbg_print("\nuploading %d bytes...\n" % filesize)
 
     def StatusCallback(total_packets, success_count, error_count):
         sys.stdout.flush()
