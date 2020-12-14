@@ -187,8 +187,8 @@ typedef enum
 #define SX127X_FIFO_RX_BASE_ADDR_MAX 0b00000000 //  7     0     allocate the entire FIFO buffer for RX only
 
 // SX127X_REG_SYNC_WORD
-#define SX127X_SYNC_WORD 0xC8 //  200   0     default ExpressLRS sync word - 200Hz
-// #define SX127X_SYNC_WORD                              0x12        //  18    0     default LoRa sync word
+//#define SX127X_SYNC_WORD 0xC8 //  200   0     default ExpressLRS sync word - 200Hz
+#define SX127X_SYNC_WORD                              0x12        //  18    0     default LoRa sync word
 #define SX127X_SYNC_WORD_LORAWAN 0x34 //  52    0     sync word reserved for LoRaWAN networks
 
 #define IRQpin 26

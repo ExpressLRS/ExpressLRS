@@ -702,7 +702,7 @@ void setup()
 
     Radio.currFreq = GetInitialFreq();
 #if !defined(Regulatory_Domain_ISM_2400)
-    Radio.currSyncWord = UID[3];
+    //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
     while (!init_success)
