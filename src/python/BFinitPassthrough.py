@@ -1,9 +1,7 @@
-import serial
+import serial, time, sys
 from xmodem import XMODEM
-import time
-import sys
-
 import serials_find
+
 
 class PassthroughEnabled(Exception):
     pass
@@ -17,24 +15,19 @@ def dbg_print(line=''):
 def bf_passthrough_init(port, requestedBaudrate):
     sys.stdout.flush()
     dbg_print("======== PASSTHROUGH INIT ========")
-    dbg_print("  Going to use %s @ %s" % (port, requestedBaudrate))
+    dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
 
     s = serial.Serial(port=port, baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
 
-    s.write(chr(0x23).encode())
+    s.write(chr(0x23).encode('utf-8'))
     time.sleep(1)
-    s.write(("serial\n").encode())
+    s.write(("serial\n").encode('utf-8'))
     time.sleep(1)
 
-    lines = []
     inChars = ""
-    serialInfo = []
-    SerialInfoSplit = []
+    SerialRXindex = ""
 
-    SerialRXindex = -1
-    uartNumber = -1
-
-    dbg_print("\nAttempting to detect Betaflight UART configuration...")
+    dbg_print("\nAttempting to detect FC UART configuration...")
 
     while s.in_waiting:
         try:
@@ -43,48 +36,36 @@ def bf_passthrough_init(port, requestedBaudrate):
             # just discard possible RC / TLM data
             pass
 
-
     for line in inChars.split('\n'):
-        if "serial" in line:
-            lines.append(line)
-            sys.stdout.write(line[0:len(line)-1])
-            sys.stdout.write("\n")
+        if line.startswith("serial"):
+            line = line.strip()
+            dbg_print(line)
 
-    for line in lines:
-        if line[0:6] == "serial":
-            serialInfo.append(line)
-
-    for line in serialInfo:
-        data = line.split()
-        SerialInfoSplit.append(data)
-
-    for i in range(0,len(serialInfo)):
-        data = SerialInfoSplit[i][2]
-        if(data == "64"):
-            uartNumber = data
-            SerialRXindex = i
+            # Searching: 'serial <index> 64 ...'
+            config = line.split()
+            if config[2] == "64":
+                dbg_print("    ** Serial RX config detected: '%s'" % line)
+                SerialRXindex = config[1]
 
     dbg_print()
 
-    if uartNumber != -1:
-        dbg_print("Detected Betaflight Serial RX config: " +str(serialInfo[SerialRXindex]))
-    else:
-        dbg_print("Failed to make contact with Betaflight, possibly already in passthrough mode?")
+    if not SerialRXindex:
+        dbg_print("Failed to make contact with FC, possibly already in passthrough mode?")
         dbg_print("If the next step fails please reboot FC")
         dbg_print()
-        raise PassthroughEnabled("BF connection failed");
+        raise PassthroughEnabled("FC connection failed");
 
-    cmd = "serialpassthrough "+str(SerialInfoSplit[SerialRXindex][1])+" "+str(requestedBaudrate)
+    cmd = "serialpassthrough %s %s " % (SerialRXindex, requestedBaudrate, )
 
     dbg_print("Setting serial passthrough...")
     dbg_print("  CMD: '%s'" % cmd)
-    s.write((cmd + '\n').encode())
+    s.write((cmd + '\n').encode('utf-8'))
     time.sleep(1)
 
     s.flush()
     s.close()
 
-    dbg_print("========================================================\n")
+    dbg_print("======== PASSTHROUGH DONE ========")
 
 
 if __name__ == '__main__':
