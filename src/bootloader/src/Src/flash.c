@@ -54,11 +54,9 @@ flash_status flash_dump(void)
 {
   //__IO uint8_t* address = (uint8_t*)FLASH_BASE;
   uint32_t len = 0x2000;
-  uart_transmit_str("Memery dump:\r\n");
-  /*while(len--) {
-
-  }*/
+  uart_transmit_str("Memory dump start >>>>\r\n");
   uart_transmit_bytes((uint8_t*)FLASH_BASE, len);
+  uart_transmit_str("<<<< Memory dump end\r\n");
   return FLASH_OK;
 }
 #else
