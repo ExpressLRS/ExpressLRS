@@ -29,18 +29,15 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         bytesize=8, parity='N', stopbits=1,
         timeout=1, xonxoff=0, rtscts=0)
 
-    rl = SerialHelper.SerialHelper(s, 3., ['CCC'])
+    rl = SerialHelper.SerialHelper(s, 3., ['CCC', "# "])
     rl.clear()
+    # Send start command '#'
+    rl.write("#\r\n", half_duplex)
     start = rl.read_line(2.).strip()
+    #dbg_print("BF INIT: '%s'" % start.replace("\r", ""))
     if "CCC" in start:
         raise PassthroughEnabled("Passthrough already enabled and bootloader active")
-    # Send start command '#'
-    rl.clear()
-    rl.set_delimiters("# ")
-    rl.write("#\r\n", half_duplex)
-    start = rl.read_line().strip()
-    #dbg_print("BF INIT: '%s'" % start.replace("\r", ""))
-    if not start or not start.endswith("#"):
+    elif not start or not start.endswith("#"):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?")
 
     SerialRXindex = ""
