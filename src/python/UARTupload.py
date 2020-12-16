@@ -6,7 +6,7 @@ import logging
 import os
 import serials_find
 import BFinitPassthrough
-import ReadLine
+import SerialHelper
 import re
 
 SCRIPT_DEBUG = 0
@@ -40,13 +40,14 @@ def uart_upload(port, filename, baudrate, ghst=False):
         dbg_print(msg)
         raise Exception(msg)
 
-    s = serial.Serial(port=port, baudrate=baudrate, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
+    s = serial.Serial(port=port, baudrate=baudrate,
+        bytesize=8, parity='N', stopbits=1,
+        timeout=5, inter_byte_timeout=None, xonxoff=0, rtscts=0)
+
+    rl = SerialHelper.SerialHelper(s, 2., ["CCC"], half_duplex)
 
     # Check if bootloader *and* passthrough is already active
-    try:
-        gotBootloader = 'CCC' in s.read(3).decode('utf-8')
-    except UnicodeDecodeError:
-        gotBootloader = False
+    gotBootloader = 'CCC' in rl.read_line()
 
     if not gotBootloader:
         s.close()
@@ -54,67 +55,64 @@ def uart_upload(port, filename, baudrate, ghst=False):
         # Init Betaflight passthrough
         try:
             BFinitPassthrough.bf_passthrough_init(port, baudrate, half_duplex)
-        except BFinitPassthrough.PassthroughEnabled as bf_err:
-            dbg_print("  FC Init error: '%s'" % bf_err)
+        except BFinitPassthrough.PassthroughEnabled as info:
+            dbg_print("  Warning: '%s'\n" % info)
+        except BFinitPassthrough.PassthroughFailed as failed:
+            raise
 
-        # Init bootloader next
-        s = serial.Serial(port=port, baudrate=baudrate, bytesize=8, parity='N', stopbits=1, timeout=5, xonxoff=0, rtscts=0)
+        # Prepare to upload
+        s = serial.Serial(port=port, baudrate=baudrate,
+            bytesize=8, parity='N', stopbits=1,
+            timeout=1, xonxoff=0, rtscts=0)
+        rl.set_serial(s)
+        rl.clear()
 
-        # Check again if we're in the bootloader now that passthrough is setup; This is for button-method flashing
-        try:
-            gotBootloader = 'CCC' in s.read(3).decode('utf-8')
-        except UnicodeDecodeError:
-            pass
+        # Check again if we're in the bootloader now that passthrough is setup;
+        #   Note: This is for button-method flashing
+        gotBootloader = 'CCC' in rl.read_line()
 
         # Init bootloader
-        if gotBootloader == False:
+        if not gotBootloader:
             # legacy bootloader requires a 500ms delay
             delay_seq2 = .5
 
-            s.timeout = .5
-            s.write_timeout = .5
-
-            retryTimeout = 2.0
-            rl = ReadLine.ReadLine(s, retryTimeout)
+            rl.set_timeout(2.)
+            rl.set_delimiters(["\n"], "CCC")
 
             currAttempt = 0
             dbg_print("\nAttempting to reboot into bootloader...\n")
 
             while gotBootloader == False:
-
                 currAttempt += 1
                 if 10 < currAttempt:
                     msg = "[FAILED] to get to BL in reasonable time\n"
                     dbg_print(msg)
                     raise Exception(msg)
-                    
-                if 6 < currAttempt:
-                    # Enable debug
+
+                if 5 < currAttempt:
+                    # Enable debug logs after 5 retries
                     global SCRIPT_DEBUG
-                    SCRIPT_DEBUG = 1
+                    SCRIPT_DEBUG = True
 
                 dbg_print("[%1u] retry...\n" % currAttempt)
 
                 # clear RX buffer before continuing
-                s.reset_input_buffer()
-
+                rl.clear()
                 # request reboot
-                cnt = s.write(BootloaderInitSeq1)
-                s.flush()
-                if half_duplex:
-                   s.read(cnt)
+                rl.write(BootloaderInitSeq1)
 
                 start = time.time()
-                while ((time.time() - start) < retryTimeout):
-                    try:
-                        line = rl.read_line().decode('utf-8')
-                    except UnicodeDecodeError:
+                while ((time.time() - start) < 2.):
+                    line = rl.read_line().strip()
+                    if not line:
+                        # timeout
                         continue
+
                     if SCRIPT_DEBUG and line:
-                        dbg_print(" **DBG : '%s'\n" % line.strip())
+                        dbg_print(" **DBG : '%s'\n" % line)
 
                     if "BL_TYPE" in line:
-                        bl_type = line.strip()[8:].strip()
+                        bl_type = line[8:].strip()
                         dbg_print("    Bootloader type found : '%s'\n" % bl_type)
                         # Newer bootloaders do not require delay but keep
                         # a 100ms just in case
@@ -126,12 +124,9 @@ def uart_upload(port, filename, baudrate, ghst=False):
                         bl_version = versionMatch.group(1)
                         dbg_print("    Bootloader version found : '%s'\n" % bl_version)
 
-                    elif "hold down button" in line.lower():
+                    elif "hold down button" in line:
                         time.sleep(delay_seq2)
-                        cnt = s.write(BootloaderInitSeq2)
-                        s.flush()
-                        if half_duplex:
-                            s.read(cnt)
+                        rl.write(BootloaderInitSeq2)
                         gotBootloader = True
                         break
 
@@ -143,26 +138,13 @@ def uart_upload(port, filename, baudrate, ghst=False):
 
             dbg_print("    Got into bootloader after: %u attempts\n" % currAttempt)
 
-            # change timeout to 30sec
-            s.timeout = 30.
-            s.write_timeout = 5.
-
             # sanity check! Make sure the bootloader is started
             dbg_print("Wait sync...")
-            start = time.time()
-            while True:
-                try:
-                    char = s.read(3).decode('utf-8')
-                except UnicodeDecodeError:
-                    continue
-                if SCRIPT_DEBUG and char:
-                    dbg_print(" **DBG : '%s'\n" % char)
-                if char == 'CCC':
-                    break
-                if ((time.time() - start) > 15):
-                    msg = "[FAILED] Unable to communicate with bootloader...\n"
-                    dbg_print(msg)
-                    raise Exception(msg)
+            rl.set_delimiters(["CCC"])
+            if "CCC" not in rl.read_line(15.):
+                msg = "[FAILED] Unable to communicate with bootloader...\n"
+                dbg_print(msg)
+                raise Exception(msg)
             dbg_print(" sync OK\n")
         else:
             dbg_print("\nWe were already in bootloader\n")
@@ -176,17 +158,17 @@ def uart_upload(port, filename, baudrate, ghst=False):
     # open binary
     stream = open(filename, 'rb')
     filesize = os.stat(filename).st_size
-    filechunks = filesize/128
+    filechunks = filesize / 128
 
     dbg_print("\nuploading %d bytes...\n" % filesize)
 
     def StatusCallback(total_packets, success_count, error_count):
         #sys.stdout.flush()
         if (total_packets % 10 == 0):
+            dbg = str(round((total_packets / filechunks) * 100)) + "%"
             if (error_count > 0):
-                dbg_print(str(round((total_packets/filechunks)*100)) + "% err: " + str(error_count) + "\n")
-            else:
-                dbg_print(str(round((total_packets/filechunks)*100)) + "%\n")
+                dbg += ", err: " + str(error_count)
+            dbg_print(dbg + "\n")
 
     def getc(size, timeout=3):
         return s.read(size) or None
