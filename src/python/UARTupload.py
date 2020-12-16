@@ -77,7 +77,7 @@ def uart_upload(port, filename, baudrate, ghst=False):
             delay_seq2 = .5
 
             rl.set_timeout(2.)
-            rl.set_delimiters(["\n"], "CCC")
+            rl.set_delimiters(["\n", "CCC"])
 
             currAttempt = 0
             dbg_print("\nAttempting to reboot into bootloader...\n")
