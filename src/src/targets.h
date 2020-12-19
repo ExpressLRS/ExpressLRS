@@ -200,7 +200,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    PA10 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA9 // confirmed
 
-#define GPIO_PIN_BUZZER      PB1 // confirmed
 
 #define BUFFER_OE               PA5  //CONFIRMED
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
