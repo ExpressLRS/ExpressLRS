@@ -619,7 +619,7 @@ void setup()
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
-  Radio.currSyncWord = UID[3];
+  //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
   while (!init_success)
