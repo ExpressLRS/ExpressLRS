@@ -267,8 +267,19 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
-#define GPIO_PIN_BUTTON 0
 #define timerOffset -1
+#ifdef USE_DIVERSITY
+/*
+https://www.psemi.com/pdf/datasheets/pe4259ds.pdf
+By default GPIO0 is pulled high. so RF1 is selected, which equals Ant2 on the PCB.
+If flashed without USE_DIVERSITY Ant2 must be connected
+Low = Ant1
+High = Ant2
+*/
+    #define GPIO_PIN_ANTENNA_SELECT 0
+#else
+    #define GPIO_PIN_BUTTON 0
+#endif
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
 #define GPIO_PIN_NSS 5

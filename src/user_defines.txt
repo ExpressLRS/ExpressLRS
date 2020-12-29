@@ -64,3 +64,6 @@
 
 # Comment this to disable advanced telemetry.
 #-DENABLE_TELEMETRY
+
+#Comment this to disable diversity function
+-DUSE_DIVERSITY
