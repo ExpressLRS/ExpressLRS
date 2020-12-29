@@ -126,15 +126,16 @@ bool LockRFmode = false;
 
 // flip to the other antenna
 // no-op if GPIO_PIN_ANTENNA_SELECT not defined
-void ICACHE_RAM_ATTR switchAntenna()
-{
-    #ifdef GPIO_PIN_ANTENNA_SELECT
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    void ICACHE_RAM_ATTR switchAntenna()
+    {
+        
 
-    antenna = !antenna;
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
-    
-    #endif
-}
+        antenna = !antenna;
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+        
+    }
+#endif
 
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
@@ -311,28 +312,29 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-    static bool antennaSwitched = false;
+    #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+        static bool antennaSwitched = false;
 
-    // if we didn't get a packet switch the antenna
-    if (!LQCALC.packetReceivedForPreviousFrame()) {
-        prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-        switchAntenna();
-        antennaSwitched = true;
-    } else if (antennaSwitched) {
-        // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
-        // We can compare the rssi values and see if we made things better or worse when we switched
-
-        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-        if (rssi < prevRSSI) {
-            // things got worse when we switched, so change back.
+        // if we didn't get a packet switch the antenna
+        if (!LQCALC.packetReceivedForPreviousFrame()) {
+            prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             switchAntenna();
-        } else {
-            // all good, we can stay on the current antenna. Clear the flag.
-            antennaSwitched = false;
-        }
-    }
+            antennaSwitched = true;
+        } else if (antennaSwitched) {
+            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+            // We can compare the rssi values and see if we made things better or worse when we switched
 
+            int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+            if (rssi < prevRSSI) {
+                // things got worse when we switched, so change back.
+                switchAntenna();
+            } else {
+                // all good, we can stay on the current antenna. Clear the flag.
+                antennaSwitched = false;
+            }
+        }
+    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
