@@ -16,11 +16,11 @@ ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depe
 
 ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manafactures are preparing to offer offical ELRS hardware soon so stay tuned. 
 
-![LatencyChart](img/Average%20Total%20Latency.png)
+![LatencyChart](img/Average%20Total%20Latency.png)<!-- .element height="100%" width="100%" -->
 
 ExpressLRS achieves the best possible link preformance for both latency and range. This is acheieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market.  
 
-![RangeVsPacketRate](img/pktrate_vs_sens.png)
+![RangeVsPacketRate](img/pktrate_vs_sens.png)<!-- .element height="100%" width="100%" -->
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
@@ -34,7 +34,7 @@ Development is ongoing but the following hardware is currently compatible
 | TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
 | TX        | 2019 R9M        | Fully Supported     | Resistor mod not required                    |
 | TX        | R9M Lite        | Fully Supported     | Limited to 50mW                              |
-| TX        | R9M Lite Pro    | IN PROGRESS         |                                              |
+| TX        | R9M Lite Pro    | In Development      |                                              |
 | RX        | R9MM            | Fully Supported     |                                              |
 | RX        | R9MX            | Fully Supported     |                                              |
 | RX        | R9mini          | Fully Supported     |                                              |
@@ -56,7 +56,7 @@ Development is ongoing but the following hardware is currently compatible
 | **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
 | --------- | ---------------                    | ------------------- | -------------------------------------------- |
 | TX        | ESP32 Module (E28 SX1280)          | Fully Supported     | Flashable via USB, 250mW max                 |
-| TX        | ESP32 Module (F27 SX1280)          | In testing          | Flashable via USB, 250mW max                 |
+| TX        | ESP32 Module (F27 SX1280)          | In Testing          | Flashable via USB, 250mW max                 |
 | TX        | ESP32 Module (Bare SX1280)         | Fully Supported     | Flashable via USB, 20mW max                  |
 | RX        | 20x20mm RX                         | Fully Supported     | Supports WIFI Updating                       |
 | RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
