@@ -42,9 +42,9 @@ Development is ongoing but the following hardware is currently compatible
 | RX        | R9slimplusOTA   | Fully Supported     |                                              |
 
 **Jumper Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
-| --------- | --------------- | ------------------- | -------------------------------------------- |
-| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink               |
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                                         |
+| --------- | --------------- | ------------------- | ----------------------------------------------------------------- |
+| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink,  BAD included antenna             |
 
 **ImmersionRC Ghost Hardware**
 | **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
