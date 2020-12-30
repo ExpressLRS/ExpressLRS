@@ -72,6 +72,28 @@ STLs for printing your own enclosure are available in the [STL folder](https://g
 
 <img src="img/ttgo_lora_wiring_diagram.png" width="50%"><img src="img/TTGO_BOARD_2.png" width="50%">
 
+## Long Range Leaderboard
+
+One of the most frequently asked questions that gets asked from people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
+The following table is a leaderboard of the current record holder for each packet rate, and the longest distance from home. Note that not every flight resulted in a failsafe at max range, so the link may go (much) futher in some cases.
+
+Anyone can add an entry to the table, and entries should include the:
+- RF freq (900 / 2.4),
+- Packet rate,
+- Power level,
+- Max distance from home,
+- If the link failsafed at max range,
+- The pilot name, 
+- A link to your DVR on youtube (DVR is essential to compete, sorry, no keyboard claims)
+
+| Freq | Pkt Rate | TX Power | Max Dist. | Failsafe at Max Range? | Pilot Handle | Link to DVR |
+| ---- | -------- | -------- | ---------------------- | ------------ | ----------- |
+| 900M | 50HZ | 1W | 30Km | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
+| 900M | 100HZ | 50mW | 6Km | No | Snipes | https://www.youtube.com/watch?v=kN89mINbmQc |
+| 900M | 50HZ | 10mW | 2.28Km | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
+| 900M | 200HZ | 250mW | 4.77Km | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
+| 2.4G | 250HZ | 250mW | 9.8Km | Yes | Snipes | https://www.youtube.com/watch?v=D9SHpSguOMQ |
+
 ### Legal Stuff
 The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
 
