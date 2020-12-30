@@ -89,7 +89,7 @@ Anyone can add an entry to the table, and entries should include the:
 | Freq | Pkt Rate | TX Power | Max Dist. | Failsafe at Max Range? | Pilot Handle | Link to DVR |
 | ---- | -------- | -------- | --------- | ---------------------- | ------------ | ----------- |
 | 900M | 50HZ | 1W | 30Km | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
-| 900M | 100HZ | 50mW | 6Km | No | Snipes | https://www.youtube.com/watch?v=kN89mINbmQc |
+| 900M | 100HZ | 50mW | 6Km | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
 | 900M | 50HZ | 10mW | 2.28Km | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
 | 900M | 200HZ | 250mW | 4.77Km | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
 | 2.4G | 250HZ | 250mW | 9.8Km | Yes | Snipes | https://www.youtube.com/watch?v=D9SHpSguOMQ |
