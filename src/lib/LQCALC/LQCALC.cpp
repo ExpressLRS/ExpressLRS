@@ -42,10 +42,9 @@ void ICACHE_RAM_ATTR LQCALC::reset()
     }
 }
 
-#define MAX_LQ (100)
 bool ICACHE_RAM_ATTR LQCALC::packetReceivedForPreviousFrame()
 {
-    uint32_t prevIndex = (LQArrayIndex == 0) ? (MAX_LQ - 1) : (LQArrayIndex - 1);
+    uint32_t prevIndex = (LQArrayIndex == 0) ? (this->LQcalcDepth - 1) : (LQArrayIndex - 1);
 
     return (LQArray[prevIndex] != 0);
 }
