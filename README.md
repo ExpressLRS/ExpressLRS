@@ -18,7 +18,7 @@ ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Ju
 
 ![LatencyChart](img/Average%20Total%20Latency.png)
 
-ExpressLRS achieves the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range Crossfire 150Hz.
+ExpressLRS achieves the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz.**
 
 ![RangeVsPacketRate](img/pktrate_vs_sens.png)
 
@@ -66,7 +66,6 @@ Development is ongoing but the following hardware is currently compatible
 | **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
 | --------- | ---------------                        | ------------------- | -------------------------------------------- |
 | TX        | DIY Module (RFM95 Module)              | Fully Supported     | Flashable via USB, 50mW max                  |
-| TX        | DIY Module (E19 Module)                | Fully Supported     | No longer recommended                        |
 | TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended                        |
 | TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating, 50mW max             |
 | RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
