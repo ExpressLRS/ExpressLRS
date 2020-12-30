@@ -6,3 +6,4 @@
 .vscode/launch.json
 python/__pycache__/
 *.pyc
+user_defines.txt
