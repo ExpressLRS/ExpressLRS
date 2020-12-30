@@ -14,7 +14,7 @@ Upload the Mini_Rx_v1.1_Gerber.ara file to https://jlcpcb.com/
 
 
 - PCB Thickness 0.6m. Thicker is ok but the Rx becomes bulky.  Going thinner to 0.4mm costs more!
-
+- Check the price for 5, 10, and 30 pieces. It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
 
 
 ### Component placement
@@ -25,7 +25,7 @@ R2 is not required unless you run into boot issues due to the flight controller 
 
 Boot jumper pads have been added next to the button as an alternative.  Typically it is easier to use the jumpers for the initial flash, and then wifi updating for future updates.
 
-<img src="img/schematic.png" width="25%"> <img src="img/component_placement.PNG" width="25%">
+<img src="img/schematic.PNG" width="25%"> <img src="img/component_placement.PNG" width="25%">
 
 
 
