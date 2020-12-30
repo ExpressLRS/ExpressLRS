@@ -28,7 +28,7 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 
 Development is ongoing but the following hardware is currently compatible
 
-**Supported Frsky Hardware**
+**Frsky Hardware**
 | **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
 | --------- | --------------- | ------------------- | -------------------------------------------- |
 | TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
@@ -62,6 +62,15 @@ Development is ongoing but the following hardware is currently compatible
 | RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
 | RX        | CCG Nano RX                        | Fully Supported     | No WIFI, STM32 Based                         |
 
+**DIY 900MHz Hardware**
+| **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
+| --------- | ---------------                        | ------------------- | -------------------------------------------- |
+| TX        | DIY ESP32 Module (RFM95 Module)        | Fully Supported     | Flashable via USB, 50mW max                  |
+| TX        | DIY ESP32 Module (E19 Module)          | Fully Supported     | No longer recommended                        |
+| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended (10mW max power)       |
+| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating (50mW output          |
+| RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
+| RX        | DIY 20x20 RX                           | Fully Supported     | Supports WIFI Updating                       |
 
 ## Hardware Examples
 
