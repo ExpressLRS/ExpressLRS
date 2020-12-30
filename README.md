@@ -87,7 +87,7 @@ Anyone can add an entry to the table, and entries should include the:
 - A link to your DVR on youtube (DVR is essential to compete, sorry, no keyboard claims)
 
 | Freq | Pkt Rate | TX Power | Max Dist. | Failsafe at Max Range? | Pilot Handle | Link to DVR |
-| ---- | -------- | -------- | ---------------------- | ------------ | ----------- |
+| ---- | -------- | -------- | --------- | ---------------------- | ------------ | ----------- |
 | 900M | 50HZ | 1W | 30Km | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
 | 900M | 100HZ | 50mW | 6Km | No | Snipes | https://www.youtube.com/watch?v=kN89mINbmQc |
 | 900M | 50HZ | 10mW | 2.28Km | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
