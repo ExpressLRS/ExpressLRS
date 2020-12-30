@@ -16,11 +16,11 @@ ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depe
 
 ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manafactures are preparing to offer offical ELRS hardware soon so stay tuned. 
 
-![LatencyChart](img/Average%20Total%20Latency.png)<!-- .element height="100%" width="100%" -->
+![LatencyChart](img/Average%20Total%20Latency.png)
 
 ExpressLRS achieves the best possible link preformance for both latency and range. This is acheieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market.  
 
-![RangeVsPacketRate](img/pktrate_vs_sens.png)<!-- .element height="100%" width="100%" -->
+![RangeVsPacketRate](img/pktrate_vs_sens.png)
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
