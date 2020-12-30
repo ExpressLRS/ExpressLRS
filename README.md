@@ -30,6 +30,7 @@ Development is ongoing but the following hardware is currently compatible
 
 **Supported Frsky Hardware**
 | **Hardware**    | **Status**          | **Notes**                                    |
+| --------------- | ------------------- | -------------------------------------------- |
 | 2018 R9M TX     | Fully Supported     | Requires resistor mod for lowest latency     |
 | 2019 R9M TX     | Fully Supported     | Resistor mod not required                    |
 | R9M Lite        | Fully Supported     | Limited to 50mW                              |
