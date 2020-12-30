@@ -16,11 +16,11 @@ ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depe
 
 ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manafactures are preparing to offer offical ELRS hardware soon so stay tuned. 
 
-![LatencyChart](img/Average%20Total%20Latency.png | width=100)
+![LatencyChart](img/Average%20Total%20Latency.png)
 
 ExpressLRS achieves the best possible link preformance for both latency and range. This is acheieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market.  
 
-![RangeVsPacketRate](img/pktrate_vs_sens.png | width=100)
+![RangeVsPacketRate](img/pktrate_vs_sens.png)
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
@@ -29,27 +29,39 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 Development is ongoing but the following hardware is currently compatible
 
 **Supported Frsky Hardware**
-| **Hardware**    | **Status**          | **Notes**                                    |
-| --------------- | ------------------- | -------------------------------------------- |
-| 2018 R9M TX     | Fully Supported     | Requires resistor mod for lowest latency     |
-| 2019 R9M TX     | Fully Supported     | Resistor mod not required                    |
-| R9M Lite        | Fully Supported     | Limited to 50mW                              |
-|                 |                     |                                              |
-| R9MM            | Fully Supported     |                                              |
-| R9mini          | Fully Supported     |                                              |
-| R9MX            | Fully Supported     |                                              |
-| R9MX            | Fully Supported     |                                              |
-| R9MX            | Fully Supported     |                                              |
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
+| TX        | 2019 R9M        | Fully Supported     | Resistor mod not required                    |
+| TX        | R9M Lite        | Fully Supported     | Limited to 50mW                              |
+| TX        | R9M Lite Pro    | IN PROGRESS         |                                              |
+| RX        | R9MM            | Fully Supported     |                                              |
+| RX        | R9MX            | Fully Supported     |                                              |
+| RX        | R9mini          | Fully Supported     |                                              |
+| RX        | R9slimplus      | Fully Supported     |                                              |
+| RX        | R9slimplusOTA   | Fully Supported     |                                              |
 
+**Jumper Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink               |
 
-| Brand | Type | Name      | Notes |
-| ----- | ---- | --------- | ----- |
-| FrSky | TX   | R9M       | 2018 and 2019 versions, up to 2W ⚠️(cooling mod needed) |
-| FrSky | TX   | R9M Lite  | output power 50mw in accordance with chip specification |
-| TTGO  | TX   | LoRa v1   | __not__ recommended due to bad RF design (~10mW) |
-| TTGO  | TX   | LoRa v2   | power output 50mW |
-| FrSky | RX   | R9mm      |       |
-| FrSky | RX   | R9mini    |       |
+**ImmersionRC Ghost Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| RX        | Ghost Atto      | Fully Supported     | Can only be flashed via stlink               |
+| RX        | Ghost Zepto     | Fully Supported     | Can only be flashed via stlink               |
+
+**DIY 2.4GHz Hardware**
+| **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
+| --------- | ---------------                    | ------------------- | -------------------------------------------- |
+| TX        | ESP32 Module (E28 SX1280)          | Fully Supported     | Flashable via USB, 250mW max                 |
+| TX        | ESP32 Module (F27 SX1280)          | In testing          | Flashable via USB, 250mW max                 |
+| TX        | ESP32 Module (Bare SX1280)         | Fully Supported     | Flashable via USB, 20mW max                  |
+| RX        | 20x20mm RX                         | Fully Supported     | Supports WIFI Updating                       |
+| RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
+| RX        | CCG Nano RX                        | Fully Supported     | No WIFI, STM32 Based                         |
+
 
 ## Hardware Examples
 
