@@ -65,10 +65,10 @@ Development is ongoing but the following hardware is currently compatible
 **DIY 900MHz Hardware**
 | **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
 | --------- | ---------------                        | ------------------- | -------------------------------------------- |
-| TX        | DIY ESP32 Module (RFM95 Module)        | Fully Supported     | Flashable via USB, 50mW max                  |
-| TX        | DIY ESP32 Module (E19 Module)          | Fully Supported     | No longer recommended                        |
-| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended (10mW max power)       |
-| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating (50mW output          |
+| TX        | DIY Module (RFM95 Module)              | Fully Supported     | Flashable via USB, 50mW max                  |
+| TX        | DIY Module (E19 Module)                | Fully Supported     | No longer recommended                        |
+| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended                        |
+| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating, 50mW max             |
 | RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
 | RX        | DIY 20x20 RX                           | Fully Supported     | Supports WIFI Updating                       |
 
