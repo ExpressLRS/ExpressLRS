@@ -16,8 +16,8 @@ def gen_multi_bin(source, target, env):
 
 
 def gen_elrs(source, target, env):
-    if not "_stock" in env['PIOENV']:
-        return
+    #if not "_stock" in env['PIOENV']:
+    #    return
     source_bin = source[0]
     sys.stdout.write("Source bin: %s \n" % source_bin)
     bin_path = os.path.dirname(source_bin.rstr())
