@@ -825,7 +825,8 @@ void loop()
         RFmodeLastCycled = millis();
     }
 
-    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
+    uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
+    if ((connectionState == connected) && (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (millis() - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
     }
