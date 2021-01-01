@@ -9,7 +9,7 @@ stm = env.get('PIOPLATFORM', '') in ['ststm32']
 # don't overwrite if custom command defined
 if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOADERFLAGS'):
     target_name = env['PIOENV'].upper()
-    print("STM ENv: '%s'" % target_name)
+    print("STM ENV: '%s'" % target_name)
     if "_R9M_" in target_name:
         if "WIFI" in target_name:
             env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
