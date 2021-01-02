@@ -57,6 +57,9 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="main.css" />
+<style>
+.hide {display: none;}
+</style>
 <script>
 var websock;
 function start() {
@@ -141,11 +144,11 @@ curl --include \
 <h2>R9M Tx Firmware Update:</h2>
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
-<input type='file' accept='.bin,.elrs' name='filesystem'>
-<input type='text' value='0x0000' name='flash_address' size='6'>
-<input type='submit' value='Upload and Flash R9M Tx'>
+<input type='file' accept='.bin,.elrs' name='firmware' id='stm_fw'>
+<input type='text' value='0x0000' name='flash_address' size='6' id='stm_addr' class="hide">
+<input type='submit' value='Upload and Flash R9M Tx' id='stm_submit' disabled='disabled'>
 </form>
-<div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
+<div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
 </fieldset>
 </div>
 <hr>
@@ -155,12 +158,47 @@ curl --include \
 <h2>WiFi Backpack Firmware Update:</h2>
 </legend>
 <form method='POST' action='/update' enctype='multipart/form-data'>
-<input type='file' accept='.bin' name='firmware'>
-<input type='submit' value='Flash WiFi Backpack'>
+<input type='file' accept='.bin,.bin.gz' name='backpack_fw' id='esp_fw'>
+<input type='submit' value='Flash WiFi Backpack' id='esp_submit' disabled='disabled'>
 </form>
-<div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
+<div style="color:red;"><span id="esp_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
 </fieldset>
 </div>
+<script type="text/javascript">
+document.getElementById('esp_fw').onchange = function (ev) {
+const esp_message = document.getElementById('esp_message');
+const FIRMWARE_PATTERN = /backpack\.bin$/g;
+const uploadButton = document.getElementById('esp_submit');
+const value = ev.target.value;
+if (FIRMWARE_PATTERN.test(value)) {
+uploadButton.removeAttribute('disabled');
+esp_message.innerHTML = "Firmware file is correct";
+} else {
+uploadButton.setAttribute('disabled', 'disabled');
+esp_message.innerHTML = " OOPS! Incorrect firmware file! Please select correct file.";
+}
+};
+document.getElementById('stm_fw').onchange = function (ev) {
+const stm_message = document.getElementById('stm_message');
+const FW_PATTERN_BIN = /firmware\.bin$/g;
+const FW_PATTERN_ELRS = /firmware\.elrs$/g;
+const uploadButton = document.getElementById('stm_submit');
+const address = document.getElementById('stm_addr');
+const value = ev.target.value;
+address.classList.add('hide');
+if (FW_PATTERN_BIN.test(value)) {
+uploadButton.removeAttribute('disabled');
+address.classList.remove('hide');
+stm_message.innerHTML = "Note: DFU flashing will be used";
+} else if (FW_PATTERN_ELRS.test(value)) {
+uploadButton.removeAttribute('disabled');
+stm_message.innerHTML = "Firmware file is correct";
+} else {
+uploadButton.setAttribute('disabled', 'disabled');
+stm_message.innerHTML = " OOPS! Incorrect firmware file! Please select correct file.";
+}
+};
+</script>
 <hr>
 <div align="left">
 <legend>
