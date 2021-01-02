@@ -22,13 +22,14 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Solder the WROOM32 module
 - Solder the 2x 10k resistors
 - Solder the capacitor
-- Apply tape to the base of the regulator pcb to insulate it from potentially shorting with the vias on the main pcb. Solder on a 4 pin straight header, then remove the plastic bridge on the header so that the reg will stil flush with the main pcb on the bottom (pictures show the v1 pcb with reg on the top, which is incorrect).
+- Apply tape to the base of the regulator pcb to insulate it from potentially shorting with the vias on the main pcb. Solder on a 4 pin straight header, then remove the plastic bridge on the header so that the reg will stil flush with the main pcb on the bottom. NOTE: pictures show the v1 pcb with reg on the top, which is incorrect. The v1.1 PCB moved the reg to the underside of the main PCB, so it doesn't intrude on the antenna SMA.
 - Set the regulator to 3.3V and cut the PCB trace on the regulator for ADJ, then solder in place.
 - Solder 3x silicon wires to the 3 pin header pads (G, V, S), and attach to the 8 way header using the pinout below, so that G goes to GND, V goes to 6V, and S goes to S.Port.
 
 ### STLs
 
 - Print STLs standing on the end. For best results use 0.12 layer thickness, and 40% infill for the base, and 0.12 layer thickness, and 100% infill for the top.
+- NOTE: The X-Lite STL is pretty crude. I just extended the mount part of the print out by 10mm so it clears the bay. It could really do with someone designing a proper xlite STL. It's also untested :|
 
 ### Build Pics
 
