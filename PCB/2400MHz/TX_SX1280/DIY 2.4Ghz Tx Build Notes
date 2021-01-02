@@ -1,0 +1,13 @@
+After having built several of the DIY 2.4GHz transmitter modules, here are a few tips to help your build go smoothly:
+
+1) Test each component separately before soldering it onto the PCB.  
+    -Flash the firmware onto the ESP-32 dev board to make sure it is working. Use "Upload and Monitor" and it should provide output to the terminal once the flash is done.
+    -Test the output of the voltage regulator.  I've had bad regulators come from the factory.  Remember you need to provide voltage to the "EN" pin to get voltage output if you're using the specified regulator.
+    -I do not know of a good way to test the E28 module before installing it on PCB.  If somone does, please add to this file.
+2) Don't bother trying to move the 0 ohm resistor on the E28 module.  Just remove it with your soldering iron and use a small piece of wire or header pin to connect the u.fl. You're welcome.
+3) After soldering the Molex connector in place, grind the pins flat on the other side of the PCB and insulate well with tape or plastic.  The power pins can poke thru the solder mask on the ESP-32 dev board and short out your radio.
+4) Once the module is assembled, power it with a 2S LiPo and check how much current it is drawing.  It should be close to 0.07 amps.  If the module is drawing more than that, do not put it in your radio.
+    -In fact, every time you add a component, check the current draw. 
+5) Do not put the module in your radio while it is powered on.  There is copper around the holes in the PCB and if the pins scrape thru while powered will short out your radio.
+
+    
