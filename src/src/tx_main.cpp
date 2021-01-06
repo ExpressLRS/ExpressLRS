@@ -377,7 +377,7 @@ void sendLuaParams()
                          (uint8_t)(POWERMGNT.currPower() + 1),
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF00) >> 8,
+                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
 
   crsf.sendLUAresponse(luaParams, 9);
