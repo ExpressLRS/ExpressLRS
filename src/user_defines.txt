@@ -12,7 +12,7 @@
 
 -DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
-sdavfadfasd
+
 ### REGULATORY DOMAIN: ### 
 
 #-DRegulatory_Domain_AU_915
