@@ -153,7 +153,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
     Serial.println(syncWord);
   }
 
-  hal.writeRegister(SX127X_REG_SYNC_WORD, syncWord);
+  hal.writeRegister(SX127X_REG_SYNC_WORD, _syncWord);
   currSyncWord = _syncWord;
 }
 
