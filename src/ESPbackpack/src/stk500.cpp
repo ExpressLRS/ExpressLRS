@@ -203,6 +203,6 @@ int verify_sync(uint32_t timeout)
             return 0;
         }
     }
-    DEBUG_PRINT("[ERROR]Â sync fail...");
+    DEBUG_PRINT("[ERROR] sync fail...");
     return -1;
 }
