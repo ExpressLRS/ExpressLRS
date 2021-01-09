@@ -23,10 +23,12 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 - Solder the 4 pin molex connector.  Cut the pins flush with the PCB before soldering.
 - Apply tape to the base of the esp32 board to insulate it from potentially shorting with the molex pins.  Remove the black plastic standoffs.  Place on the PCB and cut the pins flush then solder.
-- Set the regulator to 3.3V and cut the PCB trace on the regulator for ADJ (red circle on image 4). Remove the black standoff, insulate the base with tape, then solder in place.
+- Set the regulator voltage to 3.45V by rotating the potentiometer on the top fully clockwise, and jumper both the 5V and 12V pads on the back.  Why didn't we just jumper the 3.3V?  Because that also requires cutting the ADJ trace and potentially damaging the regulator.  The e28 will also run better on a voltage slightly above 3.3V.  Now remove the black standoff, insulate the base with tape, then solder in place.
+
+<img src="img/regulator_setup.jpg" width="30%">
+
 - Solder the 10k resistor.
 - Solder the e28 module.  Dont forget to change the zero ohm resistor near the ufl.  Default is to use the PCB antenna, it must be repositioned to use the ufl.
 
-<img src="img/1.jpg" width="30%"> <img src="img/2.jpg" width="30%"> <img src="img/3.jpg" width="30%">
-<img src="img/4.jpg" width="30%"> <img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
+<img src="img/1.jpg" width="30%"> <img src="img/2.jpg" width="30%"> <img src="img/3.jpg" width="30%"> <img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
 <img src="img/7.jpg" width="30%"> <img src="img/8.jpg" width="30%">
