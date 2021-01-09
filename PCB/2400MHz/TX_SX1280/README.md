@@ -25,8 +25,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Apply tape to the base of the esp32 board to insulate it from potentially shorting with the molex pins.  Remove the black plastic standoffs.  Place on the PCB and cut the pins flush then solder.
 - Set the regulator to 3.3V and cut the PCB trace on the regulator for ADJ (red circle on image 4). Remove the black standoff, insulate the base with tape, then solder in place.
 WARNING: MAKE SURE YOU DO THIS CORRECTLY. CHECK OUTPUT VOLTAGE IS 3.3V BEFORE SOLDERING TO BOARD.
-<img src="img/4.jpg" width="30%"> <img src="stepdown_trace_cuttting.png" width="30%"> <img src="img/6.jpg" width="30%">
-
+<img src="stepdown_trace_cuttting.png" width="30%">
 - Solder the 10k resistor.
 - Solder the e28 module.  Dont forget to change the zero ohm resistor near the ufl.  Default is to use the PCB antenna, it must be repositioned to use the ufl.
 
