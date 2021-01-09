@@ -54,6 +54,7 @@ uint32_t LEDupdateCounterMillis;
 #define DEBUG_SUPPRESS // supresses debug messages on uart
 
 hwTimer hwTimer;
+GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 

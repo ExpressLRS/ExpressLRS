@@ -20,7 +20,7 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
--DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400
 
 
 ### SWITCHES: ### 

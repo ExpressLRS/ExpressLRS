@@ -147,11 +147,11 @@ RxConfig::Commit()
 }
 
 // Getters
-uint32_t
-RxConfig::GetRate()
-{
-    return m_config.rate;
-}
+// uint32_t
+// RxConfig::GetRate()
+// {
+//     return m_config.rate;
+// }
 
 bool
 RxConfig::IsModified()
@@ -160,24 +160,24 @@ RxConfig::IsModified()
 }
 
 // Setters
-void
-RxConfig::SetRate(uint32_t rate)
-{
-    if (m_config.rate != rate)
-    {
-        m_config.rate = rate;
-        m_modified = true;
-    }
-}
+// void
+// RxConfig::SetRate(uint32_t rate)
+// {
+//     if (m_config.rate != rate)
+//     {
+//         m_config.rate = rate;
+//         m_modified = true;
+//     }
+// }
 
 void
 RxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     m_config.version = CONFIG_VERSION;
-    SetRate(modParams->index);
-    SetTlm(modParams->TLMinterval);
-    SetPower(DefaultPowerEnum);
+    // SetRate(modParams->index);
+    // SetTlm(modParams->TLMinterval);
+    // SetPower(DefaultPowerEnum);
     Commit();
 }
 
