@@ -1,0 +1,5 @@
+***Warning***
+
+Be careful when you are cutting the trace on the back of the voltage regulator to set its output to 3.3V.  If you don't leave the row of small pads connected to the circle, the voltage regulator will pass full 2S battery voltage to the PCB.
+
+When assembling this module, solder the Molex on first, then wire up the voltage regulator to ensure it is putting out 3.3VDC to the PCB.  This step is critical since it is very easy to cut too much of the trace on the back and feed 8.4V to the E28 and ESP board, thus frying them.
