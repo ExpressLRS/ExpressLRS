@@ -147,11 +147,17 @@ RxConfig::Commit()
 }
 
 // Getters
-// uint32_t
-// RxConfig::GetRate()
-// {
-//     return m_config.rate;
-// }
+bool
+RxConfig::GetIsBound()
+{
+    return m_config.isBound;
+}
+
+uint8_t*
+RxConfig::GetUID()
+{
+    return m_config.uid;
+}
 
 bool
 RxConfig::IsModified()
@@ -160,24 +166,31 @@ RxConfig::IsModified()
 }
 
 // Setters
-// void
-// RxConfig::SetRate(uint32_t rate)
-// {
-//     if (m_config.rate != rate)
-//     {
-//         m_config.rate = rate;
-//         m_modified = true;
-//     }
-// }
+void
+RxConfig::SetIsBound(bool isBound)
+{
+    if (m_config.isBound != isBound)
+    {
+        m_config.isBound = isBound;
+        m_modified = true;
+    }
+}
+
+void
+RxConfig::SetUID(uint8_t* uid)
+{
+    for (uint8_t i = 0; i < UID_LEN; ++i)
+    {
+        m_config.uid[i] = uid[i];
+    }
+    m_modified = true;
+}
 
 void
 RxConfig::SetDefaults()
 {
-    expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
-    m_config.version = CONFIG_VERSION;
-    // SetRate(modParams->index);
-    // SetTlm(modParams->TLMinterval);
-    // SetPower(DefaultPowerEnum);
+    m_config.version = RX_CONFIG_VERSION;
+    SetIsBound(false);
     Commit();
 }
 

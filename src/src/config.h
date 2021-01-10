@@ -4,7 +4,9 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
-#define CONFIG_VERSION          1
+#define TX_CONFIG_VERSION   1
+#define RX_CONFIG_VERSION   1
+#define UID_LEN             6
 
 typedef struct {
     uint32_t    version;
@@ -43,7 +45,7 @@ private:
 typedef struct {
     uint32_t    version;
     bool        isBound;
-    uint8_t     uid[6];
+    uint8_t     uid[UID_LEN];
 } rx_config_t;
 
 class RxConfig

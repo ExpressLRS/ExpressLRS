@@ -24,7 +24,7 @@ SX1280Driver Radio;
 #include "hwTimer.h"
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
-#include "elrs_eeprom_schema.h"
+#include "config.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -57,6 +57,7 @@ hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
+RxConfig config;
 
 /// Filters ////////////////
 LPF LPF_Offset(2);
@@ -742,16 +743,14 @@ void setup()
     Serial.print(", ");
     Serial.println(UID[5]);
 
-    // Read out the byte that indicates if RX has been bound
-    uint8_t bindingState = eeprom.ReadByte(EEPROM_INDEX_BINDING);
-
-    // If the byte matches the reserved value
-    if (bindingState == EEPROM_IS_BOUND)
+    // Check the byte that indicates if RX has been bound
+    if (config.GetIsBound())
     {
         Serial.println("RX has been bound previously, reading the UID from eeprom...");
-        for (uint8_t i = 2; i < 6; ++i)
+        uint8_t* storedUID = config.GetUID();
+        for (uint8_t i = 0; i < UID_LEN; ++i)
         {
-            UID[i] = eeprom.ReadByte(EEPROM_INDEX_UID + (i - 2));
+            UID[i] = storedUID[i];
         }
 
         Serial.print("UID = ");
@@ -984,31 +983,25 @@ void EnterBindingMode()
 
     Serial.print("Entered binding mode at freq = ");
     Serial.print(Radio.currFreq);
-    Serial.print(" and rfmode = ");
-    // Serial.print(ExpressLRS_currAirRate->rate);
-    Serial.println("Hz");
 }
 
 void ExitBindingMode()
 {
     if (!InBindingMode) {
         // Not in binding mode
-        Serial.println("Cannot exit binding mode!");
+        Serial.println("Cannot exit binding mode, not in binding mode!");
         return;
     }
 
     InBindingMode = false;
 
-    // Revert to original packet rate
+    // Revert to default packet rate
     // and go to initial freq
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(RATE_DEFAULT);
     Radio.SetFrequency(GetInitialFreq());
 
     Serial.print("Exit binding mode at freq = ");
     Serial.print(Radio.currFreq);
-    Serial.print(" and rfmode = ");
-    // Serial.print(ExpressLRS_currAirRate->rate);
-    Serial.println("Hz");
 }
 
 void OnELRSBindMSP(mspPacket_t *packet)
@@ -1033,12 +1026,14 @@ void OnELRSBindMSP(mspPacket_t *packet)
     Serial.print(", ");
     Serial.println(UID[5]);
 
-    for (uint8_t i = 2; i < 6; ++i) {
-        eeprom.WriteByte(EEPROM_INDEX_UID + (i - 2), UID[i]);
-    }
+    // Set new UID in eeprom
+    config.SetUID(UID);
 
     // Set eeprom byte to indicate RX is bound
-    eeprom.WriteByte(EEPROM_INDEX_BINDING, EEPROM_IS_BOUND);
+    config.SetIsBound(true);
+
+    // Write the value to eeprom
+    config.Commit();
 
     FHSSrandomiseFHSSsequence();
     ExitBindingMode();
