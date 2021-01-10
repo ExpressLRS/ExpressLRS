@@ -9,7 +9,7 @@ TxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != CONFIG_VERSION)
+    if (m_config.version != TX_CONFIG_VERSION)
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -95,7 +95,7 @@ void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
-    m_config.version = CONFIG_VERSION;
+    m_config.version = TX_CONFIG_VERSION;
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
@@ -120,7 +120,7 @@ RxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != CONFIG_VERSION)
+    if (m_config.version != RX_CONFIG_VERSION)
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
