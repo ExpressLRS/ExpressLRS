@@ -45,7 +45,7 @@ uint32_t LEDupdateCounterMillis;
 
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
-#define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
+#define BINDING_PRESS_INTERVAL 2000 // hold button for 2 sec to enter binding mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -617,12 +617,8 @@ void sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) // button held down
+    if ((millis() > buttonLastPressed + BINDING_PRESS_INTERVAL) && buttonDown) // button held down
     {
-        // if (!webUpdateMode)
-        // {
-        //     beginWebsever();
-        // }
         EnterBindingMode();
     }
     if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
@@ -729,19 +725,6 @@ void setup()
 #endif
 
     eeprom.Begin();
-
-    Serial.print("UID = ");
-    Serial.print(UID[0]);
-    Serial.print(", ");
-    Serial.print(UID[1]);
-    Serial.print(", ");
-    Serial.print(UID[2]);
-    Serial.print(", ");
-    Serial.print(UID[3]);
-    Serial.print(", ");
-    Serial.print(UID[4]);
-    Serial.print(", ");
-    Serial.println(UID[5]);
 
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
