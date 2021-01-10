@@ -765,8 +765,8 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
