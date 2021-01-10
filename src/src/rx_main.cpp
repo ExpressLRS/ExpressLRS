@@ -725,6 +725,7 @@ void setup()
 #endif
 
     eeprom.Begin();
+    config.Load();
 
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
@@ -748,10 +749,6 @@ void setup()
         Serial.print(UID[4]);
         Serial.print(", ");
         Serial.println(UID[5]);
-    }
-    else {
-        Serial.println("RX has not been bound, enter binding mode...");
-        EnterBindingMode();
     }
 
     FHSSrandomiseFHSSsequence();
@@ -933,6 +930,12 @@ void loop()
 #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
 #endif
+
+    if (!config.GetIsBound() && !InBindingMode)
+    {
+        Serial.println("RX has not been bound, enter binding mode...");
+        EnterBindingMode();
+    }
 }
 
 void EnterBindingMode()
@@ -959,13 +962,13 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_50HZ);
+    SetRFLinkRate(RATE_200HZ);
     Radio.SetFrequency(GetInitialFreq());
 
     InBindingMode = true;
 
     Serial.print("Entered binding mode at freq = ");
-    Serial.print(Radio.currFreq);
+    Serial.println(Radio.currFreq);
 }
 
 void ExitBindingMode()
@@ -984,7 +987,7 @@ void ExitBindingMode()
     Radio.SetFrequency(GetInitialFreq());
 
     Serial.print("Exit binding mode at freq = ");
-    Serial.print(Radio.currFreq);
+    Serial.println(Radio.currFreq);
 }
 
 void OnELRSBindMSP(mspPacket_t *packet)

@@ -878,7 +878,7 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_50HZ);
+  SetRFLinkRate(RATE_200HZ);
   Radio.SetFrequency(GetInitialFreq());
 
   // isRXconnected = false;
