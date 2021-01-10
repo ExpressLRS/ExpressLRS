@@ -7,6 +7,7 @@
     extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
 #elif defined(TARGET_R9M_RX)
     extEEPROM EEPROM(kbits_2, 1, 1, 0x50);
+#elif defined(PLATFORM_ESP32) 
 #else
 #define NO_EEPROM 1
 #endif

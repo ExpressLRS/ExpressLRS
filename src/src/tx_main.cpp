@@ -390,7 +390,7 @@ void sendLuaParams()
                          (uint8_t)(POWERMGNT.currPower() + 1),
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF00) >> 8,
+                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
 
   crsf.sendLUAresponse(luaParams, 9);
@@ -462,23 +462,26 @@ void HandleUpdateParameter()
   case 1:
     if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
     {
+      Serial.print("Request AirRate: ");
+      Serial.println(crsf.ParameterUpdateData[1]);
       ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
+      config.SetRate(ExpressLRS_nextAirRateIndex);
     }
     break;
 
   case 2:
     if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1];
-      Serial.print("TLM interval: ");
+      Serial.print("Request TLM interval: ");
       Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
+      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     }
     break;
 
   case 3:
     Serial.print("Request Power: ");
     Serial.println(crsf.ParameterUpdateData[1]);
-    POWERMGNT.setPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     break;
 
   case 4:
@@ -523,15 +526,11 @@ void HandleUpdateParameter()
     break;
   }
   UpdateParamReq = false;
-  config.SetRate(ExpressLRS_nextAirRateIndex);
-  config.SetTlm(ExpressLRS_currAirRate_Modparams->TLMinterval);
-  config.SetPower(POWERMGNT.currPower());
-
+  
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
     hwTimer.stop();
-
     // Set a flag that will trigger the eeprom commit in the main loop
     // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
     WaitEepromCommit = true;
@@ -687,21 +686,18 @@ void loop()
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
   if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
   {
-    if (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)
-    {
-      Serial.println("Change Link rate");
-      SetRFLinkRate(ExpressLRS_nextAirRateIndex);
-      Serial.println(ExpressLRS_currAirRate_Modparams->enum_rate);
-      Serial.println(ExpressLRS_currAirRate_Modparams->index);
-    }
+    SetRFLinkRate(config.GetRate());
+    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+
     // Write the values, and restart the timer
     WaitEepromCommit = false;
     // Write the uncommitted eeprom values
-    config.Commit();
     Serial.println("EEPROM COMMIT");
+    config.Commit();
     // Resume the timer
-    hwTimer.resume();
     sendLuaParams();
+    hwTimer.resume();
   }
 
 #ifdef FEATURE_OPENTX_SYNC
