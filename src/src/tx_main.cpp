@@ -64,7 +64,6 @@ void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
-bool bindMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
@@ -384,7 +383,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void sendLuaParams()
 {
   uint8_t luaParams[] = {0xFF,
-                         (uint8_t)(bindMode | (webUpdateMode << 1)),
+                         (uint8_t)(InBindingMode | (webUpdateMode << 1)),
                          (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
                          (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1),
                          (uint8_t)(POWERMGNT.currPower() + 1),
@@ -507,17 +506,11 @@ void HandleUpdateParameter()
     if (crsf.ParameterUpdateData[1] == 1)
     {
       Serial.println("Binding Requested!");
-      uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
-      crsf.sendLUAresponse(luaBindingRequestedPacket);
       EnterBindingMode();
     }
-
-    if (crsf.ParameterUpdateData[1] == 0)
+    else
     {
-      Serial.println("Binding Cancelled!");
-      uint8_t luaBindingCancelledPacket[] = {(uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00};
-      crsf.sendLUAresponse(luaBindingCancelledPacket);
-
+      Serial.println("Binding Stopped!");
       ExitBindingMode();
     }
     break;
@@ -923,9 +916,6 @@ void ExitBindingMode()
   // and go to initial freq
   SetRFLinkRate(RATE_200HZ);
   Radio.SetFrequency(GetInitialFreq());
-
-  uint8_t LUAbindDone[4] = {0xFF, 0x00, 0x00, 0x00};
-  crsf.sendLUAresponse(LUAbindDone);
 
   Serial.print("Exit binding mode at freq = ");
   Serial.print(Radio.currFreq);
