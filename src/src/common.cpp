@@ -68,12 +68,16 @@ ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
         // Set to first entry in the array
         return &ExpressLRS_AirRateConfig[0];
     }
-    else if (index > (RATE_MAX - 1))
+
+    for (int i = 0; i < (RATE_MAX); i++)
     {
-        // Set to last usable entry in the array
-        return &ExpressLRS_AirRateConfig[RATE_MAX - 1];
+        if (index == ExpressLRS_AirRateConfig[i].enum_rate)
+        {
+            return &ExpressLRS_AirRateConfig[i];
+        }
     }
-    return &ExpressLRS_AirRateConfig[index];
+
+    return &ExpressLRS_AirRateConfig[RATE_MAX - 1];
 }
 
 ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
@@ -84,12 +88,16 @@ ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
         // Set to first entry in the array
         return &ExpressLRS_AirRateRFperf[0];
     }
-    else if (index > (RATE_MAX - 1))
+
+    for (int i = 0; i < (RATE_MAX); i++)
     {
-        // Set to last usable entry in the array
-        return &ExpressLRS_AirRateRFperf[RATE_MAX - 1];
+        if (index == ExpressLRS_AirRateRFperf[i].enum_rate)
+        {
+            return &ExpressLRS_AirRateRFperf[i];
+        }
     }
-    return &ExpressLRS_AirRateRFperf[index];
+
+    return &ExpressLRS_AirRateRFperf[RATE_MAX - 1];
 }
 
 ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
