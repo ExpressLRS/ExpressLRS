@@ -49,7 +49,7 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define BIND_LED_FLASH_INTERVAL_SHORT 100
-#define BIND_LED_FLASH_INTERVAL_LONG 1500
+#define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
@@ -83,10 +83,10 @@ uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a
 bool lowRateMode = false;
 
 bool LED = false;
-bool LEDPulseCounter = 0;
+uint8_t LEDPulseCounter = 0;
 
 uint32_t webUpdateLedFlashIntervalLast = 0;
-uint32_t bindLedFlashIntervalLast = 0;
+uint32_t bindLedFlashInterval = 0;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -988,19 +988,37 @@ void loop()
     // Update the LED while in binding mode
     if (InBindingMode)
     {
-        if (LEDPulseCounter < 4 && millis() > BIND_LED_FLASH_INTERVAL_SHORT + bindLedFlashIntervalLast)
+        if (millis() > bindLedFlashInterval)
         {
+            if (LEDPulseCounter == 0)
+            {
+                LED = true;
+            }
+            else if (LEDPulseCounter == 4)
+            {
+                LED = false;
+            }
+            else
+            {
+                LED = !LED;
+            }
+
+            if (LEDPulseCounter < 4)
+            {
+                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_SHORT;
+            }
+            else
+            {
+                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_LONG;
+                LEDPulseCounter = 0;
+            }
+            
+            
             #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED);
             #endif
-            LED = !LED;
-            bindLedFlashIntervalLast = millis();
+            
             LEDPulseCounter++;
-        }
-        if (millis() > BIND_LED_FLASH_INTERVAL_LONG + bindLedFlashIntervalLast)
-        {
-            bindLedFlashIntervalLast = millis();
-            LEDPulseCounter = 0;
         }
     }
 }
