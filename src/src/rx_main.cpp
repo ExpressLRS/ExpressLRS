@@ -742,6 +742,9 @@ void setup()
             UID[i] = storedUID[i];
         }
 
+        CRCCaesarCipher = UID[4];
+        DeviceAddr = UID[5] & 0b111111;
+
         Serial.print("UID = ");
         Serial.print(UID[0]);
         Serial.print(", ");
@@ -967,7 +970,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
+    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
     Radio.SetFrequency(GetInitialFreq());
 
     InBindingMode = true;
