@@ -445,6 +445,10 @@ int main(void)
 #endif // UART_RX_PIN
   tx_pin = IO_CREATE(UART_TX_PIN);
 
+  /* Give a bit time for OTX to bootup */
+  if ((BL_FLASH_START & 0xffff) == 0x0)
+    HAL_Delay(500);
+
   ret = boot_code_stk(UART_BAUD, rx_pin, tx_pin, duplex_pin);
 #if defined(UART_TX_PIN_2ND)
   if (ret < 0) {

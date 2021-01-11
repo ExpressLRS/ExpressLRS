@@ -110,7 +110,7 @@ uint32_t doneProcessing;
 
 ///////Variables for Telemetry and Link Quality///////////////
 uint32_t ModuleBootTime = 0;
-uint32_t LastValidPacketMicros = 0;
+uint32_t volatile LastValidPacketMicros = 0; // Needs to be volatile to stop race condition as variable might be updated during if() in loop()
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
@@ -838,8 +838,8 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
@@ -901,7 +901,8 @@ void loop()
         RFmodeLastCycled = millis();
     }
 
-    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
+    uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
+    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(millis() - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
     }
