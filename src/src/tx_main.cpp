@@ -505,12 +505,12 @@ void HandleUpdateParameter()
   case 0xFF:
     if (crsf.ParameterUpdateData[1] == 1)
     {
-      Serial.println("Binding Requested!");
+      Serial.println("Binding requested from LUA");
       EnterBindingMode();
     }
     else
     {
-      Serial.println("Binding Stopped!");
+      Serial.println("Binding stopped  from LUA");
       ExitBindingMode();
     }
     break;
@@ -751,13 +751,13 @@ void OnRFModePacket(mspPacket_t *packet)
   switch (rfMode)
   {
   case RATE_200HZ:
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
     break;
   case RATE_100HZ:
-    SetRFLinkRate(RATE_100HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_100HZ));
     break;
   case RATE_50HZ:
-    SetRFLinkRate(RATE_50HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
     break;
   default:
     // Unsupported rate requested
@@ -878,16 +878,11 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_200HZ);
+  SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
   Radio.SetFrequency(GetInitialFreq());
 
-  // isRXconnected = false;
-
   Serial.print("Entered binding mode at freq = ");
-  Serial.print(Radio.currFreq);
-  Serial.print(" and rfmode = ");
-  // Serial.print(ExpressLRS_currAirRate->rate);
-  Serial.println("Hz");
+  Serial.println(Radio.currFreq);
 }
 
 void ExitBindingMode()
@@ -914,14 +909,10 @@ void ExitBindingMode()
 
   // Revert to original packet rate
   // and go to initial freq
-  SetRFLinkRate(RATE_200HZ);
+  SetRFLinkRate(config.GetRate());
   Radio.SetFrequency(GetInitialFreq());
 
-  Serial.print("Exit binding mode at freq = ");
-  Serial.print(Radio.currFreq);
-  Serial.print(" and rfmode = ");
-  // Serial.print(ExpressLRS_currAirRate->rate);
-  Serial.println("Hz");
+  Serial.println("Exiting binding mode");
 }
 
 void SendUIDOverMSP()
