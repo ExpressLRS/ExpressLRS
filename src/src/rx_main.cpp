@@ -51,7 +51,7 @@ uint32_t LEDupdateCounterMillis;
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
 
-volatile uint8_t antenna = 0;    // which antenna is currently in use
+uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
@@ -62,8 +62,8 @@ LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 
 // LPF LPF_UplinkRSSI(5);
-LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
-LPF LPF_UplinkRSSI1(5);
+LPF LPF_UplinkRSSI0(3);  // track rssi per antenna
+LPF LPF_UplinkRSSI1(3);
 
 
 /// LQ Calculation //////////
@@ -314,14 +314,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-        static bool antennaSwitched = false;
+        static int32_t antennaSwitched;
 
         // if we didn't get a packet switch the antenna
-        if (!LQCALC.packetReceivedForPreviousFrame()) {
+        if (!LQCALC.packetReceivedForPreviousFrame() && antennaSwitched == 0) {
             prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             switchAntenna();
-            antennaSwitched = true;
-        } else if (antennaSwitched) {
+            antennaSwitched = 1;
+        } else if (antennaSwitched >= 5) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
@@ -330,10 +330,13 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
                 // things got worse when we switched, so change back.
                 prevRSSI = rssi;
                 switchAntenna();
+                antennaSwitched = 1;
             } else {
                 // all good, we can stay on the current antenna. Clear the flag.
-                antennaSwitched = false;
+                antennaSwitched = 0;
             }
+        } else if (antennaSwitched > 0){
+            antennaSwitched ++;
         }
     #endif
     HandleFHSS();
