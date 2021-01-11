@@ -51,7 +51,7 @@ uint32_t LEDupdateCounterMillis;
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
 
-uint8_t antenna = 0;    // which antenna is currently in use
+volatile uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
@@ -328,6 +328,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             if (rssi < prevRSSI) {
                 // things got worse when we switched, so change back.
+                prevRSSI = rssi;
                 switchAntenna();
             } else {
                 // all good, we can stay on the current antenna. Clear the flag.
