@@ -175,6 +175,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+    if (InBindingMode)
+    {
+        return;
+    }
+
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
     {
         return;
@@ -1018,7 +1023,7 @@ void OnELRSBindMSP(mspPacket_t *packet)
     // Set eeprom byte to indicate RX is bound
     config.SetIsBound(true);
 
-    // Write the value to eeprom
+    // Write the values to eeprom
     config.Commit();
 
     FHSSrandomiseFHSSsequence();
