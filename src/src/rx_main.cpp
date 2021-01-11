@@ -659,7 +659,21 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-    delay(100);
+    eeprom.Begin();
+    config.Load();
+
+    // Increment the power on counter in eeprom
+    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+    config.Commit();
+
+    // If we haven't reached our binding mode power cycles
+    // and we've been powered on for 2s, reset the power on counter
+    if (config.GetPowerOnCounter() < 3)
+    {
+        delay(2000);
+        config.SetPowerOnCounter(0);
+        config.Commit();
+    }
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
@@ -736,13 +750,6 @@ void setup()
 #elif defined Regulatory_Domain_ISM_2400
     Serial.println("Setting 2.4GHz Mode");
 #endif
-
-    eeprom.Begin();
-    config.Load();
-
-    // Increment the power on counter in eeprom
-    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-    config.Commit();
 
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
@@ -976,13 +983,6 @@ void loop()
         
         Serial.println("Power on counter >=3, enter binding mode...");
         EnterBindingMode();
-    }
-
-    // If we've been powered on for >5s, reset the power on counter
-    if (millis() > 5000)
-    {
-        config.SetPowerOnCounter(0);
-        config.Commit();
     }
 
     // Update the LED while in binding mode
