@@ -159,6 +159,12 @@ RxConfig::GetUID()
     return m_config.uid;
 }
 
+uint8_t
+RxConfig::GetPowerOnCounter()
+{
+    return m_config.powerOnCounter;
+}
+
 bool
 RxConfig::IsModified()
 {
@@ -184,6 +190,16 @@ RxConfig::SetUID(uint8_t* uid)
         m_config.uid[i] = uid[i];
     }
     m_modified = true;
+}
+
+void
+RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
+{
+    if (m_config.powerOnCounter != powerOnCounter)
+    {
+        m_config.powerOnCounter = powerOnCounter;
+        m_modified = true;
+    }
 }
 
 void

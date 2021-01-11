@@ -45,9 +45,11 @@ uint32_t LEDupdateCounterMillis;
 
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
-#define BINDING_PRESS_INTERVAL 2000 // hold button for 2 sec to enter binding mode
+#define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
+#define BIND_LED_FLASH_INTERVAL_SHORT 100
+#define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
@@ -81,6 +83,10 @@ uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a
 bool lowRateMode = false;
 
 bool LED = false;
+bool LEDPulseCounter = 0;
+
+uint32_t webUpdateLedFlashIntervalLast = 0;
+uint32_t bindLedFlashIntervalLast = 0;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -90,7 +96,6 @@ uint32_t buttonLastPressed = 0;
 
 bool webUpdateMode = false;
 bool disableWebServer = false;
-uint32_t webUpdateLedFlashIntervalLast;
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
@@ -622,9 +627,12 @@ void sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + BINDING_PRESS_INTERVAL) && buttonDown) // button held down
-    {
-        EnterBindingMode();
+    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) 
+    { // button held down for WEB_UPDATE_PRESS_INTERVAL
+        if (!webUpdateMode)
+        {
+            beginWebsever();
+        }
     }
     if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
@@ -731,6 +739,10 @@ void setup()
 
     eeprom.Begin();
     config.Load();
+
+    // Increment the power on counter in eeprom
+    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+    config.Commit();
 
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
@@ -869,12 +881,6 @@ void loop()
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
-            #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
-            #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED);
-            #endif
-            LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
             getRFlinkInfo();
@@ -882,6 +888,15 @@ void loop()
             delay(100);
             crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
             Radio.RXnb();
+            if (!InBindingMode)
+            {
+                #ifdef GPIO_PIN_LED
+                    digitalWrite(GPIO_PIN_LED, LED);
+                #elif GPIO_PIN_LED_GREEN
+                    digitalWrite(GPIO_PIN_LED_GREEN, LED);
+                #endif
+                LED = !LED;
+            }
         }
         RFmodeLastCycled = millis();
     }
@@ -939,10 +954,48 @@ void loop()
     STM32_RX_HandleUARTin();
 #endif
 
+    // If the eeprom is indicating that we're not bound
+    // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
     {
         Serial.println("RX has not been bound, enter binding mode...");
         EnterBindingMode();
+    }
+
+    // If the power on counter is >=3, enter binding and clear counter
+    if (config.GetPowerOnCounter() >= 3)
+    {
+        config.SetPowerOnCounter(0);
+        config.Commit();
+        
+        Serial.println("Power on counter >=3, enter binding mode...");
+        EnterBindingMode();
+    }
+
+    // If we've been powered on for >5s, reset the power on counter
+    if (millis() > 5000)
+    {
+        config.SetPowerOnCounter(0);
+        config.Commit();
+    }
+
+    // Update the LED while in binding mode
+    if (InBindingMode)
+    {
+        if (LEDPulseCounter < 4 && millis() > BIND_LED_FLASH_INTERVAL_SHORT + bindLedFlashIntervalLast)
+        {
+            #ifdef GPIO_PIN_LED
+            digitalWrite(GPIO_PIN_LED, LED);
+            #endif
+            LED = !LED;
+            bindLedFlashIntervalLast = millis();
+            LEDPulseCounter++;
+        }
+        if (millis() > BIND_LED_FLASH_INTERVAL_LONG + bindLedFlashIntervalLast)
+        {
+            bindLedFlashIntervalLast = millis();
+            LEDPulseCounter = 0;
+        }
     }
 }
 

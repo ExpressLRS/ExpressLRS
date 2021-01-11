@@ -46,6 +46,7 @@ typedef struct {
     uint32_t    version;
     bool        isBound;
     uint8_t     uid[UID_LEN];
+    uint8_t     powerOnCounter;
 } rx_config_t;
 
 class RxConfig
@@ -57,11 +58,13 @@ public:
     // Getters
     bool     GetIsBound();
     uint8_t* GetUID();
+    uint8_t  GetPowerOnCounter();
     bool     IsModified();
 
     // Setters
     void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
+    void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
 
