@@ -49,7 +49,7 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define BIND_LED_FLASH_INTERVAL_SHORT 100
-#define BIND_LED_FLASH_INTERVAL_LONG 1000
+#define BIND_LED_FLASH_INTERVAL_LONG 1500
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
@@ -1083,5 +1083,7 @@ void OnELRSBindMSP(mspPacket_t *packet)
     config.Commit();
 
     FHSSrandomiseFHSSsequence();
+
+    disableWebServer = true;
     ExitBindingMode();
 }
