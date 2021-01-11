@@ -357,9 +357,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       GenerateMSPData();
       MSPPacketLastSent = millis();
-      if (!InBindingMode)
+      MSPPacketSendCount--;
+
+      if (MSPPacketSendCount <= 0 && InBindingMode)
       {
-        MSPPacketSendCount--;
+        ExitBindingMode();
       }
     }
     else
@@ -926,5 +928,5 @@ void SendUIDOverMSP()
   MSPPacket.addByte(UID[4]);
   MSPPacket.addByte(UID[5]);
 
-  MSPPacketSendCount = 1;
+  MSPPacketSendCount = 10;
 }

@@ -839,7 +839,12 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && !InBindingMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
+    {
+        beginWebsever();
+    }
+
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && InBindingMode && millis() > 60000)
     {
         beginWebsever();
     }
