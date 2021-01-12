@@ -814,6 +814,7 @@ void setup()
 
 #ifdef LOCK_ON_50HZ
     SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
+    LockRFmode = true;
 #else
     SetRFLinkRate(RATE_DEFAULT);
 #endif
