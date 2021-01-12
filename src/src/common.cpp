@@ -119,7 +119,11 @@ connectionState_e connectionStatePrev = disconnected;
 
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 
-uint8_t UID[6] = {MY_UID};
+#if defined(MY_UID)
+    uint8_t UID[6] = {MY_UID};
+#else
+    uint8_t UID[6] = {0,0,0,0,0,0};
+#endif
 
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged

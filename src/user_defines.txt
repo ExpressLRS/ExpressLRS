@@ -9,8 +9,9 @@
  
 
 ### BINDING PHRASE: ### 
-
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+# Uncomment the line below to use a hardcoded binding phrase
+# Leave commented to use traditional binding
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
 ### REGULATORY DOMAIN: ### 

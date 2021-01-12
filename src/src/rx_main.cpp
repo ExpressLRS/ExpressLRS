@@ -751,6 +751,9 @@ void setup()
     Serial.println("Setting 2.4GHz Mode");
 #endif
 
+// Use the user defined binding phase if set,
+// otherwise use the bind flag and UID in eeprom for UID
+#if !defined(MY_UID)
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
     {
@@ -777,6 +780,7 @@ void setup()
         Serial.print(", ");
         Serial.println(UID[5]);
     }
+#endif
 
     FHSSrandomiseFHSSsequence();
 
@@ -1070,6 +1074,7 @@ void ExitBindingMode()
     // and go to initial freq
     SetRFLinkRate(RATE_DEFAULT);
     Radio.SetFrequency(GetInitialFreq());
+    RFmodeLastCycled = millis();
 
     Serial.print("Exit binding mode at freq = ");
     Serial.println(Radio.currFreq);
