@@ -118,12 +118,20 @@ connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
 
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
-
 #if defined(MY_UID)
     uint8_t UID[6] = {MY_UID};
 #else
-    uint8_t UID[6] = {0,0,0,0,0,0};
+    #ifdef PLATFORM_ESP32
+        uint8_t UID[6];
+        esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
+    #elif PLATFORM_STM32
+        uint8_t UID[6] = {HAL_GetUIDw0(), HAL_GetUIDw0() >> 8, HAL_GetUIDw1(), HAL_GetUIDw1() >> 8, HAL_GetUIDw2(), HAL_GetUIDw2() >> 8};
+    #else
+        uint8_t UID[6] = {0};
+    #endif
+
 #endif
+uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
 uint8_t CRCCaesarCipher = UID[4];
 uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged

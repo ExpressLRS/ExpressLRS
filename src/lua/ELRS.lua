@@ -215,8 +215,7 @@ local function refreshLCD()
     lcd.clear()
 	if wifiupdatemode == true then --make this less hacky later
 		lcd.drawText(lOffset, yOffset, "Goto http://10.0.0.1   ", INVERS)
-	elseif bindmode == true then
-		lcd.drawText(lOffset, yOffset, "Binding not yet needed...", INVERS)
+	-- elseif bindmode == true then
 	else	
 		lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
 	end

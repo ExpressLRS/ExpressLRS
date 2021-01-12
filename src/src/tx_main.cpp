@@ -880,7 +880,7 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
+  SetRFLinkRate(RATE_DEFAULT);
   Radio.SetFrequency(GetInitialFreq());
 
   Serial.print("Entered binding mode at freq = ");
@@ -896,23 +896,17 @@ void ExitBindingMode()
   }
 
   // Reset UID to defined values
-  uint8_t definedUID[6] = {MY_UID};
-  UID[0] = definedUID[0];
-  UID[1] = definedUID[1];
-  UID[2] = definedUID[2];
-  UID[3] = definedUID[3];
-  UID[4] = definedUID[4];
-  UID[5] = definedUID[5];
+  UID[0] = MasterUID[0];
+  UID[1] = MasterUID[1];
+  UID[2] = MasterUID[2];
+  UID[3] = MasterUID[3];
+  UID[4] = MasterUID[4];
+  UID[5] = MasterUID[5];
 
   CRCCaesarCipher = UID[4];
   DeviceAddr = UID[5] & 0b111111;
 
   InBindingMode = false;
-
-  // Revert to original packet rate
-  // and go to initial freq
-  SetRFLinkRate(config.GetRate());
-  Radio.SetFrequency(GetInitialFreq());
 
   Serial.println("Exiting binding mode");
 }

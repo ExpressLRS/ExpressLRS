@@ -1051,7 +1051,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
+    SetRFLinkRate(RATE_DEFAULT);
     Radio.SetFrequency(GetInitialFreq());
 
     InBindingMode = true;
@@ -1070,10 +1070,10 @@ void ExitBindingMode()
 
     InBindingMode = false;
 
-    // Revert to default packet rate
-    // and go to initial freq
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.SetFrequency(GetInitialFreq());
+    LostConnection();
+
+    // Sets params to allow sync after binding and not instantly change RF mode
+    RFmodeCycleDivisor = 1;
     RFmodeLastCycled = millis();
 
     Serial.print("Exit binding mode at freq = ");
