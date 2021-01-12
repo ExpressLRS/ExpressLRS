@@ -46,7 +46,7 @@ uint32_t LEDupdateCounterMillis;
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
-#define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define SEND_LINK_STATS_TO_FC_INTERVAL 50
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
