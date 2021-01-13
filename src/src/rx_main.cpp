@@ -46,7 +46,8 @@ uint32_t LEDupdateCounterMillis;
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
-#define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define SEND_LINK_STATS_TO_FC_INTERVAL 10
+#define DIVERSITY_ANTENNA_INTERVAL 20
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -173,7 +174,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = antenna;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -321,7 +322,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             switchAntenna();
             antennaSwitched = 1;
-        } else if (antennaSwitched >= 5) {
+        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
