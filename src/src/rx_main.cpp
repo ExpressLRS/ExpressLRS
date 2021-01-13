@@ -662,6 +662,7 @@ void setup()
     eeprom.Begin();
     config.Load();
 
+#ifndef MY_UID
     // Increment the power on counter in eeprom
     config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
     config.Commit();
@@ -674,6 +675,7 @@ void setup()
         config.SetPowerOnCounter(0);
         config.Commit();
     }
+#endif
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
@@ -980,6 +982,7 @@ void loop()
     }
 
     // If the power on counter is >=3, enter binding and clear counter
+#ifndef MY_UID
     if (config.GetPowerOnCounter() >= 3)
     {
         config.SetPowerOnCounter(0);
@@ -988,7 +991,7 @@ void loop()
         Serial.println("Power on counter >=3, enter binding mode...");
         EnterBindingMode();
     }
-
+#endif
     // Update the LED while in binding mode
     if (InBindingMode)
     {

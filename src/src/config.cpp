@@ -207,6 +207,7 @@ RxConfig::SetDefaults()
 {
     m_config.version = RX_CONFIG_VERSION;
     SetIsBound(false);
+    SetPowerOnCounter(0);
     Commit();
 }
 
