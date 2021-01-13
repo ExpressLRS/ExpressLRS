@@ -14,7 +14,7 @@ void StubbornSender::ResetState()
     currentOffset = 0;
     currentPackage = 0;
     length = 0;
-    waitUntilTelemtryConfirm = true;
+    waitUntilTelemetryConfirm = true;
     waitCount = 0;
     senderState = SENDER_IDLE;
 }
@@ -82,12 +82,12 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
     switch (senderState)
     {
     case SENDING:
-        if (telemetryConfirmValue != waitUntilTelemtryConfirm)
+        if (telemetryConfirmValue != waitUntilTelemetryConfirm)
         {
             waitCount++;
             if (waitCount > WAIT_FOR_RESYNC)
             {
-                waitUntilTelemtryConfirm = !telemetryConfirmValue;
+                waitUntilTelemetryConfirm = !telemetryConfirmValue;
                 nextSenderState = RESYNC;
             }
             break;
@@ -95,7 +95,7 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
 
         currentOffset += bytesPerCall;
         currentPackage++;
-        waitUntilTelemtryConfirm = !waitUntilTelemtryConfirm;
+        waitUntilTelemetryConfirm = !waitUntilTelemetryConfirm;
         waitCount = 0;
 
         if (currentOffset >= length)
@@ -106,10 +106,10 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         break;
     case RESYNC:
     case WAIT_UNTIL_NEXT_CONFIRM:
-        if (telemetryConfirmValue == waitUntilTelemtryConfirm)
+        if (telemetryConfirmValue == waitUntilTelemetryConfirm)
         {
             nextSenderState = SENDER_IDLE;
-            waitUntilTelemtryConfirm = !telemetryConfirmValue;
+            waitUntilTelemetryConfirm = !telemetryConfirmValue;
         }
 
         break;

@@ -75,9 +75,9 @@ Telemetry telemetry;
 #endif
 
 #ifdef ENABLE_TELEMETRY
-StubbornSender TelementrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
-uint8_t NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
+uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
@@ -254,13 +254,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
 
-    switch (NextTelemtetryType)
+    switch (NextTelemetryType)
     {
         case ELRS_TELEMETRY_TYPE_LINK:
             #ifdef ENABLE_TELEMETRY
-            NextTelemtetryType = ELRS_TELEMETRY_TYPE_DATA;
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
             #else
-            NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
             #endif
             Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
@@ -289,11 +289,11 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             }
             else
             {
-                NextTelemtetryType = ELRS_TELEMETRY_TYPE_LINK;
+                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
                 telemetryDataCount = 0;
             }
 
-            TelementrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+            TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
             Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
             Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
             Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
@@ -474,7 +474,7 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
 #endif
 #ifdef ENABLE_TELEMETRY
-    TelementrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
+    TelemetrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
     crsf.PackedRCdataOut.ch7 = 0;
 #endif
 }
@@ -572,7 +572,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
         #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
-        TelementrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         #endif
         #else
         UnpackChannelData_11bit();
@@ -885,7 +885,7 @@ void setup()
 
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
-    TelementrySender.ResetState();
+    TelemetrySender.ResetState();
     #endif
     Radio.RXnb();
     crsf.Begin();
@@ -1097,9 +1097,9 @@ void loop()
         }
 
         #ifdef ENABLE_TELEMETRY
-        if (!TelementrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
         {
-            TelementrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
         }
         #endif
     }

@@ -27,7 +27,7 @@ private:
     volatile uint8_t bytesPerCall;
     volatile uint8_t currentOffset;
     volatile uint8_t currentPackage;
-    volatile bool waitUntilTelemtryConfirm;
+    volatile bool waitUntilTelemetryConfirm;
     volatile bool resetState;
     volatile uint16_t waitCount;
     volatile uint8_t maxPackageIndex;

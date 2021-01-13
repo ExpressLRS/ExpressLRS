@@ -12,7 +12,7 @@ using namespace std;
 
 Telemetry::Telemetry()
 {
-    telemtry_state = TELEMTRY_IDLE;
+    telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
     callBootloader = false;
@@ -89,7 +89,7 @@ uint8_t Telemetry::ReceivedPackagesCount()
 
 void Telemetry::ResetState()
 {
-    telemtry_state = TELEMTRY_IDLE;
+    telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
     receivedPackages = 0;
@@ -115,12 +115,12 @@ void Telemetry::ResetState()
 
 bool Telemetry::RXhandleUARTin(uint8_t data)
 {
-    switch(telemtry_state) {
-        case TELEMTRY_IDLE:
+    switch(telemetry_state) {
+        case TELEMETRY_IDLE:
             if (data == CRSF_ADDRESS_CRSF_RECEIVER || data == CRSF_SYNC_BYTE)
             {
                 currentTelemetryByte = 0;
-                telemtry_state = RECEIVING_LEGNTH;
+                telemetry_state = RECEIVING_LENGTH;
                 CRSFinBuffer[0] = data;
             }
             else {
@@ -128,15 +128,15 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
             }
 
             break;
-        case RECEIVING_LEGNTH:
+        case RECEIVING_LENGTH:
             if (data >= CRSF_MAX_PACKET_LEN)
             {
-                telemtry_state = TELEMTRY_IDLE;
+                telemetry_state = TELEMETRY_IDLE;
                 return false;
             }
             else
             {
-                telemtry_state = RECEIVING_DATA;
+                telemetry_state = RECEIVING_DATA;
                 CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] = data;
             }
 
@@ -148,7 +148,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
                 uint8_t crc = CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
-                telemtry_state = TELEMTRY_IDLE;
+                telemetry_state = TELEMETRY_IDLE;
 
                 if (data == crc)
                 {

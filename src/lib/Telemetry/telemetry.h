@@ -4,8 +4,8 @@
 #include <crsf_protocol.h>
 
 typedef enum {
-    TELEMTRY_IDLE = 0,
-    RECEIVING_LEGNTH,
+    TELEMETRY_IDLE = 0,
+    RECEIVING_LENGTH,
     RECEIVING_DATA
 } telemetry_state_s;
 
@@ -49,7 +49,7 @@ private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     void AppendTelemetryPackage();
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
-    telemetry_state_s telemtry_state;
+    telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
     uint8_t currentPayloadIndex;
     volatile crsf_telemetry_package_t *telemetryPackageHead;

@@ -114,7 +114,7 @@ void ExitBindingMode();
 void SendUIDOverMSP();
 
 #ifdef ENABLE_TELEMETRY
-StubbornReceiver TelementryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
+StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
 // MSP packet handling function defs
@@ -187,11 +187,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             break;
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
-            TelementryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
-            if (TelementryReceiver.HasFinishedData())
+            TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
+            if (TelemetryReceiver.HasFinishedData())
             {
                 crsf.sendTelemetryToTX(CRSFinBuffer);
-                TelementryReceiver.Unlock();
+                TelemetryReceiver.Unlock();
             }
             break;
         #endif
@@ -265,7 +265,7 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
 #ifdef ENABLE_TELEMETRY
-  Radio.TXdataBuffer[6] =  Radio.TXdataBuffer[6] & (~1 | TelementryReceiver.GetCurrentConfirm());
+  Radio.TXdataBuffer[6] =  Radio.TXdataBuffer[6] & (~1 | TelemetryReceiver.GetCurrentConfirm());
 #endif
 }
 
@@ -403,7 +403,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       #if defined HYBRID_SWITCHES_8
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, TelementryReceiver.GetCurrentConfirm());
+      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
       #else
       GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, false);
       #endif
@@ -713,8 +713,8 @@ void setup()
     delay(1000);
   }
   #ifdef ENABLE_TELEMETRY
-  TelementryReceiver.ResetState();
-  TelementryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
+  TelemetryReceiver.ResetState();
+  TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif
   POWERMGNT.setDefaultPower();
 
