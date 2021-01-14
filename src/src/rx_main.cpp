@@ -326,6 +326,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             antennaSwitched = 1;
         } else if(antennaSwitched == DIVERSITY_ANTENNA_INTERVAL){
             prevRSSI = rssi;
+            antennaSwitched++;
         } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL + 10) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
