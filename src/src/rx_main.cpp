@@ -23,6 +23,7 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
+#include "diversity.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -61,6 +62,7 @@ LPF LPF_OffsetDx(4);
 LPF LPF_UplinkRSSI(5);
 
 /// LQ Calculation //////////
+DIVERSITY antDiv; // antenna diversity lib 
 LQCALC LQCALC;
 uint8_t uplinkLQ;
 
@@ -121,7 +123,12 @@ bool LockRFmode = false;
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     //int8_t LastRSSI = Radio.LastPacketRSSI;
-    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+
+    #ifdef USE_DIVERSITY
+    int32_t rssiDBM = LPF_UplinkRSSI.update(antDiv.RSSI());
+    #else
+    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.RSSI());
+    #endif
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
@@ -134,9 +141,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
     crsf.LinkStatistics.uplink_RSSI_2 = 0;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
+    crsf.LinkStatistics.uplink_SNR = Radio.SNR();
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+
+    //crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate; TEMP FOR DEBUG
+    crsf.LinkStatistics.rf_Mode = (uint8_t)antDiv.ActiveAntenna();
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -272,6 +281,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    #ifdef USE_DIVERSITY
+    antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
+    digitalWrite(GPIO_PIN_ANTENNA_SELECT, antDiv.calcActiveAntenna());
+    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -696,6 +709,11 @@ void setup()
     Serial.println("Setting 433MHz Mode");
 #elif defined Regulatory_Domain_ISM_2400
     Serial.println("Setting 2.4GHz Mode");
+#endif
+
+#ifdef GPIO_PIN_ANTENNA_SELECT
+    pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 #endif
 
     FHSSrandomiseFHSSsequence();

@@ -51,6 +51,7 @@ public:
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
+    uint8_t LastPacketRSSIraw = 0;
     int8_t LastPacketRSSI = 0;
     int8_t LastPacketSNR = 0;
     volatile uint8_t NonceTX = 0;
@@ -94,11 +95,14 @@ public:
     void ICACHE_RAM_ATTR GetStatus();
 
     void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
-    
+
     bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
     uint8_t ICACHE_RAM_ATTR GetRxBufferAddr();
 
     void ICACHE_RAM_ATTR GetLastPacketStats();
+    uint8_t ICACHE_RAM_ATTR RSSIraw();
+    int8_t ICACHE_RAM_ATTR RSSI();
+    int8_t ICACHE_RAM_ATTR SNR();
 
 private:
 };
