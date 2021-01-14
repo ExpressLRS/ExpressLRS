@@ -47,7 +47,7 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 10
-#define DIVERSITY_ANTENNA_INTERVAL 20
+#define DIVERSITY_ANTENNA_INTERVAL 30
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -314,24 +314,41 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+        static int32_t otherRSSI;  
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
         static int32_t antennaSwitched;
-
+        static int32_t antennaSwitched2;
+        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+            
         // if we didn't get a packet switch the antenna
-        if (!LQCALC.packetReceivedForPreviousFrame() && antennaSwitched == 0) {
-            prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+         if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= 30){
+            otherRSSI = rssi;
             switchAntenna();
             antennaSwitched = 1;
+            antennaSwitched2 = 0; 
+         } else if(antennaSwitched2 < 30){
+             prevRSSI = rssi;
+             antennaSwitched2++;
+         } else {
+             if(rssi > prevRSSI){
+                 prevRSSI = rssi;
+             }
+         }
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
+            otherRSSI = rssi;
+            switchAntenna();
+            antennaSwitched = 1;
+            antennaSwitched2 = 0;
         } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
-            int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-            if (rssi < prevRSSI) {
+            if (rssi < otherRSSI) {
                 // things got worse when we switched, so change back.
-                prevRSSI = rssi;
+                otherRSSI = rssi;
                 switchAntenna();
                 antennaSwitched = 1;
+                antennaSwitched2 = 0;
             } else {
                 // all good, we can stay on the current antenna. Clear the flag.
                 antennaSwitched = 0;
