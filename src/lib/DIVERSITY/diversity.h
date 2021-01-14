@@ -92,8 +92,8 @@ bool ICACHE_RAM_ATTR DIVERSITY::calcActiveAntenna()
         return activeAntenna;
     }
 
-    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 5) + (antA_skip >> 3);
-    uint32_t antB_weight = antB_rssi + (antB_rssidt << 3) + (rng8Bit() >> 5) + (antB_skip >> 3);
+    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 5) + (antA_skip >> (linkquality >> 6));
+    uint32_t antB_weight = antB_rssi + (antB_rssidt << 3) + (rng8Bit() >> 5) + (antB_skip >> (linkquality >> 6));
 
     if (antA_weight > antB_weight)
     {
