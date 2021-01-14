@@ -47,7 +47,7 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 10
-#define DIVERSITY_ANTENNA_INTERVAL 20
+#define DIVERSITY_ANTENNA_INTERVAL 30
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -320,13 +320,13 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             
         // if we didn't get a packet switch the antenna
-        if (((!LQCALC.packetReceivedForPreviousFrame()) || ((rssi-prevRSSI) > 5)) && antennaSwitched == 0) {
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0) || (((prevRSSI - rssi) > 5) && antennaSwitched > DIVERSITY_ANTENNA_INTERVAL) ) {
             otherRSSI = rssi;
             switchAntenna();
             antennaSwitched = 1;
-        } else if(antennaSwitched == DIVERSITY_ANTENNA_INTERVAL - 5){
-            prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
+        } else if(antennaSwitched == DIVERSITY_ANTENNA_INTERVAL){
+            prevRSSI = rssi;
+        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL + 10) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
