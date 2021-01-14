@@ -329,6 +329,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
          } else if(antennaSwitched2 < 30){
              prevRSSI = rssi;
              antennaSwitched2++;
+         } else {
+             if(rssi > prevRSSI){
+                 prevRSSI = rssi;
+             }
          }
         if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
             otherRSSI = rssi;
