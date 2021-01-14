@@ -47,7 +47,7 @@ uint32_t LEDupdateCounterMillis;
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
-#define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define SEND_LINK_STATS_TO_FC_INTERVAL 25
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -167,6 +167,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+    #ifdef USE_DIVERSITY
+    antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
+    digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.calcActiveAntenna());
+    #endif
+
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
     {
         return;
@@ -281,10 +286,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    #ifdef USE_DIVERSITY
-    antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, antDiv.calcActiveAntenna());
-    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -713,7 +714,6 @@ void setup()
 
 #ifdef GPIO_PIN_ANTENNA_SELECT
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 #endif
 
     FHSSrandomiseFHSSsequence();

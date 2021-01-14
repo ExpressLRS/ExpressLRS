@@ -3,24 +3,28 @@
 #include "../../src/LowPassFilter.h"
 #include "../../src/utils.h"
 
-LPF antA(1);
-LPF antB(1);
+LPF antA(2);
+LPF antB(2);
 
-LPF antA_dt(2);
-LPF antB_dt(2);
+LPF antA_dt(3);
+LPF antB_dt(3);
 
+#ifdef Regulatory_Domain_ISM_2400
 #define RSSIthreshold 85
-#define LQthreshold 99
+#else
+#define RSSIthreshold 67
+#endif
+#define LQthreshold 98
 
 class DIVERSITY
 {
 private:
-    bool activeAntenna;
+    bool activeAntenna = false;
 
     uint8_t linkquality;
 
-    uint16_t antA_skip; // how many times the selected antenna was 'skipped' ie how many times it was not the active antenna for each call.
-    uint16_t antB_skip;
+    uint32_t antA_skip; // how many times the selected antenna was 'skipped' ie how many times it was not the active antenna for each call.
+    uint32_t antB_skip;
 
     uint8_t antA_rssi; //uses raw RSSI values from radio, reverse scaled, ie higher is better.
     uint8_t antB_rssi;
@@ -32,7 +36,7 @@ public:
     DIVERSITY(/* args */);
     ~DIVERSITY();
 
-    uint8_t ICACHE_RAM_ATTR updateRSSI(uint8_t rssi, uint8_t lq);
+    void ICACHE_RAM_ATTR updateRSSI(uint8_t rssi, uint8_t lq);
     bool ICACHE_RAM_ATTR calcActiveAntenna();
     bool ICACHE_RAM_ATTR ActiveAntenna();
     int8_t ICACHE_RAM_ATTR RSSI();
@@ -48,18 +52,18 @@ DIVERSITY::~DIVERSITY()
 {
 }
 
-uint8_t ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
+void ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
 {
     linkquality = lq;
 
-    if (activeAntenna)
+    if (activeAntenna == true)
     {
         uint8_t antA_rssi_prev = antA_rssi;
-        #ifdef Regulatory_Domain_ISM_2400
+#ifdef Regulatory_Domain_ISM_2400
         antA_rssi = (uint8_t)antA.update(255 - rssi); // sx1280 raw value decreases as signal gets better
-        #else
+#else
         antA_rssi = (uint8_t)antA.update(rssi); // sx1276 raw value increases as signal gets better
-        #endif
+#endif
         antA_rssidt = (uint8_t)antA_dt.update((antA_rssi - antA_rssi_prev) / (antA_skip + 1));
 
         antA_skip = 0;
@@ -68,11 +72,11 @@ uint8_t ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
     else
     {
         uint8_t antB_rssi_prev = antB_rssi;
-        #ifdef Regulatory_Domain_ISM_2400
+#ifdef Regulatory_Domain_ISM_2400
         antB_rssi = (uint8_t)antB.update(255 - rssi);
-        #else
-        antA_rssi = (uint8_t)antA.update(rssi);
-        #endif
+#else
+        antB_rssi = (uint8_t)antB.update(rssi);
+#endif
         antB_rssidt = (uint8_t)antB_dt.update((antB_rssi - antB_rssi_prev) / (antB_skip + 1));
 
         antB_skip = 0;
@@ -87,8 +91,8 @@ bool ICACHE_RAM_ATTR DIVERSITY::calcActiveAntenna()
         return activeAntenna;
     }
 
-    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 4); 
-    uint32_t antB_weight = antB_rssi + (antB_rssidt << 3) + (rng8Bit() >> 4);
+    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 5) + (antA_skip >> 3);
+    uint32_t antB_weight = antB_rssi + (antB_rssidt << 3) + (rng8Bit() >> 5) + (antB_skip >> 3);
 
     if (antA_weight > antB_weight)
     {
@@ -112,7 +116,11 @@ int8_t ICACHE_RAM_ATTR DIVERSITY::RSSI()
     uint8_t rssiRaw;
     activeAntenna ? rssiRaw = antA_rssi : rssiRaw = antB_rssi;
 
+#ifdef Regulatory_Domain_ISM_2400
     return -(int8_t)(rssiRaw / 2);
+#else
+    return (-157 + (int8_t)rssiRaw);
+#endif
 }
 
 uint8_t ICACHE_RAM_ATTR DIVERSITY::RSSIa()

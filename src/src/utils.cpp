@@ -1,4 +1,6 @@
+#include <Arduino.h>
 #include "utils.h"
+
 
 unsigned long seed = 0;
 
@@ -30,7 +32,7 @@ unsigned int rngN(unsigned int max)
 }
 
 // 0..255 returned
-long rng8Bit(void)
+uint8_t rng8Bit(void)
 {
     return rng() & 0b11111111;
 }
@@ -46,8 +48,9 @@ long rng0to2(void)
 {
     int randomNumber = rng() & 0b11;
 
-    while(randomNumber == 3) {
+    while (randomNumber == 3)
+    {
         randomNumber = rng() & 0b11;
     }
     return randomNumber;
-} 
+}

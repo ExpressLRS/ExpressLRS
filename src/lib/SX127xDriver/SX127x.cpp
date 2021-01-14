@@ -463,7 +463,7 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::RSSIraw()
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::RSSI()
 {
-    return LastPacketRSSIraw;
+    return LastPacketRSSI;
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::SNR()
