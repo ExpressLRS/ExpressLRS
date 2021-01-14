@@ -47,6 +47,7 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 50
+#define DIVERSITY_ANTENNA_INTERVAL 20
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -321,7 +322,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             switchAntenna();
             antennaSwitched = 1;
-        } else if (antennaSwitched >= 5) {
+        } } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
@@ -751,6 +752,11 @@ void setup()
             delay(35);
         }
     }
+#endif
+
+#ifdef GPIO_PIN_ANTENNA_SELECT
+  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 #endif
 
 #ifdef Regulatory_Domain_AU_915
