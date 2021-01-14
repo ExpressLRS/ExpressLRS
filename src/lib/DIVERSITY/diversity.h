@@ -3,11 +3,11 @@
 #include "../../src/LowPassFilter.h"
 #include "../../src/utils.h"
 
-LPF antA(2);
-LPF antB(2);
+LPF antA(1);
+LPF antB(1);
 
-LPF antA_dt(3);
-LPF antB_dt(3);
+LPF antA_dt(2);
+LPF antB_dt(2);
 
 #ifdef Regulatory_Domain_ISM_2400
 #define RSSIthreshold 85
@@ -38,7 +38,8 @@ public:
 
     void ICACHE_RAM_ATTR updateRSSI(uint8_t rssi, uint8_t lq);
     bool ICACHE_RAM_ATTR calcActiveAntenna();
-    bool ICACHE_RAM_ATTR ActiveAntenna();
+    bool ICACHE_RAM_ATTR getActiveAntenna();
+    void ICACHE_RAM_ATTR toggleAntenna();
     int8_t ICACHE_RAM_ATTR RSSI();
     int8_t ICACHE_RAM_ATTR RSSIa();
     int8_t ICACHE_RAM_ATTR RSSIb();
@@ -106,9 +107,14 @@ bool ICACHE_RAM_ATTR DIVERSITY::calcActiveAntenna()
     return activeAntenna;
 }
 
-bool ICACHE_RAM_ATTR DIVERSITY::ActiveAntenna()
+bool ICACHE_RAM_ATTR DIVERSITY::getActiveAntenna()
 {
     return activeAntenna;
+}
+
+void ICACHE_RAM_ATTR DIVERSITY::toggleAntenna()
+{
+    activeAntenna = !activeAntenna;
 }
 
 int8_t ICACHE_RAM_ATTR DIVERSITY::RSSI()
