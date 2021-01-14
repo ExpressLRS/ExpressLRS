@@ -46,7 +46,7 @@ uint32_t LEDupdateCounterMillis;
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
-#define SEND_LINK_STATS_TO_FC_INTERVAL 50
+#define SEND_LINK_STATS_TO_FC_INTERVAL 10
 #define DIVERSITY_ANTENNA_INTERVAL 20
 ///////////////////
 
@@ -174,7 +174,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = antenna;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
