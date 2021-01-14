@@ -317,17 +317,25 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         static int32_t otherRSSI;  
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
         static int32_t antennaSwitched;
+        static int32_t antennaSwitched2;
         int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             
         // if we didn't get a packet switch the antenna
-        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0) || (((prevRSSI - rssi) > 5) && antennaSwitched > DIVERSITY_ANTENNA_INTERVAL) ) {
+         if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= 30){
             otherRSSI = rssi;
             switchAntenna();
             antennaSwitched = 1;
-        } else if(antennaSwitched == DIVERSITY_ANTENNA_INTERVAL){
-            prevRSSI = rssi;
-            antennaSwitched++;
-        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL + 10) {
+            antennaSwitched2 = 0; 
+         } else if(antennaSwitched2 < 30){
+             prevRSSI = rssi;
+             antennaSwitched2++;
+         }
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
+            otherRSSI = rssi;
+            switchAntenna();
+            antennaSwitched = 1;
+            antennaSwitched2 = 0;
+        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
@@ -336,6 +344,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
                 otherRSSI = rssi;
                 switchAntenna();
                 antennaSwitched = 1;
+                antennaSwitched2 = 0;
             } else {
                 // all good, we can stay on the current antenna. Clear the flag.
                 antennaSwitched = 0;
