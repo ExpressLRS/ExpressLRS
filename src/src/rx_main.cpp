@@ -314,22 +314,25 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+        static int32_t otherRSSI;  
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
         static int32_t antennaSwitched;
-
+        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+            
         // if we didn't get a packet switch the antenna
-        if (!LQCALC.packetReceivedForPreviousFrame() && antennaSwitched == 0) {
-            prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+        if (((!LQCALC.packetReceivedForPreviousFrame()) || ((rssi-prevRSSI) > 5)) && antennaSwitched == 0) {
+            otherRSSI = rssi;
             switchAntenna();
             antennaSwitched = 1;
+        } else if(antennaSwitched == DIVERSITY_ANTENNA_INTERVAL - 5){
+            prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
         } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
-            int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-            if (rssi < prevRSSI) {
+            if (rssi < otherRSSI) {
                 // things got worse when we switched, so change back.
-                prevRSSI = rssi;
+                otherRSSI = rssi;
                 switchAntenna();
                 antennaSwitched = 1;
             } else {
