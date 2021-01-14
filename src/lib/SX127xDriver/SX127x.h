@@ -48,6 +48,7 @@ public:
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
+    uint8_t LastPacketRSSIraw = 0;
     int8_t LastPacketRSSI;
     int8_t LastPacketSNR;
     uint32_t TimeOnAir;
@@ -91,11 +92,12 @@ public:
     //////////////RX related Functions/////////////////
 
     //uint8_t RunCAD();
-
-    uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
     int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
-    int8_t ICACHE_RAM_ATTR GetCurrRSSI();
+
+    uint8_t ICACHE_RAM_ATTR RSSIraw();
+    int8_t ICACHE_RAM_ATTR RSSI();
+    int8_t ICACHE_RAM_ATTR SNR();
 
     ////////////Non-blocking TX related Functions/////////////////
     static void ICACHE_RAM_ATTR TXnb(uint8_t volatile *data, uint8_t length);

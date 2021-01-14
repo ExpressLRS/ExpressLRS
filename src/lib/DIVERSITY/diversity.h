@@ -55,7 +55,11 @@ uint8_t ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
     if (activeAntenna)
     {
         uint8_t antA_rssi_prev = antA_rssi;
-        antA_rssi = (uint8_t)antA.update(255 - rssi);
+        #ifdef Regulatory_Domain_ISM_2400
+        antA_rssi = (uint8_t)antA.update(255 - rssi); // sx1280 raw value decreases as signal gets better
+        #else
+        antA_rssi = (uint8_t)antA.update(rssi); // sx1276 raw value increases as signal gets better
+        #endif
         antA_rssidt = (uint8_t)antA_dt.update((antA_rssi - antA_rssi_prev) / (antA_skip + 1));
 
         antA_skip = 0;
@@ -64,7 +68,11 @@ uint8_t ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
     else
     {
         uint8_t antB_rssi_prev = antB_rssi;
+        #ifdef Regulatory_Domain_ISM_2400
         antB_rssi = (uint8_t)antB.update(255 - rssi);
+        #else
+        antA_rssi = (uint8_t)antA.update(rssi);
+        #endif
         antB_rssidt = (uint8_t)antB_dt.update((antB_rssi - antB_rssi_prev) / (antB_skip + 1));
 
         antB_skip = 0;
@@ -79,7 +87,7 @@ bool ICACHE_RAM_ATTR DIVERSITY::calcActiveAntenna()
         return activeAntenna;
     }
 
-    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 4);
+    uint32_t antA_weight = antA_rssi + (antA_rssidt << 3) + (rng8Bit() >> 4); 
     uint32_t antB_weight = antB_rssi + (antB_rssidt << 3) + (rng8Bit() >> 4);
 
     if (antA_weight > antB_weight)

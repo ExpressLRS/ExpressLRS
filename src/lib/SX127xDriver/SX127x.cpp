@@ -434,19 +434,11 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
   return fErrorHZ;
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
-{
-  return (hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE));
-}
-
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
-  return (-157 + hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE));
-}
-
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
-{
-  return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
+  uint8_t rawRSSI = hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE);
+  LastPacketRSSIraw = rawRSSI;
+  return (-157 + (int8_t)rawRSSI);
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
@@ -462,6 +454,21 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
     hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
     IRQneedsClear = false;
   }
+}
+
+uint8_t ICACHE_RAM_ATTR SX127xDriver::RSSIraw()
+{
+    return LastPacketRSSIraw;
+}
+
+int8_t ICACHE_RAM_ATTR SX127xDriver::RSSI()
+{
+    return LastPacketRSSIraw;
+}
+
+int8_t ICACHE_RAM_ATTR SX127xDriver::SNR()
+{
+    return LastPacketSNR;
 }
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
