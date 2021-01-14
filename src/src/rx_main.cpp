@@ -757,6 +757,11 @@ void setup()
     }
 #endif
 
+#ifdef GPIO_PIN_ANTENNA_SELECT
+  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+#endif
+
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915
