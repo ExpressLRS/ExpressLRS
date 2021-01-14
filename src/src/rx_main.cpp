@@ -322,7 +322,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             prevRSSI = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             switchAntenna();
             antennaSwitched = 1;
-        } } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
+        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
