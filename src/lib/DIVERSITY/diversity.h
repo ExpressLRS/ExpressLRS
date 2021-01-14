@@ -40,8 +40,8 @@ public:
     bool ICACHE_RAM_ATTR calcActiveAntenna();
     bool ICACHE_RAM_ATTR ActiveAntenna();
     int8_t ICACHE_RAM_ATTR RSSI();
-    uint8_t ICACHE_RAM_ATTR RSSIa();
-    uint8_t ICACHE_RAM_ATTR RSSIb();
+    int8_t ICACHE_RAM_ATTR RSSIa();
+    int8_t ICACHE_RAM_ATTR RSSIb();
 };
 
 DIVERSITY::DIVERSITY(/* args */)
@@ -123,12 +123,20 @@ int8_t ICACHE_RAM_ATTR DIVERSITY::RSSI()
 #endif
 }
 
-uint8_t ICACHE_RAM_ATTR DIVERSITY::RSSIa()
+int8_t ICACHE_RAM_ATTR DIVERSITY::RSSIa()
 {
-    return antA_rssi;
+#ifdef Regulatory_Domain_ISM_2400
+    return -(int8_t)(antA_rssi / 2);
+#else
+    return (-157 + (int8_t)antA_rssi);
+#endif
 }
 
-uint8_t ICACHE_RAM_ATTR DIVERSITY::RSSIb()
+int8_t ICACHE_RAM_ATTR DIVERSITY::RSSIb()
 {
-    return antB_rssi;
+#ifdef Regulatory_Domain_ISM_2400
+    return -(int8_t)(antB_rssi / 2);
+#else
+    return (-157 + (int8_t)antB_rssi);
+#endif
 }
