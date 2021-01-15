@@ -140,7 +140,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM = 0;
 
 #ifdef USE_DIVERSITY
-    if (antDiv.getActiveAntenna() == true)
+    if (antDiv.getActiveAntenna() == false)
     {
         crsf.LinkStatistics.uplink_RSSI_1 = -1 * antDiv.RSSIa();
     }
