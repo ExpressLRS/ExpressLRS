@@ -14,12 +14,12 @@ LPF antB_dt(2);
 #else
 #define RSSIthreshold 67
 #endif
-#define LQthreshold 98
+#define LQthreshold 99
 
 class DIVERSITY
 {
 private:
-    bool activeAntenna = false;
+    bool activeAntenna = true;
 
     uint8_t linkquality;
 
@@ -87,7 +87,7 @@ void ICACHE_RAM_ATTR DIVERSITY::updateRSSI(uint8_t rssi, uint8_t lq)
 
 bool ICACHE_RAM_ATTR DIVERSITY::calcActiveAntenna()
 {
-    if (linkquality >= LQthreshold && ((antA_rssi > RSSIthreshold) || (antB_rssi > RSSIthreshold))) // link is ok, no need to switch
+    if (linkquality > LQthreshold && ((antA_rssi > RSSIthreshold) || (antB_rssi > RSSIthreshold))) // link is ok, no need to switch
     {
         return activeAntenna;
     }
