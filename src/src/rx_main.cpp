@@ -300,12 +300,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (connectionState != connected)
     {
         antDiv.toggleAntenna();
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.getActiveAntenna());
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antDiv.getActiveAntenna());
     }
     else
     {
         antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.calcActiveAntenna());
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antDiv.calcActiveAntenna());
     }
 #endif
     HandleFHSS();
