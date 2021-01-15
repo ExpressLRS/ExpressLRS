@@ -182,20 +182,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-    #ifdef USE_DIVERSITY
-    if (connectionState != connected)
-    {
-        antDiv.toggleAntenna();
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.getActiveAntenna());
-    }
-    else
-    {
-        antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.calcActiveAntenna());
-    }
-    
-#endif
-
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
     {
         return;
@@ -310,10 +296,18 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    #ifdef USE_DIVERSITY
-    antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.calcActiveAntenna());
-    #endif
+#ifdef USE_DIVERSITY
+    if (connectionState != connected)
+    {
+        antDiv.toggleAntenna();
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.getActiveAntenna());
+    }
+    else
+    {
+        antDiv.updateRSSI(Radio.RSSIraw(), uplinkLQ);
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, !antDiv.calcActiveAntenna());
+    }
+#endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
