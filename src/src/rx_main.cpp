@@ -314,15 +314,15 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-        static int32_t otherRSSI;  
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
         static int32_t antennaSwitched;
         static int32_t antennaSwitched2;
         int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
             
-        // if rssi drop 5 from strongest rssi
+        // if we didn't get a packet switch the antenna
          if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= DIVERSITY_ANTENNA_INTERVAL){
-            otherRSSI = rssi;
+            
             switchAntenna();
             antennaSwitched = 1;
             antennaSwitched2 = 0; 
@@ -330,9 +330,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
                  prevRSSI = rssi;
                  antennaSwitched2++;
              }
-         //if there is a packet drop
+         
         if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
-            otherRSSI = rssi;
+            
             switchAntenna();
             antennaSwitched = 1;
             antennaSwitched2 = 0;
@@ -342,7 +342,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
             if (rssi < otherRSSI) {
                 // things got worse when we switched, so change back.
-                otherRSSI = rssi;
+                
                 switchAntenna();
                 antennaSwitched = 1;
                 antennaSwitched2 = 0;
