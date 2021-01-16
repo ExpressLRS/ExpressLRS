@@ -321,19 +321,15 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
             
         // if rssi drop 5 from strongest rssi
-         if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= 30){
+         if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= DIVERSITY_ANTENNA_INTERVAL){
             otherRSSI = rssi;
             switchAntenna();
             antennaSwitched = 1;
             antennaSwitched2 = 0; 
-         } else if(antennaSwitched2 < 30){
-             prevRSSI = rssi;
-             antennaSwitched2++;
-         } else { //overwrite prev rssi with stronger rssi val
-             if(rssi > prevRSSI){
+         } else if(rssi > prevRSSI || antennaSwitched2 < DIVERSITY_ANTENNA_INTERVAL){
                  prevRSSI = rssi;
+                 antennaSwitched2++;
              }
-         }
          //if there is a packet drop
         if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
             otherRSSI = rssi;
