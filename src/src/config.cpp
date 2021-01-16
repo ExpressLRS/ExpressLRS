@@ -150,7 +150,11 @@ RxConfig::Commit()
 bool
 RxConfig::GetIsBound()
 {
-    return m_config.isBound;
+    #ifndef MY_UID
+        return true;
+    #else
+        return m_config.isBound;
+    #endif
 }
 
 uint8_t*
