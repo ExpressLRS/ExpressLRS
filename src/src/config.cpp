@@ -150,7 +150,7 @@ RxConfig::Commit()
 bool
 RxConfig::GetIsBound()
 {
-    #ifndef MY_UID
+    #ifdef MY_UID
         return true;
     #else
         return m_config.isBound;
