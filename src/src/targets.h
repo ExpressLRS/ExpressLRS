@@ -314,6 +314,27 @@ https://github.com/jaxxzer
 #define timerOffset             1
 #endif
 
+#ifdef TARGET_TX_GHOST
+#define GPIO_PIN_NSS             PA15
+#define GPIO_PIN_BUSY            PB15
+#define GPIO_PIN_DIO1            PB2
+#define GPIO_PIN_MOSI            PA7
+#define GPIO_PIN_MISO            PA6
+#define GPIO_PIN_SCK             PA5
+#define GPIO_PIN_RST             PB0
+#define GPIO_PIN_RX_ENABLE          PA8  // These may be swapped
+#define GPIO_PIN_TX_ENABLE          PB14 // These may be swapped
+#define GPIO_PIN_RCSIGNAL_RX     PXX
+#define GPIO_PIN_RCSIGNAL_TX     PXX
+#define GPIO_PIN_LED_WS2812      PB6
+#define GPIO_PIN_LED_WS2812_FAST PB_6
+#define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
+#define GPIO_PIN_RF_AMP_DET      PA3
+#define GPIO_PIN_ANT_CTRL_1      PA9
+#define GPIO_PIN_ANT_CTRL_1      PB13
+#define timerOffset              1
+#endif
+
 #if defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
