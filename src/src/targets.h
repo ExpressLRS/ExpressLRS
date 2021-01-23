@@ -324,8 +324,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST             PB0
 #define GPIO_PIN_RX_ENABLE          PA8  // These may be swapped
 #define GPIO_PIN_TX_ENABLE          PB14 // These may be swapped
-#define GPIO_PIN_RCSIGNAL_RX     PXX
-#define GPIO_PIN_RCSIGNAL_TX     PXX
+//#define GPIO_PIN_RCSIGNAL_RX     PXX
+//#define GPIO_PIN_RCSIGNAL_TX     PXX
 #define GPIO_PIN_LED_WS2812      PB6
 #define GPIO_PIN_LED_WS2812_FAST PB_6
 #define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
