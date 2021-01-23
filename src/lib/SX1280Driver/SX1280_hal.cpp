@@ -75,7 +75,7 @@ void SX1280Hal::init()
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
   digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 #endif
-    4
+
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
