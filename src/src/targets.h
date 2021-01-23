@@ -331,7 +331,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
 #define GPIO_PIN_RF_AMP_DET      PA3
 #define GPIO_PIN_ANT_CTRL_1      PA9
-#define GPIO_PIN_ANT_CTRL_1      PB13
+#define GPIO_PIN_ANT_CTRL_2      PB13
 #define timerOffset              1
 #endif
 
