@@ -317,6 +317,7 @@ https://github.com/jaxxzer
 #ifdef TARGET_TX_GHOST
 #define GPIO_PIN_NSS             PA15
 #define GPIO_PIN_BUSY            PB15
+#define GPIO_PIN_DIO0           -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1            PB2
 #define GPIO_PIN_MOSI            PA7
 #define GPIO_PIN_MISO            PA6
