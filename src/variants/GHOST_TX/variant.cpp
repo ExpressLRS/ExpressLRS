@@ -28,23 +28,23 @@ const PinName digitalPin[] = {
   PA_9,  //D1
   PA_12, //D2
   PB_0,  //D3/A7
-  PB_7,  //D4
-  PB_6,  //D5
-  PB_1,  //D6/A8
+  PB_14,  //D4
+  PB_10,  //D5
+  PA_8,  //D6/A8
   PF_0,  //D7
   PF_1,  //D8
-  PA_8,  //D9
+  PA_13,  //D9
   PA_11, //D10
-  PB_5,  //D11
-  PB_4,  //D12
-  PB_3,  //D13
+  PA_7,  //D11
+  PA_6,  //D12
+  PA_5,  //D13
   PA_0,  //D14/A0
-  PA_1,  //D15/A1
-  PA_3,  //D16/A2
+  PB_2,  //D15/A1
+  PB_15,  //D16/A2
   PA_4,  //D17/A3
-  PA_5,  //D18
-  PA_6,  //D19/A4
-  PA_7,  //D20/A5
+  PB_3,  //D18
+  PB_4,  //D19/A4
+  PB_6,  //D20/A5
   PA_2,  //D21/A6 - STLink Tx
   PA_15  //D22    - STLink Rx
 };
