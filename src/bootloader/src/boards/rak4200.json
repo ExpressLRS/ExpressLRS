@@ -8,6 +8,7 @@
       "arduino": "-D__CORTEX_SC=0"
     },
     "mcu": "stm32l071k8",
+    "product_line": "STM32L07xkB",
     "variant": "RAK4200"
   },
   "connectivity": [

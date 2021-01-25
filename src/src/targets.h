@@ -89,7 +89,7 @@
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_LED 16
-#define GPIO_PIN_BUTTON 2
+#define GPIO_PIN_BUTTON 0
 #define timerOffset -1
 #endif
 

@@ -8,6 +8,7 @@
 #include <ESP8266HTTPUpdateServer.h>
 #include <FS.h>
 #include "stm32Updater.h"
+#include "stk500.h"
 
 // reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
@@ -25,10 +26,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 ESP8266HTTPUpdateServer httpUpdater;
 
 File fsUploadFile;                                         // a File object to temporarily store the received file
-FSInfo fs_info;
 String uploadedfilename;                                   // filename of uploaded file
-
-uint32_t TotalUploadedBytes;
 
 uint8_t socketNumber;
 
@@ -59,6 +57,9 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="main.css" />
+<style>
+.hide {display: none;}
+</style>
 <script>
 var websock;
 function start() {
@@ -81,11 +82,10 @@ document.getElementById("logField").scrollTop = document.getElementById("logFiel
 };
 }
 function saveTextAsFile() {
-var textToWrite = document.getElementById('logField').innerHTML;
+var textToWrite = document.getElementById('logField').value;
 var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
-var fileNameToSaveAs = "tx_log.txt";
 var downloadLink = document.createElement("a");
-downloadLink.download = fileNameToSaveAs;
+downloadLink.download = "tx_log.txt";
 downloadLink.innerHTML = "Download File";
 if (window.webkitURL != null) {
 downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
@@ -144,10 +144,11 @@ curl --include \
 <h2>R9M Tx Firmware Update:</h2>
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
-<input type='file' accept='.bin' name='filesystem'>
-<input type='submit' value='Upload and Flash R9M Tx'>
+<input type='file' accept='.bin,.elrs' name='firmware' id='stm_fw'>
+<input type='text' value='0x0000' name='flash_address' size='6' id='stm_addr' class="hide">
+<input type='submit' value='Upload and Flash R9M Tx' id='stm_submit' disabled='disabled'>
 </form>
-<div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
+<div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
 </fieldset>
 </div>
 <hr>
@@ -157,12 +158,47 @@ curl --include \
 <h2>WiFi Backpack Firmware Update:</h2>
 </legend>
 <form method='POST' action='/update' enctype='multipart/form-data'>
-<input type='file' accept='.bin' name='firmware'>
-<input type='submit' value='Flash WiFi Backpack'>
+<input type='file' accept='.bin,.bin.gz' name='backpack_fw' id='esp_fw'>
+<input type='submit' value='Flash WiFi Backpack' id='esp_submit' disabled='disabled'>
 </form>
-<div style="color:red;">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</div>
+<div style="color:red;"><span id="esp_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
 </fieldset>
 </div>
+<script type="text/javascript">
+document.getElementById('esp_fw').onchange = function (ev) {
+const esp_message = document.getElementById('esp_message');
+const FIRMWARE_PATTERN = /backpack\.bin$/g;
+const uploadButton = document.getElementById('esp_submit');
+const value = ev.target.value;
+if (FIRMWARE_PATTERN.test(value)) {
+uploadButton.removeAttribute('disabled');
+esp_message.innerHTML = "Firmware file is correct";
+} else {
+uploadButton.setAttribute('disabled', 'disabled');
+esp_message.innerHTML = " OOPS! Incorrect firmware file! Please select correct file.";
+}
+};
+document.getElementById('stm_fw').onchange = function (ev) {
+const stm_message = document.getElementById('stm_message');
+const FW_PATTERN_BIN = /firmware\.bin$/g;
+const FW_PATTERN_ELRS = /firmware\.elrs$/g;
+const uploadButton = document.getElementById('stm_submit');
+const address = document.getElementById('stm_addr');
+const value = ev.target.value;
+address.classList.add('hide');
+if (FW_PATTERN_BIN.test(value)) {
+uploadButton.removeAttribute('disabled');
+address.classList.remove('hide');
+stm_message.innerHTML = "Note: DFU flashing will be used";
+} else if (FW_PATTERN_ELRS.test(value)) {
+uploadButton.removeAttribute('disabled');
+stm_message.innerHTML = "Firmware file is correct";
+} else {
+uploadButton.setAttribute('disabled', 'disabled');
+stm_message.innerHTML = " OOPS! Incorrect firmware file! Please select correct file.";
+}
+};
+</script>
 <hr>
 <div align="left">
 <legend>
@@ -177,47 +213,61 @@ curl --include \
 </html>
 )rawliteral";
 
+#define WEBSOCK_DEBUG 0
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
+#if WEBSOCK_DEBUG
   Serial.printf("webSocketEvent(%d, %d, ...)\r\n", num, type);
+#endif
 
   switch (type)
   {
     case WStype_DISCONNECTED:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] Disconnected!\r\n", num);
+#endif
       break;
     }
-  
+
     case WStype_CONNECTED:
     {
+#if WEBSOCK_DEBUG
       IPAddress ip = webSocket.remoteIP(num);
       Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+#endif
       socketNumber = num;
       break;
     }
 
     case WStype_TEXT:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] get text: %s\r\n", num, payload);
+#endif
       // send data to all connected clients
       // webSocket.broadcastTXT(payload, length);
       break;
     }
-    
+
     case WStype_BIN:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("[%u] get binary length: %u\r\n", num, length);
       hexdump(payload, length);
 
       // echo data back to browser
       webSocket.sendBIN(num, payload, length);
+#endif
       break;
     }
-    
+
     default:
     {
+#if WEBSOCK_DEBUG
       Serial.printf("Invalid WStype [%d]\r\n", type);
+#endif
       break;
     }
   }
@@ -238,16 +288,47 @@ void handleRoot()
   server.send_P(200, "text/html", INDEX_HTML);
 }
 
-bool flashSTM32()
+int8_t flashSTM32(uint32_t flash_addr)
 {
-  webSocket.broadcastTXT("Firmware Flash Requested!");
-  stm32flasher_hardware_init();
-  webSocket.broadcastTXT("Going to flash the firmware file: " + uploadedfilename);
-  char filename[31];
-  uploadedfilename.toCharArray(filename, sizeof(uploadedfilename) + 3);
-  bool result = esp8266_spifs_write_file("/firmware.bin");
+  int8_t result = -1;
+  webSocket.broadcastTXT("STM32 Firmware Flash Requested!");
+  webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
+  if (uploadedfilename.endsWith("firmware.elrs")) {
+    result = stk500_write_file(uploadedfilename.c_str());
+  } else if (uploadedfilename.endsWith("firmware.bin")) {
+    result = esp8266_spifs_write_file(uploadedfilename.c_str(), flash_addr);
+  } else {
+    webSocket.broadcastTXT("Invalid file!");
+  }
   Serial.begin(460800);
   return result;
+}
+
+void handleFileUploadEnd()
+{
+  uint32_t flash_base = BEGIN_ADDRESS;
+  //String message = "\nRequest params:\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    String name = server.argName(i);
+    String value = server.arg(i);
+      //message += " " + name + ": " + value + "\n";
+      if (name == "flash_address") {
+        flash_base = strtol(&value.c_str()[2], NULL, 16);
+        break;
+      }
+  }
+  //webSocket.broadcastTXT(message);
+
+  int8_t success = flashSTM32(flash_base);
+
+  if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+    SPIFFS.remove(uploadedfilename);
+
+  server.sendHeader("Location", "/return");          // Redirect the client to the success page
+  server.send(303);
+  webSocket.broadcastTXT(
+    (success) ? "Update Successful!": "Update Failure!");
+  server.send((success < 0) ? 400 : 200);
 }
 
 void handleFileUpload()
@@ -255,18 +336,20 @@ void handleFileUpload()
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START)
   {
+    /* Remove old file */
+    if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+      SPIFFS.remove(uploadedfilename);
+
+    FSInfo fs_info;
     if (SPIFFS.info(fs_info))
     {
-      SPIFFS.remove("/firmware.bin");
-      String output;
-      output += "Filesystem: used: ";
-      output += String(fs_info.usedBytes);
+      String output = "Filesystem: used: ";
+      output += fs_info.usedBytes;
       output += " / free: ";
-      output += String(fs_info.totalBytes);
+      output += fs_info.totalBytes;
       webSocket.broadcastTXT(output);
 
-      if (fs_info.usedBytes > 0)
-      {
+      if (fs_info.usedBytes > 0) {
         webSocket.broadcastTXT("formatting filesystem");
         SPIFFS.format();
       }
@@ -284,17 +367,15 @@ void handleFileUpload()
     {
       uploadedfilename = "/" + uploadedfilename;
     }
-    fsUploadFile = SPIFFS.open("/firmware.bin", "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
+    fsUploadFile = SPIFFS.open(uploadedfilename, "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
   }
   else if (upload.status == UPLOAD_FILE_WRITE)
   {
     if (fsUploadFile)
     {
       fsUploadFile.write(upload.buf, upload.currentSize);  // Write the received bytes to the file
-      TotalUploadedBytes += int(upload.currentSize);
-      String output = "";
-      output += "Uploaded: ";
-      output += String(TotalUploadedBytes);
+      String output = "Uploaded: ";
+      output += fsUploadFile.position();
       output += " bytes";
       webSocket.broadcastTXT(output);
     }
@@ -302,30 +383,19 @@ void handleFileUpload()
   else if (upload.status == UPLOAD_FILE_END)
   {
     if (fsUploadFile)                                      // If the file was successfully created
-    {                       
-      fsUploadFile.close();                                // Close the file again
-      String totsize = String(upload.totalSize);
-      webSocket.broadcastTXT("Total uploaded size: " + totsize);
-      TotalUploadedBytes = 0;
+    {
+      String totsize = "Total uploaded size ";
+      totsize += fsUploadFile.position();
+      totsize += " of ";
+      totsize += upload.totalSize;
+      webSocket.broadcastTXT(totsize);
       server.send(100);
-      if (flashSTM32())
-      {
-        server.sendHeader("Location", "/return");          // Redirect the client to the success page
-        server.send(303);
-        webSocket.broadcastTXT("Update Successful!");
-      }
-      else
-      {
-        server.sendHeader("Location", "/return");          // Redirect the client to the success page
-        server.send(303);
-        webSocket.broadcastTXT("Update Failure!");
-      }
+      fsUploadFile.close(); // Close the file again
     }
     else
     {
       server.send(500, "text/plain", "500: couldn't create file");
     }
-    SPIFFS.remove("/firmware.bin");
   }
 }
 
@@ -344,6 +414,22 @@ void handleNotFound()
     message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
   server.send(404, "text/plain", message);
+}
+
+void handleMacAddress()
+{
+  String message = "WiFi STA MAC: ";
+  message += WiFi.macAddress();
+  message += "\n  - channel in use: ";
+  message += wifi_get_channel();
+  message += "\n  - mode: ";
+  message += (uint8_t)WiFi.getMode();
+  message += "\n\nWiFi SoftAP MAC: ";
+  message += WiFi.softAPmacAddress();
+  message += "\n  - IP: ";
+  message += WiFi.softAPIP().toString();
+  message += "\n";
+  server.send(200, "text/plain", message);
 }
 
 void setup()
@@ -395,13 +481,10 @@ void setup()
 
   server.on("/", handleRoot);
   server.on("/return", sendReturn);
+  server.on("/mac", handleMacAddress);
   server.on("/main.css", sendMainCss);
-
-  server.on(
-      "/upload", HTTP_POST,                                // if the client posts to the upload page
-      []() { server.send(200); },                          // Send status 200 (OK) to tell the client we are ready to receive
-      handleFileUpload                                     // Receive and save the file
-  );
+  server.on("/upload", HTTP_POST, // STM32 OTA upgrade
+    handleFileUploadEnd, handleFileUpload);
 
   server.onNotFound(handleRoot);
   httpUpdater.setup(&server);

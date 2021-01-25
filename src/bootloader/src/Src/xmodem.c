@@ -162,7 +162,7 @@ static xmodem_status xmodem_handle_packet(uint8_t const header)
   #define TIMEOUT 100 // 100ms
   if (UART_OK != uart_receive_timeout(&received_packet_number[0u], sizeof(received_packet_number), TIMEOUT))
     return X_ERROR_UART;
-  if (UART_OK != uart_receive_timeout(&received_packet_data[0u], size, 10))
+  if (UART_OK != uart_receive_timeout(&received_packet_data[0u], size, TIMEOUT))
     return X_ERROR_UART;
   if (UART_OK != uart_receive_timeout(&received_packet_crc[0u], sizeof(received_packet_crc), TIMEOUT))
     return X_ERROR_UART;

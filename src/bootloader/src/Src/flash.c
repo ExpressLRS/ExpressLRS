@@ -9,6 +9,11 @@
 
 #include "flash.h"
 #include "main.h"
+#include "uart.h"
+
+#ifndef DUMPING
+#define DUMPING 0
+#endif
 
 #ifndef FLASH_TYPEPROGRAM_HALFWORD
 #define FLASH_TYPEPROGRAM_HALFWORD 0 // should fail
@@ -43,6 +48,24 @@ uint32_t get_flash_end(void) {
 
 /* Function pointer for jumping to user application. */
 typedef void (*fnc_ptr)(void);
+
+#if DUMPING
+flash_status flash_dump(void)
+{
+  //__IO uint8_t* address = (uint8_t*)FLASH_BASE;
+  uint32_t len = 0x2000;
+  uart_transmit_str("Memory dump start >>>>\r\n");
+  uart_transmit_bytes((uint8_t*)FLASH_BASE, len);
+  uart_transmit_str("<<<< Memory dump end\r\n");
+  return FLASH_OK;
+}
+#else
+flash_status flash_dump(void)
+{
+  return FLASH_OK;
+}
+#endif
+
 
 /**
  * @brief   This function erases the memory.
@@ -256,10 +279,14 @@ void flash_jump_to_app(void)
     NVIC_SystemReset();
   }
 
+  /* Small delay to allow UART TX send out everything */
+  HAL_Delay(100);
+
   /* Function pointer to the address of the user application. */
   fnc_ptr jump_to_app;
   jump_to_app = (fnc_ptr)(*(volatile uint32_t *)(FLASH_APP_START_ADDRESS + 4u));
   /* Remove configs before jump. */
+  uart_deinit();
   HAL_DeInit();
   /* Change the main stack pointer. */
   asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)FLASH_APP_START_ADDRESS));

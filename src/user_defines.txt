@@ -9,8 +9,9 @@
  
 
 ### BINDING PHRASE: ### 
-
--DMY_BINDING_PHRASE="BrandonRC"
+# Uncomment the line below to use a hardcoded binding phrase
+# Leave commented to use traditional binding
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
 ### REGULATORY DOMAIN: ### 
@@ -20,7 +21,7 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
--DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400
 
 
 ### SWITCHES: ### 
@@ -55,7 +56,7 @@
 
 ### OTHER OPTIONS: ###
 
--DAUTO_WIFI_ON_BOOT
+-DAUTO_WIFI_ON_INTERVAL=20
 
 #-DUSE_ESP8266_BACKPACK
 
