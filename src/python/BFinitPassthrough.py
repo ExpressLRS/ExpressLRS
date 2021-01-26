@@ -84,4 +84,7 @@ if __name__ == '__main__':
     except:
         requestedBaudrate = 420000
     port = serials_find.get_serial_port()
-    bf_passthrough_init(port, requestedBaudrate)
+    try:
+        bf_passthrough_init(port, requestedBaudrate)
+    except:
+        dbg_print("Assuming that FC is in Passthrough already.")
