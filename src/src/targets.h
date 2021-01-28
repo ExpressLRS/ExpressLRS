@@ -323,8 +323,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO            PA6
 #define GPIO_PIN_SCK             PA5
 #define GPIO_PIN_RST             PB0
-#define GPIO_PIN_RX_ENABLE          PA8  // These may be swapped
-#define GPIO_PIN_TX_ENABLE          PB14 // These may be swapped
+#define GPIO_PIN_RX_ENABLE       PA8  // These may be swapped
+#define GPIO_PIN_TX_ENABLE       PB14 // These may be swapped
 #define GPIO_PIN_RCSIGNAL_RX     PB10 //UART3_TX we can change these.. I just picked unused pins
 #define GPIO_PIN_RCSIGNAL_TX     PA4 //UART2_TX we can change these.. I just picked unused pins
 #define GPIO_PIN_LED_WS2812      PB6
