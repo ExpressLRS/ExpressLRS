@@ -71,12 +71,12 @@ void SX1280Hal::init()
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
 
-#if defined(GPIO_PIN_PIN_ANT_CTRL_1)
+#if defined(GPIO_PIN_ANT_CTRL_1)
     pinMode(GPIO_PIN_PIN_ANT_CTRL_1, OUTPUT);
   digitalWrite(GPIO_PIN_PIN_ANT_CTRL_1, HIGH);
 #endif
 
-#if defined(GPIO_PIN_PIN_ANT_CTRL_2)
+#if defined(GPIO_PIN_ANT_CTRL_2)
     pinMode(GPIO_PIN_PIN_ANT_CTRL_2, OUTPUT);
   digitalWrite(GPIO_PIN_PIN_ANT_CTRL_2, LOW);
 #endif
