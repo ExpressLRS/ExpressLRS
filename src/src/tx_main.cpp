@@ -550,11 +550,11 @@ void setup()
   Serial.begin(115200);
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || TARGET_TX_GHOST
 
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+    // pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    // pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    // digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 
 #ifdef USE_ESP8266_BACKPACK
     HardwareSerial(USART1);
@@ -563,11 +563,11 @@ void setup()
     HardwareSerial(USART2);
     Serial.setTx(PA2);
     Serial.setRx(PA3);
-    Serial.begin(400000);
+    Serial.begin(102400);
 #endif
     
 
-#if defined(TARGET_R9M_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
     // Annoying startup beeps
   #ifndef JUST_BEEP_ONCE
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -597,8 +597,8 @@ void setup()
     delay(200);
     tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-  R9DAC.init();
+  // button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+  // R9DAC.init();
 #endif
 
 #endif
