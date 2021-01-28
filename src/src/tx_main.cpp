@@ -42,6 +42,15 @@ button button;
 R9DAC R9DAC;
 #endif
 
+#ifdef TARGET_TX_GHOST
+uint8_t LEDfadeDiv;
+uint8_t LEDfade;
+bool LEDfadeDir;
+uint32_t LEDupdateInterval = 25;
+uint32_t LEDupdateCounterMillis;
+#include "STM32F3_WS2812B_LED.h"
+#endif
+
 #if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
 #include "STM32_hwTimer.h"
 #endif
@@ -566,6 +575,19 @@ void setup()
     Serial.begin(115200);
 #endif
     
+#if WS2812_LED_IS_USED // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
+#endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
     // Annoying startup beeps
@@ -668,6 +690,23 @@ void setup()
 
 void loop()
 {
+
+#if WS2812_LED_IS_USED
+    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 30 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDupdateCounterMillis = millis();
+    }
+#endif
+
 #if defined(PLATFORM_ESP32)
   if (webUpdateMode)
   {
