@@ -35,9 +35,9 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 ### Schematic and PCB layout
 
-<img src="img/top.png" width="25%"> <img src="img/bottom.png" width="25%"> 
+<img src="img/top.PNG" width="25%"> <img src="img/bottom.PNG" width="25%"> 
 
-<img src="schm.png" width="50%">
+<img src="schm.PNG" width="50%">
 
 ### Flashing 
 
