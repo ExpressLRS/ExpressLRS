@@ -22,6 +22,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 ### Build order
 
+Click this image to watch video of build
 [![Build Video](https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/thumbnail.png?raw=true)](https://youtu.be/sNQbWaVPUCc)
 
 0. Print both STLs in the orientation shown in the image below, use light support (15%)
