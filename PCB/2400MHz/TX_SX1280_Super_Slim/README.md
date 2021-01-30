@@ -50,12 +50,12 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 ### Pics
 
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/printlayout.png?raw=true" width="48">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/antennaswitch.png?raw=true" width="48">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/vreg.png?raw=true" width="48">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/final.png?raw=true" width="48">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/printlayout.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/antennaswitch.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/vreg.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/final.png?raw=true" width="300">
 
 ### Schematic and PCB layout
 
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/brd.png?raw=true" width="48">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/sch.png?raw=true" width="48">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/brd.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/sch.png?raw=true" width="300">
