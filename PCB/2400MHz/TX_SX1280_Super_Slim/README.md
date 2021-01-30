@@ -15,7 +15,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - SMA or RPSMA pigtail https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
 - 10uF 3528 Cap https://www.aliexpress.com/item/32666405364.html?algo_pvid=365ae59d-9e6c-46b7-9792-2656b0961f70&algo_expid=365ae59d-9e6c-46b7-9792-2656b0961f70-6&btsid=0bb0623116027669252885518ea610&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
-- 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
+- 8 Way header https://www.aliexpress.com/item/3pcs-1X40PIN-2-54MM-1x40-Pin-2-54-Round-Female-Pin-Header-connector/32847506950.html?spm=a2g0s.9042311.0.0.27424c4dOfOrhZ
 - 4 M3 screws 4-7mm (use leftover motor/frame screws)
 - 2.4GHz antenna
 - A few wires
