@@ -9,8 +9,9 @@
  
 
 ### BINDING PHRASE: ### 
-
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+# Uncomment the line below to use a hardcoded binding phrase
+# Leave commented to use traditional binding
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
 ### REGULATORY DOMAIN: ### 
@@ -55,9 +56,9 @@
 
 ### OTHER OPTIONS: ###
 
--DAUTO_WIFI_ON_BOOT
+-DAUTO_WIFI_ON_INTERVAL=20
 
-#-DUSE_ESP8266_BACKPACK
+-DUSE_ESP8266_BACKPACK
 
 #-DJUST_BEEP_ONCE
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"

@@ -79,10 +79,10 @@ elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_STM32*'):
     sys.stdout.write("\u001b[32mBuilding for STM32 Platform\n")
 elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP8266*'):
     sys.stdout.write("\u001b[32mBuilding for ESP8266/ESP8285 Platform\n")
-    if fnmatch.filter(env['BUILD_FLAGS'], '-DAUTO_WIFI_ON_BOOT*'):
-        sys.stdout.write("\u001b[32mAUTO_WIFI_ON_BOOT = ON\n")
+    if fnmatch.filter(env['BUILD_FLAGS'], '-DAUTO_WIFI_ON_INTERVAL*'):
+        sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = ON\n")
     else:
-        sys.stdout.write("\u001b[32mAUTO_WIFI_ON_BOOT = OFF\n")
+        sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = OFF\n")
         
 if fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_915*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 915AU\n")

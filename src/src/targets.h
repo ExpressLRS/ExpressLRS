@@ -89,7 +89,7 @@
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_LED 16
-#define GPIO_PIN_BUTTON 2
+#define GPIO_PIN_BUTTON 0
 #define timerOffset -1
 #endif
 
@@ -116,7 +116,7 @@ https://github.com/jaxxzer
 #elif TARGET_R9SLIMPLUS_RX               // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
-#elif TARGET_R900MINI_RX                 
+#elif TARGET_R900MINI_RX
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
 #else //default R9MM_R9MINI or R9MX
@@ -337,9 +337,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO        PA6
 #define GPIO_PIN_SCK         PA5
 
-#define GPIO_PIN_DIO0        PA10
-#define GPIO_PIN_DIO1        PA9
-//#define GPIO_PIN_DIO2        PA8
+#define GPIO_PIN_DIO0        -1
+#define GPIO_PIN_DIO1        PA10
 #define GPIO_PIN_RST         PB4
 #define GPIO_PIN_BUSY        PA11
 

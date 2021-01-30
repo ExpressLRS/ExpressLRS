@@ -1,13 +1,11 @@
 #include "elrs_eeprom.h"
 #include <Arduino.h>
 
-#ifndef TARGET_RX_GHOST_ATTO_V1
-
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
     extEEPROM EEPROM(kbits_2, 1, 1, 0x51);
 #elif defined(TARGET_R9M_RX)
     extEEPROM EEPROM(kbits_2, 1, 1, 0x50);
-#elif defined(PLATFORM_ESP32) 
+#elif defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 #else
 #define NO_EEPROM 1
 #endif
@@ -60,12 +58,10 @@ ELRS_EEPROM::WriteByte(const unsigned long address, const uint8_t value)
 void
 ELRS_EEPROM::Commit()
 {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     if (!EEPROM.commit())
     {
       Serial.println("ERROR! EEPROM commit failed");
     }
 #endif
 }
-
-#endif

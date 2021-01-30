@@ -58,13 +58,12 @@ CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
-Config config;
+TxConfig config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
-bool bindMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
@@ -89,6 +88,11 @@ bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
+
+bool InBindingMode = false;
+void EnterBindingMode();
+void ExitBindingMode();
+void SendUIDOverMSP();
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -277,6 +281,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+  if (InBindingMode)
+  {
+    return;
+  }
+  
   uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
@@ -349,6 +358,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateMSPData();
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
+
+      if (MSPPacketSendCount <= 0 && InBindingMode)
+      {
+        ExitBindingMode();
+      }
     }
     else
     {
@@ -371,7 +385,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void sendLuaParams()
 {
   uint8_t luaParams[] = {0xFF,
-                         (uint8_t)(bindMode | (webUpdateMode << 1)),
+                         (uint8_t)(InBindingMode | (webUpdateMode << 1)),
                          (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
                          (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1),
                          (uint8_t)(POWERMGNT.currPower() + 1),
@@ -493,13 +507,13 @@ void HandleUpdateParameter()
   case 0xFF:
     if (crsf.ParameterUpdateData[1] == 1)
     {
-      Serial.println("Binding Requested!");
-      bindMode = true;
+      Serial.println("Binding requested from LUA");
+      EnterBindingMode();
     }
     else
     {
-      Serial.println("Binding Stopped!");
-      bindMode = false;
+      Serial.println("Binding stopped  from LUA");
+      ExitBindingMode();
     }
     break;
 
@@ -739,13 +753,13 @@ void OnRFModePacket(mspPacket_t *packet)
   switch (rfMode)
   {
   case RATE_200HZ:
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
     break;
   case RATE_100HZ:
-    SetRFLinkRate(RATE_100HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_100HZ));
     break;
   case RATE_50HZ:
-    SetRFLinkRate(RATE_50HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
     break;
   default:
     // Unsupported rate requested
@@ -839,4 +853,75 @@ void ProcessMSPPacket(mspPacket_t *packet)
     MSPPacket = *packet;
     MSPPacketSendCount = 6;
   }
+}
+
+void EnterBindingMode()
+{
+  if (InBindingMode) {
+      // Don't enter binding if we're already binding
+      return;
+  }
+
+  // Start periodically sending the current UID as MSP packets
+  SendUIDOverMSP();
+
+  // Set UID to special binding values
+  UID[0] = BindingUID[0];
+  UID[1] = BindingUID[1];
+  UID[2] = BindingUID[2];
+  UID[3] = BindingUID[3];
+  UID[4] = BindingUID[4];
+  UID[5] = BindingUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = true;
+
+  // Start attempting to bind
+  // Lock the RF rate and freq while binding
+  SetRFLinkRate(RATE_DEFAULT);
+  Radio.SetFrequency(GetInitialFreq());
+  POWERMGNT.setPower(PWR_10mW);
+
+  Serial.print("Entered binding mode at freq = ");
+  Serial.println(Radio.currFreq);
+}
+
+void ExitBindingMode()
+{
+  if (!InBindingMode)
+  {
+    // Not in binding mode
+    return;
+  }
+
+  // Reset UID to defined values
+  UID[0] = MasterUID[0];
+  UID[1] = MasterUID[1];
+  UID[2] = MasterUID[2];
+  UID[3] = MasterUID[3];
+  UID[4] = MasterUID[4];
+  UID[5] = MasterUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = false;
+
+  Serial.println("Exiting binding mode");
+}
+
+void SendUIDOverMSP()
+{
+  MSPPacket.reset();
+
+  MSPPacket.makeCommand();
+  MSPPacket.function = MSP_ELRS_BIND;
+  MSPPacket.addByte(UID[2]);
+  MSPPacket.addByte(UID[3]);
+  MSPPacket.addByte(UID[4]);
+  MSPPacket.addByte(UID[5]);
+
+  MSPPacketSendCount = 10;
 }
