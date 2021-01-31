@@ -684,7 +684,7 @@ void setup()
   crsf.Begin();
   hwTimer.init();
   hwTimer.resume();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  // hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
 
@@ -964,3 +964,18 @@ void SendUIDOverMSP()
 
   MSPPacketSendCount = 10;
 }
+
+
+
+#ifdef TARGET_TX_GHOST
+extern "C"
+/**
+  * @brief This function handles external line 2 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI2_TSC_IRQHandler()
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+}
+#endif
