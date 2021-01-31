@@ -323,16 +323,16 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO            PA6
 #define GPIO_PIN_SCK             PA5
 #define GPIO_PIN_RST             PB0
-//#define GPIO_PIN_RX_ENABLE       PA8  // These may be swapped
-//#define GPIO_PIN_TX_ENABLE       PB14 // These may be swapped
+#define GPIO_PIN_RX_ENABLE       PA8  // These may be swapped
+#define GPIO_PIN_TX_ENABLE       PB14 // These may be swapped
 #define GPIO_PIN_RCSIGNAL_RX     PA10 //UART1
 #define GPIO_PIN_RCSIGNAL_TX     PA9 
 #define GPIO_PIN_LED_WS2812      PB6
 #define GPIO_PIN_LED_WS2812_FAST PB_6
 #define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
 #define GPIO_PIN_RF_AMP_DET      PA3
-//#define GPIO_PIN_ANT_CTRL_1      PA9
-//#define GPIO_PIN_ANT_CTRL_2      PB13
+#define GPIO_PIN_ANT_CTRL_1      PA9
+#define GPIO_PIN_ANT_CTRL_2      PB13
 #define GPIO_PIN_BUZZER          PC13
 #define timerOffset              1
 #endif

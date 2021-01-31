@@ -559,21 +559,21 @@ void setup()
   Serial.begin(115200);
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || TARGET_TX_GHOST
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
 
     // pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     // pinMode(GPIO_PIN_LED_RED, OUTPUT);
     // digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
 
-// #ifdef USE_ESP8266_BACKPACK
-//     HardwareSerial(USART1);
-//     Serial.begin(460800);
-// #else
+#ifdef USE_ESP8266_BACKPACK
+    HardwareSerial(USART1);
+    Serial.begin(460800);
+#else
     HardwareSerial(USART2);
     Serial.setTx(PA2);
     Serial.setRx(PA3);
     Serial.begin(115200);
-// #endif
+#endif
     
 #if WS2812_LED_IS_USED // do startup blinkies for fun
     uint32_t col = 0x0000FF;
@@ -684,7 +684,7 @@ void setup()
   crsf.Begin();
   hwTimer.init();
   hwTimer.resume();
-  //hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
 
