@@ -88,7 +88,7 @@ void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
     //----------------- GHOST TX Testing ------------------
     // ---------------- Setting power low low low
     // buf[0] = power + 18; // <--------- original code here 
-    buf[0] = 8; // remove this once we figure out power levels
+    buf[0] = 0; // remove this once we figure out power levels
     // ----------------------------------------------------
     buf[1] = (uint8_t)SX1280_RADIO_RAMP_04_US;
     hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, 2);

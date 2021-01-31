@@ -58,6 +58,9 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = (PowerLevels_e)MaxPower;
     }
 
+    Radio.SetOutputPower(-15);
+    return (PowerLevels_e)0;
+
 #if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
