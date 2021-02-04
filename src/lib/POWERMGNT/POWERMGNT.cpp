@@ -38,12 +38,20 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
+
+
 #ifdef TARGET_R9M_TX
     Serial.println("Init TARGET_R9M_TX DAC Driver");
 #endif
 #ifdef GPIO_PIN_FAN_EN
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+
+#ifdef TARGET_TX_GHOST
+    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
+    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
+#endif
+
 }
 
 void POWERMGNT::setDefaultPower()
@@ -57,9 +65,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = (PowerLevels_e)MaxPower;
     }
-
-    Radio.SetOutputPower(-15);
-    return (PowerLevels_e)0;
 
 #if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
@@ -75,6 +80,32 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         break;
     }
     return CurrentPower;
+#endif
+
+#if defined(TARGET_TX_GHOST)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(2);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(6);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(9);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(9);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(9);
+        break;
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(0);
+        break;
+    }
+    CurrentPower = Power;
 #endif
 
 #ifdef TARGET_R9M_TX
