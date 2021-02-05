@@ -27,7 +27,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Solder the capacitor
 - Set the regulator voltage to 3.45V by rotating the potentiometer on the top fully clockwise, and jumper both the 5V and 12V pads on the back.  Why didn't we just jumper the 3.3V?  Because that also requires cutting the ADJ trace and potentially damaging the regulator.  The e28 will also run better on a voltage slightly above 3.3V.
 
-
+<img src="img/regulator_setup.jpg" width="30%">
 
 - Apply tape to the base of the regulator pcb to insulate it from potentially shorting with the vias on the main pcb. Solder on a 4 pin straight header, then remove the plastic bridge on the header so that the reg will stil flush with the main pcb on the bottom. NOTE: pictures show the v1 pcb with reg on the top, which is incorrect. The v1.1 PCB moved the reg to the underside of the main PCB, so it doesn't intrude on the antenna SMA.
 - Solder 3x silicon wires to the 3 pin header pads (G, V, S), and attach to the 8 way header using the pinout below, so that G goes to GND, V goes to 6V, and S goes to S.Port.
