@@ -42,16 +42,16 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 ### Build process and Pics
 
-- Solder wires to connector
-- Install from outside of module case
-- Install module into radio
-- Hot glue wires/connector to set location.
+- Solder wires to connector  
+- Install from outside of module case  
+- Install module into radio  
+- Hot glue wires/connector to set location.  
 
-- Solder wires to board
-- install rf cable
-- install rf cable to sx1280 board
-- Neatly install in case
-- Add 4 screws
+- Solder wires to board  
+- install rf cable  
+- install rf cable to sx1280 board  
+- Neatly install in case  
+- Add 4 screws  
 
 
 ### Schematic and PCB layout
