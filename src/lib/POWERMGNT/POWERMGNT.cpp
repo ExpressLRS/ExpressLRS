@@ -103,8 +103,33 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #ifdef GPIO_PIN_FAN_EN
     (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
 #endif
-#elif defined(TARGET_R9M_LITE_PRO_TX)
-    Radio.SetOutputPower(0b0000);
+    return CurrentPower;
+#endif
+
+#if defined(TARGET_R9M_LITE_PRO_TX)
+    switch (Power)
+    {
+    case PWR_100mW:
+        Radio.SetOutputPower(0b0101); //Needs to set PA5 DAC to 590mV & PA4 to 2.7V
+        CurrentPower = PWR_100mW;
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(0b1000); //Needs to set PA5 DAC to 870mV & PA4 to 2.7V
+        CurrentPower = PWR_250mW;
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(0b1100); //Needs to set PA5 DAC to 1.093V & PA4 to 2.7V
+        CurrentPower = PWR_500mW;
+        break;
+    case PWR_1000mW:
+        Radio.SetOutputPower(0b1111); //Needs to set PA5 DAC to 1.493V & PA4 to 2.7V
+        CurrentPower = PWR_1000mW;
+        break;
+    default:
+        CurrentPower = PWR_100mW;
+        Radio.SetOutputPower(0b0101); //Needs to set PA5 DAC to 590mV & PA4 to 2.7V
+        break;
+    }
 #elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
     switch (Power)
     {
