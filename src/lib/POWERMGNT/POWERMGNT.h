@@ -26,8 +26,8 @@
 #endif
 
 #ifdef TARGET_R9M_LITE_PRO_TX
-#define MaxPower 0
-#define DefaultPowerEnum 0
+#define MaxPower 6
+#define DefaultPowerEnum 3
 #endif
 
 #ifdef TARGET_100mW_MODULE
