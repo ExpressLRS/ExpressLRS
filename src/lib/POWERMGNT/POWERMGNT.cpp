@@ -43,7 +43,13 @@ void POWERMGNT::init()
 #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     Serial.println("Init DAC Driver");
 #endif
-#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#ifdef TARGET_R9M_LITE_PRO_TX
+    //initialize both 12 bit DACs
+    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
+    pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
+    analogWriteResolution(12);
+#endif
+#ifdef GPIO_PIN_FAN_EN  && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
 #if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
@@ -107,37 +113,34 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #endif
 
 #if defined(TARGET_R9M_LITE_PRO_TX)
+    Radio.SetOutputPower(0b0000);
+    //Set DACs PA5 & PA4
     switch (Power)
     {
     case PWR_100mW:
-        //Radio.SetOutputPower(0b0101); //Needs to set PA5 DAC to 590mV & PA4 to 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095
-        analogWrite(GPIO_PIN_RFamp_APC2, 732); //0-4095 100mW 590mV
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 732); //0-4095  590mV
         CurrentPower = PWR_100mW;
         break;
     case PWR_250mW:
-        //Radio.SetOutputPower(0b1000); //Needs to set PA5 DAC to 870mV & PA4 to 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095
-        analogWrite(GPIO_PIN_RFamp_APC2, 1080); //0-4095 200mW 870mV
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1080); //0-4095 870mV this is actually 200mw
         CurrentPower = PWR_250mW;
         break;
     case PWR_500mW:
-        //Radio.SetOutputPower(0b1100); //Needs to set PA5 DAC to 1.093V & PA4 to 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095
-        analogWrite(GPIO_PIN_RFamp_APC2, 1356); //0-4095 500mW 1.093V
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1356); //0-4095 1.093V
         CurrentPower = PWR_500mW;
         break;
     case PWR_1000mW:
-        //Radio.SetOutputPower(0b1111); //Needs to set PA5 DAC to 1.493V & PA4 to 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095
-        analogWrite(GPIO_PIN_RFamp_APC2, 1853); //0-4095 1W 1.493V
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1853); //0-4095 1.493V
         CurrentPower = PWR_1000mW;
         break;
     default:
         CurrentPower = PWR_100mW;
-        //Radio.SetOutputPower(0b0101); //Needs to set PA5 DAC to 590mV & PA4 to 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095
-        analogWrite(GPIO_PIN_RFamp_APC2, 732); //0-4095 100mW 590mV
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 732);  //0-4095 590mV
         break;
     }
 #elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
