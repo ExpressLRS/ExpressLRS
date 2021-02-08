@@ -245,21 +245,24 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PA9  // NRESET
-#define GPIO_PIN_RX_ENABLE      PC13 // need to confirm
+#define GPIO_PIN_RX_ENABLE      UNDEF_PIN   // NOT USED ON THIS TARGET
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
-#define GPIO_PIN_RCSIGNAL_RX    PB11 // not yet confirmed
-#define GPIO_PIN_RCSIGNAL_TX    PB10 // not yet confirmed
+#define GPIO_PIN_RCSIGNAL_RX    PB11 // s.port inverter
+#define GPIO_PIN_RCSIGNAL_TX    PB10 // s.port inverter
 #define GPIO_PIN_LED_GREEN      PA15 // Green LED
 #define GPIO_PIN_LED_RED        PB3  // Red LED
 #define GPIO_PIN_LED_RED        PB4  // Blue LED
 
-#define GPIO_PIN_DEBUG_RX    	PA3  // not yet confirmed
-#define GPIO_PIN_DEBUG_TX    	PA2  // not yet confirmed
+#define GPIO_PIN_DEBUG_RX    	PA3  // inverted UART JR
+#define GPIO_PIN_DEBUG_TX    	PA2  // inverted UART JR
 
-#define GPIO_PIN_VRF1			PA7  // 26SU Sample RF1
-#define GPIO_PIN_VRF2			PB1  // 26SU Sample RF2
-#define GPIO_PIN_SWR			PA0  // SWR? ADC1_IN1
+#define GPIO_PIN_VRF1			PA7  // 26SU Switch RF1
+#define GPIO_PIN_VRF2			PB1  // 26SU Switch RF2
+#define GPIO_PIN_SWR			 PA0  // SWR ADC1_IN1
+
+//#define GPIO_PIN_EEPROM_DATA     PB8 //2Kb EEPROM ST M95160
+//#define GPIO_PIN_EEPROM_CLOCK    PB9 //2Kb EEPROM ST M95160
 
 #define BUFFER_OE               UNDEF_PIN  //CONFIRMED
 
