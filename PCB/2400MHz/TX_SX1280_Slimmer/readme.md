@@ -1,6 +1,8 @@
 
 # 2.4GHz Slimmer Tx 
 
+<img src="img/11.jpg" width="20%">
+
 EasyEda Link: https://easyeda.com/jberkmanPI/tx-slim-2-4g-sch
 
 ### PCB manufacturing
@@ -49,26 +51,25 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Install module into radio  
 - Hot glue wires/connector to set location.  
 
-<<<<<<< HEAD
+
 - Solder wires to board
 - install rf cable to case
 - install rf cable to sx1280 board
 - Neatly install in case
 - Add 4 screws
-=======
+
 - Solder wires to board  
 - install rf cable  
 - install rf cable to sx1280 board  
 - Neatly install in case  
 - Add 4 screws  
->>>>>>> dbcb796d273cdb3f0fb7c6708e17ca68512d48a6
 
-<img src="img/1.jpg" width="30%"> <img src="img/2.jpg" width="30%">
-<img src="img/3.jpg" width="30%"> <img src="img/4.jpg" width="30%">
-<img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
-<img src="img/7.jpg" width="30%"> <img src="img/8.jpg" width="30%">
-<img src="img/9.jpg" width="30%"> <img src="img/10.jpg" width="30%">
-<img src="img/11.jpg" width="30%">
+
+<img src="img/1.jpg" width="20%"> <img src="img/2.jpg" width="20%">
+<img src="img/3.jpg" width="20%"> <img src="img/4.jpg" width="20%">
+<img src="img/5.jpg" width="20%"> <img src="img/6.jpg" width="20%">
+<img src="img/7.jpg" width="20%"> <img src="img/8.jpg" width="20%">
+<img src="img/9.jpg" width="20%"> <img src="img/10.jpg" width="20%">
 
 
 ### Schematic and PCB layout
