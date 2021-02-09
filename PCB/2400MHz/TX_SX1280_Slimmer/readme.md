@@ -76,5 +76,5 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 <img src="img/schem.jpg" width="30%">
 
-<img src="img/layout.jpg" width="30%">
+<img src="img/layout.jpg" width="20%">
 
