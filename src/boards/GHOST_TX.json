@@ -1,47 +1,40 @@
 {
   "build": {
+    "core": "stm32",
     "cpu": "cortex-m4",
-    "extra_flags": "-DSTM32F301x8=1 -DSTM32F3xx=1 -DSTM32F301=1",
+    "extra_flags": "-DSTM32F3 -DSTM32F303xC -DBLACKPILL_F303CC",
     "f_cpu": "72000000L",
-    "ldscript": "ldscript.ld",
-    "mcu": "stm32f301k8",
-    "product_line": "STM32F301x8",
-    "variants_dir": "variants",
+	"ldscript": "ldscript.ld",
+    "mcu": "stm32f303cct6",
+    "product_line": "STM32F303xC",
+	"variants_dir": "variants",
     "variant": "GHOST_TX"
   },
   "connectivity": [
     "can"
   ],
   "debug": {
-    "default_tools": [
-      "stlink"
-    ],
-    "jlink_device": "STM32F301K8",
-    "onboard_tools": [
-      "stlink"
-    ],
-    "openocd_board": "st_nucleo_f3",
+    "jlink_device": "STM32F303CC",
+    "openocd_target": "stm32f3x",
     "svd_path": "STM32F30x.svd"
   },
   "frameworks": [
     "arduino",
     "cmsis",
-    "mbed",
     "stm32cube",
     "libopencm3"
   ],
-  "name": "STM32F301K8",
+  "name": "GHOST TX",
   "upload": {
-    "maximum_ram_size": 16384,
-    "maximum_size": 65536,
+    "maximum_ram_size": 40960,
+    "maximum_size": 262144,
     "protocol": "stlink",
     "protocols": [
       "jlink",
       "stlink",
-      "blackmagic",
-      "mbed"
+      "blackmagic"
     ]
   },
-  "url": "https://www.st.com/content/st_com/en/products/microcontrollers-microprocessors/stm32-32-bit-arm-cortex-mcus/stm32-mainstream-mcus/stm32f3-series/stm32f301/stm32f301k8.html",
-  "vendor": "ST"
+  "url": "https://github.com/TauLabs/TauLabs/wiki/Sparky",
+  "vendor": "TauLabs"
 }
