@@ -1,6 +1,8 @@
 
 # 2.4GHz Slimmer Tx 
 
+EasyEda Link: https://easyeda.com/jberkmanPI/tx-slim-2-4g-sch
+
 ### PCB manufacturing
 
 This is copied from the slim board page.
@@ -18,7 +20,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
 - 10uF 3528 Cap https://www.aliexpress.com/item/32666405364.html?algo_pvid=365ae59d-9e6c-46b7-9792-2656b0961f70&algo_expid=365ae59d-9e6c-46b7-9792-2656b0961f70-6&btsid=0bb0623116027669252885518ea610&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
 - 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
-- #2 screw for sheet metal, .375" long. can be subbed for metric equiv - https://www.mcmaster.com/92470A097/
+- #2 screw for sheet metal, .25" long. https://www.amazon.com/TOUHIA-Screws-Phillips-Stainless-Self-Tapping/dp/B07PDC3F85/ref=sr_1_8?dchild=1&keywords=%232+screw&qid=1612739282&sr=8-8
 
 ### Build order
 
@@ -48,10 +50,17 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Hot glue wires/connector to set location.
 
 - Solder wires to board
-- install rf cable
+- install rf cable to case
 - install rf cable to sx1280 board
 - Neatly install in case
 - Add 4 screws
+
+<img src="img/1.jpg" width="30%"> <img src="img/2.jpg" width="30%">
+<img src="img/3.jpg" width="30%"> <img src="img/4.jpg" width="30%">
+<img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
+<img src="img/7.jpg" width="30%"> <img src="img/8.jpg" width="30%">
+<img src="img/9.jpg" width="30%"> <img src="img/10.jpg" width="30%">
+<img src="img/11.jpg" width="30%">
 
 
 ### Schematic and PCB layout
