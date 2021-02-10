@@ -16,19 +16,20 @@ SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-HardwareSerial CRSF::Port(USART3);
-#endif
 
-#if defined(TARGET_TX_GHOST)
-HardwareSerial CRSF::Port(USART1);
-#endif
+    #if defined(TARGET_TX_GHOST)
+        HardwareSerial CRSF::Port(USART1);
+    #else
+        HardwareSerial CRSF::Port(USART3);
+    #endif
 
-#if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
-#include "stm32f3xx_hal.h"
-#include "stm32f3xx_hal_gpio.h"
-#else
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
+    #if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+        #include "stm32f3xx_hal.h"
+        #include "stm32f3xx_hal_gpio.h"
+    #else
+        #include "stm32f1xx_hal.h"
+        #include "stm32f1xx_hal_gpio.h"
+    #endif
 #endif
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
