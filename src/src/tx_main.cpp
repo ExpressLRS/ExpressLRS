@@ -179,6 +179,8 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
+
+  //luaxx
 #ifdef HYBRID_SWITCHES_8
   uint8_t SwitchEncMode = 0b01;
 #else

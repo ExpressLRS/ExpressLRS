@@ -427,7 +427,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t inCRC = Radio.RXdataBuffer[10];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
-
+//luaxx
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;
 #else
