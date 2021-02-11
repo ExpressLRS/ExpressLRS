@@ -34,7 +34,7 @@ Config::Commit()
 
     m_modified = false;
 }
-
+//luaxx
 // Getters
 uint32_t
 Config::GetRate()
@@ -59,7 +59,7 @@ Config::IsModified()
 {
     return m_modified;
 }
-
+//luaxx
 // Setters
 void
 Config::SetRate(uint32_t rate)
