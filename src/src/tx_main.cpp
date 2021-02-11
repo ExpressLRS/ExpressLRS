@@ -81,6 +81,7 @@ LPF LPD_DownlinkLQ(1);
 volatile bool UpdateParamReq = false;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
+//luaxx
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
@@ -370,7 +371,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[10] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 11);
 }
-
+//luaxx
 void sendLuaParams()
 {
   uint8_t luaParams[] = {0xFF,
@@ -382,7 +383,9 @@ void sendLuaParams()
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
-
+//                       (uint8_t)(crsf.FuncMode)};  
+//luaxx
+//crsf.sendLUAresponse(luaParams, 10);
   crsf.sendLUAresponse(luaParams, 9);
 }
 
@@ -441,7 +444,7 @@ void HandleUpdateParameter()
   {
     return;
   }
-
+//luaxx
   switch (crsf.ParameterUpdateData[0])
   {
   case 0: // special case for sending commit packet

@@ -39,9 +39,17 @@ local AirRate = {
     values = SX127x_RATES.values,
     max_allowed = #SX127x_RATES.values,
 }
-
-local TLMinterval = {
+local FuncMode = {
     index = 2,
+    editable = true,
+    name = 'mode',
+    selected = 99,
+	list = {'7analog', 'hybrid8'},
+    values = {0x01, 0x00},
+    max_allowed = 2,
+}
+local TLMinterval = {
+    index = 3,
     editable = true,
     name = 'TLM Ratio',
     selected = 99,
@@ -51,7 +59,7 @@ local TLMinterval = {
 }
 
 local MaxPower = {
-    index = 3,
+    index = 4,
     editable = true,
     name = 'Power',
     selected = 99,
@@ -61,7 +69,7 @@ local MaxPower = {
 }
 
 local RFfreq = {
-    index = 4,
+    index = 5,
     editable = false,
     name = 'RF Freq',
     selected = 99,
@@ -131,7 +139,7 @@ local menu = {
     selected = 1,
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
-    list = {AirRate, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
+    list = {AirRate, FuncMode, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
     --list = {AirRate, TLMinterval, MaxPower, RFfreq, WebServer, exit_script},
 }
 
@@ -316,6 +324,8 @@ local function processResp()
 					end
 					RFfreq.selected = data[8]
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
+                    
+					FuncMode.selected =  GetIndexOf(FuncMode.values, data[5])
 				end
 				
 				UartBadPkts = data[9]
