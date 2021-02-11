@@ -101,6 +101,7 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
+  //luaxx
   uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 10) + CRCCaesarCipher;
   uint8_t inCRC = Radio.RXdataBuffer[10];
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
@@ -367,6 +368,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
+
+  //luaxx
   uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[10] = crc;
   Radio.TXnb(Radio.TXdataBuffer, 11);

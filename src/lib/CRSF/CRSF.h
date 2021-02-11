@@ -371,7 +371,7 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 //luaxx
-//  static uint32_t FuncMode;
+//  static uint8_t FuncMode;
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);

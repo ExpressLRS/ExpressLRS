@@ -219,11 +219,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
     Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
     Radio.TXdataBuffer[6] = (crsf.TLMbattSensor.voltage & 0x00FF);
+  //luaxx  
+    
     Radio.TXdataBuffer[7] = 0;
     Radio.TXdataBuffer[8] = 0;
     Radio.TXdataBuffer[9] = 0;
 
-    uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 10) + CRCCaesarCipher;
+    uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[10] = crc;
     Radio.TXnb(Radio.TXdataBuffer, 11);
     return;
@@ -418,8 +420,9 @@ void ICACHE_RAM_ATTR UnpackMSPData()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    //luaxx
     beginProcessing = micros();
-    uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 10) + CRCCaesarCipher;
+    uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[10];
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
     uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
