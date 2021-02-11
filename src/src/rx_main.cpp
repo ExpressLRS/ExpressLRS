@@ -185,6 +185,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 }
 
+//luaxx
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
@@ -476,6 +477,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #if defined SEQ_SWITCHES
         UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
         #elif defined HYBRID_SWITCHES_8
+        //luaxx
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
         #else
         UnpackChannelData_11bit();

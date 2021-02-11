@@ -99,6 +99,7 @@ void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
+//luaxx
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   //luaxx
@@ -290,6 +291,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
   }
 }
 
+
 void ICACHE_RAM_ATTR HandleTLM()
 {
   if (ExpressLRS_currAirRate_Modparams->TLMinterval > 0)
@@ -304,6 +306,7 @@ void ICACHE_RAM_ATTR HandleTLM()
   }
 }
 
+//luaxx
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
 #ifdef FEATURE_OPENTX_SYNC
@@ -358,6 +361,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     else
     {
       #if defined HYBRID_SWITCHES_8
+      //luaxx
       GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
