@@ -49,9 +49,9 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   // currentSwitches[nextSwitchIndex] is in the range 0 through 2, takes 2 bits.
   Buffer[6] += (nextSwitchIndex << 2) + value;
   
-  Buffer[7] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[8] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[9] = ((crsf->ChannelDataIn[3]) >> 3);
+  Buffer[7] = ((crsf->ChannelDataIn[4]) >> 3);
+  Buffer[8] = ((crsf->ChannelDataIn[5]) >> 3);
+  Buffer[9] = ((crsf->ChannelDataIn[6]) >> 3);
 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
@@ -102,17 +102,17 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
         case 4:
             crsf->PackedRCdataOut.ch11 = switchValue;
             break;
-        /**
+        
         case 5:
-            crsf->PackedRCdataOut.ch9 = switchValue;
+            crsf->PackedRCdataOut.ch12 = switchValue;
             break;
         case 6:
-            crsf->PackedRCdataOut.ch10 = switchValue;
+            crsf->PackedRCdataOut.ch13 = switchValue;
             break;
         case 7:
-            crsf->PackedRCdataOut.ch11 = switchValue;
+            crsf->PackedRCdataOut.ch14 = switchValue;
             break;
-            */
+            
     }
 }
 

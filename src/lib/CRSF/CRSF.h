@@ -322,7 +322,7 @@ public:
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values
-    #define N_SWITCHES 5
+    #define N_SWITCHES 8
 
     static uint8_t currentSwitches[N_SWITCHES];
     static uint8_t sentSwitches[N_SWITCHES];
