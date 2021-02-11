@@ -541,13 +541,6 @@ void setup()
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-  
-#if defined(TARGET_R9M_LITE_PRO_TX)
-//#define HAL_DAC_MODULE_ENABLED //this may need to be enabled in the Arduino stm32h7xx_hal_conf.h file
-pinMode(GPIO_PIN_RFamp_APC1, OUTPUT); //I'm sure this does not belong here
-pinMode(GPIO_PIN_RFamp_APC2, OUTPUT); //I'm sure this does not belong here
-analogWriteResolution(12); //I'm sure this does not belong here
-#endif
 
 #ifdef USE_ESP8266_BACKPACK
     HardwareSerial(USART1);
