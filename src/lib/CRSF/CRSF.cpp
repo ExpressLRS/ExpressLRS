@@ -911,7 +911,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 const uint16_t SWITCH_DIVISOR = INPUT_RANGE / 3; // input is 0 - 2048
                 for (int i = 0; i < N_SWITCHES; i++)
                 {
-                    currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;
+                    currentSwitches[i] = ChannelDataIn[i + 7] / SWITCH_DIVISOR;
                 }
             }
 

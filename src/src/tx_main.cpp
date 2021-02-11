@@ -100,8 +100,8 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-  uint8_t inCRC = Radio.RXdataBuffer[7];
+  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 10) + CRCCaesarCipher;
+  uint8_t inCRC = Radio.RXdataBuffer[10];
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
@@ -206,6 +206,9 @@ void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
                           ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
+  Radio.TXdataBuffer[7] = ((CRSF_to_UINT10(crsf.ChannelDataIn[4]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[8] = ((CRSF_to_UINT10(crsf.ChannelDataIn[5]) & 0b1111111100) >> 2);
+  Radio.TXdataBuffer[9] = ((CRSF_to_UINT10(crsf.ChannelDataIn[6]) & 0b1111111100) >> 2);
 }
 
 void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
@@ -364,8 +367,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[7] = crc;
-  Radio.TXnb(Radio.TXdataBuffer, 8);
+  Radio.TXdataBuffer[10] = crc;
+  Radio.TXnb(Radio.TXdataBuffer, 11);
 }
 
 void sendLuaParams()
