@@ -12,16 +12,16 @@
 
 #ifdef TARGET_R9M_TX
 #ifdef R9M_UNLOCK_HIGHER_POWER
-#define MaxPower 6
+#define MaxPower PWR_1000mW
 #else
-#define MaxPower 4
+#define MaxPower PWR_250mW
 #endif
-#define DefaultPowerEnum 2
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_R9M_LITE_PRO_TX
-#define MaxPower 6
-#define DefaultPowerEnum 3
+#define MaxPower PWR_1000mW
+#define DefaultPowerEnum PWR_100mW
 #endif
 
 #ifdef TARGET_100mW_MODULE
@@ -31,17 +31,17 @@
 
 #ifdef TARGET_1000mW_MODULE
 #define MaxPower 4
-#define DefaultPowerEnum 2
+#define DefaultPowerEnum 2 
 #endif
 
 #ifdef TARGET_R9M_LITE_TX
-#define MaxPower 2
-#define DefaultPowerEnum 2
+#define MaxPower PWR_50mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_TX_ESP32_SX1280_V1
-#define MaxPower 0 // Output is actually 14mW
-#define DefaultPowerEnum 0
+#define MaxPower PWR_10mW // Output is actually 14mW
+#define DefaultPowerEnum PWR_10mW
 #endif
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
