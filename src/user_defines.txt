@@ -26,7 +26,7 @@
 ### SWITCHES: ### 
 
 #-DHYBRID_SWITCHES_8
-
+#-DANALOG_7
 
 ### PERFORMANCE OPTIONS: ### 
 

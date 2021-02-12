@@ -39,7 +39,6 @@ local AirRate = {
     values = SX127x_RATES.values,
     max_allowed = #SX127x_RATES.values,
 }
-
 local TLMinterval = {
     index = 2,
     editable = true,
@@ -60,8 +59,18 @@ local MaxPower = {
     max_allowed = 8,
 }
 
-local RFfreq = {
+local FuncMode = {
     index = 4,
+    editable = true,
+    name = 'mode',
+    selected = 99,
+	list = {'0','hybrid8','analog7','3'},
+    values = {0x00, 0x01, 0x02, 0x03},
+    max_allowed = 4,
+}
+
+local RFfreq = {
+    index = 5,
     editable = false,
     name = 'RF Freq',
     selected = 99,
@@ -83,7 +92,7 @@ local function binding(item, event)
 end
 
 local Bind = {
-    index = 5,
+    index = 6,
     editable = false,
     name = '[Bind]',
     exec = false,
@@ -103,7 +112,7 @@ local function web_server_start(item, event)
 end
 
 local WebServer = {
-    index = 5,
+    index = 6,
     editable = false,
     name = '[Wifi Update]',
     exec = false,
@@ -131,7 +140,7 @@ local menu = {
     selected = 1,
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
-    list = {AirRate, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
+    list = {AirRate, TLMinterval, MaxPower, FuncMode, RFfreq, Bind, WebServer},
     --list = {AirRate, TLMinterval, MaxPower, RFfreq, WebServer, exit_script},
 }
 
@@ -296,14 +305,15 @@ local function processResp()
 	else
 		if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
 		
-			if(data[3] == 0xFF) and #data == 11 then
+			if(data[3] == 0xFF) and #data == 12 then
 				bindmode = bit32.btest(0x01, data[4]) -- bind mode active 
 				wifiupdatemode = bit32.btest(0x02, data[4]) 
 				
 				if StopUpdate == false then 
 					TLMinterval.selected = data[6]
 					MaxPower.selected = data[7]
-					if data[8] == 6 then
+                    FuncMode.selected = data[12]+1
+                    if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
 						AirRate.values = SX128x_RATES.values
@@ -316,6 +326,8 @@ local function processResp()
 					end
 					RFfreq.selected = data[8]
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
+                    
+					
 				end
 				
 				UartBadPkts = data[9]

@@ -34,7 +34,7 @@ Config::Commit()
 
     m_modified = false;
 }
-
+//luaxx
 // Getters
 uint32_t
 Config::GetRate()
@@ -47,7 +47,11 @@ Config::GetTlm()
 {
     return m_config.tlm;
 }
-
+uint32_t
+Config::GetSwitchMode()
+{
+    return m_config.switchMode;
+}
 uint32_t
 Config::GetPower()
 {
@@ -59,7 +63,7 @@ Config::IsModified()
 {
     return m_modified;
 }
-
+//luaxx
 // Setters
 void
 Config::SetRate(uint32_t rate)
@@ -82,6 +86,15 @@ Config::SetTlm(uint32_t tlm)
 }
 
 void
+Config::SetSwitchMode(uint32_t modeSwitch)
+{
+    if (m_config.switchMode != modeSwitch && modeSwitch > 0 && modeSwitch <3)
+    {
+        m_config.switchMode = modeSwitch;
+        m_modified = true;
+    }
+}
+void
 Config::SetPower(uint32_t power)
 {
     if (m_config.power != power)
@@ -99,6 +112,7 @@ Config::SetDefaults()
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
+    SetSwitchMode(1);
     Commit();
 }
 

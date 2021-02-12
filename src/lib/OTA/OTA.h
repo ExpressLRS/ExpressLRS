@@ -13,8 +13,10 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+#if defined(HYBRID_SWITCHES_8) || defined(UNIT_TEST) || defined(ANALOG_7)
 
+void GenerateChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *crsf);
 void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
 void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
 

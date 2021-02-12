@@ -370,6 +370,8 @@ public:
 
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
+//luaxx
+//  static uint8_t FuncMode;
 
 #ifdef PLATFORM_ESP32
     static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
@@ -407,6 +409,7 @@ public:
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static int32_t OpenTXsyncOffetFLTR;
     static uint32_t SyncWaitPeriodCounter;
+    static uint8_t Analog7Mode;
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
