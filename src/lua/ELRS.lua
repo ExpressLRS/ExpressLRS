@@ -75,7 +75,7 @@ local FuncMode = {
     selected = 99,
 	list = {'7analog', 'hybrid8'},
     values = {0x03, 0x01},
-    max_allowed = 5,
+    max_allowed = 3,
 }
 
 local function binding(item, event)
@@ -325,7 +325,7 @@ local function processResp()
 					RFfreq.selected = data[8]
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
                     
-					FuncMode.selected =  GetIndexOf(FuncMode.values, data[12])
+					FuncMode.selected = data[12]
 				end
 				
 				UartBadPkts = data[9]
