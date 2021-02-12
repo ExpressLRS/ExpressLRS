@@ -39,17 +39,8 @@ local AirRate = {
     values = SX127x_RATES.values,
     max_allowed = #SX127x_RATES.values,
 }
-local FuncMode = {
-    index = 2,
-    editable = true,
-    name = 'mode',
-    selected = 99,
-	list = {'7analog', 'hybrid8'},
-    values = {0x01, 0x00},
-    max_allowed = 2,
-}
 local TLMinterval = {
-    index = 3,
+    index = 2,
     editable = true,
     name = 'TLM Ratio',
     selected = 99,
@@ -59,7 +50,7 @@ local TLMinterval = {
 }
 
 local MaxPower = {
-    index = 4,
+    index = 3,
     editable = true,
     name = 'Power',
     selected = 99,
@@ -69,13 +60,22 @@ local MaxPower = {
 }
 
 local RFfreq = {
-    index = 5,
+    index = 4,
     editable = false,
     name = 'RF Freq',
     selected = 99,
     list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM'},
     values = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
     max_allowed = 6,
+}
+local FuncMode = {
+    index = 5,
+    editable = true,
+    name = 'mode',
+    selected = 99,
+	list = {'7analog', 'hybrid8'},
+    values = {0x11, 0x01},
+    max_allowed = 3,
 }
 
 local function binding(item, event)
@@ -91,7 +91,7 @@ local function binding(item, event)
 end
 
 local Bind = {
-    index = 5,
+    index = 6,
     editable = false,
     name = '[Bind]',
     exec = false,
@@ -111,7 +111,7 @@ local function web_server_start(item, event)
 end
 
 local WebServer = {
-    index = 5,
+    index = 6,
     editable = false,
     name = '[Wifi Update]',
     exec = false,
@@ -139,7 +139,7 @@ local menu = {
     selected = 1,
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
-    list = {AirRate, FuncMode, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
+    list = {AirRate, TLMinterval, MaxPower, FuncMode, RFfreq, Bind, WebServer},
     --list = {AirRate, TLMinterval, MaxPower, RFfreq, WebServer, exit_script},
 }
 
@@ -311,7 +311,7 @@ local function processResp()
 				if StopUpdate == false then 
 					TLMinterval.selected = data[6]
 					MaxPower.selected = data[7]
-					if data[8] == 6 then
+                    if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
 						AirRate.values = SX128x_RATES.values
@@ -325,7 +325,7 @@ local function processResp()
 					RFfreq.selected = data[8]
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
                     
-					FuncMode.selected =  GetIndexOf(FuncMode.values, data[5])
+					FuncMode.selected =  GetIndexOf(FuncMode.values, data[12])
 				end
 				
 				UartBadPkts = data[9]
