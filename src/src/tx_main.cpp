@@ -403,7 +403,7 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(SwitchEncMode)};  
 //luaxx
-crsf.sendLUAresponse(luaParams, 10);
+  crsf.sendLUAresponse(luaParams, 10);
 
 }
 
