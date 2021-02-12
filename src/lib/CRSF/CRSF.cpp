@@ -15,7 +15,7 @@ TaskHandle_t xESP32uartWDT = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
 
     #if defined(TARGET_TX_GHOST)
         HardwareSerial CRSF::Port(USART1);
