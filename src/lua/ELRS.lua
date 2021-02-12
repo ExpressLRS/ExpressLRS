@@ -59,23 +59,24 @@ local MaxPower = {
     max_allowed = 8,
 }
 
-local RFfreq = {
+local FuncMode = {
     index = 4,
+    editable = true,
+    name = 'mode',
+    selected = 99,
+	list = {'0','hybrid8','analog7','3'},
+    values = {0x00, 0x01, 0x02, 0x03},
+    max_allowed = 4,
+}
+
+local RFfreq = {
+    index = 5,
     editable = false,
     name = 'RF Freq',
     selected = 99,
     list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM'},
     values = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
     max_allowed = 6,
-}
-local FuncMode = {
-    index = 5,
-    editable = true,
-    name = 'mode',
-    selected = 99,
-	list = {'0','hybrid8','7analog','3','4','5','6','7','8','9','10','11','12','13','14','15'},
-    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15},
-    max_allowed = 16,
 }
 
 local function binding(item, event)
@@ -311,6 +312,7 @@ local function processResp()
 				if StopUpdate == false then 
 					TLMinterval.selected = data[6]
 					MaxPower.selected = data[7]
+                    FuncMode.selected = data[12]
                     if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
@@ -325,7 +327,7 @@ local function processResp()
 					RFfreq.selected = data[8]
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
                     
-					FuncMode.selected = data[12]
+					
 				end
 				
 				UartBadPkts = data[9]

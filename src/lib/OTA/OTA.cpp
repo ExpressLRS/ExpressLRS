@@ -51,9 +51,9 @@ void ICACHE_RAM_ATTR GenerateChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *
   // currentSwitches[nextSwitchIndex] is in the range 0 through 2, takes 2 bits.
   Buffer[6] += (nextSwitchIndex << 2) + value;
   
-  Buffer[8] = ((crsf->ChannelDataIn[4]) >> 3);
-  Buffer[9] = ((crsf->ChannelDataIn[5]) >> 3);
-  Buffer[10] = ((crsf->ChannelDataIn[6]) >> 3);
+  Buffer[8] = ((crsf->ChannelDataIn[5]) >> 3);
+  Buffer[9] = ((crsf->ChannelDataIn[6]) >> 3);
+  Buffer[10] = ((crsf->ChannelDataIn[7]) >> 3);
 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
@@ -119,12 +119,12 @@ void ICACHE_RAM_ATTR UnpackChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *cr
     crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) + ((Buffer[5] & 0b00001100) >> 1);
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[5] & 0b00000011) << 1);
     
-    crsf->PackedRCdataOut.ch4 = (Buffer[8] << 3);
-    crsf->PackedRCdataOut.ch5 = (Buffer[9] << 3);
-    crsf->PackedRCdataOut.ch6 = (Buffer[10] << 3);
+    crsf->PackedRCdataOut.ch5 = (Buffer[8] << 3);
+    crsf->PackedRCdataOut.ch6 = (Buffer[9] << 3);
+    crsf->PackedRCdataOut.ch7 = (Buffer[10] << 3);
     
     // The low latency switch
-    crsf->PackedRCdataOut.ch7 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
+    crsf->PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
 
     // The round-robin switch
     uint8_t switchIndex = (Buffer[6] & 0b11100) >> 2;
@@ -168,7 +168,7 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[5] & 0b00000011) << 1);
 
     // The low latency switch
-    crsf->PackedRCdataOut.ch7 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
+    crsf->PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
 
     // The round-robin switch
     uint8_t switchIndex = (Buffer[6] & 0b11100) >> 2;
@@ -179,26 +179,26 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
             Serial.println("BAD switchIndex 0");
             break;
         case 1:
-            crsf->PackedRCdataOut.ch8 = switchValue;
+            crsf->PackedRCdataOut.ch5 = switchValue;
             break;
         case 2:
-            crsf->PackedRCdataOut.ch9 = switchValue;
+            crsf->PackedRCdataOut.ch6 = switchValue;
             break;
         case 3:
-            crsf->PackedRCdataOut.ch10 = switchValue;
+            crsf->PackedRCdataOut.ch7 = switchValue;
             break;
         case 4:
-            crsf->PackedRCdataOut.ch11 = switchValue;
+            crsf->PackedRCdataOut.ch8 = switchValue;
             break;
         
         case 5:
-            crsf->PackedRCdataOut.ch12 = switchValue;
+            crsf->PackedRCdataOut.ch9 = switchValue;
             break;
         case 6:
-            crsf->PackedRCdataOut.ch13 = switchValue;
+            crsf->PackedRCdataOut.ch10 = switchValue;
             break;
         case 7:
-            crsf->PackedRCdataOut.ch14 = switchValue;
+            crsf->PackedRCdataOut.ch11 = switchValue;
             break;
             
     }

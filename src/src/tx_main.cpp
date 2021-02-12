@@ -401,7 +401,7 @@ void sendLuaParams()
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)(SwitchEncMode)};  
+                         (uint8_t)(SwitchEncMode& 0xFF)};  
 //luaxx
 crsf.sendLUAresponse(luaParams, 10);
 
@@ -668,7 +668,9 @@ void setup()
 
   eeprom.Begin(); // Init the eeprom
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+  
   config.Load(); // Load the stored values from eeprom
+  //config.SetSwitchMode(2);
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
