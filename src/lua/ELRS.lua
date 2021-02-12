@@ -75,7 +75,7 @@ local FuncMode = {
     selected = 99,
 	list = {'7analog', 'hybrid8'},
     values = {0x11, 0x01},
-    max_allowed = 4,
+    max_allowed = 2,
 }
 
 local function binding(item, event)
