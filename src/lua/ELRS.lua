@@ -74,8 +74,8 @@ local FuncMode = {
     name = 'mode',
     selected = 99,
 	list = {'7analog', 'hybrid8'},
-    values = {0x11, 0x01},
-    max_allowed = 2,
+    values = {0x03, 0x01},
+    max_allowed = 3,
 }
 
 local function binding(item, event)
