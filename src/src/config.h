@@ -11,7 +11,7 @@ typedef struct {
     uint32_t    rate;
     uint32_t    tlm;
     uint32_t    power;
-    uint32_t     switchMode;
+    uint32_t    switchMode;
 } config_t;
 
 class Config

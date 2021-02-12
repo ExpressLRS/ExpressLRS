@@ -112,6 +112,7 @@ Config::SetDefaults()
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
+    SetSwitchMode(1);
     Commit();
 }
 
