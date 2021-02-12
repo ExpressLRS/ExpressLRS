@@ -1,14 +1,15 @@
 ![Banner](img/banner.png)
 
 ## Need help? Confused? Join the Community!
- * [RCGroups Discussion](https://www.rcgroups.com/forums/showthread.php?3437865-ExpressLRS-DIY-LoRa-based-race-optimized-RC-link-system)
  * [Discord Chat](https://discord.gg/dS6ReFY)
  * [Facebook Group](https://www.facebook.com/groups/636441730280366)
 
 
-## High Preformance LoRa Radio Link
+## High Performance LoRa Radio Link
 
 ![Build Status](https://github.com/AlessandroAU/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)
+![License](https://img.shields.io/github/license/AlessandroAU/ExpressLRS)
+![Stars](https://img.shields.io/github/stars/AlessandroAU/ExpressLRS)
 
 ExpressLRS is an open source RC link for RC applications. It is based on the fantastic semtech **SX127x**/**SX1280** hardware combined with an **ESP8285**, **ESP32** or **STM32**. ExpressLRS supports a wide range of hardware platforms as well as both `900 MHz` and `2.4 GHz` frequency options. ExpressLRS uses **LoRa** modulation as well as reduced packet size to achieve **best in class range and latency** compared to current commercial offerings. 
 
@@ -26,52 +27,10 @@ ExpressLRS aims too achieve the best possible link preformance for both latency 
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
-## Supported Hardware
+## Starting Out
 
-Development is ongoing but the following hardware is currently compatible
+After taking a look at the [supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Off-The-Shelf-Hardware) and making sure you have the required hardware, the [Quick Start Guide](https://github.com/AlessandroAU/ExpressLRS/wiki/Toolchain-and-Git-Setup) is written to walk through the process of flashing ELRS for the first time
 
-**Frsky Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
-| --------- | --------------- | ------------------- | -------------------------------------------- |
-| TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
-| TX        | 2019 R9M        | Fully Supported     | Resistor mod not required                    |
-| TX        | R9M Lite        | Fully Supported     | Limited to 50mW                              |
-| TX        | R9M Lite Pro    | In Development      |                                              |
-| RX        | R9MM            | Fully Supported     |                                              |
-| RX        | R9MX            | Fully Supported     |                                              |
-| RX        | R9mini          | Fully Supported     |                                              |
-| RX        | R9slimplus      | Fully Supported     |                                              |
-| RX        | R9slimplusOTA   | Fully Supported     |                                              |
-
-**Jumper Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                                         |
-| --------- | --------------- | ------------------- | ----------------------------------------------------------------- |
-| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink,  BAD included antenna             |
-
-**ImmersionRC Ghost Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
-| --------- | --------------- | ------------------- | -------------------------------------------- |
-| RX        | Ghost Atto      | Fully Supported     | Can only be flashed via stlink               |
-| RX        | Ghost Zepto     | Fully Supported     | Can only be flashed via stlink               |
-
-**DIY 2.4GHz Hardware**
-| **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
-| --------- | ---------------                    | ------------------- | -------------------------------------------- |
-| TX        | ESP32 Module (E28 SX1280)          | Fully Supported     | Flashable via USB, 250mW max                 |
-| TX        | ESP32 Module (F27 SX1280)          | In Testing          | Flashable via USB, 250mW max                 |
-| TX        | ESP32 Module (Bare SX1280)         | Fully Supported     | Flashable via USB, 20mW max                  |
-| RX        | 20x20mm RX                         | Fully Supported     | Supports WIFI Updating                       |
-| RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
-| RX        | CCG Nano RX                        | Fully Supported     | No WIFI, STM32 Based                         |
-
-**DIY 900MHz Hardware**
-| **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
-| --------- | ---------------                        | ------------------- | -------------------------------------------- |
-| TX        | DIY Module (RFM95 Module)              | Fully Supported     | Flashable via USB, 50mW max                  |
-| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended                        |
-| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating, 50mW max             |
-| RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
-| RX        | DIY 20x20 RX                           | Fully Supported     | Supports WIFI Updating                       |
 
 ## Hardware Examples
 
@@ -110,6 +69,8 @@ Anyone can add an entry to the table, and entries should include the:
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
 | 2.28Km | 900M | 50HZ | 10mW | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
+
+
 
 ### Legal Stuff
 The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
