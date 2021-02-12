@@ -499,7 +499,8 @@ void HandleUpdateParameter()
   case 4:
     Serial.print("Request Mode: ");
     Serial.println(SwitchEncMode);
-    config.SetSwitchMode(crsf.ParameterUpdateData[1]);
+    //config.SetSwitchMode(crsf.ParameterUpdateData[1]);
+    config.SetSwitchMode(1);
     break;
 /////luaxxxxx//////
   case 5:
@@ -680,6 +681,8 @@ void setup()
   hwTimer.resume();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
+  
+  config.SetSwitchMode(1);
 }
 
 void loop()

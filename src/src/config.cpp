@@ -88,7 +88,7 @@ Config::SetTlm(uint32_t tlm)
 void
 Config::SetSwitchMode(uint32_t modeSwitch)
 {
-    if (m_config.switchMode != modeSwitch)
+    if (m_config.switchMode != modeSwitch && (modeSwitch > 0 || modeSwitch <3))
     {
         m_config.switchMode = modeSwitch;
         m_modified = true;
