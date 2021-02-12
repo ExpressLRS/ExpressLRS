@@ -400,10 +400,11 @@ void sendLuaParams()
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
-                         (uint8_t)(SwitchEncMode);};  
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)(SwitchEncMode)};  
 //luaxx
 crsf.sendLUAresponse(luaParams, 10);
+
 }
 
 void UARTdisconnected()
