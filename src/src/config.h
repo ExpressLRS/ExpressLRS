@@ -11,6 +11,7 @@ typedef struct {
     uint32_t    rate;
     uint32_t    tlm;
     uint32_t    power;
+    uint8_t     switchMode;
 } config_t;
 
 class Config
@@ -23,12 +24,15 @@ public:
     uint32_t GetRate();
     uint32_t GetTlm();
     uint32_t GetPower();
+    uint8_t GetSwitchMode();
     bool     IsModified();
 
     // Setters
     void SetRate(uint32_t rate);
     void SetTlm(uint32_t tlm);
     void SetPower(uint32_t power);
+    //luaxx
+    void SetSwitchMode(uint8_t modeSwitch);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
 

@@ -494,10 +494,15 @@ void HandleUpdateParameter()
     Serial.println(crsf.ParameterUpdateData[1]);
     config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     break;
-
+//////luaxxxxx////////
   case 4:
+    Serial.print("Request Mode: ");
+    Serial.println(SwitchEncMode);
+    config.SetSwitchMode((uint8_t)crsf.ParameterUpdateData[1]);
     break;
-
+/////luaxxxxx//////
+  case 5:
+    break;
   case 0xFE:
     if (crsf.ParameterUpdateData[1] == 1)
     {
@@ -668,7 +673,7 @@ void setup()
   ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-
+  SwitchEncMode = config.GetSwitchMode();
   crsf.Begin();
   hwTimer.init();
   hwTimer.resume();
@@ -694,6 +699,7 @@ void loop()
     SetRFLinkRate(config.GetRate());
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    SwitchEncMode=config.GetSwitchMode();
 //luaxx
     // Write the values, and restart the timer
     WaitEepromCommit = false;
