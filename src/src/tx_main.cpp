@@ -679,6 +679,7 @@ void setup()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   SwitchEncMode = (uint8_t)config.GetSwitchMode();
   crsf.Begin();
+  crsf.Analog7Mode = SwitchEncMode;
   hwTimer.init();
   hwTimer.resume();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -706,6 +707,7 @@ void loop()
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
     SwitchEncMode=(uint8_t)config.GetSwitchMode();
+    crsf.Analog7Mode = SwitchEncMode;
 //luaxx
     // Write the values, and restart the timer
     WaitEepromCommit = false;

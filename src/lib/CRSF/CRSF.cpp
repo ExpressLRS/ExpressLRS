@@ -916,8 +916,10 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                   {
                       if(i==0){
                         currentSwitches[i] = ChannelDataIn[4] / SWITCH_DIVISOR;    
-                      } else {
+                      } else if(Analog7Mode == 2){
                         currentSwitches[i] = ChannelDataIn[i + 7] / SWITCH_DIVISOR;
+                      } else {
+                        currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;    
                       }
                   }
                 //} else {
