@@ -237,7 +237,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[7] = crc;
     if(SwitchEncModeExpected == 0b10){
   Radio.TXnb(Radio.TXdataBuffer, 11);  
-  } else {
+  } else if(SwitchEncModeExpected == 0b01){
   Radio.TXnb(Radio.TXdataBuffer, 8);
   }
     return;
@@ -488,7 +488,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         //luaxx
         if(SwitchEncModeExpected == 0b10){
         UnpackChannelDataAnalog7(Radio.RXdataBuffer, &crsf);    
-        } else {
+        } else if(SwitchEncModeExpected == 0b01) {
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
         }
         #else
