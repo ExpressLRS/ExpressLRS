@@ -312,7 +312,7 @@ local function processResp()
 				if StopUpdate == false then 
 					TLMinterval.selected = data[6]
 					MaxPower.selected = data[7]
-                    FuncMode.selected = data[12]
+                    FuncMode.selected = data[12]+1
                     if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
