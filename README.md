@@ -40,6 +40,8 @@ After taking a look at the [supported Hardware](https://github.com/AlessandroAU/
 Links:
 - [Nano 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_Nano) Currently Smallest DIY 2.4Ghz RX
 - [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_20x20) Convenient Stack Mounted DIY 2.4GHz RX
+- [JR Module 2.4GHz TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) Fits in JR bays, up to 500mW TX power
+- [SuperSlim 2.4GHz TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) Ultraslim module, fits in any lite bay, same power limit as it's bigger brother
 
 ### 868/915MHz DIY Receiver and Transmitter
 ![868/915MHz Hardware](img/900Mhardware.jpg)
@@ -49,10 +51,12 @@ Links:
 - [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0603_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
 - [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0805_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
 
-## Long Range Leaderboard
-One of the most frequently asked questions that gets asked from people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
+## Long Range Competion
+One of the most frequently asked questions that gets asked by people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
+
 The following table is a leaderboard of the current record holder for each packet rate, and the longest distance from home. Note that not every flight resulted in a failsafe at max range, so the link may go (much) futher in some cases.
 
+### Rules
 Anyone can add an entry to the table, and entries should include the:
 - Max distance from home,
 - RF freq (900 / 2.4),
@@ -62,6 +66,7 @@ Anyone can add an entry to the table, and entries should include the:
 - The pilot name, 
 - A link to your DVR on youtube (DVR is essential to compete, sorry, no keyboard claims)
 
+### Current Leaderboard
 | Max Dist. | Freq | Pkt Rate | TX Power | Failsafe at Max Range? | Pilot Handle | Link to DVR |
 | ---- | -------- | -------- | --------- | ---------------------- | ------------ | ----------- |
 | 30Km | 900M | 50HZ | 1W | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
@@ -70,9 +75,10 @@ Anyone can add an entry to the table, and entries should include the:
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
 | 2.28Km | 900M | 50HZ | 10mW | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
 
+Check the [wiki page](https://github.com/AlessandroAU/ExpressLRS/wiki/Range-Competition) for previous leaders!
 
 
-### Legal Stuff
-The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
+## Legal Stuff
+The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. **USE AT YOUR OWN RISK**
 
 [![Banner](img/footer.png)](https://github.com/AlessandroAU/ExpressLRS/wiki#community)
