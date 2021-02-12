@@ -103,8 +103,8 @@ uint8_t baseMac[6];
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   //luaxx
-  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 10) + CRCCaesarCipher;
-  uint8_t inCRC = Radio.RXdataBuffer[10];
+  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
+  uint8_t inCRC = Radio.RXdataBuffer[7];
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
@@ -176,16 +176,17 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
   }
 }
 
-void ICACHE_RAM_ATTR GenerateSyncPacketData()
-{
-  uint8_t PacketHeaderAddr;
-
   //luaxx
 #ifdef HYBRID_SWITCHES_8
   uint8_t SwitchEncMode = 0b01;
 #else
   uint8_t SwitchEncMode = 0b00;
 #endif
+
+void ICACHE_RAM_ATTR GenerateSyncPacketData()
+{
+  uint8_t PacketHeaderAddr;
+
   uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
@@ -364,7 +365,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       #if defined HYBRID_SWITCHES_8
       //luaxx
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      if(SwitchEncMode == 0b11){
+        GenerateChannelDataAnalog7(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      }else {
+        GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      }
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
@@ -377,8 +382,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   //luaxx
   uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[10] = crc;
-  Radio.TXnb(Radio.TXdataBuffer, 11);
+  Radio.TXdataBuffer[7] = crc;
+  if(SwitchEncMode == 0b11){
+  Radio.TXnb(Radio.TXdataBuffer, 11);  
+  } else {
+  Radio.TXnb(Radio.TXdataBuffer, 8);
+  }
 }
 //luaxx
 void sendLuaParams()
@@ -392,10 +401,9 @@ void sendLuaParams()
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
-//                       (uint8_t)(crsf.FuncMode)};  
+                         (uint8_t)(SwitchEncMode);};  
 //luaxx
-//crsf.sendLUAresponse(luaParams, 10);
-  crsf.sendLUAresponse(luaParams, 9);
+crsf.sendLUAresponse(luaParams, 10);
 }
 
 void UARTdisconnected()
@@ -428,6 +436,7 @@ void UARTconnected()
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
+    //luaxx
     crsf.sendLUAresponse(luaCommitPacket, 7);
     delay(100);
     sendLuaParams();

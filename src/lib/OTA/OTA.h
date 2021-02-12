@@ -15,6 +15,8 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
+void GenerateChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void UnpackChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *crsf);
 void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
 void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
 
