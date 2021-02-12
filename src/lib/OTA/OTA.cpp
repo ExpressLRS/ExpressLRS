@@ -154,7 +154,7 @@ void ICACHE_RAM_ATTR UnpackChannelDataAnalog7(volatile uint8_t* Buffer, CRSF *cr
             crsf->PackedRCdataOut.ch13 = switchValue;
             break;
         case 7:
-            crsf->PackedRCdataOut.ch14 = switchValue;
+            //crsf->PackedRCdataOut.ch14 = switchValue;
             break;
             
     }
