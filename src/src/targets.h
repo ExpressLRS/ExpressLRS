@@ -195,6 +195,7 @@ https://github.com/jaxxzer
 
 
 #define BUFFER_OE               PA5  //CONFIRMED
+#define BUFFER_OE_ACTIVE HIGH
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #elif defined(TARGET_R9M_LITE_TX)
@@ -221,8 +222,9 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
 #define BUFFER_OE               PA5  //CONFIRMED
+#define BUFFER_OE_ACTIVE HIGH
 
-#if defined(TARGET_R9M_LITE_PRO_TX)
+#elif defined(TARGET_R9M_LITE_PRO_TX)
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
 #define GPIO_PIN_RFamp_APC2           PA5  //100mW@590mV, 200mW@870mV, 500mW@1.093V, 1W@1.493V
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
@@ -244,17 +246,17 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_RED        PB3  // Red LED
 #define GPIO_PIN_LED_RED        PB4  // Blue LED
 
-#define GPIO_PIN_DEBUG_RX    	PA3  // inverted UART JR
-#define GPIO_PIN_DEBUG_TX    	PA2  // inverted UART JR
+#define GPIO_PIN_DEBUG_RX    	  PA3  // inverted UART JR
+#define GPIO_PIN_DEBUG_TX      	PA2  // inverted UART JR
 
-#define GPIO_PIN_VRF1			PA7  // 26SU Switch RF1
-#define GPIO_PIN_VRF2			PB1  // 26SU Switch RF2
-#define GPIO_PIN_SWR			 PA0  // SWR ADC1_IN1
+#define BUFFER_OE               PB2  //CONFIRMED
+#define BUFFER_OE_ACTIVE LOW
+#define GPIO_PIN_VRF1			        PA7  // 26SU Switch RF1
+#define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
+#define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
 
-//#define GPIO_PIN_EEPROM_DATA     PB8 //2Kb EEPROM ST M95160
-//#define GPIO_PIN_EEPROM_CLOCK    PB9 //2Kb EEPROM ST M95160
-
-#define BUFFER_OE               UNDEF_PIN  //CONFIRMED
+//#define GPIO_PIN_EEPROM_DATA    PB8 //2Kb EEPROM ST M95160
+//#define GPIO_PIN_EEPROM_CLOCK   PB9 //2Kb EEPROM ST M95160
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1)
 #define GPIO_PIN_NSS 15
