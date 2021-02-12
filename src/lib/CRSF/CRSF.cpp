@@ -914,11 +914,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 //if(FuncMode = 0){
                     for (int i = 0; i < N_SWITCHES; i++)
                   {
-                      if(i==0){
-                        currentSwitches[i] = ChannelDataIn[4] / SWITCH_DIVISOR;    
-                      } else {
+                      //if(i==0){
+                     //   currentSwitches[i] = ChannelDataIn[4] / SWITCH_DIVISOR;    
+                     // } else {
                         currentSwitches[i] = ChannelDataIn[i + 7] / SWITCH_DIVISOR;
-                      }
+                      //}
                   }
                 //} else {
                 //for (int i = 0; i < N_SWITCHES; i++)

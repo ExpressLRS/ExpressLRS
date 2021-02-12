@@ -47,7 +47,7 @@ Config::GetTlm()
 {
     return m_config.tlm;
 }
-uint8_t
+uint32_t
 Config::GetSwitchMode()
 {
     return m_config.switchMode;
@@ -86,7 +86,7 @@ Config::SetTlm(uint32_t tlm)
 }
 
 void
-Config::SetSwitchMode(uint8_t modeSwitch)
+Config::SetSwitchMode(uint32_t modeSwitch)
 {
     if (m_config.switchMode != modeSwitch)
     {

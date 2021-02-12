@@ -97,6 +97,13 @@ bool alreadyTLMresp = false;
 uint32_t beginProcessing;
 uint32_t doneProcessing;
 
+//////////////////////////////////LUAXXXXXXXXXXXXXX////////////////////
+#ifdef HYBRID_SWITCHES_8
+    uint8_t SwitchEncModeExpected = 0b01;
+#else
+    uint8_t SwitchEncModeExpected = 0b00;
+#endif
+
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
@@ -123,9 +130,9 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //int8_t LastRSSI = Radio.LastPacketRSSI;
     int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                               ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    //crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+    //                                           ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
@@ -228,7 +235,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
-    if(SwitchEncModeExpected == 0b11){
+    if(SwitchEncModeExpected == 0b10){
   Radio.TXnb(Radio.TXdataBuffer, 11);  
   } else {
   Radio.TXnb(Radio.TXdataBuffer, 8);
@@ -423,12 +430,6 @@ void ICACHE_RAM_ATTR UnpackMSPData()
     crsf.sendMSPFrameToFC(&packet);
 }
 //////////////////////////////////LUAXXXXXXXXXXXXXX////////////////////
-#ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
-#else
-    uint8_t SwitchEncModeExpected = 0b00;
-#endif
-//////////////////////////////////LUAXXXXXXXXXXXXXX////////////////////
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
@@ -485,7 +486,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
         #elif defined HYBRID_SWITCHES_8
         //luaxx
-        if(SwitchEncModeExpected == 0b11){
+        if(SwitchEncModeExpected == 0b10){
         UnpackChannelDataAnalog7(Radio.RXdataBuffer, &crsf);    
         } else {
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);

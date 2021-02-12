@@ -73,9 +73,9 @@ local FuncMode = {
     editable = true,
     name = 'mode',
     selected = 99,
-	list = {'7analog', 'hybrid8'},
-    values = {0x03, 0x01},
-    max_allowed = 3,
+	list = {'0','hybrid8','7analog','3','4','5','6','7','8','9','10','11','12','13','14','15'},
+    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15},
+    max_allowed = 16,
 }
 
 local function binding(item, event)

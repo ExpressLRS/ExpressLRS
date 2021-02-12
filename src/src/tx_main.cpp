@@ -365,7 +365,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       #if defined HYBRID_SWITCHES_8
       //luaxx
-      if(SwitchEncMode == 0b11){
+      if(SwitchEncMode == 0b10){
         GenerateChannelDataAnalog7(Radio.TXdataBuffer, &crsf, DeviceAddr);
       }else {
         GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
@@ -383,7 +383,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   //luaxx
   uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
   Radio.TXdataBuffer[7] = crc;
-  if(SwitchEncMode == 0b11){
+  if(SwitchEncMode == 0b10){
   Radio.TXnb(Radio.TXdataBuffer, 11);  
   } else {
   Radio.TXnb(Radio.TXdataBuffer, 8);
@@ -403,7 +403,7 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(SwitchEncMode)};  
 //luaxx
-  crsf.sendLUAresponse(luaParams, 10);
+crsf.sendLUAresponse(luaParams, 10);
 
 }
 
