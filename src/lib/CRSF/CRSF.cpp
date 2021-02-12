@@ -136,7 +136,7 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 {
     int firstSwitch = 0; // sequential switches includes switch 0
 
-#if defined HYBRID_SWITCHES_8
+#if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
     firstSwitch = 1; // skip 0 since it is sent on every packet
 #endif
 
@@ -157,7 +157,7 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
     // during the next call.
     nextSwitchIndex = (i + 1) % 8;
 
-#ifdef HYBRID_SWITCHES_8
+#if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
     // for hydrid switches 0 is sent on every packet, so we can skip
     // that value for the round-robin
     if (nextSwitchIndex == 0)

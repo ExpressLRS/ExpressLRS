@@ -8,7 +8,7 @@
 
 #include "OTA.h"
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+#if defined(HYBRID_SWITCHES_8) || defined(UNIT_TEST) || defined(ANALOG_7)
 
 /**
  * Hybrid switches packet encoding for sending over the air

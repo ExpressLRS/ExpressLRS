@@ -177,7 +177,7 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
 }
 
   //luaxx
-#ifdef HYBRID_SWITCHES_8
+#if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
   uint8_t SwitchEncMode = 0b01;
 #else
   uint8_t SwitchEncMode = 0b00;
@@ -363,7 +363,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      #if defined HYBRID_SWITCHES_8
+      #if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
       //luaxx
       if(SwitchEncMode == 0b10){
         GenerateChannelDataAnalog7(Radio.TXdataBuffer, &crsf, DeviceAddr);
