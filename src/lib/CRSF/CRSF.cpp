@@ -585,10 +585,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 pinMode(BUFFER_OE, HIGH);
                 #endif
                 
-                //#if defined(TARGET_TX_GHOST)
-                //HAL_HalfDuplex_EnableTransmitter(CRSF::Port.handle);
-                //#endif
-                
                 
             }
 
