@@ -1,20 +1,20 @@
 ### The Legal Stuff ###
 
 # The use and operation of this type of device may require a license and some countries may forbid its use entirely.
-# It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
-# This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
+# It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required.
+# This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK
 
 # HOW TO USE THIS FILE: https://github.com/AlessandroAU/ExpressLRS/wiki/User-Defines
-# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND 
- 
+# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND
 
-### BINDING PHRASE: ### 
+
+### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
 #-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
-### REGULATORY DOMAIN: ### 
+### REGULATORY DOMAIN: ###
 
 #-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
@@ -24,15 +24,15 @@
 #-DRegulatory_Domain_ISM_2400
 
 
-### SWITCHES: ### 
+### SWITCHES: ###
 
 #-DHYBRID_SWITCHES_8
 
 
-### PERFORMANCE OPTIONS: ### 
+### PERFORMANCE OPTIONS: ###
 
 #Improves Inital Syncing/Binding Speed (Currently Experimental)
--DFAST_SYNC 
+-DFAST_SYNC
 
 #unlocks >250mw output power for R9M (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
 #-DR9M_UNLOCK_HIGHER_POWER
@@ -48,10 +48,12 @@
 
 
 ### COMPATIBILITY OPTIONS: ###
- 
+
 -DUART_INVERTED
 
 #-DUSE_R9MM_R9MINI_SBUS
+
+#-DTLM_REPORT_INTERVAL_MS=320U
 
 
 ### OTHER OPTIONS: ###
