@@ -1,15 +1,20 @@
 ![Banner](img/banner.png)
 
 ## Need help? Confused? Join the Community!
- * [Discord Chat](https://discord.gg/dS6ReFY)
+ * [Community Discord](https://discord.gg/dS6ReFY)
  * [Facebook Group](https://www.facebook.com/groups/636441730280366)
 
+## Support ExpressLRS
+If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate<br/><br/>
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=FLHGG9DAFYQZU)
 
 ## High Performance LoRa Radio Link
 
 ![Build Status](https://github.com/AlessandroAU/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)
+![Release](https://img.shields.io/github/v/release/AlessandroAu/ExpressLRS?include_prereleases)
 ![License](https://img.shields.io/github/license/AlessandroAU/ExpressLRS)
 ![Stars](https://img.shields.io/github/stars/AlessandroAU/ExpressLRS)
+![Chat](https://img.shields.io/discord/596350022191415318)
 
 ExpressLRS is an open source RC link for RC applications. It is based on the fantastic semtech **SX127x**/**SX1280** hardware combined with an **ESP8285**, **ESP32** or **STM32**. ExpressLRS supports a wide range of hardware platforms as well as both `900 MHz` and `2.4 GHz` frequency options. ExpressLRS uses **LoRa** modulation as well as reduced packet size to achieve **best in class range and latency** compared to current commercial offerings. 
 
@@ -32,7 +37,51 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 After taking a look at the [supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Off-The-Shelf-Hardware) and making sure you have the required hardware, the [Quick Start Guide](https://github.com/AlessandroAU/ExpressLRS/wiki/Toolchain-and-Git-Setup) is written to walk through the process of flashing ELRS for the first time
 
 
-## Hardware Examples
+## Supported Hardware
+
+**Frsky Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
+| TX        | 2019 R9M        | Fully Supported     | Resistor mod not required                    |
+| TX        | R9M Lite        | Fully Supported     | Limited to 50mW                              |
+| TX        | R9M Lite Pro    | In Development      |                                              |
+| RX        | R9MM            | Fully Supported     |                                              |
+| RX        | R9MX            | Fully Supported     |                                              |
+| RX        | R9mini          | Fully Supported     |                                              |
+| RX        | R9slimplus      | Fully Supported     |                                              |
+| RX        | R9slimplusOTA   | Fully Supported     |                                              |
+
+**Jumper Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                                         |
+| --------- | --------------- | ------------------- | ----------------------------------------------------------------- |
+| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink,  BAD included antenna             |
+
+**ImmersionRC Ghost Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| RX        | Ghost Atto      | Fully Supported     | Can only be flashed via stlink               |
+| RX        | Ghost Zepto     | Fully Supported     | Can only be flashed via stlink               |
+
+**DIY 2.4GHz Hardware**
+| **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
+| --------- | ---------------                    | ------------------- | -------------------------------------------- |
+| TX        | ESP32 Module (E28 SX1280)          | Fully Supported     | Flashable via USB, 250mW max                 |
+| TX        | ESP32 Module (F27 SX1280)          | In Testing          | Flashable via USB, 250mW max                 |
+| TX        | ESP32 Module (Bare SX1280)         | Fully Supported     | Flashable via USB, 20mW max                  |
+| RX        | 20x20mm RX                         | Fully Supported     | Supports WIFI Updating                       |
+| RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
+| RX        | CCG Nano RX                        | Fully Supported     | No WIFI, STM32 Based                         |
+
+**DIY 900MHz Hardware**
+| **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
+| --------- | ---------------                        | ------------------- | -------------------------------------------- |
+| TX        | DIY Module (RFM95 Module)              | Fully Supported     | Flashable via USB, 50mW max                  |
+| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended                        |
+| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating, 50mW max             |
+| RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
+| RX        | DIY 20x20 RX                           | Fully Supported     | Supports WIFI Updating                       |
+
 
 ### 2.4GHz DIY Receiver and Transmitter
 ![2.4GHz Hardware](img/24Ghardware.jpg)
@@ -58,12 +107,12 @@ The following table is a leaderboard of the current record holder for each packe
 
 ### Rules
 Anyone can add an entry to the table, and entries should include the:
-- Max distance from home,
-- RF freq (900 / 2.4),
-- Packet rate,
-- Power level,
-- If the link failsafed at max range,
-- The pilot name, 
+- Max distance from home
+- RF freq (900 / 2.4)
+- Packet rate
+- Power level
+- If the link failsafed at max range
+- The pilot name
 - A link to your DVR on youtube (DVR is essential to compete, sorry, no keyboard claims)
 
 ### Current Leaderboard
