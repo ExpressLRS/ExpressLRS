@@ -107,7 +107,7 @@ uint32_t doneProcessing;
 //////////////////////////////////LUAXXXXXXXXXXXXXX////////////////////
 #if defined(HYBRID_SWITCHES_8)
     uint8_t SwitchEncModeExpected = 0b01;
-#elif defined(ANALOG_7)
+#elif defined(ANALOG_7) && (defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915))
     uint8_t SwitchEncModeExpected = 0b10;
 #else
     uint8_t SwitchEncModeExpected = 0b00;
