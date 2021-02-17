@@ -109,7 +109,9 @@ uint32_t doneProcessing;
     uint8_t SwitchEncModeExpected = 0b01;
 #elif defined(ANALOG_7) && (defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915))
     uint8_t SwitchEncModeExpected = 0b10;
-#else
+#elif defined(SEQ_SWITCHES)
+    uint8_t SwitchEncModeExpected = 0b11;
+#else //11bit
     uint8_t SwitchEncModeExpected = 0b00;
 #endif
 

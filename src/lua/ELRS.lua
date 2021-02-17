@@ -64,7 +64,7 @@ local FuncMode = {
     editable = true,
     name = 'mode',
     selected = 99,
-	list = {'0','hybrid8','analog7','3'},
+	list = {'11bit','hybrid8','analog7','seq'},
     values = {0x00, 0x01, 0x02, 0x03},
     max_allowed = 4,
 }

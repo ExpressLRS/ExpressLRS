@@ -8,7 +8,6 @@
 
 #include "OTA.h"
 
-#if defined(HYBRID_SWITCHES_8) || defined(UNIT_TEST) || defined(ANALOG_7)
 
 /**
  * Hybrid switches packet encoding for sending over the air
@@ -205,9 +204,6 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
 }
 
 
-#endif // HYBRID_SWITCHES_8
-
-#if defined SEQ_SWITCHES or defined UNIT_TEST
 
 /**
  * Sequential switches packet encoding
@@ -282,4 +278,3 @@ void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF
             break;
     }
 }
-#endif // SEQ_SWITCHES

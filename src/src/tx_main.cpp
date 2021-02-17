@@ -175,13 +175,7 @@ void ICACHE_RAM_ATTR CheckChannels5to8Change()
     }
   }
 }
-
-  //luaxx
-#if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
   uint8_t SwitchEncMode = 0b01;
-#else
-  uint8_t SwitchEncMode = 0b00;
-#endif
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
@@ -363,18 +357,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      #if defined(HYBRID_SWITCHES_8) || defined(ANALOG_7)
       //luaxx
       if(SwitchEncMode == 0b10){
         GenerateChannelDataAnalog7(Radio.TXdataBuffer, &crsf, DeviceAddr);
       }else if(SwitchEncMode == 0b01){
         GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr);
-      }
-      #elif defined SEQ_SWITCHES
+      }else if(SwitchEncMode == 0b11){
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
-      #else
+      }else {
       Generate4ChannelData_11bit();
-#endif
+      }
+
     }
   }
 
@@ -679,7 +672,7 @@ void setup()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   SwitchEncMode = (uint8_t)config.GetSwitchMode();
   crsf.Begin();
-  crsf.Analog7Mode = SwitchEncMode;
+  crsf.packetMode = SwitchEncMode;
   hwTimer.init();
   hwTimer.resume();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
@@ -707,7 +700,7 @@ void loop()
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
     SwitchEncMode=(uint8_t)config.GetSwitchMode();
-    crsf.Analog7Mode = SwitchEncMode;
+    crsf.packetMode = SwitchEncMode;
 //luaxx
     // Write the values, and restart the timer
     WaitEepromCommit = false;

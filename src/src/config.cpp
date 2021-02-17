@@ -94,7 +94,7 @@ Config::SetSwitchMode(uint32_t modeSwitch)
     
     #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915)
 
-    if (m_config.switchMode != modeSwitch && modeSwitch > 0 && modeSwitch <3)
+    if (m_config.switchMode != modeSwitch && modeSwitch >= 0 && modeSwitch <4)
     {
         if(modeSwitch == 2){    //if analog7 is selected, change the RATE to 50hz
             m_config.rate = 2;
