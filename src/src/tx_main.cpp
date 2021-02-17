@@ -408,7 +408,7 @@ void sendLuaParams()
 
 void UARTdisconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {676, 520};
   const uint16_t beepDurations[] = {300, 150};
   for (int i = 0; i < 2; i++)
@@ -417,13 +417,14 @@ void UARTdisconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
 }
 
 void UARTconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {520, 676};
   const uint16_t beepDurations[] = {150, 300};
   for (int i = 0; i < 2; i++)
@@ -432,6 +433,7 @@ void UARTconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
