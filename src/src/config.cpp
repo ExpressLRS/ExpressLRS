@@ -104,7 +104,6 @@ Config::SetSwitchMode(uint32_t modeSwitch)
         
     }
     #endif
-    #endif
 }
 void
 Config::SetPower(uint32_t power)
