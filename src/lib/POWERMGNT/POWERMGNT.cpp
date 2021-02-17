@@ -38,12 +38,20 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
+
+
 #ifdef TARGET_R9M_TX
     Serial.println("Init TARGET_R9M_TX DAC Driver");
 #endif
 #ifdef GPIO_PIN_FAN_EN
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+
+#ifdef TARGET_TX_GHOST
+    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
+    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
+#endif
+
 }
 
 void POWERMGNT::setDefaultPower()
@@ -72,6 +80,32 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         break;
     }
     return CurrentPower;
+#endif
+
+#if defined(TARGET_TX_GHOST)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(0);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(4);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(7);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(10);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(13);
+        break;
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(7);
+        break;
+    }
+    CurrentPower = Power;
 #endif
 
 #ifdef TARGET_R9M_TX

@@ -42,6 +42,15 @@ button button;
 R9DAC R9DAC;
 #endif
 
+#ifdef TARGET_TX_GHOST
+uint8_t LEDfadeDiv;
+uint8_t LEDfade;
+bool LEDfadeDir;
+uint32_t LEDupdateInterval = 25;
+uint32_t LEDupdateCounterMillis;
+#include "STM32F3_WS2812B_LED.h"
+#endif
+
 #if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
 #include "STM32_hwTimer.h"
 #endif
@@ -399,7 +408,7 @@ void sendLuaParams()
 
 void UARTdisconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {676, 520};
   const uint16_t beepDurations[] = {300, 150};
   for (int i = 0; i < 2; i++)
@@ -408,13 +417,14 @@ void UARTdisconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
 }
 
 void UARTconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {520, 676};
   const uint16_t beepDurations[] = {150, 300};
   for (int i = 0; i < 2; i++)
@@ -423,6 +433,7 @@ void UARTconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
@@ -550,56 +561,74 @@ void setup()
   Serial.begin(115200);
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
 
+  /**
+   * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
+   * else we will use GPIO_PIN_LED_GREEN and _RED. 
+   **/
+  #if WS2812_LED_IS_USED // do startup blinkies for fun
+      uint32_t col = 0x0000FF;
+      for (uint8_t j = 0; j < 3; j++)
+      {
+          for (uint8_t i = 0; i < 5; i++)
+          {
+              WS281BsetLED(col << j*8);
+              delay(15);
+              WS281BsetLED(0, 0, 0);
+              delay(35);
+          }
+      }
+  #else
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
-#ifdef USE_ESP8266_BACKPACK
-    HardwareSerial(USART1);
-    Serial.begin(460800);
-#else
-    HardwareSerial(USART2);
-    Serial.setTx(PA2);
-    Serial.setRx(PA3);
-    Serial.begin(400000);
-#endif
-    
-
-#if defined(TARGET_R9M_TX)
-    // Annoying startup beeps
-  #ifndef JUST_BEEP_ONCE
-    pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    #if defined(MY_STARTUP_MELODY_ARR)
-      // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-      const int melody[][2] = MY_STARTUP_MELODY_ARR;
-
-      for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
-        tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
-        delay(melody[i][1]);
-        noTone(GPIO_PIN_BUZZER);
-      }
-    #else
-      // use default jingle
-      const int beepFreq[] = {659, 659, 523, 659, 783, 392};
-      const int beepDurations[] = {300, 300, 100, 300, 550, 575};
-
-      for (int i = 0; i < 6; i++)
-      {
-        tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-        delay(beepDurations[i]);
-        noTone(GPIO_PIN_BUZZER);
-      }
-    #endif
-  #else
-    tone(GPIO_PIN_BUZZER, 400, 200);
-    delay(200);
-    tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-  R9DAC.init();
-#endif
+
+  #ifdef USE_ESP8266_BACKPACK
+      HardwareSerial(USART1);
+      Serial.begin(460800);
+  #else
+      HardwareSerial(USART2);
+      Serial.setTx(PA2);
+      Serial.setRx(PA3);
+      Serial.begin(115200);
+  #endif
+  
+
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
+      // Annoying startup beeps
+    #ifndef JUST_BEEP_ONCE
+      pinMode(GPIO_PIN_BUZZER, OUTPUT);
+      #if defined(MY_STARTUP_MELODY_ARR)
+        // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
+        const int melody[][2] = MY_STARTUP_MELODY_ARR;
+
+        for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
+          tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
+          delay(melody[i][1]);
+          noTone(GPIO_PIN_BUZZER);
+        }
+      #else
+        // use default jingle
+        const int beepFreq[] = {659, 659, 523, 659, 783, 392};
+        const int beepDurations[] = {300, 300, 100, 300, 550, 575};
+
+        for (int i = 0; i < 6; i++)
+        {
+          tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+          delay(beepDurations[i]);
+          noTone(GPIO_PIN_BUZZER);
+        }
+      #endif
+    #else
+      tone(GPIO_PIN_BUZZER, 400, 200);
+      delay(200);
+      tone(GPIO_PIN_BUZZER, 480, 200);
+    #endif
+    // button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+    // R9DAC.init();
+  #endif
 
 #endif
 
@@ -668,13 +697,30 @@ void setup()
 
 void loop()
 {
-#if defined(PLATFORM_ESP32)
-  if (webUpdateMode)
-  {
-    HandleWebUpdate();
-    return;
-  }
-#endif
+
+  #if WS2812_LED_IS_USED
+      if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
+      {
+          uint8_t LEDcolor[3] = {0};
+          if (LEDfade == 30 || LEDfade == 0)
+          {
+              LEDfadeDir = !LEDfadeDir;
+          }
+
+          LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+          LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+          WS281BsetLED(LEDcolor);
+          LEDupdateCounterMillis = millis();
+      }
+  #endif
+
+  #if defined(PLATFORM_ESP32)
+    if (webUpdateMode)
+    {
+      HandleWebUpdate();
+      return;
+    }
+  #endif
 
   HandleUpdateParameter();
 
@@ -695,9 +741,9 @@ void loop()
     hwTimer.resume();
   }
 
-#ifdef FEATURE_OPENTX_SYNC
-// Serial.println(crsf.OpenTXsyncOffset);
-#endif
+  #ifdef FEATURE_OPENTX_SYNC
+  // Serial.println(crsf.OpenTXsyncOffset);
+  #endif
 
   if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
@@ -714,16 +760,16 @@ void loop()
     #endif
   }
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-  crsf.STM32handleUARTin();
-  #ifdef FEATURE_OPENTX_SYNC
-  crsf.sendSyncPacketToTX();
+  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
+    crsf.STM32handleUARTin();
+    #ifdef FEATURE_OPENTX_SYNC
+    crsf.sendSyncPacketToTX();
+    #endif
+    crsf.UARTwdt();
+    #ifdef TARGET_R9M_TX
+    button.handle();
+    #endif
   #endif
-  crsf.UARTwdt();
-  #ifdef TARGET_R9M_TX
-  button.handle();
-  #endif
-#endif
 
   if (Serial.available())
   {
@@ -925,3 +971,18 @@ void SendUIDOverMSP()
 
   MSPPacketSendCount = 10;
 }
+
+
+
+#ifdef TARGET_TX_GHOST
+extern "C"
+/**
+  * @brief This function handles external line 2 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI2_TSC_IRQHandler()
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+}
+#endif

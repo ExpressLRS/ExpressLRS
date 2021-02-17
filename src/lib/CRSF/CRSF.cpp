@@ -15,15 +15,21 @@ TaskHandle_t xESP32uartWDT = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-HardwareSerial CRSF::Port(USART3);
-#if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-#include "stm32f3xx_hal.h"
-#include "stm32f3xx_hal_gpio.h"
-#else
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
-#endif
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+
+    #if defined(TARGET_TX_GHOST)
+        HardwareSerial CRSF::Port(USART1);
+    #else
+        HardwareSerial CRSF::Port(USART3);
+    #endif
+
+    #if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+        #include "stm32f3xx_hal.h"
+        #include "stm32f3xx_hal_gpio.h"
+    #else
+        #include "stm32f1xx_hal.h"
+        #include "stm32f1xx_hal_gpio.h"
+    #endif
 #endif
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
@@ -104,7 +110,7 @@ void CRSF::Begin()
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
     xTaskCreatePinnedToCore(UARTwdt, "ESP32uartWDTTask", 2000, NULL, 10, &xESP32uartWDT, 1);
 #endif
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
     // TODO: Find out if xTaskCreate is a substitute for xTaskCreatePinnedToCore
     Serial.println("STM32 Platform Detected...");
     CRSF::STM32initUART();
@@ -175,7 +181,7 @@ void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
     sentSwitches[index] = value;
 }
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)  || defined(TARGET_TX_GHOST)
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -471,7 +477,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         }
 #endif
 
-#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+#if defined(PLATFORM_ESP32) || defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
 
 #ifdef PLATFORM_ESP32
     void ICACHE_RAM_ATTR CRSF::UARTwdt(void *pvParameters) // in values in us.
@@ -481,7 +487,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
         {
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
             void  CRSF::UARTwdt()
             {
                 if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
@@ -534,11 +540,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 }
             }
 #endif
-
-#ifdef PLATFORM_ESP32
-
             void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
             {
+                #ifdef PLATFORM_ESP32
                 ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
                 gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
                 #ifdef UART_INVERTED
@@ -550,9 +554,17 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
                 gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
                 #endif
+                #endif
+
+                #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+                pinMode(BUFFER_OE, LOW);
+                #endif
+
+
             }
             void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
             {
+                #ifdef PLATFORM_ESP32
                 gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
                 ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
                 ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
@@ -563,7 +575,16 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 #else
                 gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
                 #endif
+                #endif
+
+                #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+                pinMode(BUFFER_OE, HIGH);
+                #endif
+                
+                
             }
+
+#ifdef PLATFORM_ESP32
 
             void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters) //RTOS task to read and write CRSF packets to the serial port
             {
@@ -730,19 +751,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             }
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
 
             void ICACHE_RAM_ATTR CRSF::STM32initUART() //RTOS task to read and write CRSF packets to the serial port
             {
                 Serial.println("Start STM32 R9M TX CRSF UART");
-
-                pinMode(BUFFER_OE, OUTPUT);
-
-                CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-                CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
-                CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
                 UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
-
                 Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
                 CRSF::Port.flush();
             }
@@ -753,8 +767,20 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
                 if (UARTrequestedBaud != UARTcurrentBaud)
                 {
-                    CRSF::Port.begin(UARTrequestedBaud);
                     UARTcurrentBaud = UARTrequestedBaud;
+
+                    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
+                    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+                    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+                    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
+                    #endif
+
+                    #if defined(TARGET_TX_GHOST)
+                    USART1->CR1 &= ~USART_CR1_UE;
+                    USART1->CR3 |= USART_CR3_HDSEL;
+                    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+                    USART1->CR1 |= USART_CR1_UE;
+                    #endif
                 }
 
                 while (CRSF::Port.available())
@@ -838,7 +864,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     if (SerialOutFIFO.size() >= (peekVal + 1))
                     {
-                        digitalWrite(BUFFER_OE, HIGH);
+                        duplex_set_TX();
 
                         uint8_t OutPktLen = SerialOutFIFO.pop();
                         uint8_t OutData[OutPktLen];
@@ -846,7 +872,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         SerialOutFIFO.popBytes(OutData, OutPktLen);
                         CRSF::Port.write(OutData, OutPktLen); // write the packet out
                         CRSF::Port.flush();
-                        digitalWrite(BUFFER_OE, LOW);
+
+                        duplex_set_RX();
+
                         while (CRSF::Port.available())
                         {
                             CRSF::Port.read(); // measure sure there is no garbage on the UART at the start

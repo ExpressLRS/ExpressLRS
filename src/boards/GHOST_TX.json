@@ -1,0 +1,40 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F3 -DSTM32F303xC -DBLACKPILL_F303CC",
+    "f_cpu": "72000000L",
+	"ldscript": "ldscript.ld",
+    "mcu": "stm32f303cct6",
+    "product_line": "STM32F303xC",
+	"variants_dir": "variants",
+    "variant": "GHOST_TX"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "jlink_device": "STM32F303CC",
+    "openocd_target": "stm32f3x",
+    "svd_path": "STM32F30x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "stm32cube",
+    "libopencm3"
+  ],
+  "name": "GHOST TX",
+  "upload": {
+    "maximum_ram_size": 40960,
+    "maximum_size": 262144,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic"
+    ]
+  },
+  "url": "https://www.immersionrc.com/fpv-products/ghost/",
+  "vendor": "ImmersionRC"
+}
