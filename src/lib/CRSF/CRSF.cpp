@@ -560,10 +560,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 pinMode(BUFFER_OE, LOW);
                 #endif
 
-               // #if defined(TARGET_TX_GHOST)
-                //HAL_HalfDuplex_EnableReceiver(CRSF::Port.handle);
-               // #endif
-
 
             }
             void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
@@ -773,16 +769,13 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     UARTcurrentBaud = UARTrequestedBaud;
 
-                    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX)
+                    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
                     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
                     CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
                     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
                     #endif
 
                     #if defined(TARGET_TX_GHOST)
-                    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
-                    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-                    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
                     USART1->CR1 &= ~USART_CR1_UE;
                     USART1->CR3 |= USART_CR3_HDSEL;
                     USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv

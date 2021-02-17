@@ -73,12 +73,12 @@ void SX1280Hal::init()
 
 #if defined(GPIO_PIN_ANT_CTRL_1)
     pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
+    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
 #endif
 
 #if defined(GPIO_PIN_ANT_CTRL_2)
     pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
+    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
 #endif
 
 #ifdef PLATFORM_ESP32

@@ -40,43 +40,41 @@ extern "C" {
 
 // USB connector on the top, MCU side
 // Left Side
-#define PB9  0  // CAN_TX
-#define PB8  1  // CAN_RX
-#define PB7  2  // UART1_RX or I2C1_SDC
-#define PB6  3  // UART1_TX or I2C1_SCL
-#define PB5  4  // LED_BLUE
-#define PB4  5  // LED_RED
+#define PB9  0  
+#define PB8  1  
+#define PB7  2  
+#define PB6  3  
+#define PB5  4  
+#define PB4  5  
 #define PB3  6
 #define PA15 7
-#define PA12 8  // USB_DP
-#define PA11 9  // USB_DM
-#define PA10 10 // SDA MPU-9150
-#define PA9  11 // SCL MPU-9150
+#define PA12 8  
+#define PA11 9  
+#define PA10 10 
+#define PA9  11 
 #define PA8  12
 #define PB15 13
 #define PB14 14
 #define PB13 15
 #define PB12 16
-// Right side
-#define PC13 17 // LED on Bluepill Board
+#define PC13 17 
 #define PC14 18
 #define PC15 19
-#define PA0  20 // A0
-#define PA1  21 // A1
-#define PA2  22 // A2
-#define PA3  23 // A3 - RCX
-#define PA4  24 // A4
-#define PA5  25 // A5
-#define PA6  26 // A6
-#define PA7  27 // A7
-#define PB0  28 // A8
-#define PB1  29 // A9
-#define PB10 30 // UART3_TX
-#define PB11 31 // UART3_RX
-// Other
-#define PB2  32 // BOOT1
-#define PA13 33 // SWDI0
-#define PA14 34 // SWCLK
+#define PA0  20 
+#define PA1  21 
+#define PA2  22 
+#define PA3  23 
+#define PA4  24 
+#define PA5  25 
+#define PA6  26 
+#define PA7  27 
+#define PB0  28 
+#define PB1  29 
+#define PB10 30 
+#define PB11 31 
+#define PB2  32 
+#define PA13 33 
+#define PA14 34 
 
 // This must be a literal
 #define NUM_DIGITAL_PINS        35
