@@ -1,7 +1,7 @@
 #include "CRSF.h"
 #include "targets.h"
 
-#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
+#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO) /* !TARGET_RX_GHOST_ATTO_V1 */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */

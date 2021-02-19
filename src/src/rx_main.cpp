@@ -34,7 +34,7 @@ SX1280Driver Radio;
 #include "STM32_UARTinHandler.h"
 #endif
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO)
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
@@ -690,7 +690,7 @@ void setup()
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
-#if defined(TARGET_RX_GHOST_ATTO_V1)
+#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO)
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
@@ -702,7 +702,7 @@ void setup()
     Serial.setHalfDuplex();
     Serial.setRx((PinName)NC);
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
-#endif /* TARGET_RX_GHOST_ATTO_V1 */
+#endif /* TARGET_RX_GHOST_ATTO_V1 OR TARGET_RX_GHOST_ATTO_DUO*/
 #endif /* PLATFORM_STM32 */
 
     Serial.begin(CRSF_RX_BAUDRATE);

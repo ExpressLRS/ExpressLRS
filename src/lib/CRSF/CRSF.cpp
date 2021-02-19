@@ -15,7 +15,8 @@ TaskHandle_t xESP32uartWDT = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+// TARGET_GHOST = TX and all the RX's
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_GHOST)
 
     #if defined(TARGET_TX_GHOST)
         HardwareSerial CRSF::Port(USART1);
@@ -23,7 +24,7 @@ SemaphoreHandle_t mutexOutFIFO = NULL;
         HardwareSerial CRSF::Port(USART3);
     #endif
 
-    #if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+    #if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_GHOST)
         #include "stm32f3xx_hal.h"
         #include "stm32f3xx_hal_gpio.h"
     #else
@@ -382,7 +383,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
 
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_SX1280_RX_CCG_NANO_v05) ||defined(UNIT_TEST)
+#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO) || defined(TARGET_SX1280_RX_CCG_NANO_v05) ||defined(UNIT_TEST)
         bool CRSF::RXhandleUARTout()
         {
             uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
