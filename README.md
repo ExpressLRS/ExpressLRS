@@ -28,7 +28,6 @@ ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Ju
 ExpressLRS aims too achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.   
 
 **2.4GHz Comparison**
-
 ![RangeVsPacketRate](img/pktrate_vs_sens.png)
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
@@ -40,66 +39,41 @@ After taking a look at the [supported Hardware](https://github.com/AlessandroAU/
 
 ## Supported Hardware
 
-**Frsky Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
-| --------- | --------------- | ------------------- | -------------------------------------------- |
-| TX        | 2018 R9M        | Fully Supported     | Requires resistor mod for lowest latency     |
-| TX        | 2019 R9M        | Fully Supported     | Resistor mod not required                    |
-| TX        | R9M Lite        | Fully Supported     | Limited to 50mW                              |
-| TX        | R9M Lite Pro    | In Development      |                                              |
-| RX        | R9MM            | Fully Supported     |                                              |
-| RX        | R9MX            | Fully Supported     |                                              |
-| RX        | R9mini          | Fully Supported     |                                              |
-| RX        | R9slimplus      | Fully Supported     |                                              |
-| RX        | R9slimplusOTA   | Fully Supported     |                                              |
+### 900 MHz Hardware:
+<img src="img/900Mhardware.jpg" width = "80%">
 
-**Jumper Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                                         |
-| --------- | --------------- | ------------------- | ----------------------------------------------------------------- |
-| RX        | R900 mini       | Fully Supported     | Can only be flashed via stlink,  BAD included antenna             |
+- **TX**
+    - [FrSky R9M (2018)](https://www.frsky-rc.com/product/r9m/) (Full Support, requires resistor mod)
+    - [FrSky R9M (2019)](https://www.frsky-rc.com/product/r9m-2019/) (Full Support, no mod required)
+    - [FrSky R9M Lite](https://www.frsky-rc.com/product/r9m-lite/) (Full Support, power limited)
+    - [TTGO LoRa V1/V2](http://www.lilygo.cn/products.aspx?TypeId=50003&fid=t3:50003:3) (Full Support, V2 recommended w/50 mW power limit)
+    - DIY Module (Full Support, 50mW limit, limited documentation)
+- **RX**
+    - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
+    - [FrSky R9 Mini](https://www.frsky-rc.com/product/r9-mini-ota/) (Full Support, OTA version can be used)
+    - [FrSky R9mx](https://www.frsky-rc.com/product/r9-mx/) (Full Support)
+    - [FrSky R9 Slim+](https://www.frsky-rc.com/product/r9-slim-ota/) (Full Support, OTA version can be used, diversity not yet implemented)
+    - [Jumper R900 mini](https://www.jumper-b2b.com/jumper-r900-mini-receiver-900mhz-long-range-rx-p0083.html) (Full Support, only flashable via STLink, Bad Stock antenna)
+    - [DIY mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_Mini_v1.1) (Full Support, supports WiFi Updates)
+    - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_20x20_0805_SMD) (Full Support, supports WiFi Updates)
 
-**ImmersionRC Ghost Hardware**
-| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
-| --------- | --------------- | ------------------- | -------------------------------------------- |
-| RX        | Ghost Atto      | Fully Supported     | Can only be flashed via stlink               |
-| RX        | Ghost Zepto     | Fully Supported     | Can only be flashed via stlink               |
+### 2.4 GHz Hardware:
+<img src="img/24Ghardware.jpg" width = "80%">
 
-**DIY 2.4GHz Hardware**
-| **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
-| --------- | ---------------                    | ------------------- | -------------------------------------------- |
-| TX        | ESP32 Module (E28 SX1280)          | Fully Supported     | Flashable via USB, 250mW max                 |
-| TX        | ESP32 Module (F27 SX1280)          | In Testing          | Flashable via USB, 250mW max                 |
-| TX        | ESP32 Module (Bare SX1280)         | Fully Supported     | Flashable via USB, 20mW max                  |
-| RX        | 20x20mm RX                         | Fully Supported     | Supports WIFI Updating                       |
-| RX        | Nano RX                            | Fully Supported     | Supports WIFI Updating                       |
-| RX        | CCG Nano RX                        | Fully Supported     | No WIFI, STM32 Based                         |
+- **TX**
+    - [DIY JR Bay](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
+    - [DIY Slim TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
+    - [DIY Slimmer TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
+    - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Beta Support, 250 mW output power)
+- **RX**
+    - [GHOST Atto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
+    - [GHOST Zepto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
+    - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_20x20) (Full Support, easy to build. WiFi Updating)
+    - [DIY Nano RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano) (Full Support, CRSF Nano Footprint, WiFi Updating)
+    - [DIY Nano CCG RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_CCG_Nano) (Full Support, CRSF Nano Pinout, STM32 Based)
+    - [DIY Nano Ceramic RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano_Ceramic) (Full Support, CRSF Nano Footprint, WiFi Updating, Built in antenna)
 
-**DIY 900MHz Hardware**
-| **RX/TX** | **Hardware**                           | **Status**          | **Notes**                                    |
-| --------- | ---------------                        | ------------------- | -------------------------------------------- |
-| TX        | DIY Module (RFM95 Module)              | Fully Supported     | Flashable via USB, 50mW max                  |
-| TX        | TTGO V1 Dev Board                      | Fully Supported     | No longer recommended                        |
-| TX        | TTGO V2 Dev Board                      | Fully Supported     | Supports WIFI Updating, 50mW max             |
-| RX        | DIY mini RX                            | Fully Supported     | Supports WIFI Updating                       |
-| RX        | DIY 20x20 RX                           | Fully Supported     | Supports WIFI Updating                       |
-
-
-### 2.4GHz DIY Receiver and Transmitter
-![2.4GHz Hardware](img/24Ghardware.jpg)
-
-Links:
-- [Nano 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_Nano) Currently Smallest DIY 2.4Ghz RX
-- [20x20 2.4GHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/2400MHz/RX_20x20) Convenient Stack Mounted DIY 2.4GHz RX
-- [JR Module 2.4GHz TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) Fits in JR bays, up to 500mW TX power
-- [SuperSlim 2.4GHz TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) Ultraslim module, fits in any lite bay, same power limit as it's bigger brother
-
-### 868/915MHz DIY Receiver and Transmitter
-![868/915MHz Hardware](img/900Mhardware.jpg)
-
-Links:
-- [Mini 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_Mini_v1.1) Currently Smallest DIY 868/915MHz RX
-- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0603_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
-- [20x20 900MHz RX](https://github.com/AlessandroAU/ExpressLRS/tree/master-dev/PCB/900MHz/RX_20x20_0805_SMD) Convenient Stack Mounted DIY 20x20mm 868/915MHz RX
+**For a more exhaustive list refer to the Wiki's [Supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Hardware) Page**
 
 ## Long Range Competition
 One of the most frequently asked questions that gets asked by people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
