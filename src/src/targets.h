@@ -314,6 +314,32 @@ https://github.com/jaxxzer
 #define timerOffset             1
 #endif
 
+
+#ifdef TARGET_RX_GHOST_ATTO_DUO
+// Shared sx1280 F301 pins
+#define GPIO_PIN_MOSI           PB5
+#define GPIO_PIN_MISO           PB4
+#define GPIO_PIN_SCK            PB3
+#define GPIO_PIN_RST            PB1
+// First (Left) sc1280
+#define GPIO_PIN_NSS            PA15
+#define GPIO_PIN_BUSY           PA4
+#define GPIO_PIN_DIO0           -1 // does not exist on sx1280
+#define GPIO_PIN_DIO1           PA2
+// Second (Right) sc1280
+#define GPIO_PIN_NSS_2            PA11
+#define GPIO_PIN_BUSY_2           PA5
+#define GPIO_PIN_DIO1_2           PB7
+//#define GPIO_PIN_RCSIGNAL_RX    PB7
+//#define GPIO_PIN_RCSIGNAL_TX    PB6
+#define GPIO_PIN_RCSIGNAL_RX    PA4 // USART1, half duplex
+#define GPIO_PIN_RCSIGNAL_TX    PA3 // USART2, half duplex
+// LED Pins
+#define GPIO_PIN_LED_WS2812      PA7  //NOT SURE ABOUT THIS.. could not probe LED
+#define GPIO_PIN_LED_WS2812_FAST PA_7 //NOT SURE ABOUT THIS.. could not probe LED
+#define timerOffset             1
+#endif
+
 #ifdef TARGET_TX_GHOST
 #define GPIO_PIN_NSS             PA15
 #define GPIO_PIN_BUSY            PB15
