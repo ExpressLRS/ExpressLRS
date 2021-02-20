@@ -2,12 +2,13 @@ v1.0 PCB
 - Pictured below
 
 v1.1 PCB
-- Lager IPEX pads
+- Larger IPEX pads
 - Added boot jumper pads under the button and base of the PCB.  These can be used in place of the button.  Any solder paste applied to these pads via a stencil will need to be removed before adding a button.
 
 v1.2 PCB
-- Lager XO footprint for the FL520WFMT1.
-- Remove ground form beneath the UFL.
+- Larger XO footprint for the FL520WFMT1.
+- Remove ground from beneath the UFL.
+- Adds WiFi antenna
 
 # Nano 2.4 GHz Rx
 
