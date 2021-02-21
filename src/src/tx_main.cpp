@@ -57,7 +57,7 @@ uint32_t LEDupdateCounterMillis;
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 1500ms of no TLM response consider that slave has lost connection
+#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
 #define MSP_PACKET_SEND_INTERVAL 200LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
