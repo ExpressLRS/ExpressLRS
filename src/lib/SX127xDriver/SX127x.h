@@ -69,7 +69,6 @@ public:
     void ConfigLoraDefaults();
 
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
-
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
     void SetPreambleLength(uint8_t PreambleLen);
@@ -78,10 +77,11 @@ public:
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
 
-    void SetFrequency(uint32_t freq);
-    int32_t GetFrequencyError();
-    bool GetFrequencyErrorbool();
-    void SetPPMoffsetReg(int32_t offset);
+    void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
+    void ICACHE_RAM_ATTR SetFrequencyDirect(uint32_t freq);
+    int32_t ICACHE_RAM_ATTR GetFrequencyError();
+    bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
+    void ICACHE_RAM_ATTR SetPPMoffsetReg(int32_t offset);
 
     ////////////////////////////////////////////////////
 

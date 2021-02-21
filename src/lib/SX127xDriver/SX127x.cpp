@@ -14,7 +14,7 @@ void (*SX127xDriver::RXtimeout)() = &nullCallback;
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[TXRXBuffSize] = {0};
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0};
 
-uint8_t SX127x_AllowedSyncwords[105] =
+const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
      21, 23, 26, 29, 30, 31, 33, 34,
      37, 38, 39, 40, 42, 44, 50, 51,
@@ -210,6 +210,20 @@ void SX127xDriver::SetFrequency(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
+void SX127xDriver::SetFrequencyDirect(uint32_t freq)
+{
+  currFreq = freq;
+  SetMode(SX127x_OPMODE_STANDBY);
+
+  uint8_t FRQ_MSB = (uint8_t)((freq >> 16) & 0xFF);
+  uint8_t FRQ_MID = (uint8_t)((freq >> 8) & 0xFF);
+  uint8_t FRQ_LSB = (uint8_t)(freq & 0xFF);
+
+  WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
+
+  hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+}
+
 bool SX127xDriver::DetectChip()
 {
   uint8_t i = 0;
@@ -333,7 +347,7 @@ void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x
   SetOutputPower(currPWR);
   SetSpreadingFactor(sf);
   SetBandwidthCodingRate(bw, cr);
-  SetFrequency(freq);
+  SetFrequencyDirect(freq);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
