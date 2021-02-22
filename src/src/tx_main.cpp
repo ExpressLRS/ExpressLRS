@@ -37,9 +37,11 @@ SX1280Driver Radio;
 
 #ifdef TARGET_R9M_TX
 #include "DAC.h"
+R9DAC R9DAC;
+#endif
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
-R9DAC R9DAC;
 #endif
 
 #ifdef TARGET_TX_GHOST
@@ -568,7 +570,7 @@ void setup()
 
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
-   * else we will use GPIO_PIN_LED_GREEN and _RED. 
+   * else we will use GPIO_PIN_LED_GREEN and _RED.
    **/
   #if WS2812_LED_IS_USED // do startup blinkies for fun
       uint32_t col = 0x0000FF;
@@ -597,7 +599,6 @@ void setup()
       Serial.setRx(PA3);
       Serial.begin(115200);
   #endif
-  
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
       // Annoying startup beeps
@@ -629,10 +630,16 @@ void setup()
       delay(200);
       tone(GPIO_PIN_BUZZER, 480, 200);
     #endif
-    // button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-    // R9DAC.init();
   #endif
 
+  #if defined(TARGET_R9M_TX)
+    R9DAC.init();
+  #endif
+
+#endif
+
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -770,9 +777,10 @@ void loop()
     crsf.sendSyncPacketToTX();
     #endif
     crsf.UARTwdt();
-    #ifdef TARGET_R9M_TX
+  #endif
+
+  #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
-    #endif
   #endif
 
   if (Serial.available())
