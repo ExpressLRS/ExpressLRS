@@ -62,8 +62,14 @@
 #ifndef UART_BAUD
 #define UART_BAUD 420000
 #endif
+#ifndef UART_INV
+#define UART_INV 0
+#endif
 #ifndef UART_BAUD_2ND
 #define UART_BAUD_2ND UART_BAUD
+#endif
+#ifndef UART_INV_2ND
+#define UART_INV_2ND 0
 #endif
 
 
