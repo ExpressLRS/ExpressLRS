@@ -767,13 +767,12 @@ void loop()
     #endif
   }
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
-    crsf.STM32handleUARTin();
+  #ifdef PLATFORM_STM32
+    crsf.handleUARTin();
     #ifdef FEATURE_OPENTX_SYNC
     crsf.sendSyncPacketToTX();
     #endif
-    crsf.UARTwdt();
-  #endif
+  #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
