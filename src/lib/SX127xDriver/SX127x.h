@@ -77,6 +77,7 @@ public:
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
 
+    #define FREQ_STEP 61.03515625
     void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
     void ICACHE_RAM_ATTR SetFrequencyReg(uint32_t freq);
     int32_t ICACHE_RAM_ATTR GetFrequencyError();

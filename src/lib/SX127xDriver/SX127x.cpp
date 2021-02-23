@@ -196,9 +196,7 @@ void SX127xDriver::SetFrequencyHz(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
-
-#define FREQ_STEP 61.03515625
-
+  
   int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
   uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);

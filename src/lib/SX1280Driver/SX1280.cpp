@@ -195,7 +195,6 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
 
 void SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
 {
-    //Serial.println(Reqfreq);
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
     uint32_t freq = (uint32_t)((double)Reqfreq / (double)FREQ_STEP);
