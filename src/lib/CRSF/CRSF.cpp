@@ -120,7 +120,8 @@ void CRSF::Begin()
                      false, 500);
     CRSF::duplex_set_RX();
 
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 10, &xESP32uartTask, 1);
+    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
+    disableCore0WDT();
 
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
@@ -155,10 +156,10 @@ void CRSF::End()
 {
 #if CRSF_TX_MODULE
 #ifdef PLATFORM_ESP32
-    if (xESP32uartTask)
+    if (xESP32uartTask != NULL)
+    {
         vTaskDelete(xESP32uartTask);
-    if (xHandleOpenTXsync)
-        vTaskDelete(xHandleOpenTXsync);
+    }
 #endif
     CRSF::Port.end();
 #endif // CRSF_TX_MODULE
@@ -332,8 +333,8 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
     CRSF::SyncWaitPeriodCounter = millis();
     CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-    LPF_OPENTX_SYNC_MARGIN.init(0);
     LPF_OPENTX_SYNC_OFFSET.init(0);
+    LPF_OPENTX_SYNC_MARGIN.init(0);
 #endif
 }
 
@@ -363,7 +364,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
         CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
     }
 #endif
-    // Serial.print(CRSF::OpenTXsyncOffset);
+    //Serial.print(CRSF::OpenTXsyncOffset);
     // Serial.print(",");
     // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
@@ -371,7 +372,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 {
-    if (millis() > OpenTXsyncLastSent + OpenTXsyncPacketInterval)
+    if ((millis() > OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
@@ -424,10 +425,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
 
-#if defined(PLATFORM_ESP32) && defined(FEATURE_OPENTX_SYNC)
-        xTaskCreatePinnedToCore(ESP32syncPacketTask, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
-#endif // PLATFORM_ESP32 || FEATURE_OPENTX_SYNC
-
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
         SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
         LPF_OPENTX_SYNC_MARGIN.init(0);
@@ -454,6 +451,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     else if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
+        GoodPktsCount++;
         GetChannelDataIn();
         (RCdataCallback1)(); // run new RC data callback
         (RCdataCallback2)(); // run new RC data callback
@@ -541,7 +539,6 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     {
                         delayMicroseconds(50);
                         handleUARTout();
-                        GoodPktsCount++;
                     }
                 }
                 else
@@ -557,12 +554,13 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             }
         }
     }
-
     UARTwdt();
 }
 
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
 {
+    sendSyncPacketToTX(); // calculate mixer sync packet if needed
+
     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
     if (peekVal > 0)
     {
@@ -681,30 +679,14 @@ void CRSF::UARTwdt()
 
 
 #ifdef PLATFORM_ESP32
-void ICACHE_RAM_ATTR CRSF::ESP32syncPacketTask(void *pvParameters)
-{
-    Serial.println("ESP32 OpenTX Mixer task BEGIN");
-    (void)pvParameters;
-    for (;;)
-    {
-        sendSyncPacketToTX();
-        vTaskDelay(OpenTXsyncPacketInterval);
-    }
-}
-
 //RTOS task to read and write CRSF packets to the serial port
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     (void)pvParameters;
-
-    // wait for the first packet to arrive
-    vTaskDelay(5);
-
     for (;;)
     {
         handleUARTin();
-        //delay when crsf state is not connected, this will prevent WDT triggering
-        vTaskDelay(1);
+        yield();
     }
 }
 #endif // PLATFORM_ESP32
