@@ -93,7 +93,6 @@ uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 uint32_t CRSF::UARTcurrentBaud;
-uint32_t CRSF::UARTrequestedBaud;
 bool CRSF::CRSFstate = false;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
@@ -107,7 +106,7 @@ void CRSF::Begin()
     Serial.println("About to start CRSF task...");
 
 #if CRSF_TX_MODULE
-    UARTrequestedBaud = UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
+    UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #ifdef PLATFORM_ESP32
@@ -231,6 +230,11 @@ void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
 #if CRSF_TX_MODULE
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -243,21 +247,23 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-    if (CRSF::CRSFstate)
-    {
 #ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux);
+    portENTER_CRITICAL(&FIFOmux);
 #endif
-        SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
 #ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux);
+    portEXIT_CRITICAL(&FIFOmux);
 #endif
-    }
 }
 
 void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 {
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
     uint8_t LUArespLength = len + 2;
     uint8_t outBuffer[LUArespLength + 5] = {0};
 
@@ -277,21 +283,23 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
     outBuffer[LUArespLength + 3] = crc;
 
-    if (CRSF::CRSFstate)
-    {
 #ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux);
+    portENTER_CRITICAL(&FIFOmux);
 #endif
-        SerialOutFIFO.push(LUArespLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+    SerialOutFIFO.push(LUArespLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
 #ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux);
+    portEXIT_CRITICAL(&FIFOmux);
 #endif
-    }
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 {
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
     uint8_t outBuffer[BattSensorFrameLength + 4] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -314,17 +322,14 @@ void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
 
     outBuffer[BattSensorFrameLength + 3] = crc;
 
-    if (CRSF::CRSFstate)
-    {
 #ifdef PLATFORM_ESP32
-        xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+    xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
 #endif
-        SerialOutFIFO.push(BattSensorFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, BattSensorFrameLength + 4);
+    SerialOutFIFO.push(BattSensorFrameLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, BattSensorFrameLength + 4);
 #ifdef PLATFORM_ESP32
-        xSemaphoreGive(mutexOutFIFO);
+    xSemaphoreGive(mutexOutFIFO);
 #endif
-    }
 }
 
 void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
@@ -372,7 +377,8 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 {
-    if ((millis() > OpenTXsyncLastSent + OpenTXsyncPacketInterval))
+    uint32_t now = millis();
+    if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
@@ -401,18 +407,15 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         outBuffer[OpenTXsyncFrameLength + 3] = crc;
 
-        if (CRSF::CRSFstate)
-        {
 #ifdef PLATFORM_ESP32
-            portENTER_CRITICAL(&FIFOmux);
+        portENTER_CRITICAL(&FIFOmux);
 #endif
-            SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
-            SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
+        SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
+        SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
 #ifdef PLATFORM_ESP32
-            portEXIT_CRITICAL(&FIFOmux);
+        portEXIT_CRITICAL(&FIFOmux);
 #endif
-        }
-        OpenTXsyncLastSent = millis();
+        OpenTXsyncLastSent = now;
     }
 }
 
@@ -464,19 +467,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 {
     volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
-    if (UARTrequestedBaud != UARTcurrentBaud)
+    if (UARTwdt())
     {
-        SerialOutFIFO.flush();
-#ifdef PLATFORM_ESP32
-        CRSF::Port.flush();
-        CRSF::Port.updateBaudRate(UARTrequestedBaud);
-#else
-        CRSF::Port.begin(UARTrequestedBaud);
-#endif
-        UARTcurrentBaud = UARTrequestedBaud;
-        duplex_set_RX();
-        // cleanup input buffer
-        flush_port_input();
         return;
     }
 
@@ -554,7 +546,6 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             }
         }
     }
-    UARTwdt();
 }
 
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
@@ -630,9 +621,11 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 #endif
 }
 
-void CRSF::UARTwdt()
+bool CRSF::UARTwdt()
 {
-    if (millis() > (UARTwdtLastChecked + UARTwdtInterval))
+    uint32_t now = millis();
+    bool retval = false;
+    if (now >= (UARTwdtLastChecked + UARTwdtInterval))
     {
         if (BadPktsCount >= GoodPktsCount)
         {
@@ -642,7 +635,7 @@ void CRSF::UARTwdt()
             {
                 Serial.println("CRSF UART Disconnected");
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-                SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+                SyncWaitPeriodCounter = now; // set to begin wait for auto sync offset calculation
                 CRSF::OpenTXsyncOffsetSafeMargin = 1000;
                 CRSF::OpenTXsyncOffset = 0;
                 CRSF::OpenTXsyncLastSent = 0;
@@ -651,30 +644,39 @@ void CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            if (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE)
-            {
-                UARTrequestedBaud = CRSF_OPENTX_SLOW_BAUDRATE;
-            }
-            else if (UARTcurrentBaud == CRSF_OPENTX_SLOW_BAUDRATE)
-            {
-                UARTrequestedBaud = CRSF_OPENTX_FAST_BAUDRATE;
-            }
+            uint32_t UARTrequestedBaud = (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE) ?
+                CRSF_OPENTX_SLOW_BAUDRATE : CRSF_OPENTX_FAST_BAUDRATE;
 
             Serial.print("UART WDT: Switch to: ");
             Serial.print(UARTrequestedBaud);
             Serial.println(" baud");
+
+            SerialOutFIFO.flush();
+#ifdef PLATFORM_ESP32
+            CRSF::Port.flush();
+            CRSF::Port.updateBaudRate(UARTrequestedBaud);
+#else
+            CRSF::Port.begin(UARTrequestedBaud);
+#endif
+            UARTcurrentBaud = UARTrequestedBaud;
+            duplex_set_RX();
+            // cleanup input buffer
+            flush_port_input();
+
+            retval = true;
         }
         Serial.print("UART STATS Bad:Good = ");
         Serial.print(BadPktsCount);
         Serial.print(":");
         Serial.println(GoodPktsCount);
 
-        UARTwdtLastChecked = millis();
+        UARTwdtLastChecked = now;
         GoodPktsCountResult = GoodPktsCount;
         BadPktsCountResult = BadPktsCount;
         BadPktsCount = 0;
         GoodPktsCount = 0;
     }
+    return retval;
 }
 
 

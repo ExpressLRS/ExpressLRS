@@ -428,7 +428,6 @@ private:
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
     static uint32_t UARTcurrentBaud;
-    static uint32_t UARTrequestedBaud;
     static bool CRSFstate;
 
 #ifdef PLATFORM_ESP32
@@ -440,7 +439,7 @@ private:
     static void duplex_set_TX();
     static bool ProcessPacket();
     static void handleUARTout();
-    static void UARTwdt();
+    static bool UARTwdt();
 #endif
 
     static void flush_port_input(void);
