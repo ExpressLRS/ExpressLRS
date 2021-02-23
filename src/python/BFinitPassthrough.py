@@ -18,6 +18,17 @@ def dbg_print(line=''):
     sys.stdout.flush()
 
 
+def _validate_serialrx(rl, config, expected):
+    expected = " = %s" % expected
+    rl.set_delimiters(["# "])
+    rl.clear()
+    rl.write("get serialrx_%s\r\n" % config)
+    line = rl.read_line(1.).strip()
+    if expected not in line:
+        return False
+    return True
+
+
 def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     debug = SCRIPT_DEBUG
 
@@ -39,6 +50,22 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         raise PassthroughEnabled("Passthrough already enabled and bootloader active")
     elif not start or not start.endswith("#"):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?")
+
+    serial_check = []
+    if not _validate_serialrx(rl, "provider", ["CRSF", "GHST"][half_duplex]):
+        serial_check.append("serialrx_provider != CRSF")
+    if not _validate_serialrx(rl, "inverted", "OFF"):
+        serial_check.append("serialrx_inverted != OFF")
+    if not _validate_serialrx(rl, "halfduplex", "OFF"):
+        serial_check.append("serialrx_halfduplex != OFF")
+
+    if serial_check:
+        error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
+        for err in serial_check:
+            error += "    !!! %s !!!\n" % err
+        error += "\n    Please change the configuration and try again!\n"
+        dbg_print(error)
+        raise PassthroughFailed(error)
 
     SerialRXindex = ""
 
@@ -86,5 +113,5 @@ if __name__ == '__main__':
     port = serials_find.get_serial_port()
     try:
         bf_passthrough_init(port, requestedBaudrate)
-    except:
-        dbg_print("Assuming that FC is in Passthrough already.")
+    except PassthroughEnabled as err:
+        dbg_print(str(err))
