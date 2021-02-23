@@ -35,9 +35,9 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 #include "DAC.h"
-R9DAC R9DAC;
+DAC TxDAC;
 #endif
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -566,7 +566,7 @@ void setup()
   Serial.begin(115200);
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
 
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
@@ -596,7 +596,7 @@ void setup()
 #endif
   Serial.begin(460800);
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
       // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
       pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -628,8 +628,8 @@ void setup()
     #endif
   #endif
 
-  #if defined(TARGET_R9M_TX)
-    R9DAC.init();
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    TxDAC.init();
   #endif
 
 #endif
@@ -672,7 +672,7 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
-    #if defined(TARGET_R9M_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
     tone(GPIO_PIN_BUZZER, 480, 200);
     digitalWrite(GPIO_PIN_LED_RED, LOW);
@@ -755,19 +755,19 @@ void loop()
   if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
+  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
     crsf.STM32handleUARTin();
     #ifdef FEATURE_OPENTX_SYNC
     crsf.sendSyncPacketToTX();
