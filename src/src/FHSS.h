@@ -41,7 +41,7 @@ extern int32_t FreqCorrection;
 const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(433420000),
     FREQ_HZ_TO_REG_VAL(433920000),
-    FREQ_HZ_TO_REG_VAL(434420000),
+    FREQ_HZ_TO_REG_VAL(434420000)};
 #elif defined Regulatory_Domain_AU_915
 const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(915500000),
@@ -67,7 +67,7 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(925100000),
     FREQ_HZ_TO_REG_VAL(925700000),
     FREQ_HZ_TO_REG_VAL(926300000),
-    FREQ_HZ_TO_REG_VAL(926900000/SX127x_FREQ_STEP)};
+    FREQ_HZ_TO_REG_VAL(926900000)};
 #elif defined Regulatory_Domain_EU_868
 /* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: these frequencies fall in the license free H-band, but in combination with 500kHz 
