@@ -562,8 +562,15 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
+#endif
+
 #ifdef PLATFORM_ESP32
   Serial.begin(115200);
+#else
+  Serial.begin(460800);
 #endif
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
@@ -590,11 +597,7 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
-#ifdef TARGET_TX_GHOST
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-  Serial.begin(460800);
+
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
       // Annoying startup beeps

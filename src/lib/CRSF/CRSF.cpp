@@ -424,11 +424,12 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
 
+#if defined(PLATFORM_ESP32) && defined(FEATURE_OPENTX_SYNC)
+        xTaskCreatePinnedToCore(ESP32syncPacketTask, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
+#endif // PLATFORM_ESP32 || FEATURE_OPENTX_SYNC
+
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
         SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
-#ifdef PLATFORM_ESP32
-        xTaskCreatePinnedToCore(ESP32syncPacketTask, "sendSyncPacketToTX", 2000, NULL, 10, &xHandleOpenTXsync, 1);
-#endif // PLATFORM_ESP32
         LPF_OPENTX_SYNC_MARGIN.init(0);
         LPF_OPENTX_SYNC_OFFSET.init(0);
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
@@ -587,7 +588,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 
             duplex_set_RX();
 
-            // measure sure there is no garbage on the UART at the start
+            // make sure there is no garbage on the UART left over
             flush_port_input();
         }
     }
@@ -682,6 +683,7 @@ void CRSF::UARTwdt()
 #ifdef PLATFORM_ESP32
 void ICACHE_RAM_ATTR CRSF::ESP32syncPacketTask(void *pvParameters)
 {
+    Serial.println("ESP32 OpenTX Mixer task BEGIN");
     (void)pvParameters;
     for (;;)
     {
