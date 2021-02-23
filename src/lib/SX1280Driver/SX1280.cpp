@@ -61,14 +61,14 @@ bool SX1280Driver::Begin()
         return false;
     }
 
-    this->SetMode(SX1280_MODE_STDBY_RC);                                    //step 1 put in STDBY_RC mode
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA); //Step 2: set packet type to LoRa
-    this->ConfigModParams(currBW, currSF, currCR);                          //Step 5: Configure Modulation Params
-    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                        //enable auto FS
-    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));           //default is low power mode, switch to high sensitivity instead
-    this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); //default params
-    this->SetFrequencyReg(this->currFreq);                                     //Step 3: Set Freq
-    this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
+    this->SetMode(SX1280_MODE_STDBY_RC);                                                                                                //step 1 put in STDBY_RC mode
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);                                                             //Step 2: set packet type to LoRa
+    this->ConfigLoRaModParams(currBW, currSF, currCR);                                                                                      //Step 5: Configure Modulation Params
+    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                                                                                    //enable auto FS
+    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));                                                                       //default is low power mode, switch to high sensitivity instead
+    this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);                              //default params
+    this->SetFrequencyReg(this->currFreq);                                                                                              //Step 3: Set Freq
+    this->SetFIFOaddr(0x00, 0x00);                                                                                                      //Step 4: Config FIFO addr
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
     return true;
 }
@@ -77,7 +77,7 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
 {
     this->SetMode(SX1280_MODE_STDBY_XOSC); 
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    ConfigModParams(bw, sf, cr);
+    ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
     SetFrequencyReg(freq);
 }
@@ -165,7 +165,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     currOpmode = OPmode;
 }
 
-void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr)
+void SX1280Driver::ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr
 {
     // Care must therefore be taken to ensure that modulation parameters are set using the command
     // SetModulationParam() only after defining the packet type SetPacketType() to be used
@@ -193,7 +193,7 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
     }
 }
 
-void SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
@@ -206,7 +206,7 @@ void SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
     currFreq = Reqfreq;
 }
 
-void SX1280Driver::SetFrequencyReg(uint32_t freq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t freq)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
@@ -218,7 +218,7 @@ void SX1280Driver::SetFrequencyReg(uint32_t freq)
     currFreq = freq;
 }
 
-int32_t SX1280Driver::GetFrequencyError()
+int32_t ICACHE_RAM_ATTR SX1280Driver::GetFrequencyError()
 {
     WORD_ALIGNED_ATTR uint8_t efeRaw[3] = {0};
     uint32_t efe = 0;
@@ -260,7 +260,7 @@ void SX1280Driver::SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t
     hal.WriteCommand(SX1280_RADIO_SET_DIOIRQPARAMS, buf, sizeof(buf));
 }
 
-void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
+void ICACHE_RAM_ATTR SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 {
     uint8_t buf[2];
 
@@ -270,7 +270,7 @@ void SX1280Driver::ClearIrqStatus(uint16_t irqMask)
     hal.WriteCommand(SX1280_RADIO_CLR_IRQSTATUS, buf, sizeof(buf));
 }
 
-void SX1280Driver::TXnbISR()
+void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 {
     //endTX = micros();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
@@ -288,7 +288,7 @@ void SX1280Driver::TXnbISR()
 
 uint8_t FIFOaddr = 0;
 
-void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable(); // do first to allow PA stablise
@@ -297,7 +297,7 @@ void SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
     beginTX = micros();
 }
 
-void SX1280Driver::RXnbISR()
+void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
 {
     instance->currOpmode = SX1280_MODE_FS;
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
@@ -307,7 +307,7 @@ void SX1280Driver::RXnbISR()
     instance->RXdoneCallback();
 }
 
-void SX1280Driver::RXnb()
+void ICACHE_RAM_ATTR SX1280Driver::RXnb()
 {
     hal.RXenable();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
