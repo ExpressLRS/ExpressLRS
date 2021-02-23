@@ -590,15 +590,11 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
-  #ifdef USE_ESP8266_BACKPACK
-      HardwareSerial(USART1);
-      Serial.begin(460800);
-  #else
-      HardwareSerial(USART2);
-      Serial.setTx(PA2);
-      Serial.setRx(PA3);
-      Serial.begin(115200);
-  #endif
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
+#endif
+  Serial.begin(460800);
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
       // Annoying startup beeps
