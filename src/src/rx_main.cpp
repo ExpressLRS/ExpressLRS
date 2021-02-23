@@ -198,7 +198,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequencyDirect(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
 
     if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
     {
@@ -324,7 +324,7 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        Radio.SetFrequencyDirect(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         hwTimer.stop();
     }
 
@@ -863,7 +863,7 @@ void loop()
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
-        Radio.SetFrequencyDirect(GetInitialFreq());
+        Radio.SetFrequencyReg(GetInitialFreq());
         Radio.RXnb();
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
@@ -1037,7 +1037,7 @@ void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(RATE_DEFAULT);
-    Radio.SetFrequencyDirect(GetInitialFreq());
+    Radio.SetFrequencyReg(GetInitialFreq());
 
     InBindingMode = true;
 

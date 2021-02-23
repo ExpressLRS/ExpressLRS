@@ -77,8 +77,8 @@ public:
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
 
-    void ICACHE_RAM_ATTR SetFrequency(uint32_t freq);
-    void ICACHE_RAM_ATTR SetFrequencyDirect(uint32_t freq);
+    void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
+    void ICACHE_RAM_ATTR SetFrequencyReg(uint32_t freq);
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
     bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
     void ICACHE_RAM_ATTR SetPPMoffsetReg(int32_t offset);

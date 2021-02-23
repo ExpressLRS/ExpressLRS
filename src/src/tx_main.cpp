@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
   if (modresult == 0) // if it time to hop, do so.
   {
-    Radio.SetFrequencyDirect(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
 }
 
@@ -944,7 +944,7 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
-  Radio.SetFrequencyDirect(GetInitialFreq());
+  Radio.SetFrequencyReg(GetInitialFreq());
   POWERMGNT.setPower(PWR_10mW);
 
   Serial.print("Entered binding mode at freq = ");

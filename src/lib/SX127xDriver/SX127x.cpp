@@ -192,7 +192,7 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void SX127xDriver::SetFrequency(uint32_t freq)
+void SX127xDriver::SetFrequencyHz(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
@@ -210,7 +210,7 @@ void SX127xDriver::SetFrequency(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
-void SX127xDriver::SetFrequencyDirect(uint32_t freq)
+void SX127xDriver::SetFrequencyReg(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
@@ -347,7 +347,7 @@ void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x
   SetOutputPower(currPWR);
   SetSpreadingFactor(sf);
   SetBandwidthCodingRate(bw, cr);
-  SetFrequencyDirect(freq);
+  SetFrequencyReg(freq);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()

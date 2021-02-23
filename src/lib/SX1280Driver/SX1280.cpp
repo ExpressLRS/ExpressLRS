@@ -67,7 +67,7 @@ bool SX1280Driver::Begin()
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                        //enable auto FS
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));           //default is low power mode, switch to high sensitivity instead
     this->SetPacketParams(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); //default params
-    this->SetFrequencyDirect(this->currFreq);                                     //Step 3: Set Freq
+    this->SetFrequencyReg(this->currFreq);                                     //Step 3: Set Freq
     this->SetFIFOaddr(0x00, 0x00);                                          //Step 4: Config FIFO addr
     this->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
     return true;
@@ -79,7 +79,7 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     ConfigModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
-    SetFrequencyDirect(freq);
+    SetFrequencyReg(freq);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
@@ -193,12 +193,12 @@ void SX1280Driver::ConfigModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_Radio
     }
 }
 
-void SX1280Driver::SetFrequency(uint32_t Reqfreq)
+void SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
 {
-    Serial.println(Reqfreq);
+    //Serial.println(Reqfreq);
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
-    uint32_t freq = (uint32_t)((double)Reqfreq / (double)SX1280_FREQ_STEP);
+    uint32_t freq = (uint32_t)((double)Reqfreq / (double)FREQ_STEP);
     buf[0] = (uint8_t)((freq >> 16) & 0xFF);
     buf[1] = (uint8_t)((freq >> 8) & 0xFF);
     buf[2] = (uint8_t)(freq & 0xFF);
@@ -207,7 +207,7 @@ void SX1280Driver::SetFrequency(uint32_t Reqfreq)
     currFreq = Reqfreq;
 }
 
-void SX1280Driver::SetFrequencyDirect(uint32_t freq)
+void SX1280Driver::SetFrequencyReg(uint32_t freq)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
