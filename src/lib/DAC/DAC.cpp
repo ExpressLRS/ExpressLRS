@@ -19,9 +19,7 @@ int DAC::LUT[8][4] = {
     {1000, 30, 28, 2100},
     {2000, 33, 31, 2600}, // Danger untested at high power
 };
-#endif
-
-#if defined(TARGET_TX_ES915TX)
+#elif defined(TARGET_TX_ES915TX)
 int DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 875},

@@ -37,7 +37,7 @@ SX1280Driver Radio;
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 #include "DAC.h"
-DAC DAC;
+DAC TxDAC;
 #endif
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -629,7 +629,7 @@ void setup()
   #endif
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
-    DAC.init();
+    TxDAC.init();
   #endif
 
 #endif
