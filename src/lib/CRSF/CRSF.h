@@ -18,20 +18,13 @@
 #include "driver/gpio.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || \
-    defined(TARGET_R9M_LITE_TX) || \
-    defined(TARGET_R9M_LITE_PRO_TX) || \
-    defined(TARGET_TX_GHOST)
+#if TARGET_TX && PLATFORM_STM32
 #define CRSF_TX_MODULE_STM32 1
 #endif
 
-#if defined(PLATFORM_ESP32) || CRSF_TX_MODULE_STM32
+#if TARGET_TX
 #define CRSF_TX_MODULE 1
-#elif defined(PLATFORM_ESP8266) || \
-      defined(TARGET_R9M_RX) || \
-      defined(TARGET_RX_GHOST_ATTO_V1) || \
-      defined(TARGET_SX1280_RX_CCG_NANO_v05) || \
-      defined(UNIT_TEST)
+#elif TARGET_RX || defined(UNIT_TEST)
 #define CRSF_RX_MODULE 1
 #else
 #error "Invalid configuration!"

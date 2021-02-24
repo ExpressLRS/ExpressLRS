@@ -53,9 +53,6 @@ uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
-#if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
-#include "STM32_hwTimer.h"
-#endif
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
@@ -386,7 +383,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
       Generate4ChannelData_11bit();
-#endif
+      #endif
     }
   }
 
@@ -568,8 +565,6 @@ void setup()
 #endif
   Serial.begin(460800);
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
-
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
    * else we will use GPIO_PIN_LED_GREEN and _RED.
@@ -586,18 +581,20 @@ void setup()
               delay(35);
           }
       }
-  #else
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
+  #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+  #endif // GPIO_PIN_LED_GREEN
+  #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+  #endif // GPIO_PIN_LED_RED
 
-
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
-      // Annoying startup beeps
+  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+    pinMode(GPIO_PIN_BUZZER, OUTPUT);
+    // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
-      pinMode(GPIO_PIN_BUZZER, OUTPUT);
       #if defined(MY_STARTUP_MELODY_ARR)
         // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
         const int melody[][2] = MY_STARTUP_MELODY_ARR;
@@ -624,13 +621,12 @@ void setup()
       delay(200);
       tone(GPIO_PIN_BUZZER, 480, 200);
     #endif
-  #endif
+  #endif // GPIO_PIN_BUZZER
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     TxDAC.init();
   #endif
 
-#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
@@ -645,7 +641,7 @@ void setup()
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-#endif
+#endif // PLATFORM_ESP32
 
   FHSSrandomiseFHSSsequence();
 
@@ -664,21 +660,29 @@ void setup()
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
+  #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
   while (!init_success)
   {
-    #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    tone(GPIO_PIN_BUZZER, 480, 200);
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    #endif // GPIO_PIN_LED_GREEN
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+      tone(GPIO_PIN_BUZZER, 480, 200);
+    #endif // GPIO_PIN_BUZZER
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_RED, LOW);
+    #endif // GPIO_PIN_LED_RED
     delay(200);
-    tone(GPIO_PIN_BUZZER, 400, 200);
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+      tone(GPIO_PIN_BUZZER, 400, 200);
+    #endif // GPIO_PIN_BUZZER
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    #endif // GPIO_PIN_LED_RED
     delay(1000);
-    #endif
   }
   POWERMGNT.setDefaultPower();
 
@@ -753,16 +757,16 @@ void loop()
   if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
-    #endif
+    #endif // GPIO_PIN_LED_RED
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
-    #endif
+    #endif // GPIO_PIN_LED_RED
   }
 
   #ifdef PLATFORM_STM32
