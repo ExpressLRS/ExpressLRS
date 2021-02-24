@@ -562,9 +562,11 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef PLATFORM_ESP32
-  Serial.begin(115200);
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
 #endif
+  Serial.begin(460800);
 
 #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
 
@@ -590,11 +592,7 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
-#ifdef TARGET_TX_GHOST
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-  Serial.begin(460800);
+
 
   #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
       // Annoying startup beeps
@@ -767,13 +765,9 @@ void loop()
     #endif
   }
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
-    crsf.STM32handleUARTin();
-    #ifdef FEATURE_OPENTX_SYNC
-    crsf.sendSyncPacketToTX();
-    #endif
-    crsf.UARTwdt();
-  #endif
+  #ifdef PLATFORM_STM32
+    crsf.handleUARTin();
+  #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
