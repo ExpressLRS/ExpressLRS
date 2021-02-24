@@ -12,23 +12,15 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
+#elif CRSF_TX_MODULE_STM32
+HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+#if defined(STM32F3) || defined(STM32F3xx)
+#include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_gpio.h"
+#elif defined(STM32F1) || defined(STM32F1xx)
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
 #endif
-
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
-
-    #if defined(TARGET_TX_GHOST)
-        HardwareSerial CRSF::Port(USART1);
-    #else
-        HardwareSerial CRSF::Port(USART3);
-    #endif
-
-    #if defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
-        #include "stm32f3xx_hal.h"
-        #include "stm32f3xx_hal_gpio.h"
-    #else
-        #include "stm32f1xx_hal.h"
-        #include "stm32f1xx_hal_gpio.h"
-    #endif
 #endif
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
