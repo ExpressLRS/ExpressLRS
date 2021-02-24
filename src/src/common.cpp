@@ -116,7 +116,7 @@ uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 #else
     #ifdef PLATFORM_ESP32
         uint8_t UID[6];
-        (void)esp_read_mac(UID, ESP_MAC_WIFI_STA);
+        esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
     #elif PLATFORM_STM32
         uint8_t UID[6] = {
             (uint8_t)HAL_GetUIDw0(), (uint8_t)(HAL_GetUIDw0() >> 8),
