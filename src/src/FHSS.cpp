@@ -6,32 +6,6 @@ uint8_t FHSSsequence[256] = {0};
 //uint8_t NumOfFHSSfrequencies = 20;
 int32_t FreqCorrection = 0;
 
-void ICACHE_RAM_ATTR FHSSsetCurrIndex(uint8_t value)
-{ // set the current index of the FHSS pointer
-    FHSSptr = value;
-}
-
-uint8_t ICACHE_RAM_ATTR FHSSgetCurrIndex()
-{ // get the current index of the FHSS pointer
-    return FHSSptr;
-}
-
-uint32_t ICACHE_RAM_ATTR GetInitialFreq()
-{
-    return FHSSfreqs[0] - FreqCorrection;
-}
-
-uint32_t ICACHE_RAM_ATTR FHSSgetCurrFreq()
-{
-    return FHSSfreqs[FHSSsequence[FHSSptr]] - FreqCorrection;
-}
-
-uint32_t ICACHE_RAM_ATTR FHSSgetNextFreq()
-{
-    FHSSptr++;
-    return FHSSgetCurrFreq();
-}
-
 // Set all of the flags in the array to true, except for the first one
 // which corresponds to the sync channel and is never available for normal
 // allocation.
