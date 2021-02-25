@@ -134,12 +134,19 @@ void CRSF::Begin()
     CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
 
-    #if defined(TARGET_TX_GHOST)
+#if defined(TARGET_TX_GHOST)
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     USART1->CR1 &= ~USART_CR1_UE;
     USART1->CR3 |= USART_CR3_HDSEL;
     USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
     USART1->CR1 |= USART_CR1_UE;
-    #endif
+#endif
     Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
 #endif
