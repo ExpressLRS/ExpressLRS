@@ -7,8 +7,8 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#ifdef TARGET_R9M_TX
-extern R9DAC R9DAC;
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+extern DAC TxDAC;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
@@ -40,8 +40,8 @@ void POWERMGNT::init()
 {
 
 
-#ifdef TARGET_R9M_TX
-    Serial.println("Init TARGET_R9M_TX DAC Driver");
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    Serial.println("Init DAC Driver");
 #endif
 #ifdef GPIO_PIN_FAN_EN
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
@@ -108,9 +108,9 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     Radio.SetOutputPower(0b0000);
-    R9DAC.setPower((DAC_PWR_)Power);
+    TxDAC.setPower((DAC_PWR_)Power);
     CurrentPower = Power;
 #ifdef GPIO_PIN_FAN_EN
     (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);

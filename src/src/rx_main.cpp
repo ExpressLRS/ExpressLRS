@@ -198,7 +198,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
 
     if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
     {
@@ -324,7 +324,7 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         hwTimer.stop();
     }
 
@@ -817,26 +817,7 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    // #ifdef LOCK_ON_50HZ // to do check if needed or delete
-    //     for (int i = 0; i < RATE_MAX; i++)
-    //     {
-    //         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
-    //         if (ModParams->enum_rate == RATE_50HZ)
-    //         {
-    //             SetRFLinkRate(ModParams->index);
-    //             LockRFmode = true;
-    //         }
-    //     }
-    // #else
-    //     SetRFLinkRate(RATE_DEFAULT);
-    // #endif
-
-#ifdef LOCK_ON_50HZ
-    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
-    LockRFmode = true;
-#else
     SetRFLinkRate(RATE_DEFAULT);
-#endif
 
     Radio.RXnb();
     crsf.Begin();
@@ -882,7 +863,7 @@ void loop()
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
-        Radio.SetFrequency(GetInitialFreq());
+        Radio.SetFrequencyReg(GetInitialFreq());
         Radio.RXnb();
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
@@ -1056,7 +1037,7 @@ void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(RATE_DEFAULT);
-    Radio.SetFrequency(GetInitialFreq());
+    Radio.SetFrequencyReg(GetInitialFreq());
 
     InBindingMode = true;
 

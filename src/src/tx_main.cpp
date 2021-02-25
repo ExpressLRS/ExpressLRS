@@ -35,9 +35,9 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 #include "DAC.h"
-R9DAC R9DAC;
+DAC TxDAC;
 #endif
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
   if (modresult == 0) // if it time to hop, do so.
   {
-    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
 }
 
@@ -562,11 +562,13 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef PLATFORM_ESP32
-  Serial.begin(115200);
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
 #endif
+  Serial.begin(460800);
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
 
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
@@ -590,13 +592,9 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
-#ifdef TARGET_TX_GHOST
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-  Serial.begin(460800);
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
+
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
       // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
       pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -628,8 +626,8 @@ void setup()
     #endif
   #endif
 
-  #if defined(TARGET_R9M_TX)
-    R9DAC.init();
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    TxDAC.init();
   #endif
 
 #endif
@@ -672,7 +670,7 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
-    #if defined(TARGET_R9M_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
     tone(GPIO_PIN_BUZZER, 480, 200);
     digitalWrite(GPIO_PIN_LED_RED, LOW);
@@ -755,25 +753,21 @@ void loop()
   if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
-    crsf.STM32handleUARTin();
-    #ifdef FEATURE_OPENTX_SYNC
-    crsf.sendSyncPacketToTX();
-    #endif
-    crsf.UARTwdt();
-  #endif
+  #ifdef PLATFORM_STM32
+    crsf.handleUARTin();
+  #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
@@ -944,7 +938,7 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
-  Radio.SetFrequency(GetInitialFreq());
+  Radio.SetFrequencyReg(GetInitialFreq());
   POWERMGNT.setPower(PWR_10mW);
 
   Serial.print("Entered binding mode at freq = ");

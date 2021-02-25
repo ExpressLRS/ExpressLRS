@@ -36,7 +36,7 @@ void setup()
     //Radio.Config(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7, 2420000000, SX1280_PREAMBLE_LENGTH_32_BITS);
     Radio.TXdoneCallback = &TXdoneCallback;
     Radio.RXdoneCallback = &RXdoneCallback;
-    Radio.SetFrequency(FHSSfreqs[0]);
+    Radio.SetFrequencyReg(FHSSfreqs[0]);
     //Radio.RXnb();
     Radio.TXnb(testdata, sizeof(testdata));
 }
