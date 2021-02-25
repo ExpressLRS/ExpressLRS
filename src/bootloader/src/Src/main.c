@@ -375,6 +375,22 @@ int8_t boot_code_stk(uint32_t baud, int32_t rx_pin, int32_t tx_pin, int32_t dupl
   int8_t ret = 0;
 
   uart_init(baud, rx_pin, tx_pin, duplexpin, inverted);
+  uart_clear();
+
+#if 0 // UART ECHO DEBUG
+  uint8_t _led_tmp = 0;
+  uint8_t header[6];
+  while(1) {
+    if (uart_receive_timeout(header, 1u, 1000) == UART_OK) {
+      uart_transmit_bytes(header, 1);
+    } else {
+      //uart_transmit_ch('F');
+      uart_transmit_str("F\r\n");
+    }
+    led_state_set(_led_tmp ? LED_FLASHING : LED_FLASHING_ALT);
+    _led_tmp ^= 1;
+  }
+#endif
 
   boot_start_time = HAL_GetTick();
 

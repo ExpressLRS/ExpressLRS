@@ -504,27 +504,28 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx,
     }
   }
 
-#if defined(STM32F3xx)
-  /* F3 can swap Rx and Tx pins */
-  if (swapped) {
-    uart_ptr->CR2 |= USART_CR2_SWAP;
-    uart_ptr_rx->CR2 |= USART_CR2_SWAP;
-  }
-  /* F3 can invert uart lines */
-  if (inverted) {
-    uart_ptr->CR2 |= USART_CR2_TXINV;
-    uart_ptr_rx->CR2 |= USART_CR2_RXINV;
-  }
-#else
-  (void)inverted;
-#endif
-
   /* Store handles */
   UART_handle_tx = uart_ptr;
   UART_handle_rx = uart_ptr_rx;
 
   /* TX USART peripheral config */
   usart_hw_init(uart_ptr, baud, 0, halfduplex);
+
+#if defined(STM32F3xx)
+  /* F3 can swap Rx and Tx pins */
+  if (swapped) {
+    LL_USART_SetTXRXSwap(uart_ptr, LL_USART_TXRX_SWAPPED);
+    if (uart_ptr_rx != uart_ptr)
+      LL_USART_SetTXRXSwap(uart_ptr_rx, LL_USART_TXRX_SWAPPED);
+  }
+  /* F3 can invert uart lines */
+  if (inverted) {
+    LL_USART_SetTXPinLevel(uart_ptr, LL_USART_TXPIN_LEVEL_INVERTED);
+    LL_USART_SetRXPinLevel(uart_ptr_rx, LL_USART_RXPIN_LEVEL_INVERTED);
+  }
+#else
+  (void)inverted;
+#endif
 
   /* Duplex pin */
   duplex_setup_pin(duplexpin);
@@ -547,10 +548,10 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx,
  }
 
   /* TX pin */
-  usart_pin_config(pin_tx, 0);
+  usart_pin_config(pin_tx, (halfduplex ^ inverted));
   /* RX pin */
   if (0 <= pin_rx)
-    usart_pin_config(pin_rx, 1);
+    usart_pin_config(pin_rx, (halfduplex ^ inverted));
 }
 
 void uart_deinit(void)
