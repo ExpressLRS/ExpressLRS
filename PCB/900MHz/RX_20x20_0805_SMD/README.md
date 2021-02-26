@@ -22,6 +22,7 @@
 
  ## Building and Testing
 
- Component values and some possible checks for continuity:
+ * Solder the components according to the picture
+ * You may check continuity checks for GND, 5V and 3.3V pins with a multimeter
 
  <img src="img/ELRS-868-20x20-01F.jpg" width="25%"> <img src="img/ELRS-868-20x20-RFM95.jpg" width="25%">
