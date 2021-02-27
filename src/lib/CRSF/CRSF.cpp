@@ -420,33 +420,6 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     }
 }
 
-<<<<<<< HEAD
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO) || defined(TARGET_SX1280_RX_CCG_NANO_v05) ||defined(UNIT_TEST)
-        bool CRSF::RXhandleUARTout()
-        {
-            uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-            if (peekVal > 0)
-            {
-                if (SerialOutFIFO.size() > (peekVal))
-                {
-                    noInterrupts();
-                    uint8_t OutPktLen = SerialOutFIFO.pop();
-                    uint8_t OutData[OutPktLen];
-                    SerialOutFIFO.popBytes(OutData, OutPktLen);
-                    interrupts();
-                    this->_dev->write(OutData, OutPktLen); // write the packet out
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
-        {
-            uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
-=======
->>>>>>> upstream/develop
-
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
