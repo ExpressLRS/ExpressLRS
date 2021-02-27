@@ -46,6 +46,10 @@ void SX1280Hal::init()
 
     pinMode(GPIO_PIN_RST, OUTPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
+    #if defined(GPIO_PIN_NSS_2)
+        pinMode(GPIO_PIN_NSS_2, OUTPUT);
+            digitalWrite(GPIO_PIN_NSS_2, HIGH);
+    #endif
 
 #if defined(GPIO_PIN_RX_ENABLE) || defined(GPIO_PIN_TX_ENABLE)
     Serial.print("This Target uses seperate TX/RX enable pins: ");

@@ -321,21 +321,30 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO           PB4
 #define GPIO_PIN_SCK            PB3
 #define GPIO_PIN_RST            PB0
-// First (Left) sc1280
-// #define GPIO_PIN_NSS            PA15
-// #define GPIO_PIN_BUSY           PA5
 #define GPIO_PIN_DIO0           -1 // does not exist on sx1280
-// #define GPIO_PIN_DIO1           PA2
+//======================================
+/**
+ *  For now I am just manually setting the left or right 1280 CC pin to HIGH and naming it NSS_2
+ * We have full control over the pins!!! it works right now with just one , left or right. 
+ * 
+ **/
+// First (Left) sc1280
+#define GPIO_PIN_NSS_2            PA15
+// #define GPIO_PIN_BUSY           PA3
+// #define GPIO_PIN_DIO1           PA1
+//=====================================
 // Second (Right) sc1280
-#define GPIO_PIN_NSS            PA12
-#define GPIO_PIN_BUSY           PA7
-#define GPIO_PIN_DIO1           PA0
+#define GPIO_PIN_NSS            PA11
+#define GPIO_PIN_BUSY           PA4
+#define GPIO_PIN_DIO1           PB7
+
+
 //#define GPIO_PIN_RCSIGNAL_RX    PB7
 //#define GPIO_PIN_RCSIGNAL_TX    PB6
 // #define GPIO_PIN_RCSIGNAL_RX    PA4 // USART1, half duplex
 // #define GPIO_PIN_RCSIGNAL_TX    PA3 // USART2, half duplex
-#define GPIO_PIN_RCSIGNAL_RX    PA2 // USART1, half duplex
-#define GPIO_PIN_RCSIGNAL_TX    PB6 // USART2, half duplex //pin is really PA3
+#define GPIO_PIN_RCSIGNAL_RX    PB6 // USART1, half duplex
+#define GPIO_PIN_RCSIGNAL_TX    PA2 // USART2, half duplex //pin is really PA3
 // LED Pins
 #define GPIO_PIN_LED_WS2812      PA7  
 #define GPIO_PIN_LED_WS2812_FAST PA_7 
