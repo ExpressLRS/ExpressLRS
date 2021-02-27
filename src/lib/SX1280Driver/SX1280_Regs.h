@@ -5,7 +5,7 @@
 #define SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK 0x0FFFFF
 
 #define SX1280_XTAL_FREQ 52000000
-#define SX1280_FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))
+#define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))
 
 typedef enum
 {

@@ -18,6 +18,26 @@
 #include "driver/gpio.h"
 #endif
 
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || \
+    defined(TARGET_R9M_LITE_TX) || \
+    defined(TARGET_R9M_LITE_PRO_TX) || \
+    defined(TARGET_TX_GHOST)
+#define CRSF_TX_MODULE_STM32 1
+#endif
+
+#if defined(PLATFORM_ESP32) || CRSF_TX_MODULE_STM32
+#define CRSF_TX_MODULE 1
+#elif defined(PLATFORM_ESP8266) || \
+      defined(TARGET_R9M_RX) || \
+      defined(TARGET_RX_GHOST_ATTO_V1) || \
+      defined(TARGET_SX1280_RX_CCG_NANO_v05) || \
+      defined(UNIT_TEST)
+#define CRSF_RX_MODULE 1
+#else
+#error "Invalid configuration!"
+#endif
+
+
 #define PACKED __attribute__((packed))
 
 #define CRSF_CRC_POLY 0xd5
@@ -305,7 +325,7 @@ class CRSF
 {
 
 public:
-    #if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_GHOST_ATTO_DUO) || defined(TARGET_SX1280_RX_CCG_NANO_v05) ||defined(UNIT_TEST)
+    #if CRSF_RX_MODULE
 
     CRSF(Stream *dev) : _dev(dev)
     {
@@ -339,52 +359,18 @@ public:
 
     static volatile uint8_t ParameterUpdateData[2];
 
-    static uint8_t CSFR_TXpin_Module;
-    static uint8_t CSFR_RXpin_Module;
-
-    static uint8_t CSFR_TXpin_Recv;
-    static uint8_t CSFR_RXpin_Recv;
-
     /////Variables/////
 
     static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
     static volatile crsf_sensor_battery_s TLMbattSensor;
 
-    static void Begin(); //setup timers etc
-    static void End(); //stop timers etc
-
     /// UART Handling ///
-
-    static bool CRSFstate;
-    static bool CRSFstatePrev;
-    static uint32_t UARTcurrentBaud;
-    static uint32_t UARTrequestedBaud;
-
-    static uint32_t lastUARTpktTime;
-    static uint32_t UARTwdtLastChecked;
-    static uint32_t UARTwdtInterval;
-
-    static uint32_t GoodPktsCount;
-    static uint32_t BadPktsCount;
-
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 
-#ifdef PLATFORM_ESP32
-    static void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters);
-    static void ICACHE_RAM_ATTR UARTwdt(void *pvParametersxHandleSerialOutFIFO);
-#endif
-
-    static void ICACHE_RAM_ATTR duplex_set_RX();
-    static void ICACHE_RAM_ATTR duplex_set_TX();
-
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
-    static void ICACHE_RAM_ATTR STM32initUART();
-    static void ICACHE_RAM_ATTR UARTwdt();
-    static void ICACHE_RAM_ATTR STM32handleUARTin();
-    static void ICACHE_RAM_ATTR STM32handleUARTout();
-#endif
+    static void Begin(); //setup timers etc
+    static void End(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
@@ -401,27 +387,19 @@ public:
 
 ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
-    static volatile uint32_t OpenTXsyncLastSent;
-    static uint32_t RequestedRCpacketInterval;
-    static volatile uint32_t RCdataLastRecv;
-    static volatile int32_t OpenTXsyncOffset;
-    static uint32_t OpenTXsyncOffsetSafeMargin;
-    static int32_t OpenTXsyncOffetFLTR;
-    static uint32_t SyncWaitPeriodCounter;
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
-    static void ICACHE_RAM_ATTR sendSyncPacketToTX(void *pvParameters);
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
+
     /////////////////////////////////////////////////////////////
 
-    static void ICACHE_RAM_ATTR ESP32ProcessPacket();
-    static bool ICACHE_RAM_ATTR STM32ProcessPacket();
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static void ICACHE_RAM_ATTR updateSwitchValues();
-    bool RXhandleUARTout();
 
     static void inline nullCallback(void);
 
+    static void handleUARTin();
+    bool RXhandleUARTout();
 
 private:
     Stream *_dev;
@@ -432,8 +410,39 @@ private:
     static volatile inBuffer_U inBuffer;
     static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
-    static volatile bool ignoreSerialData; //since we get a copy of the serial data use this flag to know when to ignore it
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
+
+#if CRSF_TX_MODULE
+    /// OpenTX mixer sync ///
+    static volatile uint32_t OpenTXsyncLastSent;
+    static uint32_t RequestedRCpacketInterval;
+    static volatile uint32_t RCdataLastRecv;
+    static volatile int32_t OpenTXsyncOffset;
+    static uint32_t OpenTXsyncOffsetSafeMargin;
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
+    static uint32_t SyncWaitPeriodCounter;
+#endif
+
+    /// UART Handling ///
+    static uint32_t GoodPktsCount;
+    static uint32_t BadPktsCount;
+    static uint32_t UARTwdtLastChecked;
+    static uint32_t UARTcurrentBaud;
+    static bool CRSFstate;
+
+#ifdef PLATFORM_ESP32
+    static void ESP32uartTask(void *pvParameters);
+    static void ESP32syncPacketTask(void *pvParameters);
+#endif
+
+    static void duplex_set_RX();
+    static void duplex_set_TX();
+    static bool ProcessPacket();
+    static void handleUARTout();
+    static bool UARTwdt();
+#endif
+
+    static void flush_port_input(void);
 };
 
 #endif

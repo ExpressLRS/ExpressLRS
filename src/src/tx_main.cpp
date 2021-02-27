@@ -35,11 +35,13 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 #include "DAC.h"
+DAC TxDAC;
+#endif
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
-R9DAC R9DAC;
 #endif
 
 #ifdef TARGET_TX_GHOST
@@ -57,8 +59,12 @@ uint32_t LEDupdateCounterMillis;
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
-#define MSP_PACKET_SEND_INTERVAL 200
+#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
+#define MSP_PACKET_SEND_INTERVAL 200LU
+
+#ifndef TLM_REPORT_INTERVAL_MS
+#define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
+#endif
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -82,7 +88,9 @@ mspPacket_t MSPPacket;
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
 
-uint32_t LastTLMpacketRecvMillis = 0;
+volatile uint32_t LastTLMpacketRecvMillis = 0;
+uint32_t TLMpacketReported = 0;
+
 LQCALC LQCALC;
 LPF LPD_DownlinkLQ(1);
 
@@ -169,9 +177,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
-
-    crsf.sendLinkStatisticsToTX();
-    crsf.sendLinkBattSensorToTX();
   }
 }
 
@@ -294,12 +299,12 @@ void ICACHE_RAM_ATTR HandleFHSS()
   {
     return;
   }
-  
+
   uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
   {
-    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
 }
 
@@ -532,7 +537,7 @@ void HandleUpdateParameter()
     break;
   }
   UpdateParamReq = false;
-  
+
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
@@ -557,15 +562,17 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef PLATFORM_ESP32
-  Serial.begin(115200);
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
 #endif
+  Serial.begin(460800);
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST)
+#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
 
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
-   * else we will use GPIO_PIN_LED_GREEN and _RED. 
+   * else we will use GPIO_PIN_LED_GREEN and _RED.
    **/
   #if WS2812_LED_IS_USED // do startup blinkies for fun
       uint32_t col = 0x0000FF;
@@ -585,18 +592,9 @@ void setup()
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
   #endif
 
-  #ifdef USE_ESP8266_BACKPACK
-      HardwareSerial(USART1);
-      Serial.begin(460800);
-  #else
-      HardwareSerial(USART2);
-      Serial.setTx(PA2);
-      Serial.setRx(PA3);
-      Serial.begin(115200);
-  #endif
-  
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST)
+
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_GHOST) || defined(TARGET_TX_ES915TX)
       // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
       pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -626,10 +624,16 @@ void setup()
       delay(200);
       tone(GPIO_PIN_BUZZER, 480, 200);
     #endif
-    // button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-    // R9DAC.init();
   #endif
 
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    TxDAC.init();
+  #endif
+
+#endif
+
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -666,7 +670,7 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
-    #if defined(TARGET_R9M_TX)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_GREEN, LOW);
     tone(GPIO_PIN_BUZZER, 480, 200);
     digitalWrite(GPIO_PIN_LED_RED, LOW);
@@ -697,9 +701,10 @@ void setup()
 
 void loop()
 {
+  uint32_t now = millis();
 
   #if WS2812_LED_IS_USED
-      if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
+      if ((connectionState == disconnected) && (now > LEDupdateInterval + LEDupdateCounterMillis))
       {
           uint8_t LEDcolor[3] = {0};
           if (LEDfade == 30 || LEDfade == 0)
@@ -710,7 +715,7 @@ void loop()
           LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
           LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
           WS281BsetLED(LEDcolor);
-          LEDupdateCounterMillis = millis();
+          LEDupdateCounterMillis = now;
       }
   #endif
 
@@ -745,30 +750,27 @@ void loop()
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
 
-  if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
+  if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
     #endif
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_TX_ES915TX)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
     #endif
   }
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_TX_GHOST)
-    crsf.STM32handleUARTin();
-    #ifdef FEATURE_OPENTX_SYNC
-    crsf.sendSyncPacketToTX();
-    #endif
-    crsf.UARTwdt();
-    #ifdef TARGET_R9M_TX
+  #ifdef PLATFORM_STM32
+    crsf.handleUARTin();
+  #endif // PLATFORM_STM32
+
+  #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
-    #endif
   #endif
 
   if (Serial.available())
@@ -781,6 +783,15 @@ void loop()
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
+  }
+
+  /* Send TLM updates to handset if connected + reporting period
+   * is elapsed. This keeps handset happy dispite of the telemetry ratio */
+  if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
+      (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
+    crsf.sendLinkStatisticsToTX();
+    crsf.sendLinkBattSensorToTX();
+    TLMpacketReported = now;
   }
 }
 
@@ -927,7 +938,7 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
-  Radio.SetFrequency(GetInitialFreq());
+  Radio.SetFrequencyReg(GetInitialFreq());
   POWERMGNT.setPower(PWR_10mW);
 
   Serial.print("Entered binding mode at freq = ");

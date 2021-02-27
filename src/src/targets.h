@@ -171,7 +171,7 @@ https://github.com/jaxxzer
 //#define SYSCLK_FREQ_72MHz
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 
 #define GPIO_PIN_RFamp_APC1           PA6  //APC2 is connected through a I2C dac and is handled elsewhere
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX

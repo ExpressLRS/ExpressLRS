@@ -1,3 +1,9 @@
+
+v1.1 PCB
+- Larger XO footprint for the FL520WFMT1.
+- Remove ground from beneath the UFL.
+- Adds WiFi antenna
+
 This is pretty much the same as the normal Nano Rx with the addition of a RF switch. So please make sure you check out its readme. The button has been removed and jumper pads left in its place for the initial flashing.  Upload the standard 2.4 Nano Rx targte with -DUSE_DIVERSITY uncommented.
 
 Shout out to StonedDawg and JamesK for getting the ball rolling with chip antennas.
