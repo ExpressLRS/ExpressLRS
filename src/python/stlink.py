@@ -47,8 +47,7 @@ def get_commands(env, firmware):
         print("OS X not supported at the moment\n")
         raise OSError
     else:
-        print("Operating system: "+ platform_name +  "\n")
-        print("                   Is not supported.\n")
+        print("Operating system: "+ platform_name +  " is not supported.\n")
         raise OSError
 
     return " ".join(BL_CMD), " ".join(APP_CMD)
