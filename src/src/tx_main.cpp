@@ -11,7 +11,6 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
-#include <crsf_protocol.h>
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
@@ -182,9 +181,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
             crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
-            crsf.sendLinkStatisticsToTX();
-
             break;
+
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
@@ -821,17 +819,13 @@ void loop()
     }
   }
 
-#if 0
-  /* !!!! FIXME FIXME FIXME !!!! */
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
-    crsf.sendLinkBattSensorToTX();
     TLMpacketReported = now;
   }
-#endif
 }
 
 void ICACHE_RAM_ATTR TimerCallbackISR()

@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <cstring>
-#include <telemetry.h>
-#include <crsf_protocol.h>
+#include "telemetry.h"
 
 #if defined(UNIT_TEST)
 #include <iostream>

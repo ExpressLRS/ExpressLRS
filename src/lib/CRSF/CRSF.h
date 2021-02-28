@@ -2,7 +2,7 @@
 #define H_CRSF
 
 #include <Arduino.h>
-#include <crsf_protocol.h>
+#include "crsf_protocol.h"
 #include "HardwareSerial.h"
 #include "msp.h"
 #include "msptypes.h"

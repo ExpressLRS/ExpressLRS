@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <crsf_protocol.h>
+#include "crsf_protocol.h"
 
 typedef enum {
     TELEMETRY_IDLE = 0,
