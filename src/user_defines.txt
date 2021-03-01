@@ -63,4 +63,4 @@
 #-DUSE_500HZ
 
 # Comment this to disable advanced telemetry.
--DENABLE_TELEMETRY
+#-DENABLE_TELEMETRY
