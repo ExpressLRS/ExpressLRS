@@ -16,10 +16,10 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
+#include "telemetry_protocol.h"
+#include "telemetry.h"
 #ifdef ENABLE_TELEMETRY
-#include <telemetry_protocol.h>
-#include <telemetry.h>
-#include <stubborn_sender.h>
+#include "stubborn_sender.h"
 #endif
 
 #include "FHSS.h"

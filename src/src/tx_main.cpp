@@ -25,9 +25,9 @@ SX1280Driver Radio;
 #include "hwTimer.h"
 #include "LQCALC.h"
 #include "LowPassFilter.h"
+#include "telemetry_protocol.h"
 #ifdef ENABLE_TELEMETRY
-#include <telemetry_protocol.h>
-#include <stubborn_receiver.h>
+#include "stubborn_receiver.h"
 #endif
 
 #ifdef PLATFORM_ESP8266
