@@ -237,7 +237,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PA9  // NRESET
-#define GPIO_PIN_RX_ENABLE      UNDEF_PIN   // NOT USED ON THIS TARGET
+#define GPIO_PIN_RX_ENABLE      GPIO_PIN_RFswitch_CONTROL
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // s.port inverter
