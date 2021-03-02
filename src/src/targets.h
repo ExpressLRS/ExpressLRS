@@ -238,8 +238,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PA9  // NRESET
 #define GPIO_PIN_RX_ENABLE      GPIO_PIN_RFswitch_CONTROL
-#define GPIO_PIN_SDA            PB7
-#define GPIO_PIN_SCL            PB6
+#define GPIO_PIN_SDA            PB9 // EEPROM ST M24C02-W
+#define GPIO_PIN_SCL            PB8 // EEPROM ST M24C02-W
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // s.port inverter
 #define GPIO_PIN_RCSIGNAL_TX    PB10 // s.port inverter
 #define GPIO_PIN_LED_GREEN      PA15 // Green LED
@@ -254,9 +254,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF1			        PA7  // 26SU Switch RF1
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
-
-//#define GPIO_PIN_EEPROM_DATA    PB8 //2Kb EEPROM ST M95160
-//#define GPIO_PIN_EEPROM_CLOCK   PB9 //2Kb EEPROM ST M95160
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1)
 #define GPIO_PIN_NSS 15
