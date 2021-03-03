@@ -594,20 +594,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
          SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
-//////////////////////////////LUAXXXXXXXXXXXX/////////////////////////////
-        #ifdef ANALOG_7    
-         if (ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
-
-         {
-             LastSyncPacket = millis();
-             if (SwitchEncModeExpected != SwitchEncMode){
-                SwitchEncModeExpected = SwitchEncMode; 
-             }
-        #else
+      
              if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
-        #endif 
+        
+#ifndef DEBUG_SUPPRESS
+             Serial.println("sync");
+#endif 
 #ifndef DEBUG_SUPPRESS
              Serial.println("sync");
 #endif
