@@ -19,3 +19,10 @@
 
  * I've had good results using JLCPCB (https://jlcpcb.com/). Upload the .zip file in this repo and adjust any PCB parameters that you want (defaults work fine).
  * A super-lightweight build can be achieved by going to a 0.6mm PCB thickness (without an increase to cost)
+
+ ## Building and Testing
+
+ * Solder the components according to the picture
+ * You may check continuity checks for GND, 5V and 3.3V pins with a multimeter
+
+ <img src="img/ELRS-868-20x20-01F.jpg" width="25%"> <img src="img/ELRS-868-20x20-RFM95.jpg" width="25%">
