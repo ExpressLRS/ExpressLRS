@@ -29,7 +29,8 @@ uart_status uart_transmit_str(char * data);
 uart_status uart_transmit_ch(uint8_t data);
 uart_status uart_transmit_bytes(uint8_t *data, uint32_t len);
 
-void uart_init(uint32_t baud, uint32_t rx_pin, uint32_t tx_pin, int32_t duplexpin);
+void uart_init(uint32_t baud, int32_t rx_pin, int32_t tx_pin,
+               int32_t duplexpin, int8_t inverted);
 void uart_deinit(void);
 
 #endif /* UART_H_ */
