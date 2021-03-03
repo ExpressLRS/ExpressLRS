@@ -8,9 +8,7 @@
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     #include "SX127xDriver.h"
     extern SX127xDriver Radio;
-#endif
-
-#if defined(Regulatory_Domain_ISM_2400)
+#elif defined(Regulatory_Domain_ISM_2400)
     #include "SX1280Driver.h"
     extern SX1280Driver Radio;
 #endif

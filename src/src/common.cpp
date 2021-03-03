@@ -31,10 +31,10 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 2, 12}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_500HZ, -105, 4380, 3500, 1000, 2000, 5000}, 
-    {1, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000}, 
+    {0, RATE_500HZ, -105, 4380, 3500, 1000, 2000, 5000},
+    {1, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
     {2, RATE_150HZ, -112, 8770, 3500, 2500, 2000, 5000},
-    {3, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000}}; 
+    {3, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000}};
 #else
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 2, 14},
@@ -45,7 +45,7 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
     {1, RATE_150HZ, -112, 8770, 3500, 2500, 2000, 5000},
-    {2, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000}, 
+    {2, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000},
     {3, RATE_25HZ, -120, 36886, 3500, 4000, 2000, 5000}};
 #endif
 
@@ -118,11 +118,13 @@ uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
         uint8_t UID[6];
         esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
     #elif PLATFORM_STM32
-        uint8_t UID[6] = {HAL_GetUIDw0(), HAL_GetUIDw0() >> 8, HAL_GetUIDw1(), HAL_GetUIDw1() >> 8, HAL_GetUIDw2(), HAL_GetUIDw2() >> 8};
+        uint8_t UID[6] = {
+            (uint8_t)HAL_GetUIDw0(), (uint8_t)(HAL_GetUIDw0() >> 8),
+            (uint8_t)HAL_GetUIDw1(), (uint8_t)(HAL_GetUIDw1() >> 8),
+            (uint8_t)HAL_GetUIDw2(), (uint8_t)(HAL_GetUIDw2() >> 8)};
     #else
         uint8_t UID[6] = {0};
     #endif
-
 #endif
 uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
