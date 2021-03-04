@@ -7,7 +7,7 @@
 using namespace std;
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(TARGET_R9M_RX) || defined(UNIT_TEST)
+#if CRSF_RX_MODULE
 
 Telemetry::Telemetry()
 {
