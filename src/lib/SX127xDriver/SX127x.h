@@ -24,7 +24,10 @@ public:
     static void (*RXtimeout)(); //function pointer for callback
 
 ///////////Radio Variables////////
-    #define TXRXBuffSize 8
+    //luaxx
+    //if(const uint8_t TXRXBuffSize=8
+
+    #define TXRXBuffSize 11
     const uint8_t TXbuffLen = TXRXBuffSize; //TODO might not always be const
     const uint8_t RXbuffLen = TXRXBuffSize;
 

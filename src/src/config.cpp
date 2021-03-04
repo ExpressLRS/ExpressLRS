@@ -34,7 +34,7 @@ Config::Commit()
 
     m_modified = false;
 }
-
+//luaxx
 // Getters
 uint32_t
 Config::GetRate()
@@ -47,7 +47,11 @@ Config::GetTlm()
 {
     return m_config.tlm;
 }
-
+uint32_t
+Config::GetSwitchMode()
+{
+    return m_config.switchMode;
+}
 uint32_t
 Config::GetPower()
 {
@@ -59,15 +63,18 @@ Config::IsModified()
 {
     return m_modified;
 }
-
+//luaxx
 // Setters
 void
 Config::SetRate(uint32_t rate)
 {
     if (m_config.rate != rate)
     {
+        //can only change rate to 50hz or lower in analog7 mode
+        if((m_config.switchMode == 2 && rate > 1) || (m_config.switchMode != 2)){
         m_config.rate = rate;
         m_modified = true;
+        }
     }
 }
 
@@ -81,6 +88,23 @@ Config::SetTlm(uint32_t tlm)
     }
 }
 
+void
+Config::SetSwitchMode(uint32_t modeSwitch)
+{
+    
+    #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915)
+
+    if (m_config.switchMode != modeSwitch && modeSwitch >= 0 && modeSwitch <4)
+    {
+        if(modeSwitch == 2){    //if analog7 is selected, change the RATE to 50hz
+            m_config.rate = 2;
+        }
+        m_config.switchMode = modeSwitch;
+        m_modified = true;
+        
+    }
+    #endif
+}
 void
 Config::SetPower(uint32_t power)
 {
@@ -99,6 +123,7 @@ Config::SetDefaults()
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
+    SetSwitchMode(1);
     Commit();
 }
 

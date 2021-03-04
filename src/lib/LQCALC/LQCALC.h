@@ -13,6 +13,7 @@ public:
     void ICACHE_RAM_ATTR inc();
     uint8_t ICACHE_RAM_ATTR getLQ();
     void ICACHE_RAM_ATTR reset();
+    bool ICACHE_RAM_ATTR packetReceivedForPreviousFrame();
 
 private:
     uint8_t LQcalcDepth = 0;

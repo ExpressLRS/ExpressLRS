@@ -60,6 +60,8 @@ uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
+//luaxx
+//uint32_t CRSF::FuncMode = 1;
 
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
@@ -68,6 +70,7 @@ volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 
 volatile inBuffer_U CRSF::inBuffer;
+uint8_t CRSF::packetMode = 0;
 
 // current and sent switch values, used for prioritising sequential switch transmission
 uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
@@ -134,9 +137,9 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 {
     int firstSwitch = 0; // sequential switches includes switch 0
 
-#if defined HYBRID_SWITCHES_8
-    firstSwitch = 1; // skip 0 since it is sent on every packet
-#endif
+    if(CRSF::packetMode == 2 || packetMode == 1){
+        firstSwitch = 1; // skip 0 since it is sent on every packet
+    }
 
     // look for a changed switch
     int i;
@@ -155,14 +158,14 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
     // during the next call.
     nextSwitchIndex = (i + 1) % 8;
 
-#ifdef HYBRID_SWITCHES_8
+if(CRSF::packetMode == 2 || packetMode == 1){
     // for hydrid switches 0 is sent on every packet, so we can skip
     // that value for the round-robin
     if (nextSwitchIndex == 0)
     {
         nextSwitchIndex = 1;
     }
-#endif
+}
 
     return i;
 }
@@ -202,7 +205,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
     }
 }
-
+//luaxx
 void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 {
     uint8_t LUArespLength = len + 2;
@@ -909,10 +912,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
             {
 #define INPUT_RANGE 2048
                 const uint16_t SWITCH_DIVISOR = INPUT_RANGE / 3; // input is 0 - 2048
-                for (int i = 0; i < N_SWITCHES; i++)
-                {
-                    currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;
-                }
+                //if(FuncMode = 0){
+                    for (int i = 0; i < N_SWITCHES; i++)
+                  {
+                      if(i==0){
+                        currentSwitches[i] = ChannelDataIn[4] / SWITCH_DIVISOR;    
+                      } else if(CRSF::packetMode == 2){
+                        currentSwitches[i] = ChannelDataIn[i + 7] / SWITCH_DIVISOR;
+                      } else {
+                        currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;    
+                      }
+                  }
+                //} else {
+                //for (int i = 0; i < N_SWITCHES; i++)
+                //{
+                //    currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;
+                //}
+                //luaxx
+                //}
             }
 
             void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
