@@ -47,12 +47,9 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
-#define DIVERSITY_ANTENNA_INTERVAL 30
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
-
-uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
@@ -61,11 +58,7 @@ CRSF crsf(Serial); //pass a serial port object to the class for it to use
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
-
-// LPF LPF_UplinkRSSI(5);
-LPF LPF_UplinkRSSI0(3);  // track rssi per antenna
-LPF LPF_UplinkRSSI1(3);
-
+LPF LPF_UplinkRSSI(5);
 
 /// LQ Calculation //////////
 LQCALC LQCALC;
@@ -104,7 +97,6 @@ bool alreadyTLMresp = false;
 uint32_t beginProcessing;
 uint32_t doneProcessing;
 
-//////////////////////////////////LUAXXXXXXXXXXXXXX////////////////////
 #if defined(HYBRID_SWITCHES_8)
     uint8_t SwitchEncModeExpected = 0b01;
 #elif defined(ANALOG_7) && (defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915))
@@ -114,8 +106,6 @@ uint32_t doneProcessing;
 #else //11bit
     uint8_t SwitchEncModeExpected = 0b00;
 #endif
-
-//////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
 uint32_t ModuleBootTime = 0;
@@ -136,38 +126,10 @@ uint8_t RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
-// flip to the other antenna
-// no-op if GPIO_PIN_ANTENNA_SELECT not defined
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    void ICACHE_RAM_ATTR switchAntenna()
-    {
-        
-
-        antenna = !antenna;
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
-        
-    }
-#endif
-
-
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     //int8_t LastRSSI = Radio.LastPacketRSSI;
-    // int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
-
-    int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
-    int32_t rssiDBM1 = LPF_UplinkRSSI1.SmoothDataINT;
-    switch (antenna) {
-        case 0:
-            rssiDBM0 = LPF_UplinkRSSI0.update(Radio.LastPacketRSSI);
-            break;
-        case 1:
-            rssiDBM1 = LPF_UplinkRSSI1.update(Radio.LastPacketRSSI);
-            break;
-    }
-
-    int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
-
+    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
@@ -175,17 +137,16 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
-    // if (rssiDBM > 0)
-    //     rssiDBM = 0;
+        if (rssiDBM > 0)
+        rssiDBM = 0;
 
-    if (rssiDBM0 > 0) rssiDBM0 = 0;
-    if (rssiDBM1 > 0) rssiDBM1 = 0;
-    
-    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0; // negate to match BF
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
+    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
+    crsf.LinkStatistics.uplink_RSSI_2 = 0;
+
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = antenna;
+    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -234,7 +195,6 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 }
 
-//luaxx
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
@@ -334,47 +294,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-        static int32_t antennaSwitched;
-        static int32_t antennaSwitched2;
-        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
-            
-        // if we didn't get a packet switch the antenna
-         if ((rssi < (prevRSSI - 5) ) && antennaSwitched2 >= DIVERSITY_ANTENNA_INTERVAL){
-            
-            switchAntenna();
-            antennaSwitched = 1;
-            antennaSwitched2 = 0; 
-         } else if(rssi > prevRSSI || antennaSwitched2 < DIVERSITY_ANTENNA_INTERVAL){
-                 prevRSSI = rssi;
-                 antennaSwitched2++;
-             }
-         
-        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaSwitched == 0)) {
-            
-            switchAntenna();
-            antennaSwitched = 1;
-            antennaSwitched2 = 0;
-        } else if (antennaSwitched >= DIVERSITY_ANTENNA_INTERVAL) {
-            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
-            // We can compare the rssi values and see if we made things better or worse when we switched
-
-            if (rssi < otherRSSI) {
-                // things got worse when we switched, so change back.
-                
-                switchAntenna();
-                antennaSwitched = 1;
-                antennaSwitched2 = 0;
-            } else {
-                // all good, we can stay on the current antenna. Clear the flag.
-                antennaSwitched = 0;
-            }
-        } else if (antennaSwitched > 0){
-            antennaSwitched ++;
-        }
-    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
