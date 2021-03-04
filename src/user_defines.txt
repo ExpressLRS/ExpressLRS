@@ -24,7 +24,8 @@
 
 
 ### SWITCHES: ### 
-
+# select one of the mode below! ONLY ONE!
+# Selected Mode will be TX default switch mode, but TX can change mode from LUA script!
 #-DHYBRID_SWITCHES_8
 #-DANALOG_7
 
