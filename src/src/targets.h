@@ -5,6 +5,7 @@
 
 /// General Features ///
 #define LED_MAX_BRIGHTNESS 50 //0..255 for max led brightness
+
 /////////////////////////
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
@@ -31,12 +32,10 @@
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED 2
-#endif
 
-#ifdef TARGET_TTGO_LORA_V1_AS_RX
-#endif
+#elif defined(TARGET_TTGO_LORA_V1_AS_RX)
 
-#ifdef TARGET_TTGO_LORA_V2_AS_TX
+#elif defined(TARGET_TTGO_LORA_V2_AS_TX)
 #define GPIO_PIN_NSS 18
 #define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
@@ -49,13 +48,11 @@
 #define GPIO_PIN_OLED_SCK 22
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
-#endif
 
-#ifdef TARGET_TTGO_LORA_V2_AS_RX
+#elif defined(TARGET_TTGO_LORA_V2_AS_RX)
  // not supported
-#endif
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3
+#elif defined(TARGET_EXPRESSLRS_PCB_TX_V3)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
@@ -69,14 +66,12 @@
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED 27
-#endif
 
-#ifdef TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY
+#elif defined(TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY)
 #define GPIO_PIN_BUTTON 36
 #define RC_SIGNAL_PULLDOWN 4
-#endif
 
-#ifdef TARGET_EXPRESSLRS_PCB_RX_V3
+#elif defined(TARGET_EXPRESSLRS_PCB_RX_V3)
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 4
@@ -91,9 +86,8 @@
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 0
 #define timerOffset -1
-#endif
 
-#ifdef TARGET_R9M_RX
+#elif defined(TARGET_R9M_RX)
 /*
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
@@ -169,9 +163,8 @@ https://github.com/jaxxzer
 //#define HSE_VALUE    25000000U
 // #endif /* HSE_VALUE */
 //#define SYSCLK_FREQ_72MHz
-#endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 
 #define GPIO_PIN_RFamp_APC1           PA6  //APC2 is connected through a I2C dac and is handled elsewhere
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
@@ -203,9 +196,8 @@ https://github.com/jaxxzer
 
 #define BUFFER_OE               PA5  //CONFIRMED
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
-#endif
 
-#ifdef TARGET_R9M_LITE_TX
+#elif defined(TARGET_R9M_LITE_TX)
 
 #define GPIO_PIN_RFswitch_CONTROL     PC13  // need to confirm  //HIGH = RX, LOW = TX
 
@@ -230,9 +222,7 @@ https://github.com/jaxxzer
 
 #define BUFFER_OE               PA5  //CONFIRMED
 
-#endif
-
-#ifdef TARGET_R9M_LITE_PRO_TX
+#elif defined(TARGET_R9M_LITE_PRO_TX)
 //#define GPIO_PIN_RFamp_APC1           PA4  //2.7V
 //#define GPIO_PIN_RFamp_APC2           PA5  //100mW@590mV, 200mW@870mV, 500mW@1.093V, 1W@1.493V
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
@@ -263,9 +253,7 @@ https://github.com/jaxxzer
 
 #define BUFFER_OE               UNDEF_PIN  //CONFIRMED
 
-#endif
-
-#ifdef TARGET_RX_ESP8266_SX1280_V1
+#elif defined(TARGET_RX_ESP8266_SX1280_V1)
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_BUSY 5
 #define GPIO_PIN_DIO0 -1 // does not exist on sx1280
@@ -279,9 +267,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 0
 #define timerOffset -1
-#endif
 
-#ifdef TARGET_TX_ESP32_SX1280_V1
+#elif defined(TARGET_TX_ESP32_SX1280_V1)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
 #define GPIO_PIN_DIO0 -1 // does not exist on sx1280
@@ -292,9 +279,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST 14
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
-#endif
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
+#elif defined(TARGET_RX_GHOST_ATTO_V1)
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_BUSY           PA3
 #define GPIO_PIN_DIO0           -1 // does not exist on sx1280
@@ -312,9 +298,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_WS2812_FAST PA_7
 //#define GPIO_PIN_BUTTON         PA12
 #define timerOffset             1
-#endif
 
-#ifdef TARGET_TX_GHOST
+#elif defined(TARGET_TX_GHOST)
 #define GPIO_PIN_NSS             PA15
 #define GPIO_PIN_BUSY            PB15
 #define GPIO_PIN_DIO0           -1 // does not exist on sx1280
@@ -335,9 +320,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_ANT_CTRL_2      PB13
 #define GPIO_PIN_BUZZER          PC13
 #define timerOffset              1
-#endif
 
-#if defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
+#elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
 #define GPIO_PIN_DIO0 -1
@@ -352,9 +336,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
-#endif
 
-#if defined(TARGET_SX1280_RX_CCG_NANO_v05)
+#elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
 #define GPIO_PIN_NSS         PA4
 #define GPIO_PIN_MOSI        PA7
 #define GPIO_PIN_MISO        PA6
@@ -371,7 +354,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_RED     PB5
 
 #define timerOffset          1
-#endif /* TARGET_SX1280_RX_CCG_NANO_v05 */
+
+#else
+#error "Unknown target!"
+#endif
 
 #ifdef GPIO_PIN_LED_WS2812
 #ifndef GPIO_PIN_LED_WS2812_FAST
