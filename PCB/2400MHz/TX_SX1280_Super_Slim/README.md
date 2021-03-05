@@ -1,5 +1,7 @@
 # 2.4GHz Slim Tx
 
+This is basically the same PCB as the DIY 2.4GHz JR module but in a smaller form factor. The PCB works in both the slim enclosure and the JR enclosure.
+
 ### PCB manufacturing
 
 Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
@@ -47,7 +49,8 @@ Click this image to watch video of build
 
 ### STLs
 
-[Onshape link](https://cad.onshape.com/documents/2cffc645d8696d047935ac89/w/6acaaaa832f4b23c1c8ac47e/e/49ad20ba4b7d79ea1d683a18)
+[Slim enclosure onshape link](https://cad.onshape.com/documents/2cffc645d8696d047935ac89/w/6acaaaa832f4b23c1c8ac47e/e/49ad20ba4b7d79ea1d683a18)
+[JR enclosure onshape link](https://cad.onshape.com/documents/50ada7dd7257b3b4cfa71d02/w/741afccb437d7d488507c71b/e/4760c734ca4584832616ed85)
 
 ### Pics
 
