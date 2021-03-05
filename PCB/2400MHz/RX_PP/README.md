@@ -20,15 +20,15 @@ Upload the Gerber file to https://cart.jlcpcb.com/quote and below are the order 
 
 Upload the BOM and PickAndPlace files.
 
-<img src="img/bomandpnp.png" width="33%">
+<img src="img/bomandpnp.PNG" width="33%">
 
 Confirm the selected components.  If you get a red 'No part selected' warning, press Search and search by part number (its starts with a C) and select the 0402 size.
 
-<img src="img/selectparts.png" width="33%"> <img src="img/nopartselected.png" width="33%">
+<img src="img/selectparts.PNG" width="33%"> <img src="img/nopartselected.PNG" width="33%">
 
 The final review will probably looks wrong and with components rotated incorrectly.  This appears to be normal and production will still be ok.  To date I have had good communication with JLC if there are production issues and they get in contact before starting.
 
-<img src="img/bomandpnp.png" width="33%">
+<img src="img/review.PNG" width="33%">
 
 ### BOM
 
