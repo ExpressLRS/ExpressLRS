@@ -26,7 +26,7 @@ Confirm the selected components.  If you get a red 'No part selected' warning, p
 
 <img src="img/selectparts.png" width="33%"> <img src="img/nopartselected.png" width="33%">
 
-The final review will probably looks wrong and with components rotated incorrectly.  This appears to be normal and production will still be ok.  To date I have had good communication with JLC if there are production issues and they get in contact before starting.
+The final review will probably look wrong and with components rotated incorrectly.  This appears to be normal and production will still be ok.  To date I have had good communication with JLC if there are production issues and they get in contact before starting.
 
 <img src="img/review.png" width="33%">
 
@@ -60,6 +60,6 @@ The final review will probably looks wrong and with components rotated incorrect
 
 ### Flashing
 
-The first flash will requie connecting a st link to SWCLK, SWDIO, 5V and GND.  After this it can be updated through Betaflight passthrough.  Flash the DIY_2400_RX_STM32_CCG_Nano_v0_5_via_STLINK and DIY_2400_RX_STM32_CCG_Nano_v0_5_via_BetaflightPassthrough targets.
+The first flash will require connecting a st link to SWCLK, SWDIO, 5V and GND.  After this it can be updated through Betaflight passthrough.  Flash the DIY_2400_RX_STM32_CCG_Nano_v0_5_via_STLINK and DIY_2400_RX_STM32_CCG_Nano_v0_5_via_BetaflightPassthrough targets.
 
 <img src="img/flashing.png" width="33%">
