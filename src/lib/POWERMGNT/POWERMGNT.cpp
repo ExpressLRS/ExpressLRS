@@ -110,9 +110,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
 #endif
     return CurrentPower;
-#endif
-
-#if defined(TARGET_R9M_LITE_PRO_TX)
+#elif defined(TARGET_R9M_LITE_PRO_TX)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     switch (Power)
