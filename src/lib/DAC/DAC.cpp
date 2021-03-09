@@ -1,13 +1,15 @@
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
 
 #include "DAC.h"
 #include "SX127xDriver.h"
 
-#define DAC_ADDR    0b0001100
+#ifndef DAC_I2C_ADDRESS
+#define DAC_I2C_ADDRESS 0b0001100
+#endif /* DAC_I2C_ADDRESS */
 #define VCC         3300
 
-#if defined(TARGET_R9M_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
 int DAC::LUT[8][4] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 720},
@@ -47,7 +49,7 @@ void DAC::standby()
 {
     if (m_state != STANDBY)
     {
-        Wire.beginTransmission(DAC_ADDR);
+        Wire.beginTransmission(DAC_I2C_ADDRESS);
         Wire.write(0x00);
         Wire.write(0x00);
         Wire.endTransmission();
@@ -79,7 +81,7 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
     Radio.SetOutputPower(0b0000);
-    Wire.beginTransmission(DAC_ADDR);
+    Wire.beginTransmission(DAC_I2C_ADDRESS);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();

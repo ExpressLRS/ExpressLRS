@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
 
 #include "../../src/targets.h"
 #include <Wire.h>

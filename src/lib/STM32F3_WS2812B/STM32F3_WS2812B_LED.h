@@ -5,6 +5,10 @@
 #if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
 #define WS2812_LED_IS_USED 1
 
+#ifndef BRIGHTNESS
+#define BRIGHTNESS 10 // 1...256
+#endif
+
 static inline void LEDsend_1(void) {
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, HIGH);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -20,7 +24,9 @@ static inline void LEDsend_1(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+#ifndef TARGET_NAMIMNO_ALPHA_TX
         __NOP(); __NOP(); __NOP();
+#endif
 }
 
 static inline void LEDsend_0(void) {
@@ -28,7 +34,9 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+#ifndef TARGET_NAMIMNO_ALPHA_TX
         __NOP(); __NOP(); __NOP();
+#endif
         digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -41,9 +49,10 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
 }
 
-static inline uint32_t bitReverse(uint8_t input)
+static inline uint32_t bitReverse(uint32_t input)
 {
-    uint8_t r = input; // r will be reversed bits of v; first get LSB of v
+    // r will be reversed bits of v; first get LSB of v
+    uint8_t r = (uint8_t)((input * BRIGHTNESS) >> 8);
     uint8_t s = 8 - 1; // extra shift needed at end
 
     for (input >>= 1; input; input >>= 1)
