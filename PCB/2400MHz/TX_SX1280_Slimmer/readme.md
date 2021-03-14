@@ -71,15 +71,16 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - Note: Connector is 6 pin even though there are 5 pins on radio. It's what i had on hand for testing.
 - Trim ears off of connector
 - Install connector in case
-- solder 3 wires to slimmer board, same as above
+- solder 3 wires to slimmer board, same as above (see bay pinout pic)
 - install board into case with 2 screws
-- insteall sma into cover
+- install sma into cover
 - attach UFL antenna
 - screw cover on w/4 screws
 
-<img src="img/13.jpg" width="20%"> <img src="img/14.jpg" width="20%">
-<img src="img/15.jpg" width="20%"> <img src="img/16.jpg" width="20%"> 
-<img src="img/17.jpg" width="20%"> <img src="img/18.jpg" width="20%"> 
+<img src="img/19.jpg" width="20%"><img src="img/13.jpg" width="20%"> 
+<img src="img/14.jpg" width="20%"><img src="img/15.jpg" width="20%"> 
+<img src="img/16.jpg" width="20%"> <img src="img/17.jpg" width="20%"> 
+<img src="img/18.jpg" width="20%"> 
 
 
 ### Schematic and PCB layout
