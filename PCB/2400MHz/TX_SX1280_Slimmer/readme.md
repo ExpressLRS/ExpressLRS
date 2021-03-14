@@ -1,7 +1,7 @@
 
 # 2.4GHz Slimmer Tx Lite or JR Case
 
-<img src="img/11.jpg" width="20%"><img src="img/20.jpg" width="20%">
+<img src="img/11.jpg" width="20%">    <img src="img/20.jpg" width="20%">
 
 EasyEda Link: https://easyeda.com/jberkmanPI/tx-slim-2-4g-sch
 
