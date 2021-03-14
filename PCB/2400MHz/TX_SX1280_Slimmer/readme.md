@@ -22,7 +22,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
 - 10uF 3528 Cap https://www.aliexpress.com/item/32666405364.html?algo_pvid=365ae59d-9e6c-46b7-9792-2656b0961f70&algo_expid=365ae59d-9e6c-46b7-9792-2656b0961f70-6&btsid=0bb0623116027669252885518ea610&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
 - Connector for X-lite/X9 lite case: 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
-- Connector for JR Bay case:JST-SM 6 pin connector https://www.aliexpress.com/item/33003863385.html?spm=a2g0o.productlist.0.0.6b846649NO2kGU&algo_pvid=d4831a53-1e21-43d6-b856-186b12fcbd6a&algo_expid=d4831a53-1e21-43d6-b856-186b12fcbd6a-0&btsid=0bb0623c16157501551688142e7a96&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
+- Connector for JR Bay case:JST-SM 6 pin connector https:https://www.aliexpress.com/item/1005001748142754.html?spm=a2g0o.productlist.0.0.547dde13o37ndJ&algo_pvid=84973fbb-1e6c-42a5-8d45-f0af9c90c6fa&algo_expid=84973fbb-1e6c-42a5-8d45-f0af9c90c6fa-2&btsid=0bb0624016157543319841944e0f9e&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
 - #2 screw for sheet metal, .25" long. https://www.amazon.com/TOUHIA-Screws-Phillips-Stainless-Self-Tapping/dp/B07PDC3F85/ref=sr_1_8?dchild=1&keywords=%232+screw&qid=1612739282&sr=8-8
 
 ### Build order
