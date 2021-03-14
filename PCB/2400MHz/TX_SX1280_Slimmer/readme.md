@@ -1,5 +1,5 @@
 
-# 2.4GHz Slimmer Tx 
+# 2.4GHz Slimmer Tx Lite or JR Case
 
 <img src="img/11.jpg" width="20%">
 
@@ -22,7 +22,7 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
 - 10uF 3528 Cap https://www.aliexpress.com/item/32666405364.html?algo_pvid=365ae59d-9e6c-46b7-9792-2656b0961f70&algo_expid=365ae59d-9e6c-46b7-9792-2656b0961f70-6&btsid=0bb0623116027669252885518ea610&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
 - Connector for X-lite/X9 lite case: 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
-- Connector for JR Bay case:JST-SM 6 pin connector
+- Connector for JR Bay case:JST-SM 6 pin connector https://www.aliexpress.com/item/33003863385.html?spm=a2g0o.productlist.0.0.6b846649NO2kGU&algo_pvid=d4831a53-1e21-43d6-b856-186b12fcbd6a&algo_expid=d4831a53-1e21-43d6-b856-186b12fcbd6a-0&btsid=0bb0623c16157501551688142e7a96&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
 - #2 screw for sheet metal, .25" long. https://www.amazon.com/TOUHIA-Screws-Phillips-Stainless-Self-Tapping/dp/B07PDC3F85/ref=sr_1_8?dchild=1&keywords=%232+screw&qid=1612739282&sr=8-8
 
 ### Build order
@@ -47,15 +47,15 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 ### Slimmer Case Build process and Pics
 
-- Solder wires to connector  
-- Install from outside of module case  
-- Install module into radio  
+- Solder wires to connector
+- Install from outside of module case
+- Install module into radio
 - Hot glue wires/connector to set location.  
 
-- Solder wires to board  
-- install rf cable  
-- install rf cable to sx1280 board  
-- Neatly install in case  
+- Solder wires to board
+- install rf cable
+- install rf cable to sx1280 board
+- Neatly install in case
 - Add 4 screws  
 
 
@@ -67,6 +67,20 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 
 ### JR Bay Case Build Process and Pics
+
+- Note: Connector is 6 pin even though there are 5 pins on radio. It's what i had on hand for testing.
+- Trim ears off of connector
+- Install connector in case
+- solder 3 wires to slimmer board, same as above
+- install board into case with 2 screws
+- insteall sma into cover
+- attach UFL antenna
+- screw cover on w/4 screws
+
+<img src="img/13.jpg" width="20%"> <img src="img/14.jpg" width="20%">
+<img src="img/15.jpg" width="20%"> <img src="img/16.jpg" width="20%"> 
+<img src="img/17.jpg" width="20%"> <img src="img/18.jpg" width="20%"> 
+
 
 ### Schematic and PCB layout
 
