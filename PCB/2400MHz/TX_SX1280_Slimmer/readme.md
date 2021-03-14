@@ -21,7 +21,8 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 - SMA or RPSMA connector https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
 - 10uF 3528 Cap https://www.aliexpress.com/item/32666405364.html?algo_pvid=365ae59d-9e6c-46b7-9792-2656b0961f70&algo_expid=365ae59d-9e6c-46b7-9792-2656b0961f70-6&btsid=0bb0623116027669252885518ea610&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_
-- 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
+- Connector for X-lite/X9 lite case: 8 Way header https://au.rs-online.com/web/p/sil-sockets/7022852/
+- Connector for JR Bay case:JST-SM 6 pin connector
 - #2 screw for sheet metal, .25" long. https://www.amazon.com/TOUHIA-Screws-Phillips-Stainless-Self-Tapping/dp/B07PDC3F85/ref=sr_1_8?dchild=1&keywords=%232+screw&qid=1612739282&sr=8-8
 
 ### Build order
@@ -44,19 +45,12 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 
 
-### Build process and Pics
+### Slimmer Case Build process and Pics
 
 - Solder wires to connector  
 - Install from outside of module case  
 - Install module into radio  
 - Hot glue wires/connector to set location.  
-
-
-- Solder wires to board
-- install rf cable to case
-- install rf cable to sx1280 board
-- Neatly install in case
-- Add 4 screws
 
 - Solder wires to board  
 - install rf cable  
@@ -71,6 +65,8 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 <img src="img/8.jpg" width="20%"> <img src="img/9.jpg" width="20%"> 
 <img src="img/10.jpg" width="20%">
 
+
+### JR Bay Case Build Process and Pics
 
 ### Schematic and PCB layout
 
