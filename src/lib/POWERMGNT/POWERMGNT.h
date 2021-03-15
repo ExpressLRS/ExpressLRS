@@ -61,7 +61,7 @@
 #endif
 
 #ifdef TARGET_TX_FM30
-#define MaxPower 4
+#define MaxPower 3
 #define DefaultPowerEnum 2
 #endif
 
