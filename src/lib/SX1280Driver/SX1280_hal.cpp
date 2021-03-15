@@ -41,7 +41,9 @@ void SX1280Hal::end()
 void SX1280Hal::init()
 {
     Serial.println("Hal Init");
+#if defined(GPIO_PIN_BUSY)
     pinMode(GPIO_PIN_BUSY, INPUT);
+#endif
     pinMode(GPIO_PIN_DIO1, INPUT);
 
     pinMode(GPIO_PIN_RST, OUTPUT);
@@ -118,6 +120,7 @@ void SX1280Hal::reset(void)
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
 
+#if defined(GPIO_PIN_BUSY)
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
         #ifdef PLATFORM_STM32
@@ -128,6 +131,9 @@ void SX1280Hal::reset(void)
         _NOP();
         #endif
     }
+#else
+    delay(10); // typically 2ms observed
+#endif
 
     //this->BusyState = SX1280_NOT_BUSY;
     Serial.println("SX1280 Ready!");
@@ -278,6 +284,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
+#if defined(GPIO_PIN_BUSY)    
     #define wtimeoutUS 1000
     uint32_t startTime = micros();
 
@@ -299,6 +306,13 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
             #endif
         }
     }
+#else
+    // Datasheet table 10-2 indicates maximum typical mode switch value
+    // of 60us: FS to TX/RX, RX/TX to FS, TX to RX, RX to TX
+    // However, BUSY is really only needed to guard these transions and ELRS
+    // code does other things after enabling TX or RX
+    // delayMicroseconds(80);
+#endif
     return true;
 }
 

@@ -194,7 +194,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_TX    PA9 // confirmed
 
 
-#define BUFFER_OE               PA5  //CONFIRMED
+#define GPIO_PIN_RCSIGNAL_OE    PA5  //CONFIRMED
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #elif defined(TARGET_R9M_LITE_TX)
@@ -220,7 +220,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
-#define BUFFER_OE               PA5  //CONFIRMED
+#define GPIO_PIN_RCSIGNAL_OE    PA5  //CONFIRMED
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 //#define GPIO_PIN_RFamp_APC1           PA4  //2.7V
@@ -251,7 +251,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF2			PB1  // 26SU Sample RF2
 #define GPIO_PIN_SWR			PA0  // SWR? ADC1_IN1
 
-#define BUFFER_OE               UNDEF_PIN  //CONFIRMED
+#define GPIO_PIN_RCSIGNAL_OE    UNDEF_PIN  //CONFIRMED
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1)
 #define GPIO_PIN_NSS 15
@@ -355,6 +355,33 @@ https://github.com/jaxxzer
 
 #define timerOffset          1
 
+#elif defined(TARGET_TX_FM30)
+#define GPIO_PIN_NSS            PB12
+//#define GPIO_PIN_BUSY         UNDEF_PIN // Does not appear to be connected?
+#define GPIO_PIN_DIO0           UNDEF_PIN // No DIO0 on SX1280
+#define GPIO_PIN_DIO1           PB8
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PB3
+//#define GPIO_PIN_RX_ENABLE    UNDEF_PIN
+#define GPIO_PIN_TX_ENABLE      PB9 // CTX on SE2431L
+#define GPIO_PIN_ANT_CTRL_2     PB4 // Low for left (stock), high for right (empty)
+#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1
+#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
+#define GPIO_PIN_RCSIGNAL_OE    PB7
+#define GPIO_PIN_LED_RED        PB2 // Right Red LED (active low)
+#define GPIO_PIN_LED_GREEN      PA7 // Left Green LED (active low)
+#define GPIO_PIN_BUTTON         PB0 // active low
+//#define GPIO_PIN_BUZZER       UNDEF_PIN
+#define GPIO_PIN_DIP1           PA0 // Rotary Switch 0001
+#define GPIO_PIN_DIP2           PA1 // Rotary Switch 0010
+//#define GPIO_PIN_FAN_EN       UNDEF_PIN
+#define GPIO_PIN_DEBUG_RX       PA3 // UART2 (bluetooth)
+#define GPIO_PIN_DEBUG_TX       PA2 // UART2 (bluetooth)
+#define GPIO_LED_RED_INVERTED   1
+#define GPIO_LED_GREEN_INVERTED 1
+
 #else
 #error "Unknown target!"
 #endif
@@ -374,3 +401,13 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED GPIO_PIN_LED_RED
 #endif /* GPIO_PIN_LED_RED */
 #endif /* GPIO_PIN_LED */
+
+#ifndef GPIO_BUTTON_INVERTED
+#define GPIO_BUTTON_INVERTED 0
+#endif
+#ifndef GPIO_LED_RED_INVERTED
+#define GPIO_LED_RED_INVERTED 0
+#endif
+#ifndef GPIO_LED_GREEN_INVERTED
+#define GPIO_LED_GREEN_INVERTED 0
+#endif

@@ -99,6 +99,9 @@ elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_433*'):
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_FCC_915*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 915FCC\n")
 
+elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_ISM_2400*'):
+    sys.stdout.write("\u001b[32mBuilding for SX1280 2400ISM\n")
+
 time.sleep(1)
 
 # Set upload_protovol = 'custom' for STM32 MCUs

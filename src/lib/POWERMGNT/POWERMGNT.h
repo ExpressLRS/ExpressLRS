@@ -60,6 +60,11 @@
 #define DefaultPowerEnum 2
 #endif
 
+#ifdef TARGET_TX_FM30
+#define MaxPower 4
+#define DefaultPowerEnum 2
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,

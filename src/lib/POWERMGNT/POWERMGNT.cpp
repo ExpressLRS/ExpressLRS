@@ -189,6 +189,29 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
+#elif defined(TARGET_TX_FM30)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-15); // ~10.5mW
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-11); // ~26mW
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-1);  // ~99mW
+        break;
+    case PWR_250mW:
+        // The original FM30 can somehow put out +22dBm but the 2431L max input
+        // is +6dBm, and even when SetOutputPower(13) you still only get 150mW
+        Radio.SetOutputPower(6);  // ~150mW
+        break;
+    case PWR_50mW:
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
+        break;
+    }
 #else
 #error "[ERROR] Unknown power management!"
 #endif
