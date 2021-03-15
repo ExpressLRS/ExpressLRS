@@ -10,12 +10,18 @@
 #include "SX1280Driver.h"
 #endif
 
-#ifdef TARGET_R9M_TX
-#ifdef R9M_UNLOCK_HIGHER_POWER
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#ifdef UNLOCK_HIGHER_POWER
 #define MaxPower 6
 #else
 #define MaxPower 4
 #endif
+#define DefaultPowerEnum 2
+#endif
+
+
+#ifdef TARGET_TX_GHOST
+#define MaxPower 4
 #define DefaultPowerEnum 2
 #endif
 

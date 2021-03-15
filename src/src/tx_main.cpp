@@ -35,21 +35,33 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#ifdef TARGET_R9M_TX
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
 #include "DAC.h"
+DAC TxDAC;
+#endif
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
-R9DAC R9DAC;
 #endif
 
-#if defined(TARGET_R9M_LITE_TX) || (TARGET_R9M_LITE_PRO_TX)
-#include "STM32_hwTimer.h"
+#ifdef TARGET_TX_GHOST
+uint8_t LEDfadeDiv;
+uint8_t LEDfade;
+bool LEDfadeDir;
+uint32_t LEDupdateInterval = 25;
+uint32_t LEDupdateCounterMillis;
+#include "STM32F3_WS2812B_LED.h"
 #endif
+
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 3000 // After 1500ms of no TLM response consider that slave has lost connection
-#define MSP_PACKET_SEND_INTERVAL 200
+#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
+#define MSP_PACKET_SEND_INTERVAL 200LU
+
+#ifndef TLM_REPORT_INTERVAL_MS
+#define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
+#endif
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -58,13 +70,12 @@ CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
-Config config;
+TxConfig config;
 
 void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
-bool bindMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
@@ -74,7 +85,9 @@ mspPacket_t MSPPacket;
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
 
-uint32_t LastTLMpacketRecvMillis = 0;
+volatile uint32_t LastTLMpacketRecvMillis = 0;
+uint32_t TLMpacketReported = 0;
+
 LQCALC LQCALC;
 LPF LPD_DownlinkLQ(1);
 
@@ -89,6 +102,11 @@ bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
+
+bool InBindingMode = false;
+void EnterBindingMode();
+void ExitBindingMode();
+void SendUIDOverMSP();
 
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -156,9 +174,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
 
     crsf.TLMbattSensor.voltage = (Radio.RXdataBuffer[3] << 8) + Radio.RXdataBuffer[6];
-
-    crsf.sendLinkStatisticsToTX();
-    crsf.sendLinkBattSensorToTX();
   }
 }
 
@@ -277,11 +292,16 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+  if (InBindingMode)
+  {
+    return;
+  }
+
   uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
   if (modresult == 0) // if it time to hop, do so.
   {
-    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
 }
 
@@ -349,6 +369,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateMSPData();
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
+
+      if (MSPPacketSendCount <= 0 && InBindingMode)
+      {
+        ExitBindingMode();
+      }
     }
     else
     {
@@ -358,7 +383,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
       Generate4ChannelData_11bit();
-#endif
+      #endif
     }
   }
 
@@ -371,7 +396,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void sendLuaParams()
 {
   uint8_t luaParams[] = {0xFF,
-                         (uint8_t)(bindMode | (webUpdateMode << 1)),
+                         (uint8_t)(InBindingMode | (webUpdateMode << 1)),
                          (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
                          (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1),
                          (uint8_t)(POWERMGNT.currPower() + 1),
@@ -385,7 +410,7 @@ void sendLuaParams()
 
 void UARTdisconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {676, 520};
   const uint16_t beepDurations[] = {300, 150};
   for (int i = 0; i < 2; i++)
@@ -394,13 +419,14 @@ void UARTdisconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
 }
 
 void UARTconnected()
 {
-  #ifdef TARGET_R9M_TX
+  #ifdef GPIO_PIN_BUZZER
   const uint16_t beepFreq[] = {520, 676};
   const uint16_t beepDurations[] = {150, 300};
   for (int i = 0; i < 2; i++)
@@ -409,6 +435,7 @@ void UARTconnected()
     delay(beepDurations[i]);
     noTone(GPIO_PIN_BUZZER);
   }
+  pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
@@ -493,13 +520,13 @@ void HandleUpdateParameter()
   case 0xFF:
     if (crsf.ParameterUpdateData[1] == 1)
     {
-      Serial.println("Binding Requested!");
-      bindMode = true;
+      Serial.println("Binding requested from LUA");
+      EnterBindingMode();
     }
     else
     {
-      Serial.println("Binding Stopped!");
-      bindMode = false;
+      Serial.println("Binding stopped  from LUA");
+      ExitBindingMode();
     }
     break;
 
@@ -507,7 +534,7 @@ void HandleUpdateParameter()
     break;
   }
   UpdateParamReq = false;
-  
+
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
@@ -532,61 +559,77 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef PLATFORM_ESP32
-  Serial.begin(115200);
+#ifdef TARGET_TX_GHOST
+  Serial.setTx(PA2);
+  Serial.setRx(PA3);
 #endif
+  Serial.begin(460800);
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-
-#ifdef USE_ESP8266_BACKPACK
-    HardwareSerial(USART1);
-    Serial.begin(460800);
-#else
-    HardwareSerial(USART2);
-    Serial.setTx(PA2);
-    Serial.setRx(PA3);
-    Serial.begin(400000);
-#endif
-    
-
-#if defined(TARGET_R9M_TX)
-    // Annoying startup beeps
-  #ifndef JUST_BEEP_ONCE
-    pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    #if defined(MY_STARTUP_MELODY_ARR)
-      // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-      const int melody[][2] = MY_STARTUP_MELODY_ARR;
-
-      for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
-        tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
-        delay(melody[i][1]);
-        noTone(GPIO_PIN_BUZZER);
-      }
-    #else
-      // use default jingle
-      const int beepFreq[] = {659, 659, 523, 659, 783, 392};
-      const int beepDurations[] = {300, 300, 100, 300, 550, 575};
-
-      for (int i = 0; i < 6; i++)
+  /**
+   * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
+   * else we will use GPIO_PIN_LED_GREEN and _RED.
+   **/
+  #if WS2812_LED_IS_USED // do startup blinkies for fun
+      uint32_t col = 0x0000FF;
+      for (uint8_t j = 0; j < 3; j++)
       {
-        tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-        delay(beepDurations[i]);
-        noTone(GPIO_PIN_BUZZER);
+          for (uint8_t i = 0; i < 5; i++)
+          {
+              WS281BsetLED(col << j*8);
+              delay(15);
+              WS281BsetLED(0, 0, 0);
+              delay(35);
+          }
       }
-    #endif
-  #else
-    tone(GPIO_PIN_BUZZER, 400, 200);
-    delay(200);
-    tone(GPIO_PIN_BUZZER, 480, 200);
   #endif
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
-  R9DAC.init();
-#endif
 
+  #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+  #endif // GPIO_PIN_LED_GREEN
+  #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    pinMode(GPIO_PIN_LED_RED, OUTPUT);
+  #endif // GPIO_PIN_LED_RED
+
+  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+    pinMode(GPIO_PIN_BUZZER, OUTPUT);
+    // Annoying startup beeps
+    #ifndef JUST_BEEP_ONCE
+      #if defined(MY_STARTUP_MELODY_ARR)
+        // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
+        const int melody[][2] = MY_STARTUP_MELODY_ARR;
+
+        for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
+          tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
+          delay(melody[i][1]);
+          noTone(GPIO_PIN_BUZZER);
+        }
+      #else
+        // use default jingle
+        const int beepFreq[] = {659, 659, 523, 659, 783, 392};
+        const int beepDurations[] = {300, 300, 100, 300, 550, 575};
+
+        for (int i = 0; i < 6; i++)
+        {
+          tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
+          delay(beepDurations[i]);
+          noTone(GPIO_PIN_BUZZER);
+        }
+      #endif
+    #else
+      tone(GPIO_PIN_BUZZER, 400, 200);
+      delay(200);
+      tone(GPIO_PIN_BUZZER, 480, 200);
+    #endif
+  #endif // GPIO_PIN_BUZZER
+
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    TxDAC.init();
+  #endif
+
+
+#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -598,7 +641,7 @@ void setup()
   // Print base mac address
   // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-#endif
+#endif // PLATFORM_ESP32
 
   FHSSrandomiseFHSSsequence();
 
@@ -617,21 +660,29 @@ void setup()
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  #if !(defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1) || defined(Regulatory_Domain_ISM_2400))
+  #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
   while (!init_success)
   {
-    #if defined(TARGET_R9M_TX)
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-    tone(GPIO_PIN_BUZZER, 480, 200);
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    #endif // GPIO_PIN_LED_GREEN
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+      tone(GPIO_PIN_BUZZER, 480, 200);
+    #endif // GPIO_PIN_BUZZER
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_RED, LOW);
+    #endif // GPIO_PIN_LED_RED
     delay(200);
-    tone(GPIO_PIN_BUZZER, 400, 200);
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+      tone(GPIO_PIN_BUZZER, 400, 200);
+    #endif // GPIO_PIN_BUZZER
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+      digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    #endif // GPIO_PIN_LED_RED
     delay(1000);
-    #endif
   }
   POWERMGNT.setDefaultPower();
 
@@ -654,13 +705,31 @@ void setup()
 
 void loop()
 {
-#if defined(PLATFORM_ESP32)
-  if (webUpdateMode)
-  {
-    HandleWebUpdate();
-    return;
-  }
-#endif
+  uint32_t now = millis();
+
+  #if WS2812_LED_IS_USED
+      if ((connectionState == disconnected) && (now > LEDupdateInterval + LEDupdateCounterMillis))
+      {
+          uint8_t LEDcolor[3] = {0};
+          if (LEDfade == 30 || LEDfade == 0)
+          {
+              LEDfadeDir = !LEDfadeDir;
+          }
+
+          LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+          LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+          WS281BsetLED(LEDcolor);
+          LEDupdateCounterMillis = now;
+      }
+  #endif
+
+  #if defined(PLATFORM_ESP32)
+    if (webUpdateMode)
+    {
+      HandleWebUpdate();
+      return;
+    }
+  #endif
 
   HandleUpdateParameter();
 
@@ -681,35 +750,32 @@ void loop()
     hwTimer.resume();
   }
 
-#ifdef FEATURE_OPENTX_SYNC
-// Serial.println(crsf.OpenTXsyncOffset);
-#endif
+  #ifdef FEATURE_OPENTX_SYNC
+  // Serial.println(crsf.OpenTXsyncOffset);
+  #endif
 
-  if (millis() > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
+  if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
     connectionState = disconnected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED_RED, LOW);
-    #endif
+    #endif // GPIO_PIN_LED_RED
   }
   else
   {
     connectionState = connected;
-    #if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
     digitalWrite(GPIO_PIN_LED_RED, HIGH);
-    #endif
+    #endif // GPIO_PIN_LED_RED
   }
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_R9M_LITE_TX) || defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_RX_GHOST_ATTO_V1)
-  crsf.STM32handleUARTin();
-  #ifdef FEATURE_OPENTX_SYNC
-  crsf.sendSyncPacketToTX();
+  #ifdef PLATFORM_STM32
+    crsf.handleUARTin();
+  #endif // PLATFORM_STM32
+
+  #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+    button.handle();
   #endif
-  crsf.UARTwdt();
-  #ifdef TARGET_R9M_TX
-  button.handle();
-  #endif
-#endif
 
   if (Serial.available())
   {
@@ -721,6 +787,15 @@ void loop()
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
+  }
+
+  /* Send TLM updates to handset if connected + reporting period
+   * is elapsed. This keeps handset happy dispite of the telemetry ratio */
+  if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
+      (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
+    crsf.sendLinkStatisticsToTX();
+    crsf.sendLinkBattSensorToTX();
+    TLMpacketReported = now;
   }
 }
 
@@ -739,13 +814,13 @@ void OnRFModePacket(mspPacket_t *packet)
   switch (rfMode)
   {
   case RATE_200HZ:
-    SetRFLinkRate(RATE_200HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
     break;
   case RATE_100HZ:
-    SetRFLinkRate(RATE_100HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_100HZ));
     break;
   case RATE_50HZ:
-    SetRFLinkRate(RATE_50HZ);
+    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
     break;
   default:
     // Unsupported rate requested
@@ -840,3 +915,89 @@ void ProcessMSPPacket(mspPacket_t *packet)
     MSPPacketSendCount = 6;
   }
 }
+
+void EnterBindingMode()
+{
+  if (InBindingMode) {
+      // Don't enter binding if we're already binding
+      return;
+  }
+
+  // Start periodically sending the current UID as MSP packets
+  SendUIDOverMSP();
+
+  // Set UID to special binding values
+  UID[0] = BindingUID[0];
+  UID[1] = BindingUID[1];
+  UID[2] = BindingUID[2];
+  UID[3] = BindingUID[3];
+  UID[4] = BindingUID[4];
+  UID[5] = BindingUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = true;
+
+  // Start attempting to bind
+  // Lock the RF rate and freq while binding
+  SetRFLinkRate(RATE_DEFAULT);
+  Radio.SetFrequencyReg(GetInitialFreq());
+  POWERMGNT.setPower(PWR_10mW);
+
+  Serial.print("Entered binding mode at freq = ");
+  Serial.println(Radio.currFreq);
+}
+
+void ExitBindingMode()
+{
+  if (!InBindingMode)
+  {
+    // Not in binding mode
+    return;
+  }
+
+  // Reset UID to defined values
+  UID[0] = MasterUID[0];
+  UID[1] = MasterUID[1];
+  UID[2] = MasterUID[2];
+  UID[3] = MasterUID[3];
+  UID[4] = MasterUID[4];
+  UID[5] = MasterUID[5];
+
+  CRCCaesarCipher = UID[4];
+  DeviceAddr = UID[5] & 0b111111;
+
+  InBindingMode = false;
+
+  Serial.println("Exiting binding mode");
+}
+
+void SendUIDOverMSP()
+{
+  MSPPacket.reset();
+
+  MSPPacket.makeCommand();
+  MSPPacket.function = MSP_ELRS_BIND;
+  MSPPacket.addByte(UID[2]);
+  MSPPacket.addByte(UID[3]);
+  MSPPacket.addByte(UID[4]);
+  MSPPacket.addByte(UID[5]);
+
+  MSPPacketSendCount = 10;
+}
+
+
+
+#ifdef TARGET_TX_GHOST
+extern "C"
+/**
+  * @brief This function handles external line 2 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI2_TSC_IRQHandler()
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+}
+#endif

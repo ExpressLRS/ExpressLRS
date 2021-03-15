@@ -5,6 +5,9 @@
  * [Discord Chat](https://discord.gg/dS6ReFY)
  * [Facebook Group](https://www.facebook.com/groups/636441730280366)
 
+## Suport ExpressLRS
+If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate<br/><br/>
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=FLHGG9DAFYQZU)
 
 ## High Preformance LoRa Radio Link
 

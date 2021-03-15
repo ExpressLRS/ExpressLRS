@@ -13,7 +13,9 @@
 
 #define One_Bit_Switches
 
+extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
+extern uint8_t MasterUID[6];
 extern uint8_t CRCCaesarCipher;
 extern uint8_t DeviceAddr;
 
@@ -78,7 +80,7 @@ typedef struct expresslrs_rf_pref_params_s
     uint32_t RFmodeCycleInterval;
     uint32_t RFmodeCycleAddtionalTime;
     uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-    uint32_t SyncPktIntervalConnected; // how often to send the SYNC_PACKET packet (ms) when there we have a connection
+    uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
 
@@ -106,7 +108,7 @@ typedef struct expresslrs_mod_settings_s
 #define RATE_DEFAULT 0
 typedef struct expresslrs_mod_settings_s
 {
-    uint8_t index;
+    int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     SX1280_RadioLoRaBandwidths_t bw;
     SX1280_RadioLoRaSpreadingFactors_t sf;
@@ -141,5 +143,5 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX7 11
 #define AUX8 12
 
-//ELRS SPECIFIC OTA CRC 
+//ELRS SPECIFIC OTA CRC
 #define ELRS_CRC_POLY 0x83

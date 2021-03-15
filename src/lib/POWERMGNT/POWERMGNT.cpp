@@ -7,8 +7,8 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#ifdef TARGET_R9M_TX
-extern R9DAC R9DAC;
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+extern DAC TxDAC;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
@@ -38,11 +38,17 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-#ifdef TARGET_R9M_TX
-    Serial.println("Init TARGET_R9M_TX DAC Driver");
+
+
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+    Serial.println("Init DAC Driver");
 #endif
-#ifdef GPIO_PIN_FAN_EN
+#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+#endif
+#if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
+    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
+    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
 #endif
 }
 
@@ -63,34 +69,43 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
     case PWR_10mW:
         Radio.SetOutputPower(8);
-        CurrentPower = PWR_10mW;
         break;
     case PWR_25mW:
     default:
         Radio.SetOutputPower(13);
-        CurrentPower = PWR_25mW;
+        Power = PWR_25mW;
         break;
     }
-    return CurrentPower;
-#endif
-
-#ifdef TARGET_R9M_TX
+#elif defined(TARGET_TX_GHOST)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(0);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(4);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(10);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(13);
+        break;
+    case PWR_50mW:
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(7);
+        break;
+    }
+#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     Radio.SetOutputPower(0b0000);
-    R9DAC.setPower((DAC_PWR_)Power);
-    CurrentPower = Power;
+    TxDAC.setPower((DAC_PWR_)Power);
 #ifdef GPIO_PIN_FAN_EN
     (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
 #endif
-    return CurrentPower;
-#endif
-
-#ifdef TARGET_R9M_LITE_PRO_TX
+#elif defined(TARGET_R9M_LITE_PRO_TX)
     Radio.SetOutputPower(0b0000);
-    CurrentPower = Power;
-    return CurrentPower;
-#endif
-
-#if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
+#elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
     switch (Power)
     {
     case PWR_10mW:
@@ -102,17 +117,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         CurrentPower = PWR_25mW;
         break;
     case PWR_50mW:
-        Radio.SetOutputPower(0b1111); //15
-        CurrentPower = PWR_50mW;
-        break;
     default:
-        CurrentPower = PWR_50mW;
+        Power = PWR_50mW;
         Radio.SetOutputPower(0b1111); //15
         break;
     }
-#endif
-
-#ifdef TARGET_1000mW_MODULE
+#elif defined(TARGET_1000mW_MODULE)
     switch (Power)
     {
     case PWR_100mW:
@@ -133,10 +143,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
-    CurrentPower = Power;
-#endif
-
-#ifdef TARGET_TX_ESP32_E28_SX1280_V1
+#elif defined(TARGET_TX_ESP32_E28_SX1280_V1)
     switch (Power)
     {
     case PWR_10mW:
@@ -159,10 +166,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-8);
         break;
     }
-    CurrentPower = Power;
-#endif
-
-#ifdef TARGET_TX_ESP32_LORA1280F27
+#elif defined(TARGET_TX_ESP32_LORA1280F27)
     switch (Power)
     {
     case PWR_10mW:
@@ -185,7 +189,9 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
-    CurrentPower = Power;
+#else
+#error "[ERROR] Unknown power management!"
 #endif
-    return CurrentPower;
+    CurrentPower = Power;
+    return Power;
 }

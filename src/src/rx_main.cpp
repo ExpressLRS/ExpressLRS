@@ -23,6 +23,8 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
+#include "elrs_eeprom.h"
+#include "config.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -46,6 +48,8 @@ uint32_t LEDupdateCounterMillis;
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
 #define WEB_UPDATE_LED_FLASH_INTERVAL 25
+#define BIND_LED_FLASH_INTERVAL_SHORT 100
+#define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 ///////////////////
 
@@ -54,6 +58,8 @@ uint32_t LEDupdateCounterMillis;
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
+ELRS_EEPROM eeprom;
+RxConfig config;
 
 /// Filters ////////////////
 LPF LPF_Offset(2);
@@ -77,6 +83,10 @@ uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a
 bool lowRateMode = false;
 
 bool LED = false;
+uint8_t LEDPulseCounter = 0;
+
+uint32_t webUpdateLedFlashIntervalLast = 0;
+uint32_t bindLedFlashInterval = 0;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -86,7 +96,6 @@ uint32_t buttonLastPressed = 0;
 
 bool webUpdateMode = false;
 bool disableWebServer = false;
-uint32_t webUpdateLedFlashIntervalLast;
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
@@ -101,7 +110,7 @@ uint32_t doneProcessing;
 
 ///////Variables for Telemetry and Link Quality///////////////
 uint32_t ModuleBootTime = 0;
-uint32_t LastValidPacketMicros = 0;
+uint32_t volatile LastValidPacketMicros = 0; // Needs to be volatile to stop race condition as variable might be updated during if() in loop()
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
@@ -117,6 +126,14 @@ uint32_t RFmodeLastCycled = 0;
 uint8_t RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
 bool LockRFmode = false;
 ///////////////////////////////////////
+
+bool InBindingMode = false;
+
+void EnterBindingMode();
+void ExitBindingMode();
+void OnELRSBindMSP(mspPacket_t *packet);
+
+//////////////////////////////////////////////////////////////
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -143,6 +160,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
+    if (InBindingMode)
+    {
+        return;
+    }
+
     if (!LockRFmode)
     {
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
@@ -158,6 +180,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
+    if (InBindingMode)
+    {
+        return;
+    }
+
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
     {
         return;
@@ -171,7 +198,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequency(FHSSgetNextFreq());
+    Radio.SetFrequencyReg(FHSSgetNextFreq());
 
     if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
     {
@@ -295,8 +322,12 @@ void LostConnection()
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
     #endif
 
-    Radio.SetFrequency(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
-    hwTimer.stop();
+    if (!InBindingMode)
+    {
+        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        hwTimer.stop();
+    }
+
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -406,7 +437,15 @@ void ICACHE_RAM_ATTR UnpackMSPData()
     packet.addByte(Radio.RXdataBuffer[4]);
     packet.addByte(Radio.RXdataBuffer[5]);
     packet.addByte(Radio.RXdataBuffer[6]);
-    crsf.sendMSPFrameToFC(&packet);
+
+    if (packet.function == MSP_ELRS_BIND)
+    {
+        OnELRSBindMSP(&packet);
+    }
+    else
+    {
+        crsf.sendMSPFrameToFC(&packet);
+    }
 }
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
@@ -565,8 +604,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
 void beginWebsever()
 {
-#ifdef PLATFORM_STM32
-#else
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
     BeginWebUpdate();
     webUpdateMode = true;
@@ -583,12 +621,12 @@ void sampleButton()
         buttonDown = true;
     }
 
-    if (buttonValue == true && buttonPrevValue == false) 
+    if (buttonValue == true && buttonPrevValue == false)
     { //rising edge
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown) 
+    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
     { // button held down for WEB_UPDATE_PRESS_INTERVAL
         if (!webUpdateMode)
         {
@@ -620,7 +658,23 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-    delay(100);
+    eeprom.Begin();
+    config.Load();
+
+#ifndef MY_UID
+    // Increment the power on counter in eeprom
+    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+    config.Commit();
+
+    // If we haven't reached our binding mode power cycles
+    // and we've been powered on for 2s, reset the power on counter
+    if (config.GetPowerOnCounter() < 3)
+    {
+        delay(2000);
+        config.SetPowerOnCounter(0);
+        config.Commit();
+    }
+#endif
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
@@ -629,9 +683,6 @@ void setup()
 
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-#ifdef USE_R9MM_R9MINI_SBUS
-//HardwareSerial(USART2); // This is useless call
-#endif
     Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
     Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
@@ -698,6 +749,37 @@ void setup()
     Serial.println("Setting 2.4GHz Mode");
 #endif
 
+// Use the user defined binding phase if set,
+// otherwise use the bind flag and UID in eeprom for UID
+#if !defined(MY_UID)
+    // Check the byte that indicates if RX has been bound
+    if (config.GetIsBound())
+    {
+        Serial.println("RX has been bound previously, reading the UID from eeprom...");
+        uint8_t* storedUID = config.GetUID();
+        for (uint8_t i = 0; i < UID_LEN; ++i)
+        {
+            UID[i] = storedUID[i];
+        }
+
+        CRCCaesarCipher = UID[4];
+        DeviceAddr = UID[5] & 0b111111;
+
+        Serial.print("UID = ");
+        Serial.print(UID[0]);
+        Serial.print(", ");
+        Serial.print(UID[1]);
+        Serial.print(", ");
+        Serial.print(UID[2]);
+        Serial.print(", ");
+        Serial.print(UID[3]);
+        Serial.print(", ");
+        Serial.print(UID[4]);
+        Serial.print(", ");
+        Serial.println(UID[5]);
+    }
+#endif
+
     FHSSrandomiseFHSSsequence();
 
     Radio.currFreq = GetInitialFreq();
@@ -714,7 +796,7 @@ void setup()
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
     }
-#ifdef Regulatory_Domain_ISM_2400
+#ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
 #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
@@ -731,25 +813,7 @@ void setup()
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    // #ifdef LOCK_ON_50HZ // to do check if needed or delete
-    //     for (int i = 0; i < RATE_MAX; i++)
-    //     {
-    //         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig((expresslrs_RFrates_e)i);
-    //         if (ModParams->enum_rate == RATE_50HZ)
-    //         {
-    //             SetRFLinkRate(ModParams->index);
-    //             LockRFmode = true;
-    //         }
-    //     }
-    // #else
-    //     SetRFLinkRate(RATE_DEFAULT);
-    // #endif
-
-#ifdef LOCK_ON_50HZ
-    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
-#else
     SetRFLinkRate(RATE_DEFAULT);
-#endif
 
     Radio.RXnb();
     crsf.Begin();
@@ -765,8 +829,13 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_BOOT)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && millis() > 20000)
+    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && !InBindingMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
+    {
+        beginWebsever();
+    }
+
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && InBindingMode && millis() > 60000)
     {
         beginWebsever();
     }
@@ -790,14 +859,14 @@ void loop()
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
-        Radio.SetFrequency(GetInitialFreq());
+        Radio.SetFrequencyReg(GetInitialFreq());
         Radio.RXnb();
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
     }
 
 #ifdef FAST_SYNC
-    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor))) 
+    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
 #else
         if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
 #endif
@@ -808,12 +877,6 @@ void loop()
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
             LQCALC.reset();
-            #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
-            #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED);
-            #endif
-            LED = !LED;
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
             getRFlinkInfo();
@@ -821,11 +884,21 @@ void loop()
             delay(100);
             crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
             Radio.RXnb();
+            if (!InBindingMode)
+            {
+                #ifdef GPIO_PIN_LED
+                    digitalWrite(GPIO_PIN_LED, LED);
+                #elif GPIO_PIN_LED_GREEN
+                    digitalWrite(GPIO_PIN_LED_GREEN, LED);
+                #endif
+                LED = !LED;
+            }
         }
         RFmodeLastCycled = millis();
     }
 
-    if ((connectionState == connected) && ((millis() > (LastValidPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)) || ((millis() > (LastSyncPacket + 11000)) && uplinkLQ < 10))) // check if we lost conn.
+    uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
+    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(millis() - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
     }
@@ -877,4 +950,150 @@ void loop()
 #ifdef PLATFORM_STM32
     STM32_RX_HandleUARTin();
 #endif
+
+    // If the eeprom is indicating that we're not bound
+    // and we're not already in binding mode, enter binding
+    if (!config.GetIsBound() && !InBindingMode)
+    {
+        Serial.println("RX has not been bound, enter binding mode...");
+        EnterBindingMode();
+    }
+
+    // If the power on counter is >=3, enter binding and clear counter
+#ifndef MY_UID
+    if (config.GetPowerOnCounter() >= 3)
+    {
+        config.SetPowerOnCounter(0);
+        config.Commit();
+
+        Serial.println("Power on counter >=3, enter binding mode...");
+        EnterBindingMode();
+    }
+#endif
+    // Update the LED while in binding mode
+    if (InBindingMode)
+    {
+        if (millis() > bindLedFlashInterval)
+        {
+            if (LEDPulseCounter == 0)
+            {
+                LED = true;
+            }
+            else if (LEDPulseCounter == 4)
+            {
+                LED = false;
+            }
+            else
+            {
+                LED = !LED;
+            }
+
+            if (LEDPulseCounter < 4)
+            {
+                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_SHORT;
+            }
+            else
+            {
+                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_LONG;
+                LEDPulseCounter = 0;
+            }
+
+
+            #ifdef GPIO_PIN_LED
+            digitalWrite(GPIO_PIN_LED, LED);
+            #endif
+
+            LEDPulseCounter++;
+        }
+    }
+}
+
+void EnterBindingMode()
+{
+    if ((connectionState == connected) || InBindingMode || webUpdateMode) {
+        // Don't enter binding if:
+        // - we're already connected
+        // - we're already binding
+        // - we're in web update mode
+        Serial.println("Cannot enter binding mode!");
+        return;
+    }
+
+    // Set UID to special binding values
+    UID[0] = BindingUID[0];
+    UID[1] = BindingUID[1];
+    UID[2] = BindingUID[2];
+    UID[3] = BindingUID[3];
+    UID[4] = BindingUID[4];
+    UID[5] = BindingUID[5];
+
+    CRCCaesarCipher = UID[4];
+    DeviceAddr = UID[5] & 0b111111;
+
+    // Start attempting to bind
+    // Lock the RF rate and freq while binding
+    SetRFLinkRate(RATE_DEFAULT);
+    Radio.SetFrequencyReg(GetInitialFreq());
+
+    InBindingMode = true;
+
+    Serial.print("Entered binding mode at freq = ");
+    Serial.println(Radio.currFreq);
+}
+
+void ExitBindingMode()
+{
+    if (!InBindingMode) {
+        // Not in binding mode
+        Serial.println("Cannot exit binding mode, not in binding mode!");
+        return;
+    }
+
+    InBindingMode = false;
+
+    LostConnection();
+
+    // Sets params to allow sync after binding and not instantly change RF mode
+    RFmodeCycleDivisor = 1;
+    RFmodeLastCycled = millis();
+
+    Serial.print("Exit binding mode at freq = ");
+    Serial.println(Radio.currFreq);
+}
+
+void OnELRSBindMSP(mspPacket_t *packet)
+{
+    UID[2] = packet->readByte();
+    UID[3] = packet->readByte();
+    UID[4] = packet->readByte();
+    UID[5] = packet->readByte();
+    CRCCaesarCipher = UID[4];
+    DeviceAddr = UID[5] & 0b111111;
+
+    Serial.print("New UID = ");
+    Serial.print(UID[0]);
+    Serial.print(", ");
+    Serial.print(UID[1]);
+    Serial.print(", ");
+    Serial.print(UID[2]);
+    Serial.print(", ");
+    Serial.print(UID[3]);
+    Serial.print(", ");
+    Serial.print(UID[4]);
+    Serial.print(", ");
+    Serial.println(UID[5]);
+
+    // Set new UID in eeprom
+    config.SetUID(UID);
+
+    // Set eeprom byte to indicate RX is bound
+    config.SetIsBound(true);
+
+    // Write the values to eeprom
+    config.Commit();
+
+    FHSSrandomiseFHSSsequence();
+
+    disableWebServer = true;
+    ExitBindingMode();
 }

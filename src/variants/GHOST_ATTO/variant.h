@@ -27,29 +27,29 @@ extern "C" {
  *        Pins
  *----------------------------------------------------------------------------*/
 
-#define PA10 0
-#define PA9  1
-#define PA12 2
-#define PB0  3
-#define PB7  4
-#define PB6  5
-#define PB1  6
-#define PF0  7 // XO, don't use!
-#define PF1  8 // XO, don't use!
-#define PA8  9
-#define PA11 10
-#define PB5  11
-#define PB4  12
-#define PB3  13
-#define PA0  14
-#define PA1  15
-#define PA3  16
-#define PA4  17
-#define PA5  18 // if SB18 ON (default) connected to PB7
-#define PA6  19 // if SB16 ON (default) connected to PB6
-#define PA7  20
-#define PA2  21 // STLink Tx
-#define PA15 22 // STLink Rx
+#define PA10 0    //
+#define PA9  1    //
+#define PA12 2    // 
+#define PB0  3    // RESET --------------------------------- #define GPIO_PIN_RST
+#define PB7  4    // TX_ENABLE ------------------------------#define GPIO_
+#define PB6  5    // USART1, half duplex ------------------- #define GPIO_PIN_RCSIGNAL_RX
+#define PB1  6    //
+#define PF0  7    // XO, don't use!
+#define PF1  8    // XO, don't use!
+#define PA8  9    // ??????
+#define PA11 10   // ??????
+#define PB5  11   // MOSI pin ------------------------------ #define GPIO_PIN_MISO
+#define PB4  12   // MISO pin ------------------------------ #define GPIO_PIN_MISO
+#define PB3  13   // SCK ----------------------------------- #define GPIO_PIN_SCK
+#define PA0  14   // ???????
+#define PA1  15   // DIO1 ---------------------------------- #define GPIO_PIN_DIO1
+#define PA3  16   // BUSY pin ------------------------------ #define GPIO_PIN_BUSY
+#define PA4  17   // ???????
+#define PA5  18   // if SB18 ON (default) connected to PB7 - 
+#define PA6  19   // if SB16 ON (default) connected to PB6 - 
+#define PA7  20   // LED ----------------------------------- #define GPIO_PIN_LED_WS2812
+#define PA2  21   // STLink Tx ----------------------------- #define GPIO_PIN_RCSIGNAL_TX
+#define PA15 22   // NSS ----------------------------------- #define GPIO_PIN_NSS
 
 // This must be a literal
 #define NUM_DIGITAL_PINS        23
