@@ -634,13 +634,18 @@ void setup()
 #endif
 
 #if defined(TARGET_TX_FM30)
-  pinMode(PB1, OUTPUT); // Green LED on "Red" LED
+  pinMode(PB1, OUTPUT); // Green LED on "Red" LED (off)
   digitalWrite(PB1, HIGH);
-  pinMode(PA15, OUTPUT); // Red LED on "Green" LED
+  pinMode(PA15, OUTPUT); // Red LED on "Green" LED (off)
   digitalWrite(PA15, HIGH);
   pinMode(PB5, OUTPUT); // RX3 inverter (from radio)
-  //digitalWrite(PB5, HIGH); // RX3 not inverted
+  digitalWrite(PB5, LOW); // RX3 not inverted
   pinMode(PA8, OUTPUT); // Bluetooth enable (disabled)
+  digitalWrite(PA8, LOW);
+  pinMode(PB6, OUTPUT); // RX1 inverter
+  digitalWrite(PB6, HIGH);
+  //pinMode(PB7, OUTPUT); // TX1 inverter (handled in CRSF lib)
+  //digitalWrite(PB7, HIGH);
 #endif
 
 #ifdef PLATFORM_ESP32

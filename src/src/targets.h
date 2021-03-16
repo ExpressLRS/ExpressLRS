@@ -370,6 +370,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1
 #define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
 #define GPIO_PIN_RCSIGNAL_OE    PB7
+//#define GPIO_PIN_RCSIGNAL_ITX   PB7
+//#define GPIO_PIN_RCSIGNAL_IRX   PB6
 #define GPIO_PIN_LED_RED        PB2 // Right Red LED (active low)
 #define GPIO_PIN_LED_GREEN      PA7 // Left Green LED (active low)
 #define GPIO_PIN_BUTTON         PB0 // active low
