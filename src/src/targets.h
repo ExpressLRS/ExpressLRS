@@ -243,7 +243,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // s.port inverter
 #define GPIO_PIN_RCSIGNAL_TX    PB10 // s.port inverter
 #define GPIO_PIN_LED_GREEN      PA15 // Green LED
-#define GPIO_PIN_LED_RED        PB3  // Red LED
+//#define GPIO_PIN_LED_RED        PB3  // Red LED
 #define GPIO_PIN_LED_RED        PB4  // Blue LED
 
 #define GPIO_PIN_DEBUG_RX    	  PA3  // inverted UART JR
