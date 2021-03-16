@@ -16,6 +16,12 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
+#include "telemetry_protocol.h"
+#include "telemetry.h"
+#ifdef ENABLE_TELEMETRY
+#include "stubborn_sender.h"
+#endif
+
 #include "FHSS.h"
 // #include "Debug.h"
 #include "OTA.h"
@@ -28,10 +34,6 @@ SX1280Driver Radio;
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#endif
-
-#ifdef PLATFORM_STM32
-#include "STM32_UARTinHandler.h"
 #endif
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
@@ -60,7 +62,22 @@ GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
+Telemetry telemetry;
 
+#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
+#elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
+    #define CRSF_RX_SERIAL CrsfRxSerial
+    HardwareSerial CrsfRxSerial(USART3);
+#else
+    #define CRSF_RX_SERIAL Serial
+#endif
+
+#ifdef ENABLE_TELEMETRY
+StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+#endif
+uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
@@ -214,6 +231,14 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
+    #ifdef ENABLE_TELEMETRY
+    uint8_t *data;
+    uint8_t maxLength;
+    uint8_t packageIndex;
+    static uint8_t telemetryDataCount = 0;
+    #endif
+    uint8_t openTxRSSI;
+
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
     {
         return; // don't bother sending tlm if disconnected or TLM is off
@@ -228,24 +253,56 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
 
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
-    Radio.TXdataBuffer[1] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
-    // rssi we send is for display only.
-    // OpenTX treats the rssi values as signed.
+    switch (NextTelemetryType)
+    {
+        case ELRS_TELEMETRY_TYPE_LINK:
+            #ifdef ENABLE_TELEMETRY
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+            #else
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+            #endif
+            Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
-    uint8_t openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
-    // truncate the range to fit into OpenTX's 8 bit signed value
-    if (openTxRSSI > 127)
-        openTxRSSI = 127;
-    // convert to 8 bit signed value in the negative range (-128 to 0)
-    openTxRSSI = 255 - openTxRSSI;
-    Radio.TXdataBuffer[2] = openTxRSSI;
+            // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
+            // rssi we send is for display only.
+            // OpenTX treats the rssi values as signed.
 
-    Radio.TXdataBuffer[3] = (crsf.TLMbattSensor.voltage & 0xFF00) >> 8;
-    Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-    Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-    Radio.TXdataBuffer[6] = (crsf.TLMbattSensor.voltage & 0x00FF);
+            openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
+            // truncate the range to fit into OpenTX's 8 bit signed value
+            if (openTxRSSI > 127)
+                openTxRSSI = 127;
+            // convert to 8 bit signed value in the negative range (-128 to 0)
+            openTxRSSI = 255 - openTxRSSI;
+            Radio.TXdataBuffer[2] = openTxRSSI;
+            Radio.TXdataBuffer[3] = 0;
+            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+            Radio.TXdataBuffer[6] = 0;
+
+            break;
+        #ifdef ENABLE_TELEMETRY
+        case ELRS_TELEMETRY_TYPE_DATA:
+            if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_1_16 && telemetryDataCount < 2)
+            {
+                telemetryDataCount++;
+            }
+            else
+            {
+                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+                telemetryDataCount = 0;
+            }
+
+            TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+            Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+            Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+            Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+            Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+            Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+            Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+            break;
+        #endif
+    }
 
     uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
@@ -416,6 +473,10 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
 #endif
+#ifdef ENABLE_TELEMETRY
+    TelemetrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
+    crsf.PackedRCdataOut.ch7 = 0;
+#endif
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
@@ -464,6 +525,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
+    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
+    bool telemetryConfirmValue;
+    #endif
 
     if (inCRC != calculatedCRC)
     {
@@ -506,6 +570,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
         #elif defined HYBRID_SWITCHES_8
         UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
+        #ifdef ENABLE_TELEMETRY
+        telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
+        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+        #endif
         #else
         UnpackChannelData_11bit();
         #endif
@@ -815,6 +883,10 @@ void setup()
 
     SetRFLinkRate(RATE_DEFAULT);
 
+    telemetry.ResetState();
+    #ifdef ENABLE_TELEMETRY
+    TelemetrySender.ResetState();
+    #endif
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
@@ -824,6 +896,11 @@ void setup()
 
 void loop()
 {
+    #ifdef ENABLE_TELEMETRY
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
+    #endif
+
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
@@ -947,9 +1024,6 @@ void loop()
         LEDupdateCounterMillis = millis();
     }
 #endif
-#ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-#endif
 
     // If the eeprom is indicating that we're not bound
     // and we're not already in binding mode, enter binding
@@ -1005,6 +1079,29 @@ void loop()
 
             LEDPulseCounter++;
         }
+    }
+
+
+    while (CRSF_RX_SERIAL.available())
+    {
+        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
+
+        if (telemetry.ShouldCallBootloader())
+        {
+            #if defined(PLATFORM_STM32)
+                delay(100);
+                Serial.println("Jumping to Bootloader...");
+                delay(100);
+                HAL_NVIC_SystemReset();
+            #endif
+        }
+
+        #ifdef ENABLE_TELEMETRY
+        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+        }
+        #endif
     }
 }
 
