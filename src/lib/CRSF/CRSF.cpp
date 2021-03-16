@@ -117,9 +117,9 @@ void CRSF::Begin()
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
 
-    #if defined(GPIO_PIN_RCSIGNAL_OE) && (GPIO_PIN_RCSIGNAL_OE != UNDEF_PIN)
-    pinMode(GPIO_PIN_RCSIGNAL_OE, OUTPUT);
-    digitalWrite(GPIO_PIN_RCSIGNAL_OE, LOW);
+    #if defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
+    pinMode(BUFFER_OE, OUTPUT);
+    digitalWrite(BUFFER_OE, !BUFFER_OE_ACTIVE);
     #endif
 
     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
@@ -590,8 +590,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
-#elif defined(GPIO_PIN_RCSIGNAL_OE) && (GPIO_PIN_RCSIGNAL_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RCSIGNAL_OE, LOW);
+#elif defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
+    digitalWrite(BUFFER_OE, !BUFFER_OE_ACTIVE);
 #endif
 }
 
@@ -608,8 +608,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #else
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
     #endif
-#elif defined(GPIO_PIN_RCSIGNAL_OE) && (GPIO_PIN_RCSIGNAL_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RCSIGNAL_OE, HIGH);
+#elif defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
+    digitalWrite(BUFFER_OE, BUFFER_OE_ACTIVE);
 #endif
 }
 
@@ -670,7 +670,6 @@ bool CRSF::UARTwdt()
     }
     return retval;
 }
-
 
 #ifdef PLATFORM_ESP32
 //RTOS task to read and write CRSF packets to the serial port
