@@ -30,6 +30,17 @@ build_flags = env['BUILD_FLAGS']
 UIDbytes = ""
 define = ""
 
+def print_error(error):
+    time.sleep(1)
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;31m!!!             ExpressLRS Warning Below             !!!\n")
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;30m  %s \n" % error)
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.flush()
+    time.sleep(3)
+    raise Exception('!!! %s !!!' % error)
+
 
 def parse_flags(path):
     try:
@@ -63,15 +74,10 @@ build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+s
 print("build flags: %s" % env['BUILD_FLAGS'])
 
 if not fnmatch.filter(env['BUILD_FLAGS'], '-DRegulatory_Domain*'):
-    time.sleep(1)
-    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-    sys.stdout.write("\033[47;31m!!!             ExpressLRS Warning Below             !!!\n")
-    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-    sys.stdout.write("\033[47;30m  Please define a Regulatory_Domain in user_defines.txt \n")
-    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-    sys.stdout.flush()
-    time.sleep(3)
-    raise Exception('!!!  Please define a Regulatory_Domain in user_defines.txt !!!')
+    print_error('Please define a Regulatory_Domain in user_defines.txt')
+
+if '-DENABLE_TELEMETRY' in env['BUILD_FLAGS'] and '-DHYBRID_SWITCHES_8' not in env['BUILD_FLAGS']:
+    print_error('Telemetry requires HYBRID_SWITCHES_8')
 
 if fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
@@ -83,16 +89,16 @@ elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP8266*'):
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = ON\n")
     else:
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = OFF\n")
-        
+
 if fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_915*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 915AU\n")
-    
+
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_868*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 868EU\n")
-    
+
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_433*'):
     sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")
-    
+
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_433*'):
     sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")
 

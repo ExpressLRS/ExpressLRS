@@ -36,7 +36,7 @@ SX127xDriver Radio; // needed for Radio.TXdataBuffer
  * Successive calls should increment the next index until wrap
  * around from 7 to either 0 or 1 depending on mode.
  */
-void test_round_robin(void) 
+void test_round_robin(void)
 {
     uint8_t expectedIndex = crsf.nextSwitchIndex;
 
@@ -120,7 +120,7 @@ void test_encodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
 
     // check it looks right
     // 1st byte is header & packet type
@@ -173,7 +173,7 @@ void test_decodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into Radio.TXdataBuffer
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
 
     // copy into the expected buffer for the decoder
     memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
@@ -235,7 +235,7 @@ void test_encodingSEQ()
     expected = (crsf.ChannelDataIn[0] & 0b111) << 5 | (crsf.ChannelDataIn[1] & 0b111) << 2 | (crsf.ChannelDataIn[2] & 0b110) >> 1;
     TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[5]);
 
-    // bit 7 of byte 6 contains the lsb of ChannelDataIn[2], 
+    // bit 7 of byte 6 contains the lsb of ChannelDataIn[2],
     expected = crsf.ChannelDataIn[2] & 0b1;
     TEST_ASSERT_EQUAL(expected, (Radio.TXdataBuffer[6] & 0b10000000) >> 7);
 

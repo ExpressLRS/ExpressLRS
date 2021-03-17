@@ -22,13 +22,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install platformio
-
     - name: Run PlatformIO
       run: |
         platformio platform update
         mkdir -p ~/artifcats
         cd src
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
+        platformio test -e native
         pio run --environment Frsky_TX_R9M_via_STLINK 
         pio run --environment Frsky_TX_R9M_via_stock_BL 
         pio run --environment Frsky_TX_R9M_via_WIFI 
@@ -53,7 +53,6 @@ jobs:
         pio run --environment DIY_2400_RX_ESP8285_SX1280_via_UART 
         pio run --environment DIY_2400_RX_ESP8285_SX1280_via_BetaflightPassthrough 
         mv .pio/build ~/artifcats/ISM_2400
-
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:

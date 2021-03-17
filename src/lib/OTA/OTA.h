@@ -15,7 +15,7 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
-void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus);
 void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // HYBRID_SWITCHES_8
