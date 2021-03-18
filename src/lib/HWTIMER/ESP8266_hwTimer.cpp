@@ -21,7 +21,7 @@ void hwTimer::init()
     if (!running)
     {
         timer1_attachInterrupt(hwTimer::callback);
-        timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
+        timer1_enable(TIM_DIV1, TIM_EDGE, TIM_LOOP); //5MHz ticks
         timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
         ResetNextLoop = false;
         TickTock = true;
@@ -50,7 +50,7 @@ void hwTimer::resume()
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    hwTimer::HWtimerInterval = newTimerInterval * 5;
+    hwTimer::HWtimerInterval = newTimerInterval * 5 * 16;
     if (running)
     {
         timer1_write(hwTimer::HWtimerInterval >> 1);
@@ -74,7 +74,7 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
         hwTimer::PhaseShift = newPhaseShift;
     }
 
-    hwTimer::PhaseShift = hwTimer::PhaseShift * 5;
+    hwTimer::PhaseShift = hwTimer::PhaseShift * 5 * 16;
 }
 
 void ICACHE_RAM_ATTR hwTimer::callback()

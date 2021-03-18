@@ -102,6 +102,7 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
+volatile bool currentlyProcessing = false;
 int32_t RawOffset;
 int32_t Offset;
 int32_t OffsetDx;
@@ -446,8 +447,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         }
     #endif
     PFDloop.nco_rising(micros()); // our internal osc just fired
-    HandleFHSS();
-    HandleSendTelemetryResponse();
+    if (currentlyProcessing == false)
+    {
+        HandleFHSS();
+        HandleSendTelemetryResponse();
+    }
 }
 
 void LostConnection()
@@ -592,10 +596,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
+    currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.ref_rising(beginProcessing + 150);
+    PFDloop.ref_rising(beginProcessing + 175);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -683,9 +688,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
         prevOffset = Offset;
 
-        hwTimer.phaseShift((Offset >> 3));
+        hwTimer.phaseShift((Offset >> 2));
 
-        if (RXtimerState == tim_locked && NonceRX % 16 == 0) //limit rate of freq offset adjustment
+        if (RXtimerState == tim_locked) //limit rate of freq offset adjustment
         {
             if (Offset > 0) // limit rate of adjustment
             {
@@ -709,16 +714,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     doneProcessing = micros();
 
 //#ifndef DEBUG_SUPPRESS
-    Serial.print(Offset);
-    Serial.print(":");
-    Serial.print(RawOffset);
-    Serial.print(":");
-    Serial.print(OffsetDx);
-    Serial.print(":");
-    Serial.print(hwTimer.freqOffset);
-    Serial.print(":");
-    Serial.println(uplinkLQ);
+    //Serial.print(Offset);
+    //Serial.print(":");
+    //Serial.print(RawOffset);
+    //Serial.print(":");
+    //Serial.print(OffsetDx);
+    //Serial.print(":");
+    Serial.println(hwTimer.freqOffset);
+    //Serial.print(":");
+    //Serial.println(uplinkLQ);
 //#endif
+    currentlyProcessing = false;
 }
 
 void beginWebsever()
