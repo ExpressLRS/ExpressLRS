@@ -28,6 +28,7 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include "hwTimer.h"
+#include "PFD.h"
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
@@ -62,6 +63,7 @@ uint32_t LEDupdateCounterMillis;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
+PFD PFDloop; 
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
@@ -392,6 +394,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
     crsf.RXhandleUARTout();
+    Serial.print("PFD:");
+    Serial.println(PFDloop.get_result());
+    PFDloop.reset();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -437,6 +442,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             antennaLQDropTrigger ++;
         }
     #endif
+    PFDloop.nco_rising(); // our internal osc just fired
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -484,6 +490,7 @@ void LostConnection()
 void ICACHE_RAM_ATTR TentativeConnection()
 {
     hwTimer.resume();
+    PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
     RXtimerState = tim_disconnected;
@@ -587,6 +594,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
+    PFDloop.ref_rising();
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
