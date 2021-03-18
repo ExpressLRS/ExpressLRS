@@ -13,11 +13,11 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 ### BOM E28-2G4M27S
 
 - E28-2G4M27S SX1280 Wireless module 2.4G 27dBm https://www.aliexpress.com/item/33004335921.html
-- ESP32 30 Pin Development Board https://www.aliexpress.com/item/32959541446.html
+- ESP32 30 Pin Development Board https://www.aliexpress.com/item/1005001635370174.html
 - 3.3V DC-DC Step Down Power Supply https://www.aliexpress.com/item/32880983608.html
 - 10k 0805 resistor https://www.aliexpress.com/item/4000049692396.html
 - SMA or RPSMA connector https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
-- 2.4 Ghz antenna that matches your antenna connector https://www.aliexpress.com/item/33030015823.html 
+- 2.4 Ghz antenna that matches your antenna connector https://www.aliexpress.com/item/33030015823.html
 - KK 254 PC Board Connector https://www.molex.com/molex/products/part-detail/pcb_receptacles/0022142044 https://www.digikey.com/en/products/detail/molex/0022142044/26523
 
 ### Build order
