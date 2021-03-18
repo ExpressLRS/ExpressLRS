@@ -16,7 +16,8 @@ class hwTimer
 public:
 	static volatile uint32_t HWtimerInterval;
 	static volatile bool TickTock;
-	static volatile int16_t PhaseShift;
+	static volatile int32_t PhaseShift;
+	static volatile int32_t freqOffset;
 	static bool ResetNextLoop;
 	static bool running;
 	static uint32_t LastCallbackMicrosTick;
@@ -27,6 +28,7 @@ public:
 	static void ICACHE_RAM_ATTR resume();
 	static void ICACHE_RAM_ATTR callback();
 	static void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
+	static void ICACHE_RAM_ATTR updateFreqOffset(int32_t offset);
 	static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
 
 	static void inline nullCallback(void);
