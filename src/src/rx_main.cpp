@@ -102,7 +102,6 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
-int32_t HWtimerError;
 int32_t RawOffset;
 int32_t Offset;
 int32_t OffsetDx;
@@ -394,8 +393,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
     crsf.RXhandleUARTout();
-    Serial.print("PFD:");
-    Serial.println(PFDloop.get_result());
+
+    //Serial.println(micros() - LastValidPacketMicros);
+    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet 
+    {
+        PFDloop.calc_result();
+    }
     PFDloop.reset();
 }
 
@@ -442,7 +445,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             antennaLQDropTrigger ++;
         }
     #endif
-    PFDloop.nco_rising(); // our internal osc just fired
+    PFDloop.nco_rising(micros()); // our internal osc just fired
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -458,7 +461,6 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     FreqCorrection = 0;
-    HWtimerError = 0;
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
@@ -496,7 +498,6 @@ void ICACHE_RAM_ATTR TentativeConnection()
     RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
     FreqCorrection = 0;
-    HWtimerError = 0;
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
@@ -594,7 +595,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.ref_rising();
+    PFDloop.ref_rising(beginProcessing + 150);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -677,19 +678,23 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (connectionState != disconnected)
     {
-        HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate_Modparams->interval);
-        RawOffset = (HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1) + 50); // the offset is because we want the hwtimer tick to occur slightly after the packet would have otherwise been recv
-        OffsetDx = LPF_OffsetDx.update(abs(RawOffset - prevOffset));
-        Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
+        RawOffset = PFDloop.get_result();
+        Offset = LPF_Offset.update(RawOffset);
+        OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
         prevOffset = Offset;
 
-        if (RXtimerState == tim_locked)
+        hwTimer.phaseShift((Offset >> 3));
+
+        if (RXtimerState == tim_locked && NonceRX % 16 == 0) //limit rate of freq offset adjustment
         {
-            hwTimer.phaseShift((Offset >> 3) + timerOffset);
-        }
-        else
-        {
-            hwTimer.phaseShift((RawOffset >> 4) + timerOffset);
+            if (Offset > 0) // limit rate of adjustment
+            {
+                hwTimer.freqOffset++;
+            }
+            else if (Offset < 0)
+            {
+                hwTimer.freqOffset--;
+            }
         }
     }
 
@@ -703,15 +708,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 
-#ifndef DEBUG_SUPPRESS
-    Serial.print(RawOffset);
-    Serial.print(":");
+//#ifndef DEBUG_SUPPRESS
     Serial.print(Offset);
+    Serial.print(":");
+    Serial.print(RawOffset);
     Serial.print(":");
     Serial.print(OffsetDx);
     Serial.print(":");
+    Serial.print(hwTimer.freqOffset);
+    Serial.print(":");
     Serial.println(uplinkLQ);
-#endif
+//#endif
 }
 
 void beginWebsever()

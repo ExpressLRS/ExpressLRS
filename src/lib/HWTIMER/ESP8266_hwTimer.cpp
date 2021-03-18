@@ -8,7 +8,8 @@ void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
 volatile bool hwTimer::TickTock = true;
-volatile int16_t hwTimer::PhaseShift = 0;
+volatile int32_t hwTimer::PhaseShift = 0;
+volatile int32_t hwTimer::freqOffset = 0;
 bool hwTimer::ResetNextLoop = false;
 bool hwTimer::running = false;
 
@@ -72,7 +73,7 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
     {
         hwTimer::PhaseShift = newPhaseShift;
     }
-    
+
     hwTimer::PhaseShift = hwTimer::PhaseShift * 5;
 }
 
@@ -88,14 +89,14 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         if (hwTimer::ResetNextLoop)
         {
 
-            timer1_write(hwTimer::HWtimerInterval >> 1);
+            timer1_write((hwTimer::HWtimerInterval + freqOffset) >> 1);
             hwTimer::ResetNextLoop = false;
         }
 
         if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
         {
 
-            timer1_write((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift);
+            timer1_write(((hwTimer::HWtimerInterval + freqOffset) >> 1) + hwTimer::PhaseShift);
 
             hwTimer::ResetNextLoop = true;
             hwTimer::PhaseShift = 0;
