@@ -28,7 +28,7 @@ jobs:
         mkdir -p ~/artifcats
         cd src
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
-        platformio test -e native
+        #platformio test -e native
         pio run --environment Frsky_TX_R9M_via_STLINK 
         pio run --environment Frsky_TX_R9M_via_stock_BL 
         pio run --environment Frsky_TX_R9M_via_WIFI 
