@@ -404,7 +404,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_GREEN      PB7
 #define GPIO_PIN_DEBUG_RX       PA10 // UART1
 #define GPIO_PIN_DEBUG_TX       PA9  // UART1
-#define timerOffset             1
+#define timerOffset             0
 #define GPIO_LED_RED_INVERTED   1
 #define GPIO_LED_GREEN_INVERTED 1
 // Unused pins
