@@ -246,23 +246,18 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     }
 }
 
-void ICACHE_RAM_ATTR HandleFHSS()
+bool ICACHE_RAM_ATTR HandleFHSS()
 {
-    if (InBindingMode)
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode)
     {
-        return;
-    }
-
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
-    {
-        return;
+        return false;
     }
 
     uint8_t modresult = (NonceRX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     if ((modresult != 0) || (connectionState == disconnected)) // don't hop if disconnected
     {
-        return;
+        return false;
     }
 
     alreadyFHSS = true;
@@ -271,16 +266,16 @@ void ICACHE_RAM_ATTR HandleFHSS()
     if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
     {
         Radio.RXnb();
-        return;
+        return true;
     }
     else if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we aren't about to send a response don't go back into RX mode
     {
         Radio.RXnb();
-        return;
+        return true;
     }
 }
 
-void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
+bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     #ifdef ENABLE_TELEMETRY
     uint8_t *data;
@@ -292,13 +287,13 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
     {
-        return; // don't bother sending tlm if disconnected or TLM is off
+        return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
     if (modresult != 0)
     {
-        return;
+        return false;
     }
 
     alreadyTLMresp = true;
@@ -358,7 +353,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
     Radio.TXnb(Radio.TXdataBuffer, 8);
-    return;
+    return true;
 }
 
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
@@ -398,12 +393,11 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback
 {
-    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window 
+    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window
     {
         PFDloop.calc_result();
     }
     PFDloop.reset();
-
     NonceRX++;
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
@@ -455,10 +449,27 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         }
     #endif
     PFDloop.nco_rising(micros()); // our internal osc just fired
-    if (currentlyProcessing == false)
+
+    bool tlmSent = false;
+    bool didFHSS = false;
+
+    if (currentlyProcessing == false) // stop race condition 
     {
-        HandleFHSS();
-        HandleSendTelemetryResponse();
+        didFHSS = HandleFHSS();
+        tlmSent = HandleSendTelemetryResponse();
+    }
+
+    if (didFHSS || tlmSent)
+    {
+        return;
+    }
+
+    if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
+    {
+        if (connectionState == connected)
+        {
+            Radio.RXnb();
+        }
     }
 }
 
@@ -611,7 +622,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.ref_rising(beginProcessing + 150);
+    PFDloop.ref_rising(beginProcessing + 250);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -701,15 +712,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
         hwTimer.phaseShift((Offset >> 2));
         
-        if ((RXtimerState == tim_locked) && NonceRX % 4 == 0) //limit rate of freq offset adjustment slightly
+        if ((RXtimerState == tim_locked) && NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
         {
             if (OffsetSlow > 0) 
             {
-                //hwTimer.incFreqOffset();
+                hwTimer.incFreqOffset();
             }
             else if (OffsetSlow < 0)
             {
-                //hwTimer.decFreqOffset();
+                hwTimer.decFreqOffset();
             }
         }
         prevOffset = Offset;
