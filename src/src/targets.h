@@ -407,6 +407,8 @@ https://github.com/jaxxzer
 #define timerOffset             1
 #define GPIO_LED_RED_INVERTED   1
 #define GPIO_LED_GREEN_INVERTED 1
+// Unused pins
+#define GPIO_PIN_UART1TX_INVERT PF6
 
 #else
 #error "Unknown target!"

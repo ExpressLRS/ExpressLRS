@@ -63,7 +63,7 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 
-/* CRSF_MAIN_SERIAL is used for full duplex CRSF RX/TX */
+/* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
 #else
@@ -71,13 +71,15 @@ Telemetry telemetry;
 #endif
 CRSF crsf(CRSF_TX_SERIAL);
 
-/* CRSF_RX_SERIAL is used if CRSF RX needs to happen on a separate peripheral */
+/* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
+#elif defined(TARGET_RX_FM30_MINI)
+    #define CRSF_RX_SERIAL CRSF_TX_SERIAL
 #else
     #define CRSF_RX_SERIAL Serial
 #endif
@@ -732,26 +734,8 @@ void ICACHE_RAM_ATTR TXdoneISR()
     Radio.RXnb();
 }
 
-void setup()
+static void setupSerial()
 {
-    eeprom.Begin();
-    config.Load();
-
-#ifndef MY_UID
-    // Increment the power on counter in eeprom
-    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-    config.Commit();
-
-    // If we haven't reached our binding mode power cycles
-    // and we've been powered on for 2s, reset the power on counter
-    if (config.GetPowerOnCounter() < 3)
-    {
-        delay(2000);
-        config.SetPowerOnCounter(0);
-        config.Commit();
-    }
-#endif
-
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -779,20 +763,38 @@ void setup()
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
-    pinMode(PF6, OUTPUT);  // UART1 inverter
-    digitalWrite(PF6, LOW);
+    // This GPIO setup done here because it is needed for Serial
+    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
+    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(CRSF_RX_BAUDRATE);
+    Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
+}
 
-    Serial.println("ExpressLRS Module Booting...");
+static void setupConfigAndPocCheck()
+{
+    eeprom.Begin();
+    config.Load();
 
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
+#ifndef MY_UID
+    // Increment the power on counter in eeprom
+    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+    config.Commit();
 
+    // If we haven't reached our binding mode power cycles
+    // and we've been powered on for 2s, reset the power on counter
+    if (config.GetPowerOnCounter() < 3)
+    {
+        delay(2000);
+        config.SetPowerOnCounter(0);
+        config.Commit();
+    }
+#endif
+}
+
+static void setupGpio()
+{
 #ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
@@ -808,33 +810,10 @@ void setup()
 #ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
+}
 
-#if WS2812_LED_IS_USED // do startup blinkies for fun
-    uint32_t col = 0x0000FF;
-    for (uint8_t j = 0; j < 3; j++)
-    {
-        for (uint8_t i = 0; i < 5; i++)
-        {
-            WS281BsetLED(col << j*8);
-            delay(15);
-            WS281BsetLED(0, 0, 0);
-            delay(35);
-        }
-    }
-#endif
-
-#ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_FCC_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
-    Serial.println("Setting 433MHz Mode");
-#elif defined Regulatory_Domain_ISM_2400
-    Serial.println("Setting 2.4GHz Mode");
-#endif
-
+static void setupBindingFromConfig()
+{
 // Use the user defined binding phase if set,
 // otherwise use the bind flag and UID in eeprom for UID
 #if !defined(MY_UID)
@@ -865,9 +844,10 @@ void setup()
         Serial.println(UID[5]);
     }
 #endif
+}
 
-    FHSSrandomiseFHSSsequence();
-
+static void setupRadio()
+{
     Radio.currFreq = GetInitialFreq();
 #if !defined(Regulatory_Domain_ISM_2400)
     //Radio.currSyncWord = UID[3];
@@ -882,24 +862,61 @@ void setup()
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
     }
+
 #ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
 #else
     Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
 #endif
 
+    Radio.RXdoneCallback = &RXdoneISR;
+    Radio.TXdoneCallback = &TXdoneISR;
+
+    SetRFLinkRate(RATE_DEFAULT);
+}
+
+void setup()
+{
+    // serial setup must be done before anything as some libs write
+    // to the serial port and they'll block if the buffer fills
+    setupSerial();
+    // Init EEPROM and load config, checking powerup count
+    setupConfigAndPocCheck();
+
+    Serial.println("ExpressLRS Module Booting...");
+
+#ifdef PLATFORM_ESP8266
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+#endif /* PLATFORM_ESP8266 */
+
+    setupGpio();
+
+#if WS2812_LED_IS_USED // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
+#endif
+
+    setupBindingFromConfig();
+    FHSSrandomiseFHSSsequence();
+    setupRadio();
+
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
     // Serial.print("RF noise floor: ");
     // Serial.print(RFnoiseFloor);
     // Serial.println("dBm");
 
-    Radio.RXdoneCallback = &RXdoneISR;
-    Radio.TXdoneCallback = &TXdoneISR;
-
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
-
-    SetRFLinkRate(RATE_DEFAULT);
 
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
