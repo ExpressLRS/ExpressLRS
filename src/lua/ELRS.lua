@@ -300,8 +300,8 @@ local function processResp()
 				wifiupdatemode = bit32.btest(0x02, data[4]) 
 				
 				if StopUpdate == false then 
-					TLMinterval.selected = data[6]
-					MaxPower.selected = data[7]
+					TLMinterval.selected = GetIndexOf(TLMinterval.values,data[6])
+					MaxPower.selected = GetIndexOf(MaxPower.values,data[7])
 					if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
@@ -313,7 +313,7 @@ local function processResp()
 						AirRate.values = SX127x_RATES.values
 						AirRate.max_allowed = #SX127x_RATES.values
 					end
-					RFfreq.selected = data[8]
+					RFfreq.selected = GetIndexOf(RFfreq.values,data[8])
 					AirRate.selected =  GetIndexOf(AirRate.values, data[5])
 				end
 				
