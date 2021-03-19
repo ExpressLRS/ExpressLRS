@@ -22,7 +22,7 @@ void hwTimer::init()
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-        //MyTim->setPreloadEnable(false);
+        MyTim->setPreloadEnable(false);
         alreadyInit = true;
     }
 }
@@ -75,12 +75,16 @@ void hwTimer::callback(void)
 
     if (hwTimer::TickTock)
     {
-        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + FreqOffset, MICROSEC_FORMAT);
+        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
+        uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
+        MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
         hwTimer::callbackTick();
     }
     else
     {
-        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift + FreqOffset, MICROSEC_FORMAT);
+        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift, MICROSEC_FORMAT);
+        uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
+        MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
         hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
     }
