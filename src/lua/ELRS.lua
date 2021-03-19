@@ -9,7 +9,7 @@
 ]] --
 local commitSha = '??????'
 local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
-local version = 'v0.1'
+local version = 'v0.2'
 local gotFirstResp = false
 local needResp = false
 local NewReqTime = 0;
