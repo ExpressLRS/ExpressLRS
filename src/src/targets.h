@@ -194,8 +194,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_TX    PA9 // confirmed
 
 
-#define GPIO_PIN_RC_INVERT      PA5  //CONFIRMED
-#define GPIO_PIN_RC_INVERT_TX   HIGH
+#define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #elif defined(TARGET_R9M_LITE_TX)
@@ -221,8 +221,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
-#define GPIO_PIN_RC_INVERT      PA5  //CONFIRMED
-#define GPIO_PIN_RC_INVERT_TX   HIGH
+#define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
@@ -249,8 +249,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    	  PA3  // inverted UART JR
 #define GPIO_PIN_DEBUG_TX      	PA2  // inverted UART JR
 
-#define GPIO_PIN_RC_INVERT      PB2  //CONFIRMED
-#define GPIO_PIN_RC_INVERT_TX   LOW
+#define GPIO_PIN_BUFFER_OE      PB2  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED     1
 #define GPIO_PIN_VRF1			        PA7  // 26SU Switch RF1
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
@@ -371,8 +371,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_ANT_CTRL_2     PB4 // Low for left (stock), high for right (empty)
 #define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1
 #define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
-#define GPIO_PIN_RC_INVERT      PB7
-#define GPIO_PIN_RC_INVERT_TX   HIGH
+#define GPIO_PIN_BUFFER_OE      PB7
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
 //#define GPIO_PIN_RCSIGNAL_ITX   PB7
 //#define GPIO_PIN_RCSIGNAL_IRX   PB6
 #define GPIO_PIN_LED_RED        PB2 // Right Red LED (active low)

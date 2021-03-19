@@ -117,9 +117,9 @@ void CRSF::Begin()
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
 
-    #if defined(GPIO_PIN_RC_INVERT) && (GPIO_PIN_RC_INVERT != UNDEF_PIN)
-    pinMode(GPIO_PIN_RC_INVERT, OUTPUT);
-    digitalWrite(GPIO_PIN_RC_INVERT, !GPIO_PIN_RC_INVERT_TX); // RX mode default
+    #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
+    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
     #endif
 
     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
@@ -572,8 +572,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
-#elif defined(GPIO_PIN_RC_INVERT) && (GPIO_PIN_RC_INVERT != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RC_INVERT, !GPIO_PIN_RC_INVERT_TX);
+#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #endif
 }
 
@@ -590,8 +590,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #else
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
     #endif
-#elif defined(GPIO_PIN_RC_INVERT) && (GPIO_PIN_RC_INVERT != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RC_INVERT, GPIO_PIN_RC_INVERT_TX);
+#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #endif
 }
 
