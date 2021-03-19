@@ -31,6 +31,7 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
+#include "POWERMGNT.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
@@ -863,11 +864,10 @@ static void setupRadio()
         Serial.println("Failed to detect RF chipset!!!");
     }
 
-#ifdef TARGET_SX1280
-    Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
-#else
-    Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
-#endif
+    // Set transmit power to maximum
+    POWERMGNT P;
+    P.init();
+    P.setPower(MaxPower);
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
