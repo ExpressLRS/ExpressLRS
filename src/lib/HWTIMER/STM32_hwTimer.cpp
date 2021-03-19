@@ -3,19 +3,15 @@
 
 void inline hwTimer::nullCallback(void) {}
 
-void (*hwTimer::callbackTick)() = &nullCallback; // function is called whenever there is new RC data.
-void (*hwTimer::callbackTock)() = &nullCallback; // function is called whenever there is new RC data.
+void (*hwTimer::callbackTick)() = &nullCallback;
+void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
 volatile bool hwTimer::TickTock = false;
 volatile int32_t hwTimer::PhaseShift = 0;
-volatile int32_t hwTimer::FreqShift = 0;
-volatile bool hwTimer::ResetNextLoop = false;
+volatile int32_t hwTimer::FreqOffset = 0;
 bool hwTimer::running = false;
 bool hwTimer::alreadyInit = false;
-
-volatile uint32_t hwTimer::LastCallbackMicrosTick = 0;
-volatile uint32_t hwTimer::LastCallbackMicrosTock = 0;
 
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
 
@@ -26,7 +22,7 @@ void hwTimer::init()
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-        MyTim->setPreloadEnable(false);
+        //MyTim->setPreloadEnable(false);
         alreadyInit = true;
     }
 }
@@ -48,27 +44,26 @@ void hwTimer::resume()
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    hwTimer::HWtimerInterval = newTimerInterval;
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+    hwTimer::HWtimerInterval = newTimerInterval;
+}
+
+void ICACHE_RAM_ATTR hwTimer::incFreqOffset()
+{
+    FreqOffset++;
+}
+
+void ICACHE_RAM_ATTR hwTimer::decFreqOffset()
+{
+    FreqOffset--;
 }
 
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
-    //Serial.println(newPhaseShift);
-    int32_t MaxPhaseShift = hwTimer::HWtimerInterval >> 1;
+    int32_t minVal = -(hwTimer::HWtimerInterval >> 4);
+    int32_t maxVal = (hwTimer::HWtimerInterval >> 4);
 
-    if (newPhaseShift > MaxPhaseShift)
-    {
-        hwTimer::PhaseShift = MaxPhaseShift;
-    }
-    else if (newPhaseShift < -MaxPhaseShift)
-    {
-        hwTimer::PhaseShift = -MaxPhaseShift;
-    }
-    else
-    {
-        hwTimer::PhaseShift = newPhaseShift;
-    }
+    hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
 
 void hwTimer::callback(void)
@@ -80,25 +75,13 @@ void hwTimer::callback(void)
 
     if (hwTimer::TickTock)
     {
-        if (hwTimer::ResetNextLoop)
-        {
-            MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
-            hwTimer::ResetNextLoop = false;
-        }
-
-        if (hwTimer::PhaseShift > 0 || hwTimer::PhaseShift < 0)
-        {
-            MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift, MICROSEC_FORMAT);
-
-            hwTimer::ResetNextLoop = true;
-            hwTimer::PhaseShift = 0;
-        }
-        hwTimer::LastCallbackMicrosTick = micros();
+        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + FreqOffset, MICROSEC_FORMAT);
         hwTimer::callbackTick();
     }
     else
     {
-        hwTimer::LastCallbackMicrosTock = micros();
+        MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift + FreqOffset, MICROSEC_FORMAT);
+        hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
     }
     hwTimer::TickTock = !hwTimer::TickTock;

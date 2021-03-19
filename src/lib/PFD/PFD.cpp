@@ -5,7 +5,14 @@
 
 void ICACHE_RAM_ATTR PFD::calc_result()
 {
-  result = (int32_t)(timeSamples_ref - timeSamples_nco);
+  if (got_ref && got_nco)
+  {
+    result = (int32_t)(timeSamples_ref - timeSamples_nco);
+  }
+  else
+  {
+    result = 0;
+  }
 }
 
 int32_t ICACHE_RAM_ATTR PFD::get_result()
@@ -16,15 +23,20 @@ int32_t ICACHE_RAM_ATTR PFD::get_result()
 void ICACHE_RAM_ATTR PFD::ref_rising(uint32_t time)
 {
   timeSamples_ref = time;
+  got_ref = true;
 }
 
 void ICACHE_RAM_ATTR PFD::nco_rising(uint32_t time)
 {
   timeSamples_nco = time;
+  got_nco = true;
 }
 
 void ICACHE_RAM_ATTR PFD::reset()
 {
-  timeSamples_nco = 0;
-  timeSamples_ref = 0;
+  uint32_t now = micros();
+  timeSamples_nco = now;
+  timeSamples_ref = now;
+  got_ref = false;
+  got_nco = false;
 }
