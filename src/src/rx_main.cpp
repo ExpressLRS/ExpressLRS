@@ -35,6 +35,11 @@ SX1280Driver Radio;
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+inline uint32_t esp_get_cycle_count() {
+  uint32_t ccount;
+  __asm__ __volatile__("rsr %0,ccount":"=a"(ccount));
+  return ccount;
+}
 #endif
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
@@ -89,6 +94,7 @@ StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
+LPF LPF_OffsetSlow(3);
 LPF LPF_OffsetDx(4);
 
 // LPF LPF_UplinkRSSI(5);
@@ -104,7 +110,9 @@ uint8_t scanIndex = RATE_DEFAULT;
 
 volatile bool currentlyProcessing = false;
 int32_t RawOffset;
+int32_t prevRawOffset;
 int32_t Offset;
+int32_t OffsetSlow;
 int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
@@ -134,6 +142,7 @@ bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
 uint32_t beginProcessing;
+uint32_t beginProcessingCycleCount;
 uint32_t doneProcessing;
 
 //////////////////////////////////////////////////////////////
@@ -389,18 +398,17 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback
 {
+    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window 
+    {
+        PFDloop.calc_result();
+    }
+    PFDloop.reset();
+
     NonceRX++;
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
     crsf.RXhandleUARTout();
-
-    //Serial.println(micros() - LastValidPacketMicros);
-    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet 
-    {
-        PFDloop.calc_result();
-    }
-    PFDloop.reset();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -468,6 +476,7 @@ void LostConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    LPF_OffsetSlow.init(0);
     #ifdef FAST_SYNC
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
     #endif
@@ -505,6 +514,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    LPF_OffsetSlow.init(0);
 
 #if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
@@ -556,6 +566,7 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    //beginProcessingCycleCount = esp_get_cycle_count();
     beginProcessing = micros();
     uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -600,7 +611,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.ref_rising(beginProcessing + 175);
+    PFDloop.ref_rising(beginProcessing + 150);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -685,22 +696,24 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
         RawOffset = PFDloop.get_result();
         Offset = LPF_Offset.update(RawOffset);
+        OffsetSlow = LPF_OffsetSlow.update(RawOffset);
         OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
-        prevOffset = Offset;
 
         hwTimer.phaseShift((Offset >> 2));
-
-        if (RXtimerState == tim_locked) //limit rate of freq offset adjustment
+        
+        if ((RXtimerState == tim_locked) && NonceRX % 4 == 0) //limit rate of freq offset adjustment slightly
         {
-            if (Offset > 0) // limit rate of adjustment
+            if (OffsetSlow > 0) 
             {
-                hwTimer.freqOffset++;
+                //hwTimer.incFreqOffset();
             }
-            else if (Offset < 0)
+            else if (OffsetSlow < 0)
             {
-                hwTimer.freqOffset--;
+                //hwTimer.decFreqOffset();
             }
         }
+        prevOffset = Offset;
+        prevRawOffset = RawOffset;
     }
 
 #if !defined(Regulatory_Domain_ISM_2400)
@@ -714,15 +727,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     doneProcessing = micros();
 
 //#ifndef DEBUG_SUPPRESS
-    //Serial.print(Offset);
-    //Serial.print(":");
-    //Serial.print(RawOffset);
-    //Serial.print(":");
-    //Serial.print(OffsetDx);
-    //Serial.print(":");
-    Serial.println(hwTimer.freqOffset);
-    //Serial.print(":");
-    //Serial.println(uplinkLQ);
+    Serial.print(Offset);
+    Serial.print(":");
+    Serial.print(RawOffset);
+    Serial.print(":");
+    Serial.print(OffsetDx);
+    Serial.print(":");
+    Serial.print(hwTimer.FreqOffset);
+    Serial.print(":");
+    Serial.println(uplinkLQ);
 //#endif
     currentlyProcessing = false;
 }

@@ -17,21 +17,19 @@ public:
 	static volatile uint32_t HWtimerInterval;
 	static volatile bool TickTock;
 	static volatile int32_t PhaseShift;
-	static volatile int32_t freqOffset;
-	static bool ResetNextLoop;
+	static volatile int32_t FreqOffset;
 	static bool running;
-	static uint32_t LastCallbackMicrosTick;
-	static uint32_t LastCallbackMicrosTock;
 
 	static void init();
 	static void ICACHE_RAM_ATTR stop();
 	static void ICACHE_RAM_ATTR resume();
 	static void ICACHE_RAM_ATTR callback();
 	static void ICACHE_RAM_ATTR updateInterval(uint32_t newTimerInterval);
-	static void ICACHE_RAM_ATTR updateFreqOffset(int32_t offset);
+	static void ICACHE_RAM_ATTR incFreqOffset();
+	static void ICACHE_RAM_ATTR decFreqOffset();
 	static void ICACHE_RAM_ATTR phaseShift(int32_t newPhaseShift);
 
 	static void inline nullCallback(void);
-	static void ICACHE_RAM_ATTR (*callbackTick)();
-	static void ICACHE_RAM_ATTR (*callbackTock)();
+	static void (*callbackTick)();
+	static void (*callbackTock)();
 };
