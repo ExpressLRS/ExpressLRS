@@ -714,11 +714,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         
         if ((RXtimerState == tim_locked) && NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
         {
-            if (OffsetSlow > 0) 
+            if (Offset > 0) 
             {
                 hwTimer.incFreqOffset();
             }
-            else if (OffsetSlow < 0)
+            else if (Offset < 0)
             {
                 hwTimer.decFreqOffset();
             }
@@ -737,7 +737,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 
-//#ifndef DEBUG_SUPPRESS
+#ifndef DEBUG_SUPPRESS
     Serial.print(Offset);
     Serial.print(":");
     Serial.print(RawOffset);
@@ -747,7 +747,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(hwTimer.FreqOffset);
     Serial.print(":");
     Serial.println(uplinkLQ);
-//#endif
+#endif
     currentlyProcessing = false;
 }
 

@@ -1,7 +1,7 @@
 #include "../../src/targets.h"
 #include "PFD.h"
 
-//This impliments a phase frequnecy detector using a finite state machine
+// measures times differences to calculate phase error 
 
 void ICACHE_RAM_ATTR PFD::calc_result()
 {
