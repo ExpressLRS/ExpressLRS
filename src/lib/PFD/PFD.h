@@ -9,6 +9,8 @@ private:
     uint32_t timeSamples_nco = 0;
     uint32_t timeSamples_ref = 0;
     int32_t result;
+    bool got_ref;
+    bool got_nco;
 
 public:
     void nco_rising(uint32_t time);
