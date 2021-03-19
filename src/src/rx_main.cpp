@@ -59,11 +59,19 @@ uint32_t LEDupdateCounterMillis;
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
-CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 
+/* CRSF_MAIN_SERIAL is used for full duplex CRSF RX/TX */
+#if defined(TARGET_RX_FM30_MINI)
+    HardwareSerial CRSF_TX_SERIAL(USART2);
+#else
+    #define CRSF_TX_SERIAL Serial
+#endif
+CRSF crsf(CRSF_TX_SERIAL);
+
+/* CRSF_RX_SERIAL is used if CRSF RX needs to happen on a separate peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
@@ -388,15 +396,15 @@ void LostConnection()
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, 0); // turn off led
+    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
 #endif
 }
 
@@ -449,15 +457,15 @@ void GotConnection()
 #endif
 
 #ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, HIGH); // turn on led
+    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
 #endif
 }
 
@@ -749,10 +757,10 @@ void setup()
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
 
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
-    Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
 #if defined(TARGET_RX_GHOST_ATTO_V1)
     // USART1 is used for RX (half duplex)
@@ -763,13 +771,20 @@ void setup()
 
     // USART2 is used for TX (half duplex)
     // Note: these must be set before begin()
-    Serial.setHalfDuplex();
-    Serial.setRx((PinName)NC);
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setHalfDuplex();
+    CRSF_TX_SERIAL.setRx((PinName)NC);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
+    CRSF_TX_SERIAL.begin(CRSF_RX_BAUDRATE);
 #endif /* PLATFORM_STM32 */
 
+#if defined(TARGET_RX_FM30_MINI)
+    pinMode(PF6, OUTPUT);  // UART1 inverter
+    digitalWrite(PF6, LOW);
+    Serial.setRx(GPIO_PIN_DEBUG_RX);
+    Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(CRSF_RX_BAUDRATE);
+#endif
 
     Serial.println("ExpressLRS Module Booting...");
 
@@ -780,12 +795,15 @@ void setup()
 
 #ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
 #endif /* GPIO_PIN_LED_GREEN */
 #ifdef GPIO_PIN_LED_RED
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif /* GPIO_PIN_LED_RED */
 #if defined(GPIO_PIN_LED)
     pinMode(GPIO_PIN_LED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif /* GPIO_PIN_LED */
 #ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
@@ -858,7 +876,7 @@ void setup()
     while (!init_success)
     {
         #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED);
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
         #endif
         LED = !LED;
         delay(200);
@@ -923,7 +941,7 @@ void loop()
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
             #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
             #endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
@@ -964,9 +982,9 @@ void loop()
             if (!InBindingMode)
             {
                 #ifdef GPIO_PIN_LED
-                    digitalWrite(GPIO_PIN_LED, LED);
+                    digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
                 #elif GPIO_PIN_LED_GREEN
-                    digitalWrite(GPIO_PIN_LED_GREEN, LED);
+                    digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
                 #endif
                 LED = !LED;
             }
@@ -1074,7 +1092,7 @@ void loop()
 
 
             #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
             #endif
 
             LEDPulseCounter++;

@@ -60,7 +60,7 @@
 #define DefaultPowerEnum 2
 #endif
 
-#ifdef TARGET_TX_FM30
+#if defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI)
 #define MaxPower 3
 #define DefaultPowerEnum 2
 #endif

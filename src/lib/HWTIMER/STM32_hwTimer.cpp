@@ -17,7 +17,12 @@ bool hwTimer::alreadyInit = false;
 volatile uint32_t hwTimer::LastCallbackMicrosTick = 0;
 volatile uint32_t hwTimer::LastCallbackMicrosTock = 0;
 
+#if defined(TIM1)
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
+#else
+// FM30_mini (STM32F373xC) no advanced timer but TIM2 is 32-bit general purpose
+HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM2);
+#endif
 
 void hwTimer::init()
 {
