@@ -148,6 +148,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.transfer(val);
 
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
@@ -161,6 +163,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
@@ -204,6 +208,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
@@ -257,6 +263,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, volatile uint8_t *bu
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size)
@@ -307,10 +315,20 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
         }
     }
 #else
-    // Datasheet table 10-2 indicates maximum typical mode switch value
-    // of 60us: FS to TX/RX, RX/TX to FS, TX to RX, RX to TX
-    // However, BUSY is really only needed to guard these transions and ELRS
-    // code does other things after enabling TX or RX
+    // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
+    // and state transitions require extra time depending on prior state
+    if (BusyDelayDuration)
+    {
+        while ((micros() - BusyDelayStart) < BusyDelayDuration)
+            #ifdef PLATFORM_STM32
+            __NOP();
+            #elif PLATFORM_ESP32
+            _NOP();
+            #elif PLATFORM_ESP8266
+            _NOP();
+            #endif
+        BusyDelayDuration = 0;
+    }
     // delayMicroseconds(80);
 #endif
     return true;
