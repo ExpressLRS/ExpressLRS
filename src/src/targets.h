@@ -373,10 +373,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
 #define GPIO_PIN_BUFFER_OE      PB7
 #define GPIO_PIN_BUFFER_OE_INVERTED 0
-//#define GPIO_PIN_RCSIGNAL_ITX   PB7
-//#define GPIO_PIN_RCSIGNAL_IRX   PB6
 #define GPIO_PIN_LED_RED        PB2 // Right Red LED (active low)
+#define GPIO_LED_RED_INVERTED   1
 #define GPIO_PIN_LED_GREEN      PA7 // Left Green LED (active low)
+#define GPIO_LED_GREEN_INVERTED 1
 #define GPIO_PIN_BUTTON         PB0 // active low
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
 #define GPIO_PIN_DIP1           PA0 // Rotary Switch 0001
@@ -384,8 +384,12 @@ https://github.com/jaxxzer
 //#define GPIO_PIN_FAN_EN       UNDEF_PIN
 #define GPIO_PIN_DEBUG_RX       PA3 // UART2 (bluetooth)
 #define GPIO_PIN_DEBUG_TX       PA2 // UART2 (bluetooth)
-#define GPIO_LED_RED_INVERTED   1
-#define GPIO_LED_GREEN_INVERTED 1
+// GPIO not currently used (but initialized)
+#define GPIO_PIN_LED_RED_GREEN  PB1 // Right Green LED (active low)
+#define GPIO_PIN_LED_GREEN_RED  PA15 // Left Red LED (active low)
+#define GPIO_PIN_UART3RX_INVERT PB5 // Standalone inverter
+#define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on
+#define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
 
 #else
 #error "Unknown target!"

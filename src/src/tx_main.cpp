@@ -660,18 +660,16 @@ void setup()
 #endif
 
 #if defined(TARGET_TX_FM30)
-  pinMode(PB1, OUTPUT); // Green LED on "Red" LED (off)
-  digitalWrite(PB1, HIGH);
-  pinMode(PA15, OUTPUT); // Red LED on "Green" LED (off)
-  digitalWrite(PA15, HIGH);
-  pinMode(PB5, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(PB5, LOW); // RX3 not inverted
-  pinMode(PA8, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(PA8, LOW);
-  pinMode(PB6, OUTPUT); // RX1 inverter
-  digitalWrite(PB6, HIGH);
-  //pinMode(PB7, OUTPUT); // TX1 inverter (handled in CRSF lib)
-  //digitalWrite(PB7, HIGH);
+  pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
+  digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
+  pinMode(GPIO_PIN_LED_GREEN_RED, OUTPUT); // Red LED on "Green" LED (off)
+  digitalWrite(GPIO_PIN_LED_GREEN_RED, HIGH);
+  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
+  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
+  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
+  digitalWrite(GPIO_PIN_BLUETOOTH_EN, LOW);
+  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
+  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
 
 #ifdef PLATFORM_ESP32
