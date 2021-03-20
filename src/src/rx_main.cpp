@@ -710,18 +710,33 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
         OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
 
-        hwTimer.phaseShift((Offset >> 2));
-        
-        if ((RXtimerState == tim_locked) && NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
+        if (connectionState != connected)
         {
-            if (Offset > 0) 
+            hwTimer.phaseShift((RawOffset >> 1));
+        }
+        else
+        {
+            hwTimer.phaseShift((Offset >> 2));
+        }
+
+        if (RXtimerState == tim_locked) //limit rate of freq offset adjustment slightly
+        {
+
+            if (NonceRX % 8 == 0)
             {
-                hwTimer.incFreqOffset();
+                if (Offset > 0)
+                {
+                    hwTimer.incFreqOffset();
+                }
+                else if (Offset < 0)
+                {
+                    hwTimer.decFreqOffset();
+                }
             }
-            else if (Offset < 0)
-            {
-                hwTimer.decFreqOffset();
-            }
+        }
+        else
+        {
+            hwTimer.phaseShift((RawOffset >> 1));
         }
         prevOffset = Offset;
         prevRawOffset = RawOffset;
@@ -737,7 +752,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 
-#ifndef DEBUG_SUPPRESS
+//#ifndef DEBUG_SUPPRESS
     Serial.print(Offset);
     Serial.print(":");
     Serial.print(RawOffset);
@@ -747,7 +762,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(hwTimer.FreqOffset);
     Serial.print(":");
     Serial.println(uplinkLQ);
-#endif
+//#endif
     currentlyProcessing = false;
 }
 
