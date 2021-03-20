@@ -44,8 +44,8 @@ void hwTimer::resume()
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
     hwTimer::HWtimerInterval = newTimerInterval;
+    MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
 }
 
 void ICACHE_RAM_ATTR hwTimer::incFreqOffset()
