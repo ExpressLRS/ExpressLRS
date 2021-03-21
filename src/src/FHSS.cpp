@@ -127,17 +127,17 @@ void FHSSrandomiseFHSSsequence()
             }
         }
 
-        Serial.print(FHSSsequence[i]);
-        if ((i + 1) % 10 == 0)
-        {
-            Serial.println();
-        }
-        else
-        {
-            Serial.print(" ");
-        }
+        // Serial.print(FHSSsequence[i]);
+        // if ((i + 1) % 10 == 0)
+        // {
+        //     Serial.println();
+        // }
+        // else
+        // {
+        //     Serial.print(" ");
+        // }
     } // for each element in FHSSsequence
 
-    Serial.println();
+    // Serial.println();
 }
 

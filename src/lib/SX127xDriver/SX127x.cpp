@@ -229,7 +229,6 @@ bool SX127xDriver::DetectChip()
   while ((i < 3) && !flagFound)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION);
-    Serial.println(version, HEX);
     if (version == 0x12)
     {
       flagFound = true;
@@ -256,7 +255,7 @@ bool SX127xDriver::DetectChip()
   }
   else
   {
-    Serial.println(" found! (match by REG_VERSION == 0x12)");
+    Serial.println("SX127x found! (match by REG_VERSION == 0x12)");
   }
   hal.setRegValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, 2, 0);
   return true;
