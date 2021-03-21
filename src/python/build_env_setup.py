@@ -23,3 +23,10 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         env.Replace(UPLOADCMD=stlink.on_upload)
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(UPLOADCMD=UARTupload.on_upload)
+    elif "_DFU" in target_name:
+        board = env.BoardConfig()
+        # PIO's ststm32 forces stm32f103 to upload via maple_upload,
+        # but we really actually truly want dfu-util
+        env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
+            "-s", "%s:" % board.get("upload.offset_address", "0x08001000"), "-D"],
+            UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
