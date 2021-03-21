@@ -117,6 +117,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     }
 
     WORD_ALIGNED_ATTR uint8_t buf[3];
+    uint32_t switchDelay = 0;
 
     switch (OPmode)
     {
@@ -130,14 +131,17 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 
     case SX1280_MODE_STDBY_RC:
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC);
+        switchDelay = 1500;
         break;
         
     case SX1280_MODE_STDBY_XOSC:
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC);
+        switchDelay = 50;
         break;
 
     case SX1280_MODE_FS:
         hal.WriteCommand(SX1280_RADIO_SET_FS, 0x00);
+        switchDelay = 70;
         break;
 
     case SX1280_MODE_RX:
@@ -145,6 +149,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         buf[1] = 0xFF;
         buf[2] = 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
+        switchDelay = 100;
         break;
 
     case SX1280_MODE_TX:
@@ -153,6 +158,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         buf[1] = 0xFF; // no timeout set for now
         buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
         hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf));
+        switchDelay = 100;
         break;
 
     case SX1280_MODE_CAD:
@@ -161,6 +167,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     default:
         break;
     }
+    hal.BusyDelay(switchDelay);
 
     currOpmode = OPmode;
 }
