@@ -30,7 +30,7 @@ public:
             LQmask = (1 << 0);
             LQbyte += 1;
         }
-        
+
         // At idx N / 32 and bit N % 32, wrap back to idx=0, bit=0
         if ((LQbyte == (N / 32)) && (LQmask & (1 << (N % 32))))
         {
@@ -45,10 +45,10 @@ public:
         }
     }
 
-    /* Return the current running total of bits set */
+    /* Return the current running total of bits set, in percent */
     uint8_t ICACHE_RAM_ATTR getLQ() const
     {
-        return LQ;
+        return (uint32_t)LQ * N / 100;
     }
 
     /* Initialize and zero the history */
