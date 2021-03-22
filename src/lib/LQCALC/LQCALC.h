@@ -30,14 +30,15 @@ public:
             LQmask = (1 << 0);
             LQbyte += 1;
         }
+        
         // At idx N / 32 and bit N % 32, wrap back to idx=0, bit=0
-        else if ((LQbyte == (N / 32)) && (LQmask & (1 << (N % 32))))
+        if ((LQbyte == (N / 32)) && (LQmask & (1 << (N % 32))))
         {
             LQbyte = 0;
             LQmask = (1 << 0);
         }
 
-        if ((this->LQArray[LQbyte] & LQmask) != 0)
+        if ((LQArray[LQbyte] & LQmask) != 0)
         {
             LQArray[LQbyte] &= ~LQmask;
             LQ -= 1;
