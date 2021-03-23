@@ -585,7 +585,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#if defined(TARGET_TX_GHOST) || defined(TARGET_TX_FM30)
+#if defined(TARGET_TX_GHOST)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
 #endif
