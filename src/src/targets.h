@@ -388,7 +388,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_LED_RED_GREEN  PB1 // Right Green LED (active low)
 #define GPIO_PIN_LED_GREEN_RED  PA15 // Left Red LED (active low)
 #define GPIO_PIN_UART3RX_INVERT PB5 // Standalone inverter
-#define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on
+#define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
 #define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
 
 #else
