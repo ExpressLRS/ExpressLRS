@@ -28,5 +28,6 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         # PIO's ststm32 forces stm32f103 to upload via maple_upload,
         # but we really actually truly want dfu-util
         env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
-            "-s", "%s:" % board.get("upload.offset_address", "0x08001000"), "-D"],
+            "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
+            "-R", "-D"],
             UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
