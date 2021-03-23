@@ -54,6 +54,7 @@ uint32_t LEDupdateCounterMillis;
 #define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 30
+#define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -398,28 +399,28 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-        static int32_t antennaTrigger;
-        static int32_t antennaTrigger2;
+        static int32_t antennaLQDropTrigger;
+        static int32_t antennaRSSIDropTrigger;
         int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
         int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
 
-        //if rssi dropped by 5
-         if ((rssi < (prevRSSI - 5) ) && antennaTrigger2 >= DIVERSITY_ANTENNA_INTERVAL){
+        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+         if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER) ) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL){
 
             switchAntenna();
-            antennaTrigger = 1;
-            antennaTrigger2 = 0; 
-         } else if(rssi > prevRSSI || antennaTrigger2 < DIVERSITY_ANTENNA_INTERVAL){
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0; 
+         } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
                  prevRSSI = rssi;
-                 antennaTrigger2++;
+                 antennaRSSIDropTrigger++;
              }
         // if we didn't get a packet switch the antenna
-        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaTrigger == 0)) {
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
 
             switchAntenna();
-            antennaTrigger = 1;
-            antennaTrigger2 = 0;
-        } else if (antennaTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0;
+        } else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
             // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
             // We can compare the rssi values and see if we made things better or worse when we switched
 
@@ -427,14 +428,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
                 // things got worse when we switched, so change back.
 
                 switchAntenna();
-                antennaTrigger = 1;
-                antennaTrigger2 = 0;
+                antennaLQDropTrigger = 1;
+                antennaRSSIDropTrigger = 0;
             } else {
                 // all good, we can stay on the current antenna. Clear the flag.
-                antennaTrigger = 0;
+                antennaLQDropTrigger = 0;
             }
-        } else if (antennaTrigger > 0){
-            antennaTrigger ++;
+        } else if (antennaLQDropTrigger > 0){
+            antennaLQDropTrigger ++;
         }
     #endif
     HandleFHSS();
