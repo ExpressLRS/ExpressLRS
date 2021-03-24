@@ -9,7 +9,8 @@
 ]] --
 local commitSha = '??????'
 local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
-local version = 'v0.2'
+local version = 3;
+local tx_lua_version = 0;
 local gotFirstResp = false
 local needResp = false
 local NewReqTime = 0;
@@ -219,27 +220,32 @@ local function refreshLCD()
 	else	
 		lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
 	end
-    
-    yOffset = radio_data.yOffset_val
 
-    for idx,item in pairs(menu.list) do
-        local offsets = {left=0, right=0, top=0, bottom=0}
-        if item.offsets ~= nil then
-            offsets = item.offsets
-        end
-        lOffset = offsets.left + radio_data.leftOffset
-        local item_y = yOffset + offsets.top + radio_data.yOffset * item.index
-        if item.action ~= nil or item.func ~= nil then
-            lcd.drawText(lOffset, item_y, item.name, getFlags(idx) + radio_data.textSize)
-        else
-            local value = '?'
-			if 0 < item.selected and item.selected <= #item.list and gotFirstResp then
-            --if 0 < item.selected and item.selected <= #item.list and item.selected <= item.max_allowed then
-                value = item.list[item.selected]
+    if tx_lua_version == version then
+    yOffset = radio_data.yOffset_val
+        for idx,item in pairs(menu.list) do
+            local offsets = {left=0, right=0, top=0, bottom=0}
+            if item.offsets ~= nil then
+                offsets = item.offsets
             end
-            lcd.drawText(lOffset, item_y, item.name, radio_data.textSize)
-            lcd.drawText(radio_data.xOffset, item_y, value, getFlags(idx) + radio_data.textSize)
+            lOffset = offsets.left + radio_data.leftOffset
+            local item_y = yOffset + offsets.top + radio_data.yOffset * item.index
+            if item.action ~= nil or item.func ~= nil then
+                lcd.drawText(lOffset, item_y, item.name, getFlags(idx) + radio_data.textSize)
+            else
+                local value = '?'
+                if 0 < item.selected and item.selected <= #item.list and gotFirstResp then
+                --if 0 < item.selected and item.selected <= #item.list and item.selected <= item.max_allowed then
+                    value = item.list[item.selected]
+                end
+                lcd.drawText(lOffset, item_y, item.name, radio_data.textSize)
+                lcd.drawText(radio_data.xOffset, item_y, value, getFlags(idx) + radio_data.textSize)
+            end
         end
+    else
+        lcd.drawText(lOffset, (radio_data.yOffset*2), "!!! ERROR !!!", INVERS)
+        lcd.drawText(lOffset, (radio_data.yOffset*3), "Please Update ELRS.lua", INVERS)
+        lcd.drawText(lOffset, (radio_data.yOffset*4), "to v."..tx_lua_version.."(current v."..version..")", INVERS)
     end
 end
 
@@ -295,13 +301,13 @@ local function processResp()
 	else
 		if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
 		
-			if(data[3] == 0xFF) and #data == 11 then
+			if(data[3] == 0xFF) and #data == 12 then
 				bindmode = bit32.btest(0x01, data[4]) -- bind mode active 
 				wifiupdatemode = bit32.btest(0x02, data[4]) 
-				
 				if StopUpdate == false then 
 					TLMinterval.selected = GetIndexOf(TLMinterval.values,data[6])
 					MaxPower.selected = GetIndexOf(MaxPower.values,data[7])
+                    tx_lua_version = data[12];
 					if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list

@@ -65,6 +65,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
+#define LUA_VERSION 3
 #endif
 
 /// define some libs to use ///
@@ -429,9 +430,10 @@ void sendLuaParams()
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)LUA_VERSION};
 
-  crsf.sendLUAresponse(luaParams, 9);
+  crsf.sendLUAresponse(luaParams, 10);
 }
 
 void UARTdisconnected()
