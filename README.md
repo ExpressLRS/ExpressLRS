@@ -21,7 +21,22 @@ ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Ju
 
 ![LatencyChart](img/Average%20Total%20Latency.png)
 
-ExpressLRS aims too achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.   
+ExpressLRS aims too achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), full telemetry support is supported in our development branch. This comprimise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.   
+
+## Should I use 2.4ghz or 915/868mhz?
+
+Unfortunately, there is a misconception about the 2.4ghz range thanks to other radio protocols on the market. ELRS uses LoRa, which has had some amazing results on 2.4. The current max range of ELRS on 2.4ghz (250hz locked) is 33km with only 100mW of power. This moves 2.4ghz to a long-range solution for pilots. If you think that 33km is not enough range, then bump up that 100mW power to 250mW. If you think that 33km+ range just will not cut it, look at 868/915 MHz solutions. 
+
+
+#### RF noise
+We have all heard the stories of racers powering up his TBS crossfire full module at 2W and causing people to fail-safe during a race. This happens because the 868/915mhz band has limited bandwidth. The solution for this is to use a low power mode during races, so you do not blast anyone out of the sky. 2.4ghz does not have this issue. Flite Test has a world record of having [179 RC airplanes](https://www.guinnessworldrecords.com/world-records/most-rc-model-aircraft-airborne-simultaneously#:~:text=The%20most%20RC%20model%20aircraft,USA%2C%20on%2016%20July%202016) in the sky using 2.4 GHz.
+
+2.4 GHz LoRa can also handle WiFi noise very well. [Studies](https://link.springer.com/article/10.1007/s11235-020-00658-w) have been conducted with the coexistence of WiFi and LoRa bands. 
+
+868/915 does not have to worry about WiFi signal but it does have to worry about cell towers and other RF noise. You are fighting against thermostats, fire systems, burglar systems and any other device running on that band. 
+
+#### Where can I get 2.4GHz if I cannot solder? 
+The number of 2.4GHz TX's and RX's that ELRS supports is on the rise. You can currently flash a Ghost TX from ImmersionRC or FM30 2.4ghz TX from SiYi with ELRS. Siyi is only available on Aliexpress and could take up to a month to get it in the mail. If you want something fast but do not want to pay the high price for a Ghost TX full/lite then you check out our buy and sell channel on the discord—lots of great people making great hardware. 
 
 **2.4GHz Comparison**
 
@@ -54,8 +69,15 @@ Development is ongoing but the following hardware is currently compatible
 **ImmersionRC Ghost Hardware**
 | **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
 | --------- | --------------- | ------------------- | -------------------------------------------- |
-| RX        | Ghost Atto      | Fully Supported     | Can only be flashed via stlink               |
-| RX        | Ghost Zepto     | Fully Supported     | Can only be flashed via stlink               |
+| RX        | Ghost Atto      | Fully Supported     | Can only be initially flashed via stlink then betaflight passthrough |
+| RX        | Ghost Zepto     | Fully Supported     | Can only be initially flashed via stlink then betaflight passthrough |
+| TX        | Ghost TX        | Fully Supported     | Can only be initialy flashed via stlink (Development Branch)| 
+
+**Siyi Hardware**
+| **RX/TX** | **Hardware**    | **Status**          | **Notes**                                    |
+| --------- | --------------- | ------------------- | -------------------------------------------- |
+| TX | FM30 | Fully Supported | Stlink initial flash, USB update |
+|RX | FM30 Mini | Development | In STlink initial flash, betaflight passthrough update
 
 **DIY 2.4GHz Hardware**
 | **RX/TX** | **Hardware**                       | **Status**          | **Notes**                                    |
@@ -108,6 +130,7 @@ Anyone can add an entry to the table, and entries should include the:
 
 | Max Dist. | Freq | Pkt Rate | TX Power | Failsafe at Max Range? | Pilot Handle | Link to DVR |
 | ---- | -------- | -------- | --------- | ---------------------- | ------------ | ----------- |
+| 33Km | 2.4 | 250HZ | 100mW | No | Wez | https://youtu.be/GkOCT17a-DE |
 | 30Km | 900M | 50HZ | 1W | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
 | 10Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dJYfWLtXVg8 |
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
