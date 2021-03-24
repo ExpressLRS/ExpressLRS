@@ -25,7 +25,7 @@ ExpressLRS aims too achieve the best possible link preformance for both latency 
 
 ## Should I use 2.4ghz or 915/868mhz?
 
-Unfortunately, there is a misconception about the 2.4ghz range thanks to other radio protocols on the market. ELRS uses LoRa, which has had some amazing results on 2.4. The current max range of ELRS on 2.4ghz (250hz locked) is 33km with only 100mW of power. This moves 2.4ghz to a long-range solution for pilots. If you think that 33km is not enough range, then bump up that 100mW power to 250mW. If you think that 33km+ range just will not cut it, look at 868/915 MHz solutions. 
+Unfortunately, there is a misconception about the 2.4ghz range thanks to other radio protocols on the market. ELRS uses LoRa, which has had some amazing results on 2.4. The current range record of ELRS on 2.4ghz (250hz locked) is 33km with only 100mW of power. This moves 2.4ghz to a long-range solution for pilots. If you think that 33km is not enough range, then bump up that 100mW power to 250mW. If you think that 33km+ range just will not cut it, look at 868/915 MHz solutions. 
 
 
 #### RF noise
