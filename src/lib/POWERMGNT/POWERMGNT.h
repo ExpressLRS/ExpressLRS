@@ -31,7 +31,7 @@
 #endif
 
 #ifdef TARGET_100mW_MODULE
-#define MaxPower PWR_100mW
+#define MaxPower PWR_50mW
 #define DefaultPowerEnum PWR_50mW
 #endif
 
@@ -55,7 +55,7 @@
 #endif
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-#define MaxPower PWR_500mW
+#define MaxPower PWR_250mW
 #define DefaultPowerEnum PWR_50mW
 #endif
 
