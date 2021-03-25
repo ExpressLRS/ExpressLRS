@@ -36,7 +36,11 @@
 #endif
 
 #ifdef TARGET_1000mW_MODULE
+#ifdef UNLOCK_HIGHER_POWER
 #define MaxPower PWR_1000mW
+#else
+#define MaxPower PWR_250mW
+#endif
 #define DefaultPowerEnum PWR_50mW
 #endif
 
