@@ -222,7 +222,7 @@ local function refreshLCD()
 	end
 
     if tx_lua_version == version then
-    yOffset = radio_data.yOffset_val
+        yOffset = radio_data.yOffset_val
         for idx,item in pairs(menu.list) do
             local offsets = {left=0, right=0, top=0, bottom=0}
             if item.offsets ~= nil then
@@ -307,7 +307,7 @@ local function processResp()
 				if StopUpdate == false then 
 					TLMinterval.selected = GetIndexOf(TLMinterval.values,data[6])
 					MaxPower.selected = GetIndexOf(MaxPower.values,data[7])
-                    tx_lua_version = data[12];
+                    tx_lua_version = data[12]
 					if data[8] == 6 then
 						-- ISM 2400 band (SX128x)
 						AirRate.list = SX128x_RATES.list
