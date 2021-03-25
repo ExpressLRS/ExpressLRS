@@ -60,7 +60,7 @@
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
-#define MaxPower PWR_500mW
+#define MaxPower PWR_250mW
 #define DefaultPowerEnum PWR_50mW
 #endif
 
