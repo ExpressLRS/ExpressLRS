@@ -103,6 +103,27 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(7);
         break;
     }
+#elif defined(TARGET_TX_GHOST_LITE)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-12);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-8);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(2);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(4);
+        break;
+    case PWR_50mW:
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-10);
+        break;
+    }
 #elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);

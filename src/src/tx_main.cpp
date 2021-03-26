@@ -48,7 +48,7 @@ DAC TxDAC;
 button button;
 #endif
 
-#ifdef TARGET_TX_GHOST
+#if defined(TARGET_TX_GHOST) || defined(TARGET_TX_GHOST_LITE)
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
@@ -585,7 +585,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef TARGET_TX_GHOST
+#if defined(TARGET_TX_GHOST) || defined(TARGET_TX_GHOST_LITE)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
 #endif
@@ -1018,7 +1018,7 @@ void SendUIDOverMSP()
 
 
 
-#ifdef TARGET_TX_GHOST
+#if defined(TARGET_TX_GHOST) || defined(TARGET_TX_GHOST_LITE)
 extern "C"
 /**
   * @brief This function handles external line 2 interrupt request.
