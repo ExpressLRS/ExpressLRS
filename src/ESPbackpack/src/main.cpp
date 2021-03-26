@@ -100,6 +100,7 @@ downloadLink.click();
 function destroyClickedElement(event) {
 document.body.removeChild(event.target);
 }
+function command_stm32(type) {websock.send("stm32_cmd=" + type);}
 </script>
 </head>
 <body onload="javascript:start();">
@@ -149,6 +150,9 @@ curl --include \
 <input type='submit' value='Upload and Flash STM32' id='stm_submit' disabled='disabled'>
 </form>
 <div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
+<div style="text-align: center;">
+<button onclick="command_stm32('reset')">RESET</button>
+</div>
 </fieldset>
 </div>
 <hr>
@@ -217,6 +221,7 @@ stm_message.innerHTML = " OOPS! Incorrect firmware file! Please select correct f
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
+  char * temp;
 #if WEBSOCK_DEBUG
   Serial.printf("webSocketEvent(%d, %d, ...)\r\n", num, type);
 #endif
@@ -248,6 +253,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 #endif
       // send data to all connected clients
       // webSocket.broadcastTXT(payload, length);
+
+      temp = strstr((char*)payload, "stm32_cmd=");
+      if (temp) {
+        // Command STM32
+        if (strstr((char*)&temp[10], "reset")) {
+          // Reset STM32
+          reset_stm32_to_app_mode();
+        }
+      }
       break;
     }
 

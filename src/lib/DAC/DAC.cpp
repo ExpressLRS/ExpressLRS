@@ -1,16 +1,38 @@
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 
 #include "DAC.h"
 #include "SX127xDriver.h"
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #ifndef DAC_I2C_ADDRESS
 #define DAC_I2C_ADDRESS 0b0001100
 #endif /* DAC_I2C_ADDRESS */
 #define VCC         3300
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
-int DAC::LUT[8][4] = {
+typedef struct {
+    uint16_t mW;
+    uint8_t dB;
+    uint8_t gain;
+    uint16_t volts; // APC2volts*1000
+} dac_lut_s;
+
+#if defined(TARGET_R9M_TX)
+#if defined(Regulatory_Domain_EU_868)
+dac_lut_s LUT[] = {
+    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+    {10, 10, 8, 650},
+    {25, 14, 12, 860},
+    {50, 17, 15, 1000},
+    {100, 20, 18, 1160},
+    {250, 24, 22, 1420},
+    {500, 27, 25, 1730},
+    {1000, 30, 28, 2100},
+    {2000, 33, 31, 2600}, // Danger untested at high power
+};
+#else
+dac_lut_s LUT[] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 720},
     {25, 14, 12, 875},
@@ -21,8 +43,33 @@ int DAC::LUT[8][4] = {
     {1000, 30, 28, 2100},
     {2000, 33, 31, 2600}, // Danger untested at high power
 };
+#endif
+#elif defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#if defined(Regulatory_Domain_EU_868)
+dac_lut_s LUT[] = {
+    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+    {10, 10, 8, 315},
+    {25, 14, 12, 460},
+    {50, 17, 15, 595},
+    {100, 20, 18, 750},
+    {250, 24, 22, 1125},
+    {500, 27, 25, 1505},
+    {1000, 30, 28, 2105},
+};
+#else
+dac_lut_s LUT[] = {
+    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+    {10, 10, 8, 460},
+    {25, 14, 12, 622},
+    {50, 17, 15, 765},
+    {100, 20, 18, 1025},
+    {250, 24, 22, 1375},
+    {500, 27, 25, 1750},
+    {1000, 30, 28, 2250},
+};
+#endif
 #elif defined(TARGET_TX_ES915TX)
-int DAC::LUT[8][4] = {
+dac_lut_s LUT[] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 875},
     {25, 14, 12, 1065},
@@ -90,8 +137,9 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
 void DAC::setPower(DAC_PWR_ power)
 {
     Radio.SetOutputPower(0b0000);
-    uint32_t reqVolt = LUT[(uint8_t)power][3];
-    DAC::setVoltageMV(reqVolt);
+    if (ARRAY_SIZE(LUT) <= power)
+        power = (DAC_PWR_)(ARRAY_SIZE(LUT) - 1);
+    DAC::setVoltageMV(LUT[power].volts);
 }
 
 #endif

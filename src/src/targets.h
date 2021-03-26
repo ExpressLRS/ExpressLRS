@@ -103,25 +103,25 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 
-#ifdef USE_R9MM_R9MINI_SBUS
+#if defined(USE_R9MM_R9MINI_SBUS)
     #define GPIO_PIN_RCSIGNAL_RX    PA3
     #define GPIO_PIN_RCSIGNAL_TX    PA2
-#elif TARGET_R9SLIMPLUS_RX               // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
+#elif defined(TARGET_R9SLIMPLUS_RX)      // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
-#elif TARGET_R900MINI_RX
+#elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
-#else //default R9MM_R9MINI or R9MX
+#else
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
 #endif
 
-#ifdef TARGET_R9MX_RX
+#if defined(TARGET_R9MX_RX)
     #define GPIO_PIN_LED_RED        PB2 // Red
     #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
-#elif TARGET_R9SLIMPLUS_RX
+#elif defined(TARGET_R9SLIMPLUS_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
@@ -130,17 +130,16 @@ https://github.com/jaxxzer
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
     #define GPIO_PIN_ANTENNA_SELECT PB9
-#elif TARGET_R900MINI_RX
+#elif defined(TARGET_NAMIMNORC_VOYAGER_RX)
+    #define GPIO_PIN_LED_RED        PA11
+    // RF Switch: LOW = RX, HIGH = TX
+    #define GPIO_PIN_TX_ENABLE      PB3
+#elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
-    #ifdef TARGET_NAMIMNO_ALPHA_RX
-        // NamimnoRC - RF Switch: LOW = RX, HIGH = TX
-        #define GPIO_PIN_TX_ENABLE  PB3
-    #else
-        // R900MINI - RF Switch: HIGH = RX, LOW = TX
-        #define GPIO_PIN_RX_ENABLE  PB3
-    #endif
+    // RF Switch: HIGH = RX, LOW = TX
+    #define GPIO_PIN_RX_ENABLE      PB3
 #else //R9MM_R9MINI
     #define GPIO_PIN_LED_RED        PC1  // Red
     #define GPIO_PIN_LED_GREEN      PB3  // Green
@@ -359,7 +358,7 @@ https://github.com/jaxxzer
 
 #define timerOffset          1
 
-#elif defined(TARGET_NAMIMNO_ALPHA_TX)
+#elif defined(TARGET_NAMIMNORC_VOYAGER_TX)
 /*
 Designed by NamimnoRC
 */

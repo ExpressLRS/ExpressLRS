@@ -7,7 +7,7 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 extern DAC TxDAC;
 #endif
 
@@ -38,7 +38,7 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     Serial.println("Init DAC Driver");
 #endif
 #ifdef TARGET_R9M_LITE_PRO_TX
@@ -47,7 +47,7 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
     analogWriteResolution(12);
 #endif
-#ifdef GPIO_PIN_FAN_EN  && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
 #if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
@@ -105,7 +105,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(7);
         break;
     }
-#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);
 #elif defined(TARGET_R9M_LITE_PRO_TX)

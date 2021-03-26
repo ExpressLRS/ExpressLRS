@@ -39,7 +39,7 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 #include "DAC.h"
 DAC TxDAC;
 #endif
@@ -52,7 +52,7 @@ button button;
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
-uint32_t LEDupdateInterval = 25;
+constexpr uint32_t LEDupdateInterval = 100;
 uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
@@ -448,6 +448,9 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
+#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  WS281BsetLED(0xff, 0, 0);
+#endif
 }
 
 void UARTconnected()
@@ -472,6 +475,9 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
+#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  WS281BsetLED(0, 0xff, 0);
+#endif
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -596,6 +602,7 @@ void setup()
    * else we will use GPIO_PIN_LED_GREEN and _RED.
    **/
   #if WS2812_LED_IS_USED // do startup blinkies for fun
+      WS281Binit();
       uint32_t col = 0x0000FF;
       for (uint8_t j = 0; j < 3; j++)
       {
@@ -607,6 +614,7 @@ void setup()
               delay(35);
           }
       }
+      WS281BsetLED(0xff, 0, 0);
   #endif
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -649,7 +657,7 @@ void setup()
     #endif
   #endif // GPIO_PIN_BUZZER
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNO_ALPHA_TX)
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     TxDAC.init();
   #endif
 
@@ -737,8 +745,8 @@ void loop()
 {
   uint32_t now = millis();
 
-  #if WS2812_LED_IS_USED
-      if ((connectionState == disconnected) && (now > LEDupdateInterval + LEDupdateCounterMillis))
+  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_VOYAGER_TX)
+      if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
           uint8_t LEDcolor[3] = {0};
           if (LEDfade == 30 || LEDfade == 0)
