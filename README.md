@@ -111,7 +111,7 @@ Anyone can add an entry to the table, and entries should include the:
 | 30Km | 900M | 50HZ | 1W | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
 | 10Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dJYfWLtXVg8 |
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
-| 6Km | 2.4G | 500HZ | 250mW | No | CalculusTX | https://www.youtube.com/watch?v=bVJaiqJq8gY |
+| 6Km | 2.4G | 500HZ | 250mW | No | Spec | https://www.youtube.com/watch?v=bVJaiqJq8gY |
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
 | 2.28Km | 900M | 50HZ | 10mW | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
 
