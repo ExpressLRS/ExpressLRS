@@ -25,11 +25,6 @@
 #define DefaultPowerEnum PWR_50mW
 #endif
 
-#ifdef TARGET_TX_GHOST_LITE
-#define MaxPower PWR_250mW
-#define DefaultPowerEnum PWR_50mW
-#endif
-
 #ifdef TARGET_R9M_LITE_PRO_TX
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_100mW
