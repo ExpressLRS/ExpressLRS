@@ -752,7 +752,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 
-//#ifndef DEBUG_SUPPRESS
+#ifndef DEBUG_SUPPRESS
     Serial.print(Offset);
     Serial.print(":");
     Serial.print(RawOffset);
@@ -762,7 +762,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Serial.print(hwTimer.FreqOffset);
     Serial.print(":");
     Serial.println(uplinkLQ);
-//#endif
+#endif
     currentlyProcessing = false;
 }
 
