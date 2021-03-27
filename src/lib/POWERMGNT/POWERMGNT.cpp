@@ -49,7 +49,7 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
     analogWriteResolution(12);
 #endif
-#ifdef GPIO_PIN_FAN_EN  && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
 #if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
