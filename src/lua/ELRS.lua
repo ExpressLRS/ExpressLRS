@@ -316,7 +316,7 @@ local function processResp()
     else
         if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
         
-            if(data[3] == 0xFF) and #data == 12 then
+            if(data[3] == 0xFF) and (#data == 12 or force_use_lua == true) then
                 bindmode = bit32.btest(0x01, data[4]) -- bind mode active 
                 wifiupdatemode = bit32.btest(0x02, data[4]) 
                 if StopUpdate == false then 
