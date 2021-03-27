@@ -48,7 +48,12 @@ public:
     /* Return the current running total of bits set, in percent */
     uint8_t ICACHE_RAM_ATTR getLQ() const
     {
-        return (uint32_t)LQ * 100 / N;
+        // Allow the compiler to optimize out some or all of the
+        // math if evenly divisible
+        if (100 % N == 0)
+            return (uint32_t)LQ * (100 / N);
+        else
+            return (uint32_t)LQ * 100 / N;
     }
 
     /* Initialize and zero the history */
