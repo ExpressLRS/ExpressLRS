@@ -228,28 +228,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[6] = UID[5];
 }
 
-void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
-                          ((crsf.ChannelDataIn[1] & 0b111) << 2) +
-                          ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
-                          ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
-#ifdef One_Bit_Switches
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
-#endif
-}
-
 void ICACHE_RAM_ATTR GenerateMSPData()
 {
   uint8_t PacketHeaderAddr;
@@ -391,7 +369,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
-      Generate4ChannelData_11bit();
+      Generate4ChannelData_11bit(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #endif
     }
   }

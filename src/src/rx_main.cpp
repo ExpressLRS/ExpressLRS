@@ -461,20 +461,6 @@ void GotConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_11bit()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01110000) >> 4);
-#ifdef One_Bit_Switches
-    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00001000);
-    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
-    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
-    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
-#endif
-}
-
 void ICACHE_RAM_ATTR UnpackMSPData()
 {
     mspPacket_t packet;
@@ -563,7 +549,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         #endif
         #else
-        UnpackChannelData_11bit();
+        UnpackChannelData_11bit(Radio.RXdataBuffer, &crsf);
         #endif
         if (connectionState == connected)
         {

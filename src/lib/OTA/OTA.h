@@ -33,5 +33,14 @@ void UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf);
 
 #endif // SEQ_SWITCHES
 
+#if (!defined HYBRID_SWITCHES_8 and !defined SEQ_SWITCHES) or defined UNIT_TEST
+
+#if TARGET_TX or defined UNIT_TEST
+void ICACHE_RAM_ATTR Generate4ChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+#elif TARGET_RX or defined UNIT_TEST
+void ICACHE_RAM_ATTR UnpackChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
+
+#endif // !HYBRID_SWITCHES_8 and !SEQ_SWITCHES
 
 #endif // H_OTA

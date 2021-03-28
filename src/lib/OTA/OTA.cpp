@@ -190,3 +190,49 @@ void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF
 }
 #endif
 #endif // SEQ_SWITCHES
+
+#if (!defined HYBRID_SWITCHES_8 and !defined SEQ_SWITCHES) or defined UNIT_TEST
+
+#if TARGET_TX or defined UNIT_TEST
+
+void ICACHE_RAM_ATTR Generate4ChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+{
+  uint8_t PacketHeaderAddr;
+  PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
+  Buffer[0] = PacketHeaderAddr;
+  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
+  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
+  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
+  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) +
+                          ((crsf->ChannelDataIn[1] & 0b111) << 2) +
+                          ((crsf->ChannelDataIn[2] & 0b110) >> 1);
+  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) +
+                          ((crsf->ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
+#ifdef One_Bit_Switches
+  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[4]) << 3;
+  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[5]) << 2;
+  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[6]) << 1;
+  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[7]) << 0;
+#endif
+}
+
+#elif TARGET_RX or defined UNIT_TEST
+
+void ICACHE_RAM_ATTR UnpackChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf)
+{
+    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11100000) >> 5);
+    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) + ((Buffer[5] & 0b00011100) >> 2);
+    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) + ((Buffer[5] & 0b00000011) << 1) + (Buffer[6] & 0b10000000 >> 7);
+    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[6] & 0b01110000) >> 4);
+#ifdef One_Bit_Switches
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b00001000);
+    crsf->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b00000100);
+    crsf->PackedRCdataOut.ch6 = BIT_to_CRSF(Buffer[6] & 0b00000010);
+    crsf->PackedRCdataOut.ch7 = BIT_to_CRSF(Buffer[6] & 0b00000001);
+#endif
+}
+
+#endif
+
+#endif // !HYBRID_SWITCHES_8 and !SEQ_SWITCHES
