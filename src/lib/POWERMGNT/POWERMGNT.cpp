@@ -88,21 +88,41 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(0);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-13);
+        #else
+            Radio.SetOutputPower(0);
+        #endif
         break;
     case PWR_25mW:
-        Radio.SetOutputPower(4);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-9);
+        #else
+            Radio.SetOutputPower(4);
+        #endif
         break;
     case PWR_100mW:
-        Radio.SetOutputPower(10);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-4);
+        #else
+            Radio.SetOutputPower(10);
+        #endif
         break;
     case PWR_250mW:
-        Radio.SetOutputPower(13);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-2);
+        #else
+            Radio.SetOutputPower(13);
+        #endif
         break;
     case PWR_50mW:
     default:
         Power = PWR_50mW;
-        Radio.SetOutputPower(7);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-7);
+        #else
+            Radio.SetOutputPower(7);
+        #endif
         break;
     }
 #elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
