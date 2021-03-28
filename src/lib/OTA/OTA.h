@@ -43,4 +43,7 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit(volatile uint8_t* Buffer, CRSF *crs
 
 #endif // !HYBRID_SWITCHES_8 and !SEQ_SWITCHES
 
+void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp, uint8_t addr);
+void ICACHE_RAM_ATTR UnpackMSPData(volatile uint8_t* Buffer, mspPacket_t *msp);
+
 #endif // H_OTA

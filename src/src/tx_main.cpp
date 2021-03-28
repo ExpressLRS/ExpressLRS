@@ -228,31 +228,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[6] = UID[5];
 }
 
-void ICACHE_RAM_ATTR GenerateMSPData()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = MSPPacket.function;
-  Radio.TXdataBuffer[2] = MSPPacket.payloadSize;
-  Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = 0;
-  Radio.TXdataBuffer[5] = 0;
-  Radio.TXdataBuffer[6] = 0;
-  if (MSPPacket.payloadSize <= 4)
-  {
-    MSPPacket.payloadReadIterator = 0;
-    for (int i = 0; i < MSPPacket.payloadSize; i++)
-    {
-      Radio.TXdataBuffer[3 + i] = MSPPacket.readByte();
-    }
-  }
-  else
-  {
-    Serial.println("Unable to send MSP command. Packet too long.");
-  }
-}
-
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
   Serial.println("set rate");
@@ -349,7 +324,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      GenerateMSPData();
+      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
 

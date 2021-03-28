@@ -461,28 +461,6 @@ void GotConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackMSPData()
-{
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeCommand();
-    packet.flags = 0;
-    packet.function = Radio.RXdataBuffer[1];
-    packet.addByte(Radio.RXdataBuffer[3]);
-    packet.addByte(Radio.RXdataBuffer[4]);
-    packet.addByte(Radio.RXdataBuffer[5]);
-    packet.addByte(Radio.RXdataBuffer[6]);
-
-    if (packet.function == MSP_ELRS_BIND)
-    {
-        OnELRSBindMSP(&packet);
-    }
-    else
-    {
-        crsf.sendMSPFrameToFC(&packet);
-    }
-}
-
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
@@ -558,7 +536,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        UnpackMSPData();
+        mspPacket_t packet;
+        UnpackMSPData(Radio.RXdataBuffer, &packet);
+        if (packet.function == MSP_ELRS_BIND)
+        {
+            OnELRSBindMSP(&packet);
+        }
+        else
+        {
+            crsf.sendMSPFrameToFC(&packet);
+        }
         break;
 
     case TLM_PACKET: //telemetry packet from master
