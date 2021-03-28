@@ -228,21 +228,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[6] = UID[5];
 }
 
-void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
-}
-
 void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
 {
   uint8_t PacketHeaderAddr;
