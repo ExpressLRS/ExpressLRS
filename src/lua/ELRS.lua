@@ -30,10 +30,10 @@ local SX128x_RATES = {
     values = {0x06, 0x05, 0x03, 0x01, 0x00},
 }
 local SX127X_SENSITIVITY = {
-    list = {'-123db','-120db','-117db','-112db'},
+    list = {'-123dbm','-120dbm','-117dbm','-112dbm'},
 }
 local SX128x_SENSITIVITY = {
-    list = {'-120db','-117db','-108db','-105db'},
+    list = {'-120dbm','-117dbm','-108dbm','-105dbm'},
 }
 local tx_lua_version = {
     selected = 1,
@@ -54,7 +54,7 @@ local AirRate = {
 local RfSensitivity = {
     index = 2,
     editable = false,
-    name = 'RF sensitivity',
+    name = 'sensitivity',
     selected = 99,
     list = SX127X_SENSITIVITY.list,
 }
