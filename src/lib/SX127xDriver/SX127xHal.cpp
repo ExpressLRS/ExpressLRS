@@ -30,21 +30,15 @@ void SX127xHal::init()
 #if defined(GPIO_PIN_TX_ENABLE)
   Serial.print("TX: ");
   Serial.print(GPIO_PIN_TX_ENABLE);
+  pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
 
 #if defined(GPIO_PIN_RX_ENABLE)
   Serial.print(" RX: ");
   Serial.println(GPIO_PIN_RX_ENABLE);
-#endif
-
-#if defined(GPIO_PIN_RX_ENABLE)
   pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
   digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
-
-#if defined(GPIO_PIN_TX_ENABLE)
-  pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
-  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
 
 #if defined(GPIO_PIN_ANTENNA_SELECT)
