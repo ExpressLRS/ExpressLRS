@@ -28,19 +28,19 @@
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus)
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
+  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
   Buffer[0] = PacketHeaderAddr;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
   Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) +
-                           ((crsf->ChannelDataIn[1] & 0b110) << 3) +
-                           ((crsf->ChannelDataIn[2] & 0b110) << 1) +
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
+                           ((crsf->ChannelDataIn[1] & 0b110) << 3) |
+                           ((crsf->ChannelDataIn[2] & 0b110) << 1) |
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
   // switch 0 is sent on every packet - intended for low latency arm/disarm
-  Buffer[6] = (TelemetryStatus << 7) + ((crsf->currentSwitches[0] & 0b11) << 5);
+  Buffer[6] = (TelemetryStatus << 7) | ((crsf->currentSwitches[0] & 0b11) << 5);
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
@@ -48,7 +48,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
 
   // put the bits into buf[6]. nextSwitchIndex is in the range 1 through 7 so takes 3 bits
   // currentSwitches[nextSwitchIndex] is in the range 0 through 2, takes 2 bits.
-  Buffer[6] += (nextSwitchIndex << 2) + value;
+  Buffer[6] |= (nextSwitchIndex << 2) | value;
 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
@@ -68,10 +68,10 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
 void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf)
 {
     // The analog channels
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11000000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) + ((Buffer[5] & 0b00110000) >> 3);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) + ((Buffer[5] & 0b00001100) >> 1);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[5] & 0b00000011) << 1);
+    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
+    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
+    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
+    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
 
     // The low latency switch
     crsf->PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
@@ -125,21 +125,21 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
 void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
+  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
   Buffer[0] = PacketHeaderAddr;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
   Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) + ((crsf->ChannelDataIn[1] & 0b111) << 2) + ((crsf->ChannelDataIn[2] & 0b110) >> 1);
-  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) + ((crsf->ChannelDataIn[3] & 0b110) << 4);
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) | ((crsf->ChannelDataIn[1] & 0b111) << 2) | ((crsf->ChannelDataIn[2] & 0b110) >> 1);
+  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) | ((crsf->ChannelDataIn[3] & 0b110) << 4);
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111; // mask for paranoia
   uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11; // mask for paranoia
 
   // put the bits into buf[6]
-  Buffer[6] += (nextSwitchIndex << 2) + value;
+  Buffer[6] |= (nextSwitchIndex << 2) | value;
 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
@@ -153,10 +153,10 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF
  */
 void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf)
 {
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11100000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) + ((Buffer[5] & 0b00011100) >> 2);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) + ((Buffer[5] & 0b00000011) << 1) + (Buffer[6] & 0b10000000 >> 7);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[6] & 0b01100000) >> 4);
+    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11100000) >> 5);
+    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
+    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00000011) << 1) | (Buffer[6] & 0b10000000 >> 7);
+    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[6] & 0b01100000) >> 4);
 
     uint8_t switchIndex = (Buffer[6] & 0b11100) >> 2;
     uint16_t switchValue = SWITCH2b_to_CRSF(Buffer[6] & 0b11);
@@ -198,22 +198,22 @@ void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF
 void ICACHE_RAM_ATTR Generate4ChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) + RC_DATA_PACKET;
+  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
   Buffer[0] = PacketHeaderAddr;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
   Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) +
-                          ((crsf->ChannelDataIn[1] & 0b111) << 2) +
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) |
+                          ((crsf->ChannelDataIn[1] & 0b111) << 2) |
                           ((crsf->ChannelDataIn[2] & 0b110) >> 1);
-  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) +
+  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) |
                           ((crsf->ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
 #ifdef One_Bit_Switches
-  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[4]) << 3;
-  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[5]) << 2;
-  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[6]) << 1;
-  Buffer[6] += CRSF_to_BIT(crsf->ChannelDataIn[7]) << 0;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[4]) << 3;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[5]) << 2;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[6]) << 1;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[7]) << 0;
 #endif
 }
 
@@ -221,10 +221,10 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit(volatile uint8_t* Buffer, CRSF *
 
 void ICACHE_RAM_ATTR UnpackChannelData_11bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) + ((Buffer[5] & 0b11100000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) + ((Buffer[5] & 0b00011100) >> 2);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) + ((Buffer[5] & 0b00000011) << 1) + (Buffer[6] & 0b10000000 >> 7);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) + ((Buffer[6] & 0b01110000) >> 4);
+    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11100000) >> 5);
+    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
+    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00000011) << 1) | (Buffer[6] & 0b10000000 >> 7);
+    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[6] & 0b01110000) >> 4);
 #ifdef One_Bit_Switches
     crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b00001000);
     crsf->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b00000100);
@@ -240,7 +240,7 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit(volatile uint8_t* Buffer, CRSF *crs
 void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) + MSP_DATA_PACKET;
+  PacketHeaderAddr = (addr << 2) | MSP_DATA_PACKET;
   Buffer[0] = PacketHeaderAddr;
   Buffer[1] = msp->function;
   Buffer[2] = msp->payloadSize;
