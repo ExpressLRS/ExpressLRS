@@ -22,18 +22,12 @@ local bindmode = false;
 local wifiupdatemode = false;
 
 local SX127x_RATES = {
-    list = {'25 Hz', '50 Hz', '100 Hz', '200 Hz'},
+    list = {'25Hz(-123dbm)', '50Hz(-120dbm)', '100Hz(-117dbm)', '200Hz(-112dbm)'},
     values = {0x06, 0x05, 0x04, 0x02},
 }
 local SX128x_RATES = {
-    list = {'25 Hz', '50 Hz', '150 Hz', '250 Hz', '500 Hz'},
+    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
     values = {0x06, 0x05, 0x03, 0x01, 0x00},
-}
-local SX127X_SENSITIVITY = {
-    list = {'-123dbm','-120dbm','-117dbm','-112dbm'},
-}
-local SX128x_SENSITIVITY = {
-    list = {'-120dbm','-117dbm','-108dbm','-105dbm'},
 }
 local tx_lua_version = {
     selected = 1,
@@ -51,15 +45,8 @@ local AirRate = {
     max_allowed = #SX127x_RATES.values,
 }
 
-local RfSensitivity = {
-    index = 2,
-    editable = false,
-    name = 'sensitivity',
-    selected = 99,
-    list = SX127X_SENSITIVITY.list,
-}
 local TLMinterval = {
-    index = 3,
+    index = 2,
     editable = true,
     name = 'TLM Ratio',
     selected = 99,
@@ -69,7 +56,7 @@ local TLMinterval = {
 }
 
 local MaxPower = {
-    index = 4,
+    index = 3,
     editable = true,
     name = 'Power',
     selected = 99,
@@ -79,7 +66,7 @@ local MaxPower = {
 }
 
 local RFfreq = {
-    index = 5,
+    index = 4,
     editable = false,
     name = 'RF Freq',
     selected = 99,
@@ -101,7 +88,7 @@ local function binding(item, event)
 end
 
 local Bind = {
-    index = 6,
+    index = 5,
     editable = false,
     name = '[Bind]',
     exec = false,
@@ -121,7 +108,7 @@ local function web_server_start(item, event)
 end
 
 local WebServer = {
-    index = 6,
+    index = 5,
     editable = false,
     name = '[Wifi Update]',
     exec = false,
@@ -149,7 +136,7 @@ local menu = {
     selected = 1,
     modify = false,
     -- Note: list indexes must match to param handling in tx_main!
-    list = {AirRate,RfSensitivity, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
+    list = {AirRate, TLMinterval, MaxPower, RFfreq, Bind, WebServer},
     --list = {AirRate, TLMinterval, MaxPower, RFfreq, WebServer, exit_script},
 }
 
@@ -342,17 +329,14 @@ local function processResp()
                         AirRate.list = SX128x_RATES.list
                         AirRate.values = SX128x_RATES.values
                         AirRate.max_allowed = #SX128x_RATES.values
-                        RfSensitivity.list = SX128x_SENSITIVITY.list
                     else
                         -- 433/868/915 (SX127x)
                         AirRate.list = SX127x_RATES.list
                         AirRate.values = SX127x_RATES.values
                         AirRate.max_allowed = #SX127x_RATES.values
-                        RfSensitivity.list = SX127X_SENSITIVITY.list
                     end
                     RFfreq.selected = GetIndexOf(RFfreq.values,data[8])
                     AirRate.selected =  GetIndexOf(AirRate.values, data[5])
-                    RfSensitivity.selected = AirRate.selected
                 end
                 
                 UartBadPkts = data[9]
