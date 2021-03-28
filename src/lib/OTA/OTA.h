@@ -15,15 +15,21 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
+#if TARGET_TX or defined UNIT_TEST
 void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus);
+#elif TARGET_RX or defined UNIT_TEST
 void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
 
 #endif // HYBRID_SWITCHES_8
 
 #if defined SEQ_SWITCHES or defined UNIT_TEST
 
+#if TARGET_TX or defined UNIT_TEST
 void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+#elif TARGET_RX or defined UNIT_TEST
 void UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
 
 #endif // SEQ_SWITCHES
 

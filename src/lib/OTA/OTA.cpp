@@ -10,6 +10,7 @@
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
+#if TARGET_TX or defined UNIT_TEST
 /**
  * Hybrid switches packet encoding for sending over the air
  *
@@ -53,6 +54,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   crsf->setSentSwitch(nextSwitchIndex, value);
 }
 
+#elif TARGET_RX or defined UNIT_TEST
 /**
  * Hybrid switches decoding of over the air data
  *
@@ -106,10 +108,12 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, 
     }
 }
 
+#endif
 #endif // HYBRID_SWITCHES_8
 
 #if defined SEQ_SWITCHES or defined UNIT_TEST
 
+#if TARGET_TX or defined UNIT_TEST
 /**
  * Sequential switches packet encoding
  *
@@ -141,6 +145,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF
   crsf->setSentSwitch(nextSwitchIndex, value);
 }
 
+#elif TARGET_RX or defined UNIT_TEST
 /**
  * Sequential switches decoding of over the air packet
  *
@@ -183,4 +188,5 @@ void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF
             break;
     }
 }
+#endif
 #endif // SEQ_SWITCHES
