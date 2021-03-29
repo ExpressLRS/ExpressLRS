@@ -527,7 +527,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         #endif
         #else
-        UnpackChannelData_11bit(Radio.RXdataBuffer, &crsf);
+        UnpackChannelData_10bit(Radio.RXdataBuffer, &crsf);
         #endif
         if (connectionState == connected)
         {

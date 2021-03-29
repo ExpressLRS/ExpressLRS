@@ -344,7 +344,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #elif defined SEQ_SWITCHES
       GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #else
-      Generate4ChannelData_11bit(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      Generate4ChannelData_10bit(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #endif
     }
   }
