@@ -39,10 +39,6 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-#include "DAC.h"
-DAC TxDAC;
-#endif
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
@@ -368,7 +364,7 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
-#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#if defined(TARGET_NAMIMNORC_TX)
   WS281BsetLED(0xff, 0, 0);
 #endif
 }
@@ -395,7 +391,7 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
-#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#if defined(TARGET_NAMIMNORC_TX)
   WS281BsetLED(0, 0xff, 0);
 #endif
 }
@@ -577,11 +573,6 @@ void setup()
     #endif
   #endif // GPIO_PIN_BUZZER
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-    TxDAC.init();
-  #endif
-
-
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
   button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
 #endif
@@ -662,7 +653,7 @@ void loop()
 {
   uint32_t now = millis();
 
-  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
       if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
           uint8_t LEDcolor[3] = {0};

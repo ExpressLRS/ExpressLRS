@@ -1,8 +1,9 @@
 #pragma once
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-
 #include "../../src/targets.h"
+
+#if DAC_IN_USE
+
 #include <Wire.h>
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -50,4 +51,5 @@ private:
     uint8_t     m_currVoltageRegVal;
 };
 
-#endif
+extern DAC TxDAC;
+#endif // DAC_IN_USE

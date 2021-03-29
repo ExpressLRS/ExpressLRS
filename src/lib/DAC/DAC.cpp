@@ -1,8 +1,7 @@
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-
 #include "DAC.h"
-#include "SX127xDriver.h"
+
+#if DAC_IN_USE
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -44,7 +43,7 @@ dac_lut_s LUT[] = {
     {2000, 33, 31, 2600}, // Danger untested at high power
 };
 #endif
-#elif defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#elif defined(TARGET_NAMIMNORC_TX)
 #if defined(Regulatory_Domain_EU_868)
 dac_lut_s LUT[] = {
     // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
@@ -84,7 +83,7 @@ dac_lut_s LUT[] = {
 
 void DAC::init()
 {
-    Serial.println("Initialising Wire lib for DAC...");
+    Serial.println("Init DAC Driver");
 
     Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
     Wire.setSCL(GPIO_PIN_SCL);
@@ -142,4 +141,6 @@ void DAC::setPower(DAC_PWR_ power)
     DAC::setVoltageMV(LUT[power].volts);
 }
 
-#endif
+DAC TxDAC;
+
+#endif // DAC_IN_USE
