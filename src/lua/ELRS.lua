@@ -22,11 +22,11 @@ local bindmode = false;
 local wifiupdatemode = false;
 
 local SX127x_RATES = {
-    list = {'25 Hz', '50 Hz', '100 Hz', '200 Hz'},
+    list = {'25Hz(-123dbm)', '50Hz(-120dbm)', '100Hz(-117dbm)', '200Hz(-112dbm)'},
     values = {0x06, 0x05, 0x04, 0x02},
 }
 local SX128x_RATES = {
-    list = {'25 Hz', '50 Hz', '150 Hz', '250 Hz', '500 Hz'},
+    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
     values = {0x06, 0x05, 0x03, 0x01, 0x00},
 }
 local tx_lua_version = {
@@ -34,6 +34,7 @@ local tx_lua_version = {
     list = {'?', '?', 'v0.3', 'v0.4', 'v0.5'},
     values = {0x01, 0x02, 0x03, 0x04, 0x05},
 }
+
 local AirRate = {
     index = 1,
     editable = true,
