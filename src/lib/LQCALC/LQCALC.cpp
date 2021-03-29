@@ -41,3 +41,10 @@ void ICACHE_RAM_ATTR LQCALC::reset()
         this->LQArray[i] = 0;
     }
 }
+
+bool ICACHE_RAM_ATTR LQCALC::packetReceivedForPreviousFrame()
+{
+    uint32_t prevIndex = (LQArrayIndex == 0) ? (this->LQcalcDepth - 1) : (LQArrayIndex - 1);
+
+    return (LQArray[prevIndex] != 0);
+}

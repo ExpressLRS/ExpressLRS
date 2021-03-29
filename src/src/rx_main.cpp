@@ -53,9 +53,13 @@ uint32_t LEDupdateCounterMillis;
 #define BIND_LED_FLASH_INTERVAL_SHORT 100
 #define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define DIVERSITY_ANTENNA_INTERVAL 30
+#define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
+
+uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
@@ -77,11 +81,18 @@ Telemetry telemetry;
 #ifdef ENABLE_TELEMETRY
 StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
+
+
+
 uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
-LPF LPF_UplinkRSSI(5);
+
+// LPF LPF_UplinkRSSI(5);
+LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
+LPF LPF_UplinkRSSI1(5);
+
 
 /// LQ Calculation //////////
 LQCALC LQCALC;
@@ -151,11 +162,38 @@ void ExitBindingMode();
 void OnELRSBindMSP(mspPacket_t *packet);
 
 //////////////////////////////////////////////////////////////
+// flip to the other antenna
+// no-op if GPIO_PIN_ANTENNA_SELECT not defined
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    void ICACHE_RAM_ATTR switchAntenna()
+    {
+
+
+        antenna = !antenna;
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+
+    }
+#endif
+
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     //int8_t LastRSSI = Radio.LastPacketRSSI;
-    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+    // int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+
+    int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
+    int32_t rssiDBM1 = LPF_UplinkRSSI1.SmoothDataINT;
+    switch (antenna) {
+        case 0:
+            rssiDBM0 = LPF_UplinkRSSI0.update(Radio.LastPacketRSSI);
+            break;
+        case 1:
+            rssiDBM1 = LPF_UplinkRSSI1.update(Radio.LastPacketRSSI);
+            break;
+    }
+
+    int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
+
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
@@ -163,14 +201,17 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
-    if (rssiDBM > 0)
-        rssiDBM = 0;
+    // if (rssiDBM > 0)
+    //     rssiDBM = 0;
 
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
-    crsf.LinkStatistics.uplink_RSSI_2 = 0;
+    if (rssiDBM0 > 0) rssiDBM0 = 0;
+    if (rssiDBM1 > 0) rssiDBM1 = 0;
+
+    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0; // negate to match BF
+    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = antenna;
 
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
@@ -268,7 +309,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             // rssi we send is for display only.
             // OpenTX treats the rssi values as signed.
 
-            openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
+            openTxRSSI = (antenna == 0) ? crsf.LinkStatistics.uplink_RSSI_1 : crsf.LinkStatistics.uplink_RSSI_2;
             // truncate the range to fit into OpenTX's 8 bit signed value
             if (openTxRSSI > 127)
                 openTxRSSI = 127;
@@ -356,6 +397,47 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+        static int32_t antennaLQDropTrigger;
+        static int32_t antennaRSSIDropTrigger;
+        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
+
+        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+         if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER) ) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL){
+
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0; 
+         } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
+                 prevRSSI = rssi;
+                 antennaRSSIDropTrigger++;
+             }
+        // if we didn't get a packet switch the antenna
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
+
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0;
+        } else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
+            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+            // We can compare the rssi values and see if we made things better or worse when we switched
+
+            if (rssi < otherRSSI) {
+                // things got worse when we switched, so change back.
+
+                switchAntenna();
+                antennaLQDropTrigger = 1;
+                antennaRSSIDropTrigger = 0;
+            } else {
+                // all good, we can stay on the current antenna. Clear the flag.
+                antennaLQDropTrigger = 0;
+            }
+        } else if (antennaLQDropTrigger > 0){
+            antennaLQDropTrigger ++;
+        }
+    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -801,6 +883,10 @@ void setup()
     }
 #endif
 
+#if defined(GPIO_PIN_ANTENNA_SELECT)
+  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+#endif
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915
