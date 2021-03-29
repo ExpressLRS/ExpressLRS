@@ -298,14 +298,14 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
 /////inline and utility functions//////
 
-//static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; };
+//static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return round((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min); };
 static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; }
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 988.0, 2012.0)); }
-static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return round(fmap(Val, 0.0, 1024.0, 172.0, 1811.0)); }
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return fmap(Val, 172, 1811, 988, 2012); }
+static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return fmap(Val, 0, 1024, 172, 1811); }
 
 // 2b switches use 0, 1 and 2 as values to represent low, middle and high
-static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return round(fmap(Val, 0, 2, 188, 1795)); }
+static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return fmap(Val, 0, 2, 188, 1795); }
 
 static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val)
 {
@@ -323,7 +323,7 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
         return 188;
 }
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return round(fmap(Val, 172.0, 1811.0, 0.0, 1023.0)); }
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return fmap(Val, 172, 1811, 0, 1023); }
 //static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)

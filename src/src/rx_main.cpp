@@ -473,10 +473,6 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
 #endif
-#ifdef ENABLE_TELEMETRY
-    TelemetrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
-    crsf.PackedRCdataOut.ch7 = 0;
-#endif
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()
@@ -726,24 +722,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-    eeprom.Begin();
-    config.Load();
-
-#ifndef MY_UID
-    // Increment the power on counter in eeprom
-    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-    config.Commit();
-
-    // If we haven't reached our binding mode power cycles
-    // and we've been powered on for 2s, reset the power on counter
-    if (config.GetPowerOnCounter() < 3)
-    {
-        delay(2000);
-        config.SetPowerOnCounter(0);
-        config.Commit();
-    }
-#endif
-
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -772,6 +750,24 @@ void setup()
     Serial.begin(CRSF_RX_BAUDRATE);
 
     Serial.println("ExpressLRS Module Booting...");
+
+    eeprom.Begin();
+    config.Load();
+
+#ifndef MY_UID
+    // Increment the power on counter in eeprom
+    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+    config.Commit();
+
+    // If we haven't reached our binding mode power cycles
+    // and we've been powered on for 2s, reset the power on counter
+    if (config.GetPowerOnCounter() < 3)
+    {
+        delay(2000);
+        config.SetPowerOnCounter(0);
+        config.Commit();
+    }
+#endif
 
 #ifdef PLATFORM_ESP8266
     WiFi.mode(WIFI_OFF);
