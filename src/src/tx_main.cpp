@@ -335,16 +335,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      #if defined HYBRID_SWITCHES_8
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
       #else
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, false);
-      #endif
-      #elif defined SEQ_SWITCHES
-      GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
-      #else
-      Generate4ChannelData_10bit(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #endif
     }
   }

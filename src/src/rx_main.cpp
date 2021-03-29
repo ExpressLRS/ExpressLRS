@@ -518,16 +518,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
-        #elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
+        UnpackChannelData(Radio.RXdataBuffer, &crsf);
         #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        #else
-        UnpackChannelData_10bit(Radio.RXdataBuffer, &crsf);
         #endif
         if (connectionState == connected)
         {
