@@ -555,10 +555,6 @@ void ICACHE_RAM_ATTR UnpackChannelData_11bit()
     crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
     crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
 #endif
-#ifdef ENABLE_TELEMETRY
-    TelemetrySender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] & 0b00000001);
-    crsf.PackedRCdataOut.ch7 = 0;
-#endif
 }
 
 void ICACHE_RAM_ATTR UnpackChannelData_10bit()

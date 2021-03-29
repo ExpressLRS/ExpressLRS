@@ -7,7 +7,7 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 extern DAC TxDAC;
 #endif
 
@@ -38,9 +38,7 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-
-
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     Serial.println("Init DAC Driver");
 #endif
 #ifdef TARGET_R9M_LITE_PRO_TX
@@ -49,7 +47,7 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
     analogWriteResolution(12);
 #endif
-#ifdef GPIO_PIN_FAN_EN  && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
 #if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
@@ -70,6 +68,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = (PowerLevels_e)MaxPower;
     }
 
+#ifdef GPIO_PIN_FAN_EN
+    (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
+#endif
+
 #if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
@@ -86,29 +88,46 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(0);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-13);
+        #else
+            Radio.SetOutputPower(0);
+        #endif
         break;
     case PWR_25mW:
-        Radio.SetOutputPower(4);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-9);
+        #else
+            Radio.SetOutputPower(4);
+        #endif
         break;
     case PWR_100mW:
-        Radio.SetOutputPower(10);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-4);
+        #else
+            Radio.SetOutputPower(10);
+        #endif
         break;
     case PWR_250mW:
-        Radio.SetOutputPower(13);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-2);
+        #else
+            Radio.SetOutputPower(13);
+        #endif
         break;
     case PWR_50mW:
     default:
         Power = PWR_50mW;
-        Radio.SetOutputPower(7);
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-7);
+        #else
+            Radio.SetOutputPower(7);
+        #endif
         break;
     }
-#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);
-#ifdef GPIO_PIN_FAN_EN
-    (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
-#endif
 #elif defined(TARGET_R9M_LITE_PRO_TX)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4

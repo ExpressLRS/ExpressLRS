@@ -39,7 +39,7 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 #include "DAC.h"
 DAC TxDAC;
 #endif
@@ -48,11 +48,11 @@ DAC TxDAC;
 button button;
 #endif
 
-#ifdef TARGET_TX_GHOST
+#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
-uint32_t LEDupdateInterval = 25;
+constexpr uint32_t LEDupdateInterval = 100;
 uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
@@ -65,6 +65,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
+#define LUA_VERSION 3
 #endif
 
 /// define some libs to use ///
@@ -262,9 +263,6 @@ void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
   Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
 #endif
-#ifdef ENABLE_TELEMETRY
-  Radio.TXdataBuffer[6] =  Radio.TXdataBuffer[6] & (~1 | TelemetryReceiver.GetCurrentConfirm());
-#endif
 }
 
 void ICACHE_RAM_ATTR GenerateMSPData()
@@ -429,9 +427,10 @@ void sendLuaParams()
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF)};
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)LUA_VERSION};
 
-  crsf.sendLUAresponse(luaParams, 9);
+  crsf.sendLUAresponse(luaParams, 10);
 }
 
 void UARTdisconnected()
@@ -448,6 +447,9 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
+#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  WS281BsetLED(0xff, 0, 0);
+#endif
 }
 
 void UARTconnected()
@@ -472,6 +474,9 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
+#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  WS281BsetLED(0, 0xff, 0);
+#endif
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -596,6 +601,7 @@ void setup()
    * else we will use GPIO_PIN_LED_GREEN and _RED.
    **/
   #if WS2812_LED_IS_USED // do startup blinkies for fun
+      WS281Binit();
       uint32_t col = 0x0000FF;
       for (uint8_t j = 0; j < 3; j++)
       {
@@ -607,6 +613,7 @@ void setup()
               delay(35);
           }
       }
+      WS281BsetLED(0xff, 0, 0);
   #endif
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -649,7 +656,7 @@ void setup()
     #endif
   #endif // GPIO_PIN_BUZZER
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     TxDAC.init();
   #endif
 
@@ -737,8 +744,8 @@ void loop()
 {
   uint32_t now = millis();
 
-  #if WS2812_LED_IS_USED
-      if ((connectionState == disconnected) && (now > LEDupdateInterval + LEDupdateCounterMillis))
+  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_VOYAGER_TX)
+      if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
           uint8_t LEDcolor[3] = {0};
           if (LEDfade == 30 || LEDfade == 0)

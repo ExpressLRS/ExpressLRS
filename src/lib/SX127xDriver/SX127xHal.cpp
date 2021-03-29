@@ -30,14 +30,13 @@ void SX127xHal::init()
 #if defined(GPIO_PIN_TX_ENABLE)
   Serial.print("TX: ");
   Serial.print(GPIO_PIN_TX_ENABLE);
+  pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+  digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
 
 #if defined(GPIO_PIN_RX_ENABLE)
   Serial.print(" RX: ");
   Serial.println(GPIO_PIN_RX_ENABLE);
-#endif
-
-#if defined(GPIO_PIN_RX_ENABLE)
   pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
   digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
@@ -46,6 +45,7 @@ void SX127xHal::init()
   pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
   digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
 #endif
+  
 #ifdef PLATFORM_ESP32
   SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
   SPI.setBitOrder(MSBFIRST);

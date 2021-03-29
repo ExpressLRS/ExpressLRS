@@ -2,11 +2,13 @@ import subprocess, os
 import opentx
 
 def on_upload(source, target, env):
-    # Make sure the firmware.elrs is generated
-    opentx.gen_elrs(source, target, env)
     firmware_path = str(source[0])
     bin_path = os.path.dirname(firmware_path)
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
+    if not os.path.exists(elrs_bin_target):
+        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+        if not os.path.exists(elrs_bin_target):
+            raise Exception("No valid binary found!")
 
     cmd = ["curl", "-v", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",

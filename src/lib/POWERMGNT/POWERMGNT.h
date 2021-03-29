@@ -10,7 +10,7 @@
 #include "SX1280Driver.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX)
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
 #ifdef UNLOCK_HIGHER_POWER
 #define MaxPower PWR_1000mW
 #else
@@ -21,8 +21,8 @@
 
 
 #ifdef TARGET_TX_GHOST
-#define MaxPower 4
-#define DefaultPowerEnum 2
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_R9M_LITE_PRO_TX
@@ -31,13 +31,17 @@
 #endif
 
 #ifdef TARGET_100mW_MODULE
-#define MaxPower 2
-#define DefaultPowerEnum 2
+#define MaxPower PWR_50mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_1000mW_MODULE
-#define MaxPower 4
-#define DefaultPowerEnum 2 
+#ifdef UNLOCK_HIGHER_POWER
+#define MaxPower PWR_1000mW
+#else
+#define MaxPower PWR_250mW
+#endif
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_R9M_LITE_TX
@@ -51,13 +55,13 @@
 #endif
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-#define MaxPower 4
-#define DefaultPowerEnum 2
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
-#define MaxPower 4
-#define DefaultPowerEnum 2
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 typedef enum

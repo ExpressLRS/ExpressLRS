@@ -93,7 +93,6 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 #define GPIO_PIN_NSS            PB12 //confirmed on SLIMPLUS, R900MINI
-#define GPIO_PIN_BUSY           -1   // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0           PA15 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_DIO1           PA1  // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED
 /////////////////////////////////////// NOT FOUND ON SLIMPLUS EITHER.
@@ -104,27 +103,25 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 
-#ifdef USE_R9MM_R9MINI_SBUS
+#if defined(USE_R9MM_R9MINI_SBUS)
     #define GPIO_PIN_RCSIGNAL_RX    PA3
     #define GPIO_PIN_RCSIGNAL_TX    PA2
-#elif TARGET_R9SLIMPLUS_RX               // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
+#elif defined(TARGET_R9SLIMPLUS_RX)      // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
-#elif TARGET_R900MINI_RX
+#elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
-#else //default R9MM_R9MINI or R9MX
+#else
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
 #endif
 
-#ifdef TARGET_R9MX_RX
-    //#define GPIO_PIN_LED            PB2 // Red
+#if defined(TARGET_R9MX_RX)
     #define GPIO_PIN_LED_RED        PB2 // Red
     #define GPIO_PIN_LED_GREEN      PB3 // Green
     #define GPIO_PIN_BUTTON         PB0  // pullup e.g. LOW when pressed
-#elif TARGET_R9SLIMPLUS_RX
-    //#define GPIO_PIN_LED            PA11 // Red
+#elif defined(TARGET_R9SLIMPLUS_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
@@ -133,16 +130,20 @@ https://github.com/jaxxzer
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
     #define GPIO_PIN_ANTENNA_SELECT PB9
-#elif TARGET_R900MINI_RX
-    #define GPIO_PIN_LED            PA11 // Red
+#elif defined(TARGET_NAMIMNORC_VOYAGER_RX)
+    #define GPIO_PIN_LED_RED        PA11
+    // RF Switch: LOW = RX, HIGH = TX
+    #define GPIO_PIN_TX_ENABLE      PB3
+#elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
-    #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
+    // RF Switch: HIGH = RX, LOW = TX
+    #define GPIO_PIN_RX_ENABLE      PB3
 #else //R9MM_R9MINI
-    //#define GPIO_PIN_LED            PC1 // Red
-    #define GPIO_PIN_LED_RED        PC1 // Red
-    #define GPIO_PIN_LED_GREEN      PB3 // Green
-    #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    #define GPIO_PIN_LED_RED        PC1  // Red
+    #define GPIO_PIN_LED_GREEN      PB3  // Green
+    #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
 #endif
 #define timerOffset             1
 
@@ -327,10 +328,12 @@ High = Ant2
 #define GPIO_PIN_RCSIGNAL_TX     PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
 #define GPIO_PIN_LED_WS2812      PB6
 #define GPIO_PIN_LED_WS2812_FAST PB_6
-#define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
-#define GPIO_PIN_RF_AMP_DET      PA3
-#define GPIO_PIN_ANT_CTRL_1      PA9
-#define GPIO_PIN_ANT_CTRL_2      PB13
+#ifndef TARGET_TX_GHOST_LITE
+    #define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
+    #define GPIO_PIN_RF_AMP_DET      PA3
+    #define GPIO_PIN_ANT_CTRL_1      PA9
+    #define GPIO_PIN_ANT_CTRL_2      PB13
+#endif
 #define GPIO_PIN_BUZZER          PC13
 #define timerOffset              1
 
@@ -368,6 +371,40 @@ High = Ant2
 
 #define timerOffset          1
 
+#elif defined(TARGET_NAMIMNORC_VOYAGER_TX)
+/*
+Designed by NamimnoRC
+*/
+
+#define GPIO_PIN_NSS            PB12
+#define GPIO_PIN_DIO0           PA15
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PC14
+#define GPIO_PIN_RX_ENABLE      PB3  //HIGH = RX, LOW = TX
+/* DAC settings */
+#define GPIO_PIN_SDA            PB9
+#define GPIO_PIN_SCL            PB8
+#define DAC_I2C_ADDRESS         0b0001101
+/* S.Port input signal */
+#define GPIO_PIN_RCSIGNAL_RX    PB11 /* USART3 */
+#define GPIO_PIN_RCSIGNAL_TX    PB10 /* USART3 */
+#define BUFFER_OE               PA1
+#define BUFFER_OE_ACTIVE        LOW
+#define GPIO_PIN_FAN_EN         PB1
+/* Backpack logger connection */
+#ifdef USE_ESP8266_BACKPACK
+#define GPIO_PIN_DEBUG_RX       PA10
+#define GPIO_PIN_DEBUG_TX       PA9
+#else
+//
+#define GPIO_PIN_DEBUG_RX       PA3
+#define GPIO_PIN_DEBUG_TX       PA2
+#endif
+/* WS2812 led */
+#define GPIO_PIN_LED_WS2812      PB0
+#define GPIO_PIN_LED_WS2812_FAST PB_0
 #else
 #error "Unknown target!"
 #endif
@@ -387,3 +424,19 @@ High = Ant2
 #define GPIO_PIN_LED GPIO_PIN_LED_RED
 #endif /* GPIO_PIN_LED_RED */
 #endif /* GPIO_PIN_LED */
+
+#ifndef BUFFER_OE
+#define BUFFER_OE UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_BUSY
+#define GPIO_PIN_BUSY UNDEF_PIN
+#endif
+#ifndef BUFFER_OE_ACTIVE
+#define BUFFER_OE_ACTIVE HIGH
+#endif
+#ifndef GPIO_PIN_DIO0
+#define GPIO_PIN_DIO0 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO1
+#define GPIO_PIN_DIO1 UNDEF_PIN
+#endif
