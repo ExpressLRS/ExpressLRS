@@ -26,9 +26,9 @@
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 #endif
 {
   uint8_t PacketHeaderAddr;
@@ -72,7 +72,7 @@ void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, u
  * Input: Buffer
  * Output: crsf->PackedRCdataOut
  */
-void ICACHE_RAM_ATTR UnpackChannelData(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf)
 {
     // The analog channels
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
@@ -129,7 +129,7 @@ void ICACHE_RAM_ATTR UnpackChannelData(volatile uint8_t* Buffer, CRSF *crsf)
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  */
-void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
@@ -158,7 +158,7 @@ void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, u
  *
  * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
  */
-void ICACHE_RAM_ATTR UnpackChannelData(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11100000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
@@ -202,7 +202,7 @@ void ICACHE_RAM_ATTR UnpackChannelData(volatile uint8_t* Buffer, CRSF *crsf)
 
 #if TARGET_TX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
 {
   uint8_t PacketHeaderAddr;
   PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
@@ -229,7 +229,7 @@ void ICACHE_RAM_ATTR GenerateChannelData(volatile uint8_t* Buffer, CRSF *crsf, u
 
 #elif TARGET_RX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR UnpackChannelData(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
