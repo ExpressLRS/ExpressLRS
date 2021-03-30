@@ -44,11 +44,18 @@ def get_commands(env, firmware):
         if bootloader is not None:
             BL_CMD = [TOOL, "write", bootloader, hex(flash_start)]
         APP_CMD = [TOOL, "--reset", "write", firmware, hex(app_start)]
+    elif "darwin" in platform_name:
+        TOOL = os.path.join(
+            env_dir,
+            "tool-stm32duino", "stlink", "st-flash")
+        if bootloader is not None:
+            BL_CMD = [TOOL, "write", bootloader, hex(flash_start)]
+        APP_CMD = [TOOL, "--reset", "write", firmware, hex(app_start)]
     elif "os x" in platform_name:
         print("OS X not supported at the moment\n")
         raise OSError
     else:
-        print("Unknown operating system...\n")
+        print("Operating system: "+ platform_name +  " is not supported.\n")
         raise OSError
 
     return " ".join(BL_CMD), " ".join(APP_CMD)
