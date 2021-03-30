@@ -43,10 +43,7 @@ void SX1280Hal::init()
     Serial.println("Hal Init");
     pinMode(GPIO_PIN_BUSY, INPUT);
     pinMode(GPIO_PIN_DIO1, INPUT);
-
-#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
     pinMode(GPIO_PIN_RST, OUTPUT);
-#endif
     pinMode(GPIO_PIN_NSS, OUTPUT);
     digitalWrite(GPIO_PIN_NSS, HIGH);
 

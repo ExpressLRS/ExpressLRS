@@ -1,14 +1,9 @@
 
 #include "DAC.h"
 
-#if DAC_IN_USE
-
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
-#ifndef DAC_I2C_ADDRESS
-#define DAC_I2C_ADDRESS 0b0001100
-#endif /* DAC_I2C_ADDRESS */
-#define VCC         3300
+#if DAC_IN_USE && defined(DAC_I2C_ADDRESS)
+#include "helpers.h"
+#include <Wire.h>
 
 typedef struct {
     uint16_t mW;
@@ -81,6 +76,10 @@ dac_lut_s LUT[] = {
 };
 #endif
 
+#ifndef DAC_REF_VCC
+#define DAC_REF_VCC 3300
+#endif
+
 void DAC::init()
 {
     Serial.println("Init DAC Driver");
@@ -107,14 +106,13 @@ void DAC::resume()
 {
     if (m_state != RUNNING)
     {
-        Radio.SetOutputPower(0b0000);
         DAC::setVoltageRegDirect(m_currVoltageRegVal);
     }
 }
 
 void DAC::setVoltageMV(uint32_t voltsMV)
 {
-    uint8_t ScaledVolts = map(voltsMV, 0, VCC, 0, 255);
+    uint8_t ScaledVolts = map(voltsMV, 0, DAC_REF_VCC, 0, 255);
     setVoltageRegDirect(ScaledVolts);
     m_currVoltageMV = voltsMV;
     Serial.println(m_currVoltageMV);
@@ -126,7 +124,6 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
-    Radio.SetOutputPower(0b0000);
     Wire.beginTransmission(DAC_I2C_ADDRESS);
     Wire.write(RegH);
     Wire.write(RegL);
@@ -135,7 +132,6 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
 
 void DAC::setPower(DAC_PWR_ power)
 {
-    Radio.SetOutputPower(0b0000);
     if (ARRAY_SIZE(LUT) <= power)
         power = (DAC_PWR_)(ARRAY_SIZE(LUT) - 1);
     DAC::setVoltageMV(LUT[power].volts);
@@ -143,4 +139,4 @@ void DAC::setPower(DAC_PWR_ power)
 
 DAC TxDAC;
 
-#endif // DAC_IN_USE
+#endif // DAC_IN_USE && defined(DAC_I2C_ADDRESS)

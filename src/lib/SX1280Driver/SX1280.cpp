@@ -84,10 +84,10 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
 
 void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
 {
-    uint8_t buf[2];
-    buf[0] = power + 18;
-    buf[1] = (uint8_t)SX1280_RADIO_RAMP_04_US;
-    hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, 2);
+    if (power < -18) power = -18;
+    else if (13 < power) power = 13;
+    uint8_t buf[2] = {(uint8_t)(power + 18), (uint8_t)SX1280_RADIO_RAMP_04_US};
+    hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf));
     Serial.print("SetPower: ");
     Serial.println(buf[0]);
     return;

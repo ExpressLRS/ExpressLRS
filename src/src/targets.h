@@ -195,6 +195,9 @@ https://github.com/jaxxzer
 #define BUFFER_OE_ACTIVE HIGH
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
+#define DAC_I2C_ADDRESS         0b0001100
+#define DAC_IN_USE              1
+
 #elif defined(TARGET_R9M_LITE_TX)
 
 #define GPIO_PIN_RFswitch_CONTROL     PC13  // need to confirm  //HIGH = RX, LOW = TX
@@ -396,6 +399,7 @@ Designed by NamimnoRC
     #define GPIO_PIN_SDA            PB9
     #define GPIO_PIN_SCL            PB8
     #define DAC_I2C_ADDRESS         0b0001101
+    #define DAC_IN_USE              1
 #endif // TARGET_MODULE_2400
 
 /* S.Port input signal */
@@ -491,8 +495,4 @@ Designed by NamimnoRC
 #endif
 #ifndef GPIO_PIN_PA_ENABLE
 #define GPIO_PIN_PA_ENABLE UNDEF_PIN
-#endif
-#if defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && \
-    defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
-#define DAC_IN_USE  1
 #endif
