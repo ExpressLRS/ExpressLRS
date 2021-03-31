@@ -41,7 +41,7 @@ void SX1280Hal::end()
 void SX1280Hal::init()
 {
     Serial.println("Hal Init");
-#if defined(GPIO_PIN_BUSY)
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     pinMode(GPIO_PIN_BUSY, INPUT);
 #endif
     pinMode(GPIO_PIN_DIO1, INPUT);
@@ -120,7 +120,7 @@ void SX1280Hal::reset(void)
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
 
-#if defined(GPIO_PIN_BUSY)
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
         #ifdef PLATFORM_STM32
@@ -292,7 +292,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-#if defined(GPIO_PIN_BUSY)    
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     #define wtimeoutUS 1000
     uint32_t startTime = micros();
 
