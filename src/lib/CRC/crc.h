@@ -16,14 +16,14 @@ public:
     uint8_t calc(volatile uint8_t *data, uint8_t len);
 };
 
-class GENERIC_CRC16
+class GENERIC_CRC13
 {
 private:
-    uint16_t crc16tab[crclen];
+    uint16_t crc13tab[crclen];
     uint16_t crcpoly;
 
 public:
-    GENERIC_CRC16(uint16_t poly);
+    GENERIC_CRC13(uint16_t poly);
     uint16_t calc(uint8_t *data, uint8_t len, uint16_t crc);
     uint16_t calc(volatile uint8_t *data, uint8_t len, uint16_t crc);
 };
