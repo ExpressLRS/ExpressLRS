@@ -449,8 +449,8 @@ Designed by NamimnoRC
 #endif /* GPIO_PIN_LED_RED */
 #endif /* GPIO_PIN_LED */
 
-#ifndef BUFFER_OE
-#define BUFFER_OE UNDEF_PIN
+#ifndef GPIO_PIN_BUFFER_OE
+#define GPIO_PIN_BUFFER_OE UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
