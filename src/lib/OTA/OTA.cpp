@@ -118,87 +118,7 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 #endif
 #endif // HYBRID_SWITCHES_8
 
-#if defined SEQ_SWITCHES or defined UNIT_TEST
-
-#if TARGET_TX or defined UNIT_TEST
-/**
- * Sequential switches packet encoding
- *
- * Channel 3 is reduced to 10 bits to allow a 3 bit switch index and 2 bit value
- * We cycle through 8 switches on successive packets. If any switches have changed
- * we take the lowest indexed one and send that, hence lower indexed switches have
- * higher priority in the event that several are changed at once.
- */
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
-  Buffer[0] = PacketHeaderAddr;
-  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
-  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
-  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
-  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b00000111) << 5) | ((crsf->ChannelDataIn[1] & 0b111) << 2) | ((crsf->ChannelDataIn[2] & 0b110) >> 1);
-  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7) | ((crsf->ChannelDataIn[3] & 0b110) << 4);
-
-  // find the next switch to send
-  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111; // mask for paranoia
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11; // mask for paranoia
-
-  // put the bits into buf[6]
-  Buffer[6] |= (nextSwitchIndex << 2) | value;
-
-  // update the sent value
-  crsf->setSentSwitch(nextSwitchIndex, value);
-}
-
-#elif TARGET_RX or defined UNIT_TEST
-/**
- * Sequential switches decoding of over the air packet
- *
- * Seq switches uses 10 bits for ch3, 3 bits for the switch index and 2 bits for the switch value
- */
-void ICACHE_RAM_ATTR UnpackChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf)
-{
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11100000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00000011) << 1) | (Buffer[6] & 0b10000000 >> 7);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[6] & 0b01100000) >> 4);
-
-    uint8_t switchIndex = (Buffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Buffer[6] & 0b11);
-
-    switch (switchIndex) {
-        case 0:
-            crsf->PackedRCdataOut.ch4 = switchValue;
-            break;
-        case 1:
-            crsf->PackedRCdataOut.ch5 = switchValue;
-            break;
-        case 2:
-            crsf->PackedRCdataOut.ch6 = switchValue;
-            break;
-        case 3:
-            crsf->PackedRCdataOut.ch7 = switchValue;
-            break;
-        case 4:
-            crsf->PackedRCdataOut.ch8 = switchValue;
-            break;
-        case 5:
-            crsf->PackedRCdataOut.ch9 = switchValue;
-            break;
-        case 6:
-            crsf->PackedRCdataOut.ch10 = switchValue;
-            break;
-        case 7:
-            crsf->PackedRCdataOut.ch11 = switchValue;
-            break;
-    }
-}
-#endif
-#endif // SEQ_SWITCHES
-
-#if (!defined HYBRID_SWITCHES_8 and !defined SEQ_SWITCHES) or defined UNIT_TEST
+#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
 #if TARGET_TX or defined UNIT_TEST
 
@@ -245,7 +165,7 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 
 #endif
 
-#endif // !HYBRID_SWITCHES_8 and !SEQ_SWITCHES
+#endif // !HYBRID_SWITCHES_8
 
 void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp, uint8_t addr)
 {
