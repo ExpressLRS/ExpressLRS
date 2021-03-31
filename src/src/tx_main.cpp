@@ -197,17 +197,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     }
 }
 
-void ICACHE_RAM_ATTR CheckChannels5to8Change()
-{ //check if channels 5 to 8 have new data (switch channels)
-  for (int i = 4; i < 8; i++)
-  {
-    if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
-    {
-      Channels5to8Changed = true;
-    }
-  }
-}
-
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   uint8_t PacketHeaderAddr;
@@ -613,9 +602,6 @@ void setup()
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 
-#ifndef One_Bit_Switches
-  crsf.RCdataCallback1 = &CheckChannels5to8Change;
-#endif
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
