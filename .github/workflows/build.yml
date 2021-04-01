@@ -26,6 +26,7 @@ jobs:
     - name: Run PlatformIO
       run: |
         platformio platform update
+        platformio platform install native
         mkdir -p ~/artifacts
         cd src
         export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
