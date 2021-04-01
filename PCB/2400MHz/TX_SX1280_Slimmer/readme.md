@@ -9,7 +9,7 @@ EasyEda Link: https://easyeda.com/jberkmanPI/tx-slim-2-4g-sch
 
 This is copied from the slim board page.
 
-Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
+Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
 
 *PCB Thickness: 1mm*
 
