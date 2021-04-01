@@ -1,6 +1,5 @@
 #include "elrs_eeprom.h"
-#include "../../src/targets.h"
-#include <Arduino.h>
+#include "targets.h"
 
 #if defined(PLATFORM_STM32)
     #if TARGET_USE_EEPROM && \

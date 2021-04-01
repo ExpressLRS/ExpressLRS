@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "HardwareSerial.h"
-#include "../../src/targets.h"
+#include "../../include/targets.h"
 
 #define PACKED __attribute__((packed))
 

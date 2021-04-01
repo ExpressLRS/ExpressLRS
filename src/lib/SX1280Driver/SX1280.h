@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
-
-#include "../../src/targets.h"
+#include "targets.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 

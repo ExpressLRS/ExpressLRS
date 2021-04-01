@@ -1,13 +1,12 @@
 #ifndef H_CRSF
 #define H_CRSF
 
-#include <Arduino.h>
+#include "targets.h"
 #include "crsf_protocol.h"
 #include "HardwareSerial.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "../../src/targets.h"
-#include "../../src/LowPassFilter.h"
+#include "LowPassFilter.h"
 #include "../CRC/crc.h"
 
 #ifdef PLATFORM_ESP32

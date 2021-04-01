@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include "SX127xRegs.h"
 #include "SX127xHal.h"
 
