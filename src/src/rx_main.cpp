@@ -543,50 +543,6 @@ void GotConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_11bit()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01110000) >> 4);
-#ifdef One_Bit_Switches
-    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00001000);
-    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
-    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
-    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
-#endif
-}
-
-void ICACHE_RAM_ATTR UnpackChannelData_10bit()
-{
-    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));
-    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 2) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 4));
-    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 2));
-    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
-}
-
-void ICACHE_RAM_ATTR UnpackMSPData()
-{
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeCommand();
-    packet.flags = 0;
-    packet.function = Radio.RXdataBuffer[1];
-    packet.addByte(Radio.RXdataBuffer[3]);
-    packet.addByte(Radio.RXdataBuffer[4]);
-    packet.addByte(Radio.RXdataBuffer[5]);
-    packet.addByte(Radio.RXdataBuffer[6]);
-
-    if (packet.function == MSP_ELRS_BIND)
-    {
-        OnELRSBindMSP(&packet);
-    }
-    else
-    {
-        crsf.sendMSPFrameToFC(&packet);
-    }
-}
-
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
@@ -644,16 +600,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
-        #elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
+        UnpackChannelData(Radio.RXdataBuffer, &crsf);
         #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        #else
-        UnpackChannelData_11bit();
         #endif
         if (connectionState == connected)
         {
@@ -662,7 +612,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        UnpackMSPData();
+        mspPacket_t packet;
+        UnpackMSPData(Radio.RXdataBuffer, &packet);
+        if (packet.function == MSP_ELRS_BIND)
+        {
+            OnELRSBindMSP(&packet);
+        }
+        else
+        {
+            crsf.sendMSPFrameToFC(&packet);
+        }
         break;
 
     case TLM_PACKET: //telemetry packet from master

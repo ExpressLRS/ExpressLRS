@@ -48,9 +48,6 @@ public:
     // which switch should be sent in the next rc packet
     static uint8_t nextSwitchIndex;
 
-    static void (*RCdataCallback1)(); //function pointer for new RC data callback
-    static void (*RCdataCallback2)(); //function pointer for new RC data callback
-
     static void (*disconnected)();
     static void (*connected)();
 
