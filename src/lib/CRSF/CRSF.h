@@ -3,7 +3,9 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
+#endif
 #include "msp.h"
 #include "msptypes.h"
 #include "LowPassFilter.h"

@@ -60,8 +60,9 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
 }
+#endif
 
-#elif TARGET_RX or defined UNIT_TEST
+#if TARGET_RX or defined UNIT_TEST
 /**
  * Hybrid switches decoding of over the air data
  *
@@ -144,8 +145,9 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *cr
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
 }
+#endif
 
-#elif TARGET_RX or defined UNIT_TEST
+#if TARGET_RX or defined UNIT_TEST
 
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
