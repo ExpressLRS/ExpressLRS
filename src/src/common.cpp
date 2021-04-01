@@ -128,8 +128,7 @@ uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 #endif
 uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
-uint8_t CRCCaesarCipher = UID[4];
-uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
+uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20

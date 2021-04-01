@@ -87,7 +87,6 @@ void test_priority(void)
 void test_encodingHybrid8()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
     uint8_t TXdataBuffer[8];
 
@@ -108,12 +107,12 @@ void test_encodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, false);
 
     // check it looks right
     // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
-    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
+    uint8_t header = RC_DATA_PACKET;
+    TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
@@ -141,7 +140,6 @@ void test_encodingHybrid8()
 void test_decodingHybrid8()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
@@ -162,7 +160,7 @@ void test_decodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
@@ -186,7 +184,6 @@ void test_decodingHybrid8()
 void test_encoding10bit()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
     uint8_t TXdataBuffer[8];
 
@@ -203,11 +200,11 @@ void test_encoding10bit()
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
+    GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // check it looks right
     // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
+    uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
@@ -236,7 +233,6 @@ void test_encoding10bit()
 void test_decoding10bit()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
@@ -253,7 +249,7 @@ void test_decoding10bit()
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
+    GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelData10bit(TXdataBuffer, &crsf);
