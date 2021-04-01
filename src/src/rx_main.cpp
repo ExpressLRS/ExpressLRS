@@ -263,16 +263,11 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
 
-    if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
+    if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
-        return true;
     }
-    else if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we aren't about to send a response don't go back into RX mode
-    {
-        Radio.RXnb();
-        return true;
-    }
+    return true;
 }
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
@@ -297,7 +292,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     alreadyTLMresp = true;
-
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
 
     switch (NextTelemetryType)
