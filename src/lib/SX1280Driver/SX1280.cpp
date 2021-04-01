@@ -5,7 +5,7 @@
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
 
-/* Steps for startup 
+/* Steps for startup
 
 1. If not in STDBY_RC mode, then go to this mode by sending the command:
 SetStandby(STDBY_RC)
@@ -75,7 +75,7 @@ bool SX1280Driver::Begin()
 
 void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
 {
-    this->SetMode(SX1280_MODE_STDBY_XOSC); 
+    this->SetMode(SX1280_MODE_STDBY_XOSC);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL); // TODO don't make static etc.
@@ -131,7 +131,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     case SX1280_MODE_STDBY_RC:
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC);
         break;
-        
+
     case SX1280_MODE_STDBY_XOSC:
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC);
         break;
@@ -281,7 +281,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 
     // Serial.println("TXnbISR!");
     //instance->GetStatus();
-    
+
     //instance->GetStatus();
     instance->TXdoneCallback();
 }
@@ -363,5 +363,5 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
     instance->LastPacketRSSI = -(int8_t)(status[0] / 2);
-    instance->LastPacketSNR = (int8_t)(status[1] / 4);
+    instance->LastPacketSNR = (int8_t)status[1] / 4;
 }
