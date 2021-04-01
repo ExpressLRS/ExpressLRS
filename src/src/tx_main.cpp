@@ -127,6 +127,14 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
+  if (getParity(Radio.RXdataBuffer, 8))
+  {
+      #ifndef DEBUG_SUPPRESS
+      Serial.println("Parity error on RF packet");
+      #endif
+      return;
+  }
+
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111000) << 5) | Radio.RXdataBuffer[7];
   
   Radio.RXdataBuffer[0] &= 0b11;
@@ -325,9 +333,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, 0); //CRCInitializer
-  Radio.TXdataBuffer[0] |= ((crc >> 5) & 0b11111000);
+  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+  Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
   Radio.TXdataBuffer[7] = crc & 0xFF;
+
+  if (getParity(Radio.TXdataBuffer, 8))
+  {
+    Radio.TXdataBuffer[0] |= 0b00000100;
+  }
+
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
 
@@ -645,7 +659,7 @@ void setup()
   crsf.Begin();
   hwTimer.init();
   hwTimer.resume();
-  // hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
   LQCALC.init(10);
 }
 

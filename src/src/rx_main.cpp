@@ -57,7 +57,7 @@ uint32_t LEDupdateCounterMillis;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
-// #define DEBUG_SUPPRESS // supresses debug messages on uart
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
@@ -348,6 +348,12 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
     Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
     Radio.TXdataBuffer[7] = crc & 0xFF;
+    
+    if (getParity(Radio.TXdataBuffer, 8))
+    {
+        Radio.TXdataBuffer[0] |= 0b00000100;
+    }
+
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return;
 }
@@ -547,13 +553,21 @@ void GotConnection()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-    
+
+    if (getParity(Radio.RXdataBuffer, 8))
+    {
+        #ifndef DEBUG_SUPPRESS
+        Serial.println("Parity error on RF packet");
+        #endif
+        return;
+    }
+
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
 
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111000) ) << 5 ) | Radio.RXdataBuffer[7];
 
     Radio.RXdataBuffer[0] = type;
-    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, 0); //CRCInitializer
+    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;
