@@ -19,14 +19,19 @@ def dbg_print(line=''):
 
 
 def _validate_serialrx(rl, config, expected):
-    expected = " = %s" % expected
+    found = False
+    if type(expected) == str:
+        expected = [expected]
     rl.set_delimiters(["# "])
     rl.clear()
     rl.write("get serialrx_%s\r\n" % config)
     line = rl.read_line(1.).strip()
-    if expected not in line:
-        return False
-    return True
+    for key in expected:
+        key = " = %s" % key
+        if key in line:
+            found = True
+            break
+    return found
 
 
 def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
@@ -52,12 +57,12 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?")
 
     serial_check = []
-    if not _validate_serialrx(rl, "provider", ["CRSF", "GHST"][half_duplex]):
+    if not _validate_serialrx(rl, "provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
         serial_check.append("serialrx_provider != CRSF")
     if not _validate_serialrx(rl, "inverted", "OFF"):
         serial_check.append("serialrx_inverted != OFF")
-    if not _validate_serialrx(rl, "halfduplex", "OFF"):
-        serial_check.append("serialrx_halfduplex != OFF")
+    if not _validate_serialrx(rl, "halfduplex", ["OFF", "AUTO"]):
+        serial_check.append("serialrx_halfduplex != OFF/AUTO")
 
     if serial_check:
         error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
