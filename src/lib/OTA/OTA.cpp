@@ -26,14 +26,12 @@
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf)
 #endif
 {
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
-  Buffer[0] = PacketHeaderAddr;
+  Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
@@ -122,11 +120,9 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #if TARGET_TX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) | RC_DATA_PACKET;
-  Buffer[0] = PacketHeaderAddr;
+  Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
@@ -167,11 +163,9 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 
 #endif // !HYBRID_SWITCHES_8
 
-void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp, uint8_t addr)
+void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp)
 {
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (addr << 2) | MSP_DATA_PACKET;
-  Buffer[0] = PacketHeaderAddr;
+  Buffer[0] = MSP_DATA_PACKET & 0b11;
   Buffer[1] = msp->function;
   Buffer[2] = msp->payloadSize;
   Buffer[3] = 0;

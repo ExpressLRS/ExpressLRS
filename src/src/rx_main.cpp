@@ -57,12 +57,12 @@ uint32_t LEDupdateCounterMillis;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
-#define DEBUG_SUPPRESS // supresses debug messages on uart
+// #define DEBUG_SUPPRESS // supresses debug messages on uart
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
+GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
@@ -293,7 +293,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     alreadyTLMresp = true;
 
-    Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    Radio.TXdataBuffer[0] = 0b11; // address + tlm packet
 
     switch (NextTelemetryType)
     {
@@ -345,8 +345,9 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-    Radio.TXdataBuffer[7] = crc;
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+    Radio.TXdataBuffer[7] = crc & 0xFF;
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return;
 }
@@ -546,10 +547,13 @@ void GotConnection()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-    uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t inCRC = Radio.RXdataBuffer[7];
+    
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
+
+    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111000) ) << 5 ) | Radio.RXdataBuffer[7];
+
+    Radio.RXdataBuffer[0] = type;
+    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, 0); //CRCInitializer
 
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;
@@ -573,14 +577,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Serial.print(",");
         }
         Serial.println("");
-        #endif
-        return;
-    }
-
-    if (packetAddr != DeviceAddr)
-    {
-        #ifndef DEBUG_SUPPRESS
-        Serial.println("Wrong device address on RF packet");
         #endif
         return;
     }
@@ -870,9 +866,6 @@ void setup()
         {
             UID[i] = storedUID[i];
         }
-
-        CRCCaesarCipher = UID[4];
-        DeviceAddr = UID[5] & 0b111111;
 
         Serial.print("UID = ");
         Serial.print(UID[0]);
@@ -1165,8 +1158,7 @@ void EnterBindingMode()
     UID[4] = BindingUID[4];
     UID[5] = BindingUID[5];
 
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = 0;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
@@ -1205,8 +1197,7 @@ void OnELRSBindMSP(mspPacket_t *packet)
     UID[3] = packet->readByte();
     UID[4] = packet->readByte();
     UID[5] = packet->readByte();
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = (UID[4] << 8) | UID[5];
 
     Serial.print("New UID = ");
     Serial.print(UID[0]);

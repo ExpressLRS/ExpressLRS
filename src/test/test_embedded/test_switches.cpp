@@ -100,7 +100,6 @@ void test_priority(void)
 void test_encodingHybrid8()
 {
     uint8_t UID[6] = {MY_UID};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
 
     // Define the input data
@@ -120,11 +119,11 @@ void test_encodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, false);
 
     // check it looks right
     // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
+    uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
@@ -153,7 +152,6 @@ void test_encodingHybrid8()
 void test_decodingHybrid8()
 {
     uint8_t UID[6] = {MY_UID};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     // uint8_t expected;
 
     // Define the input data
@@ -173,7 +171,7 @@ void test_decodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into Radio.TXdataBuffer
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(&Radio, &crsf, false);
 
     // copy into the expected buffer for the decoder
     memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
@@ -198,7 +196,6 @@ void test_decodingHybrid8()
 void test_encodingSEQ()
 {
     uint8_t UID[6] = {MY_UID};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
 
     // Define the input data
@@ -218,11 +215,11 @@ void test_encodingSEQ()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    GenerateChannelDataSeqSwitch(&Radio, &crsf);
 
     // check it looks right
     // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
+    uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
     // bytes 1 through 4 are the high bits of the analog channels
@@ -255,7 +252,6 @@ void test_encodingSEQ()
 void test_decodingSEQ()
 {
     uint8_t UID[6] = {MY_UID};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     // uint8_t expected;
 
     // Define the input data
@@ -275,7 +271,7 @@ void test_decodingSEQ()
     crsf.nextSwitchIndex = 3;
 
     // use the encoding method to pack it into Radio.TXdataBuffer
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    GenerateChannelDataSeqSwitch(&Radio, &crsf);
 
     // copy into the required buffer for the decoder
     memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
