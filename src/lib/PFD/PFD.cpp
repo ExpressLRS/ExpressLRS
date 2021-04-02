@@ -34,9 +34,6 @@ void ICACHE_RAM_ATTR PFD::nco_rising(uint32_t time)
 
 void ICACHE_RAM_ATTR PFD::reset()
 {
-  uint32_t now = micros();
-  timeSamples_nco = now;
-  timeSamples_ref = now;
   got_ref = false;
   got_nco = false;
 }
