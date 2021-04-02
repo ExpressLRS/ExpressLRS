@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 #include <unity.h>
-#include "mock_serial.h"
-#include "encapsulated_msp_tests.h"
 #include "eeprom_tests.h"
 
 void setup() {
@@ -13,7 +11,6 @@ void setup() {
 
     UNITY_BEGIN(); // IMPORTANT LINE!
 
-    RUN_TEST(test_encapsulated_msp_send);
     RUN_TEST(test_eeprom_rw);
 }
 

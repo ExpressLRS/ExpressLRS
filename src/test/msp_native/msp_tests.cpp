@@ -101,12 +101,18 @@ void test_msp_send(void)
     TEST_ASSERT_EQUAL(224, (uint8_t)buf[9]);     // crc
 }
 
+extern void test_encapsulated_msp_send(void);
+extern void test_encapsulated_msp_send_too_long(void);
 
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_msp_receive);
     RUN_TEST(test_msp_send);
+
+    RUN_TEST(test_encapsulated_msp_send);
+    RUN_TEST(test_encapsulated_msp_send_too_long);
+
     UNITY_END();
 
     return 0;
