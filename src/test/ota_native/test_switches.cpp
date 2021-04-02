@@ -274,7 +274,6 @@ void test_decoding10bit()
     TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch11); // Switch 7
 }
 
-
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
