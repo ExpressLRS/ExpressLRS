@@ -442,6 +442,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             antennaLQDropTrigger ++;
         }
     #endif
+    
     PFDloop.nco_rising(micros()); // our internal osc just fired
 
     bool tlmSent = false;
