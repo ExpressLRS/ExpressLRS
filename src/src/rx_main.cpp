@@ -828,6 +828,7 @@ void setup()
 #endif /* GPIO_PIN_BUTTON */
 
 #if WS2812_LED_IS_USED // do startup blinkies for fun
+    WS281Binit();
     uint32_t col = 0x0000FF;
     for (uint8_t j = 0; j < 3; j++)
     {
