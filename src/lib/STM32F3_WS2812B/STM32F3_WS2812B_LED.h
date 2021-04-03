@@ -73,13 +73,14 @@ static inline uint32_t bitReverse(uint32_t input)
     return r;
 }
 
-void WS281Binit(void) // takes RGB data
+void WS281Binit(void)
 {
     pinMode(GPIO_PIN_LED_WS2812, OUTPUT);
 }
 
 void WS281BsetLED(uint8_t const * const RGB) // takes RGB data
 {
+    pinMode(GPIO_PIN_LED_WS2812, OUTPUT);
     /* Check if update is needed */
     if ((current_rgb[0] == RGB[0] &&
          current_rgb[1] == RGB[1] &&
