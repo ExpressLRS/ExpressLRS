@@ -56,7 +56,7 @@ expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
 expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
-ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
+expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
 {
     // Protect against out of bounds rate
     if (index < 0)
@@ -72,7 +72,7 @@ ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
     return &ExpressLRS_AirRateConfig[index];
 }
 
-ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
+expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
 {
     // Protect against out of bounds rate
     if (index < 0)

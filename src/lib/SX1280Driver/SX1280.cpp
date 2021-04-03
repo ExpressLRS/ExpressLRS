@@ -73,7 +73,7 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
+void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength)
 {
     this->SetMode(SX1280_MODE_STDBY_XOSC);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
@@ -82,7 +82,7 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
     SetFrequencyReg(freq);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
+void SX1280Driver::SetOutputPower(int8_t power)
 {
     uint8_t buf[2];
     buf[0] = power + 18;
