@@ -6,38 +6,37 @@
 class PFD
 {
 private:
-    uint32_t timeSamples_nco = 0;
-    uint32_t timeSamples_ref = 0;
+    uint32_t intEventTime = 0; 
+    uint32_t extEventTime = 0;  
     int32_t result;
-    bool got_ref;
-    bool got_nco;
+    bool gotExtEvent;
+    bool gotIntEvent;
 
 public:
-
-    inline void ref_rising(uint32_t time)
+    inline void extEvent(uint32_t time) // reference (external osc)
     {
-        timeSamples_ref = time;
-        got_ref = true;
+        extEventTime = time;
+        gotExtEvent = true;
     }
 
-    inline void nco_rising(uint32_t time)
-    {
-        timeSamples_nco = time;
-        got_nco = true;
+    inline void intEvent(uint32_t time) // internal osc event
+    { 
+        intEventTime = time;
+        gotIntEvent = true;
     }
 
     inline void reset()
     {
-        got_ref = false;
-        got_nco = false;
+        gotExtEvent = false;
+        gotIntEvent = false;
     }
 
-    inline void calc_result()
+    inline void calcResult()
     {
-        result = (got_ref && got_nco) ? (int32_t)(timeSamples_ref - timeSamples_nco) : 0;
+        result = (gotExtEvent && gotIntEvent) ? (int32_t)(extEventTime - intEventTime) : 0;
     }
 
-    inline int32_t get_result()
+    inline int32_t getResult()
     {
         return result;
     }

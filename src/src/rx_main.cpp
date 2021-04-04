@@ -176,7 +176,7 @@ void OnELRSBindMSP(mspPacket_t *packet);
 // flip to the other antenna
 // no-op if GPIO_PIN_ANTENNA_SELECT not defined
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    void ICACHE_RAM_ATTR switchAntenna()
+    void inline switchAntenna()
     {
 
 
@@ -389,7 +389,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 {
     if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window
     {
-        PFDloop.calc_result();
+        PFDloop.calcResult();
     }
     PFDloop.reset();
     NonceRX++;
@@ -443,7 +443,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         }
     #endif
     
-    PFDloop.nco_rising(micros()); // our internal osc just fired
+    PFDloop.intEvent(micros()); // our internal osc just fired
 
     bool tlmSent = false;
     bool didFHSS = false;
@@ -617,7 +617,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.ref_rising(beginProcessing + 250);
+    PFDloop.extEvent(beginProcessing + 250);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -700,7 +700,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (connectionState != disconnected)
     {
-        RawOffset = PFDloop.get_result();
+        RawOffset = PFDloop.getResult();
         Offset = LPF_Offset.update(RawOffset);
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
         OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
@@ -714,10 +714,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             hwTimer.phaseShift((Offset >> 2));
         }
 
-        if (RXtimerState == tim_locked) //limit rate of freq offset adjustment slightly
+        if (RXtimerState == tim_locked) 
         {
-
-            if (NonceRX % 8 == 0)
+            if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
             {
                 if (Offset > 0)
                 {
