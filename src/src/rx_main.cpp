@@ -269,7 +269,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
     }
 }
 
-void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
+void SendTelemetryResponse()
 {
     #ifdef ENABLE_TELEMETRY
     uint8_t *data;
@@ -278,17 +278,6 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     static uint8_t telemetryDataCount = 0;
     #endif
     uint8_t openTxRSSI;
-
-    if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
-    {
-        return; // don't bother sending tlm if disconnected or TLM is off
-    }
-
-    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    if (modresult != 0)
-    {
-        return;
-    }
 
     alreadyTLMresp = true;
 
@@ -348,6 +337,22 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[7] = crc;
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return;
+}
+
+void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
+{
+    if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
+    {
+        return; // don't bother sending tlm if disconnected or TLM is off
+    }
+
+    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    if (modresult != 0)
+    {
+        return;
+    }
+
+    SendTelemetryResponse();
 }
 
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
