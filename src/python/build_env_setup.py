@@ -31,5 +31,4 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         # but we really actually truly want dfu-util
         env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
             "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
-            "-R", "-D"],
-            UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
+            "-D"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
