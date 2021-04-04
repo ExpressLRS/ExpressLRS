@@ -13,11 +13,32 @@ private:
     bool got_nco;
 
 public:
-    void nco_rising(uint32_t time);
-    void ref_rising(uint32_t time);
 
-    void reset();
+    inline void ref_rising(uint32_t time)
+    {
+        timeSamples_ref = time;
+        got_ref = true;
+    }
 
-    void calc_result();
-    int32_t get_result();
+    inline void nco_rising(uint32_t time)
+    {
+        timeSamples_nco = time;
+        got_nco = true;
+    }
+
+    inline void reset()
+    {
+        got_ref = false;
+        got_nco = false;
+    }
+
+    inline void calc_result()
+    {
+        result = (got_ref && got_nco) ? (int32_t)(timeSamples_ref - timeSamples_nco) : 0;
+    }
+
+    inline int32_t get_result()
+    {
+        return result;
+    }
 };
