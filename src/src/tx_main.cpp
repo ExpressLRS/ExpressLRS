@@ -103,8 +103,6 @@ uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisC
 
 uint32_t PacketLastSentMicros = 0;
 
-bool Channels5to8Changed = false;
-
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
