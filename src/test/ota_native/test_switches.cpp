@@ -110,7 +110,7 @@ void test_encodingHybrid8()
     GenerateChannelDataHybridSwitch8(&Radio, &crsf, false);
 
     // check it looks right
-    // 1st byte is header & packet type
+    // 1st byte is CRC & packet type
     uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
 
@@ -203,7 +203,7 @@ void test_encoding10bit()
     GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // check it looks right
-    // 1st byte is header & packet type
+    // 1st byte is CRC & packet type
     uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
