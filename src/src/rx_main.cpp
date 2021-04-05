@@ -293,7 +293,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     alreadyTLMresp = true;
 
-    Radio.TXdataBuffer[0] = 0b11; // address + tlm packet
+    Radio.TXdataBuffer[0] = 0b11; // tlm packet
 
     switch (NextTelemetryType)
     {
