@@ -11,7 +11,7 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+-DMY_BINDING_PHRASE="FENIXX"
 
 
 ### REGULATORY DOMAIN: ###
@@ -21,7 +21,7 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
-#-DRegulatory_Domain_ISM_2400
+-DRegulatory_Domain_ISM_2400
 
 
 ### SWITCHES: ###
@@ -37,13 +37,13 @@
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
 #-DUNLOCK_HIGHER_POWER
 
-#-DNO_SYNC_ON_ARM
-#-DARM_CHANNEL=AUX1
+-DNO_SYNC_ON_ARM
+-DARM_CHANNEL=AUX2
 
 -DFEATURE_OPENTX_SYNC
 #-DFEATURE_OPENTX_SYNC_AUTOTUNE
 
-#-DLOCK_ON_FIRST_CONNECTION
+-DLOCK_ON_FIRST_CONNECTION
 
 ### COMPATIBILITY OPTIONS: ###
 
@@ -60,10 +60,10 @@
 #-DJUST_BEEP_ONCE
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
-#-DUSE_500HZ
+-DUSE_500HZ
 
 # Comment this to disable advanced telemetry.
 #-DENABLE_TELEMETRY
 
 #Comment this to disable diversity function
--DUSE_DIVERSITY
+#-DUSE_DIVERSITY
