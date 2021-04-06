@@ -16,7 +16,7 @@ Big thanks to @juhtipuhti for this great design!
 
 ### PCB manufacturing
 
-Upload the Gerber file to https://jlcpcb.com/ and select 4-layers and one design (already panelized).
+Upload the Gerber file to https://jlcpcb.com/RAT and select 4-layers and one design (already panelized).
 Its recommended to use 1.6mm board thickness so the mousebites wont break in production.
 
 ### BOM

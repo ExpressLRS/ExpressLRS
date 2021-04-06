@@ -53,9 +53,13 @@ uint32_t LEDupdateCounterMillis;
 #define BIND_LED_FLASH_INTERVAL_SHORT 100
 #define BIND_LED_FLASH_INTERVAL_LONG 1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
+#define DIVERSITY_ANTENNA_INTERVAL 30
+#define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
+
+uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
@@ -77,11 +81,18 @@ Telemetry telemetry;
 #ifdef ENABLE_TELEMETRY
 StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
+
+
+
 uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
-LPF LPF_UplinkRSSI(5);
+
+// LPF LPF_UplinkRSSI(5);
+LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
+LPF LPF_UplinkRSSI1(5);
+
 
 /// LQ Calculation //////////
 LQCALC LQCALC;
@@ -151,11 +162,38 @@ void ExitBindingMode();
 void OnELRSBindMSP(mspPacket_t *packet);
 
 //////////////////////////////////////////////////////////////
+// flip to the other antenna
+// no-op if GPIO_PIN_ANTENNA_SELECT not defined
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    void ICACHE_RAM_ATTR switchAntenna()
+    {
+
+
+        antenna = !antenna;
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+
+    }
+#endif
+
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     //int8_t LastRSSI = Radio.LastPacketRSSI;
-    int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+    // int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
+
+    int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
+    int32_t rssiDBM1 = LPF_UplinkRSSI1.SmoothDataINT;
+    switch (antenna) {
+        case 0:
+            rssiDBM0 = LPF_UplinkRSSI0.update(Radio.LastPacketRSSI);
+            break;
+        case 1:
+            rssiDBM1 = LPF_UplinkRSSI1.update(Radio.LastPacketRSSI);
+            break;
+    }
+
+    int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
+
 
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
@@ -163,15 +201,17 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
     // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
-    if (rssiDBM > 0)
-        rssiDBM = 0;
+    // if (rssiDBM > 0)
+    //     rssiDBM = 0;
 
-    crsf.LinkStatistics.uplink_RSSI_1 = -1 * rssiDBM; // to match BF
-    crsf.LinkStatistics.uplink_RSSI_2 = 0;
+    if (rssiDBM0 > 0) rssiDBM0 = 0;
+    if (rssiDBM1 > 0) rssiDBM1 = 0;
+
+    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0; // negate to match BF
+    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
-
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
@@ -268,7 +308,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             // rssi we send is for display only.
             // OpenTX treats the rssi values as signed.
 
-            openTxRSSI = crsf.LinkStatistics.uplink_RSSI_1;
+            openTxRSSI = (antenna == 0) ? crsf.LinkStatistics.uplink_RSSI_1 : crsf.LinkStatistics.uplink_RSSI_2;
             // truncate the range to fit into OpenTX's 8 bit signed value
             if (openTxRSSI > 127)
                 openTxRSSI = 127;
@@ -356,6 +396,47 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+        static int32_t antennaLQDropTrigger;
+        static int32_t antennaRSSIDropTrigger;
+        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
+
+        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+         if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER) ) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL){
+
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0; 
+         } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
+                 prevRSSI = rssi;
+                 antennaRSSIDropTrigger++;
+             }
+        // if we didn't get a packet switch the antenna
+        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
+
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0;
+        } else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
+            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+            // We can compare the rssi values and see if we made things better or worse when we switched
+
+            if (rssi < otherRSSI) {
+                // things got worse when we switched, so change back.
+
+                switchAntenna();
+                antennaLQDropTrigger = 1;
+                antennaRSSIDropTrigger = 0;
+            } else {
+                // all good, we can stay on the current antenna. Clear the flag.
+                antennaLQDropTrigger = 0;
+            }
+        } else if (antennaLQDropTrigger > 0){
+            antennaLQDropTrigger ++;
+        }
+    #endif
     HandleFHSS();
     HandleSendTelemetryResponse();
 }
@@ -461,50 +542,6 @@ void GotConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR UnpackChannelData_11bit()
-{
-    crsf.PackedRCdataOut.ch0 = (Radio.RXdataBuffer[1] << 3) + ((Radio.RXdataBuffer[5] & 0b11100000) >> 5);
-    crsf.PackedRCdataOut.ch1 = (Radio.RXdataBuffer[2] << 3) + ((Radio.RXdataBuffer[5] & 0b00011100) >> 2);
-    crsf.PackedRCdataOut.ch2 = (Radio.RXdataBuffer[3] << 3) + ((Radio.RXdataBuffer[5] & 0b00000011) << 1) + (Radio.RXdataBuffer[6] & 0b10000000 >> 7);
-    crsf.PackedRCdataOut.ch3 = (Radio.RXdataBuffer[4] << 3) + ((Radio.RXdataBuffer[6] & 0b01110000) >> 4);
-#ifdef One_Bit_Switches
-    crsf.PackedRCdataOut.ch4 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00001000);
-    crsf.PackedRCdataOut.ch5 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000100);
-    crsf.PackedRCdataOut.ch6 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000010);
-    crsf.PackedRCdataOut.ch7 = BIT_to_CRSF(Radio.RXdataBuffer[6] & 0b00000001);
-#endif
-}
-
-void ICACHE_RAM_ATTR UnpackChannelData_10bit()
-{
-    crsf.PackedRCdataOut.ch0 = UINT10_to_CRSF((Radio.RXdataBuffer[1] << 2) + ((Radio.RXdataBuffer[5] & 0b11000000) >> 6));
-    crsf.PackedRCdataOut.ch1 = UINT10_to_CRSF((Radio.RXdataBuffer[2] << 2) + ((Radio.RXdataBuffer[5] & 0b00110000) >> 4));
-    crsf.PackedRCdataOut.ch2 = UINT10_to_CRSF((Radio.RXdataBuffer[3] << 2) + ((Radio.RXdataBuffer[5] & 0b00001100) >> 2));
-    crsf.PackedRCdataOut.ch3 = UINT10_to_CRSF((Radio.RXdataBuffer[4] << 2) + ((Radio.RXdataBuffer[5] & 0b00000011) >> 0));
-}
-
-void ICACHE_RAM_ATTR UnpackMSPData()
-{
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeCommand();
-    packet.flags = 0;
-    packet.function = Radio.RXdataBuffer[1];
-    packet.addByte(Radio.RXdataBuffer[3]);
-    packet.addByte(Radio.RXdataBuffer[4]);
-    packet.addByte(Radio.RXdataBuffer[5]);
-    packet.addByte(Radio.RXdataBuffer[6]);
-
-    if (packet.function == MSP_ELRS_BIND)
-    {
-        OnELRSBindMSP(&packet);
-    }
-    else
-    {
-        crsf.sendMSPFrameToFC(&packet);
-    }
-}
-
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
@@ -562,16 +599,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        #if defined SEQ_SWITCHES
-        UnpackChannelDataSeqSwitches(Radio.RXdataBuffer, &crsf);
-        #elif defined HYBRID_SWITCHES_8
-        UnpackChannelDataHybridSwitches8(Radio.RXdataBuffer, &crsf);
+        UnpackChannelData(Radio.RXdataBuffer, &crsf);
         #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        #else
-        UnpackChannelData_11bit();
         #endif
         if (connectionState == connected)
         {
@@ -580,7 +611,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        UnpackMSPData();
+        mspPacket_t packet;
+        UnpackMSPData(Radio.RXdataBuffer, &packet);
+        if (packet.function == MSP_ELRS_BIND)
+        {
+            OnELRSBindMSP(&packet);
+        }
+        else
+        {
+            crsf.sendMSPFrameToFC(&packet);
+        }
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -788,6 +828,7 @@ void setup()
 #endif /* GPIO_PIN_BUTTON */
 
 #if WS2812_LED_IS_USED // do startup blinkies for fun
+    WS281Binit();
     uint32_t col = 0x0000FF;
     for (uint8_t j = 0; j < 3; j++)
     {
@@ -801,6 +842,10 @@ void setup()
     }
 #endif
 
+#if defined(GPIO_PIN_ANTENNA_SELECT)
+  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+#endif
 #ifdef Regulatory_Domain_AU_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_FCC_915

@@ -32,9 +32,6 @@ volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial
 
 void inline CRSF::nullCallback(void) {}
 
-void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
-void (*CRSF::RCdataCallback2)() = &nullCallback; // null placeholder callback
-
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
 
@@ -430,8 +427,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSF::RCdataLastRecv = micros();
         GoodPktsCount++;
         GetChannelDataIn();
-        (RCdataCallback1)(); // run new RC data callback
-        (RCdataCallback2)(); // run new RC data callback
         return true;
     }
     return false;

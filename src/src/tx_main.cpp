@@ -103,8 +103,6 @@ uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisC
 
 uint32_t PacketLastSentMicros = 0;
 
-bool Channels5to8Changed = false;
-
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
@@ -177,7 +175,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
 
-            crsf.LinkStatistics.downlink_SNR = int(Radio.LastPacketSNR * 10);
+            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR * 10;
             crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
@@ -195,17 +193,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             break;
         #endif
     }
-}
-
-void ICACHE_RAM_ATTR CheckChannels5to8Change()
-{ //check if channels 5 to 8 have new data (switch channels)
-  for (int i = 4; i < 8; i++)
-  {
-    if (crsf.ChannelDataInPrev[i] != crsf.ChannelDataIn[i])
-    {
-      Channels5to8Changed = true;
-    }
-  }
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -226,68 +213,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
-}
-
-void ICACHE_RAM_ATTR Generate4ChannelData_10bit()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[2] = ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[3] = ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[4] = ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b1111111100) >> 2);
-  Radio.TXdataBuffer[5] = ((CRSF_to_UINT10(crsf.ChannelDataIn[0]) & 0b0000000011) << 6) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[1]) & 0b0000000011) << 4) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[2]) & 0b0000000011) << 2) +
-                          ((CRSF_to_UINT10(crsf.ChannelDataIn[3]) & 0b0000000011) << 0);
-}
-
-void ICACHE_RAM_ATTR Generate4ChannelData_11bit()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + RC_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-  Radio.TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-  Radio.TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-  Radio.TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  Radio.TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
-                          ((crsf.ChannelDataIn[1] & 0b111) << 2) +
-                          ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  Radio.TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
-                          ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
-#ifdef One_Bit_Switches
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-  Radio.TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
-#endif
-}
-
-void ICACHE_RAM_ATTR GenerateMSPData()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + MSP_DATA_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
-  Radio.TXdataBuffer[1] = MSPPacket.function;
-  Radio.TXdataBuffer[2] = MSPPacket.payloadSize;
-  Radio.TXdataBuffer[3] = 0;
-  Radio.TXdataBuffer[4] = 0;
-  Radio.TXdataBuffer[5] = 0;
-  Radio.TXdataBuffer[6] = 0;
-  if (MSPPacket.payloadSize <= 4)
-  {
-    MSPPacket.payloadReadIterator = 0;
-    for (int i = 0; i < MSPPacket.payloadSize; i++)
-    {
-      Radio.TXdataBuffer[3 + i] = MSPPacket.readByte();
-    }
-  }
-  else
-  {
-    Serial.println("Unable to send MSP command. Packet too long.");
-  }
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -386,7 +311,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      GenerateMSPData();
+      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
 
@@ -397,16 +322,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      #if defined HYBRID_SWITCHES_8
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
       #else
-      GenerateChannelDataHybridSwitch8(Radio.TXdataBuffer, &crsf, DeviceAddr, false);
-      #endif
-      #elif defined SEQ_SWITCHES
-      GenerateChannelDataSeqSwitch(Radio.TXdataBuffer, &crsf, DeviceAddr);
-      #else
-      Generate4ChannelData_11bit();
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr);
       #endif
     }
   }
@@ -695,9 +614,6 @@ void setup()
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 
-#ifndef One_Bit_Switches
-  crsf.RCdataCallback1 = &CheckChannels5to8Change;
-#endif
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &ParamUpdateReq;

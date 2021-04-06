@@ -11,8 +11,6 @@
 #include "SX1280Driver.h"
 #endif
 
-#define One_Bit_Switches
-
 extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
 extern uint8_t MasterUID[6];
@@ -144,4 +142,6 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX8 12
 
 //ELRS SPECIFIC OTA CRC
-#define ELRS_CRC_POLY 0x83
+//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
+#define ELRS_CRC_POLY 0x07 // 0x83
+#define ELRS_CRC13_POLY 0x1D2F // 0x1E97
