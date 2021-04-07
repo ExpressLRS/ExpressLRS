@@ -5,6 +5,7 @@ import subprocess
 import hashlib
 import fnmatch
 import time
+import re
 import melodyparser
 
 def install(package):
@@ -65,18 +66,28 @@ def parse_flags(path):
 
 parse_flags("user_defines.txt")
 
+print("build flags: %s" % env['BUILD_FLAGS'])
+
+# Handle any negated flags i.e. !-Dxxxx remove -Dxxxx from flags
+for line in build_flags:
+    for flag in re.findall("!-D\s*[^\s]+", line):
+        build_flags = [x.replace(flag[1:],"") for x in build_flags]
+build_flags = [x.replace("!", "") for x in build_flags]
+
 git_repo = Repo(os.getcwd(), search_parent_directories=True)
 git_root = git_repo.git.rev_parse("--show-toplevel")
 ExLRS_Repo = Repo(git_root)
 sha = ExLRS_Repo.head.object.hexsha
 build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
 
+env['BUILD_FLAGS'] = build_flags
+
 print("build flags: %s" % env['BUILD_FLAGS'])
 
-if not fnmatch.filter(env['BUILD_FLAGS'], '-DRegulatory_Domain*'):
+if not fnmatch.filter(env['BUILD_FLAGS'], '*-DRegulatory_Domain*'):
     print_error('Please define a Regulatory_Domain in user_defines.txt')
 
-if '-DENABLE_TELEMETRY' in env['BUILD_FLAGS'] and '-DHYBRID_SWITCHES_8' not in env['BUILD_FLAGS']:
+if fnmatch.filter(env['BUILD_FLAGS'], '*-DENABLE_TELEMETRY*') and not fnmatch.filter(env['BUILD_FLAGS'], '*-DHYBRID_SWITCHES_8*'):
     print_error('Telemetry requires HYBRID_SWITCHES_8')
 
 if fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP32*'):
