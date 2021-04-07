@@ -299,7 +299,7 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 /////inline and utility functions//////
 
 //static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return round((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min); };
-static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; }
+static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2; }
 
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return fmap(Val, 172, 1811, 988, 2012); }
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return fmap(Val, 0, 1024, 172, 1811); }
