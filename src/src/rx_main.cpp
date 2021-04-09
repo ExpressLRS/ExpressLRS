@@ -13,6 +13,10 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
+#ifdef PLATFORM_ESP8266
+#include "ESP8266_WebUpdate.h"
+#endif
+
 #include "crc.h"
 #include "CRSF.h"
 #include "telemetry_protocol.h"
