@@ -32,15 +32,6 @@ SX1280Driver Radio;
 #include "elrs_eeprom.h"
 #include "config.h"
 
-#ifdef PLATFORM_ESP8266
-#include "ESP8266_WebUpdate.h"
-inline uint32_t esp_get_cycle_count() {
-  uint32_t ccount;
-  __asm__ __volatile__("rsr %0,ccount":"=a"(ccount));
-  return ccount;
-}
-#endif
-
 #ifdef TARGET_RX_GHOST_ATTO_V1
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
