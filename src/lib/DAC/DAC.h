@@ -46,3 +46,4 @@ private:
 
 extern DAC TxDAC;
 #endif // DAC_IN_USE && defined(DAC_I2C_ADDRESS)
+#endif
