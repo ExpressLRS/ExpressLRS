@@ -21,7 +21,7 @@ void hwTimer::init()
         timer1_attachInterrupt(hwTimer::callback);
         timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
         timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
-        TickTock = true;
+        isTick = true;
         running = true;
     }
 }
