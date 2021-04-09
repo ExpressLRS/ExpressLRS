@@ -110,6 +110,10 @@ extern "C" {
 #define PIN_SERIAL_RX           PB11
 #define PIN_SERIAL_TX           PB10
 
+// Adjust IRQ priority
+#define TIM_IRQ_PRIO            3
+#define EXTI_IRQ_PRIO           4
+
 /* Extra HAL modules */
 #define HAL_DAC_MODULE_ENABLED
 

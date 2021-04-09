@@ -13,6 +13,10 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
+#ifdef PLATFORM_ESP8266
+#include "ESP8266_WebUpdate.h"
+#endif
+
 #include "crc.h"
 #include "CRSF.h"
 #include "telemetry_protocol.h"
@@ -27,13 +31,10 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include "hwTimer.h"
+#include "PFD.h"
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
-
-#ifdef PLATFORM_ESP8266
-#include "ESP8266_WebUpdate.h"
-#endif
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
 uint8_t LEDfadeDiv;
@@ -61,6 +62,7 @@ uint32_t LEDupdateCounterMillis;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
+PFD PFDloop; 
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
 CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
@@ -86,6 +88,7 @@ StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 /// Filters ////////////////
 LPF LPF_Offset(2);
+LPF LPF_OffsetSlow(3);
 LPF LPF_OffsetDx(4);
 
 // LPF LPF_UplinkRSSI(5);
@@ -99,9 +102,11 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
-int32_t HWtimerError;
+volatile bool currentlyProcessing = false;
 int32_t RawOffset;
+int32_t prevRawOffset;
 int32_t Offset;
+int32_t OffsetSlow;
 int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
@@ -131,6 +136,7 @@ bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
 uint32_t beginProcessing;
+uint32_t beginProcessingCycleCount;
 uint32_t doneProcessing;
 
 //////////////////////////////////////////////////////////////
@@ -165,7 +171,7 @@ void OnELRSBindMSP(mspPacket_t *packet);
 // flip to the other antenna
 // no-op if GPIO_PIN_ANTENNA_SELECT not defined
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    void ICACHE_RAM_ATTR switchAntenna()
+    void inline switchAntenna()
     {
 
 
@@ -235,41 +241,31 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     }
 }
 
-void ICACHE_RAM_ATTR HandleFHSS()
+bool ICACHE_RAM_ATTR HandleFHSS()
 {
-    if (InBindingMode)
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode)
     {
-        return;
-    }
-
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true)
-    {
-        return;
+        return false;
     }
 
     uint8_t modresult = (NonceRX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     if ((modresult != 0) || (connectionState == disconnected)) // don't hop if disconnected
     {
-        return;
+        return false;
     }
 
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
 
-    if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM)
+    if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
-        return;
     }
-    else if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we aren't about to send a response don't go back into RX mode
-    {
-        Radio.RXnb();
-        return;
-    }
+    return true;
 }
 
-void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
+bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     #ifdef ENABLE_TELEMETRY
     uint8_t *data;
@@ -281,17 +277,16 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
     {
-        return; // don't bother sending tlm if disconnected or TLM is off
+        return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
     if (modresult != 0)
     {
-        return;
+        return false;
     }
 
     alreadyTLMresp = true;
-
     Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
 
     switch (NextTelemetryType)
@@ -347,7 +342,7 @@ void ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
     Radio.TXdataBuffer[7] = crc;
     Radio.TXnb(Radio.TXdataBuffer, 8);
-    return;
+    return true;
 }
 
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
@@ -387,6 +382,11 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback
 {
+    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window
+    {
+        PFDloop.calcResult();
+    }
+    PFDloop.reset();
     NonceRX++;
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
@@ -437,8 +437,30 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
             antennaLQDropTrigger ++;
         }
     #endif
-    HandleFHSS();
-    HandleSendTelemetryResponse();
+    
+    PFDloop.intEvent(micros()); // our internal osc just fired
+
+    bool tlmSent = false;
+    bool didFHSS = false;
+
+    if (currentlyProcessing == false) // stop race condition 
+    {
+        didFHSS = HandleFHSS();
+        tlmSent = HandleSendTelemetryResponse();
+    }
+
+    if (didFHSS || tlmSent)
+    {
+        return;
+    }
+
+    if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
+    {
+        if (connectionState == connected)
+        {
+            Radio.RXnb();
+        }
+    }
 }
 
 void LostConnection()
@@ -452,10 +474,10 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     FreqCorrection = 0;
-    HWtimerError = 0;
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    LPF_OffsetSlow.init(0);
     #ifdef FAST_SYNC
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
     #endif
@@ -484,15 +506,16 @@ void LostConnection()
 void ICACHE_RAM_ATTR TentativeConnection()
 {
     hwTimer.resume();
+    PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
     RXtimerState = tim_disconnected;
     Serial.println("tentative conn");
     FreqCorrection = 0;
-    HWtimerError = 0;
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    LPF_OffsetSlow.init(0);
 
 #if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
@@ -544,6 +567,7 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    //beginProcessingCycleCount = esp_get_cycle_count();
     beginProcessing = micros();
     uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -584,9 +608,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
+    currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
+    PFDloop.extEvent(beginProcessing + 250);
 
     #ifdef FAST_SYNC
     if(RFmodeCycleDivisor != 1){
@@ -669,20 +695,40 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (connectionState != disconnected)
     {
-        HWtimerError = ((LastValidPacketMicros - hwTimer.LastCallbackMicrosTick) % ExpressLRS_currAirRate_Modparams->interval);
-        RawOffset = (HWtimerError - (ExpressLRS_currAirRate_Modparams->interval >> 1) + 50); // the offset is because we want the hwtimer tick to occur slightly after the packet would have otherwise been recv
-        OffsetDx = LPF_OffsetDx.update(abs(RawOffset - prevOffset));
-        Offset = LPF_Offset.update(RawOffset); //crude 'locking function' to lock hardware timer to transmitter, seems to work well enough
-        prevOffset = Offset;
+        RawOffset = PFDloop.getResult();
+        Offset = LPF_Offset.update(RawOffset);
+        OffsetSlow = LPF_OffsetSlow.update(RawOffset);
+        OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
 
-        if (RXtimerState == tim_locked)
+        if (connectionState != connected)
         {
-            hwTimer.phaseShift((Offset >> 3) + timerOffset);
+            hwTimer.phaseShift((RawOffset >> 1));
         }
         else
         {
-            hwTimer.phaseShift((RawOffset >> 4) + timerOffset);
+            hwTimer.phaseShift((Offset >> 2));
         }
+
+        if (RXtimerState == tim_locked) 
+        {
+            if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
+            {
+                if (Offset > 0)
+                {
+                    hwTimer.incFreqOffset();
+                }
+                else if (Offset < 0)
+                {
+                    hwTimer.decFreqOffset();
+                }
+            }
+        }
+        else
+        {
+            hwTimer.phaseShift((RawOffset >> 1));
+        }
+        prevOffset = Offset;
+        prevRawOffset = RawOffset;
     }
 
 #if !defined(Regulatory_Domain_ISM_2400)
@@ -696,14 +742,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     doneProcessing = micros();
 
 #ifndef DEBUG_SUPPRESS
-    Serial.print(RawOffset);
-    Serial.print(":");
     Serial.print(Offset);
+    Serial.print(":");
+    Serial.print(RawOffset);
     Serial.print(":");
     Serial.print(OffsetDx);
     Serial.print(":");
+    Serial.print(hwTimer.FreqOffset);
+    Serial.print(":");
     Serial.println(uplinkLQ);
 #endif
+    currentlyProcessing = false;
 }
 
 void beginWebsever()

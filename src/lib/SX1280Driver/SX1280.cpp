@@ -75,7 +75,7 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ)
+void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ)
 {
     IQinverted = InvertIQ;
     this->SetMode(SX1280_MODE_STDBY_XOSC);
@@ -85,7 +85,7 @@ void ICACHE_RAM_ATTR SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX128
     SetFrequencyReg(freq);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetOutputPower(int8_t power)
+void SX1280Driver::SetOutputPower(int8_t power)
 {
     if (power < -18) power = -18;
     else if (13 < power) power = 13;
