@@ -7,9 +7,15 @@ void (*hwTimer::callbackTick)() = &nullCallback;
 void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
+<<<<<<< HEAD
+volatile bool hwTimer::isTick = true;
+volatile int16_t hwTimer::PhaseShift = 0;
+bool hwTimer::ResetNextLoop = false;
+=======
 volatile bool hwTimer::TickTock = true;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
+>>>>>>> 5beb50eb56dc84d4f4d2a7eb140c41116b41d23d
 bool hwTimer::running = false;
 
 #define HWTIMER_TICKS_PER_US 5
@@ -21,7 +27,12 @@ void hwTimer::init()
         timer1_attachInterrupt(hwTimer::callback);
         timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
         timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
+<<<<<<< HEAD
+        ResetNextLoop = false;
+        isTick = true;
+=======
         TickTock = true;
+>>>>>>> 5beb50eb56dc84d4f4d2a7eb140c41116b41d23d
         running = true;
     }
 }
@@ -79,7 +90,7 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         return;
     }
 
-    if (hwTimer::TickTock)
+    if (hwTimer::isTick)
     {
         timer1_write((hwTimer::HWtimerInterval >> 1) + FreqOffset);
         hwTimer::callbackTick();
@@ -90,6 +101,6 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
     }
-    hwTimer::TickTock = !hwTimer::TickTock;
+    hwTimer::isTick = !hwTimer::isTick;
 }
 #endif

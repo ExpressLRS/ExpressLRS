@@ -12,7 +12,7 @@ public:
     static HardwareTimer *MyTim;
 
     static volatile uint32_t HWtimerInterval;
-    static volatile bool TickTock;
+    static volatile bool isTick;
     static volatile int32_t PhaseShift;
     static volatile int32_t FreqOffset;
     static bool running;

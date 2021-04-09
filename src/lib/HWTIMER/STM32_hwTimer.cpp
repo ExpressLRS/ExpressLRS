@@ -7,7 +7,7 @@ void (*hwTimer::callbackTick)() = &nullCallback;
 void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::TickTock = false;
+volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
 bool hwTimer::running = false;
@@ -36,7 +36,7 @@ void hwTimer::stop()
 
 void hwTimer::resume()
 {
-    TickTock = false;
+    isTick = false;
     running = true;
     MyTim->resume();
     MyTim->refresh();
@@ -73,7 +73,7 @@ void hwTimer::callback(void)
         return;
     }
 
-    if (hwTimer::TickTock)
+    if (hwTimer::isTick)
     {
         MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
@@ -88,6 +88,6 @@ void hwTimer::callback(void)
         hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
     }
-    hwTimer::TickTock = !hwTimer::TickTock;
+    hwTimer::isTick = !hwTimer::isTick;
 }
 #endif
