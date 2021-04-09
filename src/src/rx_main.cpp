@@ -243,14 +243,9 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 bool ICACHE_RAM_ATTR HandleFHSS()
 {
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode)
-    {
-        return false;
-    }
-
     uint8_t modresult = (NonceRX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((modresult != 0) || (connectionState == disconnected)) // don't hop if disconnected
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresult != 0) || (connectionState == disconnected))
     {
         return false;
     }
@@ -386,6 +381,45 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     {
         PFDloop.calcResult();
     }
+
+    if (connectionState != disconnected)
+    {
+        RawOffset = PFDloop.getResult();
+        Offset = LPF_Offset.update(RawOffset);
+        OffsetSlow = LPF_OffsetSlow.update(RawOffset);
+        OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
+
+        if (connectionState != connected)
+        {
+            hwTimer.phaseShift((RawOffset >> 1));
+        }
+        else
+        {
+            hwTimer.phaseShift((Offset >> 2));
+        }
+
+        if (RXtimerState == tim_locked)
+        {
+            if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
+            {
+                if (Offset > 0)
+                {
+                    hwTimer.incFreqOffset();
+                }
+                else if (Offset < 0)
+                {
+                    hwTimer.decFreqOffset();
+                }
+            }
+        }
+        else
+        {
+            hwTimer.phaseShift((RawOffset >> 1));
+        }
+        prevOffset = Offset;
+        prevRawOffset = RawOffset;
+    }
+
     PFDloop.reset();
     NonceRX++;
     alreadyFHSS = false;
@@ -567,7 +601,6 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    //beginProcessingCycleCount = esp_get_cycle_count();
     beginProcessing = micros();
     uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
     uint8_t inCRC = Radio.RXdataBuffer[7];
@@ -692,44 +725,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     HandleFHSS();
     HandleSendTelemetryResponse();
     LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
-
-    if (connectionState != disconnected)
-    {
-        RawOffset = PFDloop.getResult();
-        Offset = LPF_Offset.update(RawOffset);
-        OffsetSlow = LPF_OffsetSlow.update(RawOffset);
-        OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
-
-        if (connectionState != connected)
-        {
-            hwTimer.phaseShift((RawOffset >> 1));
-        }
-        else
-        {
-            hwTimer.phaseShift((Offset >> 2));
-        }
-
-        if (RXtimerState == tim_locked) 
-        {
-            if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
-            {
-                if (Offset > 0)
-                {
-                    hwTimer.incFreqOffset();
-                }
-                else if (Offset < 0)
-                {
-                    hwTimer.decFreqOffset();
-                }
-            }
-        }
-        else
-        {
-            hwTimer.phaseShift((RawOffset >> 1));
-        }
-        prevOffset = Offset;
-        prevRawOffset = RawOffset;
-    }
 
 #if !defined(Regulatory_Domain_ISM_2400)
     if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
