@@ -1,19 +1,20 @@
 ### The Legal Stuff ###
 
 # The use and operation of this type of device may require a license and some countries may forbid its use entirely.
-# It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required. 
-# This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK 
+# It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required.
+# This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK
 
 # HOW TO USE THIS FILE: https://github.com/AlessandroAU/ExpressLRS/wiki/User-Defines
-# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND 
- 
-
-### BINDING PHRASE: ### 
-
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH AND
 
 
-### REGULATORY DOMAIN: ### 
+### BINDING PHRASE: ###
+# Uncomment the line below to use a hardcoded binding phrase
+# Leave commented to use traditional binding
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+
+
+### REGULATORY DOMAIN: ###
 
 #-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
@@ -23,12 +24,18 @@
 #-DRegulatory_Domain_ISM_2400
 
 
-### SWITCHES: ### 
+### SWITCHES: ###
 
 #-DHYBRID_SWITCHES_8
 
 
-### PERFORMANCE OPTIONS: ### 
+### PERFORMANCE OPTIONS: ###
+
+#Improves Inital Syncing/Binding Speed (Currently Experimental)
+-DFAST_SYNC
+
+#unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
+#-DUNLOCK_HIGHER_POWER
 
 #-DNO_SYNC_ON_ARM
 #-DARM_CHANNEL=AUX1
@@ -37,22 +44,26 @@
 #-DFEATURE_OPENTX_SYNC_AUTOTUNE
 
 #-DLOCK_ON_FIRST_CONNECTION
-#-DLOCK_ON_50HZ
-
 
 ### COMPATIBILITY OPTIONS: ###
- 
+
 -DUART_INVERTED
 
 #-DUSE_R9MM_R9MINI_SBUS
 
+#-DTLM_REPORT_INTERVAL_MS=320LU
 
 ### OTHER OPTIONS: ###
 
--DAUTO_WIFI_ON_BOOT
-
-#-DUSE_ESP8266_BACKPACK
+-DAUTO_WIFI_ON_INTERVAL=20
 
 #-DJUST_BEEP_ONCE
+#-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
 #-DUSE_500HZ
+
+# Comment this to disable advanced telemetry.
+#-DENABLE_TELEMETRY
+
+#Comment this to disable diversity function
+-DUSE_DIVERSITY

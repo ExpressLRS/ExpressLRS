@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Arduino.h"
-#include "../../src/targets.h"
+#include "targets.h"
 #include "DAC.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -10,43 +9,62 @@
 #include "SX1280Driver.h"
 #endif
 
-#ifdef TARGET_R9M_TX
-#define MaxPower 6
-#define DefaultPowerEnum 2
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#ifdef UNLOCK_HIGHER_POWER
+#define MaxPower PWR_1000mW
+#else
+#define MaxPower PWR_250mW
+#endif
+#define DefaultPowerEnum PWR_50mW
 #endif
 
-#ifdef TARGET_100mW_MODULE
-#define MaxPower 2
-#define DefaultPowerEnum 2
-#endif
 
-#ifdef TARGET_1000mW_MODULE
-#define MaxPower 4
-#define DefaultPowerEnum 2
-#endif
-
-#ifdef TARGET_R9M_LITE_TX
-#define MaxPower 2
-#define DefaultPowerEnum 2
+#ifdef TARGET_TX_GHOST
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_R9M_LITE_PRO_TX
-#define MaxPower 2
-#define DefaultPowerEnum 2
+#define MaxPower PWR_1000mW
+#define DefaultPowerEnum PWR_100mW
+#endif
+
+#ifdef TARGET_100mW_MODULE
+#define MaxPower PWR_50mW
+#define DefaultPowerEnum PWR_50mW
+#endif
+
+#ifdef TARGET_1000mW_MODULE
+#ifdef UNLOCK_HIGHER_POWER
+#define MaxPower PWR_1000mW
+#else
+#define MaxPower PWR_250mW
+#endif
+#define DefaultPowerEnum PWR_50mW
+#endif
+
+#ifdef TARGET_R9M_LITE_TX
+#define MaxPower PWR_50mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_TX_ESP32_SX1280_V1
-#define MaxPower 0 // Output is actually 14mW
-#define DefaultPowerEnum 0
+#define MaxPower PWR_10mW // Output is actually 14mW
+#define DefaultPowerEnum PWR_10mW
 #endif
 
 #ifdef TARGET_TX_ESP32_E28_SX1280_V1
-#define MaxPower 4
-#define DefaultPowerEnum 2
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
 #endif
 
 #ifdef TARGET_TX_ESP32_LORA1280F27
-#define MaxPower 4
+#define MaxPower PWR_250mW
+#define DefaultPowerEnum PWR_50mW
+#endif
+
+#ifdef TARGET_TX_FM30
+#define MaxPower 3
 #define DefaultPowerEnum 2
 #endif
 

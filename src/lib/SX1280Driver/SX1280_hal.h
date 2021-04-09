@@ -64,7 +64,7 @@ public:
 
     static void ICACHE_RAM_ATTR nullCallback(void);
     
-    void ICACHE_RAM_ATTR WaitOnBusy();
+    bool ICACHE_RAM_ATTR WaitOnBusy();
     static ICACHE_RAM_ATTR void dioISR();
     
     void ICACHE_RAM_ATTR TXenable();
@@ -73,4 +73,16 @@ public:
 
     static void (*TXdoneCallback)(); //function pointer for callback
     static void (*RXdoneCallback)(); //function pointer for callback
+
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
+    void BusyDelay(uint32_t duration) const { (void)duration; };
+#else
+    uint32_t BusyDelayStart;
+    uint32_t BusyDelayDuration;
+    void BusyDelay(uint32_t duration)
+    {
+        BusyDelayStart = micros();
+        BusyDelayDuration = duration;
+    }
+#endif
 };

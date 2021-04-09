@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include "SX127xRegs.h"
 #include "SX127xHal.h"
 
@@ -45,7 +44,6 @@ public:
     uint8_t currPWR = 0b0000;
     SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
     bool IQinverted = false;
-
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -70,7 +68,6 @@ public:
     void ConfigLoraDefaults();
 
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
-
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
     void SetPreambleLength(uint8_t PreambleLen);
@@ -79,7 +76,9 @@ public:
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
 
-    void SetFrequency(uint32_t freq);
+    #define FREQ_STEP 61.03515625
+    void SetFrequencyHz(uint32_t freq);
+    void SetFrequencyReg(uint32_t freq);
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
     void SetPPMoffsetReg(int32_t offset);
@@ -87,23 +86,23 @@ public:
     ////////////////////////////////////////////////////
 
     /////////////////Utility Funcitons//////////////////
-    void ICACHE_RAM_ATTR ClearIRQFlags();
+    void ClearIRQFlags();
 
     //////////////RX related Functions/////////////////
 
     //uint8_t RunCAD();
 
-    uint8_t ICACHE_RAM_ATTR UnsignedGetLastPacketRSSI();
-    int8_t ICACHE_RAM_ATTR GetLastPacketRSSI();
-    int8_t ICACHE_RAM_ATTR GetLastPacketSNR();
-    int8_t ICACHE_RAM_ATTR GetCurrRSSI();
+    uint8_t UnsignedGetLastPacketRSSI();
+    int8_t GetLastPacketRSSI();
+    int8_t GetLastPacketSNR();
+    int8_t GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
-    static void ICACHE_RAM_ATTR TXnb(uint8_t volatile *data, uint8_t length);
-    static void ICACHE_RAM_ATTR TXnbISR(); //ISR for non-blocking TX routine
+    static void TXnb(uint8_t volatile *data, uint8_t length);
+    static void TXnbISR(); //ISR for non-blocking TX routine
     /////////////Non-blocking RX related Functions///////////////
-    static void ICACHE_RAM_ATTR RXnb();
-    static void ICACHE_RAM_ATTR RXnbISR(); //ISR for non-blocking RC routin
+    static void RXnb();
+    static void RXnbISR(); //ISR for non-blocking RC routin
 
 private:
 };

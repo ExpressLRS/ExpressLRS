@@ -1,5 +1,4 @@
 #include "POWERMGNT.h"
-#include "../../src/targets.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 extern SX127xDriver Radio;
@@ -7,8 +6,8 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#ifdef TARGET_R9M_TX
-extern R9DAC R9DAC;
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
+extern DAC TxDAC;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
@@ -38,9 +37,21 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-#ifdef TARGET_R9M_TX
-    Serial.println("Init TARGET_R9M_TX DAC Driver");
-//R9DAC.init();
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
+    Serial.println("Init DAC Driver");
+#endif
+#ifdef TARGET_R9M_LITE_PRO_TX
+    //initialize both 12 bit DACs
+    pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
+    pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
+    analogWriteResolution(12);
+#endif
+#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+    pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+#endif
+#if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
+    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
+    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
 #endif
 }
 
@@ -56,30 +67,98 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = (PowerLevels_e)MaxPower;
     }
 
+#ifdef GPIO_PIN_FAN_EN
+    (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
+#endif
+
 #if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
     case PWR_10mW:
         Radio.SetOutputPower(8);
-        CurrentPower = PWR_10mW;
         break;
     case PWR_25mW:
     default:
         Radio.SetOutputPower(13);
-        CurrentPower = PWR_25mW;
+        Power = PWR_25mW;
         break;
     }
-    return CurrentPower;
-#endif
-
-#ifdef TARGET_R9M_TX
+#elif defined(TARGET_TX_GHOST)
+    switch (Power)
+    {
+    case PWR_10mW:
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-13);
+        #else
+            Radio.SetOutputPower(0);
+        #endif
+        break;
+    case PWR_25mW:
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-9);
+        #else
+            Radio.SetOutputPower(4);
+        #endif
+        break;
+    case PWR_100mW:
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-4);
+        #else
+            Radio.SetOutputPower(10);
+        #endif
+        break;
+    case PWR_250mW:
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-2);
+        #else
+            Radio.SetOutputPower(13);
+        #endif
+        break;
+    case PWR_50mW:
+    default:
+        Power = PWR_50mW;
+        #ifdef TARGET_TX_GHOST_LITE
+            Radio.SetOutputPower(-7);
+        #else
+            Radio.SetOutputPower(7);
+        #endif
+        break;
+    }
+#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
     Radio.SetOutputPower(0b0000);
-    R9DAC.setPower((DAC_PWR_)Power);
-    CurrentPower = Power;
-    return CurrentPower;
-#endif
-
-#if defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
+    TxDAC.setPower((DAC_PWR_)Power);
+#elif defined(TARGET_R9M_LITE_PRO_TX)
+    Radio.SetOutputPower(0b0000);
+    //Set DACs PA5 & PA4
+    switch (Power)
+    {
+    case PWR_100mW:
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 732); //0-4095  590mV
+        CurrentPower = PWR_100mW;
+        break;
+    case PWR_250mW:
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1080); //0-4095 870mV this is actually 200mw
+        CurrentPower = PWR_250mW;
+        break;
+    case PWR_500mW:
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1356); //0-4095 1.093V
+        CurrentPower = PWR_500mW;
+        break;
+    case PWR_1000mW:
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 1853); //0-4095 1.493V
+        CurrentPower = PWR_1000mW;
+        break;
+    default:
+        CurrentPower = PWR_100mW;
+        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+        analogWrite(GPIO_PIN_RFamp_APC2, 732);  //0-4095 590mV
+        break;
+    }
+#elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
     switch (Power)
     {
     case PWR_10mW:
@@ -91,17 +170,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         CurrentPower = PWR_25mW;
         break;
     case PWR_50mW:
-        Radio.SetOutputPower(0b1111); //15
-        CurrentPower = PWR_50mW;
-        break;
     default:
-        CurrentPower = PWR_50mW;
+        Power = PWR_50mW;
         Radio.SetOutputPower(0b1111); //15
         break;
     }
-#endif
-
-#ifdef TARGET_1000mW_MODULE
+#elif defined(TARGET_1000mW_MODULE)
     switch (Power)
     {
     case PWR_100mW:
@@ -122,10 +196,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
-    CurrentPower = Power;
-#endif
-
-#ifdef TARGET_TX_ESP32_E28_SX1280_V1
+#elif defined(TARGET_TX_ESP32_E28_SX1280_V1)
     switch (Power)
     {
     case PWR_10mW:
@@ -148,10 +219,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-8);
         break;
     }
-    CurrentPower = Power;
-#endif
-
-#ifdef TARGET_TX_ESP32_LORA1280F27
+#elif defined(TARGET_TX_ESP32_LORA1280F27)
     switch (Power)
     {
     case PWR_10mW:
@@ -174,7 +242,32 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
-    CurrentPower = Power;
+#elif defined(TARGET_TX_FM30)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-15); // ~10.5mW
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-11); // ~26mW
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-1);  // ~99mW
+        break;
+    case PWR_250mW:
+        // The original FM30 can somehow put out +22dBm but the 2431L max input
+        // is +6dBm, and even when SetOutputPower(13) you still only get 150mW
+        Radio.SetOutputPower(6);  // ~150mW
+        break;
+    case PWR_50mW:
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
+        break;
+    }
+#else
+#error "[ERROR] Unknown power management!"
 #endif
-    return CurrentPower;
+    CurrentPower = Power;
+    return Power;
 }

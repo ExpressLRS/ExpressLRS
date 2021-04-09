@@ -14,18 +14,36 @@
 #define SYNC_PACKET 0b10
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+#if TARGET_TX or defined UNIT_TEST
+#ifdef ENABLE_TELEMETRY
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr, bool TelemetryStatus);
+#else
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+#endif
+#endif
+#if TARGET_RX or defined UNIT_TEST
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
+#endif
 
-void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataHybridSwitches8(volatile uint8_t* Buffer, CRSF *crsf);
+#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+#if TARGET_TX or defined UNIT_TEST
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
+#endif
+#if TARGET_RX or defined UNIT_TEST
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
+#endif
 
-#endif // HYBRID_SWITCHES_8
+#if defined HYBRID_SWITCHES_8
+#define GenerateChannelData GenerateChannelDataHybridSwitch8
+#define UnpackChannelData UnpackChannelDataHybridSwitch8
+#else
+#define GenerateChannelData GenerateChannelData10bit
+#define UnpackChannelData UnpackChannelData10bit
+#endif
 
-#if defined SEQ_SWITCHES or defined UNIT_TEST
-
-void ICACHE_RAM_ATTR GenerateChannelDataSeqSwitch(volatile uint8_t* Buffer, CRSF *crsf, uint8_t addr);
-void UnpackChannelDataSeqSwitches(volatile uint8_t* Buffer, CRSF *crsf);
-
-#endif // SEQ_SWITCHES
-
+void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp, uint8_t addr);
+void ICACHE_RAM_ATTR UnpackMSPData(volatile uint8_t* Buffer, mspPacket_t *msp);
 
 #endif // H_OTA

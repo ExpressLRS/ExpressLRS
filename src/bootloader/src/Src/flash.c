@@ -9,13 +9,63 @@
 
 #include "flash.h"
 #include "main.h"
+#include "uart.h"
+
+#ifndef DUMPING
+#define DUMPING 0
+#endif
 
 #ifndef FLASH_TYPEPROGRAM_HALFWORD
 #define FLASH_TYPEPROGRAM_HALFWORD 0 // should fail
 #endif
 
+#if /*defined(STM32F3xx) &&*/ defined(FLASH_SIZE_DATA_REGISTER)
+uint32_t get_flash_end(void) {
+  uint32_t end = FLASH_BASE;
+  switch ((*((uint16_t *)FLASH_SIZE_DATA_REGISTER))) {
+  case 0x200U:
+    end += 0x7FFFFU;
+    break;
+  case 0x100U:
+    end += 0x3FFFFU;
+    break;
+  case 0x80U:
+    end += 0x1FFFFU;
+    break;
+  case 0x40U:
+    end += 0xFFFFU;
+    break;
+  case 0x20U:
+    end += 0x7FFFU;
+    break;
+  default:
+    end += 0x3FFFU;
+    break;
+  }
+  return end;
+}
+#endif /* FLASH_SIZE_DATA_REGISTER */
+
 /* Function pointer for jumping to user application. */
 typedef void (*fnc_ptr)(void);
+
+#if DUMPING
+flash_status flash_dump(void)
+{
+  //__IO uint8_t* address = (uint8_t*)FLASH_BASE;
+  uint32_t len = 0x2000;
+  uart_transmit_str("Memory dump start >>>>\r\n");
+  uart_transmit_bytes((uint8_t*)FLASH_BASE, len);
+  uart_transmit_str("<<<< Memory dump end\r\n");
+  return FLASH_OK;
+}
+#else
+flash_status flash_dump(void)
+{
+  return FLASH_OK;
+}
+#endif
+
 
 /**
  * @brief   This function erases the memory.
@@ -39,7 +89,7 @@ flash_status flash_erase(uint32_t address)
   erase_init.Banks = FLASH_BANK_1;
 #endif
   /* Calculate the number of pages from "address" and the end of flash. */
-  erase_init.NbPages = (FLASH_BANK1_END - address + 1) / FLASH_PAGE_SIZE;
+  erase_init.NbPages = (FLASH_APP_END_ADDRESS - address + 1) / FLASH_PAGE_SIZE;
   /* Do the actual erasing. */
   HAL_FLASH_Unlock();
   if (HAL_OK == HAL_FLASHEx_Erase(&erase_init, &error))
@@ -222,16 +272,42 @@ flash_status flash_write_halfword(uint32_t address, uint16_t *data,
  */
 void flash_jump_to_app(void)
 {
+  led_state_set(LED_STARTING);
+
+  if (flash_check_app_loaded() < 0) {
+    /* Restart if no valid app found */
+    NVIC_SystemReset();
+  }
+
+  /* Small delay to allow UART TX send out everything */
+  HAL_Delay(100);
+
   /* Function pointer to the address of the user application. */
   fnc_ptr jump_to_app;
   jump_to_app = (fnc_ptr)(*(volatile uint32_t *)(FLASH_APP_START_ADDRESS + 4u));
-  //led_red_state_set(1);
-  //HAL_Delay(500);
+  /* Remove configs before jump. */
+  uart_deinit();
   HAL_DeInit();
   /* Change the main stack pointer. */
-  //__set_MSP(*(volatile uint32_t *)FLASH_APP_START_ADDRESS);
-
   asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)FLASH_APP_START_ADDRESS));
   SCB->VTOR = (__IO uint32_t)(FLASH_APP_START_ADDRESS);
+  //__set_MSP(*(volatile uint32_t *)FLASH_APP_START_ADDRESS);
   jump_to_app();
+
+  while(1)
+    ;
+}
+
+int8_t flash_check_app_loaded(void)
+{
+  /* Check if app is already loaded */
+  uintptr_t app_stack = *(volatile uintptr_t *)(FLASH_APP_START_ADDRESS);
+  uintptr_t app_reset = *(volatile uintptr_t *)(FLASH_APP_START_ADDRESS + 4u);
+  uintptr_t app_nmi = *(volatile uintptr_t *)(FLASH_APP_START_ADDRESS + 8u);
+  if (((uint16_t)(app_stack >> 20) == 0x200) &&
+      ((uint16_t)(app_reset >> 16) == 0x0800) &&
+      ((uint16_t)(app_nmi >> 16) == 0x0800)) {
+    return 0;
+  }
+  return -1;
 }

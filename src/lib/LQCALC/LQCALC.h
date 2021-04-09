@@ -1,8 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
 #include <stdio.h>
-#include "../../src/targets.h"
+#include "targets.h"
 
 class LQCALC
 {
@@ -13,6 +12,7 @@ public:
     void ICACHE_RAM_ATTR inc();
     uint8_t ICACHE_RAM_ATTR getLQ();
     void ICACHE_RAM_ATTR reset();
+    bool ICACHE_RAM_ATTR packetReceivedForPreviousFrame();
 
 private:
     uint8_t LQcalcDepth = 0;

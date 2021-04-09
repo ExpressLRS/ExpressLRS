@@ -1,8 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
 #include <stdio.h>
-#include "../../src/targets.h"
+#include "targets.h"
 
 #define TimerIntervalUSDefault 20000
 

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Arduino.h>
-#include <SPI.h>
-#include "../../src/targets.h"
+#include "targets.h"
 #include "SX127xRegs.h"
+#include <SPI.h>
 
 typedef enum
 {

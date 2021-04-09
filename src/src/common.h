@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include "FHSS.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -11,9 +10,9 @@
 #include "SX1280Driver.h"
 #endif
 
-#define One_Bit_Switches
-
+extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
+extern uint8_t MasterUID[6];
 extern uint8_t CRCCaesarCipher;
 extern uint8_t DeviceAddr;
 
@@ -73,12 +72,12 @@ typedef struct expresslrs_rf_pref_params_s
 {
     int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-    int32_t RXsensitivity;          //expected RF sensitivity based on
-    uint32_t TOA;                   //time on air in microseconds
+    int32_t RXsensitivity;          // expected RF sensitivity based on
+    uint32_t TOA;                   // time on air in microseconds
     uint32_t RFmodeCycleInterval;
     uint32_t RFmodeCycleAddtionalTime;
     uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-    uint32_t SyncPktIntervalConnected; // how often to send the SYNC_PACKET packet (ms) when there we have a connection
+    uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
 
@@ -92,9 +91,9 @@ typedef struct expresslrs_mod_settings_s
     SX127x_Bandwidth bw;
     SX127x_SpreadingFactor sf;
     SX127x_CodingRate cr;
-    uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
+    uint32_t interval;                  // interval in us seconds that corresponds to that frequency
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
 
 } expresslrs_mod_settings_t;
@@ -106,14 +105,14 @@ typedef struct expresslrs_mod_settings_s
 #define RATE_DEFAULT 0
 typedef struct expresslrs_mod_settings_s
 {
-    uint8_t index;
+    int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     SX1280_RadioLoRaBandwidths_t bw;
     SX1280_RadioLoRaSpreadingFactors_t sf;
     SX1280_RadioLoRaCodingRates_t cr;
-    uint32_t interval;                  //interval in us seconds that corresponds to that frequnecy
+    uint32_t interval;                  // interval in us seconds that corresponds to that frequency
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
 
 } expresslrs_mod_settings_t;
@@ -127,6 +126,7 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+extern uint8_t ExpressLRS_nextAirRateIndex;
 //extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
@@ -140,5 +140,7 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX7 11
 #define AUX8 12
 
-//ELRS SPECIFIC OTA CRC 
-#define ELRS_CRC_POLY 0x83
+//ELRS SPECIFIC OTA CRC
+//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
+#define ELRS_CRC_POLY 0x07 // 0x83
+#define ELRS_CRC13_POLY 0x1D2F // 0x1E97
