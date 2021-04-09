@@ -23,6 +23,7 @@ extern hwTimer hwTimer;
 const byte DNS_PORT = 53;
 IPAddress apIP(10, 0, 0, 1);
 DNSServer dnsServer;
+MDNSResponder mdns;
 ESP8266WebServer server(80);
 
 ESP8266HTTPUpdateServer httpUpdater;
@@ -148,18 +149,21 @@ void BeginWebUpdate(void)
 
   dnsServer.start(DNS_PORT, "*", apIP);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  MDNS.begin(myHostname);
+  if (mdns.begin(myHostname, apIP))
+  {
+    mdns.addService("http", "tcp", 80);
+    mdns.update();
+  }
   httpUpdater.setup(&server);
   server.begin();
 
-  MDNS.addService("http", "tcp", 80);
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local/update in your browser\n", myHostname);
 }
 
 void HandleWebUpdate(void)
 {
   server.handleClient();
-  MDNS.update();
+  mdns.update();
   yield();
   delay(1);
 }

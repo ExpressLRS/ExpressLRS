@@ -1,7 +1,5 @@
-#include <Arduino.h>
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
-#include "HardwareSerial.h"
 
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
@@ -724,6 +722,8 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
 {
+    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
+    
     // TODO: This currently only supports single MSP packets per cmd
     // To support longer packets we need to re-write this to allow packet splitting
     const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;

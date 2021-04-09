@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Arduino.h"
-#include "../../src/targets.h"
+#include "targets.h"
+#include "DAC.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"

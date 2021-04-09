@@ -7,29 +7,16 @@
  * Entry point is setup_switches()
  */
 
-#include <Arduino.h>
+
 #include <unity.h>
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-#include "SX127xDriver.h"
-#elif Regulatory_Domain_ISM_2400
-#include "SX1280Driver.h"
-#endif
-
-#include "CRSF.h"       // has to come after SX127xDriver.h for R9
 #include "targets.h"
-#include "common.h"
+// #include "common.h"
+#include "CRSF.h"
 #include <OTA.h>
 
-// Tests have only been run on TTGO V1, so we have to guard
-// all the testcode to prevent breakages until it's know to do
-// something sensible.
-
-#ifdef TARGET_TTGO_LORA_V1_AS_TX
-
-CRSF crsf;  // need an instance to provide the fields used by the code under test
-
-SX127xDriver Radio; // needed for Radio.TXdataBuffer
+CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
+HardwareSerial CRSF::Port = HardwareSerial();
 
 /* Check that the round robin works
  * First call should return 0 for seq switches or 1 for hybrid
@@ -99,9 +86,10 @@ void test_priority(void)
 */
 void test_encodingHybrid8()
 {
-    uint8_t UID[6] = {MY_UID};
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
+    uint8_t TXdataBuffer[8];
 
     // Define the input data
     // 4 channels of analog data
@@ -120,17 +108,17 @@ void test_encodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
 
     // check it looks right
     // 1st byte is header & packet type
     uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
-    TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
+    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
         expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i + 1]);
+        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
     }
 
     // byte 5 is bits 1 and 2 of each analog channel
@@ -138,22 +126,23 @@ void test_encodingHybrid8()
     for(int i = 0; i < 4; i++) {
         expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
     }
-    TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[5]);
+    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
     // byte 6 is the switch encoding
     // expect switch 0 in bits 5 and 6, index in 2-4 and value in 0,1
     // top bit is undefined
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (Radio.TXdataBuffer[6] & 0b01100000)>>5);
-    TEST_ASSERT_EQUAL(3, (Radio.TXdataBuffer[6] & 0b11100)>>2);
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[3], Radio.TXdataBuffer[6] & 0b11);
+    TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (TXdataBuffer[6] & 0b01100000)>>5);
+    TEST_ASSERT_EQUAL(3, (TXdataBuffer[6] & 0b11100)>>2);
+    TEST_ASSERT_EQUAL(crsf.currentSwitches[3], TXdataBuffer[6] & 0b11);
 }
 
 /* Check the decoding of a packet after rx
 */
 void test_decodingHybrid8()
 {
-    uint8_t UID[6] = {MY_UID};
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t DeviceAddr = UID[5] & 0b111111;
+    uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
     // Define the input data
@@ -172,14 +161,11 @@ void test_decodingHybrid8()
     // set the nextSwitchIndex so we know which switch to expect in the packet
     crsf.nextSwitchIndex = 3;
 
-    // use the encoding method to pack it into Radio.TXdataBuffer
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr, false);
-
-    // copy into the expected buffer for the decoder
-    memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
+    // use the encoding method to pack it into TXdataBuffer
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelDataHybridSwitches8(&Radio, &crsf);
+    UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
@@ -191,15 +177,18 @@ void test_decodingHybrid8()
     TEST_ASSERT_EQUAL(SWITCH2b_to_CRSF(crsf.currentSwitches[3] & 0b11), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
 }
 
-// ------------------------------------------------------
-// Test the sequential switches encoding/decoding
 
-// encoding
-void test_encodingSEQ()
+// ------------------------------------------------
+// Test the 10bit encoding/decoding
+
+/* Check the 10bit encoding of a packet for OTA tx
+*/
+void test_encoding10bit()
 {
-    uint8_t UID[6] = {MY_UID};
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
+    uint8_t TXdataBuffer[8];
 
     // Define the input data
     // 4 channels of analog data
@@ -209,53 +198,46 @@ void test_encodingSEQ()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i = 0; i < N_SWITCHES; i++) {
-        crsf.currentSwitches[i] =  i % 3;
-        crsf.sentSwitches[i] = i % 3; // make all the sent values match
+    for(int i = 4; i < 12; i++) {
+        crsf.ChannelDataIn[i] =  i % 2 * 1800;
     }
 
-    // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex = 3;
-
     // encode it
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
+    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
 
     // check it looks right
     // 1st byte is header & packet type
     uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
-    TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
+    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
-    // bytes 1 through 4 are the high bits of the analog channels
+    // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
         expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[i + 1]);
+        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
     }
 
-    // byte 5 contains some bits from the first three channels
-    expected = (crsf.ChannelDataIn[0] & 0b111) << 5 | (crsf.ChannelDataIn[1] & 0b111) << 2 | (crsf.ChannelDataIn[2] & 0b110) >> 1;
-    TEST_ASSERT_EQUAL(expected, Radio.TXdataBuffer[5]);
+    // byte 5 is bits 1 and 2 of each analog channel
+    expected = 0;
+    for(int i = 0; i < 4; i++) {
+        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
+    }
+    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
-    // bit 7 of byte 6 contains the lsb of ChannelDataIn[2],
-    expected = crsf.ChannelDataIn[2] & 0b1;
-    TEST_ASSERT_EQUAL(expected, (Radio.TXdataBuffer[6] & 0b10000000) >> 7);
+    // byte 6 is the switch encoding
+    TEST_ASSERT_EQUAL(TXdataBuffer[6], 0x55);
 
-    // bits 6,5 contain bits 1,2 of ChannelDataIn[3]
-    expected = (crsf.ChannelDataIn[3] & 0b110) >> 1;
-    TEST_ASSERT_EQUAL(expected, (Radio.TXdataBuffer[6] & 0b1100000) >> 5);
-
-    // the sequential switch bits:
-    // expect index in 2-4 and value in 0,1
-    TEST_ASSERT_EQUAL(3, (Radio.TXdataBuffer[6] & 0b11100) >> 2);
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[3], Radio.TXdataBuffer[6] & 0b11);
+    for(int i = 4; i < 12; i++) {
+        TEST_ASSERT_EQUAL(i%2, (TXdataBuffer[6] >> (7 - (i - 4)) ) & 1);
+    }
 }
 
-// decoding
 /* Check the decoding of a packet after rx
 */
-void test_decodingSEQ()
+void test_decoding10bit()
 {
-    uint8_t UID[6] = {MY_UID};
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t DeviceAddr = UID[5] & 0b111111;
+    uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
     // Define the input data
@@ -266,53 +248,45 @@ void test_decodingSEQ()
     crsf.ChannelDataIn[3] = 0xCDEF;
 
     // 8 switches
-    for(int i = 0; i < N_SWITCHES; i++) {
-        crsf.currentSwitches[i] =  (i + 1) % 3;
-        crsf.sentSwitches[i] = (i + 1) % 3; // make all the sent values match
+    for(int i = 4; i < 12; i++) {
+        crsf.ChannelDataIn[i] =  i % 2 * 1800;
     }
 
-    // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex = 3;
-
-    // use the encoding method to pack it into Radio.TXdataBuffer
-    GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-
-    // copy into the required buffer for the decoder
-    memcpy((void*)Radio.RXdataBuffer, (const void*)Radio.TXdataBuffer, sizeof(Radio.RXdataBuffer));
-
-    // clear the output buffer to avoid cross-talk between tests
-    memset((void *) &crsf.PackedRCdataOut, 0, sizeof(crsf.PackedRCdataOut));
+    // use the encoding method to pack it into TXdataBuffer
+    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelDataSeqSwitches(&Radio, &crsf);
+    UnpackChannelData10bit(TXdataBuffer, &crsf);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111111, crsf.PackedRCdataOut.ch0); // contains 11 bit data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111111, crsf.PackedRCdataOut.ch1); // contains 11 bit data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111111, crsf.PackedRCdataOut.ch2); // contains 11 bit data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // last analog channel is truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(SWITCH2b_to_CRSF(crsf.currentSwitches[3] & 0b11), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch4); // Switch 0
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch5); // Switch 1
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch6); // Switch 2
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch7); // Switch 3
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch8); // Switch 4
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch9); // Switch 5
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch10); // Switch 6
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch11); // Switch 7
 }
 
-
-#endif // TARGET_TTGO_LORA_V1_AS_TX
-
-void setup_switches()
+int main(int argc, char **argv)
 {
-    // tests have only been run on ttgo v1
-    #ifdef TARGET_TTGO_LORA_V1_AS_TX
-
+    UNITY_BEGIN();
     RUN_TEST(test_round_robin);
     RUN_TEST(test_priority);
 
-    // #ifdef HYBRID_SWITCHES_8
     RUN_TEST(test_encodingHybrid8);
     RUN_TEST(test_decodingHybrid8);
-    // #endif // HYBRID_SWITCHES_8
 
-    RUN_TEST(test_encodingSEQ);
-    RUN_TEST(test_decodingSEQ);
+    RUN_TEST(test_encoding10bit);
+    RUN_TEST(test_decoding10bit);
 
-    #endif // TARGET_TTGO_LORA_V1_AS_TX
+    UNITY_END();
+
+    return 0;
 }

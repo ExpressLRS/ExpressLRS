@@ -1,6 +1,9 @@
 #pragma once
 
-#include "../../src/targets.h"
+#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
+
+#include "targets.h"
+#include <Wire.h>
 
 #if DAC_IN_USE && defined(DAC_I2C_ADDRESS)
 

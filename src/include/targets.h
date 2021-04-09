@@ -1,5 +1,7 @@
 #pragma once
+#if !defined TARGET_NATIVE
 #include <Arduino.h>
+#endif
 
 #define UNDEF_PIN (-1)
 
@@ -452,6 +454,9 @@ Designed by NamimnoRC
 
 #define timerOffset             1
 
+#elif defined(TARGET_NATIVE)
+#define IRAM_ATTR
+#include "native.h"
 #else
 #error "Unknown target!"
 #endif
