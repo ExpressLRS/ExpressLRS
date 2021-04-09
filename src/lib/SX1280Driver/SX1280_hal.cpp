@@ -41,7 +41,9 @@ void SX1280Hal::end()
 void SX1280Hal::init()
 {
     Serial.println("Hal Init");
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     pinMode(GPIO_PIN_BUSY, INPUT);
+#endif
     pinMode(GPIO_PIN_DIO1, INPUT);
 
     pinMode(GPIO_PIN_RST, OUTPUT);
@@ -118,6 +120,7 @@ void SX1280Hal::reset(void)
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
 
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
         #ifdef PLATFORM_STM32
@@ -128,6 +131,9 @@ void SX1280Hal::reset(void)
         _NOP();
         #endif
     }
+#else
+    delay(10); // typically 2ms observed
+#endif
 
     //this->BusyState = SX1280_NOT_BUSY;
     Serial.println("SX1280 Ready!");
@@ -142,6 +148,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.transfer(val);
 
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
@@ -155,6 +163,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
@@ -198,6 +208,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
@@ -251,6 +263,8 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, volatile uint8_t *bu
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size)
@@ -278,6 +292,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     #define wtimeoutUS 1000
     uint32_t startTime = micros();
 
@@ -299,6 +314,23 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
             #endif
         }
     }
+#else
+    // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
+    // and state transitions require extra time depending on prior state
+    if (BusyDelayDuration)
+    {
+        while ((micros() - BusyDelayStart) < BusyDelayDuration)
+            #ifdef PLATFORM_STM32
+            __NOP();
+            #elif PLATFORM_ESP32
+            _NOP();
+            #elif PLATFORM_ESP8266
+            _NOP();
+            #endif
+        BusyDelayDuration = 0;
+    }
+    // delayMicroseconds(80);
+#endif
     return true;
 }
 

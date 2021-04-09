@@ -209,10 +209,18 @@ void led_state_set(uint32_t state)
   };
 
 #if defined(PIN_LED_RED)
-  GPIO_Write(gpio_led_red, (!!(uint8_t)val));
+#if defined(LED_RED_INVERTED)
+  GPIO_Write(gpio_led_red, !(uint8_t)val);
+#else
+  GPIO_Write(gpio_led_red, !!(uint8_t)val);
+#endif
 #endif
 #if defined(PIN_LED_GREEN)
+#if defined(LED_GREEN_INVERTED)
+  GPIO_Write(gpio_led_green, !(uint8_t)(val >> 8));
+#else
   GPIO_Write(gpio_led_green, !!(uint8_t)(val >> 8));
+#endif
 #endif
   ws2812_set_color_u32(val);
 }
