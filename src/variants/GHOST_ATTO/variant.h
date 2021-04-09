@@ -78,6 +78,10 @@ extern "C" {
 #define HAL_ADC_MODULE_DISABLED
 //#define HAL_I2C_MODULE_DISABLED
 
+// Adjust IRQ priority
+#define TIM_IRQ_PRIO            3
+#define EXTI_IRQ_PRIO           4
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
