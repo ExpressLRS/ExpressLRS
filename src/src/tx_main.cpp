@@ -63,8 +63,9 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
-#define LUA_VERSION 3
 #endif
+
+#define LUA_VERSION 3
 
 /// define some libs to use ///
 hwTimer hwTimer;
