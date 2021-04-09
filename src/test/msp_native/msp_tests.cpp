@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <unity.h>
 #include "msp.h"
 #include "mock_serial.h"
@@ -82,11 +81,12 @@ void test_msp_send(void)
     packet.addByte(1);
 
     // Mock out the serial port using a string stream
-    String buf;
+    std::string buf;
     StringStream ss(buf);
 
     // Ask the MSP class to send the packet to the stream
     bool result = MSPProtocol.sendPacket(&packet, &ss);
+    TEST_ASSERT_EQUAL(true, result);    // success?
 
     // Assert that each byte sent matches expected
     TEST_ASSERT_EQUAL('$', buf[0]);
@@ -98,6 +98,22 @@ void test_msp_send(void)
     TEST_ASSERT_EQUAL(1, buf[6]);       // lower byte of payload size
     TEST_ASSERT_EQUAL(0, buf[7]);       // upper byte of payload size
     TEST_ASSERT_EQUAL(1, buf[8]);       // payload
-    TEST_ASSERT_EQUAL(224, buf[9]);     // crc
-    TEST_ASSERT_EQUAL(true, result);    // success?
+    TEST_ASSERT_EQUAL(224, (uint8_t)buf[9]);     // crc
+}
+
+extern void test_encapsulated_msp_send(void);
+extern void test_encapsulated_msp_send_too_long(void);
+
+int main(int argc, char **argv)
+{
+    UNITY_BEGIN();
+    RUN_TEST(test_msp_receive);
+    RUN_TEST(test_msp_send);
+
+    RUN_TEST(test_encapsulated_msp_send);
+    RUN_TEST(test_encapsulated_msp_send_too_long);
+
+    UNITY_END();
+
+    return 0;
 }

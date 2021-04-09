@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "targets.h"
 #include "utils.h"
 #include "common.h"

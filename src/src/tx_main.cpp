@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include "FIFO.h"
+#include "targets.h"
 #include "utils.h"
 #include "common.h"
 
@@ -15,7 +14,6 @@ SX1280Driver Radio;
 #include "FHSS.h"
 #include "LED.h"
 // #include "debug.h"
-#include "targets.h"
 #include "POWERMGNT.h"
 #include "msp.h"
 #include "msptypes.h"
