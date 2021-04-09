@@ -15,11 +15,10 @@
 #ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
 #else
-#ifndef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
+#undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
 #define ICACHE_RAM_ATTR IRAM_ATTR
 #endif
-#endif
-
+ 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
 #define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
