@@ -1,13 +1,12 @@
 #include "POWERMGNT.h"
+#include "DAC.h"
+#include "targets.h"
+
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 extern SX127xDriver Radio;
 #elif Regulatory_Domain_ISM_2400
 extern SX1280Driver Radio;
-#endif
-
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-extern DAC TxDAC;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
@@ -37,9 +36,9 @@ PowerLevels_e POWERMGNT::currPower()
 
 void POWERMGNT::init()
 {
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-    Serial.println("Init DAC Driver");
-#endif
+#if DAC_IN_USE
+    TxDAC.init();
+#endif // DAC_IN_USE
 #ifdef TARGET_R9M_LITE_PRO_TX
     //initialize both 12 bit DACs
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
@@ -68,10 +67,14 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     }
 
 #ifdef GPIO_PIN_FAN_EN
-    (Power >= PWR_250mW) ? digitalWrite(GPIO_PIN_FAN_EN, HIGH) : digitalWrite(GPIO_PIN_FAN_EN, LOW);
+    digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
 #endif
 
-#if defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
+#if DAC_IN_USE
+    // DAC is used e.g. for R9M, ES915TX and Voyager
+    Radio.SetOutputPower(0b0000);
+    TxDAC.setPower((DAC_PWR_)Power);
+#elif defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
     case PWR_10mW:
@@ -83,6 +86,37 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_25mW;
         break;
     }
+#elif defined(TARGET_NAMIMNORC_TX)
+    // Control Flash 2.4GHz TX module
+    int8_t rfpower = -18;
+    switch (Power)
+    {
+    case PWR_10mW:
+        rfpower = -18;
+        break;
+    case PWR_25mW:
+        rfpower = -18;
+        break;
+    case PWR_100mW:
+        rfpower = -12;
+        break;
+    case PWR_250mW:
+        rfpower = -8; //-7; = 320
+        break;
+    case PWR_500mW:
+        rfpower = -5; //-4; = 740
+        break;
+    case PWR_1000mW:
+        rfpower = 3; //4; = 1.16W
+        break;
+    case PWR_50mW:
+    default:
+        rfpower = -16; // -15 = 61
+        Power = PWR_50mW;
+        break;
+    }
+    Radio.SetOutputPower(rfpower);
+
 #elif defined(TARGET_TX_GHOST)
     switch (Power)
     {
@@ -124,9 +158,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         #endif
         break;
     }
-#elif defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-    Radio.SetOutputPower(0b0000);
-    TxDAC.setPower((DAC_PWR_)Power);
 #elif defined(TARGET_R9M_LITE_PRO_TX)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
