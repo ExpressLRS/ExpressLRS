@@ -157,6 +157,7 @@ bool LockRFmode = false;
 
 bool InBindingMode = false;
 
+void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(mspPacket_t *packet);
@@ -408,7 +409,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
             switchAntenna();
             antennaLQDropTrigger = 1;
-            antennaRSSIDropTrigger = 0; 
+            antennaRSSIDropTrigger = 0;
          } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
                  prevRSSI = rssi;
                  antennaRSSIDropTrigger++;
@@ -1129,12 +1130,7 @@ void loop()
 
         if (telemetry.ShouldCallBootloader())
         {
-            #if defined(PLATFORM_STM32)
-                delay(100);
-                Serial.println("Jumping to Bootloader...");
-                delay(100);
-                HAL_NVIC_SystemReset();
-            #endif
+            reset_into_bootloader();
         }
 
         #ifdef ENABLE_TELEMETRY
@@ -1144,6 +1140,29 @@ void loop()
         }
         #endif
     }
+}
+
+struct bootloader {
+    uint32_t key;
+    uint32_t reset_type;
+};
+
+void reset_into_bootloader(void)
+{
+#if defined(PLATFORM_STM32)
+    delay(100);
+    Serial.println("Jumping to Bootloader...");
+    delay(100);
+
+#if BOOTLOADER_DATA_EXCHANGE_ENABLED
+    extern __IO uint32_t _bootloader_data;
+    volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
+    blinfo->key = 0x454c5253; // ELRS
+    blinfo->reset_type = 0xACDC;
+#endif /* BOOTLOADER_DATA_EXCHANGE_ENABLED */
+
+    HAL_NVIC_SystemReset();
+#endif /* PLATFORM_STM32 */
 }
 
 void EnterBindingMode()
