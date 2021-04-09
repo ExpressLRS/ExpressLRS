@@ -229,7 +229,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
         expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
         hwTimer.updateInterval(ModParams->interval);
 
         ExpressLRS_currAirRate_Modparams = ModParams;

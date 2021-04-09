@@ -43,6 +43,7 @@ public:
     SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
     uint8_t currPWR = 0b0000;
     SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
+    bool IQinverted = false;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -61,8 +62,8 @@ public:
     bool Begin();
     void End();
     bool DetectChip();
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ);
     void SetMode(SX127x_RadioOPmodes mode);
     void ConfigLoraDefaults();
 
