@@ -78,6 +78,10 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
   hal.setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
+  if (IQinverted)
+  {
+    hal.setRegValue(SX127X_REG_INVERT_IQ, 6, 6);
+  }
 }
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
@@ -333,13 +337,14 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ);
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ)
 {
+  IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetOutputPower(currPWR);

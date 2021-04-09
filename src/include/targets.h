@@ -15,11 +15,10 @@
 #ifdef PLATFORM_STM32
 #define ICACHE_RAM_ATTR //nothing//
 #else
-#ifndef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
+#undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
 #define ICACHE_RAM_ATTR IRAM_ATTR
 #endif
-#endif
-
+ 
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
 #define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
@@ -132,10 +131,6 @@ https://github.com/jaxxzer
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
     #define GPIO_PIN_ANTENNA_SELECT PB9
-#elif defined(TARGET_NAMIMNORC_VOYAGER_RX)
-    #define GPIO_PIN_LED_RED        PA11
-    // RF Switch: LOW = RX, HIGH = TX
-    #define GPIO_PIN_TX_ENABLE      PB3
 #elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
@@ -197,9 +192,12 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_TX    PA9 // confirmed
 
 
-#define BUFFER_OE               PA5  //CONFIRMED
-#define BUFFER_OE_ACTIVE HIGH
+#define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
+
+#define DAC_I2C_ADDRESS         0b0001100
+#define DAC_IN_USE              1
 
 #elif defined(TARGET_R9M_LITE_TX)
 
@@ -224,8 +222,8 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DEBUG_RX    PA3 // confirmed
 #define GPIO_PIN_DEBUG_TX    PA2 // confirmed
 
-#define BUFFER_OE               PA5  //CONFIRMED
-#define BUFFER_OE_ACTIVE HIGH
+#define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
@@ -246,14 +244,14 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_RX    PB11 // s.port inverter
 #define GPIO_PIN_RCSIGNAL_TX    PB10 // s.port inverter
 #define GPIO_PIN_LED_GREEN      PA15 // Green LED
-#define GPIO_PIN_LED_RED        PB3  // Red LED
+//#define GPIO_PIN_LED_RED        PB3  // Red LED
 #define GPIO_PIN_LED_RED        PB4  // Blue LED
 
 #define GPIO_PIN_DEBUG_RX    	  PA3  // inverted UART JR
 #define GPIO_PIN_DEBUG_TX      	PA2  // inverted UART JR
 
-#define BUFFER_OE               PB2  //CONFIRMED
-#define BUFFER_OE_ACTIVE LOW
+#define GPIO_PIN_BUFFER_OE      PB2  //CONFIRMED
+#define GPIO_PIN_BUFFER_OE_INVERTED     1
 #define GPIO_PIN_VRF1			        PA7  // 26SU Switch RF1
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
@@ -373,43 +371,126 @@ High = Ant2
 
 #define timerOffset          1
 
-#elif defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#elif defined(TARGET_NAMIMNORC_TX)
 /*
 Designed by NamimnoRC
 */
+#if TARGET_MODULE_2400
+    #define GPIO_PIN_RST            PB4
+    #define GPIO_PIN_BUSY           PB5
+    #define GPIO_PIN_DIO1           PB6
+    #define GPIO_PIN_DIO2           PB7
+    #define GPIO_PIN_NSS            PA4
+    #define GPIO_PIN_MOSI           PA7
+    #define GPIO_PIN_MISO           PA6
+    #define GPIO_PIN_SCK            PA5
+    // SKY65383-11 front end control
+    #define GPIO_PIN_RX_ENABLE      PA8     // CRX
+    #define GPIO_PIN_TX_ENABLE      PA11    // CTX
+    #define GPIO_PIN_PA_ENABLE      PA12    // CSD
+#else // !TARGET_MODULE_2400
+    #define GPIO_PIN_NSS            PB12
+    #define GPIO_PIN_DIO0           PA15
+    #define GPIO_PIN_MOSI           PB15
+    #define GPIO_PIN_MISO           PB14
+    #define GPIO_PIN_SCK            PB13
+    #define GPIO_PIN_RST            PC14
+    #define GPIO_PIN_RX_ENABLE      PB3  //HIGH = RX, LOW = TX
+    /* DAC settings */
+    #define GPIO_PIN_SDA            PB9
+    #define GPIO_PIN_SCL            PB8
+    #define DAC_I2C_ADDRESS         0b0001101
+    #define DAC_IN_USE              1
+#endif // TARGET_MODULE_2400
 
-#define GPIO_PIN_NSS            PB12
-#define GPIO_PIN_DIO0           PA15
-#define GPIO_PIN_MOSI           PB15
-#define GPIO_PIN_MISO           PB14
-#define GPIO_PIN_SCK            PB13
-#define GPIO_PIN_RST            PC14
-#define GPIO_PIN_RX_ENABLE      PB3  //HIGH = RX, LOW = TX
-/* DAC settings */
-#define GPIO_PIN_SDA            PB9
-#define GPIO_PIN_SCL            PB8
-#define DAC_I2C_ADDRESS         0b0001101
 /* S.Port input signal */
 #define GPIO_PIN_RCSIGNAL_RX    PB11 /* USART3 */
 #define GPIO_PIN_RCSIGNAL_TX    PB10 /* USART3 */
-#define BUFFER_OE               PA1
-#define BUFFER_OE_ACTIVE        LOW
+#define GPIO_PIN_BUFFER_OE      PA1
+#define GPIO_PIN_BUFFER_OE_INVERTED 1
 #define GPIO_PIN_FAN_EN         PB1
 /* Backpack logger connection */
 #ifdef USE_ESP8266_BACKPACK
-#define GPIO_PIN_DEBUG_RX       PA10
-#define GPIO_PIN_DEBUG_TX       PA9
+    #define GPIO_PIN_DEBUG_RX   PA10
+    #define GPIO_PIN_DEBUG_TX   PA9
 #else
-//
-#define GPIO_PIN_DEBUG_RX       PA3
-#define GPIO_PIN_DEBUG_TX       PA2
+    #define GPIO_PIN_DEBUG_RX   PA3
+    #define GPIO_PIN_DEBUG_TX   PA2
 #endif
 /* WS2812 led */
 #define GPIO_PIN_LED_WS2812      PB0
 #define GPIO_PIN_LED_WS2812_FAST PB_0
+
+#elif defined(TARGET_NAMIMNORC_RX)
+/*
+Designed by NamimnoRC
+*/
+#if TARGET_MODULE_2400
+    #define GPIO_PIN_RST        PB4
+    #define GPIO_PIN_BUSY       PB5
+    #define GPIO_PIN_DIO1       PB6
+    #define GPIO_PIN_DIO2       PB7
+    #define GPIO_PIN_NSS        PA4
+    #define GPIO_PIN_MOSI       PA7
+    #define GPIO_PIN_MISO       PA6
+    #define GPIO_PIN_SCK        PA5
+    #define GPIO_PIN_LED_RED    PA1
+#else
+    #define GPIO_PIN_RST        PC14
+    #define GPIO_PIN_DIO0       PA15
+    #define GPIO_PIN_DIO1       PA1
+    #define GPIO_PIN_NSS        PB12
+    #define GPIO_PIN_MOSI       PB15
+    #define GPIO_PIN_MISO       PB14
+    #define GPIO_PIN_SCK        PB13
+    #define GPIO_PIN_LED_RED    PA11
+    // RF Switch: LOW = RX, HIGH = TX
+    #define GPIO_PIN_TX_ENABLE  PB3
+#endif
+
+#define GPIO_PIN_RCSIGNAL_RX    PA10
+#define GPIO_PIN_RCSIGNAL_TX    PA9
+
+#define timerOffset             1
+
 #elif defined(TARGET_NATIVE)
 #define IRAM_ATTR
 #include "native.h"
+
+#elif defined(TARGET_TX_FM30)
+#define GPIO_PIN_NSS            PB12
+//#define GPIO_PIN_BUSY         UNDEF_PIN // Does not appear to be connected?
+#define GPIO_PIN_DIO0           UNDEF_PIN // No DIO0 on SX1280
+#define GPIO_PIN_DIO1           PB8
+#define GPIO_PIN_MOSI           PB15
+#define GPIO_PIN_MISO           PB14
+#define GPIO_PIN_SCK            PB13
+#define GPIO_PIN_RST            PB3
+//#define GPIO_PIN_RX_ENABLE    UNDEF_PIN
+#define GPIO_PIN_TX_ENABLE      PB9 // CTX on SE2431L
+#define GPIO_PIN_ANT_CTRL_2     PB4 // Low for left (stock), high for right (empty)
+#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1
+#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
+#define GPIO_PIN_BUFFER_OE      PB7
+#define GPIO_PIN_BUFFER_OE_INVERTED 0
+#define GPIO_PIN_LED_RED        PB2 // Right Red LED (active low)
+#define GPIO_LED_RED_INVERTED   1
+#define GPIO_PIN_LED_GREEN      PA7 // Left Green LED (active low)
+#define GPIO_LED_GREEN_INVERTED 1
+#define GPIO_PIN_BUTTON         PB0 // active low
+//#define GPIO_PIN_BUZZER       UNDEF_PIN
+#define GPIO_PIN_DIP1           PA0 // Rotary Switch 0001
+#define GPIO_PIN_DIP2           PA1 // Rotary Switch 0010
+//#define GPIO_PIN_FAN_EN       UNDEF_PIN
+#define GPIO_PIN_DEBUG_RX       PA3 // UART2 (bluetooth)
+#define GPIO_PIN_DEBUG_TX       PA2 // UART2 (bluetooth)
+// GPIO not currently used (but initialized)
+#define GPIO_PIN_LED_RED_GREEN  PB1 // Right Green LED (active low)
+#define GPIO_PIN_LED_GREEN_RED  PA15 // Left Red LED (active low)
+#define GPIO_PIN_UART3RX_INVERT PB5 // Standalone inverter
+#define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
+#define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
+
 #else
 #error "Unknown target!"
 #endif
@@ -430,18 +511,33 @@ Designed by NamimnoRC
 #endif /* GPIO_PIN_LED_RED */
 #endif /* GPIO_PIN_LED */
 
-#ifndef BUFFER_OE
-#define BUFFER_OE UNDEF_PIN
+#ifndef GPIO_PIN_BUFFER_OE
+#define GPIO_PIN_BUFFER_OE UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RST
+#define GPIO_PIN_RST UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
-#endif
-#ifndef BUFFER_OE_ACTIVE
-#define BUFFER_OE_ACTIVE HIGH
 #endif
 #ifndef GPIO_PIN_DIO0
 #define GPIO_PIN_DIO0 UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_DIO1
 #define GPIO_PIN_DIO1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO2
+#define GPIO_PIN_DIO2 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_PA_ENABLE
+#define GPIO_PIN_PA_ENABLE UNDEF_PIN
+#endif
+#ifndef GPIO_BUTTON_INVERTED
+#define GPIO_BUTTON_INVERTED 0
+#endif
+#ifndef GPIO_LED_RED_INVERTED
+#define GPIO_LED_RED_INVERTED 0
+#endif
+#ifndef GPIO_LED_GREEN_INVERTED
+#define GPIO_LED_GREEN_INVERTED 0
 #endif

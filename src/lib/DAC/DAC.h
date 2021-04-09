@@ -5,13 +5,7 @@
 #include "targets.h"
 #include <Wire.h>
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-    #include "SX127xDriver.h"
-    extern SX127xDriver Radio;
-#elif defined(Regulatory_Domain_ISM_2400)
-    #include "SX1280Driver.h"
-    extern SX1280Driver Radio;
-#endif
+#if DAC_IN_USE && defined(DAC_I2C_ADDRESS)
 
 typedef enum
 {
@@ -50,4 +44,6 @@ private:
     uint8_t     m_currVoltageRegVal;
 };
 
+extern DAC TxDAC;
+#endif // DAC_IN_USE && defined(DAC_I2C_ADDRESS)
 #endif

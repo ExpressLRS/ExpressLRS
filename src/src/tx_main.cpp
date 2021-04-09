@@ -5,7 +5,7 @@
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
-#elif Regulatory_Domain_ISM_2400
+#elif defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
 SX1280Driver Radio;
 #endif
@@ -37,10 +37,6 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
-#if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-#include "DAC.h"
-DAC TxDAC;
-#endif
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
@@ -63,8 +59,9 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
-#define LUA_VERSION 3
 #endif
+
+#define LUA_VERSION 3
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -219,7 +216,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
   hwTimer.updateInterval(ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
@@ -364,7 +361,7 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
-#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#if defined(TARGET_NAMIMNORC_TX)
   WS281BsetLED(0xff, 0, 0);
 #endif
 }
@@ -391,7 +388,7 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
-#if defined(TARGET_NAMIMNORC_VOYAGER_TX)
+#if defined(TARGET_NAMIMNORC_TX)
   WS281BsetLED(0, 0xff, 0);
 #endif
 }
@@ -507,7 +504,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#ifdef TARGET_TX_GHOST
+#if defined(TARGET_TX_GHOST)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
 #endif
@@ -535,10 +532,11 @@ void setup()
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
   #endif // GPIO_PIN_LED_GREEN
   #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
   #endif // GPIO_PIN_LED_RED
 
   #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
@@ -573,13 +571,21 @@ void setup()
     #endif
   #endif // GPIO_PIN_BUZZER
 
-  #if defined(TARGET_R9M_TX) || defined(TARGET_TX_ES915TX) || defined(TARGET_NAMIMNORC_VOYAGER_TX)
-    TxDAC.init();
-  #endif
-
-
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-  button.init(GPIO_PIN_BUTTON, true); // r9 tx appears to be active high
+  button.init(GPIO_PIN_BUTTON, !GPIO_BUTTON_INVERTED); // r9 tx appears to be active high
+#endif
+
+#if defined(TARGET_TX_FM30)
+  pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
+  digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
+  pinMode(GPIO_PIN_LED_GREEN_RED, OUTPUT); // Red LED on "Green" LED (off)
+  digitalWrite(GPIO_PIN_LED_GREEN_RED, HIGH);
+  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
+  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
+  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
+  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
+  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
+  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -614,20 +620,20 @@ void setup()
   while (!init_success)
   {
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+      digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
     #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
       tone(GPIO_PIN_BUZZER, 480, 200);
     #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, LOW);
+      digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
     delay(200);
     #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
       tone(GPIO_PIN_BUZZER, 400, 200);
     #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, HIGH);
+      digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
     delay(1000);
   }
@@ -658,7 +664,7 @@ void loop()
 {
   uint32_t now = millis();
 
-  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_VOYAGER_TX)
+  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
       if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
           uint8_t LEDcolor[3] = {0};
@@ -709,14 +715,14 @@ void loop()
   {
     connectionState = disconnected;
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
   }
   else
   {
     connectionState = connected;
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
   }
 

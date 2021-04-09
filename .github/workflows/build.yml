@@ -54,8 +54,8 @@ jobs:
         pio run --environment DIY_2400_TX_ESP32_SX1280_LORA1280F27_via_UART 
         pio run --environment DIY_2400_RX_ESP8285_SX1280_via_UART 
         pio run --environment DIY_2400_RX_ESP8285_SX1280_via_BetaflightPassthrough 
+        pio run --environment FM30_TX_via_STLINK 
         mv .pio/build ~/artifacts/ISM_2400
-
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:

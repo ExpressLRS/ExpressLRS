@@ -74,11 +74,18 @@ start();
 };
 websock.onerror = function (evt) { console.log(evt); };
 websock.onmessage = function (evt) {
-console.log(evt);
+//console.log(evt);
+var logger = document.getElementById("logField");
+var scrollsize = parseInt(document.getElementById("scrollsize").value, 10);
+var log_history = logger.value.split("\n");
+while (scrollsize < log_history.length) {
+    log_history.shift();
+}
 var d = new Date();
 var n = d.toISOString();
-document.getElementById("logField").value += n + ' ' + evt.data + '\n';
-document.getElementById("logField").scrollTop = document.getElementById("logField").scrollHeight;
+log_history.push(n + ' ' + evt.data);
+logger.value = log_history.join('\n');
+if (document.getElementById("autoscroll").checked) logger.scrollTop = logger.scrollHeight;
 };
 }
 function saveTextAsFile() {
@@ -135,7 +142,9 @@ curl --include \
 </textarea>
 <div>Alternatively, you can use the log area below to view messages:</div>
 <textarea id="logField" rows="24" cols="80" style="font-size: 11pt;">BEGIN LOG</textarea><br/>
-<button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file</button>
+<button type="button" onclick="saveTextAsFile()" value="save" id="save">Save log to file</button> |
+<input type="checkbox" id="autoscroll" checked><label for="autoscroll"> Auto scroll</label> |
+<input type='number' value='512' name='scrollsize' id='scrollsize' min="256"><label for="scrollsize"> Scroll len</label>
 </fieldset>
 </div>
 <hr>
