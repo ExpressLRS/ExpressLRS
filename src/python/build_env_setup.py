@@ -30,6 +30,13 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         env.Replace(UPLOADCMD=stlink.on_upload)
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(UPLOADCMD=UARTupload.on_upload)
+    elif "_DFU" in target_name:
+        board = env.BoardConfig()
+        # PIO's ststm32 forces stm32f103 to upload via maple_upload,
+        # but we really actually truly want dfu-util
+        env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
+            "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
+            "-D"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
 elif platform in ['espressif8266']:
     env.AddPostAction("buildprog", esp_compress.compressFirmware)
     env.AddPreAction("${BUILD_DIR}/spiffs.bin",
@@ -41,3 +48,4 @@ elif platform in ['espressif8266']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+        
