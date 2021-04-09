@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include "FIFO.h"
+#include "targets.h"
 #include "utils.h"
 #include "common.h"
 
@@ -15,7 +14,6 @@ SX1280Driver Radio;
 #include "FHSS.h"
 #include "LED.h"
 // #include "debug.h"
-#include "targets.h"
 #include "POWERMGNT.h"
 #include "msp.h"
 #include "msptypes.h"
@@ -102,8 +100,6 @@ uint32_t LuaLastUpdated = 0;
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
-
-bool Channels5to8Changed = false;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;

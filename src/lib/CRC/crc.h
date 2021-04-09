@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "../../src/targets.h"
+#include "targets.h"
 
 #define crclen 256
 
