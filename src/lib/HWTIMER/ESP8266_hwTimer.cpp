@@ -36,7 +36,7 @@ void hwTimer::stop()
     }
 }
 
-void hwTimer::resume()
+void ICACHE_RAM_ATTR hwTimer::resume()
 {
     if (!running)
     {

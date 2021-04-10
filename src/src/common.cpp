@@ -139,7 +139,7 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
     switch (enumval)
     {
     case TLM_RATIO_NO_TLM:
-        return 0;
+        return 1;
         break;
     case TLM_RATIO_1_2:
         return 2;

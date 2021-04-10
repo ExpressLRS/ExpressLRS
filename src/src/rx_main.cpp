@@ -269,16 +269,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     static uint8_t telemetryDataCount = 0;
     #endif
     uint8_t openTxRSSI;
+    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
 
-    if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true))
+    if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
-    }
-
-    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    if (modresult != 0)
-    {
-        return false;
     }
 
     alreadyTLMresp = true;
@@ -490,7 +485,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        if (connectionState == connected)
+        if (connectionState != disconnected)
         {
             Radio.RXnb();
         }
@@ -727,7 +722,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 
 #if !defined(Regulatory_Domain_ISM_2400)
-    if ((alreadyFHSS == false) || (ExpressLRS_currAirRate_Modparams->index > 2))
+    if (alreadyFHSS == false)
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
