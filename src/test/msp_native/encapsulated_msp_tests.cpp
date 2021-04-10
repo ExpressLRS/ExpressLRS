@@ -1,6 +1,3 @@
-#pragma once
-
-#include <Arduino.h>
 #include <unity.h>
 #include "msp.h"
 #include "msptypes.h"
@@ -9,12 +6,13 @@
 #include "CRSF.h"
 
 // Mock out the serial port using a string stream
-String buf;
+std::string buf;
 StringStream ss(buf);
 
 // Create a CRSF object to test,
 // using the StringStream as a mock UART
 CRSF crsf(&ss);
+HardwareSerial CRSF::Port = HardwareSerial();
 
 void test_encapsulated_msp_send(void)
 {
@@ -45,20 +43,20 @@ void test_encapsulated_msp_send(void)
     TEST_ASSERT_EQUAL(14, buf.length());
 
     // Assert that each byte sent to the stream matches expected
-    TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, buf[0]);          // device_addr
-    TEST_ASSERT_EQUAL(12, buf[1]);                              // frame_size
-    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_MSP_WRITE, buf[2]);        // type
-    TEST_ASSERT_EQUAL(CRSF_ADDRESS_FLIGHT_CONTROLLER, buf[3]);  // dest_addr
-    TEST_ASSERT_EQUAL(CRSF_ADDRESS_RADIO_TRANSMITTER, buf[4]);  // orig_addr
-    TEST_ASSERT_EQUAL(0x30, buf[5]);                            // header
-    TEST_ASSERT_EQUAL(0x04, buf[6]);                            // mspPayloadSize
-    TEST_ASSERT_EQUAL(packet.function, buf[7]);                 // packet->cmd
-    TEST_ASSERT_EQUAL(0x18, buf[8]);                            // newFrequency b1
-    TEST_ASSERT_EQUAL(0x00, buf[9]);                            // newFrequency b2
-    TEST_ASSERT_EQUAL(0x01, buf[10]);                           // newFrequency b2
-    TEST_ASSERT_EQUAL(0x00, buf[11]);                           // pitmode
-    TEST_ASSERT_EQUAL(0x44, buf[12]);                           // msp crc
-    TEST_ASSERT_EQUAL(0x5E, buf[13]);                           // crsf crc
+    TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, buf[0]);                  // device_addr
+    TEST_ASSERT_EQUAL(12, buf[1]);                                      // frame_size
+    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_MSP_WRITE, buf[2]);                // type
+    TEST_ASSERT_EQUAL(CRSF_ADDRESS_FLIGHT_CONTROLLER, (uint8_t)buf[3]); // dest_addr
+    TEST_ASSERT_EQUAL(CRSF_ADDRESS_RADIO_TRANSMITTER, (uint8_t)buf[4]); // orig_addr
+    TEST_ASSERT_EQUAL(0x30, buf[5]);                                    // header
+    TEST_ASSERT_EQUAL(0x04, buf[6]);                                    // mspPayloadSize
+    TEST_ASSERT_EQUAL(packet.function, (uint8_t)buf[7]);                // packet->cmd
+    TEST_ASSERT_EQUAL(0x18, buf[8]);                                    // newFrequency b1
+    TEST_ASSERT_EQUAL(0x00, buf[9]);                                    // newFrequency b2
+    TEST_ASSERT_EQUAL(0x01, buf[10]);                                   // newFrequency b2
+    TEST_ASSERT_EQUAL(0x00, buf[11]);                                   // pitmode
+    TEST_ASSERT_EQUAL(0x44, buf[12]);                                   // msp crc
+    TEST_ASSERT_EQUAL(0x5E, buf[13]);                                   // crsf crc
 }
 
 void test_encapsulated_msp_send_too_long(void)

@@ -74,7 +74,7 @@ public:
     static void (*TXdoneCallback)(); //function pointer for callback
     static void (*RXdoneCallback)(); //function pointer for callback
 
-#if defined(GPIO_PIN_BUSY)
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     void BusyDelay(uint32_t duration) const { (void)duration; };
 #else
     uint32_t BusyDelayStart;

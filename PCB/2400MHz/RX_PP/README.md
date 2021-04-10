@@ -14,7 +14,7 @@ https://easyeda.com/jyesmith/ccg-pico-ceramic_copy
 
 ### PCB and Stencil Order
 
-Upload the Gerber file to https://cart.jlcpcb.com/quote and below are the order options.  You will need to do a separate order for the stencil.  If you decrease the PCB Qty to 5 you will be given the addition option to have all 5 or only 2 PCB assembled under SMT Assembly.
+Upload the Gerber file to https://cart.jlcpcb.com/RAT quote and below are the order options.  You will need to do a separate order for the stencil.  If you decrease the PCB Qty to 5 you will be given the addition option to have all 5 or only 2 PCB assembled under SMT Assembly.
 
 <img src="img/smtorder.png" width="33%"> <img src="img/stencilorder.png" width="33%">
 

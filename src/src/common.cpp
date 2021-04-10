@@ -6,10 +6,10 @@
 extern SX127xDriver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, TLM_RATIO_1_64, 2, 8},
-    {1, RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_64, 2, 8},
-    {2, RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 2, 10},
-    {3, RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10}};
+    {0, RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, TLM_RATIO_1_64, 4, 8},
+    {1, RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_64, 4, 8},
+    {2, RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 4, 10},
+    {3, RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 4, 10}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_200HZ, -112, 4380, 3500, 2500, 2000, 5000},
@@ -25,10 +25,10 @@ extern SX1280Driver Radio;
 
 #ifdef USE_500HZ
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_4_5, 2000, TLM_RATIO_1_128, 2, 12},
-    {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 2, 14},
-    {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 2, 12},
-    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 2, 12}};
+    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_4_5, 2000, TLM_RATIO_1_128, 4, 12},
+    {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
+    {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
+    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 4, 12}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_500HZ, -105, 4380, 3500, 1000, 2000, 5000},
@@ -37,10 +37,10 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {3, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000}};
 #else
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 2, 14},
-    {1, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 2, 12},
-    {2, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 2, 12},
-    {3, RATE_25HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF10, SX1280_LORA_CR_4_5, 40000, TLM_RATIO_NO_TLM, 2, 12}};
+    {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
+    {1, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
+    {2, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 4, 12},
+    {3, RATE_25HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF10, SX1280_LORA_CR_4_5, 40000, TLM_RATIO_NO_TLM, 4, 12}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
@@ -56,7 +56,7 @@ expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
 expresslrs_mod_settings_s *ExpressLRS_currAirRate;
 expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
-ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
+expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
 {
     // Protect against out of bounds rate
     if (index < 0)
@@ -72,7 +72,7 @@ ICACHE_RAM_ATTR expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
     return &ExpressLRS_AirRateConfig[index];
 }
 
-ICACHE_RAM_ATTR expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
+expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
 {
     // Protect against out of bounds rate
     if (index < 0)
@@ -139,7 +139,7 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
     switch (enumval)
     {
     case TLM_RATIO_NO_TLM:
-        return 0;
+        return 1;
         break;
     case TLM_RATIO_1_2:
         return 2;

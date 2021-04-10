@@ -551,7 +551,7 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx,
   usart_pin_config(pin_tx, (halfduplex ^ inverted));
   /* RX pin */
   if (0 <= pin_rx)
-    usart_pin_config(pin_rx, (halfduplex ^ inverted));
+    usart_pin_config(pin_rx, !inverted);
 }
 
 void uart_deinit(void)
