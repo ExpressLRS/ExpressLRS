@@ -3,11 +3,9 @@
 // void  PrintRC()
 // }
 
-// the max value returned by rng
-#define RNG_MAX 0x7FFF
-
 extern unsigned long seed;
 
+// returns values between 0 and 0x7FFF
 long rng(void);
 
 void rngSeed(long newSeed);
@@ -16,5 +14,5 @@ long rng8Bit(void);
 // 0..31 returned
 long rng5Bit(void);
 
-// returns 0 <= x < n where n <= 256
+// returns 0 <= x < n
 unsigned int rngN(unsigned int upper);
