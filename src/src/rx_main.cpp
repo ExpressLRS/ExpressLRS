@@ -958,6 +958,31 @@ static void setupRadio()
     SetRFLinkRate(RATE_DEFAULT);
 }
 
+static void wifiOff()
+{
+#ifdef PLATFORM_ESP8266
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+#endif /* PLATFORM_ESP8266 */
+}
+
+static void ws2812Blink()
+{
+ #if WS2812_LED_IS_USED // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
+#endif
+}
+
 void setup()
 {
     setupGpio();
@@ -978,25 +1003,8 @@ void setup()
     Serial.println("Setting 2.4GHz Mode");
 #endif
 
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
-
-#if WS2812_LED_IS_USED // do startup blinkies for fun
-    uint32_t col = 0x0000FF;
-    for (uint8_t j = 0; j < 3; j++)
-    {
-        for (uint8_t i = 0; i < 5; i++)
-        {
-            WS281BsetLED(col << j*8);
-            delay(15);
-            WS281BsetLED(0, 0, 0);
-            delay(35);
-        }
-    }
-#endif
-
+    wifiOff();
+    ws2812Blink();
     setupBindingFromConfig();
     FHSSrandomiseFHSSsequence();
     setupRadio();
