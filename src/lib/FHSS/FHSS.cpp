@@ -36,7 +36,7 @@ Approach:
     if the index is not a repeat, assing it to the FHSSsequence array, clear the availability flag and decrement the available count
     if there are no available channels left, reset the flags array and the count
 */
-void FHSSrandomiseFHSSsequence()
+void FHSSrandomiseFHSSsequence(long seed)
 {
 
 #ifdef Regulatory_Domain_AU_915
@@ -58,8 +58,7 @@ void FHSSrandomiseFHSSsequence()
     Serial.print("Number of FHSS frequencies =");
     Serial.println(NR_FHSS_ENTRIES);
 
-    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-    rngSeed(macSeed);
+    rngSeed(seed);
 
     uint8_t isAvailable[NR_FHSS_ENTRIES];
 

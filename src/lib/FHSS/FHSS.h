@@ -7,7 +7,6 @@
 #endif
 
 #include "utils.h"
-#include "common.h"
 
 #ifdef Regulatory_Domain_AU_915
 #define Regulatory_Domain_Index 1
@@ -257,7 +256,7 @@ const uint32_t FHSSfreqs[] = {
 
 #define NR_SEQUENCE_ENTRIES 256
 extern uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES];
-void FHSSrandomiseFHSSsequence();
+void FHSSrandomiseFHSSsequence(long seed);
 
 static inline void FHSSsetCurrIndex(uint8_t value)
 { // set the current index of the FHSS pointer
