@@ -169,12 +169,10 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_RSSI_2 = 0;
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-
-            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR * 10;
-            crsf.LinkStatistics.downlink_RSSI = 120 + Radio.LastPacketRSSI;
+            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
+            crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
-            //crsf.LinkStatistics.downlink_Link_quality = Radio.currPWR;
-            crsf.LinkStatistics.rf_Mode = 4 - ExpressLRS_currAirRate_Modparams->index;
+            crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             break;
 
         #ifdef ENABLE_TELEMETRY
