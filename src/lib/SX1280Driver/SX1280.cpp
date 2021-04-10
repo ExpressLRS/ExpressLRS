@@ -81,7 +81,7 @@ void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSprea
     this->SetMode(SX1280_MODE_STDBY_XOSC);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     ConfigLoRaModParams(bw, sf, cr);
-    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)(IQinverted << 6)); // TODO don't make static etc.
+    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
     SetFrequencyReg(freq);
 }
 
