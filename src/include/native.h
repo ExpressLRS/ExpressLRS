@@ -5,8 +5,12 @@
 #include <cstdint>
 #include <cstring>
 #include <cctype>
+#include <unistd.h>
+#include <sys/time.h>
 
 typedef uint8_t byte;
+
+#define HEX 16
 
 class Stream
 {
@@ -39,11 +43,24 @@ public:
 
     int print(const char *s) {return 0;}
     int print(uint8_t s) {return 0;}
+    int print(uint8_t s, int radix) {return 0;}
+    int println() {return 0;}
     int println(const char *s) {return 0;}
     int println(uint8_t s) {return 0;}
+    int println(uint8_t s, int radix) {return 0;}
 };
 
 static HardwareSerial Serial;
 
 inline void interrupts() {}
 inline void noInterrupts() {}
+
+inline unsigned long micros() {
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
+}
+
+inline void delay(int32_t time) {
+    usleep(time);
+}
