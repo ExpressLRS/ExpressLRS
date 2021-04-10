@@ -48,12 +48,17 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
 }
 
-void ICACHE_RAM_ATTR hwTimer::incFreqOffset()
+void hwTimer::resetFreqOffset()
+{
+    FreqOffset = 0;
+}
+
+void hwTimer::incFreqOffset()
 {
     FreqOffset++;
 }
 
-void ICACHE_RAM_ATTR hwTimer::decFreqOffset()
+void hwTimer::decFreqOffset()
 {
     FreqOffset--;
 }

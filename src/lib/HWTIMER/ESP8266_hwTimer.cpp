@@ -54,6 +54,11 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     }
 }
 
+void ICACHE_RAM_ATTR hwTimer::resetFreqOffset()
+{
+    FreqOffset = 0;
+}
+
 void ICACHE_RAM_ATTR hwTimer::incFreqOffset()
 {
     FreqOffset++;

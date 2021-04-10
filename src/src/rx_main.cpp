@@ -243,9 +243,9 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 bool ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresult = (NonceRX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    uint8_t modresultFHSS = (NonceRX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresult != 0) || (connectionState == disconnected))
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
         return false;
     }
@@ -253,7 +253,9 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
 
-    if (((NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval))) != 0) // if we are about to send a tlm response don't bother going back to rx
+    uint8_t modresultTLM = (NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+
+    if (modresultTLM != 0 || ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
     }
@@ -502,6 +504,7 @@ void LostConnection()
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
+    hwTimer.resetFreqOffset();
     FreqCorrection = 0;
     Offset = 0;
     prevOffset = 0;

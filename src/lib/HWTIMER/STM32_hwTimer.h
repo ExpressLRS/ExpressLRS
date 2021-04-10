@@ -23,6 +23,7 @@ public:
     static void resume();
     static void callback(void);
     static void updateInterval(uint32_t newTimerInterval);
+    static void resetFreqOffset();
     static void incFreqOffset();
     static void decFreqOffset();
     static void phaseShift(int32_t newPhaseShift);
