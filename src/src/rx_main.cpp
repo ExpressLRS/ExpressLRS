@@ -35,6 +35,7 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
+#include "POWERMGNT.h"
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
 uint8_t LEDfadeDiv;
@@ -64,17 +65,27 @@ uint8_t antenna = 0;    // which antenna is currently in use
 hwTimer hwTimer;
 PFD PFDloop; 
 GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
-CRSF crsf(Serial); //pass a serial port object to the class for it to use
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 
+/* CRSF_TX_SERIAL is used by CRSF output */
+#if defined(TARGET_RX_FM30_MINI)
+    HardwareSerial CRSF_TX_SERIAL(USART2);
+#else
+    #define CRSF_TX_SERIAL Serial
+#endif
+CRSF crsf(CRSF_TX_SERIAL);
+
+/* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
+#elif defined(TARGET_RX_FM30_MINI)
+    #define CRSF_RX_SERIAL CRSF_TX_SERIAL
 #else
     #define CRSF_RX_SERIAL Serial
 #endif
@@ -523,15 +534,15 @@ void LostConnection()
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, LOW);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, 0); // turn off led
+    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
 #endif
 }
 
@@ -585,15 +596,15 @@ void GotConnection()
 #endif
 
 #ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, HIGH);
+    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
 #endif
 
 #ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, HIGH); // turn on led
+    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
 #endif
 }
 
@@ -802,17 +813,17 @@ void ICACHE_RAM_ATTR TXdoneISR()
     Radio.RXnb();
 }
 
-void setup()
+static void setupSerial()
 {
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
 
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
-    Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
 #if defined(TARGET_RX_GHOST_ATTO_V1)
     // USART1 is used for RX (half duplex)
@@ -823,16 +834,22 @@ void setup()
 
     // USART2 is used for TX (half duplex)
     // Note: these must be set before begin()
-    Serial.setHalfDuplex();
-    Serial.setRx((PinName)NC);
-    Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF_TX_SERIAL.setHalfDuplex();
+    CRSF_TX_SERIAL.setRx((PinName)NC);
+    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
+    CRSF_TX_SERIAL.begin(CRSF_RX_BAUDRATE);
 #endif /* PLATFORM_STM32 */
 
-    Serial.begin(CRSF_RX_BAUDRATE);
+#if defined(TARGET_RX_FM30_MINI)
+    Serial.setRx(GPIO_PIN_DEBUG_RX);
+    Serial.setTx(GPIO_PIN_DEBUG_TX);
+    Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
+#endif
+}
 
-    Serial.println("ExpressLRS Module Booting...");
-
+static void setupConfigAndPocCheck()
+{
     eeprom.Begin();
     config.Load();
 
@@ -850,56 +867,37 @@ void setup()
         config.Commit();
     }
 #endif
+}
 
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
-
+static void setupGpio()
+{
 #ifdef GPIO_PIN_LED_GREEN
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
 #endif /* GPIO_PIN_LED_GREEN */
 #ifdef GPIO_PIN_LED_RED
     pinMode(GPIO_PIN_LED_RED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif /* GPIO_PIN_LED_RED */
 #if defined(GPIO_PIN_LED)
     pinMode(GPIO_PIN_LED, OUTPUT);
+    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED);
 #endif /* GPIO_PIN_LED */
 #ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
-
-#if WS2812_LED_IS_USED // do startup blinkies for fun
-    WS281Binit();
-    uint32_t col = 0x0000FF;
-    for (uint8_t j = 0; j < 3; j++)
-    {
-        for (uint8_t i = 0; i < 5; i++)
-        {
-            WS281BsetLED(col << j*8);
-            delay(15);
-            WS281BsetLED(0, 0, 0);
-            delay(35);
-        }
-    }
-#endif
-
 #if defined(GPIO_PIN_ANTENNA_SELECT)
-  pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-  digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+    pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 #endif
-#ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_FCC_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
-    Serial.println("Setting 433MHz Mode");
-#elif defined Regulatory_Domain_ISM_2400
-    Serial.println("Setting 2.4GHz Mode");
+#if defined(TARGET_RX_FM30_MINI)
+    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
+    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+}
 
+static void setupBindingFromConfig()
+{
 // Use the user defined binding phase if set,
 // otherwise use the bind flag and UID in eeprom for UID
 #if !defined(MY_UID)
@@ -930,9 +928,10 @@ void setup()
         Serial.println(UID[5]);
     }
 #endif
+}
 
-    FHSSrandomiseFHSSsequence();
-
+static void setupRadio()
+{
     Radio.currFreq = GetInitialFreq();
 #if !defined(Regulatory_Domain_ISM_2400)
     //Radio.currSyncWord = UID[3];
@@ -941,30 +940,82 @@ void setup()
     while (!init_success)
     {
         #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED);
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
         #endif
         LED = !LED;
         delay(200);
         Serial.println("Failed to detect RF chipset!!!");
     }
-#ifdef TARGET_SX1280
-    Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
-#else
-    Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
+
+    // Set transmit power to maximum
+    POWERMGNT P;
+    P.init();
+    P.setPower(MaxPower);
+
+    Radio.RXdoneCallback = &RXdoneISR;
+    Radio.TXdoneCallback = &TXdoneISR;
+
+    SetRFLinkRate(RATE_DEFAULT);
+}
+
+static void wifiOff()
+{
+#ifdef PLATFORM_ESP8266
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+#endif /* PLATFORM_ESP8266 */
+}
+
+static void ws2812Blink()
+{
+ #if WS2812_LED_IS_USED // do startup blinkies for fun
+    uint32_t col = 0x0000FF;
+    for (uint8_t j = 0; j < 3; j++)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+            WS281BsetLED(col << j*8);
+            delay(15);
+            WS281BsetLED(0, 0, 0);
+            delay(35);
+        }
+    }
 #endif
+}
+
+void setup()
+{
+    setupGpio();
+    // serial setup must be done before anything as some libs write
+    // to the serial port and they'll block if the buffer fills
+    setupSerial();
+    // Init EEPROM and load config, checking powerup count
+    setupConfigAndPocCheck();
+
+    Serial.println("ExpressLRS Module Booting...");
+#if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_FCC_915
+    Serial.println("Setting 915MHz Mode");
+#elif defined Regulatory_Domain_EU_868
+    Serial.println("Setting 868MHz Mode");
+#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
+    Serial.println("Setting 433MHz Mode");
+#elif defined Regulatory_Domain_ISM_2400
+    Serial.println("Setting 2.4GHz Mode");
+#endif
+
+    wifiOff();
+    ws2812Blink();
+    setupBindingFromConfig();
+    FHSSrandomiseFHSSsequence();
+    setupRadio();
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
     // Serial.print("RF noise floor: ");
     // Serial.print(RFnoiseFloor);
     // Serial.println("dBm");
 
-    Radio.RXdoneCallback = &RXdoneISR;
-    Radio.TXdoneCallback = &TXdoneISR;
-
     hwTimer.callbackTock = &HWtimerCallbackTock;
     hwTimer.callbackTick = &HWtimerCallbackTick;
-
-    SetRFLinkRate(RATE_DEFAULT);
 
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
@@ -1006,7 +1057,7 @@ void loop()
         if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
         {
             #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
             #endif
             LED = !LED;
             webUpdateLedFlashIntervalLast = millis();
@@ -1047,9 +1098,9 @@ void loop()
             if (!InBindingMode)
             {
                 #ifdef GPIO_PIN_LED
-                    digitalWrite(GPIO_PIN_LED, LED);
+                    digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
                 #elif GPIO_PIN_LED_GREEN
-                    digitalWrite(GPIO_PIN_LED_GREEN, LED);
+                    digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
                 #endif
                 LED = !LED;
             }
@@ -1157,7 +1208,7 @@ void loop()
 
 
             #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED);
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
             #endif
 
             LEDPulseCounter++;

@@ -273,7 +273,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
-#elif defined(TARGET_TX_FM30)
+#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI)
     switch (Power)
     {
     case PWR_10mW:
@@ -296,6 +296,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
         break;
     }
+#elif defined(TARGET_RX)
+#ifdef TARGET_SX1280
+    Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
+#else
+    Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
+#endif
 #else
 #error "[ERROR] Unknown power management!"
 #endif

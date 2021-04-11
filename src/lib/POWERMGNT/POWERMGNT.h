@@ -34,6 +34,10 @@
 #define MaxPower PWR_10mW // Output is actually 14mW
 #define DefaultPowerEnum PWR_10mW
 
+#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI)
+#define MaxPower PWR_100mW
+#define DefaultPowerEnum PWR_50mW
+
 #else
 // Default is "100mW module"
 //  ==> average ouput is 50mW with high duty cycle
@@ -44,9 +48,9 @@
 #endif
 #endif
 
-#ifdef TARGET_TX_FM30
-#define MaxPower 3
-#define DefaultPowerEnum 2
+#if !defined(MaxPower) && defined(TARGET_RX)
+#define MaxPower PWR_2000mW
+#define DefaultPowerEnum PWR_2000mW
 #endif
 
 typedef enum
