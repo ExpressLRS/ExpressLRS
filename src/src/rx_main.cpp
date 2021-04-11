@@ -178,21 +178,6 @@ void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(mspPacket_t *packet);
 
-//////////////////////////////////////////////////////////////
-// flip to the other antenna
-// no-op if GPIO_PIN_ANTENNA_SELECT not defined
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    void inline switchAntenna()
-    {
-
-
-        antenna = !antenna;
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
-
-    }
-#endif
-
-
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
@@ -273,7 +258,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t packageIndex;
     static uint8_t telemetryDataCount = 0;
     #endif
-    uint8_t openTxRSSI;
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
@@ -430,6 +414,17 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     uplinkLQ = LQCALC.getLQ();
     LQCALC.inc();
     crsf.RXhandleUARTout();
+}
+
+//////////////////////////////////////////////////////////////
+// flip to the other antenna
+// no-op if GPIO_PIN_ANTENNA_SELECT not defined
+static inline void switchAntenna()
+{
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    antenna = !antenna;
+    digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+#endif
 }
 
 static void ICACHE_RAM_ATTR updateDiversity()
