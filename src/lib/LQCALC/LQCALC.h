@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
-#include "../../src/targets.h"
+#include <stdint.h>
+#include "targets.h"
 
 template <uint8_t N>
 class LQCALC
@@ -15,6 +15,8 @@ public:
     /* Set the bit for the current period to true and update the running LQ */
     void ICACHE_RAM_ATTR add()
     {
+        if (currentIsSet())
+            return;
         LQArray[LQbyte] |= LQmask;
         LQ += 1;
     }
@@ -67,9 +69,19 @@ public:
     }
 
     /*  Return true if the current period was add()ed */
-    bool ICACHE_RAM_ATTR current() const
+    bool ICACHE_RAM_ATTR currentIsSet() const
     {
-        return (LQArray[LQbyte] & LQmask);
+        return LQArray[LQbyte] & LQmask;
+    }
+
+    /*  Return true if the previous period was add()ed */
+    bool ICACHE_RAM_ATTR previousIsSet() const
+    {
+        // If LQmask is 1, we need the highest bit from the previous array item
+        if (LQmask == (1 << 0))
+            return LQArray[(LQbyte - 1) % (N / 32)] & (1 << 31);
+        else
+            return LQArray[LQbyte] & (LQmask >> 1);
     }
 
 private:

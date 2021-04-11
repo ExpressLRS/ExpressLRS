@@ -1,13 +1,14 @@
 #ifndef H_CRSF
 #define H_CRSF
 
-#include <Arduino.h>
+#include "targets.h"
 #include "crsf_protocol.h"
+#ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
+#endif
 #include "msp.h"
 #include "msptypes.h"
-#include "../../src/targets.h"
-#include "../../src/LowPassFilter.h"
+#include "LowPassFilter.h"
 #include "../CRC/crc.h"
 
 #ifdef PLATFORM_ESP32
@@ -47,9 +48,6 @@ public:
     static uint8_t sentSwitches[N_SWITCHES];
     // which switch should be sent in the next rc packet
     static uint8_t nextSwitchIndex;
-
-    static void (*RCdataCallback1)(); //function pointer for new RC data callback
-    static void (*RCdataCallback2)(); //function pointer for new RC data callback
 
     static void (*disconnected)();
     static void (*connected)();

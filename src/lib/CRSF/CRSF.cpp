@@ -1,7 +1,5 @@
-#include <Arduino.h>
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
-#include "HardwareSerial.h"
 
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
@@ -31,9 +29,6 @@ FIFO SerialOutFIFO;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
 void inline CRSF::nullCallback(void) {}
-
-void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
-void (*CRSF::RCdataCallback2)() = &nullCallback; // null placeholder callback
 
 void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
 void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
@@ -117,9 +112,9 @@ void CRSF::Begin()
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
 
-    #if defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
-    pinMode(BUFFER_OE, OUTPUT);
-    digitalWrite(BUFFER_OE, !BUFFER_OE_ACTIVE);
+    #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
+    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
     #endif
 
     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
@@ -430,8 +425,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSF::RCdataLastRecv = micros();
         GoodPktsCount++;
         GetChannelDataIn();
-        (RCdataCallback1)(); // run new RC data callback
-        (RCdataCallback2)(); // run new RC data callback
         return true;
     }
     return false;
@@ -572,8 +565,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
-#elif defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
-    digitalWrite(BUFFER_OE, !BUFFER_OE_ACTIVE);
+#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #endif
 }
 
@@ -590,8 +583,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #else
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
     #endif
-#elif defined(BUFFER_OE) && (BUFFER_OE != UNDEF_PIN)
-    digitalWrite(BUFFER_OE, BUFFER_OE_ACTIVE);
+#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #endif
 }
 
@@ -729,6 +722,8 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
 {
+    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
+    
     // TODO: This currently only supports single MSP packets per cmd
     // To support longer packets we need to re-write this to allow packet splitting
     const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;

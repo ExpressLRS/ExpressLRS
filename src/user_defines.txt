@@ -51,7 +51,7 @@
 
 #-DUSE_R9MM_R9MINI_SBUS
 
-#-DTLM_REPORT_INTERVAL_MS=320U
+#-DTLM_REPORT_INTERVAL_MS=320LU
 
 ### OTHER OPTIONS: ###
 
@@ -64,3 +64,6 @@
 
 # Comment this to disable advanced telemetry.
 #-DENABLE_TELEMETRY
+
+#Comment this to disable diversity function
+#-DUSE_DIVERSITY

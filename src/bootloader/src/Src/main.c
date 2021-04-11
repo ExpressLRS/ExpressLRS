@@ -209,10 +209,18 @@ void led_state_set(uint32_t state)
   };
 
 #if defined(PIN_LED_RED)
-  GPIO_Write(gpio_led_red, (!!(uint8_t)val));
+#if defined(LED_RED_INVERTED)
+  GPIO_Write(gpio_led_red, !(uint8_t)val);
+#else
+  GPIO_Write(gpio_led_red, !!(uint8_t)val);
+#endif
 #endif
 #if defined(PIN_LED_GREEN)
+#if defined(LED_GREEN_INVERTED)
+  GPIO_Write(gpio_led_green, !(uint8_t)(val >> 8));
+#else
   GPIO_Write(gpio_led_green, !!(uint8_t)(val >> 8));
+#endif
 #endif
   ws2812_set_color_u32(val);
 }
@@ -598,12 +606,13 @@ void SystemClock_Config(void)
 
 #if defined(STM32F3xx)
   RCC_PeriphCLKInitTypeDef PeriphClkInit;
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2;
 #if defined(RCC_USART1CLKSOURCE_PCLK2)
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
 #else
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
 #endif
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
     Error_Handler();
   }

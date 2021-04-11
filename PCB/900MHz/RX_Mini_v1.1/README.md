@@ -16,7 +16,7 @@ https://easyeda.com/jyesmith/expresslrs-rx
 
 ### PCB manufacturing
 
-Upload the Mini_Rx_v1.1_Gerber.ara file to https://jlcpcb.com/
+Upload the Mini_Rx_v1.1_Gerber.ara file to https://jlcpcb.com/RAT
 
 
 - PCB Thickness 0.6m. Thicker is ok but the Rx becomes bulky.  Going thinner to 0.4mm costs more!

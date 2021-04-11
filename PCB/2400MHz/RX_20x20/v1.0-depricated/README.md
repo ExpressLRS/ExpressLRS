@@ -22,7 +22,7 @@
 
 ## Ordering
 
-* I've had good results using JLCPCB (<https://jlcpcb.com/>). Upload the .zip file in this repo and adjust any PCB parameters that you want (defaults work fine).
+* I've had good results using JLCPCB (<https://jlcpcb.com/RAT>). Upload the .zip file in this repo and adjust any PCB parameters that you want (defaults work fine).
 * A super-lightweight build can be achieved by going to a 0.6mm PCB thickness (without an increase to cost)'
 
 ## Build
