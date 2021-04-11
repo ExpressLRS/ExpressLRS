@@ -9,10 +9,9 @@ void test_fhss_assignment(void)
 
     uint32_t initFreq = GetInitialFreq();
 
-    FHSSptr=255;
     for (unsigned int i = 0; i < 256; i++) {
         uint32_t freq = FHSSgetNextFreq();
-        if (i%(NR_FHSS_ENTRIES-1) == 0) {
+        if (i%NR_FHSS_ENTRIES == 0) {
             TEST_ASSERT_EQUAL(initFreq, freq);
         } else {
             TEST_ASSERT_NOT_EQUAL(initFreq, freq);
@@ -28,7 +27,7 @@ void test_fhss_unique(void)
 
     for (unsigned int i = 0; i < 256; i++) {
         uint32_t freq = FHSSgetNextFreq();
-        if (i%NR_FHSS_ENTRIES-1 == 0) {
+        if (i%NR_FHSS_ENTRIES == 0) {
             freqs.clear();
             freqs.insert(freq);
         } else {
