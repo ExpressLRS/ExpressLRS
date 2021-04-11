@@ -623,18 +623,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     Radio.RXdataBuffer[0] = type;
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
-#ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
-#else
-    uint8_t SwitchEncModeExpected = 0b00;
-#endif
-    uint8_t SwitchEncMode;
-    uint8_t indexIN;
-    uint8_t TLMrateIn;
-    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
-    bool telemetryConfirmValue;
-    #endif
-
     if (inCRC != calculatedCRC)
     {
         #ifndef DEBUG_SUPPRESS
@@ -648,6 +636,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #endif
         return;
     }
+
+#ifdef HYBRID_SWITCHES_8
+    uint8_t SwitchEncModeExpected = 0b01;
+#else
+    uint8_t SwitchEncModeExpected = 0b00;
+#endif
+    uint8_t SwitchEncMode;
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
+    bool telemetryConfirmValue;
+    #endif
 
     currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
