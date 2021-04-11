@@ -1,6 +1,6 @@
-#include "utils.h"
+#include "random.h"
 
-unsigned long seed = 0;
+static unsigned long seed = 0;
 
 // returns values between 0 and 0x7FFF
 // NB rngN depends on this output range, so if we change the

@@ -6,7 +6,7 @@
 #include "SX1280Driver.h"
 #endif
 
-#include "utils.h"
+#include "random.h"
 
 #ifdef Regulatory_Domain_AU_915
 #define Regulatory_Domain_Index 1
