@@ -97,7 +97,9 @@ public:
 
     static void handleUARTin();
     bool RXhandleUARTout();
-
+#if CRSF_TX_MODULE
+    static volatile uint8_t sendMspMessage;
+#endif
 private:
     Stream *_dev;
 

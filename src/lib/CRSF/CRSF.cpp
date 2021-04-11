@@ -81,6 +81,7 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 uint32_t CRSF::UARTcurrentBaud;
 bool CRSF::CRSFstate = false;
+volatile uint8_t CRSF::sendMspMessage = 0;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 #define UARTwdtInterval 1000
@@ -429,6 +430,11 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         GetChannelDataIn();
         return true;
     }
+    else if (packetType == CRSF_FRAMETYPE_MSP_REQ)
+    {
+        sendMspMessage = 1;
+        return true;
+    }
     return false;
 }
 
@@ -729,8 +735,25 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
 {
-    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
-    
+    const uint8_t totalBufferLen = 14;
+    uint8_t outBuffer[totalBufferLen] = {
+        238,
+        12,
+        122,
+        200,
+        234,
+        48,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        128
+    };
+    /*if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
+
     // TODO: This currently only supports single MSP packets per cmd
     // To support longer packets we need to re-write this to allow packet splitting
     const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
@@ -756,7 +779,7 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
     outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
 
     // CRSF frame crc
-    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);*/
 
     // SerialOutFIFO.push(totalBufferLen);
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);

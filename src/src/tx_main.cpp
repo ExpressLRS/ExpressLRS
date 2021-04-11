@@ -117,7 +117,7 @@ void SendUIDOverMSP();
 #ifdef ENABLE_TELEMETRY
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
-uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
+uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
@@ -129,10 +129,10 @@ uint8_t baseMac[6];
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
-  
+
   Radio.RXdataBuffer[0] &= 0b11;
   uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-  
+
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
   //Serial.println("TLMpacket0");
@@ -304,9 +304,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && crsf.sendMspMessage)
     {
-      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket);
+        crsf.sendMspMessage = 0;
+
+      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
 
@@ -631,7 +633,7 @@ void setup()
       HandleWebUpdate();
       delay(1);
     }
-    #endif 
+    #endif
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
