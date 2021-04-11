@@ -383,13 +383,9 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     }
 }
 
-void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback
+void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    if (micros() - LastValidPacketMicros < ExpressLRS_currAirRate_Modparams->interval) // only calc if we got a packet during previous reception window
-    {
-        PFDloop.calcResult();
-    }
-
+    PFDloop.calcResult();
     if (connectionState != disconnected)
     {
         RawOffset = PFDloop.getResult();
@@ -427,8 +423,24 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         prevOffset = Offset;
         prevRawOffset = RawOffset;
     }
-
     PFDloop.reset();
+
+#ifndef DEBUG_SUPPRESS
+    Serial.print(Offset);
+    Serial.print(":");
+    Serial.print(RawOffset);
+    Serial.print(":");
+    Serial.print(OffsetDx);
+    Serial.print(":");
+    Serial.print(hwTimer.FreqOffset);
+    Serial.print(":");
+    Serial.println(uplinkLQ);
+#endif
+}
+
+void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
+{
+    updatePhaseLock();
     NonceRX++;
     alreadyFHSS = false;
     uplinkLQ = LQCALC.getLQ();
@@ -436,50 +448,53 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     crsf.RXhandleUARTout();
 }
 
+static void ICACHE_RAM_ATTR updateDiversity()
+{
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+    static int32_t antennaLQDropTrigger;
+    static int32_t antennaRSSIDropTrigger;
+    int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+    int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
+
+    //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+        if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER) ) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL){
+
+        switchAntenna();
+        antennaLQDropTrigger = 1;
+        antennaRSSIDropTrigger = 0;
+        } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
+                prevRSSI = rssi;
+                antennaRSSIDropTrigger++;
+            }
+    // if we didn't get a packet switch the antenna
+    if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
+
+        switchAntenna();
+        antennaLQDropTrigger = 1;
+        antennaRSSIDropTrigger = 0;
+    } else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
+        // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+        // We can compare the rssi values and see if we made things better or worse when we switched
+
+        if (rssi < otherRSSI) {
+            // things got worse when we switched, so change back.
+
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0;
+        } else {
+            // all good, we can stay on the current antenna. Clear the flag.
+            antennaLQDropTrigger = 0;
+        }
+    } else if (antennaLQDropTrigger > 0){
+        antennaLQDropTrigger ++;
+    }
+#endif
+}
+
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-        static int32_t antennaLQDropTrigger;
-        static int32_t antennaRSSIDropTrigger;
-        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
-
-        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
-         if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER) ) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL){
-
-            switchAntenna();
-            antennaLQDropTrigger = 1;
-            antennaRSSIDropTrigger = 0;
-         } else if(rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL){
-                 prevRSSI = rssi;
-                 antennaRSSIDropTrigger++;
-             }
-        // if we didn't get a packet switch the antenna
-        if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
-
-            switchAntenna();
-            antennaLQDropTrigger = 1;
-            antennaRSSIDropTrigger = 0;
-        } else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL) {
-            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
-            // We can compare the rssi values and see if we made things better or worse when we switched
-
-            if (rssi < otherRSSI) {
-                // things got worse when we switched, so change back.
-
-                switchAntenna();
-                antennaLQDropTrigger = 1;
-                antennaRSSIDropTrigger = 0;
-            } else {
-                // all good, we can stay on the current antenna. Clear the flag.
-                antennaLQDropTrigger = 0;
-            }
-        } else if (antennaLQDropTrigger > 0){
-            antennaLQDropTrigger ++;
-        }
-    #endif
-    
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     bool tlmSent = false;
@@ -487,6 +502,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (currentlyProcessing == false) // stop race condition 
     {
+        updateDiversity();
         didFHSS = HandleFHSS();
         tlmSent = HandleSendTelemetryResponse();
     }
@@ -744,18 +760,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
-
-#ifndef DEBUG_SUPPRESS
-    Serial.print(Offset);
-    Serial.print(":");
-    Serial.print(RawOffset);
-    Serial.print(":");
-    Serial.print(OffsetDx);
-    Serial.print(":");
-    Serial.print(hwTimer.FreqOffset);
-    Serial.print(":");
-    Serial.println(uplinkLQ);
-#endif
     currentlyProcessing = false;
 }
 
