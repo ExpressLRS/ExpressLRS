@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <math.h>
 #include <FHSS.h>
 #include <unity.h>
 #include <iostream>
