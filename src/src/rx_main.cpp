@@ -195,9 +195,6 @@ void OnELRSBindMSP(mspPacket_t *packet);
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    //int8_t LastRSSI = Radio.LastPacketRSSI;
-    // int32_t rssiDBM = LPF_UplinkRSSI.update(Radio.LastPacketRSSI);
-
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
     int32_t rssiDBM1 = LPF_UplinkRSSI1.SmoothDataINT;
     switch (antenna) {
@@ -210,22 +207,17 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     }
 
     int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
-
-
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
-    // our rssiDBM is currently in the range -128 to 98, but BF wants a value in the range
-    // 0 to 255 that maps to -1 * the negative part of the rssiDBM, so cap at 0.
-    // if (rssiDBM > 0)
-    //     rssiDBM = 0;
-
     if (rssiDBM0 > 0) rssiDBM0 = 0;
     if (rssiDBM1 > 0) rssiDBM1 = 0;
 
-    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0; // negate to match BF
+    // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
+    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
     crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
+    crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
@@ -302,18 +294,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             #endif
             Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
-            // OpenTX hard codes "rssi" warnings to the LQ sensor for crossfire, so the
-            // rssi we send is for display only.
-            // OpenTX treats the rssi values as signed.
-
-            openTxRSSI = (antenna == 0) ? crsf.LinkStatistics.uplink_RSSI_1 : crsf.LinkStatistics.uplink_RSSI_2;
-            // truncate the range to fit into OpenTX's 8 bit signed value
-            if (openTxRSSI > 127)
-                openTxRSSI = 127;
-            // convert to 8 bit signed value in the negative range (-128 to 0)
-            openTxRSSI = 255 - openTxRSSI;
-            Radio.TXdataBuffer[2] = openTxRSSI;
-            Radio.TXdataBuffer[3] = 0;
+            // OpenTX RSSI as -dBm is fine and supports +dBm values as well
+            // but the value in linkstatistics is "positivized" (inverted polarity)
+            Radio.TXdataBuffer[2] = -crsf.LinkStatistics.uplink_RSSI_1;
+            Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
             Radio.TXdataBuffer[6] = 0;
