@@ -107,12 +107,12 @@ void test_encodingHybrid8()
     crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(&Radio, &crsf, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
     uint8_t header = RC_DATA_PACKET;
-    TEST_ASSERT_EQUAL(header, Radio.TXdataBuffer[0]);
+    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
