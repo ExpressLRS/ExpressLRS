@@ -515,7 +515,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        //Radio.RXnb(); seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
+        Radio.RXnb(); //seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
     }
 }
 
@@ -749,13 +749,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     HandleSendTelemetryResponse();
     LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 
-#if !defined(Regulatory_Domain_ISM_2400)
-    if (alreadyFHSS == false)
-    {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-    }
-#endif /* Regulatory_Domain_ISM_2400 */
+//#if !defined(Regulatory_Domain_ISM_2400)
+//    if (alreadyFHSS == false && NonceRX % 4 == 0)
+//    {
+//        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+//        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+//    }
+//#endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
     currentlyProcessing = false;

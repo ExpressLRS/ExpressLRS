@@ -271,7 +271,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
-  instance->TXdoneMicros = micros();
+  //instance->TXdoneMicros = micros();
   TXdoneCallback();
 }
 
@@ -287,8 +287,8 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.TXenable();
 
-  instance->TXstartMicros = micros();
-  instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
+  //instance->TXstartMicros = micros();
+  //instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
