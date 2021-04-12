@@ -515,10 +515,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        if (connectionState != disconnected)
-        {
-            Radio.RXnb();
-        }
+        //Radio.RXnb(); seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
     }
 }
 
@@ -805,7 +802,7 @@ void sampleButton()
 #endif
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void inline RXdoneISR()
 {
     ProcessRFPacket();
     //Serial.println("r");
@@ -813,8 +810,8 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
     Radio.RXnb();
+    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 static void setupSerial()
