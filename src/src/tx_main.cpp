@@ -25,6 +25,7 @@ SX1280Driver Radio;
 #include "telemetry_protocol.h"
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_receiver.h"
+#include "stubborn_sender.h"
 #endif
 
 #ifdef PLATFORM_ESP8266
@@ -116,6 +117,7 @@ void SendUIDOverMSP();
 
 #ifdef ENABLE_TELEMETRY
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
+StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 #endif
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 // MSP packet handling function defs
@@ -177,6 +179,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
             break;
 
         #ifdef ENABLE_TELEMETRY
@@ -261,6 +264,9 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+  uint8_t *data;
+  uint8_t maxLength;
+  uint8_t packageIndex;
 #ifdef FEATURE_OPENTX_SYNC
   crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
@@ -304,13 +310,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && crsf.sendMspMessage)
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MspSender.IsActive())
     {
-        crsf.sendMspMessage = 0;
-
-      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
+      Serial.print("sending package ");
+      MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+      Serial.println(packageIndex);
+      Radio.TXdataBuffer[0] = (DeviceAddr << 2) | MSP_DATA_PACKET;
+      Radio.TXdataBuffer[1] = packageIndex;
+      Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+      Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+      Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+      Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+      Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
       MSPPacketLastSent = millis();
-      MSPPacketSendCount--;
 
       if (MSPPacketSendCount <= 0 && InBindingMode)
       {
@@ -671,12 +683,13 @@ void setup()
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
+  MspSender.ResetState();
 }
 
 void loop()
 {
   uint32_t now = millis();
-
+  static uint8_t mspTransferActive = 0;
   #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
       if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
@@ -764,6 +777,26 @@ void loop()
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
+  }
+
+  if (!MspSender.IsActive())
+  {
+    if (mspTransferActive == 1)
+    {
+      crsf.UnlockMspMessage();
+      Serial.println("sent");
+      mspTransferActive = 0;
+    }
+    else
+    {
+      uint8_t* currentMspData = crsf.GetMspMessage();
+      if (currentMspData != NULL)
+      {
+        MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
+        mspTransferActive = 1;
+        Serial.println("new msp");
+      }
+    }
   }
 }
 

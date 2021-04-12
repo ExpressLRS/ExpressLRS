@@ -1,5 +1,6 @@
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
+#include "telemetry_protocol.h"
 
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
@@ -81,11 +82,12 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 uint32_t CRSF::UARTcurrentBaud;
 bool CRSF::CRSFstate = false;
-volatile uint8_t CRSF::sendMspMessage = 0;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 #define UARTwdtInterval 1000
 
+uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
+uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
 
@@ -285,8 +287,17 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
+    Serial.print("Telemetry rec ");
+    Serial.println(data[2]);
+    if (data[2] == 123) {
+    for (uint8_t i = 0; i < CRSF_FRAME_SIZE_MAX; i++)
+    {
+        Serial.println(data[i]);
+    }
+    }
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
     {
+        Serial.print("too large");
         return;
     }
 
@@ -430,12 +441,37 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         GetChannelDataIn();
         return true;
     }
-    else if (packetType == CRSF_FRAMETYPE_MSP_REQ)
+    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
     {
-        sendMspMessage = 1;
+        const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
+        if (MspDataLength == 0 && length < ELRS_MSP_BUFFER)
+        {
+            const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+            for (uint8_t i = 0; i < length; i++)
+            {
+                Serial.println(SerialInBuffer[i]);
+                MspData[i] = SerialInBuffer[i];
+            }
+            MspDataLength = length;
+        }
         return true;
     }
     return false;
+}
+
+uint8_t* CRSF::GetMspMessage()
+{
+    if (MspDataLength > 0)
+    {
+        return MspData;
+    }
+    return NULL;
+}
+
+void CRSF::UnlockMspMessage()
+{
+    MspDataLength = 0;
+    memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
 void ICACHE_RAM_ATTR CRSF::handleUARTin()
@@ -733,25 +769,9 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 #endif
 }
 
-void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
+void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
     const uint8_t totalBufferLen = 14;
-    uint8_t outBuffer[totalBufferLen] = {
-        238,
-        12,
-        122,
-        200,
-        234,
-        48,
-        0,
-        1,
-        1,
-        0,
-        0,
-        0,
-        0,
-        128
-    };
     /*if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
 
     // TODO: This currently only supports single MSP packets per cmd
@@ -783,7 +803,7 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
 
     // SerialOutFIFO.push(totalBufferLen);
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
-    this->_dev->write(outBuffer, totalBufferLen);
+    this->_dev->write(data, totalBufferLen);
 }
 #endif // CRSF_TX_MODULE
 

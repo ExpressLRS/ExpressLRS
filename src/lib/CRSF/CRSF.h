@@ -10,6 +10,7 @@
 #include "msptypes.h"
 #include "LowPassFilter.h"
 #include "../CRC/crc.h"
+#include "telemetry_protocol.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -70,7 +71,7 @@ public:
     static void End(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(mspPacket_t* packet);
+    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
@@ -98,7 +99,8 @@ public:
     static void handleUARTin();
     bool RXhandleUARTout();
 #if CRSF_TX_MODULE
-    static volatile uint8_t sendMspMessage;
+    uint8_t* GetMspMessage();
+    void UnlockMspMessage();
 #endif
 private:
     Stream *_dev;
@@ -128,7 +130,8 @@ private:
     static uint32_t UARTwdtLastChecked;
     static uint32_t UARTcurrentBaud;
     static bool CRSFstate;
-
+    static uint8_t MspData[ELRS_MSP_BUFFER];
+    static uint8_t MspDataLength;
 #ifdef PLATFORM_ESP32
     static void ESP32uartTask(void *pvParameters);
     static void ESP32syncPacketTask(void *pvParameters);

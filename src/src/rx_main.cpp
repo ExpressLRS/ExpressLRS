@@ -22,6 +22,7 @@ SX1280Driver Radio;
 #include "telemetry.h"
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_sender.h"
+#include "stubborn_receiver.h"
 #endif
 
 #include "FHSS.h"
@@ -62,7 +63,7 @@ uint32_t LEDupdateCounterMillis;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
-PFD PFDloop; 
+PFD PFDloop;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
@@ -95,6 +96,8 @@ CRSF crsf(CRSF_TX_SERIAL);
     static uint8_t telemetryBurstMax;
     // Maximum ms between LINK_STATISTICS packets for determining burst max
     #define TELEM_MIN_LINK_INTERVAL 512U
+StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
+uint8_t MspData[ELRS_MSP_BUFFER];
 #endif
 
 
@@ -288,7 +291,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-            Radio.TXdataBuffer[6] = 0;
+            Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
             break;
         #ifdef ENABLE_TELEMETRY
@@ -314,7 +317,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
@@ -673,7 +676,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        mspPacket_t packet;
+        MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
+        if (MspReceiver.HasFinishedData())
+        {
+            crsf.sendMSPFrameToFC(MspData);
+            MspReceiver.Unlock();
+        }
+        /*mspPacket_t packet;
         UnpackMSPData(Radio.RXdataBuffer, &packet);
         if (packet.function == MSP_ELRS_BIND)
         {
@@ -682,7 +691,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         else
         {
             crsf.sendMSPFrameToFC(&packet);
-        }
+        }*/
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -1050,6 +1059,8 @@ void setup()
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
     TelemetrySender.ResetState();
+    MspReceiver.ResetState();
+    MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
     #endif
     Radio.RXnb();
     crsf.Begin();
