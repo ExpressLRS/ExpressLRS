@@ -26,6 +26,7 @@ GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
+FIFO MspWriteFIFO;
 
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
@@ -435,16 +436,27 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
     {
+        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
+        // store next msp message (only store one CRSF_FRAMETYPE_MSP_REQ)
         if (MspDataLength == 0 && length < ELRS_MSP_BUFFER)
         {
-            const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
             for (uint8_t i = 0; i < length; i++)
             {
                 MspData[i] = SerialInBuffer[i];
             }
             MspDataLength = length;
         }
+        // store all write requests since an update does send multiple writes
+        else if (packetType == CRSF_FRAMETYPE_MSP_WRITE && length < ELRS_MSP_BUFFER)
+        {
+            MspWriteFIFO.push(length);
+            for (uint8_t i = 0; i < length; i++)
+            {
+                MspWriteFIFO.push(SerialInBuffer[i]);
+            }
+        }
+
         return true;
     }
     return false;
@@ -461,8 +473,19 @@ uint8_t* CRSF::GetMspMessage()
 
 void CRSF::UnlockMspMessage()
 {
-    MspDataLength = 0;
-    memset(MspData, 0, ELRS_MSP_BUFFER);
+    // current msp message is sent so restore next buffered write
+    if (MspWriteFIFO.peek() > 0)
+    {
+        uint8_t length = MspWriteFIFO.pop();
+        MspDataLength = length;
+        MspWriteFIFO.popBytes(MspData, length);
+    }
+    else
+    {
+        // no msp message is ready to send currently
+        MspDataLength = 0;
+        memset(MspData, 0, ELRS_MSP_BUFFER);
+    }
 }
 
 void ICACHE_RAM_ATTR CRSF::handleUARTin()
