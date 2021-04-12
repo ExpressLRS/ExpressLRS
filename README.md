@@ -3,11 +3,14 @@
 ## Need help? Confused? Join the Community!
  * [Community Discord](https://discord.gg/dS6ReFY)
  * [Facebook Group](https://www.facebook.com/groups/636441730280366)
+ * [Wiki](https://github.com/ExpressLRS/ExpressLRS/wiki)
 
 ## Support ExpressLRS
 If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate<br/><br/>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-253B80.svg)](https://www.paypal.com/donate?hosted_button_id=FLHGG9DAFYQZU)
 
+## Quick Start Guide
+If you have hardware that you want to flash, please refer to our guides on the [wiki](https://github.com/ExpressLRS/ExpressLRS/wiki/), and our [FAQ](https://github.com/ExpressLRS/ExpressLRS/wiki/FAQ)
 
 ## High Performance LoRa Radio Link
 
@@ -40,13 +43,16 @@ After taking a look at the [supported Hardware](https://github.com/AlessandroAU/
 ## Supported Hardware
 
 ### 900 MHz Hardware:
-<img src="img/900Mhardware.jpg" width = "80%">
+
+<img src="/img/900Mhardware.jpg" width = "80%">
 
 - **TX**
     - [FrSky R9M (2018)](https://www.frsky-rc.com/product/r9m/) (Full Support, requires resistor mod)
     - [FrSky R9M (2019)](https://www.frsky-rc.com/product/r9m-2019/) (Full Support, no mod required)
     - [FrSky R9M Lite](https://www.frsky-rc.com/product/r9m-lite/) (Full Support, power limited)
     - [TTGO LoRa V1/V2](http://www.lilygo.cn/products.aspx?TypeId=50003&fid=t3:50003:3) (Full Support, V2 recommended w/50 mW power limit)
+    - [Namimno Voyager 900 TX](http://www.namimno.com/product.html) (Full Support off the shelf)
+    - [HappyModel ES915TX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - DIY Module (Full Support, 50mW limit, limited documentation)
 - **RX**
     - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
@@ -56,9 +62,12 @@ After taking a look at the [supported Hardware](https://github.com/AlessandroAU/
     - [Jumper R900 mini](https://www.jumper-b2b.com/jumper-r900-mini-receiver-900mhz-long-range-rx-p0083.html) (Full Support, only flashable via STLink, Bad Stock antenna)
     - [DIY mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_Mini_v1.1) (Full Support, supports WiFi Updates)
     - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_20x20_0805_SMD) (Full Support, supports WiFi Updates)
+     - [HappyModel ES915RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
+    - [Namimno Voyager 900 RX](http://www.namimno.com/product.html) (Full Support off the shelf)
 
 ### 2.4 GHz Hardware:
-<img src="img/24Ghardware.jpg" width = "80%">
+
+<img src="/img/24Ghardware.jpg" width = "80%">
 
 - **TX**
     - [DIY JR Bay](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
@@ -73,7 +82,7 @@ After taking a look at the [supported Hardware](https://github.com/AlessandroAU/
     - [DIY Nano CCG RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_CCG_Nano) (Full Support, CRSF Nano Pinout, STM32 Based)
     - [DIY Nano Ceramic RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano_Ceramic) (Full Support, CRSF Nano Footprint, WiFi Updating, Built in antenna)
 
-**For a more exhaustive list refer to the Wiki's [Supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Hardware) Page**
+**For a more exhaustive list refer to the [Supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Hardware) page on the wiki**
 
 ## Long Range Competition
 One of the most frequently asked questions that gets asked by people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
