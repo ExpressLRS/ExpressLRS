@@ -90,7 +90,7 @@ jobs:
         mkdir -p ~/artifacts
         cd src
         case ${{matrix.target}} in
-          *2400*)
+          *2400* | FM30*)
             export REG=-DRegulatory_Domain_ISM_2400
             ;;
           *)
