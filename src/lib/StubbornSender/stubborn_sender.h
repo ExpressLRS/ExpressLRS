@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#define WAIT_FOR_RESYNC 1000
+#define WAIT_FOR_RESYNC 10
 
 typedef enum {
     SENDER_IDLE = 0,

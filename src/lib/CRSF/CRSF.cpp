@@ -287,14 +287,6 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
-    Serial.print("Telemetry rec ");
-    Serial.println(data[2]);
-    if (data[2] == 123) {
-    for (uint8_t i = 0; i < CRSF_FRAME_SIZE_MAX; i++)
-    {
-        Serial.println(data[i]);
-    }
-    }
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
     {
         Serial.print("too large");
@@ -449,7 +441,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
             for (uint8_t i = 0; i < length; i++)
             {
-                Serial.println(SerialInBuffer[i]);
                 MspData[i] = SerialInBuffer[i];
             }
             MspDataLength = length;

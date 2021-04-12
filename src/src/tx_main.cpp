@@ -312,9 +312,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MspSender.IsActive())
     {
-      Serial.print("sending package ");
       MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-      Serial.println(packageIndex);
       Radio.TXdataBuffer[0] = (DeviceAddr << 2) | MSP_DATA_PACKET;
       Radio.TXdataBuffer[1] = packageIndex;
       Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
@@ -784,7 +782,6 @@ void loop()
     if (mspTransferActive == 1)
     {
       crsf.UnlockMspMessage();
-      Serial.println("sent");
       mspTransferActive = 0;
     }
     else
@@ -794,7 +791,6 @@ void loop()
       {
         MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
         mspTransferActive = 1;
-        Serial.println("new msp");
       }
     }
   }
