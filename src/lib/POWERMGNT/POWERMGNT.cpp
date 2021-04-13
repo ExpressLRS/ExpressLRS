@@ -34,6 +34,27 @@ PowerLevels_e POWERMGNT::currPower()
     return CurrentPower;
 }
 
+uint8_t POWERMGNT::currPowerAsCrsfPower()
+{
+    // Crossfire's power levels as defined in opentx:radio/src/telemetry/crossfire.cpp
+    //static const int32_t power_values[] = { 0, 10, 25, 100, 500, 1000, 2000, 250 };
+    const uint8_t CRSF_POWER_MAP[] ={
+        1, // PWR_10mW
+        2, // PWR_25mW
+        0, // PWR_50mW SAD!
+        3, // PWR_100mW
+        7, // PWR_250mW
+        4, //PWR_500mW
+        5, //PWR_1000mW
+        6 // PWR_2000mW
+    };
+    uint8_t pwr = (uint8_t)CurrentPower;
+    if (pwr < sizeof(CRSF_POWER_MAP)/sizeof(CRSF_POWER_MAP[0]))
+        return CRSF_POWER_MAP[pwr];
+    else
+        return 0;
+}
+
 void POWERMGNT::init()
 {
 #if DAC_IN_USE

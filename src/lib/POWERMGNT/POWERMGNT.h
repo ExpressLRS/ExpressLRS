@@ -77,6 +77,7 @@ public:
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
+    static uint8_t currPowerAsCrsfPower();
     static void setDefaultPower();
     static void init();
 };
