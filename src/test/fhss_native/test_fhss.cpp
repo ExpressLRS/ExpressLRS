@@ -1,10 +1,7 @@
 #include <cstdint>
 #include <FHSS.h>
 #include <unity.h>
-#include <iostream>
-#include <bitset>
-
-#include "helpers.h"
+#include <set>
 
 void test_fhss_assignment(void)
 {
@@ -23,10 +20,29 @@ void test_fhss_assignment(void)
     }
 }
 
+void test_fhss_unique(void)
+{
+    FHSSrandomiseFHSSsequence(0x01020304L);
+
+    std::set<uint32_t> freqs;
+
+    for (unsigned int i = 0; i < 256; i++) {
+        uint32_t freq = FHSSgetNextFreq();
+        if (i%NR_FHSS_ENTRIES-1 == 0) {
+            freqs.clear();
+            freqs.insert(freq);
+        } else {
+            bool inserted = freqs.insert(freq).second;
+            TEST_ASSERT_TRUE_MESSAGE(inserted, "Should only see a frequency one time per number initial value");
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_fhss_assignment);
+    RUN_TEST(test_fhss_unique);
     UNITY_END();
 
     return 0;
