@@ -32,6 +32,7 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
     uint8_t checks = 0;
     uint8_t oldPayloadIndex = currentPayloadIndex;
+    uint8_t realLength = 0;
 
     payloadTypes[currentPayloadIndex].locked = false;
     payloadTypes[currentPayloadIndex].updated = false;
@@ -45,9 +46,22 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     if (payloadTypes[currentPayloadIndex].updated)
     {
         payloadTypes[currentPayloadIndex].locked = true;
-        *nextPayloadSize = CRSF_FRAME_SIZE(payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        *payloadData = payloadTypes[currentPayloadIndex].data;
-        return true;
+
+        realLength = CRSF_FRAME_SIZE(payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        // search for non zero data from the end
+        while (realLength > 0 && payloadTypes[currentPayloadIndex].data[realLength - 1] == 0)
+        {
+            realLength--;
+        }
+
+        if (realLength > 0)
+        {
+            // store real length in frame
+            payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX] = realLength - CRSF_FRAME_NOT_COUNTED_BYTES;
+            *nextPayloadSize = realLength;
+            *payloadData = payloadTypes[currentPayloadIndex].data;
+            return true;
+        }
     }
 
     currentPayloadIndex = oldPayloadIndex;
