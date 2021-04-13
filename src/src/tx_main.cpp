@@ -55,7 +55,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
-#define MSP_PACKET_SEND_INTERVAL 200LU
+#define MSP_PACKET_SEND_INTERVAL 50LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
@@ -909,6 +909,10 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
+    /*CRSF_FRAMETYPE_MSP_WRITE
+    outBuffer[5] = 0x30;                // header
+    outBuffer[6] = packet->payloadSize; // mspPayloadSize
+    outBuffer[7] = packet->function;    // packet->cmd*/
     MSPPacket = *packet;
     MSPPacketSendCount = 6;
   }
