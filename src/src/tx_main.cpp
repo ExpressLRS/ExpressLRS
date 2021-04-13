@@ -55,7 +55,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
-#define MSP_PACKET_SEND_INTERVAL 50LU
+#define MSP_PACKET_SEND_INTERVAL 10LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
@@ -87,8 +87,6 @@ bool webUpdateMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
-uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
-mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -111,6 +109,7 @@ bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
 bool InBindingMode = false;
+uint8_t BindingPackage[5];
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
@@ -321,11 +320,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
       Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
       MSPPacketLastSent = millis();
-
-      if (MSPPacketSendCount <= 0 && InBindingMode)
-      {
-        ExitBindingMode();
-      }
     }
     else
     {
@@ -687,7 +681,7 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-  static uint8_t mspTransferActive = 0;
+  static bool mspTransferActive = false;
   #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
       if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
@@ -779,18 +773,23 @@ void loop()
 
   if (!MspSender.IsActive())
   {
-    if (mspTransferActive == 1)
+    if (InBindingMode)
+    {
+      ExitBindingMode();
+    }
+
+    if (mspTransferActive)
     {
       crsf.UnlockMspMessage();
-      mspTransferActive = 0;
+      mspTransferActive = false;
     }
     else
     {
       uint8_t* currentMspData = crsf.GetMspMessage();
-      if (currentMspData != NULL)
+      if (currentMspData != NULL && !InBindingMode)
       {
         MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
-        mspTransferActive = 1;
+        mspTransferActive = true;
       }
     }
   }
@@ -909,12 +908,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
-    /*CRSF_FRAMETYPE_MSP_WRITE
-    outBuffer[5] = 0x30;                // header
-    outBuffer[6] = packet->payloadSize; // mspPayloadSize
-    outBuffer[7] = packet->function;    // packet->cmd*/
-    MSPPacket = *packet;
-    MSPPacketSendCount = 6;
+    crsf.AddMspMessage(packet);
   }
 }
 
@@ -974,16 +968,13 @@ void ExitBindingMode()
 
 void SendUIDOverMSP()
 {
-  MSPPacket.reset();
-
-  MSPPacket.makeCommand();
-  MSPPacket.function = MSP_ELRS_BIND;
-  MSPPacket.addByte(UID[2]);
-  MSPPacket.addByte(UID[3]);
-  MSPPacket.addByte(UID[4]);
-  MSPPacket.addByte(UID[5]);
-
-  MSPPacketSendCount = 10;
+  BindingPackage[0] = MSP_ELRS_BIND;
+  BindingPackage[1] = UID[2];
+  BindingPackage[2] = UID[3];
+  BindingPackage[3] = UID[4];
+  BindingPackage[4] = UID[5];
+  MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
+  InBindingMode = true;
 }
 
 

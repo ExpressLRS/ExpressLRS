@@ -436,33 +436,15 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
     {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+        volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
-        // store next msp message (only store one CRSF_FRAMETYPE_MSP_REQ)
-        if (MspDataLength == 0 && length < ELRS_MSP_BUFFER)
-        {
-            for (uint8_t i = 0; i < length; i++)
-            {
-                MspData[i] = SerialInBuffer[i];
-            }
-            MspDataLength = length;
-        }
-        // store all write requests since an update does send multiple writes
-        else if (packetType == CRSF_FRAMETYPE_MSP_WRITE && length < ELRS_MSP_BUFFER)
-        {
-            MspWriteFIFO.push(length);
-            for (uint8_t i = 0; i < length; i++)
-            {
-                MspWriteFIFO.push(SerialInBuffer[i]);
-            }
-        }
-
+        AddMspMessage(length, SerialInBuffer);
         return true;
     }
     return false;
 }
 
-uint8_t* CRSF::GetMspMessage()
+uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
 {
     if (MspDataLength > 0)
     {
@@ -471,7 +453,7 @@ uint8_t* CRSF::GetMspMessage()
     return NULL;
 }
 
-void CRSF::UnlockMspMessage()
+void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
 {
     // current msp message is sent so restore next buffered write
     if (MspWriteFIFO.peek() > 0)
@@ -485,6 +467,62 @@ void CRSF::UnlockMspMessage()
         // no msp message is ready to send currently
         MspDataLength = 0;
         memset(MspData, 0, ELRS_MSP_BUFFER);
+    }
+}
+
+void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
+{
+    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE)
+    {
+        return;
+    }
+
+    const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
+    uint8_t outBuffer[totalBufferLen] = {0};
+
+    // CRSF extended frame header
+    outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
+    outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
+    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
+    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;                              // destination
+    outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER;                              // origin
+
+    // Encapsulated MSP payload
+    outBuffer[5] = 0x30;                // header
+    outBuffer[6] = packet->payloadSize; // mspPayloadSize
+    outBuffer[7] = packet->function;    // packet->cmd
+    for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i)
+    {
+        // copy packet payload into outBuffer and pad with zeros where required
+        outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
+    }
+    // Encapsulated MSP crc
+    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
+
+    // CRSF frame crc
+    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+    AddMspMessage(totalBufferLen, outBuffer);
+}
+
+void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
+{
+    // store next msp message (only store one CRSF_FRAMETYPE_MSP_REQ)
+    if (MspDataLength == 0 && length < ELRS_MSP_BUFFER)
+    {
+        for (uint8_t i = 0; i < length; i++)
+        {
+            MspData[i] = data[i];
+        }
+        MspDataLength = length;
+    }
+    // store all write requests since an update does send multiple writes
+    else if (length < ELRS_MSP_BUFFER)
+    {
+        MspWriteFIFO.push(length);
+        for (uint8_t i = 0; i < length; i++)
+        {
+            MspWriteFIFO.push(data[i]);
+        }
     }
 }
 
@@ -786,34 +824,6 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
     const uint8_t totalBufferLen = 14;
-    /*if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE) return;
-
-    // TODO: This currently only supports single MSP packets per cmd
-    // To support longer packets we need to re-write this to allow packet splitting
-    const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[totalBufferLen] = {0};
-
-    // CRSF extended frame header
-    outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
-    outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
-    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
-    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;                              // destination
-    outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER;                              // origin
-
-    // Encapsulated MSP payload
-    outBuffer[5] = 0x30;                // header
-    outBuffer[6] = packet->payloadSize; // mspPayloadSize
-    outBuffer[7] = packet->function;    // packet->cmd
-    for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i)
-    {
-        // copy packet payload into outBuffer and pad with zeros where required
-        outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
-    }
-    // Encapsulated MSP crc
-    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
-
-    // CRSF frame crc
-    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);*/
 
     // SerialOutFIFO.push(totalBufferLen);
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);

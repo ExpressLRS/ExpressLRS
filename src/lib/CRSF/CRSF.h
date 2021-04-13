@@ -99,8 +99,10 @@ public:
     static void handleUARTin();
     bool RXhandleUARTout();
 #if CRSF_TX_MODULE
-    uint8_t* GetMspMessage();
-    void UnlockMspMessage();
+    static uint8_t* GetMspMessage();
+    static void UnlockMspMessage();
+    static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
+    static void AddMspMessage(mspPacket_t* packet);
 #endif
 private:
     Stream *_dev;
