@@ -901,7 +901,6 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
   Radio.SetFrequencyReg(GetInitialFreq());
-  POWERMGNT.setPower(PWR_10mW);
 
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
