@@ -64,7 +64,7 @@ uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 PFD PFDloop; 
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
+GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
@@ -244,7 +244,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
         expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
         hwTimer.updateInterval(ModParams->interval);
 
         ExpressLRS_currAirRate_Modparams = ModParams;
@@ -290,7 +290,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     alreadyTLMresp = true;
-    Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    Radio.TXdataBuffer[0] = 0b11; // tlm packet
 
     switch (NextTelemetryType)
     {
@@ -342,8 +342,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-    Radio.TXdataBuffer[7] = crc;
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+    Radio.TXdataBuffer[7] = crc & 0xFF;
+    
+    if (getParity(Radio.TXdataBuffer, 8))
+    {
+        Radio.TXdataBuffer[0] |= 0b00000100;
+    }
+
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return true;
 }
@@ -443,6 +450,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     updatePhaseLock();
     NonceRX++;
     alreadyFHSS = false;
+    alreadyTLMresp = false;
     uplinkLQ = LQCalc.getLQ();
     LQCalc.inc();
     crsf.RXhandleUARTout();
@@ -514,10 +522,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        if (connectionState != disconnected)
-        {
-            Radio.RXnb();
-        }
+        Radio.RXnb(); //seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
     }
 }
 
@@ -627,22 +632,21 @@ void GotConnection()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-    uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t inCRC = Radio.RXdataBuffer[7];
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
-#ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
-#else
-    uint8_t SwitchEncModeExpected = 0b00;
-#endif
-    uint8_t SwitchEncMode;
-    uint8_t indexIN;
-    uint8_t TLMrateIn;
-    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
-    bool telemetryConfirmValue;
-    #endif
+    if (getParity(Radio.RXdataBuffer, 8))
+    {
+        #ifndef DEBUG_SUPPRESS
+        Serial.println("Parity error on RF packet");
+        #endif
+        return;
+    }
+
+    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+
+    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111000) ) << 5 ) | Radio.RXdataBuffer[7];
+
+    Radio.RXdataBuffer[0] = type;
+    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
     if (inCRC != calculatedCRC)
     {
@@ -658,13 +662,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    if (packetAddr != DeviceAddr)
-    {
-        #ifndef DEBUG_SUPPRESS
-        Serial.println("Wrong device address on RF packet");
-        #endif
-        return;
-    }
+#ifdef HYBRID_SWITCHES_8
+    uint8_t SwitchEncModeExpected = 0b01;
+#else
+    uint8_t SwitchEncModeExpected = 0b00;
+#endif
+    uint8_t SwitchEncMode;
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
+    bool telemetryConfirmValue;
+    #endif
 
     currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
@@ -751,13 +759,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     HandleSendTelemetryResponse();
     LQCalc.add(); // Received a packet, that's the definition of LQ
 
-#if !defined(Regulatory_Domain_ISM_2400)
-    if (alreadyFHSS == false)
-    {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-    }
-#endif /* Regulatory_Domain_ISM_2400 */
+//#if !defined(Regulatory_Domain_ISM_2400)
+//    if (alreadyFHSS == false && NonceRX % 4 == 0)
+//    {
+//        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+//        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+//    }
+//#endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
     currentlyProcessing = false;
@@ -804,7 +812,7 @@ void sampleButton()
 #endif
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void inline RXdoneISR()
 {
     ProcessRFPacket();
     //Serial.println("r");
@@ -812,9 +820,8 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-    alreadyTLMresp = false;
-    LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
     Radio.RXnb();
+    LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 static void setupSerial()
@@ -915,9 +922,6 @@ static void setupBindingFromConfig()
             UID[i] = storedUID[i];
         }
 
-        CRCCaesarCipher = UID[4];
-        DeviceAddr = UID[5] & 0b111111;
-
         Serial.print("UID = ");
         Serial.print(UID[0]);
         Serial.print(", ");
@@ -930,6 +934,8 @@ static void setupBindingFromConfig()
         Serial.print(UID[4]);
         Serial.print(", ");
         Serial.println(UID[5]);
+
+        CRCInitializer = (UID[4] << 8) | UID[5];
     }
 #endif
 }
@@ -1279,8 +1285,7 @@ void EnterBindingMode()
     UID[4] = BindingUID[4];
     UID[5] = BindingUID[5];
 
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = 0;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
@@ -1319,8 +1324,7 @@ void OnELRSBindMSP(mspPacket_t *packet)
     UID[3] = packet->readByte();
     UID[4] = packet->readByte();
     UID[5] = packet->readByte();
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = (UID[4] << 8) | UID[5];
 
     Serial.print("New UID = ");
     Serial.print(UID[0]);
