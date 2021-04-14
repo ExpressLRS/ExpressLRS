@@ -38,6 +38,8 @@ public:
     int read() {return -1;}
     int peek() {return 0;}
     void flush() {}
+    void end() {}
+    void begin(int baud) {}
 
     // Print methods
     size_t write(uint8_t c) {return 1;}
@@ -66,3 +68,6 @@ inline unsigned long micros() {
 inline void delay(int32_t time) {
     usleep(time);
 }
+
+inline unsigned long millis() { return 0; }
+inline void delayMicroseconds(int delay) { }

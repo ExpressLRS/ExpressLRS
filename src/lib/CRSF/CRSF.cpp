@@ -96,7 +96,7 @@ void CRSF::Begin()
 {
     Serial.println("About to start CRSF task...");
 
-#if CRSF_TX_MODULE
+#if defined(CRSF_TX_MODULE) && !defined(TARGET_NATIVE)
     UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
@@ -451,6 +451,13 @@ uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
         return MspData;
     }
     return NULL;
+}
+
+void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
+{
+    MspWriteFIFO.flush();
+    MspDataLength = 0;
+    memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
 void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
