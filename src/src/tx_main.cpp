@@ -25,8 +25,8 @@ SX1280Driver Radio;
 #include "telemetry_protocol.h"
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_receiver.h"
-#include "stubborn_sender.h"
 #endif
+#include "stubborn_sender.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
@@ -116,8 +116,8 @@ void SendUIDOverMSP();
 
 #ifdef ENABLE_TELEMETRY
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
-StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 #endif
+StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
@@ -312,7 +312,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MspSender.IsActive())
     {
       MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-      Radio.TXdataBuffer[0] = (DeviceAddr << 2) | MSP_DATA_PACKET;
+      Radio.TXdataBuffer[0] = MSP_DATA_PACKET & 0b11;
       Radio.TXdataBuffer[1] = packageIndex;
       Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
       Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;

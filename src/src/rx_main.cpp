@@ -22,8 +22,8 @@ SX1280Driver Radio;
 #include "telemetry.h"
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_sender.h"
-#include "stubborn_receiver.h"
 #endif
+#include "stubborn_receiver.h"
 
 #include "FHSS.h"
 // #include "Debug.h"
@@ -96,11 +96,12 @@ CRSF crsf(CRSF_TX_SERIAL);
     static uint8_t telemetryBurstMax;
     // Maximum ms between LINK_STATISTICS packets for determining burst max
     #define TELEM_MIN_LINK_INTERVAL 512U
-StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
-uint8_t MspData[ELRS_MSP_BUFFER];
+    StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
+    uint8_t MspData[ELRS_MSP_BUFFER];
 #endif
 
-
+StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
+uint8_t MspData[ELRS_MSP_BUFFER];
 
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
