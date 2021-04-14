@@ -165,3 +165,19 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
         return 0;
     }
 }
+
+uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
+{
+    switch(eRate)
+    {
+    case RATE_500HZ: return 500;
+    case RATE_250HZ: return 250;
+    case RATE_200HZ: return 200;
+    case RATE_150HZ: return 150;
+    case RATE_100HZ: return 100;
+    case RATE_50HZ: return 50;
+    case RATE_25HZ: return 25;
+    case RATE_4HZ: return 4;
+    default: return 1;
+    }
+}
