@@ -96,7 +96,7 @@ void CRSF::Begin()
 {
     Serial.println("About to start CRSF task...");
 
-#if defined(CRSF_TX_MODULE) && !defined(TARGET_NATIVE)
+#if CRSF_TX_MODULE
     UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
