@@ -934,6 +934,8 @@ static void setupBindingFromConfig()
         Serial.print(UID[4]);
         Serial.print(", ");
         Serial.println(UID[5]);
+
+        CRCInitializer = (UID[4] << 8) | UID[5];
     }
 #endif
 }
