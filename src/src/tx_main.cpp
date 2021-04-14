@@ -65,7 +65,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 /// define some libs to use ///
 hwTimer hwTimer;
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
+GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
@@ -120,20 +120,22 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-  uint8_t inCRC = Radio.RXdataBuffer[7];
+  if (getParity(Radio.RXdataBuffer, 8))
+  {
+      #ifndef DEBUG_SUPPRESS
+      Serial.println("Parity error on RF packet");
+      #endif
+      return;
+  }
+
+  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111000) << 5) | Radio.RXdataBuffer[7];
+  
+  Radio.RXdataBuffer[0] &= 0b11;
+  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+  
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-  uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
   //Serial.println("TLMpacket0");
-
-  if (packetAddr != DeviceAddr)
-  {
-#ifndef DEBUG_SUPPRESS
-    Serial.println("TLM device address error");
-#endif
-    return;
-  }
 
   if ((inCRC != calculatedCRC))
   {
@@ -190,7 +192,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
-  uint8_t PacketHeaderAddr;
 #ifdef HYBRID_SWITCHES_8
   uint8_t SwitchEncMode = 0b01;
 #else
@@ -198,8 +199,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 #endif
   uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
-  PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
+  Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
   Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
@@ -214,7 +214,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
   hwTimer.updateInterval(ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
+      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
 
@@ -316,16 +316,23 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     else
     {
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      GenerateChannelData(Radio.TXdataBuffer, &crsf);
       #endif
     }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[7] = crc;
+  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+  Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+  Radio.TXdataBuffer[7] = crc & 0xFF;
+
+  if (getParity(Radio.TXdataBuffer, 8))
+  {
+    Radio.TXdataBuffer[0] |= 0b00000100;
+  }
+
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
 
@@ -592,8 +599,6 @@ void setup()
 #endif
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-  // Print base mac address
-  // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
 #endif // PLATFORM_ESP32
 
@@ -888,8 +893,7 @@ void EnterBindingMode()
   UID[4] = BindingUID[4];
   UID[5] = BindingUID[5];
 
-  CRCCaesarCipher = UID[4];
-  DeviceAddr = UID[5] & 0b111111;
+  CRCInitializer = 0;
 
   InBindingMode = true;
 
@@ -919,8 +923,7 @@ void ExitBindingMode()
   UID[4] = MasterUID[4];
   UID[5] = MasterUID[5];
 
-  CRCCaesarCipher = UID[4];
-  DeviceAddr = UID[5] & 0b111111;
+  CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = false;
 
