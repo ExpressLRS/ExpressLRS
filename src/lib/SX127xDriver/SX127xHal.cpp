@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 #include "SX127xHal.h"
 
 SX127xHal *SX127xHal::instance = NULL;
@@ -253,3 +255,5 @@ void ICACHE_RAM_ATTR SX127xHal::dioISR()
     RXdoneCallback();
   }
 }
+
+#endif // UNIT_TEST

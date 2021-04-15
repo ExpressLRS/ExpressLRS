@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
 
@@ -1041,7 +1040,10 @@ void setup()
     wifiOff();
     ws2812Blink();
     setupBindingFromConfig();
-    FHSSrandomiseFHSSsequence();
+
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
+
     setupRadio();
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
@@ -1373,7 +1375,8 @@ void OnELRSBindMSP(mspPacket_t *packet)
     // Write the values to eeprom
     config.Commit();
 
-    FHSSrandomiseFHSSsequence();
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
 
     disableWebServer = true;
     ExitBindingMode();
