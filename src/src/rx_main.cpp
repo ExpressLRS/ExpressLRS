@@ -108,7 +108,7 @@ LPF LPF_UplinkRSSI1(5);
 
 
 /// LQ Calculation //////////
-LQCALC LQCALC;
+LQCALC<100> LQCalc;
 uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
@@ -451,8 +451,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     NonceRX++;
     alreadyFHSS = false;
     alreadyTLMresp = false;
-    uplinkLQ = LQCALC.getLQ();
-    LQCALC.inc();
+    uplinkLQ = LQCalc.getLQ();
+    LQCalc.inc();
     crsf.RXhandleUARTout();
 }
 
@@ -476,7 +476,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
                 antennaRSSIDropTrigger++;
             }
     // if we didn't get a packet switch the antenna
-    if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
+    if (((!LQCalc.previousIsSet()) && antennaLQDropTrigger == 0)) {
 
         switchAntenna();
         antennaLQDropTrigger = 1;
@@ -757,7 +757,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     HandleFHSS();
     HandleSendTelemetryResponse();
-    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCalc.add(); // Received a packet, that's the definition of LQ
 
 //#if !defined(Regulatory_Domain_ISM_2400)
 //    if (alreadyFHSS == false && NonceRX % 4 == 0)
@@ -821,7 +821,7 @@ void inline RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
-    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 static void setupSerial()
@@ -1035,7 +1035,6 @@ void setup()
     crsf.Begin();
     hwTimer.init();
     hwTimer.stop();
-    LQCALC.init();
 }
 
 void loop()
@@ -1097,7 +1096,7 @@ void loop()
             LastSyncPacket = millis();           // reset this variable
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
-            LQCALC.reset();
+            LQCalc.reset();
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
             getRFlinkInfo();

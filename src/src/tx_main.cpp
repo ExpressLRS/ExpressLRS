@@ -88,7 +88,7 @@ uint32_t SyncPacketLastSent = 0;
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
-LQCALC LQCALC;
+LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
 volatile bool UpdateParamReq = false;
@@ -162,7 +162,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   }
 
   LastTLMpacketRecvMillis = millis();
-  LQCALC.add();
+  LQCalc.add();
 
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
@@ -173,7 +173,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             break;
 
@@ -272,7 +272,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       if (WaitRXresponse == true)
       {
         WaitRXresponse = false;
-        LQCALC.inc();
+        LQCalc.inc();
         return;
       }
       else
@@ -660,7 +660,6 @@ void setup()
   hwTimer.init();
   hwTimer.resume();
   hwTimer.stop(); //comment to automatically start the RX timer and leave it running
-  LQCALC.init(10);
 }
 
 void loop()
