@@ -63,7 +63,7 @@ uint32_t LEDupdateCounterMillis;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
-PFD PFDloop; 
+PFD PFDloop;
 GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
@@ -342,10 +342,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
     Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
     Radio.TXdataBuffer[7] = crc & 0xFF;
-    
+
     if (getParity(Radio.TXdataBuffer, 8))
     {
         Radio.TXdataBuffer[0] |= 0b00000100;
@@ -508,7 +508,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool tlmSent = false;
     bool didFHSS = false;
 
-    if (currentlyProcessing == false) // stop race condition 
+    if (currentlyProcessing == false) // stop race condition
     {
         updateDiversity();
         didFHSS = HandleFHSS();
@@ -1280,12 +1280,16 @@ void reset_into_bootloader(void)
     Serial.println("Jumping to Bootloader...");
     delay(100);
 
-#if BOOTLOADER_DATA_EXCHANGE_ENABLED
+    /** Write command for firmware update.
+     *
+     * Bootloader checks this memory area (if newer enough) and
+     * perpare itself for fw update. Otherwise it skips the check
+     * and starts ELRS firmware immediately
+     */
     extern __IO uint32_t _bootloader_data;
     volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
     blinfo->key = 0x454c5253; // ELRS
     blinfo->reset_type = 0xACDC;
-#endif /* BOOTLOADER_DATA_EXCHANGE_ENABLED */
 
     HAL_NVIC_SystemReset();
 #endif /* PLATFORM_STM32 */
