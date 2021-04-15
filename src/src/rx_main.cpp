@@ -857,6 +857,11 @@ static void setupSerial()
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
+
+#if defined(PLATFORM_ESP8266)
+    Serial.begin(CRSF_RX_BAUDRATE);
+#endif
+
 }
 
 static void setupConfigAndPocCheck()
