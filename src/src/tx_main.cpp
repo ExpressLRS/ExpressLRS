@@ -622,6 +622,14 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
+    #ifdef PLATFORM_ESP32
+    while (1)
+    {
+      BeginWebUpdate();
+      HandleWebUpdate();
+      delay(1);
+    }
+    #endif 
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN

@@ -952,15 +952,35 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+#ifdef PLATFORM_ESP8266
+    if (!init_success)
+    {
+        Serial.println("Failed to detect RF chipset!!!");
+        beginWebsever();
+        while (1)
+        {
+            HandleWebUpdate();
+            if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+            {
+                #ifdef GPIO_PIN_LED
+                digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+                #endif
+                LED = !LED;
+                webUpdateLedFlashIntervalLast = millis();
+            }
+        }
+    }
+#else // target does not have wifi
     while (!init_success)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
         LED = !LED;
-        delay(200);
+        #endif
+        delay(WEB_UPDATE_LED_FLASH_INTERVAL);
         Serial.println("Failed to detect RF chipset!!!");
     }
+#endif
 
     // Set transmit power to maximum
     POWERMGNT P;
