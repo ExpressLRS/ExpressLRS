@@ -31,6 +31,7 @@
 #define CRSF_CHANNEL_VALUE_MIN 172
 #define CRSF_CHANNEL_VALUE_MID 992
 #define CRSF_CHANNEL_VALUE_MAX 1811
+#define CRSF_CHANNEL_VALUE_SPAN (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN)
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
@@ -298,33 +299,59 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
 /////inline and utility functions//////
 
-//static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, float in_min, float in_max, float out_min, float out_max) { return round((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min); };
-static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max) { return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2; }
-
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t Val) { return fmap(Val, 172, 1811, 988, 2012); }
-static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t Val) { return fmap(Val, 0, 1024, 172, 1811); }
-
-// 2b switches use 0, 1 and 2 as values to represent low, middle and high
-static inline uint16_t ICACHE_RAM_ATTR SWITCH2b_to_CRSF(uint16_t Val) { return fmap(Val, 0, 2, 188, 1795); }
-
-static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t Val)
+static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max)
 {
-    if (Val > 1000)
-        return 1;
-    else
-        return 0;
+    return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2;
 }
 
-static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t Val)
+// Scale a full range crossfire value to 988-2012 (Taransi channel uS)
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 {
-    if (Val)
-        return 1795;
-    else
-        return 188;
+    return fmap(val, 172, 1811, 988, 2012);
 }
 
-static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t Val) { return fmap(Val, 172, 1811, 0, 1023); }
-//static inline uint16_t ICACHE_RAM_ATTR UINT_to_CRSF(uint16_t Val);
+// Scale down a 10-bit value to a full range crossfire value
+static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
+{ 
+    return fmap(val, 0, 1024, 172, 1811);
+}
+
+// Scale up a full range crossfire value to 10-bit
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
+{
+    return fmap(val, 172, 1811, 0, 1023);
+}
+
+// Convert 0-max to the CRSF values for 1000-2000
+static inline uint16_t ICACHE_RAM_ATTR N_to_CRSF(uint16_t val, uint16_t max)
+{
+   return val * (1795-188) / max + 188;
+}
+
+// Convert CRSF (172-1811) to 0-(cnt-1)
+static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
+{
+    // The span is increased by one to prevent the max val from returning cnt
+    return (val - CRSF_CHANNEL_VALUE_MIN) * cnt / (CRSF_CHANNEL_VALUE_SPAN + 1);
+}
+
+// 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle
+static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t val)
+{
+    return (val == 7) ? CRSF_CHANNEL_VALUE_MID : N_to_CRSF(val, 5);
+}
+
+// Returns 1 if val is greater than CRSF_CHANNEL_VALUE_MID
+static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t val)
+{
+    return (val > CRSF_CHANNEL_VALUE_MID) ? 1 : 0;
+}
+
+// Convert a bit into either the CRSF value for 1000 or 2000
+static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t val)
+{
+    return (val) ? 1795 : 188;
+}
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
 {
@@ -345,7 +372,6 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
     }
     return crc;
 }
-
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
 {

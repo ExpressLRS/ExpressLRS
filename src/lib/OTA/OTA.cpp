@@ -41,19 +41,25 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
                            ((crsf->ChannelDataIn[2] & 0b110) << 1) |
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
-  // switch 0 is sent on every packet - intended for low latency arm/disarm
-  Buffer[6] = (crsf->currentSwitches[0] & 0b11) << 5;
-#ifdef ENABLE_TELEMETRY
-  Buffer[6] |= TelemetryStatus << 7;
-#endif
-
   // find the next switch to send
-  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex() & 0b111;      // mask for paranoia
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11; // mask for paranoia
+  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
+  // For index 1, the extra bit comes from flowing over into the switch index, so
+  // clear that bit for index 1 (shows up as 0 on the other side)
+  uint8_t bitclearedSwitchIndex = (nextSwitchIndex == 1) ? 0 : nextSwitchIndex;
+  // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
+  // Rely on currentSwitches to *only* have values in that rang
+  uint8_t value = crsf->currentSwitches[nextSwitchIndex];
 
-  // put the bits into buf[6]. nextSwitchIndex is in the range 1 through 7 so takes 3 bits
-  // currentSwitches[nextSwitchIndex] is in the range 0 through 2, takes 2 bits.
-  Buffer[6] |= (nextSwitchIndex << 2) | value;
+  Buffer[6] =
+#ifdef ENABLE_TELEMETRY
+      TelemetryStatus << 7 |
+#endif
+      // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
+      crsf->currentSwitches[0] << 6 |
+      // tell the receiver which switch index this is
+      bitclearedSwitchIndex << 3 |
+      // include the switch value
+      value;
 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
@@ -80,18 +86,16 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
 
     // The low latency switch
-    crsf->PackedRCdataOut.ch4 = SWITCH2b_to_CRSF((Buffer[6] & 0b01100000) >> 5);
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b01000000) >> 6);
 
     // The round-robin switch
-    uint8_t switchIndex = (Buffer[6] & 0b11100) >> 2;
-    uint16_t switchValue = SWITCH2b_to_CRSF(Buffer[6] & 0b11);
+    uint8_t switchIndex = (Buffer[6] & 0b111000) >> 3;
+    uint16_t switchValue = SWITCH3b_to_CRSF(Buffer[6] & 0b111);
 
     switch (switchIndex) {
-        case 0:   // we should never get index 0 here since that is the low latency switch
-            Serial.println("BAD switchIndex 0");
-            break;
-        case 1:
-            crsf->PackedRCdataOut.ch5 = switchValue;
+        case 0:   // Because AUX1 (index 0) is the low latency switch, the low bit
+        case 1:   // of the switchIndex can be used as data, and arrives as index 0
+            crsf->PackedRCdataOut.ch5 = N_to_CRSF(Buffer[6] & 0b1111, 15);
             break;
         case 2:
             crsf->PackedRCdataOut.ch6 = switchValue;
