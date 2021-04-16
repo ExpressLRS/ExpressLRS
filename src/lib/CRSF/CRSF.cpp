@@ -97,17 +97,10 @@ void CRSF::Begin()
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #ifdef PLATFORM_ESP32
-    Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
-
     mutexOutFIFO = xSemaphoreCreateMutex();
-
-    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
-                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
-                     false, 500);
-    CRSF::duplex_set_RX();
-
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
     disableCore0WDT();
+    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
+    
 
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
@@ -140,11 +133,21 @@ void CRSF::Begin()
 
 void CRSF::End()
 {
+    Serial.println("CRSF UART END");
 #if CRSF_TX_MODULE
 #ifdef PLATFORM_ESP32
+    while (SerialOutFIFO.peek() > 0)
+    {
+        delay(1);
+    }
     if (xESP32uartTask != NULL)
     {
         vTaskDelete(xESP32uartTask);
+    }
+#else
+    while (SerialOutFIFO.peek() > 0)
+    {
+        handleUARTin();
     }
 #endif
     CRSF::Port.end();
@@ -649,15 +652,20 @@ bool CRSF::UARTwdt()
 //RTOS task to read and write CRSF packets to the serial port
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
+    Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
+    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
+                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
+                     false, 500);
+    CRSF::duplex_set_RX();
+    vTaskDelay(500);
+    flush_port_input();
     (void)pvParameters;
     for (;;)
     {
         handleUARTin();
-        yield();
     }
 }
 #endif // PLATFORM_ESP32
-
 
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()

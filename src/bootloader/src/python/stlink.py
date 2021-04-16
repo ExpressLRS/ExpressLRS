@@ -37,7 +37,7 @@ def get_commands(env, firmware):
                 bootloader, hex(flash_start)]
         APP_CMD = [TOOL, "-c SWD UR SWCLK=8 -P",
             firmware, hex(app_start), "-RST"]
-    elif "linux" in platform_name:
+    elif "linux" in platform_name or "darwin" in platform_name:
         TOOL = os.path.join(
             env_dir,
             "tool-stm32duino", "stlink", "st-flash")

@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -458,7 +457,7 @@ void HandleUpdateParameter()
       webUpdateMode = true;
       Serial.println("Wifi Update Mode Requested!");
       sendLuaParams();
-      delay(500);
+      sendLuaParams();
       BeginWebUpdate();
 #else
       webUpdateMode = false;
@@ -602,7 +601,8 @@ void setup()
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
 #endif // PLATFORM_ESP32
 
-  FHSSrandomiseFHSSsequence();
+  long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+  FHSSrandomiseFHSSsequence(macSeed);
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
@@ -622,6 +622,14 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
+    #ifdef PLATFORM_ESP32
+    while (1)
+    {
+      BeginWebUpdate();
+      HandleWebUpdate();
+      delay(1);
+    }
+    #endif 
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
@@ -656,10 +664,9 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
-  crsf.Begin();
   hwTimer.init();
-  hwTimer.resume();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  crsf.Begin();
 }
 
 void loop()

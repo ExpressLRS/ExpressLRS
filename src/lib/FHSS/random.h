@@ -1,12 +1,7 @@
 #pragma once
 
-// void  PrintRC()
-// }
-
 // the max value returned by rng
 #define RNG_MAX 0x7FFF
-
-extern unsigned long seed;
 
 long rng(void);
 

@@ -16,6 +16,7 @@ Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 Modified and adapted by Alessandro Carcione for ELRS project
 */
 
+#ifndef UNIT_TEST
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include <SPI.h>
@@ -387,3 +388,5 @@ void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
     digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
 #endif
 }
+
+#endif // UNIT_TEST

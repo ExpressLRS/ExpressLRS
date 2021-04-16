@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
 
@@ -91,12 +90,17 @@ CRSF crsf(CRSF_TX_SERIAL);
 #endif
 
 #ifdef ENABLE_TELEMETRY
-StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+    StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+    static uint8_t telemetryBurstCount;
+    static uint8_t telemetryBurstMax;
+    // Maximum ms between LINK_STATISTICS packets for determining burst max
+    #define TELEM_MIN_LINK_INTERVAL 512U
 #endif
 
 
 
-uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static bool telemBurstValid;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetSlow(3);
@@ -249,6 +253,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
+        telemBurstValid = false;
     }
 }
 
@@ -279,7 +284,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t *data;
     uint8_t maxLength;
     uint8_t packageIndex;
-    static uint8_t telemetryDataCount = 0;
     #endif
     uint8_t openTxRSSI;
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
@@ -321,14 +325,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             break;
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
-            if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_1_16 && telemetryDataCount < 2)
+            if (telemetryBurstCount < telemetryBurstMax)
             {
-                telemetryDataCount++;
+                telemetryBurstCount++;
             }
             else
             {
                 NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-                telemetryDataCount = 0;
+                telemetryBurstCount = 0;
             }
 
             TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
@@ -739,6 +743,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  Serial.println(TLMrateIn);
 #endif
                  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+                 telemBurstValid = false;
              }
 
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
@@ -746,7 +751,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection();
-                 return;
              }
          }
          break;
@@ -857,6 +861,11 @@ static void setupSerial()
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
+
+#if defined(PLATFORM_ESP8266)
+    Serial.begin(CRSF_RX_BAUDRATE);
+#endif
+
 }
 
 static void setupConfigAndPocCheck()
@@ -947,15 +956,35 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+#ifdef PLATFORM_ESP8266
+    if (!init_success)
+    {
+        Serial.println("Failed to detect RF chipset!!!");
+        beginWebsever();
+        while (1)
+        {
+            HandleWebUpdate();
+            if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+            {
+                #ifdef GPIO_PIN_LED
+                digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+                #endif
+                LED = !LED;
+                webUpdateLedFlashIntervalLast = millis();
+            }
+        }
+    }
+#else // target does not have wifi
     while (!init_success)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
         LED = !LED;
-        delay(200);
+        #endif
+        delay(WEB_UPDATE_LED_FLASH_INTERVAL);
         Serial.println("Failed to detect RF chipset!!!");
     }
+#endif
 
     // Set transmit power to maximum
     POWERMGNT P;
@@ -993,6 +1022,28 @@ static void ws2812Blink()
 #endif
 }
 
+static void updateTelemetryBurst()
+{
+#if defined(ENABLE_TELEMETRY)
+    if (telemBurstValid)
+        return;
+    telemBurstValid = true;
+
+    uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint32_t ratiodiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    // telemInterval = 1000 / (hz / ratiodiv);
+    // burst = TELEM_MIN_LINK_INTERVAL / telemInterval;
+    // This ^^^ rearranged to preserve precision vvv
+    telemetryBurstMax = TELEM_MIN_LINK_INTERVAL * hz / ratiodiv / 1000U;
+
+    // Reserve one slot for LINK telemetry
+    if (telemetryBurstMax > 1)
+        --telemetryBurstMax;
+    else
+        telemetryBurstMax = 1;
+#endif
+}
+
 void setup()
 {
     setupGpio();
@@ -1016,7 +1067,10 @@ void setup()
     wifiOff();
     ws2812Blink();
     setupBindingFromConfig();
-    FHSSrandomiseFHSSsequence();
+
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
+
     setupRadio();
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
@@ -1093,6 +1147,9 @@ void loop()
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
+            #ifdef FAST_SYNC
+            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+            #endif
             LastSyncPacket = millis();           // reset this variable
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
@@ -1241,6 +1298,8 @@ void loop()
         }
         #endif
     }
+
+    updateTelemetryBurst();
 }
 
 struct bootloader {
@@ -1348,7 +1407,8 @@ void OnELRSBindMSP(mspPacket_t *packet)
     // Write the values to eeprom
     config.Commit();
 
-    FHSSrandomiseFHSSsequence();
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
 
     disableWebServer = true;
     ExitBindingMode();
