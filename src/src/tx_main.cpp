@@ -71,8 +71,16 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
+void ICACHE_RAM_ATTR timerIdleCallback()
+{
+  NonceTX++;
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    FHSSptr++;
+  }
+};
+void ICACHE_RAM_ATTR TimerCallbackISR();
 
 bool webUpdateMode = false;
 
@@ -90,6 +98,7 @@ uint32_t TLMpacketReported = 0;
 LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
+volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
@@ -487,7 +496,9 @@ void HandleUpdateParameter()
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
-    hwTimer.stop();
+    //while ((micros() - PacketLastSentMicros) < (ExpressLRS_currAirRate_Modparams->interval - 250)); // wait for almost the next timer tick
+    while(busyTransmitting);
+    hwTimer.callbackTock = &timerIdleCallback;
     // Set a flag that will trigger the eeprom commit in the main loop
     // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
     WaitEepromCommit = true;
@@ -497,10 +508,12 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR RXdoneISR()
 {
   ProcessTLMpacket();
+  busyTransmitting = false;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  busyTransmitting = false;
   NonceTX++; // must be done before callback
   HandleFHSS();
   HandleTLM();
@@ -700,7 +713,7 @@ void loop()
   HandleUpdateParameter();
 
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
-  if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
+  if (WaitEepromCommit)
   {
     SetRFLinkRate(config.GetRate());
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
@@ -711,12 +724,11 @@ void loop()
     // Write the uncommitted eeprom values
     Serial.println("EEPROM COMMIT");
     config.Commit();
-    // Resume the timer
     sendLuaParams();
-    hwTimer.resume();
+    hwTimer.callbackTock = &TimerCallbackISR; // Resume the timer
   }
 
-  #ifdef FEATURE_OPENTX_SYNC
+#ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
 
@@ -766,8 +778,9 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  SendRCdataToRF();
+  busyTransmitting = true;
   PacketLastSentMicros = micros();
+  SendRCdataToRF();
 }
 
 void OnRFModePacket(mspPacket_t *packet)
