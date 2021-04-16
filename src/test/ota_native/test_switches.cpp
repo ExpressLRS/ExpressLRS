@@ -105,7 +105,7 @@ void test_encodingHybrid8(bool highResChannel)
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
     if (highResChannel)
-        crsf.nextSwitchIndex = 1;
+        crsf.nextSwitchIndex = 7;
     else
         crsf.nextSwitchIndex = 3;
 
@@ -131,29 +131,31 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
     // byte 6 is the switch encoding
-    // expect switch 0 in bit 6, index in 3-5 and value in 0,1,2[,3]
-    // top bit is undefined
     TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (TXdataBuffer[6] & 0b0100000)>>6);
+    // top bit is undefined
+    // expect switch 0 in bit 6
+    // index-1 in 3-5
+    // value in 0,1,2[,3]
     if (highResChannel)
     {
-        TEST_ASSERT_EQUAL(0, (TXdataBuffer[6] & 0b110000)>>3);
-        TEST_ASSERT_EQUAL(crsf.currentSwitches[1], TXdataBuffer[6] & 0b1111);
+        TEST_ASSERT_EQUAL(7, ((TXdataBuffer[6] & 0b110000)>>3) + 1);
+        TEST_ASSERT_EQUAL(crsf.currentSwitches[7], TXdataBuffer[6] & 0b1111);
     }
     else
     {
-        TEST_ASSERT_EQUAL(3, (TXdataBuffer[6] & 0b111000)>>3);
+        TEST_ASSERT_EQUAL(3, ((TXdataBuffer[6] & 0b111000)>>3) + 1);
         TEST_ASSERT_EQUAL(crsf.currentSwitches[3], TXdataBuffer[6] & 0b0111);
     }
-}
-
-void test_encodingHybrid8_1()
-{
-    test_encodingHybrid8(true);
 }
 
 void test_encodingHybrid8_3()
 {
     test_encodingHybrid8(false);
+}
+
+void test_encodingHybrid8_7()
+{
+    test_encodingHybrid8(true);
 }
 
 /* Check the decoding of a packet after rx
@@ -180,7 +182,12 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     crsf.sentSwitches[forceSwitch] = switchval;
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex = forceSwitch;
+    // nextSwitchIndex=0 is invalid, since the previous getNextSwitchIndex()
+    // would have skipped it
+    if (forceSwitch == 0)
+        crsf.nextSwitchIndex = 1;
+    else
+        crsf.nextSwitchIndex = forceSwitch;
 
     // use the encoding method to pack it into TXdataBuffer
     GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
@@ -195,10 +202,24 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
     TEST_ASSERT_EQUAL(BIT_to_CRSF(crsf.currentSwitches[0]), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
-    if (forceSwitch == 1)
-        TEST_ASSERT_EQUAL(N_to_CRSF(crsf.currentSwitches[forceSwitch], 15), crsf.PackedRCdataOut.ch5); // We forced switch 1 to be sent as the sequential field
+    if (forceSwitch == 7)
+        TEST_ASSERT_EQUAL(N_to_CRSF(crsf.currentSwitches[forceSwitch], 15), crsf.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
     else if (forceSwitch != 0)
+    {
+        uint16_t ch;
+        switch (forceSwitch)
+        {
+        case 1: ch = crsf.PackedRCdataOut.ch5; break;
+        case 2: ch = crsf.PackedRCdataOut.ch6; break;
+        case 3: ch = crsf.PackedRCdataOut.ch7; break;
+        case 4: ch = crsf.PackedRCdataOut.ch8; break;
+        case 5: ch = crsf.PackedRCdataOut.ch9; break;
+        case 6: ch = crsf.PackedRCdataOut.ch10; break;
+        default:
+            TEST_FAIL_MESSAGE("forceSwitch not handled");
+        }
         TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(crsf.currentSwitches[forceSwitch]), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+    }
 }
 
 void test_decodingHybrid8_all()
@@ -206,14 +227,14 @@ void test_decodingHybrid8_all()
     // Switch 0 is 2 pos
     test_decodingHybrid8(0, 0);
     test_decodingHybrid8(0, 1);
-    // Switch 1 is 16 pos
-    for (uint8_t val=0; val<16; ++val)
-        test_decodingHybrid8(1, val);
     // Switch X in 6-pos mode (includes 3-pos low/high)
     for (uint8_t val=0; val<6; ++val)
         test_decodingHybrid8(3, val);
     // Switch X in 3-pos mode center
     test_decodingHybrid8(3, 7);
+    // Switch 7 is 16 pos
+    for (uint8_t val=0; val<16; ++val)
+        test_decodingHybrid8(7, val);
 }
 
 // ------------------------------------------------
@@ -316,8 +337,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_round_robin);
     RUN_TEST(test_priority);
 
-    RUN_TEST(test_encodingHybrid8_1);
     RUN_TEST(test_encodingHybrid8_3);
+    RUN_TEST(test_encodingHybrid8_7);
     RUN_TEST(test_decodingHybrid8_all);
 
     RUN_TEST(test_encoding10bit);
