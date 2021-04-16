@@ -94,7 +94,6 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     // where x is the high bit of switch 7
     uint8_t switchIndex = (Buffer[6] & 0b111000) >> 3;
     uint16_t switchValue = SWITCH3b_to_CRSF(Buffer[6] & 0b111);
-    Serial.print(switchIndex, DEC);
 
     switch (switchIndex) {
         case 0:  
