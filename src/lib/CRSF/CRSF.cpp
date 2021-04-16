@@ -776,13 +776,10 @@ void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
     // AUX1 is arm switch, one bit
     currentSwitches[0] = CRSF_to_BIT(ChannelDataIn[4]);
 
-    // AUX2 is High Resolution 16-pos (4-bit)
-    currentSwitches[1] = CRSF_to_N(ChannelDataIn[5], 16);
-
-    // AUX3-X are Low Resolution, "7pos" (6+center)
+    // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
     const uint16_t CHANNEL_BIN_COUNT = 6;
     const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
-    for (int i = 2; i < N_SWITCHES; i++)
+    for (int i = 1; i < N_SWITCHES-1; i++)
     {
         uint16_t ch = ChannelDataIn[i + 4];
         // If channel is within 1/4 a BIN of being in the middle use special value 7
@@ -792,6 +789,9 @@ void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
         else
             currentSwitches[i] = 7;
     } // for N_SWITCHES
+
+    // AUXx is High Resolution 16-pos (4-bit)
+    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16);
 }
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel

@@ -43,9 +43,10 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
-  // For index 1, the extra bit comes from flowing over into the switch index, so
-  // clear that bit for index 1 (shows up as 0 on the other side)
-  uint8_t bitclearedSwitchIndex = (nextSwitchIndex == 1) ? 0 : nextSwitchIndex;
+  // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to 0-6 (0b110)
+  // If the two high bits are 0b11, the receiver knows it is the last switch and can use
+  // that bit to store data
+  uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
   uint8_t value = crsf->currentSwitches[nextSwitchIndex];
@@ -88,32 +89,35 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     // The low latency switch
     crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b01000000) >> 6);
 
-    // The round-robin switch
+    // The round-robin switch, switchIndex is actually index-1 
+    // to leave the low bit open for switch 7 (sent as 0b11x)
+    // where x is the high bit of switch 7
     uint8_t switchIndex = (Buffer[6] & 0b111000) >> 3;
     uint16_t switchValue = SWITCH3b_to_CRSF(Buffer[6] & 0b111);
+    Serial.print(switchIndex, DEC);
 
     switch (switchIndex) {
-        case 0:   // Because AUX1 (index 0) is the low latency switch, the low bit
-        case 1:   // of the switchIndex can be used as data, and arrives as index 0
-            crsf->PackedRCdataOut.ch5 = N_to_CRSF(Buffer[6] & 0b1111, 15);
+        case 0:  
+            crsf->PackedRCdataOut.ch5 = switchValue;
             break;
-        case 2:
+        case 1:
             crsf->PackedRCdataOut.ch6 = switchValue;
             break;
-        case 3:
+        case 2:
             crsf->PackedRCdataOut.ch7 = switchValue;
             break;
-        case 4:
+        case 3:
             crsf->PackedRCdataOut.ch8 = switchValue;
             break;
-        case 5:
+        case 4:
             crsf->PackedRCdataOut.ch9 = switchValue;
             break;
-        case 6:
+        case 5:
             crsf->PackedRCdataOut.ch10 = switchValue;
             break;
-        case 7:
-            crsf->PackedRCdataOut.ch11 = switchValue;
+        case 6:   // Because AUX1 (index 0) is the low latency switch, the low bit
+        case 7:   // of the switchIndex can be used as data, and arrives as index "6"
+            crsf->PackedRCdataOut.ch11 = N_to_CRSF(Buffer[6] & 0b1111, 15);
             break;
     }
 }
