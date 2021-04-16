@@ -366,7 +366,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection < FreqCorrectionMax)
         {
-            FreqCorrection += 61; //min freq step is ~ 61hz
+            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
         }
         else
         {
@@ -381,7 +381,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection > FreqCorrectionMin)
         {
-            FreqCorrection -= 61; //min freq step is ~ 61hz
+            FreqCorrection -= 1; //min freq step is ~ 61hz
         }
         else
         {
@@ -759,17 +759,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    HandleFHSS();
+    bool didFHSS = HandleFHSS();
     HandleSendTelemetryResponse();
     LQCalc.add(); // Received a packet, that's the definition of LQ
 
-//#if !defined(Regulatory_Domain_ISM_2400)
-//    if (alreadyFHSS == false && NonceRX % 4 == 0)
-//    {
-//        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-//        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-//    }
-//#endif /* Regulatory_Domain_ISM_2400 */
+#if !defined(Regulatory_Domain_ISM_2400)
+    if (didFHSS == false)
+    {
+        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+    }
+#endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
     currentlyProcessing = false;
