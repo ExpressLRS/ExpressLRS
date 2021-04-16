@@ -96,8 +96,6 @@ CRSF crsf(CRSF_TX_SERIAL);
     static uint8_t telemetryBurstMax;
     // Maximum ms between LINK_STATISTICS packets for determining burst max
     #define TELEM_MIN_LINK_INTERVAL 512U
-    StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
-    uint8_t MspData[ELRS_MSP_BUFFER];
 #endif
 
 StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
@@ -281,6 +279,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         case ELRS_TELEMETRY_TYPE_LINK:
             #ifdef ENABLE_TELEMETRY
             NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+            telemetryBurstCount = 0;
             #else
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
             #endif
@@ -304,7 +303,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             else
             {
                 NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-                telemetryBurstCount = 0;
             }
 
             TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
@@ -647,6 +645,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
     bool telemetryConfirmValue;
     #endif
+    bool currentMspConfirmValue;
 
     currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
@@ -677,7 +676,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
+        currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
         MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
+        if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
+        {
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        }
+
         if (MspReceiver.HasFinishedData())
         {
             crsf.sendMSPFrameToFC(MspData);
