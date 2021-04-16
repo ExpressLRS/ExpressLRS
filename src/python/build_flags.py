@@ -11,23 +11,7 @@ import melodyparser
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-try:
-    from git import Repo
-except ImportError:
-    sys.stdout.write("Installing GitPython")
-    install("GitPython")
-    from git import Repo
-
 build_flags = env['BUILD_FLAGS']
-
-try:
-    from git import Repo
-except ImportError:
-    env.Execute("$PYTHONEXE -m pip install GitPython")
-    from git import Repo
-
-build_flags = env['BUILD_FLAGS']
-
 UIDbytes = ""
 define = ""
 
@@ -64,9 +48,32 @@ def parse_flags(path):
     except IOError:
         print("File '%s' does not exist" % path)
 
-parse_flags("user_defines.txt")
+def get_git_sha():
+    # Don't try to pull the git revision when doing tests, as 
+    # `pio remote test` doesn't copy the entire repository, just the files
+    if env['PIOPLATFORM'] == "native":
+        return "0x00,0x11,0x22,0x33,0x44,0x55"
 
-print("build flags: %s" % env['BUILD_FLAGS'])
+    try:
+        from git import Repo
+    except ImportError:
+        sys.stdout.write("Installing GitPython")
+        install("GitPython")
+        from git import Repo
+
+    try:
+        from git import Repo
+    except ImportError:
+        env.Execute("$PYTHONEXE -m pip install GitPython")
+        from git import Repo
+
+    git_repo = Repo(os.getcwd(), search_parent_directories=True)
+    git_root = git_repo.git.rev_parse("--show-toplevel")
+    ExLRS_Repo = Repo(git_root)
+    sha = ExLRS_Repo.head.object.hexsha
+    return "0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5]
+
+parse_flags("user_defines.txt")
 
 # Handle any negated flags i.e. !-Dxxxx remove -Dxxxx from flags
 for line in build_flags:
@@ -74,11 +81,7 @@ for line in build_flags:
         build_flags = [x.replace(flag[1:],"") for x in build_flags]
 build_flags = [x.replace("!", "") for x in build_flags]
 
-git_repo = Repo(os.getcwd(), search_parent_directories=True)
-git_root = git_repo.git.rev_parse("--show-toplevel")
-ExLRS_Repo = Repo(git_root)
-sha = ExLRS_Repo.head.object.hexsha
-build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
+build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 
 env['BUILD_FLAGS'] = build_flags
 
