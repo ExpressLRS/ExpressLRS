@@ -182,7 +182,7 @@ bool InBindingMode = false;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
-void OnELRSBindMSP(mspPacket_t *packet);
+void OnELRSBindMSP(uint8_t* packet);
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -683,21 +683,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (MspReceiver.HasFinishedData())
+        if (Radio.RXdataBuffer[1] == 1 && MspData[0] == MSP_ELRS_BIND)
+        {
+            OnELRSBindMSP(MspData);
+            MspReceiver.ResetState();
+        }
+        else if (MspReceiver.HasFinishedData())
         {
             crsf.sendMSPFrameToFC(MspData);
             MspReceiver.Unlock();
         }
-        /*mspPacket_t packet;
-        UnpackMSPData(Radio.RXdataBuffer, &packet);
-        if (packet.function == MSP_ELRS_BIND)
-        {
-            OnELRSBindMSP(&packet);
-        }
-        else
-        {
-            crsf.sendMSPFrameToFC(&packet);
-        }*/
         break;
 
     case TLM_PACKET: //telemetry packet from master
@@ -1364,12 +1359,13 @@ void ExitBindingMode()
     Serial.println(Radio.currFreq);
 }
 
-void OnELRSBindMSP(mspPacket_t *packet)
+void OnELRSBindMSP(uint8_t* packet)
 {
-    UID[2] = packet->readByte();
-    UID[3] = packet->readByte();
-    UID[4] = packet->readByte();
-    UID[5] = packet->readByte();
+    for (int i = 1; i <=4; i++)
+    {
+        UID[i + 1] = packet[i];
+    }
+
     CRCInitializer = (UID[4] << 8) | UID[5];
 
     Serial.print("New UID = ");

@@ -184,11 +184,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
-            if (TelemetryReceiver.HasFinishedData())
-            {
-                crsf.sendTelemetryToTX(CRSFinBuffer);
-                TelemetryReceiver.Unlock();
-            }
             break;
         #endif
     }
@@ -771,6 +766,14 @@ void loop()
     TLMpacketReported = now;
   }
 
+  #ifdef ENABLE_TELEMETRY
+  if (TelemetryReceiver.HasFinishedData())
+  {
+      crsf.sendTelemetryToTX(CRSFinBuffer);
+      TelemetryReceiver.Unlock();
+  }
+  #endif
+
   if (!MspSender.IsActive())
   {
     if (InBindingMode)
@@ -962,6 +965,7 @@ void ExitBindingMode()
   CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = false;
+  MspSender.ResetState();
 
   Serial.println("Exiting binding mode");
 }
