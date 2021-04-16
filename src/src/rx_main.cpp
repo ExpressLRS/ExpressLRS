@@ -1120,6 +1120,9 @@ void loop()
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
+            #ifdef FAST_SYNC
+            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+            #endif
             LastSyncPacket = millis();           // reset this variable
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();

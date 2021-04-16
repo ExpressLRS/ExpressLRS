@@ -457,7 +457,7 @@ void HandleUpdateParameter()
       webUpdateMode = true;
       Serial.println("Wifi Update Mode Requested!");
       sendLuaParams();
-      delay(500);
+      sendLuaParams();
       BeginWebUpdate();
 #else
       webUpdateMode = false;
@@ -664,10 +664,9 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
-  crsf.Begin();
   hwTimer.init();
-  hwTimer.resume();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  crsf.Begin();
 }
 
 void loop()
