@@ -273,14 +273,8 @@ static inline uint32_t GetInitialFreq()
     return FHSSfreqs[0] - FreqCorrection;
 }
 
-static inline uint32_t FHSSgetCurrFreq()
-{
-    return FHSSfreqs[FHSSsequence[FHSSptr]] - FreqCorrection;
-}
-
 static inline uint32_t FHSSgetNextFreq()
 {
-    FHSSptr++;
-    return FHSSgetCurrFreq();
+    return FHSSfreqs[FHSSsequence[FHSSptr++]] - FreqCorrection;
 }
 
