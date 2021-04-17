@@ -23,7 +23,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #include "SX1280Driver.h"
 extern SX1280Driver Radio;
 
-#ifdef USE_2400GHZ_25HZ
+#ifdef USE_2400MHZ_25HZ
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
     {1, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
