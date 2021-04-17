@@ -336,9 +336,19 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
 }
 
 // 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle
+// The calculation is a bit non-linear all the way to the endpoints due to where
+// Ardupilot defines its modes
 static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t val)
 {
-    return (val == 7) ? CRSF_CHANNEL_VALUE_MID : N_to_CRSF(val, 5);
+  switch (val)
+  {
+  case 0: return 188;
+  case 5: return 1795;
+  case 6: // fallthrough
+  case 7: return CRSF_CHANNEL_VALUE_MID;
+  default: // (val - 1) * 240 + 630; aka 150us spacing, starting at 1275
+    return val * 240 + 391;
+  }
 }
 
 // Returns 1 if val is greater than CRSF_CHANNEL_VALUE_MID
