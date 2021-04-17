@@ -28,9 +28,11 @@
 #define CRSF_OPENTX_FAST_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
 #define CRSF_NUM_CHANNELS 16
-#define CRSF_CHANNEL_VALUE_MIN 172
-#define CRSF_CHANNEL_VALUE_MID 992
-#define CRSF_CHANNEL_VALUE_MAX 1811
+#define CRSF_CHANNEL_VALUE_MIN  172
+#define CRSF_CHANNEL_VALUE_1000 191
+#define CRSF_CHANNEL_VALUE_MID  992
+#define CRSF_CHANNEL_VALUE_2000 1792
+#define CRSF_CHANNEL_VALUE_MAX  1811
 #define CRSF_CHANNEL_VALUE_SPAN (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN)
 #define CRSF_MAX_PACKET_LEN 64
 
@@ -325,7 +327,7 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
 // Convert 0-max to the CRSF values for 1000-2000
 static inline uint16_t ICACHE_RAM_ATTR N_to_CRSF(uint16_t val, uint16_t max)
 {
-   return val * (1795-188) / max + 188;
+   return val * (CRSF_CHANNEL_VALUE_2000-CRSF_CHANNEL_VALUE_1000) / max + CRSF_CHANNEL_VALUE_1000;
 }
 
 // Convert CRSF (172-1811) to 0-(cnt-1)
@@ -342,8 +344,8 @@ static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t val)
 {
   switch (val)
   {
-  case 0: return 188;
-  case 5: return 1795;
+  case 0: return CRSF_CHANNEL_VALUE_1000;
+  case 5: return CRSF_CHANNEL_VALUE_2000;
   case 6: // fallthrough
   case 7: return CRSF_CHANNEL_VALUE_MID;
   default: // (val - 1) * 240 + 630; aka 150us spacing, starting at 1275
@@ -360,7 +362,7 @@ static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t val)
 // Convert a bit into either the CRSF value for 1000 or 2000
 static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t val)
 {
-    return (val) ? 1795 : 188;
+    return (val) ? CRSF_CHANNEL_VALUE_2000 : CRSF_CHANNEL_VALUE_1000;
 }
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
