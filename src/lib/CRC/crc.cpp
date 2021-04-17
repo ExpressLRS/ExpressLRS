@@ -40,7 +40,7 @@ GENERIC_CRC13::GENERIC_CRC13(uint16_t poly)
     uint16_t crc;
     for (uint16_t i = 0; i < crclen; i++)
     {
-        crc = i << 8;
+        crc = i << (13 - 8);
         for (uint8_t j = 0; j < 8; j++)
         {
             crc = (crc << 1) ^ ((crc & 0x1000) ? poly : 0);
