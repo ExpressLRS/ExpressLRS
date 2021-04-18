@@ -71,9 +71,14 @@ def process_flags(path):
         return
     parse_flags(path)
     # Handle any negated flags i.e. !-Dxxxx remove -Dxxxx from flags
-    for line in build_flags:
+    for idx, line in enumerate(build_flags):
         if line.startswith('!-D'):
-            build_flags = [x for x in build_flags if (x != line and x != line[1:])]
+            build_flags[idx] = '' # clear this remover from the list
+            define = line[1:]
+            for innerIdx, test in enumerate(build_flags):
+                if test == define:
+                    build_flags[innerIdx] = '' # clear the actual item from the list
+    build_flags[:] = [x for x in build_flags if x] # remove all our cleared entries
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
@@ -84,7 +89,6 @@ ExLRS_Repo = Repo(git_root)
 sha = ExLRS_Repo.head.object.hexsha
 build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
 
-env['BUILD_FLAGS'] = build_flags
 print("build flags: %s" % env['BUILD_FLAGS'])
 
 if not fnmatch.filter(env['BUILD_FLAGS'], '*-DRegulatory_Domain*'):
