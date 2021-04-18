@@ -41,13 +41,14 @@ void test_crc13_implementation_compatibility(void)
 // This test will fail as 6 bits is over our HD fro CRC13
 void test_crc13_flip6(void)
 {
+    GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
+
     for (int x=0 ; x<1000 ; x++) {
         uint8_t bytes[7];
         for (int i = 0; i < sizeof(bytes); i++)
             bytes[i] = random() % 255;
         bytes[0] &= 0b11;
 
-        GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
         uint16_t c = ccrc.calc(bytes, 7, 0);
 
         // Flip 5 random bits
@@ -56,9 +57,7 @@ void test_crc13_flip6(void)
             bytes[pos/8] ^= 1 << (pos % 8);
         }
 
-        GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
-        uint16_t e = ecrc.calc(bytes, 7, 0);
-
+        uint16_t e = ccrc.calc(bytes, 7, 0);
         TEST_ASSERT_NOT_EQUAL_MESSAGE(c, e, genMsg(bytes, sizeof(bytes)));
 
         // Flip all the bits one after the other
@@ -69,9 +68,7 @@ void test_crc13_flip6(void)
                 pos += 6;
             bytes[pos / 8] ^= 1 << (pos % 8);
 
-            GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
-            uint16_t e = ecrc.calc(bytes, 7, 0);
-
+            uint16_t e = ccrc.calc(bytes, 7, 0);
             if (c == e)
             {
                 fprintf(stderr, "False +ve %s\n", genMsg(bytes, sizeof(bytes)));
@@ -85,6 +82,8 @@ void test_crc13_flip6(void)
 
 void test_crc13_flip5(void)
 {
+    GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
+
     for (int x = 0; x < NUM_ITERATIONS; x++)
     {
         uint8_t bytes[7];
@@ -92,7 +91,6 @@ void test_crc13_flip5(void)
             bytes[i] = random() % 255;
         bytes[0] &= 0b11;
 
-        GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
         uint16_t c = ccrc.calc(bytes, 7, 0);
 
         // Flip 4 random bits
@@ -113,9 +111,7 @@ void test_crc13_flip5(void)
                 pos += 6;
             bytes[pos / 8] ^= 1 << (pos % 8);
 
-            GENERIC_CRC13 ecrc = GENERIC_CRC13(0x1d2f);
-            uint16_t e = ecrc.calc(bytes, 7, 0);
-
+            uint16_t e = ccrc.calc(bytes, 7, 0);
             if (c == e)
             {
                 fprintf(stderr, "False +ve %s\n", genMsg(bytes, sizeof(bytes)));
