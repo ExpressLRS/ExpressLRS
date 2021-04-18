@@ -2,6 +2,13 @@
 #include <unity.h>
 #include "ucrc_t.h"
 #include <crc.h>
+#include "common.h"
+
+#ifdef BIG_TEST
+#define NUM_ITERATIONS 1000000
+#else
+#define NUM_ITERATIONS 1000
+#endif
 
 static char *genMsg(uint8_t bytes[], int len) {
     static char buf[80];
@@ -15,16 +22,17 @@ static char *genMsg(uint8_t bytes[], int len) {
     return buf;
 }
 
-void test_crc13(void)
+void test_crc13_implementation_compatibility(void)
 {
     uint8_t bytes[7];
     for (int i = 0; i < sizeof(bytes); i++)
         bytes[i] = random() % 255;
+    bytes[0] &= 0b11;
 
-    uCRC_t ccrc = uCRC_t("CRC13", 13, 0x3d2f, 0, false, false, 0);
+    uCRC_t ccrc = uCRC_t("CRC13", 13, ELRS_CRC13_POLY, 0, false, false, 0);
     uint64_t crc = ccrc.get_raw_crc(bytes, 7, 0);
 
-    GENERIC_CRC13 ecrc = GENERIC_CRC13(0x1d2f);
+    GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
     uint16_t c = ecrc.calc(bytes, 7, 0);
 
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0x1FFF), c, genMsg(bytes, sizeof(bytes)));
@@ -37,8 +45,9 @@ void test_crc13_flip6(void)
         uint8_t bytes[7];
         for (int i = 0; i < sizeof(bytes); i++)
             bytes[i] = random() % 255;
+        bytes[0] &= 0b11;
 
-        GENERIC_CRC13 ccrc = GENERIC_CRC13(0x1d2f);
+        GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
         uint16_t c = ccrc.calc(bytes, 7, 0);
 
         // Flip 5 random bits
@@ -47,17 +56,20 @@ void test_crc13_flip6(void)
             bytes[pos/8] ^= 1 << (pos % 8);
         }
 
-        GENERIC_CRC13 ecrc = GENERIC_CRC13(0x1d2f);
+        GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
         uint16_t e = ecrc.calc(bytes, 7, 0);
 
         TEST_ASSERT_NOT_EQUAL_MESSAGE(c, e, genMsg(bytes, sizeof(bytes)));
 
         // Flip all the bits one after the other
-        for (int i=0 ; i<52 ; i++) {
+        for (int i=0 ; i<50 ; i++) {
             // flip bit i and test
-            bytes[i / 8] ^= 1 << (i % 8);
+            int pos = i;
+            if (pos > 1)
+                pos += 6;
+            bytes[pos / 8] ^= 1 << (pos % 8);
 
-            GENERIC_CRC13 ecrc = GENERIC_CRC13(0x1d2f);
+            GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
             uint16_t e = ecrc.calc(bytes, 7, 0);
 
             if (c == e)
@@ -66,34 +78,40 @@ void test_crc13_flip6(void)
             }
 
             // flip bit i back again
-            bytes[i / 8] ^= 1 << (i % 8);
+            bytes[pos / 8] ^= 1 << (pos % 8);
         }
     }
 }
 
 void test_crc13_flip5(void)
 {
-    for (int x = 0; x < 1000000; x++)
+    for (int x = 0; x < NUM_ITERATIONS; x++)
     {
         uint8_t bytes[7];
         for (int i = 0; i < sizeof(bytes); i++)
             bytes[i] = random() % 255;
+        bytes[0] &= 0b11;
 
-        GENERIC_CRC13 ccrc = GENERIC_CRC13(0x1d2f);
+        GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
         uint16_t c = ccrc.calc(bytes, 7, 0);
 
         // Flip 4 random bits
         for (int i = 0; i < 4; i++)
         {
-            int pos = random() % 52;
+            int pos = random() % 50;
+            if (pos > 1) 
+                pos += 6;
             bytes[pos / 8] ^= 1 << (pos % 8);
         }
 
         // Flip all the bits one after the other
-        for (int i = 0; i < 52; i++)
+        for (int i = 0; i < 50; i++)
         {
             // flip bit i and test
-            bytes[i / 8] ^= 1 << (i % 8);
+            int pos = i;
+            if (pos > 1)
+                pos += 6;
+            bytes[pos / 8] ^= 1 << (pos % 8);
 
             GENERIC_CRC13 ecrc = GENERIC_CRC13(0x1d2f);
             uint16_t e = ecrc.calc(bytes, 7, 0);
@@ -104,7 +122,7 @@ void test_crc13_flip5(void)
             }
 
             // flip bit i back again
-            bytes[i / 8] ^= 1 << (i % 8);
+            bytes[pos / 8] ^= 1 << (pos % 8);
         }
     }
 }
@@ -116,10 +134,10 @@ void test_crc8(void)
     for (int i = 0; i < sizeof(bytes); i++)
         bytes[i] = random() % 255;
 
-    uCRC_t ccrc = uCRC_t("CRC8", 8, 0x107, 0, false, false, 0);
+    uCRC_t ccrc = uCRC_t("CRC8", 8, ELRS_CRC_POLY, 0, false, false, 0);
     uint64_t crc = ccrc.get_raw_crc(bytes, 7, 0);
 
-    GENERIC_CRC8 ecrc = GENERIC_CRC8(0x07);
+    GENERIC_CRC8 ecrc = GENERIC_CRC8(ELRS_CRC_POLY);
     uint16_t c = ecrc.calc(bytes, 7);
 
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0xFF), c, genMsg(bytes, sizeof(bytes)));
@@ -130,7 +148,7 @@ int main(int argc, char **argv)
     srandom(micros());
 
     UNITY_BEGIN();
-    RUN_TEST(test_crc13);
+    RUN_TEST(test_crc13_implementation_compatibility);
     RUN_TEST(test_crc13_flip5);
     RUN_TEST(test_crc8);
     UNITY_END();

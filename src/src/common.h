@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef UNIT_TEST
+
 #include "FHSS.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -9,6 +11,8 @@
 #if defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
 #endif
+
+#endif // UNIT_TEST
 
 extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
@@ -80,6 +84,8 @@ typedef struct expresslrs_rf_pref_params_s
 
 } expresslrs_rf_pref_params_s;
 
+#ifndef UNIT_TEST
+
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
@@ -118,6 +124,7 @@ typedef struct expresslrs_mod_settings_s
 
 #endif
 
+
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index);
 
@@ -131,6 +138,7 @@ extern uint8_t ExpressLRS_nextAirRateIndex;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
+#endif // UNIT_TEST
 
 #define AUX1 5
 #define AUX2 6
