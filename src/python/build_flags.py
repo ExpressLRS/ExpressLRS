@@ -64,7 +64,13 @@ def parse_flags(path):
     except IOError:
         print("File '%s' does not exist" % path)
 
-parse_flags("user_defines.txt")
+developer_defines_filename = "developer_defines.txt"
+user_defines_filename = "user_defines.txt"
+if os.path.isfile(developer_defines_filename):
+    configuration_filename = developer_defines_filename
+else:
+    configuration_filename = user_defines_filename
+parse_flags(configuration_filename)
 
 print("build flags: %s" % env['BUILD_FLAGS'])
 

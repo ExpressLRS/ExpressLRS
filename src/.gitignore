@@ -7,3 +7,4 @@
 python/__pycache__/
 *.pyc
 user_defines.txt
+developer_defines.txt
