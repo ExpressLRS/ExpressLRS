@@ -135,7 +135,8 @@ private:
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
-    static uint8_t MspRequestsInTransit;
+    static volatile uint8_t MspRequestsInTransit;
+    static uint32_t LastMspRequestSent;
 #ifdef PLATFORM_ESP32
     static void ESP32uartTask(void *pvParameters);
     static void ESP32syncPacketTask(void *pvParameters);

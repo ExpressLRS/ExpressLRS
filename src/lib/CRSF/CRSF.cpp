@@ -89,7 +89,8 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
-uint8_t CRSF::MspRequestsInTransit = 0;
+volatile uint8_t CRSF::MspRequestsInTransit = 0;
+uint32_t CRSF::LastMspRequestSent = 0;
 #endif // CRSF_TX_MODULE
 
 
@@ -289,6 +290,11 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
+    if (data[2] == CRSF_FRAMETYPE_MSP_RESP)
+    {
+        MspRequestsInTransit--;
+    }
+
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
     {
         Serial.print("too large");
@@ -464,11 +470,6 @@ void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
 
 void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
 {
-    if (MspData[2] == CRSF_FRAMETYPE_MSP_REQ)
-    {
-        MspRequestsInTransit--;
-    }
-
     // current msp message is sent so restore next buffered write
     if (MspWriteFIFO.peek() > 0)
     {
@@ -520,31 +521,48 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
 
 void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
 {
-    bool WillBeSent = false;
-    // store next msp message (only store one CRSF_FRAMETYPE_MSP_REQ)
-    if (MspDataLength == 0 && length < ELRS_MSP_BUFFER)
+    uint32_t now = millis();
+    if (length > ELRS_MSP_BUFFER)
+    {
+        return;
+    }
+
+    // only store one CRSF_FRAMETYPE_MSP_REQ
+    if ((MspRequestsInTransit > 0 && data[2] == CRSF_FRAMETYPE_MSP_REQ))
+    {
+        if (LastMspRequestSent + ELRS_MSP_REQ_TIMEOUT_MS < now)
+        {
+            MspRequestsInTransit = 0;
+        }
+        else
+        {
+            return;
+        }
+    }
+
+    // store next msp message
+    if (MspDataLength == 0)
     {
         for (uint8_t i = 0; i < length; i++)
         {
             MspData[i] = data[i];
         }
         MspDataLength = length;
-        WillBeSent = true;
     }
     // store all write requests since an update does send multiple writes
-    else if ((data[2] == CRSF_FRAMETYPE_MSP_WRITE || MspRequestsInTransit == 0) && length < ELRS_MSP_BUFFER)
+    else
     {
         MspWriteFIFO.push(length);
         for (uint8_t i = 0; i < length; i++)
         {
             MspWriteFIFO.push(data[i]);
         }
-        WillBeSent = true;
     }
 
-    if (WillBeSent && data[2] == CRSF_FRAMETYPE_MSP_REQ)
+    if (data[2] == CRSF_FRAMETYPE_MSP_REQ)
     {
         MspRequestsInTransit++;
+        LastMspRequestSent = now;
     }
 }
 
