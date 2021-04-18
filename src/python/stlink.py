@@ -65,11 +65,14 @@ def on_upload(source, target, env):
 
     BL_CMD, APP_CMD = get_commands(env, firmware_path)
 
+    retval = 0
     # flash bootloader
     if BL_CMD:
         print("Cmd: {}".format(BL_CMD))
-        env.Execute(BL_CMD)
+        retval = env.Execute(BL_CMD)
     # flash application
-    if APP_CMD:
+    if retval == 0 and APP_CMD:
         print("Cmd: {}".format(APP_CMD))
-        env.Execute(APP_CMD)
+        retval = env.Execute(APP_CMD)
+    return retval
+
