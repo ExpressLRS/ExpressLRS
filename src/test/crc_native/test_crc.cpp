@@ -5,7 +5,7 @@
 #include "common.h"
 
 #ifdef BIG_TEST
-#define NUM_ITERATIONS 1000000
+#define NUM_ITERATIONS 10000000
 #else
 #define NUM_ITERATIONS 1000
 #endif
@@ -38,12 +38,12 @@ void test_crc13_implementation_compatibility(void)
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0x1FFF), c, genMsg(bytes, sizeof(bytes)));
 }
 
-// This test will fail as 6 bits is over our HD fro CRC13
-void test_crc13_flip6(void)
+void test_crc13_flip_n(int flip)
 {
+    int false_positive = 0;
     GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
 
-    for (int x=0 ; x<1000 ; x++) {
+    for (int x=0 ; x<NUM_ITERATIONS ; x++) {
         uint8_t bytes[7];
         for (int i = 0; i < sizeof(bytes); i++)
             bytes[i] = random() % 255;
@@ -51,33 +51,22 @@ void test_crc13_flip6(void)
 
         uint16_t c = ccrc.calc(bytes, 7, 0);
 
-        // Flip 5 random bits
-        for (int i=0 ; i<5 ; i++) {
-            int pos = random() % 52;
-            bytes[pos/8] ^= 1 << (pos % 8);
-        }
-
-        uint16_t e = ccrc.calc(bytes, 7, 0);
-        TEST_ASSERT_NOT_EQUAL_MESSAGE(c, e, genMsg(bytes, sizeof(bytes)));
-
-        // Flip all the bits one after the other
-        for (int i=0 ; i<50 ; i++) {
-            // flip bit i and test
-            int pos = i;
+        // Flip 'flip' random bits
+        for (int i=0 ; i<flip ; i++) {
+            int pos = random() % 50;
             if (pos > 1)
                 pos += 6;
             bytes[pos / 8] ^= 1 << (pos % 8);
+        }
 
-            uint16_t e = ccrc.calc(bytes, 7, 0);
-            if (c == e)
-            {
-                fprintf(stderr, "False +ve %s\n", genMsg(bytes, sizeof(bytes)));
-            }
-
-            // flip bit i back again
-            bytes[pos / 8] ^= 1 << (pos % 8);
+        uint16_t e = ccrc.calc(bytes, 7, 0);
+        if (c == e)
+        {
+            //fprintf(stderr, "False +ve %s\n", genMsg(bytes, sizeof(bytes)));
+            false_positive++;
         }
     }
+    printf("%d out of %d false positives, %f%%\n", false_positive, NUM_ITERATIONS, false_positive*100.0/NUM_ITERATIONS);
 }
 
 void test_crc13_flip5(void)
@@ -139,6 +128,21 @@ void test_crc8(void)
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0xFF), c, genMsg(bytes, sizeof(bytes)));
 }
 
+void test_crc13_flip_6()
+{
+    test_crc13_flip_n(6);
+}
+
+void test_crc13_flip_8()
+{
+    test_crc13_flip_n(8);
+}
+
+void test_crc13_flip_10()
+{
+    test_crc13_flip_n(10);
+}
+
 int main(int argc, char **argv)
 {
     srandom(micros());
@@ -147,6 +151,9 @@ int main(int argc, char **argv)
     RUN_TEST(test_crc13_implementation_compatibility);
     RUN_TEST(test_crc13_flip5);
     RUN_TEST(test_crc8);
+    RUN_TEST(test_crc13_flip_6);
+    RUN_TEST(test_crc13_flip_8);
+    RUN_TEST(test_crc13_flip_10);
     UNITY_END();
 
     return 0;
