@@ -8,10 +8,13 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = 0x20000000 + RAM_SIZE;    /* end of RAM */
+_estack = 0x20000000 + RAM_SIZE - 0x80;
+/* Reserve some RAM to exchange data for bootloader */
+_bootloader_data = 0x20000000 + RAM_SIZE - 0x7C;
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x800;     /* required amount of stack */
+_Min_Heap_Size = 0x200;   /* required amount of heap  */
+_Min_Stack_Size = 0x800;  /* required amount of stack */
+_Min_BL_Size = 0x80;      /* required amount of bootloader data */
 
 /* Specify the memory areas */
 MEMORY
@@ -124,6 +127,7 @@ SECTIONS
     PROVIDE ( _end = . );
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
+    . = . + _Min_BL_Size;
     . = ALIGN(8);
   } >RAM
 

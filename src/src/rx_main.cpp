@@ -507,7 +507,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool tlmSent = false;
     bool didFHSS = false;
 
-    if (currentlyProcessing == false) // stop race condition 
+    if (currentlyProcessing == false) // stop race condition
     {
         updateDiversity();
         didFHSS = HandleFHSS();
@@ -1301,12 +1301,16 @@ void reset_into_bootloader(void)
     Serial.println("Jumping to Bootloader...");
     delay(100);
 
-#if BOOTLOADER_DATA_EXCHANGE_ENABLED
+    /** Write command for firmware update.
+     *
+     * Bootloader checks this memory area (if newer enough) and
+     * perpare itself for fw update. Otherwise it skips the check
+     * and starts ELRS firmware immediately
+     */
     extern __IO uint32_t _bootloader_data;
     volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
     blinfo->key = 0x454c5253; // ELRS
     blinfo->reset_type = 0xACDC;
-#endif /* BOOTLOADER_DATA_EXCHANGE_ENABLED */
 
     HAL_NVIC_SystemReset();
 #endif /* PLATFORM_STM32 */
