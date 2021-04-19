@@ -25,10 +25,10 @@ extern SX1280Driver Radio;
 
 #ifdef USE_500HZ
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_4_5, 2000, TLM_RATIO_1_128, 4, 12},
+    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_LI_4_6, 2000, TLM_RATIO_1_128, 4, 12},
     {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
     {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
-    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 4, 12}};
+    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 4, 12}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_500HZ, -105, 4380, 3500, 1000, 2000, 5000},
@@ -39,8 +39,8 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
     {1, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
-    {2, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_4_5, 20000, TLM_RATIO_NO_TLM, 4, 12},
-    {3, RATE_25HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF10, SX1280_LORA_CR_4_5, 40000, TLM_RATIO_NO_TLM, 4, 12}};
+    {2, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 4, 12},
+    {3, RATE_25HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF10, SX1280_LORA_CR_LI_4_6, 40000, TLM_RATIO_NO_TLM, 4, 12}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
@@ -128,8 +128,7 @@ uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 #endif
 uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
-uint8_t CRCCaesarCipher = UID[4];
-uint8_t DeviceAddr = UID[5] & 0b111111; // temporarily based on mac until listen before assigning method merged
+uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
@@ -164,5 +163,21 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
         break;
     default:
         return 0;
+    }
+}
+
+uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
+{
+    switch(eRate)
+    {
+    case RATE_500HZ: return 500;
+    case RATE_250HZ: return 250;
+    case RATE_200HZ: return 200;
+    case RATE_150HZ: return 150;
+    case RATE_100HZ: return 100;
+    case RATE_50HZ: return 50;
+    case RATE_25HZ: return 25;
+    case RATE_4HZ: return 4;
+    default: return 1;
     }
 }

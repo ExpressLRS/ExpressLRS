@@ -5,28 +5,13 @@ import subprocess
 import hashlib
 import fnmatch
 import time
+import re
 import melodyparser
 
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-try:
-    from git import Repo
-except ImportError:
-    sys.stdout.write("Installing GitPython")
-    install("GitPython")
-    from git import Repo
-
 build_flags = env['BUILD_FLAGS']
-
-try:
-    from git import Repo
-except ImportError:
-    env.Execute("$PYTHONEXE -m pip install GitPython")
-    from git import Repo
-
-build_flags = env['BUILD_FLAGS']
-
 UIDbytes = ""
 define = ""
 
@@ -63,20 +48,49 @@ def parse_flags(path):
     except IOError:
         print("File '%s' does not exist" % path)
 
+def get_git_sha():
+    # Don't try to pull the git revision when doing tests, as 
+    # `pio remote test` doesn't copy the entire repository, just the files
+    if env['PIOPLATFORM'] == "native":
+        return "0x00,0x11,0x22,0x33,0x44,0x55"
+
+    try:
+        from git import Repo
+    except ImportError:
+        sys.stdout.write("Installing GitPython")
+        install("GitPython")
+        from git import Repo
+
+    try:
+        from git import Repo
+    except ImportError:
+        env.Execute("$PYTHONEXE -m pip install GitPython")
+        from git import Repo
+
+    git_repo = Repo(os.getcwd(), search_parent_directories=True)
+    git_root = git_repo.git.rev_parse("--show-toplevel")
+    ExLRS_Repo = Repo(git_root)
+    sha = ExLRS_Repo.head.object.hexsha
+    return "0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5]
+
 parse_flags("user_defines.txt")
 
-git_repo = Repo(os.getcwd(), search_parent_directories=True)
-git_root = git_repo.git.rev_parse("--show-toplevel")
-ExLRS_Repo = Repo(git_root)
-sha = ExLRS_Repo.head.object.hexsha
-build_flags.append("-DLATEST_COMMIT=0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5])
+# Handle any negated flags i.e. !-Dxxxx remove -Dxxxx from flags
+for line in build_flags:
+    for flag in re.findall("!-D\s*[^\s]+", line):
+        build_flags = [x.replace(flag[1:],"") for x in build_flags]
+build_flags = [x.replace("!", "") for x in build_flags]
+
+build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
+
+env['BUILD_FLAGS'] = build_flags
 
 print("build flags: %s" % env['BUILD_FLAGS'])
 
-if not fnmatch.filter(env['BUILD_FLAGS'], '-DRegulatory_Domain*'):
+if not fnmatch.filter(env['BUILD_FLAGS'], '*-DRegulatory_Domain*'):
     print_error('Please define a Regulatory_Domain in user_defines.txt')
 
-if '-DENABLE_TELEMETRY' in env['BUILD_FLAGS'] and '-DHYBRID_SWITCHES_8' not in env['BUILD_FLAGS']:
+if fnmatch.filter(env['BUILD_FLAGS'], '*-DENABLE_TELEMETRY*') and not fnmatch.filter(env['BUILD_FLAGS'], '*-DHYBRID_SWITCHES_8*'):
     print_error('Telemetry requires HYBRID_SWITCHES_8')
 
 if fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP32*'):

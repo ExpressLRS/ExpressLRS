@@ -269,9 +269,9 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   //hal.TXRXdisable();
   instance->IRQneedsClear = true;
-  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   instance->ClearIRQFlags();
-  instance->TXdoneMicros = micros();
+  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
+  //instance->TXdoneMicros = micros();
   TXdoneCallback();
 }
 
@@ -282,14 +282,13 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   //   Serial.println("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
-  instance->SetMode(SX127x_OPMODE_STANDBY);
-
-  hal.TXenable();
-  instance->TXstartMicros = micros();
-  instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
-
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
+  hal.TXenable();
+
+  //instance->TXstartMicros = micros();
+  //instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
@@ -317,9 +316,9 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   Serial.println("abort RX");
   //   return; // we were already TXing so abort
   // }
-  instance->SetMode(SX127x_OPMODE_STANDBY);
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);

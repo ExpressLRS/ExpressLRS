@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 #include "LowPassFilter.h"
 
@@ -64,7 +63,7 @@ uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 PFD PFDloop; 
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
+GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
@@ -91,12 +90,17 @@ CRSF crsf(CRSF_TX_SERIAL);
 #endif
 
 #ifdef ENABLE_TELEMETRY
-StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+    StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+    static uint8_t telemetryBurstCount;
+    static uint8_t telemetryBurstMax;
+    // Maximum ms between LINK_STATISTICS packets for determining burst max
+    #define TELEM_MIN_LINK_INTERVAL 512U
 #endif
 
 
 
-uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static bool telemBurstValid;
 /// Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetSlow(3);
@@ -108,7 +112,7 @@ LPF LPF_UplinkRSSI1(5);
 
 
 /// LQ Calculation //////////
-LQCALC LQCALC;
+LQCALC<100> LQCalc;
 uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
@@ -221,11 +225,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
         expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
+        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
         hwTimer.updateInterval(ModParams->interval);
 
         ExpressLRS_currAirRate_Modparams = ModParams;
         ExpressLRS_currAirRate_RFperfParams = RFperf;
+        telemBurstValid = false;
     }
 }
 
@@ -256,7 +261,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t *data;
     uint8_t maxLength;
     uint8_t packageIndex;
-    static uint8_t telemetryDataCount = 0;
     #endif
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
 
@@ -266,7 +270,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     alreadyTLMresp = true;
-    Radio.TXdataBuffer[0] = (DeviceAddr << 2) + 0b11; // address + tlm packet
+    Radio.TXdataBuffer[0] = 0b11; // tlm packet
 
     switch (NextTelemetryType)
     {
@@ -289,14 +293,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             break;
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
-            if (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_1_16 && telemetryDataCount < 2)
+            if (telemetryBurstCount < telemetryBurstMax)
             {
-                telemetryDataCount++;
+                telemetryBurstCount++;
             }
             else
             {
                 NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-                telemetryDataCount = 0;
+                telemetryBurstCount = 0;
             }
 
             TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
@@ -310,8 +314,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-    Radio.TXdataBuffer[7] = crc;
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
+    Radio.TXdataBuffer[7] = crc & 0xFF;
+
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return true;
 }
@@ -323,7 +329,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection < FreqCorrectionMax)
         {
-            FreqCorrection += 61; //min freq step is ~ 61hz
+            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
         }
         else
         {
@@ -338,7 +344,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection > FreqCorrectionMin)
         {
-            FreqCorrection -= 61; //min freq step is ~ 61hz
+            FreqCorrection -= 1; //min freq step is ~ 61hz
         }
         else
         {
@@ -411,8 +417,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     updatePhaseLock();
     NonceRX++;
     alreadyFHSS = false;
-    uplinkLQ = LQCALC.getLQ();
-    LQCALC.inc();
+    alreadyTLMresp = false;
+    uplinkLQ = LQCalc.getLQ();
+    LQCalc.inc();
     crsf.RXhandleUARTout();
 }
 
@@ -447,7 +454,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
                 antennaRSSIDropTrigger++;
             }
     // if we didn't get a packet switch the antenna
-    if (((!LQCALC.packetReceivedForPreviousFrame()) && antennaLQDropTrigger == 0)) {
+    if (((!LQCalc.previousIsSet()) && antennaLQDropTrigger == 0)) {
 
         switchAntenna();
         antennaLQDropTrigger = 1;
@@ -479,7 +486,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool tlmSent = false;
     bool didFHSS = false;
 
-    if (currentlyProcessing == false) // stop race condition 
+    if (currentlyProcessing == false) // stop race condition
     {
         updateDiversity();
         didFHSS = HandleFHSS();
@@ -493,10 +500,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        if (connectionState != disconnected)
-        {
-            Radio.RXnb();
-        }
+        Radio.RXnb(); //seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
     }
 }
 
@@ -606,22 +610,13 @@ void GotConnection()
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-    uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-    uint8_t inCRC = Radio.RXdataBuffer[7];
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
 
-#ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
-#else
-    uint8_t SwitchEncModeExpected = 0b00;
-#endif
-    uint8_t SwitchEncMode;
-    uint8_t indexIN;
-    uint8_t TLMrateIn;
-    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
-    bool telemetryConfirmValue;
-    #endif
+    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+
+    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
+
+    Radio.RXdataBuffer[0] = type;
+    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
     if (inCRC != calculatedCRC)
     {
@@ -637,13 +632,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    if (packetAddr != DeviceAddr)
-    {
-        #ifndef DEBUG_SUPPRESS
-        Serial.println("Wrong device address on RF packet");
-        #endif
-        return;
-    }
+#ifdef HYBRID_SWITCHES_8
+    uint8_t SwitchEncModeExpected = 0b01;
+#else
+    uint8_t SwitchEncModeExpected = 0b00;
+#endif
+    uint8_t SwitchEncMode;
+    uint8_t indexIN;
+    uint8_t TLMrateIn;
+    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
+    bool telemetryConfirmValue;
+    #endif
 
     currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
@@ -710,6 +709,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  Serial.println(TLMrateIn);
 #endif
                  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
+                 telemBurstValid = false;
              }
 
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
@@ -717,7 +717,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection();
-                 return;
              }
          }
          break;
@@ -726,12 +725,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    HandleFHSS();
+    bool didFHSS = HandleFHSS();
     HandleSendTelemetryResponse();
-    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+    LQCalc.add(); // Received a packet, that's the definition of LQ
 
 #if !defined(Regulatory_Domain_ISM_2400)
-    if (alreadyFHSS == false)
+    if (didFHSS == false)
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
@@ -783,7 +782,7 @@ void sampleButton()
 #endif
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void inline RXdoneISR()
 {
     ProcessRFPacket();
     //Serial.println("r");
@@ -791,9 +790,8 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-    alreadyTLMresp = false;
-    LQCALC.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
     Radio.RXnb();
+    LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 }
 
 static void setupSerial()
@@ -829,6 +827,11 @@ static void setupSerial()
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
+
+#if defined(PLATFORM_ESP8266)
+    Serial.begin(CRSF_RX_BAUDRATE);
+#endif
+
 }
 
 static void setupConfigAndPocCheck()
@@ -894,9 +897,6 @@ static void setupBindingFromConfig()
             UID[i] = storedUID[i];
         }
 
-        CRCCaesarCipher = UID[4];
-        DeviceAddr = UID[5] & 0b111111;
-
         Serial.print("UID = ");
         Serial.print(UID[0]);
         Serial.print(", ");
@@ -909,6 +909,8 @@ static void setupBindingFromConfig()
         Serial.print(UID[4]);
         Serial.print(", ");
         Serial.println(UID[5]);
+
+        CRCInitializer = (UID[4] << 8) | UID[5];
     }
 #endif
 }
@@ -920,15 +922,35 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+#ifdef PLATFORM_ESP8266
+    if (!init_success)
+    {
+        Serial.println("Failed to detect RF chipset!!!");
+        beginWebsever();
+        while (1)
+        {
+            HandleWebUpdate();
+            if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+            {
+                #ifdef GPIO_PIN_LED
+                digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+                #endif
+                LED = !LED;
+                webUpdateLedFlashIntervalLast = millis();
+            }
+        }
+    }
+#else // target does not have wifi
     while (!init_success)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
         LED = !LED;
-        delay(200);
+        #endif
+        delay(WEB_UPDATE_LED_FLASH_INTERVAL);
         Serial.println("Failed to detect RF chipset!!!");
     }
+#endif
 
     // Set transmit power to maximum
     POWERMGNT P;
@@ -966,6 +988,28 @@ static void ws2812Blink()
 #endif
 }
 
+static void updateTelemetryBurst()
+{
+#if defined(ENABLE_TELEMETRY)
+    if (telemBurstValid)
+        return;
+    telemBurstValid = true;
+
+    uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint32_t ratiodiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    // telemInterval = 1000 / (hz / ratiodiv);
+    // burst = TELEM_MIN_LINK_INTERVAL / telemInterval;
+    // This ^^^ rearranged to preserve precision vvv
+    telemetryBurstMax = TELEM_MIN_LINK_INTERVAL * hz / ratiodiv / 1000U;
+
+    // Reserve one slot for LINK telemetry
+    if (telemetryBurstMax > 1)
+        --telemetryBurstMax;
+    else
+        telemetryBurstMax = 1;
+#endif
+}
+
 void setup()
 {
     setupGpio();
@@ -989,7 +1033,10 @@ void setup()
     wifiOff();
     ws2812Blink();
     setupBindingFromConfig();
-    FHSSrandomiseFHSSsequence();
+
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
+
     setupRadio();
 
     // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
@@ -1008,7 +1055,6 @@ void setup()
     crsf.Begin();
     hwTimer.init();
     hwTimer.stop();
-    LQCALC.init();
 }
 
 void loop()
@@ -1067,10 +1113,13 @@ void loop()
     {
         if ((connectionState == disconnected) && !webUpdateMode)
         {
+            #ifdef FAST_SYNC
+            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+            #endif
             LastSyncPacket = millis();           // reset this variable
             SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
             SendLinkStatstoFCintervalLastSent = millis();
-            LQCALC.reset();
+            LQCalc.reset();
             Serial.println(ExpressLRS_currAirRate_Modparams->interval);
             scanIndex++;
             getRFlinkInfo();
@@ -1215,6 +1264,8 @@ void loop()
         }
         #endif
     }
+
+    updateTelemetryBurst();
 }
 
 struct bootloader {
@@ -1229,12 +1280,16 @@ void reset_into_bootloader(void)
     Serial.println("Jumping to Bootloader...");
     delay(100);
 
-#if BOOTLOADER_DATA_EXCHANGE_ENABLED
+    /** Write command for firmware update.
+     *
+     * Bootloader checks this memory area (if newer enough) and
+     * perpare itself for fw update. Otherwise it skips the check
+     * and starts ELRS firmware immediately
+     */
     extern __IO uint32_t _bootloader_data;
     volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
     blinfo->key = 0x454c5253; // ELRS
     blinfo->reset_type = 0xACDC;
-#endif /* BOOTLOADER_DATA_EXCHANGE_ENABLED */
 
     HAL_NVIC_SystemReset();
 #endif /* PLATFORM_STM32 */
@@ -1259,8 +1314,7 @@ void EnterBindingMode()
     UID[4] = BindingUID[4];
     UID[5] = BindingUID[5];
 
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = 0;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
@@ -1299,8 +1353,7 @@ void OnELRSBindMSP(mspPacket_t *packet)
     UID[3] = packet->readByte();
     UID[4] = packet->readByte();
     UID[5] = packet->readByte();
-    CRCCaesarCipher = UID[4];
-    DeviceAddr = UID[5] & 0b111111;
+    CRCInitializer = (UID[4] << 8) | UID[5];
 
     Serial.print("New UID = ");
     Serial.print(UID[0]);
@@ -1324,7 +1377,8 @@ void OnELRSBindMSP(mspPacket_t *packet)
     // Write the values to eeprom
     config.Commit();
 
-    FHSSrandomiseFHSSsequence();
+    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+    FHSSrandomiseFHSSsequence(macSeed);
 
     disableWebServer = true;
     ExitBindingMode();

@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -65,15 +64,23 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 /// define some libs to use ///
 hwTimer hwTimer;
-GENERIC_CRC8 ota_crc(ELRS_CRC_POLY);
+GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
+void ICACHE_RAM_ATTR timerIdleCallback()
+{
+  NonceTX++;
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    FHSSptr++;
+  }
+};
+void ICACHE_RAM_ATTR TimerCallbackISR();
 
 bool webUpdateMode = false;
 
@@ -88,9 +95,10 @@ uint32_t SyncPacketLastSent = 0;
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
-LQCALC LQCALC;
+LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
+volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
@@ -120,20 +128,14 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  uint8_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7) + CRCCaesarCipher;
-  uint8_t inCRC = Radio.RXdataBuffer[7];
+  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
+  
+  Radio.RXdataBuffer[0] &= 0b11;
+  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+  
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-  uint8_t packetAddr = (Radio.RXdataBuffer[0] & 0b11111100) >> 2;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
   //Serial.println("TLMpacket0");
-
-  if (packetAddr != DeviceAddr)
-  {
-#ifndef DEBUG_SUPPRESS
-    Serial.println("TLM device address error");
-#endif
-    return;
-  }
 
   if ((inCRC != calculatedCRC))
   {
@@ -160,7 +162,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   }
 
   LastTLMpacketRecvMillis = millis();
-  LQCALC.add();
+  LQCalc.add();
 
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
@@ -173,7 +175,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.currPowerAsCrsfPower();
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCALC.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             break;
 
@@ -192,7 +194,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
-  uint8_t PacketHeaderAddr;
 #ifdef HYBRID_SWITCHES_8
   uint8_t SwitchEncMode = 0b01;
 #else
@@ -200,8 +201,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 #endif
   uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
-  PacketHeaderAddr = (DeviceAddr << 2) + SYNC_PACKET;
-  Radio.TXdataBuffer[0] = PacketHeaderAddr;
+  Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
   Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
@@ -216,7 +216,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(DeviceAddr & 0x01));
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
   hwTimer.updateInterval(ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
@@ -274,7 +274,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       if (WaitRXresponse == true)
       {
         WaitRXresponse = false;
-        LQCALC.inc();
+        LQCalc.inc();
         return;
       }
       else
@@ -286,9 +286,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-#if defined(NO_SYNC_ON_ARM) && defined(ARM_CHANNEL)
+#if defined(NO_SYNC_ON_ARM)
   SyncInterval = 250;
-  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[ARM_CHANNEL - 1]);
+  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 #else
   SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;
@@ -306,7 +306,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
     {
-      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket, DeviceAddr);
+      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket);
       MSPPacketLastSent = millis();
       MSPPacketSendCount--;
 
@@ -318,16 +318,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     else
     {
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, DeviceAddr);
+      GenerateChannelData(Radio.TXdataBuffer, &crsf);
       #endif
     }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = ota_crc.calc(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[7] = crc;
+  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
+  Radio.TXdataBuffer[7] = crc & 0xFF;
+
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
 
@@ -453,7 +455,7 @@ void HandleUpdateParameter()
       webUpdateMode = true;
       Serial.println("Wifi Update Mode Requested!");
       sendLuaParams();
-      delay(500);
+      sendLuaParams();
       BeginWebUpdate();
 #else
       webUpdateMode = false;
@@ -483,7 +485,9 @@ void HandleUpdateParameter()
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
-    hwTimer.stop();
+    //while ((micros() - PacketLastSentMicros) < (ExpressLRS_currAirRate_Modparams->interval - 250)); // wait for almost the next timer tick
+    while(busyTransmitting);
+    hwTimer.callbackTock = &timerIdleCallback;
     // Set a flag that will trigger the eeprom commit in the main loop
     // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
     WaitEepromCommit = true;
@@ -493,10 +497,12 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR RXdoneISR()
 {
   ProcessTLMpacket();
+  busyTransmitting = false;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  busyTransmitting = false;
   NonceTX++; // must be done before callback
   HandleFHSS();
   HandleTLM();
@@ -594,12 +600,11 @@ void setup()
 #endif
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-  // Print base mac address
-  // This should be copied to common.h and is used to generate a unique hop sequence, DeviceAddr, and CRC.
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
 #endif // PLATFORM_ESP32
 
-  FHSSrandomiseFHSSsequence();
+  long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+  FHSSrandomiseFHSSsequence(macSeed);
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
@@ -619,6 +624,14 @@ void setup()
   bool init_success = Radio.Begin();
   while (!init_success)
   {
+    #ifdef PLATFORM_ESP32
+    while (1)
+    {
+      BeginWebUpdate();
+      HandleWebUpdate();
+      delay(1);
+    }
+    #endif 
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
@@ -653,11 +666,9 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
-  crsf.Begin();
   hwTimer.init();
-  hwTimer.resume();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
-  LQCALC.init(10);
+  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  crsf.Begin();
 }
 
 void loop()
@@ -691,7 +702,7 @@ void loop()
   HandleUpdateParameter();
 
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
-  if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
+  if (WaitEepromCommit)
   {
     SetRFLinkRate(config.GetRate());
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
@@ -702,12 +713,11 @@ void loop()
     // Write the uncommitted eeprom values
     Serial.println("EEPROM COMMIT");
     config.Commit();
-    // Resume the timer
     sendLuaParams();
-    hwTimer.resume();
+    hwTimer.callbackTock = &TimerCallbackISR; // Resume the timer
   }
 
-  #ifdef FEATURE_OPENTX_SYNC
+#ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
 
@@ -757,8 +767,9 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  SendRCdataToRF();
+  busyTransmitting = true;
   PacketLastSentMicros = micros();
+  SendRCdataToRF();
 }
 
 void OnRFModePacket(mspPacket_t *packet)
@@ -890,8 +901,7 @@ void EnterBindingMode()
   UID[4] = BindingUID[4];
   UID[5] = BindingUID[5];
 
-  CRCCaesarCipher = UID[4];
-  DeviceAddr = UID[5] & 0b111111;
+  CRCInitializer = 0;
 
   InBindingMode = true;
 
@@ -899,7 +909,6 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
   Radio.SetFrequencyReg(GetInitialFreq());
-  POWERMGNT.setPower(PWR_10mW);
 
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
@@ -921,8 +930,7 @@ void ExitBindingMode()
   UID[4] = MasterUID[4];
   UID[5] = MasterUID[5];
 
-  CRCCaesarCipher = UID[4];
-  DeviceAddr = UID[5] & 0b111111;
+  CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = false;
 

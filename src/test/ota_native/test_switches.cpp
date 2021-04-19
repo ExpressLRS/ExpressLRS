@@ -84,10 +84,9 @@ void test_priority(void)
 
 /* Check the hybrid 8 encoding of a packet for OTA tx
 */
-void test_encodingHybrid8()
+void test_encodingHybrid8(bool highResChannel)
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
     uint8_t TXdataBuffer[8];
 
@@ -105,14 +104,17 @@ void test_encodingHybrid8()
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex = 3;
+    if (highResChannel)
+        crsf.nextSwitchIndex = 7;
+    else
+        crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
 
     // check it looks right
-    // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
+    // 1st byte is CRC & packet type
+    uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
@@ -129,19 +131,38 @@ void test_encodingHybrid8()
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
     // byte 6 is the switch encoding
-    // expect switch 0 in bits 5 and 6, index in 2-4 and value in 0,1
+    TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (TXdataBuffer[6] & 0b0100000)>>6);
     // top bit is undefined
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (TXdataBuffer[6] & 0b01100000)>>5);
-    TEST_ASSERT_EQUAL(3, (TXdataBuffer[6] & 0b11100)>>2);
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[3], TXdataBuffer[6] & 0b11);
+    // expect switch 0 in bit 6
+    // index-1 in 3-5
+    // value in 0,1,2[,3]
+    if (highResChannel)
+    {
+        TEST_ASSERT_EQUAL(7, ((TXdataBuffer[6] & 0b110000)>>3) + 1);
+        TEST_ASSERT_EQUAL(crsf.currentSwitches[7], TXdataBuffer[6] & 0b1111);
+    }
+    else
+    {
+        TEST_ASSERT_EQUAL(3, ((TXdataBuffer[6] & 0b111000)>>3) + 1);
+        TEST_ASSERT_EQUAL(crsf.currentSwitches[3], TXdataBuffer[6] & 0b0111);
+    }
+}
+
+void test_encodingHybrid8_3()
+{
+    test_encodingHybrid8(false);
+}
+
+void test_encodingHybrid8_7()
+{
+    test_encodingHybrid8(true);
 }
 
 /* Check the decoding of a packet after rx
 */
-void test_decodingHybrid8()
+void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
@@ -157,12 +178,19 @@ void test_decodingHybrid8()
         crsf.currentSwitches[i] =  i % 3;
         crsf.sentSwitches[i] = i % 3; // make all the sent values match
     }
+    crsf.currentSwitches[forceSwitch] = switchval;
+    crsf.sentSwitches[forceSwitch] = switchval;
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    crsf.nextSwitchIndex = 3;
+    // nextSwitchIndex=0 is invalid, since the previous getNextSwitchIndex()
+    // would have skipped it
+    if (forceSwitch == 0)
+        crsf.nextSwitchIndex = 1;
+    else
+        crsf.nextSwitchIndex = forceSwitch;
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, DeviceAddr, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
@@ -173,10 +201,41 @@ void test_decodingHybrid8()
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(SWITCH2b_to_CRSF(crsf.currentSwitches[0] & 0b11), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
-    TEST_ASSERT_EQUAL(SWITCH2b_to_CRSF(crsf.currentSwitches[3] & 0b11), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(crsf.currentSwitches[0]), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
+    if (forceSwitch == 7)
+        TEST_ASSERT_EQUAL(N_to_CRSF(crsf.currentSwitches[forceSwitch], 15), crsf.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
+    else if (forceSwitch != 0)
+    {
+        uint16_t ch;
+        switch (forceSwitch)
+        {
+        case 1: ch = crsf.PackedRCdataOut.ch5; break;
+        case 2: ch = crsf.PackedRCdataOut.ch6; break;
+        case 3: ch = crsf.PackedRCdataOut.ch7; break;
+        case 4: ch = crsf.PackedRCdataOut.ch8; break;
+        case 5: ch = crsf.PackedRCdataOut.ch9; break;
+        case 6: ch = crsf.PackedRCdataOut.ch10; break;
+        default:
+            TEST_FAIL_MESSAGE("forceSwitch not handled");
+        }
+        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(crsf.currentSwitches[forceSwitch]), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+    }
 }
 
+void test_decodingHybrid8_all()
+{
+    // Switch 0 is 2 pos
+    test_decodingHybrid8(0, 0);
+    test_decodingHybrid8(0, 1);
+    // Switch X in 6-pos mode (includes 3-pos low/high)
+    for (uint8_t val=0; val<6; ++val)
+        test_decodingHybrid8(3, val);
+    // Switch X in 3-pos mode center
+    test_decodingHybrid8(3, 7);
+    // Switch 7 is 16 pos
+    for (uint8_t val=0; val<16; ++val)
+        test_decodingHybrid8(7, val);
+}
 
 // ------------------------------------------------
 // Test the 10bit encoding/decoding
@@ -186,7 +245,6 @@ void test_decodingHybrid8()
 void test_encoding10bit()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t expected;
     uint8_t TXdataBuffer[8];
 
@@ -203,11 +261,11 @@ void test_encoding10bit()
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
+    GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // check it looks right
-    // 1st byte is header & packet type
-    uint8_t header = (DeviceAddr << 2) + RC_DATA_PACKET;
+    // 1st byte is CRC & packet type
+    uint8_t header = RC_DATA_PACKET;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
@@ -236,7 +294,6 @@ void test_encoding10bit()
 void test_decoding10bit()
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t DeviceAddr = UID[5] & 0b111111;
     uint8_t TXdataBuffer[8];
     // uint8_t expected;
 
@@ -253,7 +310,7 @@ void test_decoding10bit()
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &crsf, DeviceAddr);
+    GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelData10bit(TXdataBuffer, &crsf);
@@ -280,8 +337,9 @@ int main(int argc, char **argv)
     RUN_TEST(test_round_robin);
     RUN_TEST(test_priority);
 
-    RUN_TEST(test_encodingHybrid8);
-    RUN_TEST(test_decodingHybrid8);
+    RUN_TEST(test_encodingHybrid8_3);
+    RUN_TEST(test_encodingHybrid8_7);
+    RUN_TEST(test_decodingHybrid8_all);
 
     RUN_TEST(test_encoding10bit);
     RUN_TEST(test_decoding10bit);

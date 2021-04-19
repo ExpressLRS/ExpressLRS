@@ -12,10 +12,10 @@ typedef struct {
     uint16_t volts; // APC2volts*1000
 } dac_lut_s;
 
+dac_lut_s LUT[] =
+{
 #if defined(TARGET_R9M_TX)
 #if defined(Regulatory_Domain_EU_868)
-dac_lut_s LUT[] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 650},
     {25, 14, 12, 860},
     {50, 17, 15, 1000},
@@ -24,10 +24,7 @@ dac_lut_s LUT[] = {
     {500, 27, 25, 1730},
     {1000, 30, 28, 2100},
     {2000, 33, 31, 2600}, // Danger untested at high power
-};
 #else
-dac_lut_s LUT[] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 720},
     {25, 14, 12, 875},
     {50, 17, 15, 1000},
@@ -36,12 +33,10 @@ dac_lut_s LUT[] = {
     {500, 27, 25, 1730},
     {1000, 30, 28, 2100},
     {2000, 33, 31, 2600}, // Danger untested at high power
-};
 #endif
+
 #elif defined(TARGET_NAMIMNORC_TX)
 #if defined(Regulatory_Domain_EU_868)
-dac_lut_s LUT[] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 315},
     {25, 14, 12, 460},
     {50, 17, 15, 595},
@@ -49,10 +44,7 @@ dac_lut_s LUT[] = {
     {250, 24, 22, 1125},
     {500, 27, 25, 1505},
     {1000, 30, 28, 2105},
-};
 #else
-dac_lut_s LUT[] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
     {10, 10, 8, 460},
     {25, 14, 12, 622},
     {50, 17, 15, 765},
@@ -60,11 +52,19 @@ dac_lut_s LUT[] = {
     {250, 24, 22, 1375},
     {500, 27, 25, 1750},
     {1000, 30, 28, 2250},
-};
 #endif
+
 #elif defined(TARGET_TX_ES915TX)
-dac_lut_s LUT[] = {
-    // mw, dB, gain, APC2volts*1000, figures assume 2dBm input
+#if defined(Regulatory_Domain_EU_868)
+    {10, 10, 8, 375}, // 25mW is the minimum even the value is very low
+    {25, 14, 12, 850},
+    {50, 17, 15, 1200},
+    {100, 20, 18, 1400},
+    {250, 24, 22, 1700},
+    {500, 27, 25, 2000},
+    {1000, 30, 28, 2400}, // not tested, use same as 915
+    {2000, 33, 31, 2600}, // not tested, use same as 915
+#else
     {10, 10, 8, 875},
     {25, 14, 12, 1065},
     {50, 17, 15, 1200},
@@ -73,8 +73,9 @@ dac_lut_s LUT[] = {
     {500, 27, 25, 1900},
     {1000, 30, 28, 2400},
     {2000, 33, 31, 2600}, // Danger untested at high power
-};
 #endif
+#endif
+};
 
 #ifndef DAC_REF_VCC
 #define DAC_REF_VCC 3300
