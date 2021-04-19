@@ -318,6 +318,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
       GenerateChannelData(Radio.TXdataBuffer, &crsf);
+      Radio.TXdataBuffer[1] = 0xAA;
+      Radio.TXdataBuffer[2] = 0xAA;
+      Radio.TXdataBuffer[3] = 0xAA;
+      Radio.TXdataBuffer[4] = 0xAA;
+      Radio.TXdataBuffer[5] = 0xAA;
+      Radio.TXdataBuffer[6] = 0xAA;
       #endif
     }
   }

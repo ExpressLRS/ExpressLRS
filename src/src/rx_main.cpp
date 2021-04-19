@@ -633,11 +633,18 @@ void GotConnection()
 #endif
 }
 
+uint32_t flippedBitsArrayFailedCRC[20] = {0};
+uint32_t flippedBitsArrayPassedCRC[20] = {0};
+uint8_t numberOfFlippedBits = 0;
+uint16_t packetCounterForPrinting = 0;
+
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
 
-    if (getParity(Radio.RXdataBuffer, 8))
+    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+
+    if (getParity(Radio.RXdataBuffer, 8) && (type != RC_DATA_PACKET))
     {
         #ifndef DEBUG_SUPPRESS
         Serial.println("Parity error on RF packet");
@@ -645,14 +652,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         return;
     }
 
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111000) ) << 5 ) | Radio.RXdataBuffer[7];
 
     Radio.RXdataBuffer[0] = type;
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
-    if (inCRC != calculatedCRC)
+    uint8_t crcPass = (inCRC == calculatedCRC);
+    if (!crcPass && (type != RC_DATA_PACKET))
     {
         #ifndef DEBUG_SUPPRESS
         Serial.print("CRC error on RF packet: ");
@@ -695,15 +701,49 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        UnpackChannelData(Radio.RXdataBuffer, &crsf);
-        #ifdef ENABLE_TELEMETRY
-        telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
-        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        if (connectionState == connected)
+
+        numberOfFlippedBits = 0;
+
+        for (uint8_t i = 1; i < 7; i++)
         {
-            crsf.sendRCFrameToFC();
+            uint8_t testByte = Radio.RXdataBuffer[i] ^ 0xAA;
+
+            if (testByte)
+            {
+                for (uint8_t j = 0; j < 8; j++)
+                {
+                    if (testByte & 0b1)
+                    {
+                        numberOfFlippedBits++;
+                    }
+                    testByte = testByte >> 1;
+                }
+            }
         }
+
+        if (numberOfFlippedBits < 20)
+        {
+            if (crcPass)
+            {
+                flippedBitsArrayPassedCRC[numberOfFlippedBits] += 1;
+            } else
+            {
+                flippedBitsArrayFailedCRC[numberOfFlippedBits] += 1;
+            }
+            
+        }
+
+        packetCounterForPrinting++;
+
+        // UnpackChannelData(Radio.RXdataBuffer, &crsf);
+        // #ifdef ENABLE_TELEMETRY
+        // telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
+        // TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+        // #endif
+        // if (connectionState == connected)
+        // {
+        //     crsf.sendRCFrameToFC();
+        // }
         break;
 
     case MSP_DATA_PACKET:
@@ -1093,6 +1133,25 @@ void setup()
 
 void loop()
 {
+
+    if (packetCounterForPrinting > 999)
+    {
+        packetCounterForPrinting = 0;
+
+        Serial.println("CRC | Passed | Failed");
+
+        for (uint8_t i = 0; i < 20; i++)
+        {
+            Serial.print(i);
+            Serial.print("   | ");
+            Serial.print(flippedBitsArrayPassedCRC[i]);
+            Serial.print(" | ");
+            Serial.println(flippedBitsArrayFailedCRC[i]);
+        }
+        Serial.println();
+    }
+
+
     #ifdef ENABLE_TELEMETRY
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
