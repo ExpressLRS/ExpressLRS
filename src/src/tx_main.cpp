@@ -64,7 +64,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 /// define some libs to use ///
 hwTimer hwTimer;
-GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
+GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
@@ -119,15 +119,7 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  if (getParity(Radio.RXdataBuffer, 8))
-  {
-      #ifndef DEBUG_SUPPRESS
-      Serial.println("Parity error on RF packet");
-      #endif
-      return;
-  }
-
-  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111000) << 5) | Radio.RXdataBuffer[7];
+  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
   
   Radio.RXdataBuffer[0] &= 0b11;
   uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
@@ -324,13 +316,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
   Radio.TXdataBuffer[7] = crc & 0xFF;
-
-  if (getParity(Radio.TXdataBuffer, 8))
-  {
-    Radio.TXdataBuffer[0] |= 0b00000100;
-  }
 
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }

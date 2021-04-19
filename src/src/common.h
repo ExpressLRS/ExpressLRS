@@ -152,4 +152,4 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83
-#define ELRS_CRC13_POLY 0x1D2F // 0x1E97
+#define ELRS_CRC14_POLY 0x2E57 // 0x372B
