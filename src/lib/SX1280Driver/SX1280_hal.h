@@ -20,7 +20,6 @@ Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 
 #include "SX1280_Regs.h"
 #include "SX1280.h"
-#include <SPI.h>
 
 enum SX1280_InterruptAssignment_
 {

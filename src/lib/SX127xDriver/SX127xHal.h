@@ -2,7 +2,9 @@
 
 #include "targets.h"
 #include "SX127xRegs.h"
+#ifndef UNIT_TEST
 #include <SPI.h>
+#endif
 
 typedef enum
 {

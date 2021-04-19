@@ -129,8 +129,8 @@ void WebUpdateHandleNotFound()
 void BeginWebUpdate()
 {
     hwTimer.stop();
-    crsf.End();
     Radio.End();
+    crsf.End();
 
     Serial.println("Begin Webupdater");
     Serial.println("Stopping Radio");

@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "utils.h"
 #include "common.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -65,15 +64,23 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 /// define some libs to use ///
 hwTimer hwTimer;
-GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
+GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-void ICACHE_RAM_ATTR TimerCallbackISR();
 volatile uint8_t NonceTX;
+void ICACHE_RAM_ATTR timerIdleCallback()
+{
+  NonceTX++;
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    FHSSptr++;
+  }
+};
+void ICACHE_RAM_ATTR TimerCallbackISR();
 
 bool webUpdateMode = false;
 
@@ -91,6 +98,7 @@ uint32_t TLMpacketReported = 0;
 LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
+volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
@@ -120,15 +128,7 @@ uint8_t baseMac[6];
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  if (getParity(Radio.RXdataBuffer, 8))
-  {
-      #ifndef DEBUG_SUPPRESS
-      Serial.println("Parity error on RF packet");
-      #endif
-      return;
-  }
-
-  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111000) << 5) | Radio.RXdataBuffer[7];
+  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
   
   Radio.RXdataBuffer[0] &= 0b11;
   uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
@@ -325,13 +325,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
   Radio.TXdataBuffer[7] = crc & 0xFF;
-
-  if (getParity(Radio.TXdataBuffer, 8))
-  {
-    Radio.TXdataBuffer[0] |= 0b00000100;
-  }
 
   Radio.TXnb(Radio.TXdataBuffer, 8);
 }
@@ -458,7 +453,7 @@ void HandleUpdateParameter()
       webUpdateMode = true;
       Serial.println("Wifi Update Mode Requested!");
       sendLuaParams();
-      delay(500);
+      sendLuaParams();
       BeginWebUpdate();
 #else
       webUpdateMode = false;
@@ -488,7 +483,9 @@ void HandleUpdateParameter()
   if (config.IsModified())
   {
     // Stop the timer during eeprom writes
-    hwTimer.stop();
+    //while ((micros() - PacketLastSentMicros) < (ExpressLRS_currAirRate_Modparams->interval - 250)); // wait for almost the next timer tick
+    while(busyTransmitting);
+    hwTimer.callbackTock = &timerIdleCallback;
     // Set a flag that will trigger the eeprom commit in the main loop
     // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
     WaitEepromCommit = true;
@@ -498,10 +495,12 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR RXdoneISR()
 {
   ProcessTLMpacket();
+  busyTransmitting = false;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  busyTransmitting = false;
   NonceTX++; // must be done before callback
   HandleFHSS();
   HandleTLM();
@@ -602,7 +601,8 @@ void setup()
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
 #endif // PLATFORM_ESP32
 
-  FHSSrandomiseFHSSsequence();
+  long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+  FHSSrandomiseFHSSsequence(macSeed);
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
@@ -664,10 +664,9 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
-  crsf.Begin();
   hwTimer.init();
-  hwTimer.resume();
-  hwTimer.stop(); //comment to automatically start the RX timer and leave it running
+  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  crsf.Begin();
 }
 
 void loop()
@@ -701,7 +700,7 @@ void loop()
   HandleUpdateParameter();
 
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
-  if (WaitEepromCommit && (micros() - PacketLastSentMicros) > ExpressLRS_currAirRate_Modparams->interval)
+  if (WaitEepromCommit)
   {
     SetRFLinkRate(config.GetRate());
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
@@ -712,12 +711,11 @@ void loop()
     // Write the uncommitted eeprom values
     Serial.println("EEPROM COMMIT");
     config.Commit();
-    // Resume the timer
     sendLuaParams();
-    hwTimer.resume();
+    hwTimer.callbackTock = &TimerCallbackISR; // Resume the timer
   }
 
-  #ifdef FEATURE_OPENTX_SYNC
+#ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
 
@@ -767,8 +765,9 @@ void loop()
 
 void ICACHE_RAM_ATTR TimerCallbackISR()
 {
-  SendRCdataToRF();
+  busyTransmitting = true;
   PacketLastSentMicros = micros();
+  SendRCdataToRF();
 }
 
 void OnRFModePacket(mspPacket_t *packet)

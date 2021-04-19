@@ -282,11 +282,12 @@ void ICACHE_RAM_ATTR SX1280Driver::ClearIrqStatus(uint16_t irqMask)
 
 void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 {
+    instance->currOpmode = SX1280_MODE_FS; // radio goes to FS after TX
 #ifdef DEBUG_SX1280_OTA_TIMING
     endTX = micros();
 #endif
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    instance->currOpmode = SX1280_MODE_FS; // radio goes to FS
+    
 #ifdef DEBUG_SX1280_OTA_TIMING
     Serial.print("TOA: ");
     Serial.println(endTX - beginTX);
@@ -299,6 +300,14 @@ uint8_t FIFOaddr = 0;
 
 void ICACHE_RAM_ATTR SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 {
+    if (instance->currOpmode == SX1280_MODE_TX) //catch TX timeout
+    {
+        //Serial.println("Timeout!");
+        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+        instance->SetMode(SX1280_MODE_FS);
+        TXnbISR();
+        return;
+    }
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable();                      // do first to allow PA stablise
     hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
