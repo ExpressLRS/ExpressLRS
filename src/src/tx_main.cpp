@@ -284,9 +284,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint32_t SyncInterval;
 
-#if defined(NO_SYNC_ON_ARM) && defined(ARM_CHANNEL)
+#if defined(NO_SYNC_ON_ARM)
   SyncInterval = 250;
-  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[ARM_CHANNEL - 1]);
+  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 #else
   SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;

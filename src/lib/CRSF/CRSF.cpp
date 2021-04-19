@@ -198,8 +198,7 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
     nextSwitchIndex = (i + 1) % 8;
 
 #ifdef HYBRID_SWITCHES_8
-    // for hydrid switches 0 is sent on every packet, so we can skip
-    // that value for the round-robin
+    // for hydrid switches 0 is sent on every packet, skip it in round-robin
     if (nextSwitchIndex == 0)
     {
         nextSwitchIndex = 1;
@@ -767,21 +766,32 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(mspPacket_t * packet)
 
 
 /**
- * Convert the rc data corresponding to switches to 2 bit values.
- *
- * I'm defining channels 4 through 11 inclusive as representing switches
- * Take the input values and convert them to the range 0 - 2.
- * (not 0-3 because most people use 3 way switches and expect the middle
- *  position to be represented by a middle numeric value)
+ * Convert the rc data corresponding to switches to 3 bit values.
+ * The output is mapped evenly across 6 output values (0-5)
+ * With a special value 7 indicating the middle so it works
+ * with switches with a middle position as well as 6-position
  */
 void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
 {
-#define INPUT_RANGE 2048
-    const uint16_t SWITCH_DIVISOR = INPUT_RANGE / 3; // input is 0 - 2048
-    for (int i = 0; i < N_SWITCHES; i++)
+    // AUX1 is arm switch, one bit
+    currentSwitches[0] = CRSF_to_BIT(ChannelDataIn[4]);
+
+    // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
+    const uint16_t CHANNEL_BIN_COUNT = 6;
+    const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
+    for (int i = 1; i < N_SWITCHES-1; i++)
     {
-        currentSwitches[i] = ChannelDataIn[i + 4] / SWITCH_DIVISOR;
-    }
+        uint16_t ch = ChannelDataIn[i + 4];
+        // If channel is within 1/4 a BIN of being in the middle use special value 7
+        if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
+            || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
+            currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+        else
+            currentSwitches[i] = 7;
+    } // for N_SWITCHES
+
+    // AUXx is High Resolution 16-pos (4-bit)
+    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16);
 }
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
