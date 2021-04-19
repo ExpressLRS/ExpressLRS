@@ -5,7 +5,7 @@
 #include "common.h"
 
 #ifdef BIG_TEST
-#define NUM_ITERATIONS 10000000
+#define NUM_ITERATIONS 1000000
 #else
 #define NUM_ITERATIONS 1000
 #endif
@@ -22,26 +22,26 @@ static char *genMsg(uint8_t bytes[], int len) {
     return buf;
 }
 
-void test_crc13_implementation_compatibility(void)
+void test_crc14_implementation_compatibility(void)
 {
     uint8_t bytes[7];
     for (int i = 0; i < sizeof(bytes); i++)
         bytes[i] = random() % 255;
     bytes[0] &= 0b11;
 
-    uCRC_t ccrc = uCRC_t("CRC13", 13, ELRS_CRC13_POLY, 0, false, false, 0);
+    uCRC_t ccrc = uCRC_t("CRC14", 14, ELRS_CRC14_POLY, 0, false, false, 0);
     uint64_t crc = ccrc.get_raw_crc(bytes, 7, 0);
 
-    GENERIC_CRC13 ecrc = GENERIC_CRC13(ELRS_CRC13_POLY);
+    GENERIC_CRC14 ecrc = GENERIC_CRC14(ELRS_CRC14_POLY);
     uint16_t c = ecrc.calc(bytes, 7, 0);
 
-    TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0x1FFF), c, genMsg(bytes, sizeof(bytes)));
+    TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0x3FFF), c, genMsg(bytes, sizeof(bytes)));
 }
 
-void test_crc13_flip_n(int flip)
+void test_crc14_flip_n(int flip)
 {
     int false_positive = 0;
-    GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
+    GENERIC_CRC14 ccrc = GENERIC_CRC14(ELRS_CRC14_POLY);
 
     for (int x=0 ; x<NUM_ITERATIONS ; x++) {
         uint8_t bytes[7];
@@ -69,9 +69,9 @@ void test_crc13_flip_n(int flip)
     printf("%d out of %d false positives, %f%%\n", false_positive, NUM_ITERATIONS, false_positive*100.0/NUM_ITERATIONS);
 }
 
-void test_crc13_flip5(void)
+void test_crc14_flip5(void)
 {
-    GENERIC_CRC13 ccrc = GENERIC_CRC13(ELRS_CRC13_POLY);
+    GENERIC_CRC14 ccrc = GENERIC_CRC14(ELRS_CRC14_POLY);
 
     for (int x = 0; x < NUM_ITERATIONS; x++)
     {
@@ -128,33 +128,22 @@ void test_crc8(void)
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0xFF), c, genMsg(bytes, sizeof(bytes)));
 }
 
-void test_crc13_flip_6()
-{
-    test_crc13_flip_n(6);
-}
-
-void test_crc13_flip_8()
-{
-    test_crc13_flip_n(8);
-}
-
-void test_crc13_flip_10()
-{
-    test_crc13_flip_n(10);
-}
-
 int main(int argc, char **argv)
 {
     srandom(micros());
 
     UNITY_BEGIN();
-    RUN_TEST(test_crc13_implementation_compatibility);
-    RUN_TEST(test_crc13_flip5);
+    RUN_TEST(test_crc14_implementation_compatibility);
+    RUN_TEST(test_crc14_flip5);
     RUN_TEST(test_crc8);
-    RUN_TEST(test_crc13_flip_6);
-    RUN_TEST(test_crc13_flip_8);
-    RUN_TEST(test_crc13_flip_10);
     UNITY_END();
+
+#ifdef BIG_TEST
+    for (int i=1 ; i<31 ; i++) {
+        printf("%d flipped bits\t", i);
+        test_crc14_flip_n(i);
+    }
+#endif
 
     return 0;
 }
