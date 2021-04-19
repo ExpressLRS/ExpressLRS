@@ -63,7 +63,7 @@ uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 PFD PFDloop; 
-GENERIC_CRC13 ota_crc(ELRS_CRC13_POLY);
+GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
@@ -347,13 +347,8 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
-    Radio.TXdataBuffer[0] |= (crc >> 5) & 0b11111000;
+    Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
-    
-    if (getParity(Radio.TXdataBuffer, 8))
-    {
-        Radio.TXdataBuffer[0] |= 0b00000100;
-    }
 
     Radio.TXnb(Radio.TXdataBuffer, 8);
     return true;
@@ -366,7 +361,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection < FreqCorrectionMax)
         {
-            FreqCorrection += 61; //min freq step is ~ 61hz
+            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
         }
         else
         {
@@ -381,7 +376,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection > FreqCorrectionMin)
         {
-            FreqCorrection -= 61; //min freq step is ~ 61hz
+            FreqCorrection -= 1; //min freq step is ~ 61hz
         }
         else
         {
@@ -512,7 +507,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool tlmSent = false;
     bool didFHSS = false;
 
-    if (currentlyProcessing == false) // stop race condition 
+    if (currentlyProcessing == false) // stop race condition
     {
         updateDiversity();
         didFHSS = HandleFHSS();
@@ -637,17 +632,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
 
-    if (getParity(Radio.RXdataBuffer, 8))
-    {
-        #ifndef DEBUG_SUPPRESS
-        Serial.println("Parity error on RF packet");
-        #endif
-        return;
-    }
-
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
 
-    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111000) ) << 5 ) | Radio.RXdataBuffer[7];
+    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     Radio.RXdataBuffer[0] = type;
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
@@ -759,17 +746,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    HandleFHSS();
+    bool didFHSS = HandleFHSS();
     HandleSendTelemetryResponse();
     LQCalc.add(); // Received a packet, that's the definition of LQ
 
-//#if !defined(Regulatory_Domain_ISM_2400)
-//    if (alreadyFHSS == false && NonceRX % 4 == 0)
-//    {
-//        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-//        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-//    }
-//#endif /* Regulatory_Domain_ISM_2400 */
+#if !defined(Regulatory_Domain_ISM_2400)
+    if (didFHSS == false)
+    {
+        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+    }
+#endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
     currentlyProcessing = false;
@@ -1314,12 +1301,16 @@ void reset_into_bootloader(void)
     Serial.println("Jumping to Bootloader...");
     delay(100);
 
-#if BOOTLOADER_DATA_EXCHANGE_ENABLED
+    /** Write command for firmware update.
+     *
+     * Bootloader checks this memory area (if newer enough) and
+     * perpare itself for fw update. Otherwise it skips the check
+     * and starts ELRS firmware immediately
+     */
     extern __IO uint32_t _bootloader_data;
     volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
     blinfo->key = 0x454c5253; // ELRS
     blinfo->reset_type = 0xACDC;
-#endif /* BOOTLOADER_DATA_EXCHANGE_ENABLED */
 
     HAL_NVIC_SystemReset();
 #endif /* PLATFORM_STM32 */
