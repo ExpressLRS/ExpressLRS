@@ -633,8 +633,8 @@ void GotConnection()
 #endif
 }
 
-uint32_t flippedBitsArrayFailedCRC[20] = {0};
-uint32_t flippedBitsArrayPassedCRC[20] = {0};
+uint32_t flippedBitsArrayFailedCRC[40] = {0};
+uint32_t flippedBitsArrayPassedCRC[40] = {0};
 uint8_t numberOfFlippedBits = 0;
 uint16_t packetCounterForPrinting = 0;
 
@@ -721,7 +721,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             }
         }
 
-        if (numberOfFlippedBits < 20)
+        if (numberOfFlippedBits < 40)
         {
             if (crcPass)
             {
@@ -1140,7 +1140,7 @@ void loop()
 
         Serial.println("CRC | Passed | Failed");
 
-        for (uint8_t i = 0; i < 20; i++)
+        for (uint8_t i = 0; i < 40; i++)
         {
             Serial.print(i);
             Serial.print("   | ");
