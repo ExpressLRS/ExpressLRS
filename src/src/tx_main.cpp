@@ -110,6 +110,7 @@ bool WaitEepromCommit = false;
 
 bool InBindingMode = false;
 uint8_t BindingPackage[5];
+uint8_t BindingSendCount = 0;
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
@@ -315,6 +316,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
       Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
       MSPPacketLastSent = millis();
+      // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
+      BindingSendCount++;
     }
     else
     {
@@ -774,22 +777,29 @@ void loop()
   }
   #endif
 
-  if (!MspSender.IsActive())
+  // only send msp data when binding is not active
+  if (InBindingMode)
   {
-    if (InBindingMode)
-    {
+    // exit bind mode if package after some repeats
+    if (BindingSendCount > 6) {
       ExitBindingMode();
     }
-
+  }
+  else if (!MspSender.IsActive())
+  {
+    // sending is done and we need to update our flag
     if (mspTransferActive)
     {
+      // unlock buffer for msp messages
       crsf.UnlockMspMessage();
       mspTransferActive = false;
     }
+    // we are not sending so look for next msp package
     else
     {
       uint8_t* currentMspData = crsf.GetMspMessage();
-      if (currentMspData != NULL && !InBindingMode)
+      // if we have a new msp package start sending
+      if (currentMspData != NULL)
       {
         MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
         mspTransferActive = true;
@@ -977,6 +987,8 @@ void SendUIDOverMSP()
   BindingPackage[2] = UID[3];
   BindingPackage[3] = UID[4];
   BindingPackage[4] = UID[5];
+  MspSender.ResetState();
+  BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
   InBindingMode = true;
 }
