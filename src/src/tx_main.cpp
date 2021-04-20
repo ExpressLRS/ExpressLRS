@@ -91,7 +91,7 @@ mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
+#define syncSpamAResidualTimeMS 1500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
 uint8_t syncSpamCounter = 0;
 uint32_t rfModeLastChangedMS = 0;
