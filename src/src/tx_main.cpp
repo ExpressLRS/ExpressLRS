@@ -203,7 +203,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 #ifdef HYBRID_SWITCHES_8
   #define SwitchEncMode 0b01
 #else
-  define SwitchEncMode 0b00
+  #define SwitchEncMode 0b00
 #endif
   uint8_t Index;
   uint8_t TLMrate;
