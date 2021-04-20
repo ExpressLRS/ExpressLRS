@@ -716,8 +716,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
              if (ExpressLRS_currAirRate_Modparams->index != (expresslrs_tlm_ratio_e)indexIN)
              { // change link parameters if required
                 ExpressLRS_nextAirRateIndex = indexIN;
-                Serial.println(ExpressLRS_nextAirRateIndex);
-                Serial.println(indexIN);
              }
 
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
