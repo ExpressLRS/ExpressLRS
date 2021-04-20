@@ -220,18 +220,16 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         return;
     }
 
-    if (!LockRFmode)
-    {
-        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-        expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
-        hwTimer.updateInterval(ModParams->interval);
+    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
+    hwTimer.updateInterval(ModParams->interval);
 
-        ExpressLRS_currAirRate_Modparams = ModParams;
-        ExpressLRS_currAirRate_RFperfParams = RFperf;
-        telemBurstValid = false;
-    }
+    ExpressLRS_currAirRate_Modparams = ModParams;
+    ExpressLRS_currAirRate_RFperfParams = RFperf;
+    ExpressLRS_nextAirRateIndex = index; // presumably we just handled this 
+    telemBurstValid = false;
 }
 
 bool ICACHE_RAM_ATTR HandleFHSS()
@@ -520,9 +518,12 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
-    #ifdef FAST_SYNC
-    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-    #endif
+#ifdef FAST_SYNC
+    if (!LockRFmode)
+    {
+        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    }
+#endif
 
     if (!InBindingMode)
     {
@@ -666,7 +667,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         #endif
-        if (connectionState == connected)
+        if (connectionState != disconnected)
         {
             crsf.sendRCFrameToFC();
         }
@@ -695,7 +696,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
          SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
 
-         if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (SwitchEncModeExpected == SwitchEncMode && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
 #ifndef DEBUG_SUPPRESS
@@ -710,6 +711,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #endif
                  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)TLMrateIn;
                  telemBurstValid = false;
+             }
+
+             if (ExpressLRS_currAirRate_Modparams->index != (expresslrs_tlm_ratio_e)indexIN)
+             { // change link parameters if required
+                ExpressLRS_nextAirRateIndex = indexIN;
+                Serial.println(ExpressLRS_nextAirRateIndex);
+                Serial.println(indexIN);
              }
 
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
@@ -1095,6 +1103,19 @@ void loop()
     }
     #endif
 
+    if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
+        LostConnection();
+        LastSyncPacket = millis();           // reset this variable to stop rf mode switching
+        Serial.println("Air rate change req via sync");
+        SetRFLinkRate(ExpressLRS_nextAirRateIndex);
+        LQCalc.reset();
+        crsf.sendLinkStatisticsToFC();
+        delay(100);
+        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        Radio.SetFrequencyReg(GetInitialFreq());
+        Radio.RXnb();
+    }
+
     if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
@@ -1106,12 +1127,12 @@ void loop()
     }
 
 #ifdef FAST_SYNC
-    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
+    if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
 #else
-        if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
+        if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
 #endif
     {
-        if ((connectionState == disconnected) && !webUpdateMode)
+        if ((LockRFmode == false) && (connectionState == disconnected) && !webUpdateMode)
         {
             #ifdef FAST_SYNC
             RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;

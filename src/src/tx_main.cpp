@@ -90,6 +90,12 @@ uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
 mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
+/// sync packet spamming on mode change vars ///
+#define syncSpamAmount 3
+uint8_t syncSpamCounter = 0;
+volatile bool syncSpamRequested = false; 
+volatile bool syncSpamIsSpamming = false; 
+////////////////////////////////////////////////
 uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
@@ -195,12 +201,23 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
 #ifdef HYBRID_SWITCHES_8
-  uint8_t SwitchEncMode = 0b01;
+  #define SwitchEncMode 0b01
 #else
-  uint8_t SwitchEncMode = 0b00;
+  define SwitchEncMode 0b00
 #endif
-  uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
-  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+  uint8_t Index;
+  uint8_t TLMrate;
+  if (syncSpamRequested)
+  {
+    Index = (ExpressLRS_nextAirRate_Modparams->index & 0b11);
+    TLMrate = (ExpressLRS_nextAirRate_Modparams->TLMinterval & 0b111);
+  }
+  else
+  {
+    Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
+    TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+  }
+
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
@@ -208,6 +225,12 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
+
+  SyncPacketLastSent = millis();
+  if (syncSpamRequested)
+  {
+    syncSpamCounter++;
+  }
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -221,6 +244,9 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
+
+  ExpressLRS_nextAirRate_Modparams = ModParams;
+  ExpressLRS_nextAirRate_RFperfParams = RFperf;
 
   crsf.setSyncParams(ModParams->interval);
   connectionState = connected;
@@ -294,13 +320,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   bool skipSync = false;
 #endif
 
-  if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX - 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  if (syncSpamRequested && Radio.currFreq == GetInitialFreq())
   {
-
     GenerateSyncPacketData();
-    SyncPacketLastSent = millis();
-    //Serial.println("sync");
-    //Serial.println(Radio.currFreq);
+  }
+  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX - 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  {
+    GenerateSyncPacketData();
   }
   else
   {
@@ -426,6 +452,8 @@ void HandleUpdateParameter()
       Serial.print("Request AirRate: ");
       Serial.println(crsf.ParameterUpdateData[1]);
       ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
+      ExpressLRS_nextAirRate_Modparams = get_elrs_airRateConfig(ExpressLRS_nextAirRateIndex);
+      ExpressLRS_nextAirRate_RFperfParams = get_elrs_RFperfParams(ExpressLRS_nextAirRateIndex);
       config.SetRate(ExpressLRS_nextAirRateIndex);
     }
     break;
@@ -434,7 +462,8 @@ void HandleUpdateParameter()
     if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       Serial.print("Request TLM interval: ");
-      Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
+      Serial.println(crsf.ParameterUpdateData[1]);
+      ExpressLRS_nextAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1];
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     }
     break;
@@ -481,15 +510,27 @@ void HandleUpdateParameter()
     break;
   }
   UpdateParamReq = false;
-
   if (config.IsModified())
   {
-    // Stop the timer during eeprom writes
-    //while ((micros() - PacketLastSentMicros) < (ExpressLRS_currAirRate_Modparams->interval - 250)); // wait for almost the next timer tick
-    while(busyTransmitting);
+    syncSpamRequested = true;
+  }
+}
+
+void HandleSyncSpam()
+{
+  if (config.IsModified())
+  {
+    if ((syncSpamCounter < syncSpamAmount) && syncSpamRequested)
+    {
+      return; // we wait
+    }
+    else
+    {
+      syncSpamRequested = false;
+      syncSpamCounter = 0;
+    }
+    while (busyTransmitting){}; // wait untill no long transmitting
     hwTimer.callbackTock = &timerIdleCallback;
-    // Set a flag that will trigger the eeprom commit in the main loop
-    // NOTE: This is required to ensure we wait long enough for any outstanding IRQ's to fire
     WaitEepromCommit = true;
   }
 }
@@ -700,6 +741,7 @@ void loop()
   #endif
 
   HandleUpdateParameter();
+  HandleSyncSpam();
 
   // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
   if (WaitEepromCommit)

@@ -14,8 +14,8 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_200HZ, -112, 4380, 3500, 2500, 2000, 5000},
     {1, RATE_100HZ, -117, 8770, 3500, 2500, 2000, 5000},
-    {2, RATE_50HZ, -120, 17540, 3500, 2500, 2000, 5000},
-    {3, RATE_25HZ, -123, 17540, 3500, 4000, 2000, 5000}};
+    {2, RATE_50HZ, -120, 17540, 5000, 2500, 2000, 5000},
+    {3, RATE_25HZ, -123, 17540, 5000, 4000, 2000, 5000}};
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
@@ -34,7 +34,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_500HZ, -105, 4380, 3500, 1000, 2000, 5000},
     {1, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
     {2, RATE_150HZ, -112, 8770, 3500, 2500, 2000, 5000},
-    {3, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000}};
+    {3, RATE_50HZ, -117, 17540, 5000, 2500, 2000, 5000}};
 #else
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
@@ -45,8 +45,8 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_250HZ, -108, 4380, 3500, 2500, 2000, 5000},
     {1, RATE_150HZ, -112, 8770, 3500, 2500, 2000, 5000},
-    {2, RATE_50HZ, -117, 17540, 3500, 2500, 2000, 5000},
-    {3, RATE_25HZ, -120, 36886, 3500, 4000, 2000, 5000}};
+    {2, RATE_50HZ, -117, 17540, 5000, 2500, 2000, 5000},
+    {3, RATE_25HZ, -120, 36886, 5000, 4000, 2000, 5000}};
 #endif
 
 #endif
@@ -104,6 +104,9 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
 
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+
+expresslrs_mod_settings_s *ExpressLRS_nextAirRate_Modparams;
+expresslrs_rf_pref_params_s *ExpressLRS_nextAirRate_RFperfParams;
 
 uint8_t ExpressLRS_nextAirRateIndex = 0;
 
