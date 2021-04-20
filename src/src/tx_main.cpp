@@ -91,11 +91,14 @@ mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
+#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
 uint8_t syncSpamCounter = 0;
+uint32_t rfModeLastChangedMS = 0;
 volatile bool syncSpamRequested = false; 
 volatile bool syncSpamIsSpamming = false; 
 ////////////////////////////////////////////////
+
 uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
@@ -249,7 +252,8 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_nextAirRate_RFperfParams = RFperf;
 
   crsf.setSyncParams(ModParams->interval);
-  connectionState = connected;
+  connectionState = disconnected;
+  rfModeLastChangedMS = millis();
 
 #ifdef PLATFORM_ESP32
   updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
@@ -320,11 +324,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   bool skipSync = false;
 #endif
 
-  if (syncSpamRequested && Radio.currFreq == GetInitialFreq())
+  if ((syncSpamRequested || (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS)) && Radio.currFreq == GetInitialFreq())
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX - 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval != 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
     GenerateSyncPacketData();
   }
