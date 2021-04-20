@@ -28,11 +28,12 @@ def print_error(error):
 
 
 def parse_flags(path):
+    global build_flags
     try:
         with open(path, "r") as _f:
             for define in _f:
                 define = define.strip()
-                if define.startswith("-D"):
+                if define.startswith("-D") or define.startswith("!-D"):
                     if "MY_BINDING_PHRASE" in define:
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
                         UIDbytes = (str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5]))
@@ -44,9 +45,22 @@ def parse_flags(path):
                         transposeBySemitones = int(defineValue[2]) if len(defineValue) > 2 else 0
                         parsedMelody = melodyparser.parseMelody(defineValue[0].strip(), int(defineValue[1]), transposeBySemitones)
                         define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
-                    build_flags.append(define)
+                    if not define in build_flags:
+                        build_flags.append(define)
     except IOError:
         print("File '%s' does not exist" % path)
+
+def process_flags(path):
+    global build_flags
+    if not os.path.isfile(path):
+        return
+    parse_flags(path)
+    for line in build_flags:
+        # Some lines have multiple flags so this will split them and remove them all
+        for flag in re.findall("!-D\s*[^\s]+", line):
+            build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag which will just leave ! in their place
+    build_flags = [x.replace("!", "") for x in build_flags]  # remove the !
+    build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
 
 def get_git_sha():
     # Don't try to pull the git revision when doing tests, as 
@@ -73,18 +87,12 @@ def get_git_sha():
     sha = ExLRS_Repo.head.object.hexsha
     return "0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5]
 
-parse_flags("user_defines.txt")
-
-# Handle any negated flags i.e. !-Dxxxx remove -Dxxxx from flags
-for line in build_flags:
-    for flag in re.findall("!-D\s*[^\s]+", line):
-        build_flags = [x.replace(flag[1:],"") for x in build_flags]
-build_flags = [x.replace("!", "") for x in build_flags]
+process_flags("user_defines.txt")
+process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 
 env['BUILD_FLAGS'] = build_flags
-
 print("build flags: %s" % env['BUILD_FLAGS'])
 
 if not fnmatch.filter(env['BUILD_FLAGS'], '*-DRegulatory_Domain*'):
