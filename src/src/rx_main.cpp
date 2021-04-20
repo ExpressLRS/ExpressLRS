@@ -1108,7 +1108,7 @@ void loop()
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching
         Serial.println("Air rate change req via sync");
         SetRFLinkRate(ExpressLRS_nextAirRateIndex);
-        LQCalc.reset();
+        //LQCalc.reset();
         crsf.sendLinkStatisticsToFC();
         delay(100);
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?

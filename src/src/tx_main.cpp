@@ -213,7 +213,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   if (syncSpamRequested)
   {
     Index = (ExpressLRS_nextAirRate_Modparams->index & 0b11);
-    TLMrate = (ExpressLRS_nextAirRate_Modparams->TLMinterval & 0b111);
+    TLMrate = 0; // this helps get the link back online quicker because the RX is less likely to miss pkts, this will overridden shortly after link change anyway. 
   }
   else
   {
