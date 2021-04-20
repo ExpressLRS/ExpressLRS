@@ -324,11 +324,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   bool skipSync = false;
 #endif
 
+  uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+
   if ((syncSpamRequested || (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS)) && Radio.currFreq == GetInitialFreq())
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && ((NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval != 0))) // sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
     GenerateSyncPacketData();
   }

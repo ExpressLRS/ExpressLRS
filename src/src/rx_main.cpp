@@ -1103,7 +1103,9 @@ void loop()
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         LostConnection();
+        RFmodeCycleDivisor = 1;
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching
+        RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching
         Serial.println("Air rate change req via sync");
         SetRFLinkRate(ExpressLRS_nextAirRateIndex);
         LQCalc.reset();
