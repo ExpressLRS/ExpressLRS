@@ -105,9 +105,6 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
-expresslrs_mod_settings_s *ExpressLRS_nextAirRate_Modparams;
-expresslrs_rf_pref_params_s *ExpressLRS_nextAirRate_RFperfParams;
-
 uint8_t ExpressLRS_nextAirRateIndex = 0;
 
 connectionState_e connectionState = disconnected;

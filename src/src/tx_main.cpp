@@ -72,15 +72,6 @@ ELRS_EEPROM eeprom;
 TxConfig config;
 
 volatile uint8_t NonceTX;
-void ICACHE_RAM_ATTR timerIdleCallback()
-{
-  NonceTX++;
-  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-  {
-    FHSSptr++;
-  }
-};
-void ICACHE_RAM_ATTR TimerCallbackISR();
 
 bool webUpdateMode = false;
 
@@ -93,10 +84,8 @@ mspPacket_t MSPPacket;
 /// sync packet spamming on mode change vars ///
 #define syncSpamAResidualTimeMS 1500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
-uint8_t syncSpamCounter = 0;
+volatile uint8_t syncSpamCounter = 0;
 uint32_t rfModeLastChangedMS = 0;
-volatile bool syncSpamRequested = false; 
-volatile bool syncSpamIsSpamming = false; 
 ////////////////////////////////////////////////
 
 uint32_t SyncPacketLastSent = 0;
@@ -204,16 +193,16 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
 #ifdef HYBRID_SWITCHES_8
-  #define SwitchEncMode 0b01
+  const uint8_t SwitchEncMode = 0b01;
 #else
-  #define SwitchEncMode 0b00
+  const uint8_t SwitchEncMode = 0b00;
 #endif
   uint8_t Index;
   uint8_t TLMrate;
-  if (syncSpamRequested)
+  if (syncSpamCounter)
   {
-    Index = (ExpressLRS_nextAirRate_Modparams->index & 0b11);
-    TLMrate = 0; // this helps get the link back online quicker because the RX is less likely to miss pkts, this will overridden shortly after link change anyway. 
+    Index = (config.GetRate() & 0b11);
+    TLMrate = 0; // this helps get the link back online quicker because the RX is less likely to miss pkts, this will overridden shortly after link change anyway.
   }
   else
   {
@@ -230,26 +219,25 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[6] = UID[5];
 
   SyncPacketLastSent = millis();
-  if (syncSpamRequested)
-  {
-    syncSpamCounter++;
-  }
+  if (syncSpamCounter)
+    --syncSpamCounter;
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-  Serial.println("set rate");
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+  if (ModParams == ExpressLRS_currAirRate_Modparams)
+    return;
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+  if (RFperf == ExpressLRS_currAirRate_RFperfParams)
+    return;
 
+  Serial.println("set rate");
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
   hwTimer.updateInterval(ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-
-  ExpressLRS_nextAirRate_Modparams = ModParams;
-  ExpressLRS_nextAirRate_RFperfParams = RFperf;
 
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;
@@ -326,7 +314,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-  if ((syncSpamRequested || (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS)) && Radio.currFreq == GetInitialFreq())
+  if ((syncSpamCounter || (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS)) && Radio.currFreq == GetInitialFreq())
   {
     GenerateSyncPacketData();
   }
@@ -363,6 +351,28 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
   Radio.TXnb(Radio.TXdataBuffer, 8);
+}
+
+/*
+ * Called as the timer ISR when transmitting
+ */
+void ICACHE_RAM_ATTR timerCallbackNormal()
+{
+  busyTransmitting = true;
+  PacketLastSentMicros = micros();
+  SendRCdataToRF();
+}
+
+/*
+ * Called as the timer ISR while waiting for eeprom flush
+ */
+void ICACHE_RAM_ATTR timerCallbackIdle()
+{
+  NonceTX++;
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    FHSSptr++;
+  }
 }
 
 void sendLuaParams()
@@ -457,10 +467,7 @@ void HandleUpdateParameter()
     {
       Serial.print("Request AirRate: ");
       Serial.println(crsf.ParameterUpdateData[1]);
-      ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]);
-      ExpressLRS_nextAirRate_Modparams = get_elrs_airRateConfig(ExpressLRS_nextAirRateIndex);
-      ExpressLRS_nextAirRate_RFperfParams = get_elrs_RFperfParams(ExpressLRS_nextAirRateIndex);
-      config.SetRate(ExpressLRS_nextAirRateIndex);
+      config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
     }
     break;
 
@@ -469,7 +476,6 @@ void HandleUpdateParameter()
     {
       Serial.print("Request TLM interval: ");
       Serial.println(crsf.ParameterUpdateData[1]);
-      ExpressLRS_nextAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1];
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     }
     break;
@@ -518,26 +524,34 @@ void HandleUpdateParameter()
   UpdateParamReq = false;
   if (config.IsModified())
   {
-    syncSpamRequested = true;
+    syncSpamCounter = syncSpamAmount;
   }
 }
 
-void HandleSyncSpam()
+static void ConfigChangeCommit()
+{
+  SetRFLinkRate(config.GetRate());
+  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
+  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+
+  // Write the uncommitted eeprom values
+  Serial.println("EEPROM COMMIT");
+  config.Commit();
+  hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
+  sendLuaParams();
+}
+
+static void CheckConfigChangePending()
 {
   if (config.IsModified())
   {
-    if ((syncSpamCounter < syncSpamAmount) && syncSpamRequested)
-    {
-      return; // we wait
-    }
-    else
-    {
-      syncSpamRequested = false;
-      syncSpamCounter = 0;
-    }
-    while (busyTransmitting){}; // wait untill no long transmitting
-    hwTimer.callbackTock = &timerIdleCallback;
-    WaitEepromCommit = true;
+    // Keep transmitting sync packets until the spam counter runs out
+    if (syncSpamCounter)
+      return;
+
+    while (busyTransmitting){}; // wait until no long transmitting
+    hwTimer.callbackTock = &timerCallbackIdle;
+    ConfigChangeCommit();
   }
 }
 
@@ -659,7 +673,7 @@ void setup()
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
-  hwTimer.callbackTock = &TimerCallbackISR;
+  hwTimer.callbackTock = &timerCallbackNormal;
 
   Serial.println("ExpressLRS TX Module Booted...");
 
@@ -709,7 +723,6 @@ void setup()
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
-  ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
@@ -747,23 +760,7 @@ void loop()
   #endif
 
   HandleUpdateParameter();
-  HandleSyncSpam();
-
-  // If there's an outstanding eeprom write, and we've waited long enough for any IRQs to fire...
-  if (WaitEepromCommit)
-  {
-    SetRFLinkRate(config.GetRate());
-    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
-    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-
-    // Write the values, and restart the timer
-    WaitEepromCommit = false;
-    // Write the uncommitted eeprom values
-    Serial.println("EEPROM COMMIT");
-    config.Commit();
-    sendLuaParams();
-    hwTimer.callbackTock = &TimerCallbackISR; // Resume the timer
-  }
+  CheckConfigChangePending();
 
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
@@ -811,13 +808,6 @@ void loop()
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
-}
-
-void ICACHE_RAM_ATTR TimerCallbackISR()
-{
-  busyTransmitting = true;
-  PacketLastSentMicros = micros();
-  SendRCdataToRF();
 }
 
 void OnRFModePacket(mspPacket_t *packet)

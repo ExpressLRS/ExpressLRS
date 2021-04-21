@@ -897,7 +897,7 @@ static void setupBindingFromConfig()
     if (config.GetIsBound())
     {
         Serial.println("RX has been bound previously, reading the UID from eeprom...");
-        uint8_t* storedUID = config.GetUID();
+        const uint8_t* storedUID = config.GetUID();
         for (uint8_t i = 0; i < UID_LEN; ++i)
         {
             UID[i] = storedUID[i];
