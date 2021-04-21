@@ -98,6 +98,7 @@ LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
+uint32_t HWtimerPauseDuration = 0;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint32_t LuaLastUpdated = 0;
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
@@ -537,7 +538,15 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   Serial.println("EEPROM COMMIT");
   config.Commit();
+#ifndef PLATFORM_STM32
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
+#else
+  for (uint32_t i = 0; i < (HWtimerPauseDuration / ExpressLRS_currAirRate_Modparams->interval); i++)
+  {
+    timerCallbackIdle(); // catchup NonceRX and FHSS
+  }
+
+#endif
   sendLuaParams();
 }
 
@@ -549,8 +558,18 @@ static void CheckConfigChangePending()
     if (syncSpamCounter)
       return;
 
-    while (busyTransmitting){}; // wait until no long transmitting
+#ifndef PLATFORM_STM32
+    while (busyTransmitting); // wait until no longer transmitting
     hwTimer.callbackTock = &timerCallbackIdle;
+#else
+    #define HWtimerPauseDurationTarget 100000 // at least 100ms
+    while (HWtimerPauseDuration < HWtimerPauseDurationTarget)
+    {
+      HWtimerPauseDuration += ExpressLRS_currAirRate_Modparams->interval;
+    }
+    while (busyTransmitting); // wait until no longer transmitting
+    hwTimer.pause(HWtimerPauseDuration);
+#endif
     ConfigChangeCommit();
   }
 }

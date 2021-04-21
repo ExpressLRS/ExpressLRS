@@ -10,8 +10,11 @@ volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
 volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
+volatile uint32_t hwTimer::PauseDuration = 0;
 bool hwTimer::running = false;
 bool hwTimer::alreadyInit = false;
+bool hwTimer::isPaused = false;
+bool hwTimer::PauseReq = false;
 
 #if defined(TIM1)
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
@@ -37,6 +40,15 @@ void hwTimer::stop()
     running = false;
     MyTim->pause();
     MyTim->setCount(0);
+}
+
+void hwTimer::pause(uint32_t duration)
+{
+    PauseDuration = duration;
+    PauseReq = true; 
+    while(!isPaused){
+        __NOP();
+    }
 }
 
 void hwTimer::resume()
@@ -76,10 +88,25 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
     hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
 
+void hwTimer::PauseDoneCallback(void)
+{
+    PauseReq = false;
+    hwTimer::callback();
+    MyTim->attachInterrupt(hwTimer::callback);
+}
+
 void hwTimer::callback(void)
 {
     if (!running)
     {
+        return;
+    }
+
+    if (PauseReq)
+    {
+        MyTim->setOverflow(PauseDuration, MICROSEC_FORMAT);
+        MyTim->attachInterrupt(hwTimer::PauseDoneCallback);
+        isPaused = true;
         return;
     }
 
