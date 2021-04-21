@@ -66,3 +66,8 @@ inline unsigned long micros() {
 inline void delay(int32_t time) {
     usleep(time);
 }
+
+#ifdef _WIN32
+#define random rand
+#define srandom srand
+#endif
