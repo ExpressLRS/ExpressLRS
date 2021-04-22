@@ -60,7 +60,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_VERSION 3
+#define LUA_VERSION 4
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -442,9 +442,11 @@ void HandleUpdateParameter()
   case 2:
     if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
+      if (ExpressLRS_currAirRate_Modparams->enum_rate != RATE_250RHZ){
       Serial.print("Request TLM interval: ");
       Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+      }
     }
     break;
 

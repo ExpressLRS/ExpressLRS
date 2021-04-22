@@ -57,7 +57,7 @@ uint32_t LEDupdateCounterMillis;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
-#define DEBUG_SUPPRESS // supresses debug messages on uart
+//#define DEBUG_SUPPRESS // supresses debug messages on uart
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
@@ -640,6 +640,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
+    bool ForceDisconnect;
     #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
     bool telemetryConfirmValue;
     #endif
@@ -694,7 +695,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          indexIN = (Radio.RXdataBuffer[3] & 0b11100000) >> 5;
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00011100) >> 2;
          SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000010) >> 1;
-         bool ForceDisconnect = (bool)(Radio.RXdataBuffer[3] & 0b00000001);
+         ForceDisconnect = (bool)(Radio.RXdataBuffer[3] & 0b00000001);
 
          if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {

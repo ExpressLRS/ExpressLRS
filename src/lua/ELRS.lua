@@ -23,11 +23,11 @@ local wifiupdatemode = false;
 
 local SX127x_RATES = {
     list = {'25Hz(-123dbm)', '50Hz(-120dbm)', '100Hz(-117dbm)', '200Hz(-112dbm)'},
-    values = {0x06, 0x05, 0x04, 0x02},
+    values = {0x08, 0x07, 0x06, 0x04},
 }
 local SX128x_RATES = {
-    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '250Race(-105dbm)', '500Hz(-105dbm)', '500Race(-99dbm)'},
-    values = {0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00},
+    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '250Race(-105dbm)', '500Hz(-105dbm)'},
+    values = {0x08, 0x07, 0x05, 0x03, 0x02, 0x01},
 }
 local tx_lua_version = {
     selected = 1,
@@ -165,7 +165,7 @@ local supportedRadios =
     {
         --highRes         = false,
         textSize        = SMLSIZE,
-        xOffset         = 55,
+        xOffset         = 50,
         yOffset         = 8,
         yOffset_val     = 3,
         topOffset       = 1,
@@ -185,7 +185,7 @@ local supportedRadios =
     {
         --highRes         = false,
         textSize        = SMLSIZE,
-        xOffset         = 55,
+        xOffset         = 50,
         yOffset         = 8,
         yOffset_val     = 3,
         topOffset       = 1,
