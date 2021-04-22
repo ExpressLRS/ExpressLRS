@@ -2,7 +2,7 @@
 
 ### PCB manufacturing
 
-Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
+Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
 
 *PCB Thickness: 1mm*
 
@@ -44,3 +44,9 @@ Upload the Gerber file to https://jlcpcb.com/.  Check the price for 5, 10, and 3
 
 <img src="img/schm.png" width="30%">
 <img src="img/pcb.png" width="30%">
+
+### Flashing 
+
+- Connect an FTDI to the GND, 3v3, TX and RX pins on the left header, then hold the boot pin to ground while powering up, and flash the DIY_2400_TX_ESP32_SX1280_E28_via_UART build in pio
+
+<img src="img/ftdi-wiring.png" width="30%">

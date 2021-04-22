@@ -2,8 +2,13 @@ v1.0 PCB
 - Pictured below
 
 v1.1 PCB
-- Lager IPEX pads
+- Larger IPEX pads
 - Added boot jumper pads under the button and base of the PCB.  These can be used in place of the button.  Any solder paste applied to these pads via a stencil will need to be removed before adding a button.
+
+v1.2 PCB
+- Larger XO footprint for the FL520WFMT1.
+- Remove ground from beneath the UFL.
+- Adds WiFi antenna
 
 # Nano 2.4 GHz Rx
 
@@ -22,7 +27,7 @@ https://youtu.be/33BSITaKFUY
 
 ### PCB manufacturing
 
-Upload the Gerber file to https://jlcpcb.com/ and below are the order options.  Red is clearly the only acceptable colour! It is recommended to also get a solder paste stencil, and check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
+Upload the Gerber file to https://jlcpcb.com/RAT and below are the order options.  Red is clearly the only acceptable colour! It is recommended to also get a solder paste stencil, and check the price for 5, 10, and 30 pieces.  It is sometimes cheaper to order 30 than 10 and only a minor increase in price compared to 5.
 
 <img src="img/jlc_order_details.PNG" width="30%"> <img src="img/stencil.PNG" width="40%">
 
@@ -35,10 +40,9 @@ Below are links to the more uncommon components.
 - Button https://au.mouser.com/ProductDetail/alps/sktaaae010/?qs=u4fy%2FsgLU9NVRRqWeykmWg%3D%3D
 - sx1280 https://au.mouser.com/ProductDetail/semtech/sx1280imltrt/?qs=5aG0NVq1C4xuoq8G6ZzdxQ%3D%3D
 - RF output filter https://au.mouser.com/ProductDetail/johanson/2450fm07d0034t/?qs=%252bEew9%252b0nqrBEY7VUloPs4Q%3D%3D
-- Crystal https://au.mouser.com/ProductDetail/Diodes-Incorporated/FW520WFMT1?qs=%2Fha2pyFadugPDf0nhgewaMwLjNbxaY4Xr5XmslnYeZgOQCJm3ZvVpQ%3D%3D or https://www.digikey.com/product-detail/en/diodes-incorporated/FW520WFMT1/FW520WFMT1CT-ND/6173706
-
-If the FW520WFMT1 is out of stock, the FL520WFMT1 can be used. The FL is slightly larger and may require more skill to solder but it's been used before. 
-https://www.digikey.com/en/products/detail/diodes-incorporated/FL520WFMT1/6173685?s=N4IgTCBcDaIGIBkCsYAMB1OBZAKgRhAF0BfIA
+- Crystal.  If the FW520WFMT1 is out of stock, the FL520WFMT1 can be used. The FL is slightly larger and may require more skill to solder but it's been used before.  The v1.2 PCB is designed for this larger footprint.
+  - FW520WFMT1 https://au.mouser.com/ProductDetail/Diodes-Incorporated/FW520WFMT1?qs=%2Fha2pyFadugPDf0nhgewaMwLjNbxaY4Xr5XmslnYeZgOQCJm3ZvVpQ%3D%3D or https://www.digikey.com/product-detail/en/diodes-incorporated/FW520WFMT1/FW520WFMT1CT-ND/6173706
+  - FL520WFMT1 https://www.digikey.com/en/products/detail/diodes-incorporated/FL520WFMT1/6173685?s=N4IgTCBcDaIGIBkCsYAMB1OBZAKgRhAF0BfIA
 
 ### Antennas
 

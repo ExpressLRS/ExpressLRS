@@ -14,7 +14,7 @@ void (*SX127xDriver::RXtimeout)() = &nullCallback;
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[TXRXBuffSize] = {0};
 volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0};
 
-uint8_t SX127x_AllowedSyncwords[105] =
+const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
      21, 23, 26, 29, 30, 31, 33, 34,
      37, 38, 39, 40, 42, 44, 50, 51,
@@ -78,6 +78,7 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
   hal.setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
+  hal.setRegValue(SX127X_REG_INVERT_IQ, (uint8_t)IQinverted, 6, 6);
 }
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
@@ -192,18 +193,30 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void SX127xDriver::SetFrequency(uint32_t freq)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
-
-#define FREQ_STEP 61.03515625
-
+  
   int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
   uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
   uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
   uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
+
+  WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
+
+  hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq)
+{
+  currFreq = freq;
+  SetMode(SX127x_OPMODE_STANDBY);
+
+  uint8_t FRQ_MSB = (uint8_t)((freq >> 16) & 0xFF);
+  uint8_t FRQ_MID = (uint8_t)((freq >> 8) & 0xFF);
+  uint8_t FRQ_LSB = (uint8_t)(freq & 0xFF);
 
   WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
@@ -256,9 +269,9 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   //hal.TXRXdisable();
   instance->IRQneedsClear = true;
-  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   instance->ClearIRQFlags();
-  instance->TXdoneMicros = micros();
+  instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
+  //instance->TXdoneMicros = micros();
   TXdoneCallback();
 }
 
@@ -269,14 +282,13 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   //   Serial.println("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
-  instance->SetMode(SX127x_OPMODE_STANDBY);
-
-  hal.TXenable();
-  instance->TXstartMicros = micros();
-  instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
-
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
+  hal.TXenable();
+
+  //instance->TXstartMicros = micros();
+  //instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
@@ -304,9 +316,9 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   Serial.println("abort RX");
   //   return; // we were already TXing so abort
   // }
-  instance->SetMode(SX127x_OPMODE_STANDBY);
   instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
+  instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   instance->SetMode(SX127x_OPMODE_RXCONTINUOUS);
@@ -321,19 +333,20 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ);
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ)
 {
+  IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetOutputPower(currPWR);
   SetSpreadingFactor(sf);
   SetBandwidthCodingRate(bw, cr);
-  SetFrequency(freq);
+  SetFrequencyReg(freq);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()

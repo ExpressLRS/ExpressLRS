@@ -20,7 +20,6 @@ Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 
 #include "SX1280_Regs.h"
 #include "SX1280.h"
-#include <SPI.h>
 
 enum SX1280_InterruptAssignment_
 {
@@ -73,4 +72,16 @@ public:
 
     static void (*TXdoneCallback)(); //function pointer for callback
     static void (*RXdoneCallback)(); //function pointer for callback
+
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
+    void BusyDelay(uint32_t duration) const { (void)duration; };
+#else
+    uint32_t BusyDelayStart;
+    uint32_t BusyDelayDuration;
+    void BusyDelay(uint32_t duration)
+    {
+        BusyDelayStart = micros();
+        BusyDelayDuration = duration;
+    }
+#endif
 };

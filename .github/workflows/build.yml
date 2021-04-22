@@ -1,62 +1,111 @@
 name: Build ExpressLRS
 on: [push, pull_request]
 jobs:
-  build:
-    strategy:
-      max-parallel: 1
+  test:
     runs-on: ubuntu-latest
     steps:
 
     - name: Inject slug/short variables
-      uses: rlespinasse/github-slug-action@v2.x
+      uses: rlespinasse/github-slug-action@v3.x
 
     - name: Checkout
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v1
+
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.target }}
 
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
         pip install platformio
 
+    - name: Cache PlatformIO
+      uses: actions/cache@v2
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-platformio
+
+    - name: Run PlatformIO Tests
+      run: |
+        platformio platform install native
+        platformio platform update
+        cd src
+        PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
+
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.set-targets.outputs.targets }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - id: set-targets
+      run: echo "::set-output name=targets::[$(grep -r "\[env:" src/targets | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
+
+  build:
+    needs: targets
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJSON(needs.targets.outputs.targets)}}
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Inject slug/short variables
+      uses: rlespinasse/github-slug-action@v3.x
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.target }}
+
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install platformio
+
+    - name: Cache PlatformIO
+      uses: actions/cache@v2
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-platformio
+
     - name: Run PlatformIO
       run: |
         platformio platform update
-        mkdir -p ~/artifcats
+        platformio platform install native
+        mkdir -p ~/artifacts
         cd src
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_AU_915
-        pio run --environment Frsky_TX_R9M_via_STLINK 
-        pio run --environment Frsky_TX_R9M_via_stock_BL 
-        pio run --environment Frsky_TX_R9M_via_WIFI 
-        pio run --environment Frsky_TX_R9M_LITE_via_STLINK 
-        pio run --environment Frsky_TX_R9M_LITE_via_stock_BL
-        pio run --environment Frsky_TX_R9M_LITE_PRO_via_STLINK 
-        pio run --environment Frsky_RX_R9MM_R9MINI_via_STLINK 
-        pio run --environment Frsky_RX_R9MM_R9MINI_via_BetaflightPassthrough 
-        pio run --environment Frsky_RX_R9MX_via_STLINK 
-        pio run --environment Frsky_RX_R9MX_via_BetaflightPassthrough 
-        pio run --environment DIY_900_TX_TTGO_V1_SX127x_via_UART 
-        pio run --environment DIY_900_TX_TTGO_V2_SX127x_via_UART 
-        pio run --environment DIY_900_TX_ESP32_SX127x_E19_via_UART  
-        pio run --environment DIY_900_TX_ESP32_SX127x_RFM95_via_UART  
-        pio run --environment DIY_900_RX_ESP8285_SX127x_via_UART  
-        pio run --environment DIY_900_RX_ESP8285_SX127x_via_BetaflightPassthrough  
-        mv .pio/build ~/artifcats/AU_915
-        export PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400
-        pio run --environment DIY_2400_TX_ESP32_SX1280_Mini_via_UART 
-        pio run --environment DIY_2400_TX_ESP32_SX1280_E28_via_UART 
-        pio run --environment DIY_2400_TX_ESP32_SX1280_LORA1280F27_via_UART 
-        pio run --environment DIY_2400_RX_ESP8285_SX1280_via_UART 
-        pio run --environment DIY_2400_RX_ESP8285_SX1280_via_BetaflightPassthrough 
-        mv .pio/build ~/artifcats/ISM_2400
+        case ${{matrix.target}} in
+          *2400* | FM30*)
+            export REG=-DRegulatory_Domain_ISM_2400
+            ;;
+          *)
+            export REG=-DRegulatory_Domain_AU_915
+            ;;
+        esac
+        # All the features
+        PLATFORMIO_BUILD_FLAGS="$REG -DHYBRID_SWITCHES_8 -DENABLE_TELEMETRY -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+        # Minimal/default features
+        PLATFORMIO_BUILD_FLAGS="$REG !-DHYBRID_SWITCHES_8 !-DENABLE_TELEMETRY !-DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+        mv .pio/build ~/artifacts/AU_915
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:
         name: ExpressLRS-${{ env.GITHUB_REF_SLUG_URL }}-${{ github.run_number }}
-        path: ~/artifcats/**/*.bin
+        path: ~/artifacts/**/*.bin
       continue-on-error: true

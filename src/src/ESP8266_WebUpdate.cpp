@@ -13,7 +13,7 @@ extern SX1280Driver Radio;
 
 #define STASSID "ExpressLRS RX"
 #define STAPSK "expresslrs"
-const char *myHostname = "expresslrs";
+const char *myHostname = "elrs_rx";
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
@@ -22,7 +22,9 @@ extern hwTimer hwTimer;
 
 const byte DNS_PORT = 53;
 IPAddress apIP(10, 0, 0, 1);
+IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
+//MDNSResponder mdns;
 ESP8266WebServer server(80);
 
 ESP8266HTTPUpdateServer httpUpdater;
@@ -124,6 +126,19 @@ void BeginWebUpdate(void)
   Serial.println("Stopping Radio");
   Radio.End();
 
+  WiFi.persistent(false);
+  WiFi.disconnect();   //added to start with the wifi off, avoid crashing
+  WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
+  WiFi.setOutputPower(13);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11B);
+  wifi_station_set_hostname(myHostname);
+  delay(500);
+  WiFi.softAPConfig(apIP, apIP, netMsk);
+  WiFi.softAP(ssid, password);
+
+  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer.start(DNS_PORT, "*", apIP);
+
   server.on("/", WebUpdateHandleRoot);
   server.on("/css.css", WebUpdateSendcss);
 
@@ -137,31 +152,22 @@ void BeginWebUpdate(void)
   server.on("/fwlink", WebUpdateHandleRoot);
   server.onNotFound(WebUpdateHandleNotFound);
 
-  WiFi.persistent(false);
-  WiFi.disconnect();   //added to start with the wifi off, avoid crashing
-  WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
-  WiFi.setOutputPower(13);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
-  WiFi.softAP(ssid, password);
-  delay(1000);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-
-  dnsServer.start(DNS_PORT, "*", apIP);
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  MDNS.begin(myHostname);
+  // if (mdns.begin(myHostname, apIP))
+  // {
+  //   mdns.addService("http", "tcp", 80);
+  //   mdns.update();
+  // }
   httpUpdater.setup(&server);
   server.begin();
-
-  MDNS.addService("http", "tcp", 80);
-  Serial.printf("HTTPUpdateServer ready! Open http://%s.local/update in your browser\n", myHostname);
+  Serial.printf("HTTPUpdateServer ready! Open http://%s in your browser\n", myHostname);
 }
 
 void HandleWebUpdate(void)
 {
   server.handleClient();
-  MDNS.update();
+  dnsServer.processNextRequest();
+  //mdns.update();
   yield();
   delay(1);
 }
-
 #endif

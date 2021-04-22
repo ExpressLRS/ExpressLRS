@@ -209,10 +209,18 @@ void led_state_set(uint32_t state)
   };
 
 #if defined(PIN_LED_RED)
-  GPIO_Write(gpio_led_red, (!!(uint8_t)val));
+#if defined(LED_RED_INVERTED)
+  GPIO_Write(gpio_led_red, !(uint8_t)val);
+#else
+  GPIO_Write(gpio_led_red, !!(uint8_t)val);
+#endif
 #endif
 #if defined(PIN_LED_GREEN)
+#if defined(LED_GREEN_INVERTED)
+  GPIO_Write(gpio_led_green, !(uint8_t)(val >> 8));
+#else
   GPIO_Write(gpio_led_green, !!(uint8_t)(val >> 8));
+#endif
 #endif
   ws2812_set_color_u32(val);
 }
@@ -235,12 +243,12 @@ static void print_boot_header(void)
 #endif
 }
 
-static int8_t boot_code_xmodem(uint32_t rx_pin, uint32_t tx_pin)
+static int8_t boot_code_xmodem(int32_t rx_pin, int32_t tx_pin)
 {
   uint8_t BLrequested = 0;
   uint8_t header[6] = {0, 0, 0, 0, 0, 0};
 
-  uart_init(UART_BAUD, rx_pin, tx_pin, duplex_pin);
+  uart_init(UART_BAUD, rx_pin, tx_pin, duplex_pin, UART_INV);
   flash_dump();
 
   print_boot_header();
@@ -370,11 +378,27 @@ int8_t boot_wait_timer_end(void)
   return (BOOT_WAIT < (HAL_GetTick() - boot_start_time));
 }
 
-int8_t boot_code_stk(uint32_t baud, uint32_t rx_pin, uint32_t tx_pin, int32_t duplexpin)
+int8_t boot_code_stk(uint32_t baud, int32_t rx_pin, int32_t tx_pin, int32_t duplexpin, uint8_t inverted)
 {
   int8_t ret = 0;
 
-  uart_init(baud, rx_pin, tx_pin, duplexpin);
+  uart_init(baud, rx_pin, tx_pin, duplexpin, inverted);
+  uart_clear();
+
+#if 0 // UART ECHO DEBUG
+  uint8_t _led_tmp = 0;
+  uint8_t header[6];
+  while(1) {
+    if (uart_receive_timeout(header, 1u, 1000) == UART_OK) {
+      uart_transmit_bytes(header, 1);
+    } else {
+      //uart_transmit_ch('F');
+      uart_transmit_str("F\r\n");
+    }
+    led_state_set(_led_tmp ? LED_FLASHING : LED_FLASHING_ALT);
+    _led_tmp ^= 1;
+  }
+#endif
 
   boot_start_time = HAL_GetTick();
 
@@ -416,7 +440,7 @@ int main(void)
 
   led_state_set(LED_BOOTING);
 
-  uint32_t rx_pin = 0, tx_pin;
+  int32_t rx_pin = -1, tx_pin;
   int8_t ret = 0;
 
 #if XMODEM
@@ -426,20 +450,21 @@ int main(void)
 #endif // UART_RX_PIN
   tx_pin = IO_CREATE(UART_TX_PIN_2ND);
 
-  ret = boot_code_stk(UART_BAUD_2ND, rx_pin, tx_pin, duplex_pin);
+  ret = boot_code_stk(UART_BAUD_2ND, rx_pin, tx_pin, duplex_pin, UART_INV_2ND);
   if (ret < 0) // timeout, start xmodem
-#endif
+#endif // UART_TX_PIN
   {
 #if defined(UART_RX_PIN)
     rx_pin = IO_CREATE(UART_RX_PIN);
 #else
-    rx_pin = 0;
+    rx_pin = -1;
 #endif // UART_RX_PIN
     tx_pin = IO_CREATE(UART_TX_PIN);
     ret = boot_code_xmodem(rx_pin, tx_pin);
   }
 
 #else /* !XMODEM */
+
 #if defined(UART_RX_PIN)
   rx_pin = IO_CREATE(UART_RX_PIN);
 #endif // UART_RX_PIN
@@ -449,16 +474,16 @@ int main(void)
   if ((BL_FLASH_START & 0xffff) == 0x0)
     HAL_Delay(500);
 
-  ret = boot_code_stk(UART_BAUD, rx_pin, tx_pin, duplex_pin);
+  ret = boot_code_stk(UART_BAUD, rx_pin, tx_pin, duplex_pin, UART_INV);
 #if defined(UART_TX_PIN_2ND)
   if (ret < 0) {
 #if defined(UART_RX_PIN_2ND)
     rx_pin = IO_CREATE(UART_RX_PIN_2ND);
 #else
-    rx_pin = 0;
+    rx_pin = -1;
 #endif // UART_RX_PIN
     tx_pin = IO_CREATE(UART_TX_PIN_2ND);
-    ret = boot_code_stk(UART_BAUD_2ND, rx_pin, tx_pin, -1);
+    ret = boot_code_stk(UART_BAUD_2ND, rx_pin, tx_pin, -1, UART_INV_2ND);
   }
 #endif
 #endif/* XMODEM */
@@ -586,6 +611,10 @@ void SystemClock_Config(void)
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
 #else
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
+#endif
+#ifdef RCC_PERIPHCLK_USART2
+  PeriphClkInit.PeriphClockSelection |= RCC_PERIPHCLK_USART2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
 #endif
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
     Error_Handler();

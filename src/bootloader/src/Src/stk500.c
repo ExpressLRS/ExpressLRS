@@ -50,6 +50,7 @@ static int8_t stk500_update(void)
   uint8_t ch, GPIOR0, led = 1;
   int8_t retval;
   int8_t initial_sync = 0;
+  int8_t initial_sync_retries_left = 1;
 
   insync = 0;
 
@@ -66,8 +67,13 @@ static int8_t stk500_update(void)
 
     // avoid misunderstanding CRSF for STK500
     // STK500 MUST start with STK_GET_SYNC first
-    if (!initial_sync && (ch != STK_GET_SYNC))
-      return -1;
+    if (!initial_sync && (ch != STK_GET_SYNC)) {
+      if (initial_sync_retries_left-- == 0) {
+        return -1;
+      } else {
+        continue;
+      }
+    }
 
     led ^= 1;
     led_state_set(led ? LED_FLASHING : LED_FLASHING_ALT);
