@@ -58,6 +58,7 @@ uint32_t LEDupdateCounterMillis;
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
+//#define PRINT_RX_SCOREBOARD // print a letter for each packet received or missed
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
@@ -166,6 +167,7 @@ uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
+static bool lastPacketCrcError;
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
@@ -481,6 +483,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
 
+#if defined(PRINT_RX_SCOREBOARD)
+    if (!LQCalc.currentIsSet())
+        Serial.write(lastPacketCrcError ? '.' : '_');
+    lastPacketCrcError = false;
+#endif
+
     bool tlmSent = false;
     bool didFHSS = false;
 
@@ -630,6 +638,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         Serial.println("");
         #endif
+        #if defined(PRINT_RX_SCOREBOARD)
+            lastPacketCrcError = true;
+        #endif
         return;
     }
 
@@ -699,8 +710,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          if (SwitchEncModeExpected == SwitchEncMode && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
-#ifndef DEBUG_SUPPRESS
-             Serial.println("sync");
+#if defined(PRINT_RX_SCOREBOARD)
+             Serial.write('s');
 #endif
 
              if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
@@ -720,6 +731,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
              {
+                 //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection();
@@ -745,6 +757,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
     currentlyProcessing = false;
+#if defined(PRINT_RX_SCOREBOARD)
+    if (type != SYNC_PACKET) Serial.write('R');
+#endif
 }
 
 void beginWebsever()
@@ -791,13 +806,15 @@ void sampleButton()
 void inline RXdoneISR()
 {
     ProcessRFPacket();
-    //Serial.println("r");
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
     LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+#if defined(PRINT_RX_SCOREBOARD)
+    Serial.write('T');
+#endif
 }
 
 static void setupSerial()
