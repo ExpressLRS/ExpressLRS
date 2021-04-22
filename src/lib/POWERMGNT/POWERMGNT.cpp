@@ -71,6 +71,7 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
     digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
 #endif
+    CurrentPower = PWR_COUNT;
 }
 
 void POWERMGNT::setDefaultPower()
@@ -80,6 +81,9 @@ void POWERMGNT::setDefaultPower()
 
 PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 {
+    if (Power == CurrentPower)
+        return CurrentPower;
+
     if (Power > MaxPower)
     {
         Power = (PowerLevels_e)MaxPower;

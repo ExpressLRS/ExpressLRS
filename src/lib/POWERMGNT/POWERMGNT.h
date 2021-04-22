@@ -62,8 +62,8 @@ typedef enum
     PWR_250mW = 4,
     PWR_500mW = 5,
     PWR_1000mW = 6,
-    PWR_2000mW = 7
-
+    PWR_2000mW = 7,
+    PWR_COUNT = 8
 } PowerLevels_e;
 
 class POWERMGNT
