@@ -14,3 +14,6 @@ indent_style = tab
 
 [*.{c,h,cpp,hpp}]
 indent_size = 4
+
+[tx_main.cpp]
+indent_size = 2

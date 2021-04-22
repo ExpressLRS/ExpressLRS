@@ -137,7 +137,7 @@ void test_function_bootloader_called(void)
 void test_function_ignore_invalid_type(void)
 {
     telemetry.ResetState();
-    uint8_t bootloaderSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_MSP_RESP,0x62,0x6c,11};
+    uint8_t bootloaderSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendData(bootloaderSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);

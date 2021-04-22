@@ -23,6 +23,7 @@ SX1280Driver Radio;
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_sender.h"
 #endif
+#include "stubborn_receiver.h"
 
 #include "FHSS.h"
 // #include "Debug.h"
@@ -62,7 +63,7 @@ uint32_t LEDupdateCounterMillis;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
-PFD PFDloop; 
+PFD PFDloop;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
@@ -97,7 +98,8 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define TELEM_MIN_LINK_INTERVAL 512U
 #endif
 
-
+StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
+uint8_t MspData[ELRS_MSP_BUFFER];
 
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
@@ -180,7 +182,7 @@ bool InBindingMode = false;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
-void OnELRSBindMSP(mspPacket_t *packet);
+void OnELRSBindMSP(uint8_t* packet);
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -277,6 +279,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         case ELRS_TELEMETRY_TYPE_LINK:
             #ifdef ENABLE_TELEMETRY
             NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+            telemetryBurstCount = 0;
             #else
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
             #endif
@@ -288,7 +291,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-            Radio.TXdataBuffer[6] = 0;
+            Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
             break;
         #ifdef ENABLE_TELEMETRY
@@ -300,7 +303,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             else
             {
                 NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-                telemetryBurstCount = 0;
             }
 
             TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
@@ -314,7 +316,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         #endif
     }
 
-    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);    
+    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
@@ -643,6 +645,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
     bool telemetryConfirmValue;
     #endif
+    bool currentMspConfirmValue;
 
     currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
@@ -673,15 +676,22 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case MSP_DATA_PACKET:
-        mspPacket_t packet;
-        UnpackMSPData(Radio.RXdataBuffer, &packet);
-        if (packet.function == MSP_ELRS_BIND)
+        currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
+        MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
+        if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
         {
-            OnELRSBindMSP(&packet);
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
-        else
+
+        if (Radio.RXdataBuffer[1] == 1 && MspData[0] == MSP_ELRS_BIND)
         {
-            crsf.sendMSPFrameToFC(&packet);
+            OnELRSBindMSP(MspData);
+            MspReceiver.ResetState();
+        }
+        else if (MspReceiver.HasFinishedData())
+        {
+            crsf.sendMSPFrameToFC(MspData);
+            MspReceiver.Unlock();
         }
         break;
 
@@ -1050,6 +1060,8 @@ void setup()
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
     TelemetrySender.ResetState();
+    MspReceiver.ResetState();
+    MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
     #endif
     Radio.RXnb();
     crsf.Begin();
@@ -1347,12 +1359,13 @@ void ExitBindingMode()
     Serial.println(Radio.currFreq);
 }
 
-void OnELRSBindMSP(mspPacket_t *packet)
+void OnELRSBindMSP(uint8_t* packet)
 {
-    UID[2] = packet->readByte();
-    UID[3] = packet->readByte();
-    UID[4] = packet->readByte();
-    UID[5] = packet->readByte();
+    for (int i = 1; i <=4; i++)
+    {
+        UID[i + 1] = packet[i];
+    }
+
     CRCInitializer = (UID[4] << 8) | UID[5];
 
     Serial.print("New UID = ");

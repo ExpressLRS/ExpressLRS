@@ -171,39 +171,3 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 #endif
 
 #endif // !HYBRID_SWITCHES_8
-
-void ICACHE_RAM_ATTR GenerateMSPData(volatile uint8_t* Buffer, mspPacket_t *msp)
-{
-  Buffer[0] = MSP_DATA_PACKET & 0b11;
-  Buffer[1] = msp->function;
-  Buffer[2] = msp->payloadSize;
-  Buffer[3] = 0;
-  Buffer[4] = 0;
-  Buffer[5] = 0;
-  Buffer[6] = 0;
-  if (msp->payloadSize <= 4)
-  {
-    msp->payloadReadIterator = 0;
-    for (int i = 0; i < msp->payloadSize; i++)
-    {
-      Buffer[3 + i] = msp->readByte();
-    }
-  }
-  else
-  {
-    Serial.println("Unable to send MSP command. Packet too long.");
-  }
-}
-
-void ICACHE_RAM_ATTR UnpackMSPData(volatile uint8_t* Buffer, mspPacket_t *msp)
-{
-    msp->reset();
-    msp->makeCommand();
-    msp->flags = 0;
-    msp->function = Buffer[1];
-    msp->addByte(Buffer[3]);
-    msp->addByte(Buffer[4]);
-    msp->addByte(Buffer[5]);
-    msp->addByte(Buffer[6]);
-}
-

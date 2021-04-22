@@ -26,6 +26,7 @@ SX1280Driver Radio;
 #ifdef ENABLE_TELEMETRY
 #include "stubborn_receiver.h"
 #endif
+#include "stubborn_sender.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
@@ -54,7 +55,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
-#define MSP_PACKET_SEND_INTERVAL 200LU
+#define MSP_PACKET_SEND_INTERVAL 10LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
@@ -86,8 +87,6 @@ bool webUpdateMode = false;
 
 //// MSP Data Handling ///////
 uint32_t MSPPacketLastSent = 0;  // time in ms when the last switch data packet was sent
-uint32_t MSPPacketSendCount = 0; // number of times to send MSP packet
-mspPacket_t MSPPacket;
 
 ////////////SYNC PACKET/////////
 uint32_t SyncPacketLastSent = 0;
@@ -110,6 +109,8 @@ bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
 bool InBindingMode = false;
+uint8_t BindingPackage[5];
+uint8_t BindingSendCount = 0;
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
@@ -117,7 +118,8 @@ void SendUIDOverMSP();
 #ifdef ENABLE_TELEMETRY
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 #endif
-uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
+StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
+uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 // MSP packet handling function defs
 void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
@@ -129,10 +131,10 @@ uint8_t baseMac[6];
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
-  
+
   Radio.RXdataBuffer[0] &= 0b11;
   uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-  
+
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
   //Serial.println("TLMpacket0");
@@ -177,16 +179,12 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
             break;
 
         #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
-            if (TelemetryReceiver.HasFinishedData())
-            {
-                crsf.sendTelemetryToTX(CRSFinBuffer);
-                TelemetryReceiver.Unlock();
-            }
             break;
         #endif
     }
@@ -261,6 +259,9 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+  uint8_t *data;
+  uint8_t maxLength;
+  uint8_t packageIndex;
 #ifdef FEATURE_OPENTX_SYNC
   crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
@@ -304,16 +305,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MspSender.IsActive())
     {
-      GenerateMSPData(Radio.TXdataBuffer, &MSPPacket);
+      MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+      Radio.TXdataBuffer[0] = MSP_DATA_PACKET & 0b11;
+      Radio.TXdataBuffer[1] = packageIndex;
+      Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+      Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+      Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+      Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+      Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
       MSPPacketLastSent = millis();
-      MSPPacketSendCount--;
-
-      if (MSPPacketSendCount <= 0 && InBindingMode)
-      {
-        ExitBindingMode();
-      }
+      // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
+      BindingSendCount++;
     }
     else
     {
@@ -631,7 +635,7 @@ void setup()
       HandleWebUpdate();
       delay(1);
     }
-    #endif 
+    #endif
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
@@ -669,12 +673,13 @@ void setup()
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
+  MspSender.ResetState();
 }
 
 void loop()
 {
   uint32_t now = millis();
-
+  static bool mspTransferActive = false;
   #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
       if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
       {
@@ -762,6 +767,44 @@ void loop()
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
+  }
+
+  #ifdef ENABLE_TELEMETRY
+  if (TelemetryReceiver.HasFinishedData())
+  {
+      crsf.sendTelemetryToTX(CRSFinBuffer);
+      TelemetryReceiver.Unlock();
+  }
+  #endif
+
+  // only send msp data when binding is not active
+  if (InBindingMode)
+  {
+    // exit bind mode if package after some repeats
+    if (BindingSendCount > 6) {
+      ExitBindingMode();
+    }
+  }
+  else if (!MspSender.IsActive())
+  {
+    // sending is done and we need to update our flag
+    if (mspTransferActive)
+    {
+      // unlock buffer for msp messages
+      crsf.UnlockMspMessage();
+      mspTransferActive = false;
+    }
+    // we are not sending so look for next msp package
+    else
+    {
+      uint8_t* currentMspData = crsf.GetMspMessage();
+      // if we have a new msp package start sending
+      if (currentMspData != NULL)
+      {
+        MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
+        mspTransferActive = true;
+      }
+    }
   }
 }
 
@@ -878,8 +921,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
-    MSPPacket = *packet;
-    MSPPacketSendCount = 6;
+    crsf.AddMspMessage(packet);
   }
 }
 
@@ -933,22 +975,22 @@ void ExitBindingMode()
   CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = false;
+  MspSender.ResetState();
 
   Serial.println("Exiting binding mode");
 }
 
 void SendUIDOverMSP()
 {
-  MSPPacket.reset();
-
-  MSPPacket.makeCommand();
-  MSPPacket.function = MSP_ELRS_BIND;
-  MSPPacket.addByte(UID[2]);
-  MSPPacket.addByte(UID[3]);
-  MSPPacket.addByte(UID[4]);
-  MSPPacket.addByte(UID[5]);
-
-  MSPPacketSendCount = 10;
+  BindingPackage[0] = MSP_ELRS_BIND;
+  BindingPackage[1] = UID[2];
+  BindingPackage[2] = UID[3];
+  BindingPackage[3] = UID[4];
+  BindingPackage[4] = UID[5];
+  MspSender.ResetState();
+  BindingSendCount = 0;
+  MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
+  InBindingMode = true;
 }
 
 
