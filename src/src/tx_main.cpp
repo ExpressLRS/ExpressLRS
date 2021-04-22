@@ -234,8 +234,8 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     return;
 
   Serial.println("set rate");
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
   hwTimer.updateInterval(ModParams->interval);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -314,12 +314,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+  bool NonceFHSSresultWindow = (NonceFHSSresult == 1 || NonceFHSSresult == 2) ? true : false; // restrict to the middle nonce ticks (not before or after freq chance)
+  bool WithinSyncSpamResidualWindow = (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
 
-  if ((syncSpamCounter || (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS)) && Radio.currFreq == GetInitialFreq())
+  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && NonceFHSSresultWindow)
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
     GenerateSyncPacketData();
   }
@@ -370,7 +372,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 void ICACHE_RAM_ATTR timerCallbackIdle()
 {
   NonceTX++;
-  HandleFHSS();
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    FHSSptr++;
+  }
 }
 
 void sendLuaParams()
@@ -547,7 +552,7 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#ifndef PLATFORM_STM32
+#if !defined(PLATFORM_STM32) && !defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
     hwTimer.callbackTock = &timerCallbackIdle;
 #else
