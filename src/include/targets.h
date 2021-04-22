@@ -18,12 +18,10 @@
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
 #define ICACHE_RAM_ATTR IRAM_ATTR
 #endif
- 
+
 #ifdef TARGET_TTGO_LORA_V1_AS_TX
 #define GPIO_PIN_NSS 18
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
-#define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
 #define GPIO_PIN_MISO 19
 #define GPIO_PIN_SCK 5
@@ -38,9 +36,7 @@
 
 #elif defined(TARGET_TTGO_LORA_V2_AS_TX)
 #define GPIO_PIN_NSS 18
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
-#define GPIO_PIN_DIO1 -1
 #define GPIO_PIN_MOSI 27
 #define GPIO_PIN_MISO 19
 #define GPIO_PIN_SCK 5
@@ -55,7 +51,6 @@
 
 #elif defined(TARGET_EXPRESSLRS_PCB_TX_V3)
 #define GPIO_PIN_NSS 5
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0 26
 #define GPIO_PIN_DIO1 25
 #define GPIO_PIN_MOSI 23
@@ -74,9 +69,13 @@
 
 #elif defined(TARGET_EXPRESSLRS_PCB_RX_V3)
 #define GPIO_PIN_NSS 15
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
-#define GPIO_PIN_DIO0 4
-#define GPIO_PIN_DIO1 5
+#if TARGET_NAMIMNORC_ESP_RX
+    #define GPIO_PIN_DIO0 5
+    #define GPIO_PIN_DIO1 4
+#else
+    #define GPIO_PIN_DIO0 4
+    #define GPIO_PIN_DIO1 5
+#endif
 #define GPIO_PIN_MOSI 13
 #define GPIO_PIN_MISO 12
 #define GPIO_PIN_SCK 14
@@ -107,7 +106,7 @@ https://github.com/jaxxzer
 #if defined(USE_R9MM_R9MINI_SBUS)
     #define GPIO_PIN_RCSIGNAL_RX    PA3
     #define GPIO_PIN_RCSIGNAL_TX    PA2
-#elif defined(TARGET_R9SLIM_RX) 
+#elif defined(TARGET_R9SLIM_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3  // RX1 PIN OF CONNECTOR 1 ON SLIM
     #define GPIO_PIN_RCSIGNAL_TX    PA2  // TX1 PIN OF CONNECTOR 1 ON SLIM
 #elif defined(TARGET_R9SLIMPLUS_RX)      // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
@@ -175,7 +174,6 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RFswitch_CONTROL     PB3  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12
-#define GPIO_PIN_BUSY           -1 // NOT USED ON THIS TARGET
 #define GPIO_PIN_DIO0           PA15
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
@@ -212,8 +210,6 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12
 #define GPIO_PIN_DIO0           PC15
-#define GPIO_PIN_DIO1           -1    //unused for sx1280
-#define GPIO_PIN_BUSY           -1    //unused for sx1280
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
@@ -239,8 +235,6 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_NSS            PB12 // confirmed
 #define GPIO_PIN_DIO0           PA8  // confirmed
-#define GPIO_PIN_DIO1           UNDEF_PIN   // NOT USED ON THIS TARGET
-#define GPIO_PIN_BUSY           UNDEF_PIN   // NOT USED ON THIS TARGET
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
 #define GPIO_PIN_SCK            PB13
@@ -266,7 +260,6 @@ https://github.com/jaxxzer
 #elif defined(TARGET_RX_ESP8266_SX1280_V1)
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_BUSY 5
-#define GPIO_PIN_DIO0 -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1 4
 #define GPIO_PIN_MOSI 13
 #define GPIO_PIN_MISO 12
@@ -292,7 +285,6 @@ High = Ant2
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
-#define GPIO_PIN_DIO0 -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1 4
 #define GPIO_PIN_MOSI 23
 #define GPIO_PIN_MISO 19
@@ -304,7 +296,6 @@ High = Ant2
 #elif defined(TARGET_RX_GHOST_ATTO_V1)
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_BUSY           PA3
-#define GPIO_PIN_DIO0           -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1           PA1
 #define GPIO_PIN_MOSI           PB5
 #define GPIO_PIN_MISO           PB4
@@ -323,7 +314,6 @@ High = Ant2
 #elif defined(TARGET_TX_GHOST)
 #define GPIO_PIN_NSS             PA15
 #define GPIO_PIN_BUSY            PB15
-#define GPIO_PIN_DIO0           -1 // does not exist on sx1280
 #define GPIO_PIN_DIO1            PB2
 #define GPIO_PIN_MOSI            PA7
 #define GPIO_PIN_MISO            PA6
@@ -347,7 +337,6 @@ High = Ant2
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
-#define GPIO_PIN_DIO0 -1
 #define GPIO_PIN_DIO1 4
 #define GPIO_PIN_MOSI 23
 #define GPIO_PIN_MISO 19
@@ -366,7 +355,6 @@ High = Ant2
 #define GPIO_PIN_MISO        PA6
 #define GPIO_PIN_SCK         PA5
 
-#define GPIO_PIN_DIO0        -1
 #define GPIO_PIN_DIO1        PA10
 #define GPIO_PIN_RST         PB4
 #define GPIO_PIN_BUSY        PA11
@@ -466,8 +454,6 @@ Designed by NamimnoRC
 
 #elif defined(TARGET_TX_FM30)
 #define GPIO_PIN_NSS            PB12
-//#define GPIO_PIN_BUSY         UNDEF_PIN // Does not appear to be connected?
-#define GPIO_PIN_DIO0           UNDEF_PIN // No DIO0 on SX1280
 #define GPIO_PIN_DIO1           PB8
 #define GPIO_PIN_MOSI           PB15
 #define GPIO_PIN_MISO           PB14
@@ -501,7 +487,6 @@ Designed by NamimnoRC
 #elif defined(TARGET_RX_FM30_MINI)
 #define GPIO_PIN_NSS            PA15 // or PB3?
 #define GPIO_PIN_BUSY           PE9
-#define GPIO_PIN_DIO0           UNDEF_PIN // No DIO0 on SX1280
 #define GPIO_PIN_DIO1           PE8
 #define GPIO_PIN_MOSI           PB5
 #define GPIO_PIN_MISO           PB4
