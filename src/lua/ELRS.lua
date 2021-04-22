@@ -9,7 +9,7 @@
 ]] --
 local commitSha = '??????'
 local shaLUT = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
-local version = 3;
+local version = 4;
 local gotFirstResp = false
 local needResp = false
 local NewReqTime = 0;
@@ -26,13 +26,13 @@ local SX127x_RATES = {
     values = {0x06, 0x05, 0x04, 0x02},
 }
 local SX128x_RATES = {
-    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
-    values = {0x06, 0x05, 0x03, 0x01, 0x00},
+    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '250Race(-105dbm)', '500Hz(-105dbm)', '500Race(-99dbm)'},
+    values = {0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00},
 }
 local tx_lua_version = {
     selected = 1,
-    list = {'?', '?', 'v0.3', 'v0.4', 'v0.5'},
-    values = {0x01, 0x02, 0x03, 0x04, 0x05},
+    list = {'?', '?', 'v0.3', 'v0.4', 'v0.5', 'v0.6'},
+    values = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
 }
 
 local AirRate = {
@@ -50,8 +50,8 @@ local TLMinterval = {
     editable = true,
     name = 'TLM Ratio',
     selected = 99,
-    list = {'Off', '1:128', '1:64', '1:32', '1:16', '1:8', '1:4', '1:2'},
-    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    list = {'OFF', '1:128', '1:64', '1:32', '1:16', '1:8', '1:4', '1:2', 'Forced OFF'},
+    values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xFF},
     max_allowed = 8,
 }
 
@@ -165,7 +165,7 @@ local supportedRadios =
     {
         --highRes         = false,
         textSize        = SMLSIZE,
-        xOffset         = 60,
+        xOffset         = 55,
         yOffset         = 8,
         yOffset_val     = 3,
         topOffset       = 1,
@@ -185,7 +185,7 @@ local supportedRadios =
     {
         --highRes         = false,
         textSize        = SMLSIZE,
-        xOffset         = 60,
+        xOffset         = 55,
         yOffset         = 8,
         yOffset_val     = 3,
         topOffset       = 1,
@@ -322,6 +322,11 @@ local function processResp()
                 wifiupdatemode = bit32.btest(0x02, data[4]) 
                 if StopUpdate == false then 
                     TLMinterval.selected = GetIndexOf(TLMinterval.values,data[6])
+					if TLMinterval.selected == 0xFF then
+						TLMinterval.editable = false;
+					else
+						TLMinterval.editable = true;
+					end
                     MaxPower.selected = GetIndexOf(MaxPower.values,data[7])
                     tx_lua_version.selected = GetIndexOf(tx_lua_version.values,data[12])
                     if data[8] == 6 then

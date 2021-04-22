@@ -60,16 +60,18 @@ typedef enum
 
 typedef enum
 {
-    RATE_500HZ = 0,
-    RATE_250HZ = 1,
-    RATE_200HZ = 2,
-    RATE_150HZ = 3,
-    RATE_100HZ = 4,
-    RATE_50HZ = 5,
-    RATE_25HZ = 6,
-    RATE_4HZ = 7,
-    RATE_ENUM_MAX = 8
-} expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    RATE_500RHZ = 0,
+    RATE_500HZ = 1,
+    RATE_250RHZ = 2,
+    RATE_250HZ = 3,
+    RATE_200HZ = 4,
+    RATE_150HZ = 5,
+    RATE_100HZ = 6,
+    RATE_50HZ = 7,
+    RATE_25HZ = 8,
+    RATE_4HZ = 9,
+    RATE_ENUM_MAX = 10
+} expresslrs_RFrates_e;
 
 typedef struct expresslrs_rf_pref_params_s
 {

@@ -199,12 +199,12 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 #else
   uint8_t SwitchEncMode = 0b00;
 #endif
-  uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
+  uint8_t Index = (ExpressLRS_currAirRate_Modparams->index & 0b111);
   uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
+  Radio.TXdataBuffer[3] = (Index << 5) + (TLMrate << 2) + (SwitchEncMode << 1);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -335,10 +335,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 void sendLuaParams()
 {
+  uint8_t TLMint;
+  if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_250RHZ)
+  {
+    TLMint = 0xFF; // forced OFF telemetry mode 
+  }
+  else
+  {
+    TLMint = (uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval;
+  }
   uint8_t luaParams[] = {0xFF,
                          (uint8_t)(InBindingMode | (webUpdateMode << 1)),
                          (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
-                         (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval),
+                         (uint8_t)TLMint,
                          (uint8_t)(POWERMGNT.currPower()),
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,

@@ -633,9 +633,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
 #ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
+    #define SwitchEncModeExpected 0b1
 #else
-    uint8_t SwitchEncModeExpected = 0b00;
+    #define SwitchEncModeExpected 0b0
 #endif
     uint8_t SwitchEncMode;
     uint8_t indexIN;
@@ -691,9 +691,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
 
     case SYNC_PACKET: //sync packet from master
-         indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
-         TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
-         SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
+         indexIN = (Radio.RXdataBuffer[3] & 0b11100000) >> 5;
+         TLMrateIn = (Radio.RXdataBuffer[3] & 0b00011100) >> 2;
+         SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000010) >> 1;
+         bool ForceDisconnect = (bool)(Radio.RXdataBuffer[3] & 0b00000001);
 
          if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
