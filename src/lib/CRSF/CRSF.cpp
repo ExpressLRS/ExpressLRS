@@ -139,24 +139,25 @@ void CRSF::Begin()
 
 void CRSF::End()
 {
-    Serial.println("CRSF UART END");
 #if CRSF_TX_MODULE
 #ifdef PLATFORM_ESP32
-    while (SerialOutFIFO.peek() > 0)
-    {
-        delay(1);
-    }
     if (xESP32uartTask != NULL)
     {
         vTaskDelete(xESP32uartTask);
     }
-#else
+#endif
+    uint32_t startTime = millis();
+    #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
     {
         handleUARTin();
+        if (millis() - startTime > 1000)
+        {
+            break;
+        }
     }
-#endif
     CRSF::Port.end();
+    Serial.println("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
 
