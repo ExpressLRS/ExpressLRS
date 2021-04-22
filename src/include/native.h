@@ -69,5 +69,12 @@ inline void delay(int32_t time) {
     usleep(time);
 }
 
+
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
+
+#ifdef _WIN32
+#define random rand
+#define srandom srand
+#endif
+
