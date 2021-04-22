@@ -90,8 +90,7 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index)
 
 ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
 { // convert enum_rate to index
-    int i;
-    for (i = 0; i < RATE_MAX; i++)
+    for (int i = 0; i < RATE_MAX; i++)
     {
         expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(i);
         if (ModParams->enum_rate == rate)
@@ -99,7 +98,14 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
             return i;
         }
     }
-    return i;
+    if (rate == RATE_500HZ)
+    {
+        return 0; // if we make it to here we didn't find the rate in the table to return the first index. 
+    }
+    else if (rate == RATE_25HZ)
+    {
+        return RATE_MAX;
+    }
 }
 
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;

@@ -708,12 +708,12 @@ void setup()
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
-  while (!init_success)
+  if (!init_success)
   {
     #ifdef PLATFORM_ESP32
+    BeginWebUpdate();
     while (1)
     {
-      BeginWebUpdate();
       HandleWebUpdate();
       delay(1);
     }
