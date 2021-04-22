@@ -17,8 +17,6 @@ public:
     static volatile int32_t FreqOffset;
     static volatile uint32_t PauseDuration;
     static bool running;
-    static bool isPaused;
-    static bool PauseReq;
     static bool alreadyInit;
 
     static void init();
@@ -33,7 +31,6 @@ public:
     static void phaseShift(int32_t newPhaseShift);
 
     static void inline nullCallback(void);
-    static void PauseDoneCallback(void);
     static void (*callbackTick)();
     static void (*callbackTock)();
 };

@@ -13,8 +13,6 @@ volatile int32_t hwTimer::FreqOffset = 0;
 volatile uint32_t hwTimer::PauseDuration = 0;
 bool hwTimer::running = false;
 bool hwTimer::alreadyInit = false;
-bool hwTimer::isPaused = false;
-bool hwTimer::PauseReq = false;
 
 #if defined(TIM1)
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
@@ -29,7 +27,15 @@ void hwTimer::init()
     {
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
-        MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT);
+#if defined(TARGET_TX)
+        // The prescaler only adjusts AFTER the overflow interrupt fires so
+        // to make Pause() work, the prescaler needs to be fixed to avoid
+        // having to ramp between prescalers
+        MyTim->setPrescaleFactor(MyTim->getTimerClkFreq() / 1000000); // 1us per tick
+        MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
+#else
+        MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT); // 22(50Hz) to 3(500Hz) scaler
+#endif
         MyTim->setPreloadEnable(false);
         alreadyInit = true;
     }
@@ -42,13 +48,18 @@ void hwTimer::stop()
     MyTim->setCount(0);
 }
 
+/*
+ * Schedule a pause of the specified duration, in us -- TX Only
+ * Will pause until the TICK interrupt, then the next timer will
+ * fire Duration - interval/2 after that
+ * 65535us max!
+ */
 void hwTimer::pause(uint32_t duration)
 {
+#if defined(TARGET_TX)
     PauseDuration = duration;
-    PauseReq = true; 
-    while(!isPaused){
-        __NOP();
-    }
+    while(PauseDuration);
+#endif
 }
 
 void hwTimer::resume()
@@ -62,7 +73,8 @@ void hwTimer::resume()
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval;
-    MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
+    // Wait until the next tick to update to not mess up the phase
+    // (no MyTim->setOverflow() here)
 }
 
 void hwTimer::resetFreqOffset()
@@ -88,13 +100,6 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
     hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
 
-void hwTimer::PauseDoneCallback(void)
-{
-    PauseReq = false;
-    hwTimer::callback();
-    MyTim->attachInterrupt(hwTimer::callback);
-}
-
 void hwTimer::callback(void)
 {
     if (!running)
@@ -102,28 +107,39 @@ void hwTimer::callback(void)
         return;
     }
 
-    if (PauseReq)
-    {
-        MyTim->setOverflow(PauseDuration, MICROSEC_FORMAT);
-        MyTim->attachInterrupt(hwTimer::PauseDoneCallback);
-        isPaused = true;
-        return;
-    }
-
     if (hwTimer::isTick)
     {
+#if defined(TARGET_TX)
+        if (PauseDuration)
+        {
+            MyTim->setOverflow(PauseDuration - (hwTimer::HWtimerInterval >> 1), TICK_FORMAT);
+            PauseDuration = 0;
+            // No tick callback
+        }
+        else
+        {
+            MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
+            hwTimer::callbackTick();
+        }
+#else        
         MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
         MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
         hwTimer::callbackTick();
+#endif
     }
     else
     {
+#if defined(TARGET_TX)
+        MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
+        hwTimer::callbackTock();
+#else
         MyTim->setOverflow((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift, MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
         MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
         hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
+#endif
     }
     hwTimer::isTick = !hwTimer::isTick;
 }
