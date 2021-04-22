@@ -203,7 +203,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   if (syncSpamCounter)
   {
     Index = (config.GetRate() & 0b11);
-    TLMrate = 0; // this helps get the link back online quicker because the RX is less likely to miss pkts, this will overridden shortly after link change anyway.
+    TLMrate = (config.GetTlm() & 0b111);
   }
   else
   {
@@ -370,10 +370,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 void ICACHE_RAM_ATTR timerCallbackIdle()
 {
   NonceTX++;
-  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-  {
-    FHSSptr++;
-  }
+  HandleFHSS();
 }
 
 void sendLuaParams()
@@ -538,15 +535,7 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   Serial.println("EEPROM COMMIT");
   config.Commit();
-#ifndef PLATFORM_STM32
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
-#else
-  for (uint32_t i = 0; i < (HWtimerPauseDuration / ExpressLRS_currAirRate_Modparams->interval); i++)
-  {
-    timerCallbackIdle(); // catchup NonceRX and FHSS
-  }
-
-#endif
   sendLuaParams();
 }
 
@@ -555,20 +544,28 @@ static void CheckConfigChangePending()
   if (config.IsModified())
   {
     // Keep transmitting sync packets until the spam counter runs out
-    if (syncSpamCounter)
+    if (syncSpamCounter > 0)
       return;
 
 #ifndef PLATFORM_STM32
     while (busyTransmitting); // wait until no longer transmitting
     hwTimer.callbackTock = &timerCallbackIdle;
 #else
-    #define HWtimerPauseDurationTarget 100000 // at least 100ms
-    while (HWtimerPauseDuration < HWtimerPauseDurationTarget)
-    {
-      HWtimerPauseDuration += ExpressLRS_currAirRate_Modparams->interval;
-    }
+    // The code expects to enter here shortly after the tock ISR has started sending the last
+    // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
+    // interrupts, FastForward the timer
+    const uint32_t EEPROM_WRITE_DURATION = 30000; // us, ~27ms is where it starts getting off by one
+    const uint32_t cycleInterval = get_elrs_airRateConfig(config.GetRate())->interval;
+    // Total time needs to be at least DURATION, rounded up to next cycle
+    uint32_t pauseCycles = (EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval;
+    // Pause won't return until paused, and has just passed the tick ISR (but not fired)
+    hwTimer.pause(pauseCycles * cycleInterval);
+
     while (busyTransmitting); // wait until no longer transmitting
-    hwTimer.pause(HWtimerPauseDuration);
+
+    --pauseCycles; // the last cycle will actually be a transmit
+    while (pauseCycles--)
+      timerCallbackIdle();
 #endif
     ConfigChangeCommit();
   }
