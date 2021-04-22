@@ -2,6 +2,9 @@ import gzip
 import shutil
 import os, glob
 
+FIRMWARE_PACKING_ENABLED = False
+
+
 #
 # Code is copied from:
 # https://gist.github.com/andrewwalters/d4e3539319e55fc980db1ba67254d7ed
@@ -42,11 +45,12 @@ def binary_compress(target_file, source_file):
 
 def compressFirmware(source, target, env):
     """ Compress ESP8266 firmware using gzip for 'compressed OTA upload' """
-    build_dir = env.subst("$BUILD_DIR")
-    image_name = env.subst("$PROGNAME")
-    source_file = os.path.join(build_dir, image_name + ".bin")
-    target_file = source_file
-    binary_compress(target_file, source_file)
+    if FIRMWARE_PACKING_ENABLED:
+        build_dir = env.subst("$BUILD_DIR")
+        image_name = env.subst("$PROGNAME")
+        source_file = os.path.join(build_dir, image_name + ".bin")
+        target_file = source_file
+        binary_compress(target_file, source_file)
 
 
 def compress_files(source, target, env):

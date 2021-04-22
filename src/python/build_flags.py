@@ -8,8 +8,6 @@ import time
 import re
 import melodyparser
 
-def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 build_flags = env['BUILD_FLAGS']
 UIDbytes = ""
@@ -63,29 +61,45 @@ def process_flags(path):
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
 
 def get_git_sha():
-    # Don't try to pull the git revision when doing tests, as 
+    # Don't try to pull the git revision when doing tests, as
     # `pio remote test` doesn't copy the entire repository, just the files
     if env['PIOPLATFORM'] == "native":
         return "0x00,0x11,0x22,0x33,0x44,0x55"
 
     try:
-        from git import Repo
+        import git
     except ImportError:
         sys.stdout.write("Installing GitPython")
-        install("GitPython")
-        from git import Repo
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
+        try:
+            import git
+        except ImportError:
+            env.Execute("$PYTHONEXE -m pip install GitPython")
+            try:
+                import git
+            except ImportError:
+                git = None
 
-    try:
-        from git import Repo
-    except ImportError:
-        env.Execute("$PYTHONEXE -m pip install GitPython")
-        from git import Repo
-
-    git_repo = Repo(os.getcwd(), search_parent_directories=True)
-    git_root = git_repo.git.rev_parse("--show-toplevel")
-    ExLRS_Repo = Repo(git_root)
-    sha = ExLRS_Repo.head.object.hexsha
-    return "0x"+sha[0]+",0x"+sha[1]+",0x"+sha[2]+",0x"+sha[3]+",0x"+sha[4]+",0x"+sha[5]
+    sha = None
+    if git:
+        try:
+            git_repo = git.Repo(
+                os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
+                search_parent_directories=False)
+            git_root = git_repo.git.rev_parse("--show-toplevel")
+            ExLRS_Repo = git.Repo(git_root)
+            sha = ExLRS_Repo.head.object.hexsha
+        except git.InvalidGitRepositoryError:
+            pass
+    if not sha:
+        if os.path.exists("VERSION"):
+            with open("VERSION") as _f:
+                data = _f.readline()
+                _f.close()
+            sha = data.split()[1].strip()
+        else:
+            sha = "000000"
+    return ",".join(["0x%s" % x for x in sha[:6]])
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
