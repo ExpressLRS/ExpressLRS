@@ -21,10 +21,10 @@ public:
     void Commit();
 
     // Getters
-    uint32_t GetRate();
-    uint32_t GetTlm();
-    uint32_t GetPower();
-    bool     IsModified();
+    uint32_t GetRate() const { return m_config.rate; }
+    uint32_t GetTlm() const { return m_config.tlm; }
+    uint32_t GetPower() const { return m_config.power; }
+    bool     IsModified() const { return m_modified; }
 
     // Setters
     void SetRate(uint32_t rate);
@@ -55,10 +55,16 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound();
-    uint8_t* GetUID();
-    uint8_t  GetPowerOnCounter();
-    bool     IsModified();
+    bool     GetIsBound() const {
+        #ifdef MY_UID
+            return true;
+        #else
+            return m_config.isBound;
+        #endif
+    }
+    const uint8_t* GetUID() const { return m_config.uid; }
+    uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
+    bool     IsModified() const { return m_modified; }
 
     // Setters
     void SetIsBound(bool isBound);

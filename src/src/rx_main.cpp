@@ -59,6 +59,7 @@ uint32_t LEDupdateCounterMillis;
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
+//#define PRINT_RX_SCOREBOARD // print a letter for each packet received or missed
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
@@ -168,6 +169,7 @@ uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
+static bool lastPacketCrcError;
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
@@ -222,18 +224,16 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
         return;
     }
 
-    if (!LockRFmode)
-    {
-        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-        expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+    expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-        Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
-        hwTimer.updateInterval(ModParams->interval);
+    hwTimer.updateInterval(ModParams->interval);
+    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
-        ExpressLRS_currAirRate_Modparams = ModParams;
-        ExpressLRS_currAirRate_RFperfParams = RFperf;
-        telemBurstValid = false;
-    }
+    ExpressLRS_currAirRate_Modparams = ModParams;
+    ExpressLRS_currAirRate_RFperfParams = RFperf;
+    ExpressLRS_nextAirRateIndex = index; // presumably we just handled this 
+    telemBurstValid = false;
 }
 
 bool ICACHE_RAM_ATTR HandleFHSS()
@@ -485,6 +485,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
 
+#if defined(PRINT_RX_SCOREBOARD)
+    if (!LQCalc.currentIsSet())
+        Serial.write(lastPacketCrcError ? '.' : '_');
+    lastPacketCrcError = false;
+#endif
+
     bool tlmSent = false;
     bool didFHSS = false;
 
@@ -522,9 +528,12 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
-    #ifdef FAST_SYNC
-    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-    #endif
+#ifdef FAST_SYNC
+    if (!LockRFmode)
+    {
+        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    }
+#endif
 
     if (!InBindingMode)
     {
@@ -631,6 +640,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         Serial.println("");
         #endif
+        #if defined(PRINT_RX_SCOREBOARD)
+            lastPacketCrcError = true;
+        #endif
         return;
     }
 
@@ -669,7 +681,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         #endif
-        if (connectionState == connected)
+        if (connectionState != disconnected)
         {
             crsf.sendRCFrameToFC();
         }
@@ -705,11 +717,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
          SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
 
-         if (SwitchEncModeExpected == SwitchEncMode && ExpressLRS_currAirRate_Modparams->index == indexIN && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (SwitchEncModeExpected == SwitchEncMode && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
-#ifndef DEBUG_SUPPRESS
-             Serial.println("sync");
+#if defined(PRINT_RX_SCOREBOARD)
+             Serial.write('s');
 #endif
 
              if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
@@ -722,8 +734,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  telemBurstValid = false;
              }
 
+             if (ExpressLRS_currAirRate_Modparams->index != (expresslrs_tlm_ratio_e)indexIN)
+             { // change link parameters if required
+                ExpressLRS_nextAirRateIndex = indexIN;
+             }
+
              if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
              {
+                 //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection();
@@ -749,6 +767,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
     currentlyProcessing = false;
+#if defined(PRINT_RX_SCOREBOARD)
+    if (type != SYNC_PACKET) Serial.write('R');
+#endif
 }
 
 void beginWebsever()
@@ -795,13 +816,15 @@ void sampleButton()
 void inline RXdoneISR()
 {
     ProcessRFPacket();
-    //Serial.println("r");
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
     LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
+#if defined(PRINT_RX_SCOREBOARD)
+    Serial.write('T');
+#endif
 }
 
 static void setupSerial()
@@ -901,7 +924,7 @@ static void setupBindingFromConfig()
     if (config.GetIsBound())
     {
         Serial.println("RX has been bound previously, reading the UID from eeprom...");
-        uint8_t* storedUID = config.GetUID();
+        const uint8_t* storedUID = config.GetUID();
         for (uint8_t i = 0; i < UID_LEN; ++i)
         {
             UID[i] = storedUID[i];
@@ -1107,6 +1130,18 @@ void loop()
     }
     #endif
 
+    if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
+        SetRFLinkRate(ExpressLRS_nextAirRateIndex); 
+        LostConnection();
+        Radio.RXnb();
+        RFmodeCycleDivisor = 1;
+        LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
+        RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
+        Serial.println("Air rate change req via sync");
+        crsf.sendLinkStatisticsToFC();
+        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+    }
+
     if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
@@ -1118,12 +1153,12 @@ void loop()
     }
 
 #ifdef FAST_SYNC
-    if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
+    if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
 #else
-        if (millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
+    if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
 #endif
     {
-        if ((connectionState == disconnected) && !webUpdateMode)
+        if ((LockRFmode == false) && (connectionState != connected) && !webUpdateMode)
         {
             #ifdef FAST_SYNC
             RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
@@ -1156,6 +1191,9 @@ void loop()
     if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(millis() - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
+        #ifdef FAST_SYNC
+        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+        #endif
     }
 
     if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100 - (100 / (ExpressLRS_currAirRate_Modparams->FHSShopInterval + 1))))) //detects when we are connected

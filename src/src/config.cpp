@@ -35,31 +35,6 @@ TxConfig::Commit()
     m_modified = false;
 }
 
-// Getters
-uint32_t
-TxConfig::GetRate()
-{
-    return m_config.rate;
-}
-
-uint32_t
-TxConfig::GetTlm()
-{
-    return m_config.tlm;
-}
-
-uint32_t
-TxConfig::GetPower()
-{
-    return m_config.power;
-}
-
-bool
-TxConfig::IsModified()
-{
-    return m_modified;
-}
-
 // Setters
 void
 TxConfig::SetRate(uint32_t rate)
@@ -144,35 +119,6 @@ RxConfig::Commit()
     m_eeprom->Commit();
 
     m_modified = false;
-}
-
-// Getters
-bool
-RxConfig::GetIsBound()
-{
-    #ifdef MY_UID
-        return true;
-    #else
-        return m_config.isBound;
-    #endif
-}
-
-uint8_t*
-RxConfig::GetUID()
-{
-    return m_config.uid;
-}
-
-uint8_t
-RxConfig::GetPowerOnCounter()
-{
-    return m_config.powerOnCounter;
-}
-
-bool
-RxConfig::IsModified()
-{
-    return m_modified;
 }
 
 // Setters
