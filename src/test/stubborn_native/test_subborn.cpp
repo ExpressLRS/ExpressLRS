@@ -185,7 +185,7 @@ void test_stubborn_link_resyncs(void)
     receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
 
     // wait for resync to happen
-    for(int i = 0; i < 101; i++)
+    for(int i = 0; i < sender.GetMaxPacketsBeforeResync() + 1; i++)
     {
         sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
         TEST_ASSERT_EQUAL(3, packageIndex);

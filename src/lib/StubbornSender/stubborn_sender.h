@@ -23,6 +23,7 @@ public:
     void GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData);
     void ConfirmCurrentPayload(bool telemetryConfirmValue);
     bool IsActive();
+    uint16_t GetMaxPacketsBeforeResync() const { return maxWaitCount; }
 private:
     uint8_t *data;
     uint8_t length;
