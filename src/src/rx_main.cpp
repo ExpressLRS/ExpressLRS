@@ -1040,7 +1040,7 @@ static void updateTelemetryBurst()
         --telemetryBurstMax;
     else
         telemetryBurstMax = 1;
-    Serial.print("TLMburst:"); Serial.println(telemetryBurstMax, DEC);
+    //Serial.print("TLMburst:"); Serial.println(telemetryBurstMax, DEC);
 
     // Notify the sender to adjust its expected throughput
     TelemetrySender.UpdateTelemetryRate(hz, ratiodiv, telemetryBurstMax);
