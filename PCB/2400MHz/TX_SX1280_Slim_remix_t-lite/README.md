@@ -1,4 +1,4 @@
-# 2.4GHz Slim Tx remix for t-lite
+# 2.4GHz Slim Tx remix for t-lite without bay
 
 thanks for the original disign
 
