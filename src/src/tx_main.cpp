@@ -883,13 +883,9 @@ void OnRFModePacket(mspPacket_t *packet)
   switch (rfMode)
   {
   case RATE_200HZ:
-    SetRFLinkRate(enumRatetoIndex(RATE_200HZ));
-    break;
   case RATE_100HZ:
-    SetRFLinkRate(enumRatetoIndex(RATE_100HZ));
-    break;
   case RATE_50HZ:
-    SetRFLinkRate(enumRatetoIndex(RATE_50HZ));
+    SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
     break;
   default:
     // Unsupported rate requested
@@ -904,36 +900,8 @@ void OnTxPowerPacket(mspPacket_t *packet)
   CHECK_PACKET_PARSING();
   Serial.println("TX setpower");
 
-  switch (txPower)
-  {
-  case PWR_10mW:
-    POWERMGNT.setPower(PWR_10mW);
-    break;
-  case PWR_25mW:
-    POWERMGNT.setPower(PWR_25mW);
-    break;
-  case PWR_50mW:
-    POWERMGNT.setPower(PWR_50mW);
-    break;
-  case PWR_100mW:
-    POWERMGNT.setPower(PWR_100mW);
-    break;
-  case PWR_250mW:
-    POWERMGNT.setPower(PWR_250mW);
-    break;
-  case PWR_500mW:
-    POWERMGNT.setPower(PWR_500mW);
-    break;
-  case PWR_1000mW:
-    POWERMGNT.setPower(PWR_1000mW);
-    break;
-  case PWR_2000mW:
-    POWERMGNT.setPower(PWR_2000mW);
-    break;
-  default:
-    // Unsupported power requested
-    break;
-  }
+  if (txPower < PWR_COUNT)
+    POWERMGNT.setPower((PowerLevels_e)txPower);
 }
 
 void OnTLMRatePacket(mspPacket_t *packet)

@@ -98,14 +98,7 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
             return i;
         }
     }
-    if (rate == RATE_500HZ)
-    {
-        return 0; // if we make it to here we didn't find the rate in the table to return the first index. 
-    }
-    else if (rate == RATE_25HZ)
-    {
-        return RATE_MAX;
-    }
+    return 0; // if we make it to here we didn't find the rate in the table to return the first index. 
 }
 
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
