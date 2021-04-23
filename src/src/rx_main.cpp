@@ -755,7 +755,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    HandleFHSS();
+    bool didFHSS = HandleFHSS();
     HandleSendTelemetryResponse();
     LQCalc.add(); // Received a packet, that's the definition of LQ
 
@@ -765,6 +765,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
     }
+#else
+    (void)didFHSS; // silence compiler warning
 #endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();
