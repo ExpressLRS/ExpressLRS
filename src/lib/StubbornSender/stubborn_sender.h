@@ -35,5 +35,5 @@ private:
     uint16_t waitCount;
     uint16_t maxWaitCount;
     uint8_t maxPackageIndex;
-    stubborn_sender_state_s senderState;
+    volatile stubborn_sender_state_s senderState;
 };
