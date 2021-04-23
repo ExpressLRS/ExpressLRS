@@ -45,9 +45,7 @@ This is a diffrent to the orginal PCB design
 
 ### Build Pics
 
-<img src="img/1.jpg" width="30%"> <img src="img/5.jpg" width="30%"> <img src="img/6.jpg" width="30%">
-<img src="img/7.jpg" width="30%"> <img src="img/8.jpg" width="30%"> <img src="img/9.jpg" width="30%">
-<img src="img/t-lite.jpg" width="30%"> <img src="img/print.png" width="30%">
+<img src="img/1.jpg" width="30%"> <img src="img/t-lite.jpg" width="30%"> <img src="img/print.png" width="30%">
 
 ### Schematic and PCB layout
 
