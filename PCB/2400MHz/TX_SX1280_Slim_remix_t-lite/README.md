@@ -38,11 +38,8 @@ This is a diffrent to the orginal PCB design
 
 
     
-
 ### STLs
 
-- Print STLs standing on the end. For best results use 0.12 layer thickness, and 40% infill for the base, and 0.12 layer thickness, and 100% infill for the top.
-- NOTE: The X-Lite STL is pretty crude. I just extended the mount part of the print out by 10mm so it clears the bay. It could really do with someone designing a proper xlite STL. It's also untested :|
 - use the t-lite STL
 
 ### Build Pics
