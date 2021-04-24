@@ -33,7 +33,7 @@
 
 #include "targets.h"
 
-#define FIFO_SIZE 256
+#define FIFO_SIZE 255
 
 class FIFO
 {

@@ -45,7 +45,6 @@ volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as me
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
 
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
-volatile uint16_t CRSF::ChannelDataInPrev[16] = {0};
 
 volatile inBuffer_U CRSF::inBuffer;
 
@@ -904,10 +903,6 @@ void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
-#define SERIAL_PACKET_OFFSET 3
-
-    memcpy((uint16_t *)ChannelDataInPrev, (uint16_t *)ChannelDataIn, 16); //before we write the new RC channel data copy the old data
-
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
     ChannelDataIn[0] = (rcChannels->ch0);
     ChannelDataIn[1] = (rcChannels->ch1);

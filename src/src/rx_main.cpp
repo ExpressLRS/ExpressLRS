@@ -169,7 +169,9 @@ uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
+#if defined(PRINT_RX_SCOREBOARD)
 static bool lastPacketCrcError;
+#endif
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
@@ -764,6 +766,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
     }
+#else
+    (void)didFHSS; // silence compiler warning
 #endif /* Regulatory_Domain_ISM_2400 */
 
     doneProcessing = micros();

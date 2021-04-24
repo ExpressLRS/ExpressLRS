@@ -39,7 +39,6 @@ public:
     static HardwareSerial Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataInPrev[16]; // Contains the previous RC channel data RX side only
     static volatile uint16_t ChannelDataOut[16];
 
     // current and sent switch values
