@@ -37,7 +37,7 @@ More information can be found in the [wiki](https://github.com/AlessandroAU/Expr
 
 ## Starting Out
 
-After taking a look at the [supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Off-The-Shelf-Hardware) and making sure you have the required hardware, the [Quick Start Guide](https://github.com/AlessandroAU/ExpressLRS/wiki/Toolchain-and-Git-Setup) is written to walk through the process of flashing ELRS for the first time
+After taking a look at the [supported Hardware](https://github.com/ExpressLRS/ExpressLRS/wiki/Supported-Hardware) and making sure you have the required hardware, the [Quick Start Guide](https://github.com/AlessandroAU/ExpressLRS/wiki/Toolchain-and-Git-Setup) is written to walk through the process of flashing ELRS for the first time
 
 
 ## Supported Hardware
