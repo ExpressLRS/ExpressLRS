@@ -537,8 +537,9 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         hwTimer.stop();
+        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        Radio.RXnb();
     }
 
     Serial.println("lost conn");
@@ -1133,7 +1134,6 @@ void loop()
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); 
         LostConnection();
-        Radio.RXnb();
         RFmodeCycleDivisor = 1;
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
@@ -1146,8 +1146,6 @@ void loop()
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
-        Radio.SetFrequencyReg(GetInitialFreq());
-        Radio.RXnb();
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();
     }
