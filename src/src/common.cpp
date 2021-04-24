@@ -98,7 +98,9 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
             return i;
         }
     }
-    return 0; // if we make it to here we didn't find the rate in the table to return the first index. 
+    // If 25Hz selected and not available, return the slowest rate available
+    // else return the fastest rate available (500Hz selected but not available)
+    return (rate == RATE_25HZ) ? RATE_MAX - 1 : 0;
 }
 
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
