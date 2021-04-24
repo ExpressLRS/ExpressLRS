@@ -30,8 +30,9 @@ This is a diffrent to the orginal PCB design
 
 <img src="img/DC.jpg" width="30%">
 
-- Apply tape to the base of the regulator pcb to insulate it from potentially shorting with the vias on the main pcb. Solder on a 4 pin straight header.
-- Solder 3x silicon wires to the 3 pin header pads (G, V, S), use the wires and the conector from the orignal bay mounted like here 
+- Apply tape to the base of the regulator pcb to insulate it from potentially shorting with the vias on the main pcb. Solder on a 4 pin straight header and then to the PCB.
+- Solder 3x silicon wires to the 3 pin header pads (G, V, S), use the wires and the conector from the orignal bay mounted like here.
+- Picture 2 shows an internal modul but wiring is the same.
 
 <img src="img/wire.jpg" width="30%"> <img src="img/wire2.jpg" width="30%">
 
