@@ -29,11 +29,17 @@
  */
 #include "FIFO.h"
 
+#define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+
 FIFO::FIFO()
 {
     head = 0;
     tail = 0;
     numElements = 0;
+
+    // If the following line fails to compile, FIFO_SIZE is larger than
+    // numElements can hold
+    BUILD_BUG_ON(FIFO_SIZE >= (1 << (sizeof(numElements) * 8)));
 }
 
 FIFO::~FIFO()
@@ -42,7 +48,7 @@ FIFO::~FIFO()
 
 void ICACHE_RAM_ATTR FIFO::push(uint8_t data)
 {
-    if (numElements == (FIFO_SIZE-1))
+    if (numElements == FIFO_SIZE)
     {
         Serial.println("CRITICAL ERROR: Buffer full, will flush");
         this->flush();
