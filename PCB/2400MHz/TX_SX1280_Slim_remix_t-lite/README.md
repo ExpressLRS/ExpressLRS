@@ -12,7 +12,7 @@ Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, an
 
 - E28-2G4M27S SX1280 Wireless module 2.4G 27dBm https://www.aliexpress.com/item/33004335921.html
 - 3.3V DC-DC Step Up/Down Power Supply https://www.pololu.com/product/2873
-find this there  https://easyeda.com/jyesmith/expresslrs-jumper-t-lite
+found it there  https://easyeda.com/jyesmith/expresslrs-jumper-t-lite
 - 10k 0805 resistor https://www.aliexpress.com/item/4000049692396.html
 - SMA or RPSMA connector https://www.aliexpress.com/item/4000848776660.html https://www.aliexpress.com/item/4000848776660.html
 - WROOM32 module https://www.aliexpress.com/item/ESP32-ESP-32S-WIFI-Bluetooth-Module-240MHz-Dual-Core-CPU-MCU-Wireless-Network-Board-ESP-WROOM/4000230070560.html
