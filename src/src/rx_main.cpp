@@ -177,7 +177,7 @@ static bool lastPacketCrcError;
 /// Variables for Sync Behaviour ////
 uint32_t RFmodeLastCycled = 0;
 #define RFmodeCycleDivisorFastMode 10
-uint8_t RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+uint8_t RFmodeCycleDivisor;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
@@ -530,12 +530,8 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
-#ifdef FAST_SYNC
-    if (!LockRFmode)
-    {
-        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-    }
-#endif
+    // Make first LED cycle turn it on
+    LED = false;
 
     if (!InBindingMode)
     {
@@ -572,6 +568,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
+    RFmodeLastCycled = millis(); // give another 3 sec for lock to occur
 
 #if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
@@ -598,7 +595,6 @@ void GotConnection()
     RXtimerState = tim_tentative;
     GotConnectionMillis = millis();
 
-    RFmodeLastCycled = millis(); // give another 3 sec for loc to occur.
     Serial.println("got conn");
 
 #if WS2812_LED_IS_USED
@@ -667,12 +663,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
     PFDloop.extEvent(beginProcessing + 250);
-
-    #ifdef FAST_SYNC
-    if(RFmodeCycleDivisor != 1){
-        RFmodeCycleDivisor = 1;
-    }
-    #endif
 
     getRFlinkInfo();
 
@@ -769,6 +759,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #else
     (void)didFHSS; // silence compiler warning
 #endif /* Regulatory_Domain_ISM_2400 */
+
+    // Slow down FAST_SYNC if we're not connected, and also will hold
+    // longer for the first cycle after disconnecting since it is likely
+    // we'll reconnect on this rate again
+    RFmodeCycleDivisor = 1;
 
     doneProcessing = micros();
     currentlyProcessing = false;
@@ -999,6 +994,11 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     SetRFLinkRate(RATE_DEFAULT);
+    #ifdef FAST_SYNC
+    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    #else
+    RFmodeCycleDivisor = 1;
+    #endif
 }
 
 static void wifiOff()
@@ -1050,6 +1050,51 @@ static void updateTelemetryBurst()
     // Notify the sender to adjust its expected throughput
     TelemetrySender.UpdateTelemetryRate(hz, ratiodiv, telemetryBurstMax);
 #endif
+}
+
+/* If not connected will rotate through the RF modes looking for sync
+ * and blink LED
+ */
+static void cycleRfMode()
+{
+    if ((millis() - RFmodeLastCycled) > (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval / RFmodeCycleDivisor))
+    {
+        RFmodeLastCycled = millis();
+        if ((connectionState != connected) && !webUpdateMode)
+        {
+            // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
+            if (LockRFmode == false)
+            {
+                LastSyncPacket = millis();           // reset this variable
+                SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
+                SendLinkStatstoFCintervalLastSent = millis();
+                LQCalc.reset();
+                Serial.println(ExpressLRS_currAirRate_Modparams->interval);
+                scanIndex++;
+                getRFlinkInfo();
+                crsf.sendLinkStatisticsToFC();
+                delay(100);
+                crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+                Radio.RXnb();
+            }
+
+            #if defined(FAST_SYNC)
+            // Switch to FAST_SYNC if not already in it (won't be if was just connected)
+            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+            #endif
+
+            // LED blinks to show something is still happening
+            if (!InBindingMode)
+            {
+                #ifdef GPIO_PIN_LED
+                    digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+                #elif GPIO_PIN_LED_GREEN
+                    digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
+                #endif
+                LED = !LED;
+            }
+        } /* if not connected and webUpdateMode */
+    } /* if time to switch */
 }
 
 void setup()
@@ -1142,7 +1187,6 @@ void loop()
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); 
         LostConnection();
-        RFmodeCycleDivisor = 1;
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
         Serial.println("Air rate change req via sync");
@@ -1158,48 +1202,12 @@ void loop()
         LastSyncPacket = millis();
     }
 
-#ifdef FAST_SYNC
-    if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval/RFmodeCycleDivisor)))
-#else
-    if (LockRFmode == false && millis() > (RFmodeLastCycled + (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval)))
-#endif
-    {
-        if ((LockRFmode == false) && (connectionState != connected) && !webUpdateMode)
-        {
-            #ifdef FAST_SYNC
-            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-            #endif
-            LastSyncPacket = millis();           // reset this variable
-            SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
-            SendLinkStatstoFCintervalLastSent = millis();
-            LQCalc.reset();
-            Serial.println(ExpressLRS_currAirRate_Modparams->interval);
-            scanIndex++;
-            getRFlinkInfo();
-            crsf.sendLinkStatisticsToFC();
-            delay(100);
-            crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
-            Radio.RXnb();
-            if (!InBindingMode)
-            {
-                #ifdef GPIO_PIN_LED
-                    digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-                #elif GPIO_PIN_LED_GREEN
-                    digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-                #endif
-                LED = !LED;
-            }
-        }
-        RFmodeLastCycled = millis();
-    }
+    cycleRfMode();
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(millis() - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
-        #ifdef FAST_SYNC
-        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-        #endif
     }
 
     if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100 - (100 / (ExpressLRS_currAirRate_Modparams->FHSShopInterval + 1))))) //detects when we are connected
