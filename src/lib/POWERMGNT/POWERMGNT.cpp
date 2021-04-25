@@ -124,17 +124,17 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         rfpower = -12;
         break;
     case PWR_250mW:
-        rfpower = -8; //-7; = 320
+        rfpower = -8;
         break;
     case PWR_500mW:
-        rfpower = -5; //-4; = 740
+        rfpower = -5;
         break;
     case PWR_1000mW:
-        rfpower = 3; //4; = 1.16W
+        rfpower = 3;
         break;
     case PWR_50mW:
     default:
-        rfpower = -16; // -15 = 61
+        rfpower = -15;
         Power = PWR_50mW;
         break;
     }
