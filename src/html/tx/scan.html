@@ -1,0 +1,86 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Welcome to your ExpressLRS System</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="main.css" />
+	</head>
+	<body>
+        <section id="header">
+            <div class="inner">
+                <img src="flag.png" height="250" width="250" style="padding:20px;"></a>
+                <h1>Welcome to your <b>ExpressLRS</b><br/> update page<br/>
+                </h1>
+                <p>From here you can set your 'home' network. This will allow you to connect directly to your Transmitter module directly via a web browser on http://elrs_tx.local<br/>
+                <p>
+                <b>Firmware Rev.  </b><var id="FirmVersion">1.0</var><p>
+            </div>
+        </section>
+        <br>
+        <section id="one" class="main style1">
+            <div class="container">				
+                <form action="/sethome" id="sethome" method="post">
+                    <select name="network" id="network">
+                    </select>
+                    <input type="password" id="password" name="password">
+                    <input type="submit" value="Join">
+                </form>
+
+                <div id="failed" style="display:none" color="red">
+                    Failed to connect to network, please try again.
+                </div>
+            </div>
+        </section>
+	</body>
+    <script>
+        document.addEventListener( "DOMContentLoaded", get_json_data, false );
+
+        function get_json_data(){
+            var json_url = 'networks.json';
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() { 
+                if (this.readyState == 4 && this.status == 200) {
+                    var data = JSON.parse(this.responseText);
+                    append_json(data);
+                }
+            }
+            xmlhttp.open("POST", json_url, true);
+            xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xmlhttp.send();
+        }
+    
+        function append_json(data){
+            var dropdown = document.getElementById('network');
+            dropdown.length = 0;
+            data.forEach(function(object) {
+                option = document.createElement('option');
+                option.text = object.t;
+                option.value = object.v;
+                dropdown.add(option);
+            });
+        }
+
+        function hasErrorParameter() {
+            var tmp = [], result = false;
+            location.search
+                .substr(1)
+                .split("&")
+                .forEach(function (item) {
+                    tmp = item.split("=");
+                    if (tmp[0] === "error") result = true;
+                });
+            return result;
+        }
+
+        function show (elements, specifiedDisplay) {
+            elements = elements.length ? elements : [elements];
+            for (var index = 0; index < elements.length; index++) {
+                elements[index].style.display = specifiedDisplay || 'block';
+            }
+        }
+
+        var elements = document.querySelectorAll('#failed');
+        if(hasErrorParameter()) show(elements);
+    </script>
+    </html>

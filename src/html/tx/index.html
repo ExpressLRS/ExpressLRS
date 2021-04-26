@@ -1,0 +1,56 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Welcome to your ExpressLRS System</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="main.css" />
+	</head>
+	<body>
+	<!-- OI you! get out of my source code!!! jk-->
+		<!-- Header -->
+			<section id="header">
+				<div class="inner">
+					<img src="flag.png" height="250" width="250" style="padding:20px;"></a>
+					<h1>Welcome to your <b>ExpressLRS</b><br/> update page<br/>
+					</h1>
+					<p>From here you can update the firmware on your <b>Transmitter</b> module<br/>
+					<p>
+					<b>Firmware Rev.  </b><var id="FirmVersion">1.0</var><p>
+				</div>
+			</section>
+		<!-- One -->
+			<br>
+			<section id="one" class="main style1">
+				<div class="container">				
+					<div align="left">	
+						<legend><h2>Useful Links and Support:</h2></legend>
+						<h4><a href="https://github.com/ExpressLRS/ExpressLRS">GitHub Repository</a><h4>
+						<h4><a href="https://discord.gg/dS6ReFY">Discord Chat</a><h4> 
+					</div>
+					
+					<br>
+			
+					<div align="left">									
+						<fieldset>
+						Here you can update module firmware, 
+						be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need to reflash via USB/Serial.
+						<br><br>
+						<legend><h2>Firmware Update:</h2></legend>
+						<form method='POST' action='/update' enctype='multipart/form-data'>	<input type='file' name='update'>	<input type='submit' value='Update'></form>
+						</form>
+						<br><br>
+						</fieldset>
+					</div>
+								
+					<div align="left">									
+						<fieldset>
+						<legend><h2>Set 'Home' Network:</h2></legend>
+						<a href="/scanhome">Scan for networks</a>
+						<br><br>
+						</fieldset>
+					</div>
+				</div>
+			</section>
+	</body>
+</html>

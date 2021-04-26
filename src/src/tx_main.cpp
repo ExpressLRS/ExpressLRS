@@ -703,6 +703,10 @@ void setup()
 
   Serial.println("ExpressLRS TX Module Booted...");
 
+  eeprom.Begin(); // Init the eeprom
+  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+  config.Load(); // Load the stored values from eeprom
+
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   #if !defined(Regulatory_Domain_ISM_2400)
@@ -741,10 +745,6 @@ void setup()
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif
   POWERMGNT.setDefaultPower();
-
-  eeprom.Begin(); // Init the eeprom
-  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
-  config.Load(); // Load the stored values from eeprom
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
