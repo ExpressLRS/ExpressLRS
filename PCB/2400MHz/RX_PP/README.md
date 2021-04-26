@@ -35,6 +35,8 @@ The final review will probably look wrong and with components rotated incorrectl
 #### Mouser
 - sx1280 https://au.mouser.com/ProductDetail/semtech/sx1280imltrt/?qs=5aG0NVq1C4xuoq8G6ZzdxQ%3D%3D
 - RF output filter https://au.mouser.com/ProductDetail/johanson/2450fm07d0034t/?qs=%252bEew9%252b0nqrBEY7VUloPs4Q%3D%3D
+  - Alternate RF filter.  If the above 2450FM07D0034T  is not available the below 2450FM07A0029T is exactly the same except for the input impedance.  You should see no noticeable difference in performance.
+    - https://au.mouser.com/ProductDetail/Johanson-Technology/2450FM07A0029T?qs=Gd3Cm49KlLOPd5QDNED%252Bnw%3D%3D
 - FW520WFMT1 https://au.mouser.com/ProductDetail/Diodes-Incorporated/FW520WFMT1?qs=%2Fha2pyFadugPDf0nhgewaMwLjNbxaY4Xr5XmslnYeZgOQCJm3ZvVpQ%3D%3D
 - Antenna https://au.mouser.com/ProductDetail/Molex/47948-0001/?qs=VBGyBZiQP4FMDCbO62oZvg%3D%3D
 - 0603 LED, there are a lot of options to choose from and you can select another colour.  Or use your hot air gun to remove an led from a dead gear. https://au.mouser.com/ProductDetail/Wurth-Elektronik/150060AS75000/?qs=d0WKAl%252BL4KbvMBYryeof0Q%3D%3D
@@ -44,6 +46,8 @@ The final review will probably look wrong and with components rotated incorrectl
 #### Digikey
 - sx1280 https://www.digikey.com.au/product-detail/en/semtech-corporation/SX1280IMLTRT/SX1280IMLTRTCT-ND/7203799
 - RF output filter https://www.digikey.com.au/product-detail/en/johanson-technology-inc/2450FM07D0034T/712-1654-1-ND/9477825
+  - Alternate RF filter.  If the above 2450FM07D0034T  is not available the below 2450FM07A0029T is exactly the same except for the input impedance.  You should see no noticeable difference in performance.
+    - https://www.digikey.com/en/products/detail/johanson-technology-inc/2450FM07A0029T/6187664
 - FW520WFMT1 https://www.digikey.com/product-detail/en/diodes-incorporated/FW520WFMT1/FW520WFMT1CT-ND/6173706
 - Antenna https://www.digikey.com.au/products/en?keywords=%20WM4893CT-ND
 - 0603 LED, there are a lot of options to choose from and you can select another colour.  Or use your hot air gun to remove an led from a dead gear. https://www.digikey.com.au/product-detail/en/w%C3%BCrth-elektronik/150060AS75000/732-150060AS75000CT-ND/10468330
