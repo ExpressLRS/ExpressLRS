@@ -2,6 +2,14 @@
 #include "ESP8266_WebUpdate.h"
 #include "config.h"
 
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <DNSServer.h>
+#include <ESP8266HTTPUpdateServer.h>
+#include "ESP8266_hwTimer.h"
+#include "config.h"
+
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 extern SX127xDriver Radio;
@@ -23,13 +31,17 @@ const char *ssid = STASSID;
 const char *password = STAPSK;
 
 extern hwTimer hwTimer;
+extern RxConfig config;
 
-const byte DNS_PORT = 53;
-IPAddress apIP(10, 0, 0, 1);
-IPAddress netMsk(255, 255, 255, 0);
-DNSServer dnsServer;
-//MDNSResponder mdns;
-ESP8266WebServer server(80);
+static WiFiMode_t wifiMode = WIFI_OFF;
+static WiFiMode_t changeMode = WIFI_OFF;
+static unsigned long changeTime = 0;
+
+static const byte DNS_PORT = 53;
+static IPAddress apIP(10, 0, 0, 1);
+static IPAddress netMsk(255, 255, 255, 0);
+static DNSServer dnsServer;
+static ESP8266WebServer server(80);
 
 /** Is this an IP? */
 boolean isIp(String str)
@@ -70,9 +82,14 @@ bool captivePortal()
   return false;
 }
 
-void WebUpdateSendcss()
+void WebUpdateSendCSS()
 {
   server.send_P(200, "text/css", CSS);
+}
+
+void WebUpdateSendPNG()
+{
+  server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
 }
 
 void WebUpdateSendReturn()
@@ -90,6 +107,55 @@ void WebUpdateHandleRoot()
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
   server.send_P(200, "text/html", INDEX_HTML);
+}
+
+void WebUpdateScanHome(void)
+{
+  numNetworks = WiFi.scanNetworks();
+  server.send_P(200, "text/html", SCAN_HTML);
+}
+
+void WebUpdateSendNetworks()
+{
+  String s;
+  s+="[";
+  for(int i=0 ; i<numNetworks ; i++) {
+    s+="\"" + WiFi.SSID(i) + "\"";
+    if (i < numNetworks-1) s+=",";
+  }
+  s+="]";
+  server.send(200, "application/json", s);
+}
+
+void WebUpdateSetHome(void)
+{
+  String ssid = server.arg("network");
+  String password = server.arg("password");
+
+  Serial.printf("Joining: %s\n", ssid.c_str());
+  WiFi.setHostname(myHostname);
+  wl_status_t s = WiFi.begin(ssid, password);
+  while(true) {
+    s = WiFi.status();
+    if (s == WL_CONNECTED) {
+      Serial.printf("Connected IPAddress=%s\n", WiFi.localIP().toString());
+      config.SetSSID(ssid.c_str());
+      config.SetPassword(password.c_str());
+      config.Commit();
+      server.sendHeader("Location", "/", true);
+      server.send(302, "text/plain", "");
+      server.begin();
+      return;
+    } else if (s == WL_CONNECT_FAILED || s == WL_WRONG_PASSWORD) {
+      Serial.println("Connection to network failed");
+      server.sendHeader("Location", "/scanhome?error", true);
+      server.send(302, "text/plain", "");
+      return;
+    } else {
+      yield();
+      delay(50);
+    }
+  }
 }
 
 void WebUpdateHandleNotFound()
@@ -135,14 +201,18 @@ void BeginWebUpdate(void)
   WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   wifi_station_set_hostname(myHostname);
   delay(500);
+  WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(ssid, password);
 
+  MDNS.begin(myHostname);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(DNS_PORT, "*", apIP);
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/css.css", WebUpdateSendcss);
+  server.on("/main.css", WebUpdateSendCSS);
+  server.on("/flag.png", WebUpdateSendPNG);
+  server.on("/networks.json", WebUpdateSendNetworks);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
@@ -152,6 +222,8 @@ void BeginWebUpdate(void)
   server.on("/check_network_status.txt", WebUpdateHandleRoot);
   server.on("/ncsi.txt", WebUpdateHandleRoot);
   server.on("/fwlink", WebUpdateHandleRoot);
+  server.on("/scanhome", WebUpdateScanHome);
+  server.on("/sethome", HTTP_POST, WebUpdateSetHome);
   server.onNotFound(WebUpdateHandleNotFound);
 
     // handler for the /update form POST (once file upload finishes)
@@ -209,14 +281,21 @@ void BeginWebUpdate(void)
     });
 
   server.begin();
-  Serial.printf("HTTPUpdateServer ready! Open http://%s in your browser\n", myHostname);
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
+
+  if (config.GetSSID()[0]) {
+    Serial.println("Connecting...");
+    WiFi.setHostname(myHostname);
+    WiFi.begin(config.GetSSID(), config.GetPassword());
+  }
 }
 
 void HandleWebUpdate(void)
 {
   server.handleClient();
   dnsServer.processNextRequest();
-  //mdns.update();
+  MDNS.update();
   yield();
 }
+
 #endif

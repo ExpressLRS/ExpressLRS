@@ -18,12 +18,17 @@ extern hwTimer hwTimer;
 #include "CRSF.h"
 extern CRSF crsf;
 
+#include "config.h"
+extern TxConfig config;
+
 #include <WiFi.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <WiFiMulti.h>
 #include <WebServer.h>
 #include <Update.h>
+#include <set>
+#include <string.h>
 
 #include "ESP32_WebUpdate.h"
 #include "config.h"
@@ -42,6 +47,8 @@ IPAddress apIP(10, 0, 0, 1);
 IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 WebServer server(80);
+
+static int numNetworks;
 
 /** Is this an IP? */
 boolean isIp(String str)
@@ -82,11 +89,15 @@ bool captivePortal()
     return false;
 }
 
-void WebUpdateSendcss()
+void WebUpdateSendCSS()
 {
     server.send_P(200, "text/css", CSS);
 }
 
+void WebUpdateSendPNG()
+{
+  server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
+}
 
 void WebUpdateSendReturn()
 {
@@ -103,6 +114,66 @@ void WebUpdateHandleRoot()
     server.sendHeader("Pragma", "no-cache");
     server.sendHeader("Expires", "-1");
     server.send_P(200, "text/html", INDEX_HTML);
+}
+
+void WebUpdateScanHome(void)
+{
+  WiFi.disconnect();
+  numNetworks = WiFi.scanNetworks();
+  Serial.printf("Found %d networks\n", numNetworks);
+  server.send_P(200, "text/html", SCAN_HTML);
+}
+
+void WebUpdateSendNetworks()
+{
+  String s;
+  char buf[20];
+  std::set<String> vs;
+  s+="[";
+  for(int i=0 ; i<numNetworks ; i++) {
+    String w = WiFi.SSID(i);
+    Serial.printf("found %s\n", w.c_str());
+    if (vs.find(w)==vs.end() && w.length()>0) {
+      if (s.length() > 1) s += ",";
+      s += "{\"v\":" + String(itoa(i, buf, 10)) + ",";
+      s+="\"t\":\"" + w + "\"}";
+      vs.insert(w);
+    }
+  }
+  s+="]";
+  server.send(200, "application/json", s);
+}
+
+void WebUpdateSetHome(void)
+{
+  String network = server.arg("network");
+  String password = server.arg("password");
+  system_event_id_t status = SYSTEM_EVENT_MAX;
+
+  String ssid = WiFi.SSID(network.toInt());
+  Serial.printf("Joining: %s\n", ssid.c_str());
+  
+  WiFi.setHostname(myHostname);
+  WiFi.onEvent([&status](WiFiEvent_t event, WiFiEventInfo_t info){status = event;});
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  while(status == SYSTEM_EVENT_MAX) {
+    yield();
+    delay(50);
+  }
+  if (status == SYSTEM_EVENT_STA_CONNECTED) {
+    Serial.printf("Connected IPAddress=%s\n", WiFi.localIP().toString().c_str());
+    config.SetSSID(ssid.c_str());
+    config.SetPassword(password.c_str());
+    config.Commit();
+    server.sendHeader("Location", "/", true);
+    server.send(302, "text/plain", "");
+    // server.begin();
+  } else if (status == SYSTEM_EVENT_STA_DISCONNECTED) {
+    Serial.println("Connection failed");
+    server.sendHeader("Location", "/scanhome?error", true);
+    server.send(302, "text/plain", "");
+  }
 }
 
 void WebUpdateHandleNotFound()
@@ -144,12 +215,15 @@ void BeginWebUpdate()
     WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
     WiFi.setHostname(myHostname);
     delay(500);
+    WiFi.mode(WIFI_AP_STA);
     WiFi.softAPConfig(apIP, apIP, netMsk);
     WiFi.softAP(ssid, password);
 
     server.on("/", WebUpdateHandleRoot);
-    server.on("/css.css", WebUpdateSendcss);
-
+    server.on("/main.css", WebUpdateSendCSS);
+    server.on("/flag.png", WebUpdateSendPNG);
+    server.on("/networks.json", WebUpdateSendNetworks);
+    
     server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
     server.on("/gen_204", WebUpdateHandleRoot);
     server.on("/library/test/success.html", WebUpdateHandleRoot);
@@ -158,6 +232,8 @@ void BeginWebUpdate()
     server.on("/check_network_status.txt", WebUpdateHandleRoot);
     server.on("/ncsi.txt", WebUpdateHandleRoot);
     server.on("/fwlink", WebUpdateHandleRoot);
+    server.on("/scanhome", WebUpdateScanHome);
+    server.on("/sethome", HTTP_POST, WebUpdateSetHome);
     server.onNotFound(WebUpdateHandleNotFound);
 
     server.on(
@@ -221,6 +297,12 @@ void BeginWebUpdate()
       return;
     }
     MDNS.addService("http", "tcp", 80);
+
+    if (config.GetSSID()[0]) {
+      Serial.println("Connecting...");
+      WiFi.setHostname(myHostname);
+      WiFi.begin(config.GetSSID(), config.GetPassword());
+    }
 
     server.begin();
 }
