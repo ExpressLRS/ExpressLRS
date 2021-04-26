@@ -30,7 +30,7 @@ extern TxConfig config;
 #include <set>
 #include <string.h>
 
-#include "ESP32_WebUpdate.h"
+#include "ESP32_WebContent.h"
 
 const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
 const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
@@ -93,11 +93,6 @@ void WebUpdateSendCSS()
 void WebUpdateSendPNG()
 {
   server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
-}
-
-void WebUpdateSendReturn()
-{
-    server.send_P(200, "text/html", GO_BACK);
 }
 
 void WebUpdateHandleRoot()

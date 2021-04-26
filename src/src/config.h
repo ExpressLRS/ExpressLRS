@@ -3,8 +3,8 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
-#define TX_CONFIG_VERSION   1
-#define RX_CONFIG_VERSION   1
+#define TX_CONFIG_VERSION   2
+#define RX_CONFIG_VERSION   2
 #define UID_LEN             6
 
 typedef struct {
