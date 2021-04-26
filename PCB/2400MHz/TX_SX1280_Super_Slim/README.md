@@ -61,7 +61,9 @@ Click this image to watch a video of the building of an older version of this mo
 
 <img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/printlayout.png?raw=true" width="300">
 <img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/antennaswitch.png?raw=true" width="300">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/exploded.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/exploded.jpg?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/compacted.jpg?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/ftdi.png?raw=true" width="300">
 
 ### Schematic and PCB layout
 
