@@ -30,7 +30,7 @@ extern TxConfig config;
 #include <set>
 #include <string.h>
 
-#include "ESP32_WebUpdate.h"
+#include "ESP32_WebContent.h"
 #include "config.h"
 
 uint8_t target_seen = 0;
@@ -97,11 +97,6 @@ void WebUpdateSendCSS()
 void WebUpdateSendPNG()
 {
   server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
-}
-
-void WebUpdateSendReturn()
-{
-    server.send_P(200, "text/html", GO_BACK);
 }
 
 void WebUpdateHandleRoot()

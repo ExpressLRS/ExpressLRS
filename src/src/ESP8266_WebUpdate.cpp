@@ -20,6 +20,7 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
+#include "ESP8266_WebContent.h"
 uint8_t target_seen = 0;
 uint8_t target_pos = 0;
 
@@ -92,11 +93,6 @@ void WebUpdateSendPNG()
   server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
 }
 
-void WebUpdateSendReturn()
-{
-  server.send_P(200, "text/html", GO_BACK);
-}
-
 void WebUpdateHandleRoot()
 {
   if (captivePortal())
@@ -138,7 +134,7 @@ void WebUpdateSetHome(void)
   while(true) {
     s = WiFi.status();
     if (s == WL_CONNECTED) {
-      Serial.printf("Connected IPAddress=%s\n", WiFi.localIP().toString());
+      Serial.printf("Connected IPAddress=%s\n", WiFi.localIP().toString().c_str());
       config.SetSSID(ssid.c_str());
       config.SetPassword(password.c_str());
       config.Commit();
