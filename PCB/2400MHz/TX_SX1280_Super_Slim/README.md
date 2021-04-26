@@ -27,7 +27,7 @@ Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, an
 
 ### Build order
 
-Click this image to watch video of build
+Click this image to watch a video of the building of an older version of this module
 [![Build Video](https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/thumbnail.png?raw=true)](https://youtu.be/sNQbWaVPUCc)
 
 0. Print both STLs in the orientation shown in the image below, use light support (15%)
@@ -59,12 +59,12 @@ Click this image to watch video of build
 
 ### Pics
 
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/printlayout.png?raw=true" width="300">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/antennaswitch.png?raw=true" width="300">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/vreg.png?raw=true" width="300">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/final.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/printlayout.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/antennaswitch.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/exploded.jpg?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/compacted.jpg?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/ftdi.png?raw=true" width="300">
 
 ### Schematic and PCB layout
 
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/brd.png?raw=true" width="300">
-<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/super-slim-pcb/PCB/2400MHz/TX_SX1280_Super_Slim/img/sch.png?raw=true" width="300">
+<img src="https://github.com/SpencerGraffunder/ExpressLRS/blob/nuclear-hardware/PCB/2400MHz/TX_SX1280_Super_Slim/img/brd.png?raw=true" width="300">
