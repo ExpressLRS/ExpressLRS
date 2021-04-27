@@ -23,21 +23,19 @@
 #endif
 
 
-class CRSF : public TXModule
+class CRSF
+#if CRSF_TX_MODULE
+    : public TXModule
+#endif
 {
 
 public:
-    #if CRSF_RX_MODULE
+    CRSF()
+#if CRSF_TX_MODULE
+        : TXModule()
+#endif
+    {}
 
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    #endif
-
-    static HardwareSerial Port;
 
     static volatile uint16_t ChannelDataIn[16];
     static volatile uint16_t ChannelDataOut[16];
@@ -67,8 +65,8 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 
-    static void Begin(); //setup timers etc
-    void End(); //stop timers etc
+    void begin(Stream* dev); //setup timers etc
+    void end(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
@@ -84,7 +82,9 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
+#if CRSF_TX_MODULE
     void ICACHE_RAM_ATTR sendSyncPacketToTX() override;
+#endif
 
     /////////////////////////////////////////////////////////////
 
@@ -95,7 +95,13 @@ public:
 
     void handleUARTin();
     bool RXhandleUARTout();
+
+    void flush_port_input(void);
+
 #if CRSF_TX_MODULE
+    static void duplex_set_RX();
+    static void duplex_set_TX();
+
     static uint8_t* GetMspMessage();
     static void UnlockMspMessage();
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
@@ -103,7 +109,7 @@ public:
     static void ResetMspQueue();
 #endif
 private:
-    Stream *_dev;
+    Stream *_dev = nullptr;
 
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
     static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
@@ -114,9 +120,6 @@ private:
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
 
 #if CRSF_TX_MODULE
-    /// OpenTX mixer sync ///
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-#endif
 
     /// UART Handling ///
     static uint32_t GoodPktsCount;
@@ -128,19 +131,13 @@ private:
     static uint8_t MspDataLength;
     static volatile uint8_t MspRequestsInTransit;
     static uint32_t LastMspRequestSent;
-#ifdef PLATFORM_ESP32
-    static void ESP32uartTask(void *pvParameters);
-    static void ESP32syncPacketTask(void *pvParameters);
-#endif
 
-    static void duplex_set_RX();
-    static void duplex_set_TX();
     bool ProcessPacket();
     void flushTxBuffers() override;
     bool UARTwdt();
 #endif
-
-    static void flush_port_input(void);
 };
+
+extern CRSF crsf;
 
 #endif

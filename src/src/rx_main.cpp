@@ -77,7 +77,6 @@ Telemetry telemetry;
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
-CRSF crsf(CRSF_TX_SERIAL);
 
 /* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
@@ -1147,7 +1146,7 @@ void setup()
     MspReceiver.ResetState();
     MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
     Radio.RXnb();
-    crsf.Begin();
+    crsf.begin(&CRSF_TX_SERIAL);
     hwTimer.init();
     hwTimer.stop();
 }

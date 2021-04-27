@@ -1,6 +1,5 @@
 #pragma once
 
-#include "crsf_protocol.h"
 #include "targets.h"
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
@@ -48,7 +47,7 @@ class TXModule
 
   public:
   TXModule() {}
-  ~TXModule() {}
+  virtual ~TXModule() {}
 
   void init(Stream* dev);
 
@@ -64,8 +63,8 @@ class TXModule
   // Call this periodically
   void send();
 
-  virtual void sendSyncPacketToTX() = 0;
-  virtual void flushTxBuffers() = 0;
+  virtual void sendSyncPacketToTX() {}
+  virtual void flushTxBuffers() {}
 };
 
 class RCProtocol

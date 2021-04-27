@@ -37,6 +37,22 @@ SX1280Driver Radio;
 #include "ESP32_WebUpdate.h"
 #endif
 
+
+#ifdef PLATFORM_ESP32
+HardwareSerial SerialPort(1);
+HardwareSerial CRSF_Port = SerialPort;
+#elif CRSF_TX_MODULE_STM32
+HardwareSerial CRSF_Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+#if defined(STM32F3) || defined(STM32F3xx)
+#include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_gpio.h"
+#elif defined(STM32F1) || defined(STM32F1xx)
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
+#endif
+#endif
+
+
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
@@ -66,7 +82,6 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
-CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
@@ -126,6 +141,25 @@ void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
+
+#ifdef PLATFORM_ESP32
+//RTOS task to read and write CRSF packets to the serial port
+void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
+{
+    Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
+    CRSF_Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
+                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
+                     false, 500);
+    crsf.duplex_set_RX();
+    vTaskDelay(500);
+    crsf.flush_port_input();
+    (void)pvParameters;
+    for (;;)
+    {
+        crsf.handleUARTin();
+    }
+}
+#endif // PLATFORM_ESP32
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
@@ -763,7 +797,7 @@ void setup()
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
-  crsf.Begin();
+  crsf.begin(&CRSF_Port);
   MspSender.ResetState();
 }
 
