@@ -9,21 +9,17 @@
 void ESP32uartTask(void *pvParameters);
 #endif
 
-CRSF crsf;
-
-#ifdef PLATFORM_ESP32
-portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-TaskHandle_t xHandleOpenTXsync = NULL;
-TaskHandle_t xESP32uartTask = NULL;
-SemaphoreHandle_t mutexOutFIFO = NULL;
-#elif CRSF_TX_MODULE_STM32
-#endif
-
+CRSF         crsf;
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
 FIFO MspWriteFIFO;
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
+portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
+SemaphoreHandle_t mutexOutFIFO = NULL;
+#endif
 
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
@@ -64,17 +60,18 @@ volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
-uint32_t CRSF::UARTwdtLastChecked;
-uint32_t CRSF::UARTcurrentBaud;
-bool CRSF::CRSFstate = false;
 
-// for the UART wdt, every 1000ms we change bauds when connect is lost
-#define UARTwdtInterval 1000
+//TODO: needs to be somewhere else
+uint32_t UARTwdtLastChecked;
+uint32_t UARTcurrentBaud;
+
+bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 volatile uint8_t CRSF::MspRequestsInTransit = 0;
 uint32_t CRSF::LastMspRequestSent = 0;
+
 #endif // CRSF_TX_MODULE
 
 
@@ -83,46 +80,9 @@ void CRSF::begin(Stream* dev)
     Serial.println("About to start CRSF task...");
     _dev = dev;
 
-#if CRSF_TX_MODULE
-    UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
-    UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
-
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) and defined(CRSF_TX_MODULE)
     mutexOutFIFO = xSemaphoreCreateMutex();
-    disableCore0WDT();
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
-
-
-#elif defined(PLATFORM_STM32)
-    //
-    // TODO: move this code to init serial com to somewhere else
-    //
-    Serial.println("Start STM32 R9M TX CRSF UART");
-
-    #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
-    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
-    #endif
-
-    // if (_dev) {
-    //     _dev->setTx(GPIO_PIN_RCSIGNAL_TX);
-    //     _dev->setRx(GPIO_PIN_RCSIGNAL_RX);
-    //     _dev->begin(CRSF_OPENTX_FAST_BAUDRATE);
-    // }
-
-#if defined(TARGET_TX_GHOST)
-    USART1->CR1 &= ~USART_CR1_UE;
-    USART1->CR3 |= USART_CR3_HDSEL;
-    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
-    USART1->CR1 |= USART_CR1_UE;
 #endif
-    Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
-    if (_dev) _dev->flush();
-#endif
-
-    flush_port_input();
-#endif // CRSF_TX_MODULE
-
     //The master module requires that the serial communication is bidirectional
     //The Reciever uses seperate rx and tx pins
 }
@@ -130,12 +90,6 @@ void CRSF::begin(Stream* dev)
 void CRSF::end()
 {
 #if CRSF_TX_MODULE
-#ifdef PLATFORM_ESP32
-    if (xESP32uartTask != NULL)
-    {
-        vTaskDelete(xESP32uartTask);
-    }
-#endif
     uint32_t startTime = millis();
     #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
@@ -146,10 +100,6 @@ void CRSF::end()
             break;
         }
     }
-    //TODO: does not exists on streams,
-    // that needs to be done somewhere else
-    //if (_dev) _dev->end();
-    //Serial.println("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
 
@@ -234,12 +184,14 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
     portENTER_CRITICAL(&FIFOmux);
 #endif
+
     SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
     SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-#ifdef PLATFORM_ESP32
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
@@ -273,12 +225,14 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
     outBuffer[LUArespLength + 3] = crc;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
     portENTER_CRITICAL(&FIFOmux);
 #endif
+
     SerialOutFIFO.push(LUArespLength + 4); // length
     SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
-#ifdef PLATFORM_ESP32
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
@@ -299,12 +253,15 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     if (CRSF::CRSFstate)
     {
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-#ifdef PLATFORM_ESP32
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
         xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
 #endif
+
         SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
         SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
-#ifdef PLATFORM_ESP32
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
         xSemaphoreGive(mutexOutFIFO);
 #endif
     }
@@ -343,12 +300,14 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         outBuffer[OpenTXsyncFrameLength + 3] = crc;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
         portENTER_CRITICAL(&FIFOmux);
 #endif
+
         SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
         SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
-#ifdef PLATFORM_ESP32
+
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
         portEXIT_CRITICAL(&FIFOmux);
 #endif
         syncLastSent = now;
@@ -613,7 +572,7 @@ void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
         {
             duplex_set_TX();
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
             portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
 
@@ -622,7 +581,7 @@ void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
 
             SerialOutFIFO.popBytes(OutData, OutPktLen);
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
             portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
 

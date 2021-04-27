@@ -788,6 +788,9 @@ void beginWebsever()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
+    //
+    crsf.end();
+    CRSF_Port.end();
     BeginWebUpdate();
     webUpdateMode = true;
 #endif

@@ -130,8 +130,6 @@ void BeginWebUpdate()
 {
     hwTimer.stop();
     Radio.End();
-    crsf.end();
-    //TODO: stop serial port
 
     Serial.println("Begin Webupdater");
     Serial.println("Stopping Radio");

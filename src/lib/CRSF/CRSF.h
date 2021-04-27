@@ -124,8 +124,6 @@ private:
     /// UART Handling ///
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
-    static uint32_t UARTwdtLastChecked;
-    static uint32_t UARTcurrentBaud;
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
@@ -139,5 +137,13 @@ private:
 };
 
 extern CRSF crsf;
+
+// Serial settings:
+//  TODO: this needs to go away
+extern uint32_t UARTwdtLastChecked;
+extern uint32_t UARTcurrentBaud;
+
+// for the UART wdt, every 1000ms we change bauds when connect is lost
+#define UARTwdtInterval 1000
 
 #endif

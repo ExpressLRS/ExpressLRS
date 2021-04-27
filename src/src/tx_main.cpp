@@ -52,7 +52,6 @@ HardwareSerial CRSF_Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
-
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
@@ -143,6 +142,10 @@ void OnTLMRatePacket(mspPacket_t *packet);
 uint8_t baseMac[6];
 
 #ifdef PLATFORM_ESP32
+
+TaskHandle_t xHandleOpenTXsync = NULL;
+TaskHandle_t xESP32uartTask = NULL;
+
 //RTOS task to read and write CRSF packets to the serial port
 void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
 {
@@ -548,6 +551,13 @@ void HandleUpdateParameter()
       Serial.println("Wifi Update Mode Requested!");
       sendLuaParams();
       sendLuaParams();
+
+      if (xESP32uartTask != NULL) {
+        vTaskDelete(xESP32uartTask);
+      }
+      crsf.end();
+      CRSF_Port.end();
+
       BeginWebUpdate();
 #else
       webUpdateMode = false;
@@ -797,7 +807,47 @@ void setup()
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+
+  // Init serial port
+  UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
+  UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
+
+#if defined(PLATFORM_STM32)
+
+  Serial.println("Start STM32 R9M TX CRSF UART");
+
+#if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+  pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
+  digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
+#endif
+
+  CRSF_Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+  CRSF_Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+  CRSF_Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
+
+#if defined(TARGET_TX_GHOST)
+  USART1->CR1 &= ~USART_CR1_UE;
+  USART1->CR3 |= USART_CR3_HDSEL;
+  USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+  USART1->CR1 |= USART_CR1_UE;
+#endif
+
+  Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
+
+#endif // endif defined(PLATFORM_STM32)
+
+  CRSF_Port.flush();  
   crsf.begin(&CRSF_Port);
+
+#ifdef PLATFORM_ESP32
+
+  // Start separate UART thread which polls continually the serial port
+  // after serial port and TXModule is enabled
+  disableCore0WDT();
+  xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
+
+#endif
+
   MspSender.ResetState();
 }
 
