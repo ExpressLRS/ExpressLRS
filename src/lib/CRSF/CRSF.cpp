@@ -61,20 +61,8 @@ volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
 
 #if CRSF_TX_MODULE
+
 /// OpenTX mixer sync ///
-volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
-uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
-volatile uint32_t CRSF::RCdataLastRecv = 0;
-volatile int32_t CRSF::OpenTXsyncOffset = 0;
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-#define AutoSyncWaitPeriod 2000
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-static LPF LPF_OPENTX_SYNC_MARGIN(3);
-static LPF LPF_OPENTX_SYNC_OFFSET(3);
-uint32_t CRSF::SyncWaitPeriodCounter = 0;
-#else
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
-#endif
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
@@ -315,56 +303,14 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
-{
-    CRSF::RequestedRCpacketInterval = PacketInterval;
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    CRSF::SyncWaitPeriodCounter = millis();
-    CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-    LPF_OPENTX_SYNC_OFFSET.init(0);
-    LPF_OPENTX_SYNC_MARGIN.init(0);
-#endif
-}
-
-void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
-{
-    CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
-
-    if (CRSF::OpenTXsyncOffset > (int32_t)CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
-    {
-        CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        // wait until we stablize after changing pkt rate
-        if (millis() > (CRSF::SyncWaitPeriodCounter + AutoSyncWaitPeriod))
-        {
-            CRSF::OpenTXsyncOffsetSafeMargin = LPF_OPENTX_SYNC_MARGIN.update((CRSF::OpenTXsyncOffsetSafeMargin - OpenTXsyncOffset) + 100); // take worst case plus 50us
-        }
-#endif
-    }
-
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    if (CRSF::OpenTXsyncOffsetSafeMargin > 4000)
-    {
-        CRSF::OpenTXsyncOffsetSafeMargin = 4000; // hard limit at no tune default
-    }
-    else if (CRSF::OpenTXsyncOffsetSafeMargin < 1000)
-    {
-        CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
-    }
-#endif
-    //Serial.print(CRSF::OpenTXsyncOffset);
-    // Serial.print(",");
-    // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
-}
-
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 {
     uint32_t now = millis();
-    if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
+    if (CRSF::CRSFstate && now >= (syncLastSent + OpenTXsyncPacketInterval))
     {
-        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
+        uint32_t packetRate = packetInterval * 10; //convert from us to right format
+        int32_t offset = syncOffset * 10 - syncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
         uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
 
@@ -398,7 +344,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux);
 #endif
-        OpenTXsyncLastSent = now;
+        syncLastSent = now;
     }
 }
 
@@ -436,7 +382,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
     else if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
-        CRSF::RCdataLastRecv = micros();
+        onChannelDataIn();
         GoodPktsCount++;
         GetChannelDataIn();
         return true;
@@ -633,7 +579,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     if (ProcessPacket())
                     {
                         //delayMicroseconds(50);
-                        handleUARTout();
+                        send();
                     }
                 }
                 else
@@ -651,10 +597,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::handleUARTout()
+void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
 {
-    sendSyncPacketToTX(); // calculate mixer sync packet if needed
-
     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
     if (peekVal > 0)
     {
@@ -869,7 +813,7 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
     this->_dev->write(data, totalBufferLen);
 }
-#endif // CRSF_TX_MODULE
+#endif // !CRSF_TX_MODULE && !CRSF_RX_MODULE
 
 
 /**

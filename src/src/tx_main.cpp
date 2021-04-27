@@ -238,7 +238,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
 
-  crsf.setSyncParams(ModParams->interval);
+  crsf.setPacketInterval(ModParams->interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 
@@ -282,7 +282,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t maxLength;
   uint8_t packageIndex;
 #ifdef FEATURE_OPENTX_SYNC
-  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+  crsf.onRadioPacketSent(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
 
   /////// This Part Handles the Telemetry Response ///////
@@ -310,41 +310,51 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   SyncInterval = 250;
   bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 #else
-  SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  SyncInterval =
+      (connectionState == connected)
+          ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected
+          : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;
 #endif
 
-  uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  bool NonceFHSSresultWindow = (NonceFHSSresult == 1 || NonceFHSSresult == 2) ? true : false; // restrict to the middle nonce ticks (not before or after freq chance)
-  bool WithinSyncSpamResidualWindow = (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
+  uint8_t NonceFHSSresult =
+      NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+  bool NonceFHSSresultWindow =
+      (NonceFHSSresult == 1 || NonceFHSSresult == 2)
+          ? true
+          : false;  // restrict to the middle nonce ticks (not before or after
+                    // freq chance)
+  bool WithinSyncSpamResidualWindow =
+      (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
 
   if ((syncSpamCounter || WithinSyncSpamResidualWindow) && NonceFHSSresultWindow)
   {
     GenerateSyncPacketData();
-  }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  } else if ((!skipSync) &&
+             ((millis() > (SyncPacketLastSent + SyncInterval)) &&
+              (Radio.currFreq == GetInitialFreq()) &&
+              NonceFHSSresultWindow))  // don't sync just after we changed freqs
+                                       // (helps with hwTimer.init() being in
+                                       // sync from the get go)
   {
     GenerateSyncPacketData();
-  }
-  else
-  {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MspSender.IsActive())
-    {
+  } else {
+    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) &&
+        MspSender.IsActive()) {
       MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
       Radio.TXdataBuffer[0] = MSP_DATA_PACKET & 0b11;
       Radio.TXdataBuffer[1] = packageIndex;
       Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
       Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
       Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-      Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-      Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+      Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3) : 0;
+      Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4) : 0;
       MSPPacketLastSent = millis();
-      // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
+      // counter can be increased even for normal msp messages since it's reset
+      // if a real bind message should be sent
       BindingSendCount++;
-    }
-    else
-    {
-      #ifdef ENABLE_TELEMETRY
+    } else {
+#ifdef ENABLE_TELEMETRY
       GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
       GenerateChannelData(Radio.TXdataBuffer, &crsf);

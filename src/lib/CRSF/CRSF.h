@@ -11,6 +11,7 @@
 #include "LowPassFilter.h"
 #include "../CRC/crc.h"
 #include "telemetry_protocol.h"
+#include "TXModule.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
@@ -22,7 +23,7 @@
 #endif
 
 
-class CRSF
+class CRSF : public TXModule
 {
 
 public:
@@ -67,7 +68,7 @@ public:
     static uint32_t BadPktsCountResult; // need to latch the results
 
     static void Begin(); //setup timers etc
-    static void End(); //stop timers etc
+    void End(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
@@ -83,10 +84,7 @@ public:
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
 ///// Variables for OpenTX Syncing //////////////////////////
-    #define OpenTXsyncPacketInterval 200 // in ms
-    static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
-    static void ICACHE_RAM_ATTR JustSentRFpacket();
-    static void ICACHE_RAM_ATTR sendSyncPacketToTX();
+    void ICACHE_RAM_ATTR sendSyncPacketToTX() override;
 
     /////////////////////////////////////////////////////////////
 
@@ -95,7 +93,7 @@ public:
 
     static void inline nullCallback(void);
 
-    static void handleUARTin();
+    void handleUARTin();
     bool RXhandleUARTout();
 #if CRSF_TX_MODULE
     static uint8_t* GetMspMessage();
@@ -117,13 +115,7 @@ private:
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
-    static volatile uint32_t OpenTXsyncLastSent;
-    static uint32_t RequestedRCpacketInterval;
-    static volatile uint32_t RCdataLastRecv;
-    static volatile int32_t OpenTXsyncOffset;
-    static uint32_t OpenTXsyncOffsetSafeMargin;
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    static uint32_t SyncWaitPeriodCounter;
 #endif
 
     /// UART Handling ///
@@ -143,9 +135,9 @@ private:
 
     static void duplex_set_RX();
     static void duplex_set_TX();
-    static bool ProcessPacket();
-    static void handleUARTout();
-    static bool UARTwdt();
+    bool ProcessPacket();
+    void flushTxBuffers() override;
+    bool UARTwdt();
 #endif
 
     static void flush_port_input(void);
