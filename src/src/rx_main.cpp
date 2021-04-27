@@ -175,7 +175,7 @@ static bool lastPacketCrcError;
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
-uint32_t cycleInterval;
+uint32_t cycleInterval; // in ms
 uint32_t RFmodeLastCycled = 0;
 #define RFmodeCycleDivisorFastMode 10
 uint8_t RFmodeCycleDivisor;
@@ -233,7 +233,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
-    // Wait for 110% of time it takes to cycle through all freqs
+    // Wait for 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / 1000;
 
     ExpressLRS_currAirRate_Modparams = ModParams;
