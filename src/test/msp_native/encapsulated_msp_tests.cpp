@@ -11,8 +11,6 @@ StringStream ss(buf);
 
 // Create a CRSF object to test,
 // using the StringStream as a mock UART
-CRSF crsf(&ss);
-HardwareSerial CRSF::Port = HardwareSerial();
 
 void test_encapsulated_msp_send(void)
 {
@@ -22,6 +20,8 @@ void test_encapsulated_msp_send(void)
     // THEN the mspPacket_t will be transcoded into an embedded crsf msp packet
     // AND the transcoded packet will be sent to the Stream object associated with the CRSF class
 
+    crsf.begin(&ss);
+    
     // Make sure no msp messages are in the fifo
     crsf.ResetMspQueue();
 
@@ -68,6 +68,8 @@ void test_encapsulated_msp_send_too_long(void)
     // WHEN the crsf.sendMSPFrameToFC() function is called with a invalid mspPacket_t MSP command (payload too long)
     // THEN the mspPacket_t will NOT be transcoded into an embedded crsf msp packet
     // AND nothing will be sent to the stream
+
+    crsf.begin(&ss);
 
     // Make sure no msp messages are in the fifo
     crsf.ResetMspQueue();

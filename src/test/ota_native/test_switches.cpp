@@ -15,8 +15,7 @@
 #include "CRSF.h"
 #include <OTA.h>
 
-CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
-HardwareSerial CRSF::Port = HardwareSerial();
+HardwareSerial CRSF_Port = HardwareSerial();
 
 /* Check that the round robin works
  * First call should return 0 for seq switches or 1 for hybrid
