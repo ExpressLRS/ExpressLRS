@@ -233,8 +233,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
-    //wait for 110% of time it takes to cycle through all freqs. 
-    cycleInterval = (11*NR_FHSS_ENTRIES*ModParams->FHSShopInterval*ModParams->interval)/10; 
+    // Wait for 110% of time it takes to cycle through all freqs
+    cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / 1000;
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
