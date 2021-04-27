@@ -175,6 +175,7 @@ static bool lastPacketCrcError;
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
+uint32_t cycleInterval;
 uint32_t RFmodeLastCycled = 0;
 #define RFmodeCycleDivisorFastMode 10
 uint8_t RFmodeCycleDivisor;
@@ -231,6 +232,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
+
+    cycleInterval = (1.1*NR_FHSS_ENTRIES*ModParams->FHSShopInterval*ModParams->interval)/100;
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -544,10 +547,12 @@ void LostConnection()
     if (!InBindingMode)
     {
         hwTimer.stop();
+        delay(ExpressLRS_currAirRate_Modparams->interval/250); // delay 4x packet interval (make sure radio is not busy)
         Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Radio.RXnb();
     }
 
+    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -1002,11 +1007,7 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     SetRFLinkRate(RATE_DEFAULT);
-    #ifdef FAST_SYNC
     RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-    #else
-    RFmodeCycleDivisor = 1;
-    #endif
 }
 
 static void wifiOff()
@@ -1066,7 +1067,7 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode()
 {
-    if ((millis() - RFmodeLastCycled) > (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval / RFmodeCycleDivisor))
+    if ((millis() - RFmodeLastCycled) > (cycleInterval / RFmodeCycleDivisor))
     {
         RFmodeLastCycled = millis();
         if ((connectionState != connected) && !webUpdateMode)
@@ -1086,11 +1087,8 @@ static void cycleRfMode()
                 crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
                 Radio.RXnb();
             }
-
-            #if defined(FAST_SYNC)
             // Switch to FAST_SYNC if not already in it (won't be if was just connected)
             RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-            #endif
 
             // LED blinks to show something is still happening
             if (!InBindingMode)
