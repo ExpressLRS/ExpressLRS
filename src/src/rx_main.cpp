@@ -774,9 +774,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     (void)didFHSS; // silence compiler warning
 #endif /* Regulatory_Domain_ISM_2400 */
 
-    // Slow down FAST_SYNC if we're not connected, and also will hold
-    // longer for the first cycle after disconnecting since it is likely
-    // we'll reconnect on this rate again
+    // Extend sync duration since we've received a packet at this rate
+    // but do not extend it indefinitely
     RFmodeCycleDivisor = 1;
 
     doneProcessing = micros();
