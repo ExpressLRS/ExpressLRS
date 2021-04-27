@@ -790,7 +790,7 @@ void beginWebsever()
     hwTimer.stop();
     //
     crsf.end();
-    CRSF_Port.end();
+    CRSF_TX_SERIAL.end();
     BeginWebUpdate();
     webUpdateMode = true;
 #endif
