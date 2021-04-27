@@ -247,8 +247,11 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
         return;
     }
 
+    //
+    // TODO: this code is asking for troubles!!!
+    //
     uint8_t LUArespLength = len + 2;
-    uint8_t outBuffer[LUArespLength + 5] = {0};
+    uint8_t outBuffer[LUArespLength + 5];// = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
