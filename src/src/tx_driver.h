@@ -11,3 +11,4 @@ void TxInitSerial();
 void TxInitLeds();
 void TxInitBuzzer();
 
+void TxUpdateLEDs(uint8_t isRXconnected, uint8_t tlm);

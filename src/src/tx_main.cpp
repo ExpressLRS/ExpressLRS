@@ -12,7 +12,6 @@ SX1280Driver Radio;
 #include "tx_driver.h"
 #include "CRSF.h"
 #include "FHSS.h"
-#include "LED.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
 #include "msp.h"
@@ -275,9 +274,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 
-#ifdef PLATFORM_ESP32
-  updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
-#endif
+  TxUpdateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()

@@ -1,6 +1,9 @@
 #include "tx_driver.h"
 #include "targets.h"
 
+#include "common.h"
+#include "LED.h"
+
 void TxInitSerial()
 {
 #if defined(TARGET_TX_GHOST)
@@ -103,5 +106,24 @@ void TxInitButton()
 {
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.init(GPIO_PIN_BUTTON, !GPIO_BUTTON_INVERTED); // r9 tx appears to be active high
+#endif
+}
+
+void TxUpdateLEDs(uint8_t isRXconnected, uint8_t tlm)
+{
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
+    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_200HZ)
+    {
+        strip.ClearTo(RgbColor(0, 0, LED_MAX_BRIGHTNESS));
+    }
+    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_100HZ)
+    {
+        strip.ClearTo(RgbColor(0, LED_MAX_BRIGHTNESS, 0));
+    }
+    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_50HZ)
+    {
+        strip.ClearTo(RgbColor(LED_MAX_BRIGHTNESS, 0, 0));
+    }
+  strip.Show();
 #endif
 }
