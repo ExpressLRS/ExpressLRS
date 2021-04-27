@@ -9,6 +9,7 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#include "tx_driver.h"
 #include "CRSF.h"
 #include "FHSS.h"
 #include "LED.h"
@@ -50,11 +51,6 @@ HardwareSerial CRSF_Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
 #endif
-#endif
-
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-#include "button.h"
-button button;
 #endif
 
 #if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
@@ -650,94 +646,12 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#if defined(TARGET_TX_GHOST)
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-  Serial.begin(460800);
-
-  /**
-   * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
-   * else we will use GPIO_PIN_LED_GREEN and _RED.
-   **/
-  #if WS2812_LED_IS_USED // do startup blinkies for fun
-      WS281Binit();
-      uint32_t col = 0x0000FF;
-      for (uint8_t j = 0; j < 3; j++)
-      {
-          for (uint8_t i = 0; i < 5; i++)
-          {
-              WS281BsetLED(col << j*8);
-              delay(15);
-              WS281BsetLED(0, 0, 0);
-              delay(35);
-          }
-      }
-      WS281BsetLED(0xff, 0, 0);
-  #endif
-
-  #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
-  #endif // GPIO_PIN_LED_GREEN
-  #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-  #endif // GPIO_PIN_LED_RED
-
-  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    // Annoying startup beeps
-    #ifndef JUST_BEEP_ONCE
-      #if defined(MY_STARTUP_MELODY_ARR)
-        // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-        const int melody[][2] = MY_STARTUP_MELODY_ARR;
-
-        for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
-          tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
-          delay(melody[i][1]);
-          noTone(GPIO_PIN_BUZZER);
-        }
-      #else
-        // use default jingle
-        const int beepFreq[] = {659, 659, 523, 659, 783, 392};
-        const int beepDurations[] = {300, 300, 100, 300, 550, 575};
-
-        for (int i = 0; i < 6; i++)
-        {
-          tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-          delay(beepDurations[i]);
-          noTone(GPIO_PIN_BUZZER);
-        }
-      #endif
-    #else
-      tone(GPIO_PIN_BUZZER, 400, 200);
-      delay(200);
-      tone(GPIO_PIN_BUZZER, 480, 200);
-    #endif
-  #endif // GPIO_PIN_BUZZER
-
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-  button.init(GPIO_PIN_BUTTON, !GPIO_BUTTON_INVERTED); // r9 tx appears to be active high
-#endif
-
-#if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
-  digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
-  pinMode(GPIO_PIN_LED_GREEN_RED, OUTPUT); // Red LED on "Green" LED (off)
-  digitalWrite(GPIO_PIN_LED_GREEN_RED, HIGH);
-  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
-  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
-  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
-  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-#endif
+  TxInitSerial();
+  TxInitLeds();
+  TxInitBuzzer();
 
 #ifdef PLATFORM_ESP32
-#ifdef GPIO_PIN_LED
-  strip.Begin();
-#endif
+
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
