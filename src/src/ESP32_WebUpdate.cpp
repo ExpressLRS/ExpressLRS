@@ -28,10 +28,10 @@ extern TxConfig config;
 #include <WebServer.h>
 #include <Update.h>
 #include <set>
-#include <string.h>
 
 #include "ESP32_WebContent.h"
-#include "config.h"
+#include "flag_png.h"
+#include "main_css.h"
 
 uint8_t target_seen = 0;
 uint8_t target_pos = 0;
@@ -47,8 +47,6 @@ IPAddress apIP(10, 0, 0, 1);
 IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 WebServer server(80);
-
-static int numNetworks;
 
 /** Is this an IP? */
 boolean isIp(String str)
@@ -91,47 +89,54 @@ bool captivePortal()
 
 void WebUpdateSendCSS()
 {
-    server.send_P(200, "text/css", CSS);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/css", CSS, sizeof(CSS));
+}
+
+void WebUpdateSendJS()
+{
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/css", SCAN_JS, sizeof(SCAN_JS));
 }
 
 void WebUpdateSendPNG()
 {
-  server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
+  server.send_P(200, "image/png", PNG, sizeof(PNG));
 }
 
 void WebUpdateHandleRoot()
 {
-    if (captivePortal())
-    { // If captive portal redirect instead of displaying the page.
-        return;
-    }
-    server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    server.sendHeader("Pragma", "no-cache");
-    server.sendHeader("Expires", "-1");
-    server.send_P(200, "text/html", INDEX_HTML);
+  if (captivePortal())
+  { // If captive portal redirect instead of displaying the page.
+    return;
+  }
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "-1");
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/html", INDEX_HTML, sizeof(INDEX_HTML));
 }
 
 void WebUpdateScanHome(void)
 {
-  WiFi.disconnect();
-  numNetworks = WiFi.scanNetworks();
-  Serial.printf("Found %d networks\n", numNetworks);
-  server.send_P(200, "text/html", SCAN_HTML);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/html", SCAN_HTML, sizeof(SCAN_HTML));
 }
 
 void WebUpdateSendNetworks()
 {
   String s;
-  char buf[20];
   std::set<String> vs;
   s+="[";
+  WiFi.disconnect();
+  int numNetworks = WiFi.scanNetworks();
+  Serial.printf("Found %d networks\n", numNetworks);
   for(int i=0 ; i<numNetworks ; i++) {
     String w = WiFi.SSID(i);
     Serial.printf("found %s\n", w.c_str());
     if (vs.find(w)==vs.end() && w.length()>0) {
       if (s.length() > 1) s += ",";
-      s += "{\"v\":" + String(itoa(i, buf, 10)) + ",";
-      s+="\"t\":\"" + w + "\"}";
+      s += "\"" + w + "\"";
       vs.insert(w);
     }
   }
@@ -141,11 +146,10 @@ void WebUpdateSendNetworks()
 
 void WebUpdateSetHome(void)
 {
-  String network = server.arg("network");
+  String ssid = server.arg("network");
   String password = server.arg("password");
   system_event_id_t status = SYSTEM_EVENT_MAX;
 
-  String ssid = WiFi.SSID(network.toInt());
   Serial.printf("Joining: %s\n", ssid.c_str());
   
   WiFi.setHostname(myHostname);
@@ -216,6 +220,7 @@ void BeginWebUpdate()
 
     server.on("/", WebUpdateHandleRoot);
     server.on("/main.css", WebUpdateSendCSS);
+    server.on("/scan.js", WebUpdateSendJS);
     server.on("/flag.png", WebUpdateSendPNG);
     server.on("/networks.json", WebUpdateSendNetworks);
     

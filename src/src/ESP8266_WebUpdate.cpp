@@ -9,6 +9,11 @@
 #include <ESP8266HTTPUpdateServer.h>
 #include "ESP8266_hwTimer.h"
 #include "config.h"
+#include <set>
+
+#include "ESP8266_WebContent.h"
+#include "flag_png.h"
+#include "main_css.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -20,7 +25,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#include "ESP8266_WebContent.h"
 uint8_t target_seen = 0;
 uint8_t target_pos = 0;
 
@@ -85,12 +89,19 @@ bool captivePortal()
 
 void WebUpdateSendCSS()
 {
-  server.send_P(200, "text/css", CSS);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/css", CSS, sizeof(CSS));
+}
+
+void WebUpdateSendJS()
+{
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/css", SCAN_JS, sizeof(SCAN_JS));
 }
 
 void WebUpdateSendPNG()
 {
-  server.send_P(200, "image/png", (PGM_P)PNG, sizeof(PNG));
+  server.send_P(200, "image/png", PNG, sizeof(PNG));
 }
 
 void WebUpdateHandleRoot()
@@ -102,22 +113,32 @@ void WebUpdateHandleRoot()
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
-  server.send_P(200, "text/html", INDEX_HTML);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/html", INDEX_HTML, sizeof(INDEX_HTML));
 }
 
 void WebUpdateScanHome(void)
 {
-  numNetworks = WiFi.scanNetworks();
-  server.send_P(200, "text/html", SCAN_HTML);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/html", SCAN_HTML, sizeof(SCAN_HTML));
 }
 
 void WebUpdateSendNetworks()
 {
   String s;
+  std::set<String> vs;
   s+="[";
+  // WiFi.disconnect();
+  int numNetworks = WiFi.scanNetworks();
+  Serial.printf("Found %d networks\n", numNetworks);
   for(int i=0 ; i<numNetworks ; i++) {
-    s+="\"" + WiFi.SSID(i) + "\"";
-    if (i < numNetworks-1) s+=",";
+    String w = WiFi.SSID(i);
+    Serial.printf("found %s\n", w.c_str());
+    if (vs.find(w)==vs.end() && w.length()>0) {
+      if (s.length() > 1) s += ",";
+      s += "\"" + w + "\"";
+      vs.insert(w);
+    }
   }
   s+="]";
   server.send(200, "application/json", s);
@@ -207,6 +228,7 @@ void BeginWebUpdate(void)
 
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
+  server.on("/scan.js", WebUpdateSendJS);
   server.on("/flag.png", WebUpdateSendPNG);
   server.on("/networks.json", WebUpdateSendNetworks);
 
