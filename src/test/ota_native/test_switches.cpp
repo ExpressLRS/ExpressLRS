@@ -11,7 +11,7 @@
 #include <unity.h>
 
 #include "targets.h"
-// #include "common.h"
+#include "channels.h"
 #include "CRSF.h"
 #include <OTA.h>
 
@@ -91,10 +91,10 @@ void test_encodingHybrid8(bool highResChannel)
 
     // Define the input data
     // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    ChannelData[0] = 0x0123;
+    ChannelData[1] = 0x4567;
+    ChannelData[2] = 0x89AB;
+    ChannelData[3] = 0xCDEF;
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
@@ -109,7 +109,7 @@ void test_encodingHybrid8(bool highResChannel)
         crsf.nextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, ChannelData, &crsf, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -118,14 +118,14 @@ void test_encodingHybrid8(bool highResChannel)
 
     // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
-        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
+        expected = ChannelData[i] >> 3; // most significant 8 bits
         TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
     }
 
     // byte 5 is bits 1 and 2 of each analog channel
     expected = 0;
     for(int i = 0; i < 4; i++) {
-        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
+        expected = (expected <<2) | ((ChannelData[i] >> 1) & 0b11);
     }
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
@@ -167,10 +167,10 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 
     // Define the input data
     // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    ChannelData[0] = 0x0123;
+    ChannelData[1] = 0x4567;
+    ChannelData[2] = 0x89AB;
+    ChannelData[3] = 0xCDEF;
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
@@ -189,16 +189,16 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         crsf.nextSwitchIndex = forceSwitch;
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
+    GenerateChannelDataHybridSwitch8(TXdataBuffer, ChannelData, &crsf, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
     TEST_ASSERT_EQUAL(BIT_to_CRSF(crsf.currentSwitches[0]), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
@@ -249,18 +249,18 @@ void test_encoding10bit()
 
     // Define the input data
     // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    ChannelData[0] = 0x0123;
+    ChannelData[1] = 0x4567;
+    ChannelData[2] = 0x89AB;
+    ChannelData[3] = 0xCDEF;
 
     // 8 switches
     for(int i = 4; i < 12; i++) {
-        crsf.ChannelDataIn[i] =  i % 2 * 1800;
+        ChannelData[i] =  i % 2 * 1800;
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -269,14 +269,14 @@ void test_encoding10bit()
 
     // bytes 1 through 5 are 10 bit packed analog channels
     for(int i = 0; i < 4; i++) {
-        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
+        expected = ChannelData[i] >> 3; // most significant 8 bits
         TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
     }
 
     // byte 5 is bits 1 and 2 of each analog channel
     expected = 0;
     for(int i = 0; i < 4; i++) {
-        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
+        expected = (expected <<2) | ((ChannelData[i] >> 1) & 0b11);
     }
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
@@ -298,27 +298,27 @@ void test_decoding10bit()
 
     // Define the input data
     // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    ChannelData[0] = 0x0123;
+    ChannelData[1] = 0x4567;
+    ChannelData[2] = 0x89AB;
+    ChannelData[3] = 0xCDEF;
 
     // 8 switches
     for(int i = 4; i < 12; i++) {
-        crsf.ChannelDataIn[i] =  i % 2 * 1800;
+        ChannelData[i] =  i % 2 * 1800;
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelData10bit(TXdataBuffer, &crsf);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
     TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch4); // Switch 0
     TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch5); // Switch 1

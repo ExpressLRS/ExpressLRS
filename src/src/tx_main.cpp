@@ -10,6 +10,7 @@ SX1280Driver Radio;
 #endif
 
 #include "tx_driver.h"
+#include "channels.h"
 #include "CRSF.h"
 #include "FHSS.h"
 // #include "debug.h"
@@ -156,7 +157,7 @@ void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
     {
       // checks and baud changing on error
       if (!crsf.UARTwdt()) {
-        crsf.poll();
+        crsf.poll(ChannelData);
       }
     }
 }
@@ -341,7 +342,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 #if defined(NO_SYNC_ON_ARM)
   SyncInterval = 250;
-  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+  bool skipSync = (bool)CRSF_to_BIT(ChannelData[AUX1]);
 #else
   SyncInterval =
       (connectionState == connected)
@@ -388,10 +389,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       BindingSendCount++;
     } else {
 #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
-      #else
-      GenerateChannelData(Radio.TXdataBuffer, &crsf);
-      #endif
+      GenerateChannelData(Radio.TXdataBuffer, ChannelData, TelemetryReceiver.GetCurrentConfirm());
+#else
+      GenerateChannelData(Radio.TXdataBuffer, ChannelData);
+#endif
     }
   }
 
@@ -772,7 +773,7 @@ void loop()
   #ifdef PLATFORM_STM32
   // checks and baud changing on error
   if (!crsf.UARTwdt()) {
-    crsf.poll();
+    crsf.poll(ChannelData);
   }
   #endif // PLATFORM_STM32
 

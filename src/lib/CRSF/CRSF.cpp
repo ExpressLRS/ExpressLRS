@@ -37,8 +37,6 @@ uint32_t CRSF::BadPktsCountResult = 0;
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
 
-volatile uint16_t CRSF::ChannelDataIn[16] = {0};
-
 volatile inBuffer_U CRSF::inBuffer;
 
 // current and sent switch values, used for prioritising sequential switch transmission
@@ -94,7 +92,7 @@ void CRSF::end()
     #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
     {
-        poll();
+        poll(nullptr);
         if (millis() - startTime > 1000)
         {
             break;
@@ -316,7 +314,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
 
 
-bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
+bool ICACHE_RAM_ATTR CRSF::ProcessPacket(volatile uint16_t* channels)
 {
     if (CRSFstate == false)
     {
@@ -350,7 +348,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         onChannelDataIn();
         GoodPktsCount++;
-        GetChannelDataIn();
+        GetChannelDataIn(channels);
         return true;
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
@@ -479,7 +477,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
 }
 
 #if CRSF_TX_MODULE
-void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in)
+void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in, volatile uint16_t* channels)
 {
   volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
@@ -493,8 +491,8 @@ void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in)
       SerialInBuffer[SerialInPacketPtr] = in;
       SerialInPacketPtr++;
     }
-  } else  // frame is active so we do the processing
-  {
+  } else {  // frame is active so we do the processing
+
     // first if things have gone wrong //
     if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) {
       // we reached the maximum allowable packet length, so start again
@@ -529,7 +527,7 @@ void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in)
           crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
       if (CalculatedCRC == in) {
-        if (ProcessPacket()) {
+        if (ProcessPacket(channels)) {
           // delayMicroseconds(50);
           send();
         }
@@ -760,48 +758,54 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
  * With a special value 7 indicating the middle so it works
  * with switches with a middle position as well as 6-position
  */
-void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
+void ICACHE_RAM_ATTR CRSF::updateSwitchValues(volatile uint16_t *channels)
 {
-    // AUX1 is arm switch, one bit
-    currentSwitches[0] = CRSF_to_BIT(ChannelDataIn[4]);
+  if (!channels) return;
 
-    // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
-    const uint16_t CHANNEL_BIN_COUNT = 6;
-    const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
-    for (int i = 1; i < N_SWITCHES-1; i++)
-    {
-        uint16_t ch = ChannelDataIn[i + 4];
-        // If channel is within 1/4 a BIN of being in the middle use special value 7
-        if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
-            || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
-            currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
-        else
-            currentSwitches[i] = 7;
-    } // for N_SWITCHES
+  // AUX1 is arm switch, one bit
+  currentSwitches[0] = CRSF_to_BIT(channels[4]);
 
-    // AUXx is High Resolution 16-pos (4-bit)
-    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16);
+  // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
+  const uint16_t CHANNEL_BIN_COUNT = 6;
+  const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
+  for (int i = 1; i < N_SWITCHES - 1; i++) {
+    uint16_t ch = channels[i + 4];
+    // If channel is within 1/4 a BIN of being in the middle use special value 7
+    if (ch < (CRSF_CHANNEL_VALUE_MID - CHANNEL_BIN_SIZE / 4) ||
+        ch > (CRSF_CHANNEL_VALUE_MID + CHANNEL_BIN_SIZE / 4))
+      currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+    else
+      currentSwitches[i] = 7;
+  }  // for N_SWITCHES
+
+  // AUXx is High Resolution 16-pos (4-bit)
+  currentSwitches[N_SWITCHES - 1] = CRSF_to_N(channels[N_SWITCHES - 1 + 4], 16);
 }
 
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+void ICACHE_RAM_ATTR CRSF::GetChannelDataIn(
+    volatile uint16_t *channels)  // data is packed as 11 bits per channel
 {
-    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    ChannelDataIn[0] = (rcChannels->ch0);
-    ChannelDataIn[1] = (rcChannels->ch1);
-    ChannelDataIn[2] = (rcChannels->ch2);
-    ChannelDataIn[3] = (rcChannels->ch3);
-    ChannelDataIn[4] = (rcChannels->ch4);
-    ChannelDataIn[5] = (rcChannels->ch5);
-    ChannelDataIn[6] = (rcChannels->ch6);
-    ChannelDataIn[7] = (rcChannels->ch7);
-    ChannelDataIn[8] = (rcChannels->ch8);
-    ChannelDataIn[9] = (rcChannels->ch9);
-    ChannelDataIn[10] = (rcChannels->ch10);
-    ChannelDataIn[11] = (rcChannels->ch11);
-    ChannelDataIn[12] = (rcChannels->ch12);
-    ChannelDataIn[13] = (rcChannels->ch13);
-    ChannelDataIn[14] = (rcChannels->ch14);
-    ChannelDataIn[15] = (rcChannels->ch15);
+  if (!channels) return;
 
-    updateSwitchValues();
+  const volatile crsf_channels_t *rcChannels =
+      &CRSF::inBuffer.asRCPacket_t.channels;
+
+  channels[0] = (rcChannels->ch0);
+  channels[1] = (rcChannels->ch1);
+  channels[2] = (rcChannels->ch2);
+  channels[3] = (rcChannels->ch3);
+  channels[4] = (rcChannels->ch4);
+  channels[5] = (rcChannels->ch5);
+  channels[6] = (rcChannels->ch6);
+  channels[7] = (rcChannels->ch7);
+  channels[8] = (rcChannels->ch8);
+  channels[9] = (rcChannels->ch9);
+  channels[10] = (rcChannels->ch10);
+  channels[11] = (rcChannels->ch11);
+  channels[12] = (rcChannels->ch12);
+  channels[13] = (rcChannels->ch13);
+  channels[14] = (rcChannels->ch14);
+  channels[15] = (rcChannels->ch15);
+
+  updateSwitchValues(channels);
 }

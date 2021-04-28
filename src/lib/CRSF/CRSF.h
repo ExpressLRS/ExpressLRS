@@ -36,10 +36,6 @@ public:
 #endif
     {}
 
-
-    static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataOut[16];
-
     // current and sent switch values
     #define N_SWITCHES 8
 
@@ -88,13 +84,13 @@ public:
 
     /////////////////////////////////////////////////////////////
 
-    static void ICACHE_RAM_ATTR GetChannelDataIn();
-    static void ICACHE_RAM_ATTR updateSwitchValues();
+    static void ICACHE_RAM_ATTR GetChannelDataIn(volatile uint16_t* channels);
+    static void ICACHE_RAM_ATTR updateSwitchValues(volatile uint16_t *channels);
 
     static void inline nullCallback(void);
 
 #if CRSF_TX_MODULE
-    void consumeInputByte(uint8_t in) override;
+    void consumeInputByte(uint8_t in, volatile uint16_t* channels) override;
 #endif
     bool RXhandleUARTout();
 
@@ -134,7 +130,7 @@ private:
     static volatile uint8_t MspRequestsInTransit;
     static uint32_t LastMspRequestSent;
 
-    bool ProcessPacket();
+    bool ProcessPacket(volatile uint16_t* channels);
     void flushTxBuffers() override;
 #endif
 };

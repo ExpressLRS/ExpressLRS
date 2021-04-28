@@ -26,26 +26,29 @@
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf,
+    bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf)
 #endif
 {
   Buffer[0] = RC_DATA_PACKET & 0b11;
-  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
-  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
-  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
-  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
-                           ((crsf->ChannelDataIn[1] & 0b110) << 3) |
-                           ((crsf->ChannelDataIn[2] & 0b110) << 1) |
-                           ((crsf->ChannelDataIn[3] & 0b110) >> 1);
+  Buffer[1] = ((channels[0]) >> 3);
+  Buffer[2] = ((channels[1]) >> 3);
+  Buffer[3] = ((channels[2]) >> 3);
+  Buffer[4] = ((channels[3]) >> 3);
+  Buffer[5] = ((channels[0] & 0b110) << 5) |
+              ((channels[1] & 0b110) << 3) |
+              ((channels[2] & 0b110) << 1) |
+              ((channels[3] & 0b110) >> 1);
 
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
-  // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to 0-6 (0b110)
-  // If the two high bits are 0b11, the receiver knows it is the last switch and can use
-  // that bit to store data
+  // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to
+  // 0-6 (0b110) If the two high bits are 0b11, the receiver knows it is the
+  // last switch and can use that bit to store data
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
@@ -55,7 +58,8 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
 #ifdef ENABLE_TELEMETRY
       TelemetryStatus << 7 |
 #endif
-      // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
+      // switch 0 is one bit sent on every packet - intended for low latency
+      // arm/disarm
       crsf->currentSwitches[0] << 6 |
       // tell the receiver which switch index this is
       bitclearedSwitchIndex << 3 |
@@ -128,25 +132,27 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #if TARGET_TX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf)
 {
+  if (!channels) return;
+  
   Buffer[0] = RC_DATA_PACKET & 0b11;
-  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
-  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
-  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
-  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
-                           ((crsf->ChannelDataIn[1] & 0b110) << 3) |
-                           ((crsf->ChannelDataIn[2] & 0b110) << 1) |
-                           ((crsf->ChannelDataIn[3] & 0b110) >> 1);
-  Buffer[6] = CRSF_to_BIT(crsf->ChannelDataIn[4]) << 7;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[5]) << 6;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[6]) << 5;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[7]) << 4;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[8]) << 3;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[9]) << 2;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
+  Buffer[1] = ((channels[0]) >> 3);
+  Buffer[2] = ((channels[1]) >> 3);
+  Buffer[3] = ((channels[2]) >> 3);
+  Buffer[4] = ((channels[3]) >> 3);
+  Buffer[5] = ((channels[0] & 0b110) << 5) |
+                           ((channels[1] & 0b110) << 3) |
+                           ((channels[2] & 0b110) << 1) |
+                           ((channels[3] & 0b110) >> 1);
+  Buffer[6] = CRSF_to_BIT(channels[4]) << 7;
+  Buffer[6] |= CRSF_to_BIT(channels[5]) << 6;
+  Buffer[6] |= CRSF_to_BIT(channels[6]) << 5;
+  Buffer[6] |= CRSF_to_BIT(channels[7]) << 4;
+  Buffer[6] |= CRSF_to_BIT(channels[8]) << 3;
+  Buffer[6] |= CRSF_to_BIT(channels[9]) << 2;
+  Buffer[6] |= CRSF_to_BIT(channels[10]) << 1;
+  Buffer[6] |= CRSF_to_BIT(channels[11]) << 0;
 }
 #endif
 

@@ -64,11 +64,11 @@ class TXModule
   void onChannelDataIn();
 
   // Call this periodically
-  void poll();
+  void poll(volatile uint16_t* channels);
 
   virtual void sendSyncPacketToTX() {}
   virtual void flushTxBuffers() {}
-  virtual void consumeInputByte(uint8_t in) {}
+  virtual void consumeInputByte(uint8_t in, volatile uint16_t* channels) {}
 };
 
 class RCProtocol
