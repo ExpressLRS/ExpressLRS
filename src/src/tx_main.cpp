@@ -154,7 +154,10 @@ void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
     (void)pvParameters;
     for (;;)
     {
-        crsf.handleUARTin();
+      // checks and baud changing on error
+      if (!crsf.UARTwdt()) {
+        crsf.poll();
+      }
     }
 }
 #endif // PLATFORM_ESP32
@@ -767,7 +770,10 @@ void loop()
   }
 
   #ifdef PLATFORM_STM32
-    crsf.handleUARTin();
+  // checks and baud changing on error
+  if (!crsf.UARTwdt()) {
+    crsf.poll();
+  }
   #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)

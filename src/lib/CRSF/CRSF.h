@@ -93,12 +93,16 @@ public:
 
     static void inline nullCallback(void);
 
-    void handleUARTin();
+#if CRSF_TX_MODULE
+    void consumeInputByte(uint8_t in) override;
+#endif
     bool RXhandleUARTout();
 
     void flush_port_input(void);
 
 #if CRSF_TX_MODULE
+    bool UARTwdt();
+
     static void duplex_set_RX();
     static void duplex_set_TX();
 
@@ -132,7 +136,6 @@ private:
 
     bool ProcessPacket();
     void flushTxBuffers() override;
-    bool UARTwdt();
 #endif
 };
 

@@ -45,6 +45,9 @@ class TXModule
   // Stats
   uint32_t lastRecvChannels = 0;
 
+  // Flush output buffers, etc
+  void send();
+
   public:
   TXModule() {}
   virtual ~TXModule() {}
@@ -61,10 +64,11 @@ class TXModule
   void onChannelDataIn();
 
   // Call this periodically
-  void send();
+  void poll();
 
   virtual void sendSyncPacketToTX() {}
   virtual void flushTxBuffers() {}
+  virtual void consumeInputByte(uint8_t in) {}
 };
 
 class RCProtocol

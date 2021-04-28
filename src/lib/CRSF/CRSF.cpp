@@ -94,7 +94,7 @@ void CRSF::end()
     #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
     {
-        handleUARTin();
+        poll();
         if (millis() - startTime > 1000)
         {
             break;
@@ -478,90 +478,74 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::handleUARTin()
+#if CRSF_TX_MODULE
+void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in)
 {
-    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+  volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
-    if (UARTwdt())
-    {
+  if (CRSFframeActive == false) {
+    // stage 1 wait for sync byte //
+    if (in == CRSF_ADDRESS_CRSF_TRANSMITTER || in == CRSF_SYNC_BYTE) {
+      // we got sync, reset write pointer
+      SerialInPacketPtr = 0;
+      SerialInPacketLen = 0;
+      CRSFframeActive = true;
+      SerialInBuffer[SerialInPacketPtr] = in;
+      SerialInPacketPtr++;
+    }
+  } else  // frame is active so we do the processing
+  {
+    // first if things have gone wrong //
+    if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1) {
+      // we reached the maximum allowable packet length, so start again
+      // because shit fucked up hey.
+      SerialInPacketPtr = 0;
+      SerialInPacketLen = 0;
+      CRSFframeActive = false;
+      return;
+    }
+
+    // special case where we save the expected pkt len to buffer //
+    if (SerialInPacketPtr == 1) {
+      if (in <= CRSF_MAX_PACKET_LEN) {
+        SerialInPacketLen = in;
+      } else {
+        SerialInPacketPtr = 0;
+        SerialInPacketLen = 0;
+        CRSFframeActive = false;
         return;
+      }
     }
 
-    while (_dev && _dev->available())
+    SerialInBuffer[SerialInPacketPtr] = in;
+    SerialInPacketPtr++;
+
+    if (SerialInPacketPtr >=
+        (SerialInPacketLen +
+         2))  // plus 2 because the packlen is referenced from the start of
+              // the 'type' flag, IE there are an extra 2 bytes.
     {
-        char const inChar = _dev->read();
+      char CalculatedCRC =
+          crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
-        if (CRSFframeActive == false)
-        {
-            // stage 1 wait for sync byte //
-            if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
-                inChar == CRSF_SYNC_BYTE)
-            {
-                // we got sync, reset write pointer
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
-                CRSFframeActive = true;
-                SerialInBuffer[SerialInPacketPtr] = inChar;
-                SerialInPacketPtr++;
-            }
+      if (CalculatedCRC == in) {
+        if (ProcessPacket()) {
+          // delayMicroseconds(50);
+          send();
         }
-        else // frame is active so we do the processing
-        {
-            // first if things have gone wrong //
-            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
-            {
-                // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
-                CRSFframeActive = false;
-                return;
-            }
-
-            // special case where we save the expected pkt len to buffer //
-            if (SerialInPacketPtr == 1)
-            {
-                if (inChar <= CRSF_MAX_PACKET_LEN)
-                {
-                    SerialInPacketLen = inChar;
-                }
-                else
-                {
-                    SerialInPacketPtr = 0;
-                    SerialInPacketLen = 0;
-                    CRSFframeActive = false;
-                    return;
-                }
-            }
-
-            SerialInBuffer[SerialInPacketPtr] = inChar;
-            SerialInPacketPtr++;
-
-            if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-            {
-                char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
-
-                if (CalculatedCRC == inChar)
-                {
-                    if (ProcessPacket())
-                    {
-                        //delayMicroseconds(50);
-                        send();
-                    }
-                }
-                else
-                {
-                    Serial.println("UART CRC failure");
-                    // cleanup input buffer
-                    flush_port_input();
-                    BadPktsCount++;
-                }
-                CRSFframeActive = false;
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
-            }
-        }
+      } else {
+        Serial.println("UART CRC failure");
+        // cleanup input buffer
+        flush_port_input();
+        BadPktsCount++;
+      }
+      CRSFframeActive = false;
+      SerialInPacketPtr = 0;
+      SerialInPacketLen = 0;
     }
+  }
 }
+#endif
 
 void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
 {
@@ -677,6 +661,7 @@ bool CRSF::UARTwdt()
 #endif
             }
 
+            // re-init with a different baud rate
             UARTcurrentBaud = UARTrequestedBaud;
             duplex_set_RX();
             // cleanup input buffer

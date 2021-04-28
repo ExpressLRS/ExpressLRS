@@ -62,3 +62,10 @@ void ICACHE_RAM_ATTR TXModule::send()
     sendSyncPacketToTX();
     flushTxBuffers();
 }
+
+void ICACHE_RAM_ATTR TXModule::poll()
+{
+  while (_dev && _dev->available()) {
+    consumeInputByte(_dev->read());
+  }
+}
