@@ -11,6 +11,54 @@
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
 #if TARGET_TX or defined UNIT_TEST
+#include "channels.h"
+
+static uint8_t sentSwitches[N_SWITCHES] = {0};
+
+/**
+ * Record the value of a switch that was sent to the rx
+ */
+static void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value)
+{
+    sentSwitches[index] = value;
+}
+
+uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
+{
+    int firstSwitch = 0; // sequential switches includes switch 0
+
+#if defined HYBRID_SWITCHES_8
+    firstSwitch = 1; // skip 0 since it is sent on every packet
+#endif
+
+    // look for a changed switch
+    int i;
+    for (i = firstSwitch; i < N_SWITCHES; i++)
+    {
+        if (CurrentSwitches[i] != SentSwitches[i]) //
+            break;
+    }
+    // if we didn't find a changed switch, we get here with i==N_SWITCHES
+    if (i == N_SWITCHES)
+    {
+        i = NextSwitchIndex;
+    }
+
+    // keep track of which switch to send next if there are no changed switches
+    // during the next call.
+    NextSwitchIndex = (i + 1) % 8;
+
+#ifdef HYBRID_SWITCHES_8
+    // for hydrid switches 0 is sent on every packet, skip it in round-robin
+    if (NextSwitchIndex == 0)
+    {
+        NextSwitchIndex = 1;
+    }
+#endif
+
+    return i;
+}
+
 /**
  * Hybrid switches packet encoding for sending over the air
  *
@@ -22,16 +70,17 @@
  * we take the lowest indexed one and send that, hence lower indexed switches have
  * higher priority in the event that several are changed at once.
  *
- * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
+ * Inputs: channels, currentSwitches
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
 #ifdef ENABLE_TELEMETRY
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf,
-    bool TelemetryStatus)
+    volatile uint8_t* Buffer, volatile uint16_t* channels,
+    volatile uint8_t* switches, bool TelemetryStatus)
 #else
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf)
+    volatile uint8_t* Buffer, volatile uint16_t* channels,
+    volatile uint8_t* switches)
 #endif
 {
   Buffer[0] = RC_DATA_PACKET & 0b11;
@@ -45,14 +94,14 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
               ((channels[3] & 0b110) >> 1);
 
   // find the next switch to send
-  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
+  uint8_t nextSwitchIndex = getNextSwitchIndex(); // needs to go away
   // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to
   // 0-6 (0b110) If the two high bits are 0b11, the receiver knows it is the
   // last switch and can use that bit to store data
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex];
+  uint8_t value = switches[nextSwitchIndex]; // switches globals as well
 
   Buffer[6] =
 #ifdef ENABLE_TELEMETRY
@@ -60,14 +109,14 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
 #endif
       // switch 0 is one bit sent on every packet - intended for low latency
       // arm/disarm
-      crsf->currentSwitches[0] << 6 |
+      switches[0] << 6 |
       // tell the receiver which switch index this is
       bitclearedSwitchIndex << 3 |
       // include the switch value
       value;
 
   // update the sent value
-  crsf->setSentSwitch(nextSwitchIndex, value);
+  sentSwitches[nextSwitchIndex] = value;
 }
 #endif
 
@@ -133,9 +182,14 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 #if TARGET_TX or defined UNIT_TEST
 
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf, bool TelemetryStatus)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
+                                              volatile uint16_t* channels,
+                                              volatile uint8_t* switches,
+                                              bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
+                                              volatile uint16_t* channels,
+                                              volatile uint8_t* switches)
 #endif
 {
   if (!channels) return;
@@ -213,3 +267,4 @@ void OTAInitMethods()
 
 #endif
 }
+

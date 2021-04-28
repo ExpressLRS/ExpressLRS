@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <cmath>
 
-
 #if TARGET_TX && PLATFORM_STM32
 #define CRSF_TX_MODULE_STM32 1
 #endif

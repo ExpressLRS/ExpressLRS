@@ -36,14 +36,6 @@ public:
 #endif
     {}
 
-    // current and sent switch values
-    #define N_SWITCHES 8
-
-    static uint8_t currentSwitches[N_SWITCHES];
-    static uint8_t sentSwitches[N_SWITCHES];
-    // which switch should be sent in the next rc packet
-    static uint8_t nextSwitchIndex;
-
     static void (*disconnected)();
     static void (*connected)();
 
@@ -85,7 +77,6 @@ public:
     /////////////////////////////////////////////////////////////
 
     static void ICACHE_RAM_ATTR GetChannelDataIn(volatile uint16_t* channels);
-    static void ICACHE_RAM_ATTR updateSwitchValues(volatile uint16_t *channels);
 
     static void inline nullCallback(void);
 
