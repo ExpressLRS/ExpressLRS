@@ -15,15 +15,15 @@
 
 // Define GenerateChannelData() function pointer
 #ifdef ENABLE_TELEMETRY
-typedef void ICACHE_RAM_ATTR (*GenerateChannelDataFunc)(
+typedef void (*GenerateChannelDataFunc)(
     volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf,
     bool TelemetryStatus);
 #else
-typedef void ICACHE_RAM_ATTR (*GenerateChannelDataFunc)(
+typedef void (*GenerateChannelDataFunc)(
     volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf);
 #endif
 
-typedef void ICACHE_RAM_ATTR (*UnpackChannelDataFunc)(
+typedef void (*UnpackChannelDataFunc)(
     volatile uint8_t* Buffer, CRSF* crsf);
 
 #if TARGET_TX or defined UNIT_TEST
