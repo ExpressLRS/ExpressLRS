@@ -177,8 +177,8 @@ static bool lastPacketCrcError;
 /// Variables for Sync Behaviour ////
 uint32_t cycleInterval; // in ms
 uint32_t RFmodeLastCycled = 0;
-#define RFmodeCycleDivisorFastMode 10
-uint8_t RFmodeCycleDivisor;
+#define RFmodeCycleMultiplierSlow 10
+uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
@@ -233,8 +233,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
-    // Wait for 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / 1000;
+    // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
+    cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -553,7 +553,7 @@ void LostConnection()
         Radio.RXnb();
     }
 
-    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    RFmodeCycleMultiplier = 1;
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -776,7 +776,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
-    RFmodeCycleDivisor = 1;
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
 
     doneProcessing = micros();
     currentlyProcessing = false;
@@ -1007,7 +1007,7 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     SetRFLinkRate(RATE_DEFAULT);
-    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+    RFmodeCycleMultiplier = 1;
 }
 
 static void wifiOff()
@@ -1069,7 +1069,7 @@ static void cycleRfMode()
 {
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
     if (connectionState != connected && LockRFmode == false && !webUpdateMode
-        && (millis() - RFmodeLastCycled) > (cycleInterval / RFmodeCycleDivisor))
+        && (millis() - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
     {
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();           // reset this variable
@@ -1085,7 +1085,7 @@ static void cycleRfMode()
         Radio.RXnb();
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
-        RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
+        RFmodeCycleMultiplier = 1;
     } // if time to switch RF mode
 
     // Always blink the LED at a steady rate when not connected, independent of the cycle status
@@ -1409,7 +1409,7 @@ void ExitBindingMode()
     LostConnection();
 
     // Sets params to allow sync after binding and not instantly change RF mode
-    RFmodeCycleDivisor = 1;
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
     RFmodeLastCycled = millis();
 
     Serial.print("Exit binding mode at freq = ");
