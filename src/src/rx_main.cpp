@@ -100,6 +100,8 @@ CRSF crsf(CRSF_TX_SERIAL);
     // Maximum ms between LINK_STATISTICS packets for determining burst max
     #define TELEM_MIN_LINK_INTERVAL 512U
 #endif
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
 
 StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
 uint8_t MspData[ELRS_MSP_BUFFER];
@@ -1146,6 +1148,7 @@ void setup()
     {
         Serial.print("MD5:");
         Serial.println(ESP.getSketchMD5());
+        wifiOff();
     }
 #endif
 
@@ -1161,7 +1164,6 @@ void setup()
     Serial.println("Setting 2.4GHz Mode");
 #endif
 
-    wifiOff();
     ws2812Blink();
     setupBindingFromConfig();
 
@@ -1192,10 +1194,8 @@ void setup()
 
 void loop()
 {
-    #ifdef ENABLE_TELEMETRY
-    uint8_t *nextPayload = 0;
-    uint8_t nextPlayloadSize = 0;
-    #endif
+    nextPayload = 0;
+    nextPlayloadSize = 0;
 
     if (hwTimer.running == false)
     {
