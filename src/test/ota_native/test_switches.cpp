@@ -260,7 +260,7 @@ void test_encoding10bit()
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -309,7 +309,7 @@ void test_decoding10bit()
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, ChannelData, &crsf, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelData10bit(TXdataBuffer, &crsf);

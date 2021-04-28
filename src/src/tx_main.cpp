@@ -387,7 +387,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // counter can be increased even for normal msp messages since it's reset
       // if a real bind message should be sent
       BindingSendCount++;
-    } else {
+    } else if (GenerateChannelData) {
 #ifdef ENABLE_TELEMETRY
       GenerateChannelData(Radio.TXdataBuffer, ChannelData, TelemetryReceiver.GetCurrentConfirm());
 #else

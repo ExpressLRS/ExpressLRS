@@ -682,16 +682,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
+
+      if (UnpackChannelData) {
         UnpackChannelData(Radio.RXdataBuffer, &crsf);
-        #ifdef ENABLE_TELEMETRY
+#ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        if (connectionState != disconnected)
-        {
-            crsf.sendRCFrameToFC();
+#endif
+        if (connectionState != disconnected) {
+          crsf.sendRCFrameToFC();
         }
-        break;
+      }
+      break;
 
     case MSP_DATA_PACKET:
         currentMspConfirmValue = MspReceiver.GetCurrentConfirm();

@@ -2,4 +2,4 @@
 
 #include <inttypes.h>
 
-extern volatile uint16_t ChannelDataIn[16];
+extern volatile uint16_t ChannelData[16];

@@ -132,7 +132,11 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #if TARGET_TX or defined UNIT_TEST
 
+#ifdef ENABLE_TELEMETRY
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf, bool TelemetryStatus)
+#else
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf)
+#endif
 {
   if (!channels) return;
   
@@ -177,3 +181,18 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 #endif
 
 #endif // !HYBRID_SWITCHES_8
+
+GenerateChannelDataFunc GenerateChannelData;
+UnpackChannelDataFunc UnpackChannelData;
+
+void OTAInitMethods()
+{
+  // TODO: this could be read from configuration
+#if defined HYBRID_SWITCHES_8
+  GenerateChannelData = GenerateChannelDataHybridSwitch8;
+  UnpackChannelData = UnpackChannelDataHybridSwitch8;
+#else
+  GenerateChannelData = GenerateChannelData10bit;
+  UnpackChannelData = UnpackChannelData10bit;
+#endif
+}

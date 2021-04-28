@@ -13,34 +13,45 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-#if TARGET_TX or defined UNIT_TEST
+// Define GenerateChannelData() function pointer
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf, bool TelemetryStatus);
+typedef void ICACHE_RAM_ATTR (*GenerateChannelDataFunc)(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf,
+    bool TelemetryStatus);
 #else
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf);
+typedef void ICACHE_RAM_ATTR (*GenerateChannelDataFunc)(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf);
 #endif
+
+typedef void ICACHE_RAM_ATTR (*UnpackChannelDataFunc)(
+    volatile uint8_t* Buffer, CRSF* crsf);
+
+extern GenerateChannelDataFunc GenerateChannelData;
+extern UnpackChannelDataFunc UnpackChannelData;
+
+// This could be called again if the config changes, for instance
+void OTAInitMethods();
+
+#if defined(UNIT_TEST)
+
+#ifdef ENABLE_TELEMETRY
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
+                                              volatile uint16_t* channels,
+                                              CRSF* crsf, bool TelemetryStatus);
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf,
+    bool TelemetryStatus);
+#else
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
+                                              volatile uint16_t* channels,
+                                              CRSF* crsf);
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+    volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF* crsf);
 #endif
-#if TARGET_RX or defined UNIT_TEST
+
 void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf);
-#endif
-#endif
-
-#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-#if TARGET_TX or defined UNIT_TEST
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, volatile uint16_t* channels, CRSF *crsf);
-#endif
-#if TARGET_RX or defined UNIT_TEST
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf);
-#endif
+
 #endif
 
-#if defined HYBRID_SWITCHES_8
-#define GenerateChannelData GenerateChannelDataHybridSwitch8
-#define UnpackChannelData UnpackChannelDataHybridSwitch8
-#else
-#define GenerateChannelData GenerateChannelData10bit
-#define UnpackChannelData UnpackChannelData10bit
-#endif
-
-#endif // H_OTA
+#endif  // H_OTA
