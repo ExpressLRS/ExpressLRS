@@ -137,7 +137,7 @@ uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a
 bool lowRateMode = false;
 
 // LED Blinking state
-static bool LED = false;
+bool LED = false;
 static uint8_t LEDPulseCounter;
 static uint32_t LEDLastUpdate;
 
