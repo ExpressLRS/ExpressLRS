@@ -1142,9 +1142,9 @@ void setup()
     telemetry.ResetState();
     #ifdef ENABLE_TELEMETRY
     TelemetrySender.ResetState();
+    #endif
     MspReceiver.ResetState();
     MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
-    #endif
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
