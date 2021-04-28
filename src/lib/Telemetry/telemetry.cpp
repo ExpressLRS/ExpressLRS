@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <cstring>
 #include "telemetry.h"
-#include <arduino.h>
 
 #if defined(UNIT_TEST)
 #include <iostream>
