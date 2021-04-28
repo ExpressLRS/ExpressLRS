@@ -41,8 +41,7 @@ SX1280Driver Radio;
 uint8_t LEDfadeDiv;
 uint8_t LEDfade;
 bool LEDfadeDir;
-uint32_t LEDupdateInterval = 25;
-uint32_t LEDupdateCounterMillis;
+uint32_t LEDWS2812LastUpdate;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
@@ -50,9 +49,11 @@ uint32_t LEDupdateCounterMillis;
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
 #define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
-#define WEB_UPDATE_LED_FLASH_INTERVAL 25
-#define BIND_LED_FLASH_INTERVAL_SHORT 100
-#define BIND_LED_FLASH_INTERVAL_LONG 1000
+#define LED_INTERVAL_WEB_UPDATE 25
+#define LED_INTERVAL_ERROR      100
+#define LED_INTERVAL_DISCONNECTED 500
+#define LED_INTERVAL_BIND_SHORT 100
+#define LED_INTERVAL_BIND_LONG  1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 30
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
@@ -132,11 +133,10 @@ uint32_t GotConnectionMillis = 0;
 uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 bool lowRateMode = false;
 
-bool LED = false;
-uint8_t LEDPulseCounter = 0;
-
-uint32_t webUpdateLedFlashIntervalLast = 0;
-uint32_t bindLedFlashInterval = 0;
+// LED Blinking state
+static bool LED = false;
+static uint8_t LEDPulseCounter;
+static uint32_t LEDLastUpdate;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -175,9 +175,10 @@ static bool lastPacketCrcError;
 ///////////////////////////////////////////////////////////////
 
 /// Variables for Sync Behaviour ////
+uint32_t cycleInterval; // in ms
 uint32_t RFmodeLastCycled = 0;
-#define RFmodeCycleDivisorFastMode 10
-uint8_t RFmodeCycleDivisor;
+#define RFmodeCycleMultiplierSlow 10
+uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
@@ -231,6 +232,9 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
+
+    // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
+    cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -544,10 +548,12 @@ void LostConnection()
     if (!InBindingMode)
     {
         hwTimer.stop();
+        delay(ExpressLRS_currAirRate_Modparams->interval/250); // delay 4x packet interval (make sure radio is not busy)
         Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Radio.RXnb();
     }
 
+    RFmodeCycleMultiplier = 1;
     Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -582,7 +588,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
     WS281BsetLED(LEDcolor);
-    LEDupdateCounterMillis = millis();
+    LEDWS2812LastUpdate = millis();
 #endif
 }
 
@@ -609,7 +615,7 @@ void GotConnection()
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
     WS281BsetLED(LEDcolor);
-    LEDupdateCounterMillis = millis();
+    LEDWS2812LastUpdate = millis();
 #endif
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -768,10 +774,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     (void)didFHSS; // silence compiler warning
 #endif /* Regulatory_Domain_ISM_2400 */
 
-    // Slow down FAST_SYNC if we're not connected, and also will hold
-    // longer for the first cycle after disconnecting since it is likely
-    // we'll reconnect on this rate again
-    RFmodeCycleDivisor = 1;
+    // Extend sync duration since we've received a packet at this rate
+    // but do not extend it indefinitely
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
 
     doneProcessing = micros();
     currentlyProcessing = false;
@@ -971,13 +976,13 @@ static void setupRadio()
         while (1)
         {
             HandleWebUpdate();
-            if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+            if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
             {
                 #ifdef GPIO_PIN_LED
                 digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
                 #endif
                 LED = !LED;
-                webUpdateLedFlashIntervalLast = millis();
+                LEDLastUpdate = millis();
             }
         }
     }
@@ -988,7 +993,7 @@ static void setupRadio()
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
         LED = !LED;
         #endif
-        delay(WEB_UPDATE_LED_FLASH_INTERVAL);
+        delay(LED_INTERVAL_ERROR);
         Serial.println("Failed to detect RF chipset!!!");
     }
 #endif
@@ -1002,11 +1007,7 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     SetRFLinkRate(RATE_DEFAULT);
-    #ifdef FAST_SYNC
-    RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-    #else
-    RFmodeCycleDivisor = 1;
-    #endif
+    RFmodeCycleMultiplier = 1;
 }
 
 static void wifiOff()
@@ -1066,44 +1067,39 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode()
 {
-    if ((millis() - RFmodeLastCycled) > (ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval / RFmodeCycleDivisor))
+    // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
+    if (connectionState != connected && LockRFmode == false && !webUpdateMode
+        && (millis() - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
     {
         RFmodeLastCycled = millis();
-        if ((connectionState != connected) && !webUpdateMode)
-        {
-            // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
-            if (LockRFmode == false)
-            {
-                LastSyncPacket = millis();           // reset this variable
-                SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
-                SendLinkStatstoFCintervalLastSent = millis();
-                LQCalc.reset();
-                Serial.println(ExpressLRS_currAirRate_Modparams->interval);
-                scanIndex++;
-                getRFlinkInfo();
-                crsf.sendLinkStatisticsToFC();
-                delay(100);
-                crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
-                Radio.RXnb();
-            }
+        LastSyncPacket = millis();           // reset this variable
+        SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
+        SendLinkStatstoFCintervalLastSent = millis();
+        LQCalc.reset();
+        Serial.println(ExpressLRS_currAirRate_Modparams->interval);
+        scanIndex++;
+        getRFlinkInfo();
+        crsf.sendLinkStatisticsToFC();
+        delay(100);
+        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        Radio.RXnb();
 
-            #if defined(FAST_SYNC)
-            // Switch to FAST_SYNC if not already in it (won't be if was just connected)
-            RFmodeCycleDivisor = RFmodeCycleDivisorFastMode;
-            #endif
+        // Switch to FAST_SYNC if not already in it (won't be if was just connected)
+        RFmodeCycleMultiplier = 1;
+    } // if time to switch RF mode
 
-            // LED blinks to show something is still happening
-            if (!InBindingMode)
-            {
-                #ifdef GPIO_PIN_LED
-                    digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-                #elif GPIO_PIN_LED_GREEN
-                    digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-                #endif
-                LED = !LED;
-            }
-        } /* if not connected and webUpdateMode */
-    } /* if time to switch */
+    // Always blink the LED at a steady rate when not connected, independent of the cycle status
+    if (connectionState != connected && !webUpdateMode && !InBindingMode
+        && (millis() - LEDLastUpdate > LED_INTERVAL_DISCONNECTED))
+    {
+        #ifdef GPIO_PIN_LED
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        #elif GPIO_PIN_LED_GREEN
+            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
+        #endif
+        LED = !LED;
+        LEDLastUpdate = millis();
+    } // if cycle LED
 }
 
 void setup()
@@ -1181,13 +1177,13 @@ void loop()
     if (webUpdateMode)
     {
         HandleWebUpdate();
-        if (millis() > WEB_UPDATE_LED_FLASH_INTERVAL + webUpdateLedFlashIntervalLast)
+        if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
         {
             #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
             #endif
             LED = !LED;
-            webUpdateLedFlashIntervalLast = millis();
+            LEDLastUpdate = millis();
         }
         return;
     }
@@ -1249,7 +1245,7 @@ void loop()
     }
 
 #if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (millis() > LEDupdateInterval + LEDupdateCounterMillis))
+    if ((connectionState == disconnected) && (millis() - LEDWS2812LastUpdate > 25))
     {
         uint8_t LEDcolor[3] = {0};
         if (LEDfade == 30 || LEDfade == 0)
@@ -1260,7 +1256,7 @@ void loop()
         LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
         LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
         WS281BsetLED(LEDcolor);
-        LEDupdateCounterMillis = millis();
+        LEDWS2812LastUpdate = millis();
     }
 #endif
 
@@ -1286,7 +1282,7 @@ void loop()
     // Update the LED while in binding mode
     if (InBindingMode)
     {
-        if (millis() > bindLedFlashInterval)
+        if (millis() > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
         {
             if (LEDPulseCounter == 0)
             {
@@ -1303,11 +1299,11 @@ void loop()
 
             if (LEDPulseCounter < 4)
             {
-                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_SHORT;
+                LEDLastUpdate = millis() + LED_INTERVAL_BIND_SHORT;
             }
             else
             {
-                bindLedFlashInterval = millis() + BIND_LED_FLASH_INTERVAL_LONG;
+                LEDLastUpdate = millis() + LED_INTERVAL_BIND_LONG;
                 LEDPulseCounter = 0;
             }
 
@@ -1413,7 +1409,7 @@ void ExitBindingMode()
     LostConnection();
 
     // Sets params to allow sync after binding and not instantly change RF mode
-    RFmodeCycleDivisor = 1;
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
     RFmodeLastCycled = millis();
 
     Serial.print("Exit binding mode at freq = ");
