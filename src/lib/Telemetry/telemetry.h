@@ -1,5 +1,6 @@
 #pragma once
 
+#include "targets.h"
 #include <cstdint>
 #include "crsf_protocol.h"
 
@@ -41,6 +42,8 @@ public:
     bool RXhandleUARTin(uint8_t data);
     void ResetState();
     bool ShouldCallBootloader();
+    uint32_t BootloaderFilesize();
+    void BootloaderMD5hash(uint8_t * buff);
     #ifdef ENABLE_TELEMETRY
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t* GetCurrentPayload();
@@ -57,4 +60,6 @@ private:
     volatile crsf_telemetry_package_t *telemetryPackageHead;
     uint8_t receivedPackages;
     bool callBootloader;
+    uint32_t bootloaderExpectedFilesize;
+    uint8_t bootloaderExpectedMD5hash[16];
 };

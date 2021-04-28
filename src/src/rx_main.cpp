@@ -14,6 +14,7 @@ SX1280Driver Radio;
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+#include "ESP8266_xmodem_update.h"
 #endif
 
 #include "crc.h"
@@ -961,6 +962,42 @@ static void setupBindingFromConfig()
 #endif
 }
 
+#ifdef PLATFORM_ESP8266
+static void wifiOff()
+{
+    WiFi.disconnect(); //added to start with the wifi off, avoid crashing
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+}
+#endif /* PLATFORM_ESP8266 */
+
+static void handleUARTin()
+{
+    while (CRSF_RX_SERIAL.available())
+    {
+        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
+
+        if (telemetry.ShouldCallBootloader())
+        {
+            #ifndef PLATFORM_ESP8266
+            reset_into_bootloader();
+            #else
+            webUpdateMode = false;
+            disableWebServer = true;
+            wifiOff();
+            esp8266_xmodem_updater();
+            #endif
+        }
+
+        #ifdef ENABLE_TELEMETRY
+        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+        }
+        #endif
+    }
+}
+
 static void setupRadio()
 {
     Radio.currFreq = GetInitialFreq();
@@ -973,6 +1010,7 @@ static void setupRadio()
     {
         Serial.println("Failed to detect RF chipset!!!");
         beginWebsever();
+        handleUARTin();
         while (1)
         {
             HandleWebUpdate();
@@ -1008,14 +1046,6 @@ static void setupRadio()
 
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
-}
-
-static void wifiOff()
-{
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
 }
 
 static void ws2812Blink()
@@ -1111,7 +1141,16 @@ void setup()
     // Init EEPROM and load config, checking powerup count
     setupConfigAndPocCheck();
 
+#ifdef PLATFORM_ESP8266
+    for (uint8_t i = 0; i < 3; i++)  // in testing I found BF passthrough sometimes misses the first lines, so spam them abit. 
+    {
+        Serial.print("MD5:");
+        Serial.println(ESP.getSketchMD5());
+    }
+#endif
+
     Serial.println("ExpressLRS Module Booting...");
+
 #if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_FCC_915
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_EU_868
@@ -1177,6 +1216,7 @@ void loop()
     if (webUpdateMode)
     {
         HandleWebUpdate();
+        handleUARTin();
         if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
         {
             #ifdef GPIO_PIN_LED
@@ -1315,25 +1355,7 @@ void loop()
             LEDPulseCounter++;
         }
     }
-
-
-    while (CRSF_RX_SERIAL.available())
-    {
-        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-
-        #ifdef ENABLE_TELEMETRY
-        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
-        {
-            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
-        }
-        #endif
-    }
-
+    handleUARTin();
     updateTelemetryBurst();
 }
 

@@ -1,5 +1,7 @@
 import serial
 from xmodem import XMODEM
+from crc import crc_poly
+import hashlib
 import time
 import sys
 import logging
@@ -21,18 +23,42 @@ def dbg_print(line=''):
 
 def uart_upload(port, filename, baudrate, ghst=False):
     half_duplex = False
-
+    ESP8266 = False
+	
+	# open binary, read size and calculate md5
+    stream = open(filename, 'rb')
+    filesize = os.stat(filename).st_size
+    filechunks = filesize / 128
+    md5_hash = hashlib.md5(stream.read());
+    #md5_hash = hashlib.md5("intentionallly false md5 for testing".encode('utf-8'));
+    md5_hash_string = md5_hash.hexdigest()
+    md5_hash_bytes = md5_hash.digest()
+    stream.close()
+	
     dbg_print("=================== FIRMWARE UPLOAD ===================\n")
     dbg_print("  Bin file '%s'\n" % filename)
+    dbg_print("  Bin filesize '%s'\n" % filesize)
+    dbg_print("  MD5 Hash: '%s'\n" % md5_hash_string)
     dbg_print("  Port %s @ %s\n" % (port, baudrate))
 
     logging.basicConfig(level=logging.ERROR)
-
-    BootloaderInitSeq1 = bytes([0xEC,0x04,0x32,0x62,0x6c,0x0A]) # CRSF
+	
+    BootloaderInitSeq1 = []
+    
     if ghst:
-        BootloaderInitSeq1 = bytes([0x89,0x04,0x32,0x62,0x6c,0x0A]) # GHST
+        BootloaderInitSeq1.append(bytes([0x89,0x04,0x32,0x62,0x6c,0x0A])) # GHST
         half_duplex = True
         dbg_print("  Using GHST (half duplex)!\n")
+    else:
+        BootloaderInitSeq1.append(bytes([0xEC,0x04,0x32,0x62,0x6c,0x0A])) # CRSF
+		
+    ## Calculate size and CRC for new bootloader call method 
+    header = bytes([0xEC,0x07+len(md5_hash_bytes)])
+    type = bytes([0x32, 0x0A])
+    payload = filesize.to_bytes(4, byteorder = 'big')
+    crc =  bytes([crc_poly(type + payload + md5_hash_bytes, 8, 0xd5)])
+    BootloaderInitSeq1.append(header + type + payload + md5_hash_bytes + crc)
+	
     BootloaderInitSeq2 = bytes([0x62,0x62,0x62,0x62,0x62,0x62])
 
     if not os.path.exists(filename):
@@ -99,7 +125,8 @@ def uart_upload(port, filename, baudrate, ghst=False):
                 # clear RX buffer before continuing
                 rl.clear()
                 # request reboot
-                rl.write(BootloaderInitSeq1)
+                rl.write(BootloaderInitSeq1[0])
+                rl.write(BootloaderInitSeq1[1])
 
                 start = time.time()
                 while ((time.time() - start) < 2.):
@@ -130,6 +157,13 @@ def uart_upload(port, filename, baudrate, ghst=False):
                         gotBootloader = True
                         break
 
+                    elif "ESP8266 XMODEM BOOTLOADER" in line:
+                        # got into the esp82xx xmodem bootloader
+                        dbg_print("\n    ESP8266 XMODEM Bootloader Detected\n")
+                        ESP8266 = True
+                        gotBootloader = True
+                        break
+
                     elif "CCC" in line:
                         # Button method has been used so we're not catching the header;
                         #  let's jump right to the sanity check if we're getting enough C's
@@ -157,8 +191,6 @@ def uart_upload(port, filename, baudrate, ghst=False):
 
     # open binary
     stream = open(filename, 'rb')
-    filesize = os.stat(filename).st_size
-    filechunks = filesize / 128
 
     dbg_print("\nuploading %d bytes...\n" % filesize)
 
@@ -186,12 +218,46 @@ def uart_upload(port, filename, baudrate, ghst=False):
 
     modem = XMODEM(getc, putc, mode='xmodem')
     #modem.log.setLevel(logging.DEBUG)
-    status = modem.send(stream, retry=10, callback=StatusCallback)
+    xmodem_status = modem.send(stream, retry=10, callback=StatusCallback, timeout=1)
+    verify_md5 = False
+	
+    if (ESP8266 == True): #check that the upload has worked
+	
+        if not xmodem_status:
+            raise Exception('Failed to Upload (XMODEM ERROR)')
+		
+        dbg_print("PLEASE WAIT!!! DON'T DISCONNECT!!!")
+        rl.set_timeout(0.5)
+        rl.set_delimiters(["\n"])
+        start = time.time()
 
+        while ((time.time() - start) < 30.):
+            line = rl.read_line().strip()
+            if not line:
+                dbg_print(".") # timeout
+                continue
+
+            if SCRIPT_DEBUG and line:
+                dbg_print(" **DBG : '%s'\n" % line)
+
+            if "MD5:" in line:
+                md5_current = line[4:32+4]
+                dbg_print("\n\nExpected Firmare MD5:'%s'\n" % md5_hash_string)
+                dbg_print("Current  Firmare MD5:'%s'\n" % md5_current)
+                if (md5_hash_string == md5_current):
+                    dbg_print("Verified MD5 is correct\n\n")
+                    verify_md5 = True
+                    break
+                else:
+                    dbg_print("Failed to verify MD5")
+                    raise Exception('Failed to Upload, MD5 Hash incorrect!!!')
+					
     s.close()
     stream.close()
 
-    if (status):
+    if (ESP8266 and xmodem_status and verify_md5):
+        dbg_print("Success!!!!\n\n")
+    elif (xmodem_status and not ESP8266):
         dbg_print("Success!!!!\n\n")
     else:
         dbg_print("[FAILED] Upload failed!\n\n")

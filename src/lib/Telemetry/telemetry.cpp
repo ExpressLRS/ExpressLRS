@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstring>
 #include "telemetry.h"
+#include <arduino.h>
 
 #if defined(UNIT_TEST)
 #include <iostream>
@@ -24,6 +25,17 @@ bool Telemetry::ShouldCallBootloader()
     callBootloader = false;
     return bootloader;
 }
+
+uint32_t Telemetry::BootloaderFilesize()
+{
+    return bootloaderExpectedFilesize;
+}
+
+void Telemetry::BootloaderMD5hash(uint8_t * buff)
+{
+    memcpy(buff, &bootloaderExpectedMD5hash, sizeof(bootloaderExpectedMD5hash));
+}
+
 
 #ifdef ENABLE_TELEMETRY
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, MSP_RESP);
@@ -187,11 +199,25 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
 void Telemetry::AppendTelemetryPackage()
 {
-    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
+    #ifndef PLATFORM_ESP8266
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c) // old method of calling bootloader
     {
         callBootloader = true;
         return;
     }
+
+    #else
+    
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x0A) // new bootloader method <0xEC><len><0x32><0x0A><uint32_t size><uint8_t md5_hash[16]><crc>
+    {
+        bootloaderExpectedFilesize = (CRSFinBuffer[4] << 24) + (CRSFinBuffer[5] << 16) + (CRSFinBuffer[6] << 8) + CRSFinBuffer[7];
+        memcpy(bootloaderExpectedMD5hash, &CRSFinBuffer[8], 16);
+        callBootloader = true;
+        return;
+    }
+    #endif
+
+
     #ifdef ENABLE_TELEMETRY
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
