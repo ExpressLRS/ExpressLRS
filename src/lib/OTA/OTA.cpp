@@ -182,17 +182,34 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 
 #endif // !HYBRID_SWITCHES_8
 
+#if TARGET_TX or defined UNIT_TEST
 GenerateChannelDataFunc GenerateChannelData;
+#endif
+
+#if TARGET_RX or defined UNIT_TEST
 UnpackChannelDataFunc UnpackChannelData;
+#endif
 
 void OTAInitMethods()
 {
   // TODO: this could be read from configuration
 #if defined HYBRID_SWITCHES_8
+
+#if TARGET_TX or defined UNIT_TEST
   GenerateChannelData = GenerateChannelDataHybridSwitch8;
+#endif
+#if TARGET_RX or defined UNIT_TEST
   UnpackChannelData = UnpackChannelDataHybridSwitch8;
+#endif
+
 #else
+
+#if TARGET_TX or defined UNIT_TEST
   GenerateChannelData = GenerateChannelData10bit;
+#endif
+#if TARGET_RX or defined UNIT_TEST
   UnpackChannelData = UnpackChannelData10bit;
+#endif
+
 #endif
 }

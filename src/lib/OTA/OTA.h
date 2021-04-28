@@ -26,8 +26,13 @@ typedef void ICACHE_RAM_ATTR (*GenerateChannelDataFunc)(
 typedef void ICACHE_RAM_ATTR (*UnpackChannelDataFunc)(
     volatile uint8_t* Buffer, CRSF* crsf);
 
+#if TARGET_TX or defined UNIT_TEST
 extern GenerateChannelDataFunc GenerateChannelData;
+#endif
+
+#if TARGET_RX or defined UNIT_TEST
 extern UnpackChannelDataFunc UnpackChannelData;
+#endif
 
 // This could be called again if the config changes, for instance
 void OTAInitMethods();

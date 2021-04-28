@@ -389,9 +389,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       BindingSendCount++;
     } else if (GenerateChannelData) {
 #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, ChannelData, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, ChannelData, &crsf, TelemetryReceiver.GetCurrentConfirm());
 #else
-      GenerateChannelData(Radio.TXdataBuffer, ChannelData);
+      GenerateChannelData(Radio.TXdataBuffer, ChannelData, &crsf);
 #endif
     }
   }
