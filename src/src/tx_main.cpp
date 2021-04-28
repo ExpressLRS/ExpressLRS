@@ -274,7 +274,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 
-  TxUpdateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
+  TxLEDShowRate(ExpressLRS_currAirRate_Modparams->enum_rate);
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -643,20 +643,19 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-  TxInitSerial();
+  TxInitSerial(CRSF_Port, CRSF_OPENTX_FAST_BAUDRATE);
+
   TxInitLeds();
   TxInitBuzzer();
 
-#ifdef PLATFORM_ESP32
-
-  // Get base mac address
-  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-  // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-#endif // PLATFORM_ESP32
-
+  //TODO: trigger UID init?
+  // at the moment, this is done "statically" at bootstrap init
+  // (see common.cpp; uint8_t UID[6])
+  
   long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
   FHSSrandomiseFHSSsequence(macSeed);
 
+  // Set callbacks
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 
@@ -672,39 +671,14 @@ void setup()
   #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
   #endif
+
   bool init_success = Radio.Begin();
-  if (!init_success)
-  {
-    #ifdef PLATFORM_ESP32
-    BeginWebUpdate();
-    while (1)
-    {
-      HandleWebUpdate();
-      delay(1);
-    }
-    #endif
-    #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-    #endif // GPIO_PIN_LED_GREEN
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
-      tone(GPIO_PIN_BUZZER, 480, 200);
-    #endif // GPIO_PIN_BUZZER
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-    delay(200);
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
-      tone(GPIO_PIN_BUZZER, 400, 200);
-    #endif // GPIO_PIN_BUZZER
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-    delay(1000);
-  }
-  #ifdef ENABLE_TELEMETRY
+  if (!init_success) { TxHandleRadioInitError(); }
+
+#ifdef ENABLE_TELEMETRY
   TelemetryReceiver.ResetState();
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
-  #endif
+#endif
   POWERMGNT.setDefaultPower();
 
   eeprom.Begin(); // Init the eeprom
@@ -723,33 +697,13 @@ void setup()
   UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
   UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
-#if defined(PLATFORM_STM32)
-
-  Serial.println("Start STM32 R9M TX CRSF UART");
-
-#if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-  pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
-  digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
-#endif
-
-  CRSF_Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-  CRSF_Port.setRx(GPIO_PIN_RCSIGNAL_RX);
-  CRSF_Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
-
-#if defined(TARGET_TX_GHOST)
-  USART1->CR1 &= ~USART_CR1_UE;
-  USART1->CR3 |= USART_CR3_HDSEL;
-  USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
-  USART1->CR1 |= USART_CR1_UE;
-#endif
-
-  Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
-
-#endif // endif defined(PLATFORM_STM32)
 
   CRSF_Port.flush();  
   crsf.begin(&CRSF_Port);
 
+  // not sure if this should before or after "crsf.begin()"
+  // it seems more logical here
+  //
 #ifdef PLATFORM_ESP32
 
   // Start separate UART thread which polls continually the serial port

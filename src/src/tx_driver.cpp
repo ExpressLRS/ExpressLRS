@@ -4,14 +4,23 @@
 #include "common.h"
 #include "LED.h"
 
-void TxInitSerial()
+#ifdef PLATFORM_ESP32
+#include "ESP32_WebUpdate.h"
+#endif
+
+void TxInitSerial(HardwareSerial& port, uint32_t baudRate)
 {
 #if defined(TARGET_TX_GHOST)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
+
+  USART1->CR1 &= ~USART_CR1_UE;
+  USART1->CR3 |= USART_CR3_HDSEL;
+  USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+  USART1->CR1 |= USART_CR1_UE;
 #endif
 
-  // what is this? CRSF baud rate?
+  // what is this? CRSF baud rate? -> "upload speed"! (whatever this is....)
   Serial.begin(460800);
 
 #if defined(TARGET_TX_FM30)
@@ -22,6 +31,24 @@ void TxInitSerial()
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
+
+#if defined(PLATFORM_STM32)
+
+  Serial.println("Start STM32 R9M TX CRSF UART");
+
+#if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+  pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
+  digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
+#endif
+
+  port.setTx(GPIO_PIN_RCSIGNAL_TX);
+  port.setRx(GPIO_PIN_RCSIGNAL_RX);
+
+  port.begin(baudRate);
+
+  Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
+
+#endif // endif defined(PLATFORM_STM32)  
 }
 
 void TxInitLeds()
@@ -109,21 +136,70 @@ void TxInitButton()
 #endif
 }
 
-void TxUpdateLEDs(uint8_t isRXconnected, uint8_t tlm)
+void TxLEDShowRate(expresslrs_RFrates_e rate)
 {
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
-    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_200HZ)
-    {
-        strip.ClearTo(RgbColor(0, 0, LED_MAX_BRIGHTNESS));
-    }
-    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_100HZ)
-    {
-        strip.ClearTo(RgbColor(0, LED_MAX_BRIGHTNESS, 0));
-    }
-    if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_50HZ)
-    {
-        strip.ClearTo(RgbColor(LED_MAX_BRIGHTNESS, 0, 0));
-    }
+  switch (rate) {
+  case RATE_200HZ:
+    strip.ClearTo(RgbColor(0, 0, LED_MAX_BRIGHTNESS));
+    break;
+  case RATE_100HZ:
+    strip.ClearTo(RgbColor(0, LED_MAX_BRIGHTNESS, 0));
+    break;
+  case RATE_50HZ:
+    strip.ClearTo(RgbColor(LED_MAX_BRIGHTNESS, 0, 0));
+    break;
+
+  default:
+    // missing rates:
+    // - RATE_500HZ
+    // - RATE_250HZ
+    // - RATE_150HZ
+    // - RATE_25HZ
+    // - RATE_4HZ
+    break;
+  }
   strip.Show();
 #endif
+}
+
+void TxSetLEDGreen(uint8_t value)
+{
+#if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+  digitalWrite(GPIO_PIN_LED_GREEN, value ^ GPIO_LED_GREEN_INVERTED);
+#endif // GPIO_PIN_LED_GREEN  
+}
+
+void TxSetLEDRed(uint8_t value)
+{
+#if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+  digitalWrite(GPIO_PIN_LED_RED, value ^ GPIO_LED_RED_INVERTED);
+#endif // GPIO_PIN_LED_RED
+}
+
+void TxBuzzerPlay(unsigned int freq, unsigned long duration)
+{
+#if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+  tone(GPIO_PIN_BUZZER, freq, duration);
+#endif // GPIO_PIN_BUZZER
+}
+
+void TxHandleRadioInitError()
+{
+#ifdef PLATFORM_ESP32
+  BeginWebUpdate();
+  while (1) {
+    HandleWebUpdate();
+    delay(1);
+  }
+#endif
+
+  TxSetLEDGreen(LOW);
+  TxBuzzerPlay(480, 200);
+  TxSetLEDRed(LOW);
+  delay(200);
+
+  TxBuzzerPlay(400, 200);
+  TxSetLEDRed(HIGH);
+  delay(1000);  
 }
