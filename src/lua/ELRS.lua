@@ -35,6 +35,15 @@ local tx_lua_version = {
     values = {0x01, 0x02, 0x03, 0x04, 0x05},
 }
 
+local function decorateCommitSha(commitSha)
+  if     commitSha == 'ad715d' then return '1.0.0-RC2'
+  elseif commitSha == '92df80' then return '1.0.0-RC1'
+  elseif commitSha == '2942a6' then return '0.1.3-RC2'
+  elseif commitSha == '92f066' then return '0.1.0-RC1'
+  else return commitSha
+  end
+end
+
 local AirRate = {
     index = 1,
     editable = true,
@@ -227,7 +236,7 @@ local function refreshLCD()
         lcd.drawText(lOffset, yOffset, "Goto http://10.0.0.1   ", INVERS)
     -- elseif bindmode == true then
     else	
-        lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
+        lcd.drawText(lOffset, yOffset, 'ELRS ' .. decorateCommitSha(commitSha) .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
     end
 
     if tx_lua_version.values[tx_lua_version.selected] == version or force_use_lua == true then
