@@ -164,9 +164,13 @@ void BeginWebUpdate()
 
     server.on(
         "/update", HTTP_POST, []() {
+      server.client().setNoDelay(true);
       server.sendHeader("Connection", "close");
       server.send(200, "text/plain", target_seen ? ((Update.hasError()) ? "FAIL" : "OK") : "WRONG FIRMWARE");
-      ESP.restart(); }, []() {
+      delay(100);
+      server.client().stop();
+      ESP.restart(); },
+    []() {
       HTTPUpload& upload = server.upload();
       if (upload.status == UPLOAD_FILE_START) {
         Serial.setDebugOutput(true);
@@ -200,13 +204,14 @@ void BeginWebUpdate()
           } else {
             Update.printError(Serial);
           }
-          Serial.setDebugOutput(false);
         } else {
           Update.abort();
           Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
         }
-      } else {
-        Serial.printf("Update Failed Unexpectedly (likely broken connection): status=%d\n", upload.status);
+        Serial.setDebugOutput(false);
+      } else if(upload.status == UPLOAD_FILE_ABORTED){
+        Update.end();
+        Serial.println("Update was aborted");
       } });
 
     dnsServer.start(DNS_PORT, "*", apIP);
