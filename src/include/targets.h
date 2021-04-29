@@ -348,6 +348,7 @@ High = Ant2
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#define GPIO_PIN_LED 15
 
 #elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
 #define GPIO_PIN_NSS         PA4
