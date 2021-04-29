@@ -11,6 +11,10 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
+#define QUOTE(arg) #arg
+#define STR(macro) QUOTE(macro)
+const char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
+
 #define STASSID "ExpressLRS RX"
 #define STAPSK "expresslrs"
 const char *myHostname = "elrs_rx";
