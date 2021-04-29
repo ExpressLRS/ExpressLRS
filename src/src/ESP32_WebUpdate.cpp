@@ -27,6 +27,12 @@ extern CRSF crsf;
 
 #include "ESP32_WebUpdate.h"
 
+#define QUOTE(arg) #arg
+#define STR(macro) QUOTE(macro)
+const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
+uint8_t target_seen = 0;
+uint8_t target_pos = 0;
+
 const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
 const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
 const char *myHostname = "elrs_tx";
@@ -159,7 +165,7 @@ void BeginWebUpdate()
     server.on(
         "/update", HTTP_POST, []() {
       server.sendHeader("Connection", "close");
-      server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+      server.send(200, "text/plain", target_seen ? ((Update.hasError()) ? "FAIL" : "OK") : "WRONG FIRMWARE");
       ESP.restart(); }, []() {
       HTTPUpload& upload = server.upload();
       if (upload.status == UPLOAD_FILE_START) {
@@ -168,17 +174,37 @@ void BeginWebUpdate()
         if (!Update.begin()) { //start with max available size
           Update.printError(Serial);
         }
+        target_seen = 0;
+        target_pos = 0;
       } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
           Update.printError(Serial);
         }
-      } else if (upload.status == UPLOAD_FILE_END) {
-        if (Update.end(true)) { //true to set the size to the current progress
-          Serial.printf("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power\n", upload.totalSize);
-        } else {
-          Update.printError(Serial);
+        if (!target_seen) {
+          for (int i=0 ; i<upload.currentSize ;i++) {
+            if (upload.buf[i] == target_name[target_pos]) {
+              ++target_pos;
+              if (target_pos >= sizeof(target_name)) {
+                target_seen = 1;
+              }
+            }
+            else {
+              target_pos = 0; // Startover
+            }
+          }
         }
-        Serial.setDebugOutput(false);
+      } else if (upload.status == UPLOAD_FILE_END) {
+        if (target_seen) {
+          if (Update.end(true)) { //true to set the size to the current progress
+            Serial.printf("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power\n", upload.totalSize);
+          } else {
+            Update.printError(Serial);
+          }
+          Serial.setDebugOutput(false);
+        } else {
+          Update.abort();
+          Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
+        }
       } else {
         Serial.printf("Update Failed Unexpectedly (likely broken connection): status=%d\n", upload.status);
       } });
