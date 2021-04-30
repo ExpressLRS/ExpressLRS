@@ -9,8 +9,6 @@
 </head>
 
 <body>
-	<!-- OI you! get out of my source code!!! jk-->
-	<!-- Header -->
 	<section id="header">
 		<div class="inner">
 			<img src="flag.png" height="250" width="250" style="padding:20px;"></a>
@@ -22,7 +20,6 @@
 			<p>
 		</div>
 	</section>
-	<!-- One -->
 	<br>
 	<section id="one" class="main style1">
 		<div class="container">
@@ -52,17 +49,42 @@
 				</fieldset>
 			</div>
 
-			<div align="left">
+			<div align="left" id="apmode" style="display:none;">
+				<fieldset>
+					Here you can join a network and it will be saved as your &quot;home&quot; network.
+					When you are in range of your &quot;home&quot; network and start WiFi update the TX Module will automatically connect.
+					<legend>
+						<h2>Join Network:</h2>
+					</legend>
+					<form action="/sethome" id="sethome" method="post" autocomplete="off">
+						<div class="group">
+							<div class="autocomplete">
+								<input id="network" type="text" name="network" placeholder="SSID" />
+								<div id="loader" style="float:right" class="loader"></div>
+							</div>
+						</div>
+						<input type="password" id="password" name="password" placeholder="Password" />
+						<input type="submit" value="Join">
+					</form>
+					<br><br>
+					<a href="/connect" id="hashome">Connect to &quot;home&quot; network <span id="homenet"></span></a>
+					<br><br>
+				</fieldset>
+			</div>
+
+			<div align="left" id="stamode" style="display:none;">
 				<fieldset>
 					<legend>
-						<h2>Set 'Home' Network:</h2>
+						<h2>Home Network: <span id="ssid"></span></h2>
 					</legend>
-					<a href="/scanhome">Scan for networks</a>
+					<a href="/forget">Forget &quot;home&quot; network and disconnect</a>
+					<br><br>
+					<a href="/access">Disconnect and start Access Point</a>
 					<br><br>
 				</fieldset>
 			</div>
 		</div>
 	</section>
 </body>
-
+<script src="scan.js"></script>
 </html>
