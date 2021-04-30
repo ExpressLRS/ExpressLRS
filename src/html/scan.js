@@ -1,6 +1,30 @@
-document.addEventListener("DOMContentLoaded", get_json_data, false);
+document.addEventListener("DOMContentLoaded", get_mode, false);
+var scanTimer = undefined;
 
-function get_json_data() {
+function get_mode() {
+    var json_url = 'mode.json';
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+            var data = JSON.parse(this.responseText);
+            if (data.mode==="STA") {
+                document.getElementById('stamode').style.display = 'block';
+                document.getElementById('ssid').textContent = data.ssid;
+            } else {
+                document.getElementById('apmode').style.display = 'block';
+                if (data.ssid) {
+                    document.getElementById('homenet').textContent = data.ssid;
+                }
+                scanTimer = setInterval(get_networks, 2000);
+            }
+        }
+    };
+    xmlhttp.open("POST", json_url, true);
+    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlhttp.send();
+}
+
+function get_networks() {
     var json_url = 'networks.json';
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
@@ -8,6 +32,7 @@ function get_json_data() {
             var data = JSON.parse(this.responseText);
             document.getElementById('loader').style.display = 'none';
             autocomplete(document.getElementById('network'), data);
+            clearInterval(scanTimer);
         }
     };
     xmlhttp.open("POST", json_url, true);
