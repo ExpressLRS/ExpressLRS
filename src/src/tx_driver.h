@@ -19,3 +19,5 @@ void TxSetLEDRed(uint8_t value);
 void TxBuzzerPlay(unsigned int freq, unsigned long duration);
 
 void TxHandleRadioInitError();
+
+void TxRCSerialListenMode();

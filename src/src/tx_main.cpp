@@ -649,6 +649,10 @@ void setup()
 {
   TxInitSerial(CRSF_Port, CRSF_OPENTX_FAST_BAUDRATE);
 
+  // what is this? CRSF baud rate? -> "upload speed"! (whatever this is....)
+  //Serial.begin(460800);
+  Serial.begin(115200);
+
   TxInitLeds();
   TxInitBuzzer();
 
@@ -672,9 +676,9 @@ void setup()
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  #if !defined(Regulatory_Domain_ISM_2400)
-  //Radio.currSyncWord = UID[3];
-  #endif
+#if !defined(Regulatory_Domain_ISM_2400)
+  Radio.currSyncWord = UID[3];
+#endif
 
   bool init_success = Radio.Begin();
   if (!init_success) { TxHandleRadioInitError(); }

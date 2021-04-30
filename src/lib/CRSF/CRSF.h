@@ -53,7 +53,12 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 
-    void begin(Stream* dev); //setup timers etc
+#if CRSF_TX_MODULE        
+    void begin(Stream* dev) override; //setup timers etc
+#else
+    void begin(Stream* dev);
+#endif
+
     void end(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
@@ -99,9 +104,12 @@ public:
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
 #endif
-private:
-    Stream *_dev = nullptr;
 
+private:
+#if CRSF_RX_MODULE
+    Stream* _dev = nullptr;
+#endif
+    
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
     static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
 

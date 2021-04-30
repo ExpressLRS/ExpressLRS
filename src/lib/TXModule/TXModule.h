@@ -28,10 +28,10 @@
 // Better name: HandsetLink ???
 class TXModule
 {
+protected:
   // Device throught which the TXModule is connected to a handset
   Stream* _dev;
 
-  protected:
   // Packet frequency / sync
   uint32_t packetInterval = 5000;  // default to 200hz as per 'normal'
   int32_t syncOffset = 0;
@@ -48,11 +48,11 @@ class TXModule
   // Flush output buffers, etc
   void send();
 
-  public:
+public:
   TXModule() {}
   virtual ~TXModule() {}
 
-  void init(Stream* dev);
+  virtual void begin(Stream* dev);
 
   // Synchronisation with the handset (if supported)
   void setPacketInterval(uint32_t interval);

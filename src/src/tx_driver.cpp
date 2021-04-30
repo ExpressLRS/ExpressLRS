@@ -20,9 +20,6 @@ void TxInitSerial(HardwareSerial& port, uint32_t baudRate)
   USART1->CR1 |= USART_CR1_UE;
 #endif
 
-  // what is this? CRSF baud rate? -> "upload speed"! (whatever this is....)
-  Serial.begin(460800);
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
@@ -34,19 +31,14 @@ void TxInitSerial(HardwareSerial& port, uint32_t baudRate)
 
 #if defined(PLATFORM_STM32)
 
-  Serial.println("Start STM32 R9M TX CRSF UART");
+  TxRCSerialListenMode();
 
-#if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-  pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
-  digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
-#endif
+  // Already done when constructing CRSF_Port
+  //
+  //CRSF_Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+  //CRSF_Port.setRx(GPIO_PIN_RCSIGNAL_RX);
 
-  port.setTx(GPIO_PIN_RCSIGNAL_TX);
-  port.setRx(GPIO_PIN_RCSIGNAL_RX);
-
-  port.begin(baudRate);
-
-  Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
+  port.begin(baudRate, SERIAL_8N1);
 
 #endif // endif defined(PLATFORM_STM32)  
 }
@@ -202,4 +194,13 @@ void TxHandleRadioInitError()
   TxBuzzerPlay(400, 200);
   TxSetLEDRed(HIGH);
   delay(1000);  
+}
+
+void TxRCSerialListenMode()
+{
+  //TODO: does this really work????
+#if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
+  pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
+  digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
+#endif
 }

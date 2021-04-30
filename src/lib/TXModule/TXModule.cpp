@@ -4,6 +4,11 @@
 static LPF LPF_OPENTX_SYNC_MARGIN(3);
 static LPF LPF_OPENTX_SYNC_OFFSET(3);
 
+void TXModule::begin(Stream* dev)
+{
+  _dev = dev;
+}
+
 void ICACHE_RAM_ATTR TXModule::setPacketInterval(uint32_t interval)
 {
     packetInterval = interval;
@@ -66,6 +71,7 @@ void ICACHE_RAM_ATTR TXModule::send()
 void ICACHE_RAM_ATTR TXModule::poll(volatile uint16_t* channels)
 {
   while (_dev && _dev->available()) {
-    consumeInputByte(_dev->read(), channels);
+    char inChar = _dev->read();
+    consumeInputByte(inChar, channels);
   }
 }

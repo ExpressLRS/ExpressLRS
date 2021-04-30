@@ -76,14 +76,23 @@ uint32_t CRSF::LastMspRequestSent = 0;
 
 void CRSF::begin(Stream* dev)
 {
-    Serial.println("About to start CRSF task...");
-    _dev = dev;
+#if CRSF_TX_MODULE
+  TXModule::begin(dev);
+#else
+  _dev = dev;
+#endif
+
+  Serial.println("About to start CRSF task...");
 
 #if defined(PLATFORM_ESP32) and defined(CRSF_TX_MODULE)
-    mutexOutFIFO = xSemaphoreCreateMutex();
+  mutexOutFIFO = xSemaphoreCreateMutex();
 #endif
-    //The master module requires that the serial communication is bidirectional
-    //The Reciever uses seperate rx and tx pins
+  //The master module requires that the serial communication is bidirectional
+  //The Reciever uses seperate rx and tx pins
+
+#if CRSF_TX_MODULE
+  duplex_set_RX();
+#endif
 }
 
 void CRSF::end()
