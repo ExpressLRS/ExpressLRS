@@ -1,6 +1,14 @@
 #ifdef PLATFORM_ESP32
 
-#include "targets.h"
+#include <WiFi.h>
+#include <DNSServer.h>
+#include <ESPmDNS.h>
+#include <WebServer.h>
+#include <Update.h>
+#include <set>
+#include <StreamString.h>
+
+#include "ESP32_WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -21,35 +29,25 @@ extern CRSF crsf;
 #include "config.h"
 extern TxConfig config;
 
-#include <WiFi.h>
-#include <DNSServer.h>
-#include <ESPmDNS.h>
-#include <WiFiMulti.h>
-#include <WebServer.h>
-#include <Update.h>
-#include <set>
+static bool target_seen = false;
+static uint8_t target_pos = 0;
 
-#include "ESP32_WebContent.h"
-#include "flag_png.h"
-#include "main_css.h"
+static const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
+static const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
+static const char *myHostname = "elrs_tx";
 
-uint8_t target_seen = 0;
-uint8_t target_pos = 0;
+static wifi_mode_t wifiMode = WIFI_MODE_NULL;
+static wifi_mode_t changeMode = WIFI_MODE_NULL;
+static unsigned long changeTime = 0;
 
-const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
-const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
-const char *myHostname = "elrs_tx";
-wifi_mode_t wifiMode = WIFI_MODE_NULL;
-wifi_mode_t changeMode = WIFI_MODE_NULL;
-
-const byte DNS_PORT = 53;
-IPAddress apIP(10, 0, 0, 1);
-IPAddress netMsk(255, 255, 255, 0);
-DNSServer dnsServer;
-WebServer server(80);
+static const byte DNS_PORT = 53;
+static IPAddress apIP(10, 0, 0, 1);
+static IPAddress netMsk(255, 255, 255, 0);
+static DNSServer dnsServer;
+static WebServer server(80);
 
 /** Is this an IP? */
-boolean isIp(String str)
+static boolean isIp(String str)
 {
     for (size_t i = 0; i < str.length(); i++)
     {
@@ -63,7 +61,7 @@ boolean isIp(String str)
 }
 
 /** IP to String? */
-String toStringIp(IPAddress ip)
+static String toStringIp(IPAddress ip)
 {
     String res = "";
     for (int i = 0; i < 3; i++)
@@ -74,7 +72,7 @@ String toStringIp(IPAddress ip)
     return res;
 }
 
-bool captivePortal()
+static bool captivePortal()
 {
     if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local"))
     {
@@ -87,24 +85,25 @@ bool captivePortal()
     return false;
 }
 
-void WebUpdateSendCSS()
+static void WebUpdateSendCSS()
 {
   server.sendHeader("Content-Encoding", "gzip");
   server.send_P(200, "text/css", CSS, sizeof(CSS));
 }
 
-void WebUpdateSendJS()
+static void WebUpdateSendJS()
 {
   server.sendHeader("Content-Encoding", "gzip");
-  server.send_P(200, "text/css", SCAN_JS, sizeof(SCAN_JS));
+  server.send_P(200, "text/javascript", SCAN_JS, sizeof(SCAN_JS));
 }
 
-void WebUpdateSendPNG()
+static void WebUpdateSendFlag()
 {
-  server.send_P(200, "image/png", PNG, sizeof(PNG));
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "image/svg+xml", FLAG, sizeof(FLAG));
 }
 
-void WebUpdateHandleRoot()
+static void WebUpdateHandleRoot()
 {
   if (captivePortal())
   { // If captive portal redirect instead of displaying the page.
@@ -117,7 +116,7 @@ void WebUpdateHandleRoot()
   server.send_P(200, "text/html", INDEX_HTML, sizeof(INDEX_HTML));
 }
 
-void WebUpdateSendMode()
+static void WebUpdateSendMode()
 {
   String s;
   if (wifiMode == WIFI_STA) {
@@ -128,7 +127,7 @@ void WebUpdateSendMode()
   server.send(200, "application/json", s);
 }
 
-void WebUpdateSendNetworks()
+static void WebUpdateSendNetworks()
 {
   int numNetworks = WiFi.scanComplete();
   if (numNetworks >= 0) {
@@ -151,23 +150,25 @@ void WebUpdateSendNetworks()
   }
 }
 
-void WebUpdateAccessPoint(void)
+static void WebUpdateAccessPoint(void)
 {
   Serial.println("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
   server.send(200, "text/plain", msg);
   changeMode = WIFI_AP;
+  changeTime = millis();
 }
 
-void WebUpdateConnect(void)
+static void WebUpdateConnect(void)
 {
   Serial.println("Connecting to home network");
   String msg = String("Connected to network '") + ssid + "', connect to http://elrs_tx.local from a browser on that network";
   server.send(200, "text/plain", msg);
   changeMode = WIFI_STA;
+  changeTime = millis();
 }
 
-void WebUpdateSetHome(void)
+static void WebUpdateSetHome(void)
 {
   String ssid = server.arg("network");
   String password = server.arg("password");
@@ -179,7 +180,7 @@ void WebUpdateSetHome(void)
   WebUpdateConnect();
 }
 
-void WebUpdateForget(void)
+static void WebUpdateForget(void)
 {
   Serial.println("Forget home network");
   config.SetSSID("");
@@ -188,9 +189,10 @@ void WebUpdateForget(void)
   String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
   server.send(200, "text/plain", msg);
   changeMode = WIFI_AP;
+  changeTime = millis();
 }
 
-void WebUpdateHandleNotFound()
+static void WebUpdateHandleNotFound()
 {
     if (captivePortal())
     { // If captive portal redirect instead of displaying the error page.
@@ -215,7 +217,7 @@ void WebUpdateHandleNotFound()
     server.send(404, "text/plain", message);
 }
 
-void startWifi() {
+static void startWifi() {
   WiFi.persistent(false);
   WiFi.disconnect();   //added to start with the wifi off, avoid crashing
   WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
@@ -267,7 +269,7 @@ void BeginWebUpdate()
     server.on("/", WebUpdateHandleRoot);
     server.on("/main.css", WebUpdateSendCSS);
     server.on("/scan.js", WebUpdateSendJS);
-    server.on("/flag.png", WebUpdateSendPNG);
+    server.on("/flag.svg", WebUpdateSendFlag);
     server.on("/mode.json", WebUpdateSendMode);
     server.on("/networks.json", WebUpdateSendNetworks);
     server.on("/sethome", WebUpdateSetHome);
@@ -287,12 +289,22 @@ void BeginWebUpdate()
 
     server.on(
         "/update", HTTP_POST, []() {
-      server.client().setNoDelay(true);
-      server.sendHeader("Connection", "close");
-      server.send(200, "text/plain", target_seen ? ((Update.hasError()) ? "FAIL" : "OK") : "WRONG FIRMWARE");
-      delay(100);
-      server.client().stop();
-      ESP.restart(); },
+          if (target_seen) {
+            if (Update.hasError()) {
+              StreamString p = StreamString();
+              Update.printError(p);
+              server.send(200, "text/plain", p.c_str());
+            } else {
+              server.sendHeader("Connection", "close");
+              server.send(200, "text/plain", "Update complete, please wait 10 seconds before powering of the module");
+              server.client().stop();
+              delay(100);
+              ESP.restart();
+            }
+          } else {
+            server.send(200, "text/plain", "Wrong firmware uploaded, does not match Transmitter module type");
+          }
+      },
     []() {
       HTTPUpload& upload = server.upload();
       if (upload.status == UPLOAD_FILE_START) {
@@ -301,7 +313,7 @@ void BeginWebUpdate()
         if (!Update.begin()) { //start with max available size
           Update.printError(Serial);
         }
-        target_seen = 0;
+        target_seen = false;
         target_pos = 0;
       } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
@@ -312,7 +324,7 @@ void BeginWebUpdate()
             if (upload.buf[i] == target_name[target_pos]) {
               ++target_pos;
               if (target_pos >= target_name_size) {
-                target_seen = 1;
+                target_seen = true;
               }
             }
             else {
@@ -352,7 +364,7 @@ void BeginWebUpdate()
 
 void HandleWebUpdate()
 {
-    if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL) {
+    if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && changeTime > (millis() - 500)) {
       switch(changeMode) {
         case WIFI_AP:
           WiFi.disconnect();

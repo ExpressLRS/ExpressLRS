@@ -3,5 +3,4 @@
 
 void BeginWebUpdate(void);
 void HandleWebUpdate(void);
-
 #endif

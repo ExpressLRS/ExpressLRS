@@ -45,6 +45,31 @@
 		-webkit-text-size-adjust: none;
 	}
 
+	progress[value] {
+		-webkit-appearance: none;
+		appearance: none;
+	  
+		width: 250px;
+		height: 20px;
+	}
+
+	progress[value]::-webkit-progress-bar {
+		background-color: #eee;
+		border-radius: 2px;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25) inset;
+	}
+
+	progress[value]::-webkit-progress-value {
+		background-image:
+			-webkit-linear-gradient(top, 
+									rgba(255, 255, 255, .25), 
+									rgba(0, 0, 0, .25)),
+			-webkit-linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
+	  
+		border-radius: 2px; 
+		background-size: 35px 20px, 100% 100%, 100% 100%;
+	}
+	  
 /* Box Model */
 
 	*, *:before, *:after {
@@ -423,7 +448,6 @@ th {
 			color: #ffffff;
 		}
 
-
 /* XLarge */
 
 	@media screen and (max-width: 1680px) {
@@ -782,3 +806,362 @@ th {
 	0% { transform: rotate(0deg); }
 	100% { transform: rotate(360deg); }
 }
+
+/* Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/ */
+
+.alert-wrapper {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+	margin: 0px auto;
+	padding: 0px auto;
+	left: 0;
+	top: 0;
+	overflow: hidden;
+	position: fixed;
+	background: rgb(0, 0, 0, 0.3);
+	z-index: 999999;
+  }
+  
+  @keyframes open-frame {
+	0% {
+	  transform: scale(1);
+	}
+	25% {
+	  transform: scale(0.95);
+	}
+	50% {
+	  transform: scale(0.97);
+	}
+	75% {
+	  transform: scale(0.93);
+	}
+	100% {
+	  transform: scale(1);
+	}
+  }
+  
+  .alert-frame {
+	background: #fff;
+	min-height: 400px;
+	width: 300px;
+	box-shadow: 5px 5px 10px rgb(0, 0, 0, 0.2);
+	border-radius: 10px;
+	animation: open-frame 0.3s linear;
+  }
+  
+  .alert-header {
+	display: flex;
+	flex-direction: row;
+	height: 175px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+  }
+  
+  .alert-img {
+	height: 80px;
+	position: absolute;
+	left: 0;
+	right: 0;
+	margin-left: auto;
+	margin-right: auto;
+	align-self: center;
+  }
+  
+  .alert-close {
+	width: 30px;
+	height: 30px;
+	color: rgb(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: "Dosis", sans-serif;
+	font-weight: 700;
+	font-size: 16px;
+	cursor: pointer;
+	line-height: 30px;
+	transition: color 0.5s;
+	margin-left: auto;
+	margin-right: 5px;
+	margin-top: 5px;
+  }
+  
+  .alert-close-circle {
+	width: 30px;
+	height: 30px;
+	background: #e4eae7;
+	color: #222;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 17.5px;
+	margin-top: -15px;
+	margin-right: -15px;
+	font-family: "Dosis", sans-serif;
+	font-weight: 700;
+	font-size: 12px;
+	cursor: pointer;
+	line-height: 30px;
+	transition: background 0.5s;
+	margin-left: auto;
+  }
+  
+  .alert-close-circle:hover {
+	background: #fff;
+  }
+  
+  .alert-close:hover {
+	color: rgb(0, 0, 0, 0.5);
+  }
+  
+  .alert-body {
+	padding: 30px 30px;
+	display: flex;
+	flex-direction: column;
+	text-align: center;
+  }
+  
+  .alert-title {
+	font-size: 18px !important;
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	font-weight: 700;
+	font-size: 15px;
+	margin-bottom: 35px;
+	color: #222;
+	align-self: center;
+  }
+  
+  .alert-message {
+	font-size: 15px !important;
+	color: #666;
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	font-weight: 400;
+	font-size: 15px;
+	text-align: center;
+	margin-bottom: 35px;
+	line-height: 1.6;
+	align-self: center;
+  }
+  
+  .alert-button {
+	min-width: 140px;
+	height: 35px;
+	border-radius: 20px;
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	font-weight: 400;
+	font-size: 15px;
+	color: white;
+	border: none;
+	cursor: pointer;
+	transition: background 0.5s;
+	padding: 0 15px;
+	align-self: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+  }
+  
+  .alert-button:focus {
+	outline: 0;
+  }
+  
+  .question-buttons {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+  }
+  
+  .confirm-button {
+	min-width: 100px;
+	height: 35px;
+	border-radius: 20px;
+	font-family: "Open Sans", sans-serif;
+	font-weight: 400;
+	font-size: 15px;
+	color: white;
+	border: none;
+	cursor: pointer;
+	transition: background 0.5s;
+	padding: 0 15px;
+	margin-right: 10px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+  }
+  
+  .confirm-button:focus {
+	outline: 0;
+  }
+  
+  .cancel-button {
+	min-width: 100px;
+	height: 35px;
+	border-radius: 20px;
+	font-family: "Open Sans", sans-serif;
+	font-weight: 400;
+	font-size: 15px;
+	color: white;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	line-height: 1.6;
+	transition: background 0.5s;
+	padding: 0 15px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+  }
+  
+  .cancel-button:focus {
+	outline: 0;
+  }
+  
+  @keyframes open-toast {
+	0% {
+	  transform: scaleX(1) scaleY(1);
+	}
+	20%,
+	45% {
+	  transform: scaleX(1.35) scaleY(0.1);
+	}
+	65% {
+	  transform: scaleX(0.8) scaleY(1.7);
+	}
+	80% {
+	  transform: scaleX(0.6) scaleY(0.85);
+	}
+	100% {
+	  transform: scaleX(1) scaleY(1);
+	}
+  }
+  
+  .toast-container {
+	top: 15px;
+	right: 15px;
+	overflow: hidden;
+	position: fixed;
+	border-radius: 5px;
+	box-shadow: 0 0 20px rgb(0, 0, 0, 0.2);
+	animation: open-toast 0.3s linear;
+	z-index: 999999;
+  }
+  
+  .toast-frame {
+	padding: 5px 15px;
+	display: flex;
+	min-width: 100px;
+	height: 60px;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+  }
+  
+  .toast-img {
+	height: 40px;
+  }
+  
+  .toast-message {
+	font-size: 14px !important;
+	font-family: "Open Sans", sans-serif;
+	font-weight: 600;
+	font-size: 15px;
+	color: #fff;
+	margin-left: 15px;
+  }
+  
+  .toast-close {
+	  font-family: "Dosis", sans-serif;
+	color: rgb(0, 0, 0, 0.2);
+	font-weight: 700;
+	font-size: 16px;
+	cursor: pointer;
+	transition: color 0.5s;
+	margin-left: 25px;
+  }
+  
+  @keyframes timer {
+	0% {
+	  width: 100%;
+	}
+	25% {
+	  width: 75%;
+	}
+	50% {
+	  width: 50%;
+	}
+	75% {
+	  width: 25%;
+	}
+	100% {
+	  width: 1%;
+	}
+  }
+  
+  .toast-timer {
+	width: 1%;
+	height: 5px;
+  }
+  
+  .toast-close:hover {
+	color: rgb(0, 0, 0, 0.5);
+  }
+  
+  .error-bg {
+	background: #d85261;
+  }
+  
+  .success-bg {
+	background: #2dd284;
+  }
+  
+  .warning-bg {
+	background: #fada5e;
+  }
+  
+  .question-bg {
+	background: #779ecb;
+  }
+  
+  .error-btn:hover {
+	background: #e5a4b4;
+  }
+  
+  .success-btn:hover {
+	background: #6edaa4;
+  }
+  
+  .warning-btn:hover {
+	background: #fcecae;
+  }
+  
+  .info-btn:hover {
+	background: #c3e6fb;
+  }
+  
+  .question-btn:hover {
+	background: #bacee4;
+  }
+  
+  .error-timer {
+	background: #e5a4b4;
+  }
+  
+  .success-timer {
+	background: #6edaa4;
+  }
+  
+  .warning-timer {
+	background: #fcecae;
+  }
+  
+  .info-timer {
+	background: #c3e6fb;
+  }
+  
+  .info-bg {
+	background: #88cef7;
+  }
+  
