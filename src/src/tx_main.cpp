@@ -274,6 +274,10 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
 
+  Serial.print("interval = ");
+  Serial.print(ModParams->interval);
+  Serial.println("us");
+ 
   crsf.setPacketInterval(ModParams->interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
@@ -474,6 +478,7 @@ void UARTconnected()
   }
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
+
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
@@ -482,7 +487,11 @@ void UARTconnected()
     sendLuaParams();
     delay(100);
   }
+
+  Serial.println("resuming radio timer");
+  Serial.flush();
   hwTimer.resume();
+  
 #if defined(TARGET_NAMIMNORC_TX)
   WS281BsetLED(0, 0xff, 0);
 #endif
@@ -676,9 +685,11 @@ void setup()
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-#if !defined(Regulatory_Domain_ISM_2400)
-  Radio.currSyncWord = UID[3];
-#endif
+
+  //TODO: What is this???
+  #if !defined(Regulatory_Domain_ISM_2400)
+  //Radio.currSyncWord = UID[3];
+  #endif
 
   bool init_success = Radio.Begin();
   if (!init_success) { TxHandleRadioInitError(); }
@@ -693,18 +704,32 @@ void setup()
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
   config.Load(); // Load the stored values from eeprom
 
+  Serial.print("Config loaded (rate=");
+  Serial.print(config.GetRate());
+  Serial.print(";telem=");
+  Serial.print(config.GetTlm());
+  Serial.print(";pwr=");
+  Serial.print(config.GetPower());
+  Serial.println(")");
+  
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
+  Serial.println("Radio params set");
+  
   hwTimer.init();
+
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
 
   // Init serial port
   UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
   UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
-
+  
+  Serial.print("Starting CRSF @ ");
+  Serial.print(UARTcurrentBaud);
+  Serial.println("bps");
 
   CRSF_Port.flush();  
   crsf.begin(&CRSF_Port);
@@ -757,7 +782,7 @@ void loop()
 
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
-  #endif
+#endif
 
   if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
   {
@@ -782,9 +807,11 @@ void loop()
   #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-    button.handle();
+  //TODO: de-active for now, let's get back to it later
+  //button.handle();
   #endif
 
+  // TODO: check if that really works, should not be hooked on debug port right? 
   if (Serial.available())
   {
     uint8_t c = Serial.read();

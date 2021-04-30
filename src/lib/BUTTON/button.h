@@ -25,7 +25,7 @@ public:
     static void init(int Pin, bool activeHigh = true);
     static void handle();
 
-    static void inline nullCallback(void);
+    static void nullCallback(void);
 
     static void (*buttonShortPress)();
     static void (*buttonLongPress)();
