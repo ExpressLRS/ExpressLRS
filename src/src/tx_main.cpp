@@ -673,6 +673,7 @@ void setup()
   FHSSrandomiseFHSSsequence(macSeed);
 
   // Set callbacks
+  OTAInitMethods();
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 
