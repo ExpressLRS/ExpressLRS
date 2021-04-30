@@ -26,10 +26,8 @@ extern CRSF crsf;
 #include <Update.h>
 
 #include "ESP32_WebUpdate.h"
+#include "config.h"
 
-#define QUOTE(arg) #arg
-#define STR(macro) QUOTE(macro)
-const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 uint8_t target_seen = 0;
 uint8_t target_pos = 0;
 
@@ -188,7 +186,7 @@ void BeginWebUpdate()
           for (int i=0 ; i<upload.currentSize ;i++) {
             if (upload.buf[i] == target_name[target_pos]) {
               ++target_pos;
-              if (target_pos >= sizeof(target_name)) {
+              if (target_pos >= target_name_size) {
                 target_seen = 1;
               }
             }
@@ -210,7 +208,7 @@ void BeginWebUpdate()
         }
         Serial.setDebugOutput(false);
       } else if(upload.status == UPLOAD_FILE_ABORTED){
-        Update.end();
+        Update.abort();
         Serial.println("Update was aborted");
       } });
 

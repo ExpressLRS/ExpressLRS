@@ -1,5 +1,6 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+#include "config.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -11,9 +12,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#define QUOTE(arg) #arg
-#define STR(macro) QUOTE(macro)
-const char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 uint8_t target_seen = 0;
 uint8_t target_pos = 0;
 
@@ -184,7 +182,7 @@ void BeginWebUpdate(void)
           for (size_t i=0 ; i<upload.currentSize ;i++) {
             if (upload.buf[i] == target_name[target_pos]) {
               ++target_pos;
-              if (target_pos >= sizeof(target_name)) {
+              if (target_pos >= target_name_size) {
                 target_seen = 1;
               }
             }
@@ -201,12 +199,10 @@ void BeginWebUpdate(void)
             Update.printError(Serial);
           }
         } else {
-          Update.end();
           Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
         }
         Serial.setDebugOutput(false);
       } else if(upload.status == UPLOAD_FILE_ABORTED){
-        Update.end();
         Serial.println("Update was aborted");
       }
       delay(0);
