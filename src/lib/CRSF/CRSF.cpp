@@ -37,6 +37,7 @@ void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is rega
 
 void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
 void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges, ie command from Radio
+void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCountResult = 0;
@@ -73,6 +74,7 @@ volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
+bool CRSF::OpentxSyncActive = true;
 
 #define MAX_BYTES_SENT_IN_UART_OUT 32
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
@@ -611,6 +613,15 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     //DBGLN("%d, %d", CRSF::OpenTXsyncOffset, CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
 
+void CRSF::disableOpentxSync()
+{
+    OpentxSyncActive = false;
+}
+
+void CRSF::enableOpentxSync()
+{
+    OpentxSyncActive = true;
+}
 
 void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 {
@@ -889,6 +900,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     {
                         //delayMicroseconds(50);
                         handleUARTout();
+                        RCdataCallback();
                     }
                 }
                 else
@@ -913,8 +925,10 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
     static uint8_t sendingOffset = 0;
     uint8_t writeLength = 0;
 
-    // calculate mixer sync packet if needed
-    sendSyncPacketToTX();
+    if (OpentxSyncActive)
+    {
+        sendSyncPacketToTX(); // calculate mixer sync packet if needed
+    }
 
     // check if we have data in the output FIFO that needs to be written or a large package was split up and we need to send the second part
     if (sendingOffset > 0 || SerialOutFIFO.peek() > 0) {

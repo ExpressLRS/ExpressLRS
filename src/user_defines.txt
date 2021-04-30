@@ -85,3 +85,6 @@
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
+
+#Experimental bluetooth joystick support 
+-DBLE_HID_JOYSTICK 

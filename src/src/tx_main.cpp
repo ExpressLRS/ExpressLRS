@@ -40,6 +40,11 @@ SX1280Driver Radio;
 #endif
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
+#ifdef BLE_HID_JOYSTICK 
+#include "ESP32_BLE_HID.h"
+bool BLEjoystickActive = false;
+volatile bool BLEjoystickRefresh = false;
+#endif
 #endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
@@ -382,6 +387,11 @@ void ICACHE_RAM_ATTR HandleTLM()
     Radio.RXnb();
     WaitRXresponse = true;
   }
+}
+
+void ICACHE_RAM_ATTR SendRCdataToBLE()
+{
+  BLEjoystickRefresh = true;
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
@@ -944,6 +954,18 @@ void setup()
 
 void loop()
 {
+
+  if (BLEjoystickActive && BLEjoystickRefresh)
+  {
+    HandleUpdateParameter();
+    #ifdef FEATURE_OPENTX_SYNC
+    crsf.JustSentRFpacket(); // we want to send data now - this allows opentx packet syncing
+    #endif
+    BluetoothJoystickSendReport();
+    BLEjoystickRefresh = false;
+    return;
+  }
+
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
