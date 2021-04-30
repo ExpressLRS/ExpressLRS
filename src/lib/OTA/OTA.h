@@ -28,10 +28,18 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 #if TARGET_TX or defined UNIT_TEST
+#if defined USE_11BIT_RC_CHANNELS
+void ICACHE_RAM_ATTR GenerateChannelData11bit(volatile uint8_t* Buffer, CRSF *crsf);
+#else
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf);
 #endif
+#endif
 #if TARGET_RX or defined UNIT_TEST
+#if defined USE_11BIT_RC_CHANNELS
+void ICACHE_RAM_ATTR UnpackChannelData11bit(volatile uint8_t* Buffer, CRSF *crsf);
+#else
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf);
+#endif
 #endif
 #endif
 
@@ -39,8 +47,13 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 #define GenerateChannelData GenerateChannelDataHybridSwitch8
 #define UnpackChannelData UnpackChannelDataHybridSwitch8
 #else
+#if defined USE_11BIT_RC_CHANNELS
+#define GenerateChannelData GenerateChannelData11bit
+#define UnpackChannelData UnpackChannelData11bit
+#else
 #define GenerateChannelData GenerateChannelData10bit
 #define UnpackChannelData UnpackChannelData10bit
+#endif
 #endif
 
 #endif // H_OTA

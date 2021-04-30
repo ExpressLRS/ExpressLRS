@@ -128,6 +128,28 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #if TARGET_TX or defined UNIT_TEST
 
+#if defined USE_11BIT_RC_CHANNELS
+void ICACHE_RAM_ATTR GenerateChannelData11bit(volatile uint8_t* Buffer, CRSF *crsf)
+{
+  Buffer[0] = RC_DATA_PACKET & 0b11;
+  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
+  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
+  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
+  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
+
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b111) << 5);
+  Buffer[5] |= ((crsf->ChannelDataIn[1] & 0b111) << 2);
+  Buffer[5] |= ((crsf->ChannelDataIn[2] & 0b011) << 0);
+
+  Buffer[6] = ((crsf->ChannelDataIn[2] & 0b001) << 7);
+  Buffer[6] |= ((crsf->ChannelDataIn[3] & 0b111) << 4);
+
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[4]) << 3;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[5]) << 2;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[6]) << 1;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[7]) << 0;
+}
+#else
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
   Buffer[0] = RC_DATA_PACKET & 0b11;
@@ -148,10 +170,24 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *cr
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
 }
+#endif 
 #endif
 
 #if TARGET_RX or defined UNIT_TEST
 
+#if defined USE_11BIT_RC_CHANNELS
+void ICACHE_RAM_ATTR UnpackChannelData11bit(volatile uint8_t* Buffer, CRSF *crsf)
+{
+    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11100000) >> 5);
+    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
+    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00000011) >> 0) | ((Buffer[6] & 0b10000000) >> 7);
+    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[6] & 0b01110000) >> 4);
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b00001000);
+    crsf->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b00000100);
+    crsf->PackedRCdataOut.ch6 = BIT_to_CRSF(Buffer[6] & 0b00000010);
+    crsf->PackedRCdataOut.ch7 = BIT_to_CRSF(Buffer[6] & 0b00000001);
+}
+#else
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
@@ -167,7 +203,9 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
     crsf->PackedRCdataOut.ch10 = BIT_to_CRSF(Buffer[6] & 0b00000010);
     crsf->PackedRCdataOut.ch11 = BIT_to_CRSF(Buffer[6] & 0b00000001);
 }
-
+#endif
 #endif
 
 #endif // !HYBRID_SWITCHES_8
+
+

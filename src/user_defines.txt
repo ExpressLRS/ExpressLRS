@@ -28,6 +28,9 @@
 
 #-DHYBRID_SWITCHES_8
 
+# 11 bit encoding for RC channels (11bit analog + 4x on/off switches)
+-DUSE_11BIT_RC_CHANNELS 
+
 
 ### PERFORMANCE OPTIONS: ###
 
