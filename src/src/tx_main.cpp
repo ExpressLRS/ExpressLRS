@@ -663,6 +663,7 @@ void setup()
 
   TxInitLeds();
   TxInitBuzzer();
+  TxInitButton();
 
   //TODO: trigger UID init?
   // at the moment, this is done "statically" at bootstrap init
@@ -808,7 +809,7 @@ void loop()
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
   //TODO: de-active for now, let's get back to it later
-  //button.handle();
+  button.handle();
   #endif
 
   // TODO: check if that really works, should not be hooked on debug port right? 

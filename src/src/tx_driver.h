@@ -11,6 +11,7 @@ extern button button;
 void TxInitSerial(HardwareSerial& port, uint32_t baudRate);
 void TxInitLeds();
 void TxInitBuzzer();
+void TxInitButton();
 
 void TxLEDShowRate(expresslrs_RFrates_e rate);
 void TxSetLEDGreen(uint8_t value);
