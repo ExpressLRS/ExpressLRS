@@ -107,7 +107,7 @@ public:
 
 private:
 #if CRSF_RX_MODULE
-    Stream* _dev = nullptr;
+    HardwareSerial* _dev = nullptr;
 #endif
     
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
