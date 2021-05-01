@@ -1116,6 +1116,9 @@ void setup()
     // Init EEPROM and load config, checking powerup count
     setupConfigAndPocCheck();
 
+    // Setup up packing/unpacking methods
+    OTAInitMethods();
+    
     Serial.println("ExpressLRS Module Booting...");
 #if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_FCC_915
     Serial.println("Setting 915MHz Mode");
