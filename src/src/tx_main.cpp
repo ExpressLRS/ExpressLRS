@@ -62,6 +62,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #endif
 
 #define LUA_VERSION 3
+#define LUA_FIELD_AMOUNT 3
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -395,7 +396,47 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)LUA_VERSION};
 
-  crsf.sendLUAresponse(luaParams, 10);
+  crsf.sendLUAresponse(luaParams, 10, CRSF_FRAMETYPE_PARAMETER_WRITE);
+}
+
+void sendLuaFieldCrsf(uint8_t idx){
+  switch(idx){
+    case 2:
+    {
+      char textSelection[37]={"off;1/128;1/64;1/32;1/16;1/8;1/4;1/2"};
+      uint8_t fieldsetup2[4+37];
+      memcpy(fieldsetup2,textSelection,37);
+      fieldsetup2[36] = 0x00;
+      fieldsetup2[37] = (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval);//value
+      fieldsetup2[38] = 0x00;//min
+      fieldsetup2[39] = 0x07;//max
+      fieldsetup2[40] = 0x01;//default
+      crsf.sendLUAField(0x02,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+      break;
+    }
+    case 3:
+    {
+      uint8_t fieldsetup2[4] = {(uint8_t)(POWERMGNT.currPower()),//value
+                              0x00,//min
+                              0x07,//max
+                              0x01};//default
+      crsf.sendLUAField(0x03,CRSF_UINT8,F("power"),5,fieldsetup2,4,F("mW"),2);
+      break;
+    }
+    case 4:
+      break;
+    case 5:
+      break;
+    default: //ID 1
+    {
+      uint8_t fieldsetup2[4] = {(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate),//value
+                              0x00,//min
+                              0x03,//max
+                              0x01};//default
+      crsf.sendLUAField(0x01,CRSF_UINT8,F("pkt.Rate"),8,fieldsetup2,4,F("Hz"),2);
+      break;
+    }
+  }
 }
 
 void UARTdisconnected()
@@ -433,7 +474,7 @@ void UARTconnected()
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
-    crsf.sendLUAresponse(luaCommitPacket, 7);
+    crsf.sendLUADevice(luaCommitPacket, 7, LUA_FIELD_AMOUNT);
     delay(100);
     sendLuaParams();
     delay(100);
@@ -462,72 +503,84 @@ void HandleUpdateParameter()
     return;
   }
 
-  switch (crsf.ParameterUpdateData[0])
+  switch(crsf.ParameterUpdateData[0])
   {
-  case 0: // special case for sending commit packet
-    Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket, 7);
-    break;
-
-  case 1:
-    if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
+  case 0x2D: //device name +11 AND fieldcount
+    switch (crsf.ParameterUpdateData[1])
     {
-      Serial.print("Request AirRate: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
-    }
-    break;
+    case 0: // special case for sending commit packet
+      Serial.println("send all lua params");
+      crsf.sendLUADevice(luaCommitPacket, 6, LUA_FIELD_AMOUNT);
+      break;
 
-  case 2:
-    if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
-    {
-      Serial.print("Request TLM interval: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
-    }
-    break;
+    case 1:
+      if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2])))
+      {
+        Serial.print("Request AirRate: ");
+        Serial.println(crsf.ParameterUpdateData[2]);
+        ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]);
+        config.SetRate(ExpressLRS_nextAirRateIndex);
+      }
+      break;
 
-  case 3:
-    Serial.print("Request Power: ");
-    Serial.println(crsf.ParameterUpdateData[1]);
-    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
-    break;
+    case 2:
+      if ((crsf.ParameterUpdateData[2] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[2] >= (uint8_t)TLM_RATIO_NO_TLM))
+      {
+        Serial.print("Request TLM interval: ");
+        Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
+        config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]);
+      }
+      break;
 
-  case 4:
-    break;
+    case 3:
+      Serial.print("Request Power: ");
+      Serial.println(crsf.ParameterUpdateData[2]);
+      config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[2]);
+      break;
 
-  case 0xFE:
-    if (crsf.ParameterUpdateData[1] == 1)
-    {
+    case 4:
+      break;
+    case 0xFE:
+      if (crsf.ParameterUpdateData[2] == 1)
+      {
 #ifdef PLATFORM_ESP32
-      webUpdateMode = true;
-      Serial.println("Wifi Update Mode Requested!");
-      sendLuaParams();
-      sendLuaParams();
-      BeginWebUpdate();
+        webUpdateMode = true;
+        Serial.println("Wifi Update Mode Requested!");
+        sendLuaParams();
+        sendLuaParams();
+        BeginWebUpdate();
 #else
-      webUpdateMode = false;
-      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+        webUpdateMode = false;
+        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
 #endif
       break;
-    }
+      }
 
-  case 0xFF:
-    if (crsf.ParameterUpdateData[1] == 1)
-    {
-      Serial.println("Binding requested from LUA");
-      EnterBindingMode();
-    }
-    else
-    {
-      Serial.println("Binding stopped  from LUA");
-      ExitBindingMode();
-    }
+    case 0xFF:
+      if (crsf.ParameterUpdateData[2] == 1)
+      {
+        Serial.println("Binding requested from LUA");
+        EnterBindingMode();
+      }
+      else
+      {
+        Serial.println("Binding stopped  from LUA");
+        ExitBindingMode();
+      }
     break;
 
-  default:
+    default:
     break;
-  }
+    }
+  break;
+  case CRSF_FRAMETYPE_DEVICE_PING:
+    crsf.sendLUADevice(luaCommitPacket, 6, LUA_FIELD_AMOUNT);
+    break;
+  case CRSF_FRAMETYPE_PARAMETER_READ: //param info
+    sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
+    break;
+}
+
   UpdateParamReq = false;
   if (config.IsModified())
   {
