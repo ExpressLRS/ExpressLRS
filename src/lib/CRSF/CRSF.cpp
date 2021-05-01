@@ -644,23 +644,45 @@ bool CRSF::UARTwdt()
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
-    {
-        if (SerialOutFIFO.size() > (peekVal))
-        {
-            noInterrupts();
-            uint8_t OutPktLen = SerialOutFIFO.pop();
-            uint8_t OutData[OutPktLen];
-            SerialOutFIFO.popBytes(OutData, OutPktLen);
-            interrupts();
-            if (_dev) _dev->write(OutData, OutPktLen); // write the packet out
-            return true;
-        }
+  // let's flush these buffers
+  while (SerialOutFIFO.size()) {
+
+    //TODO: verify why this is necessary
+    noInterrupts();
+
+    // Fetch packet size first
+    uint8_t pktSize =
+      SerialOutFIFO.pop();
+
+    if (pktSize > 0) {
+
+      if (SerialOutFIFO.size() < pktSize) {
+        // framing error, drop!
+
+        // dropping rest of payload
+        SerialOutFIFO.flush();
+        interrupts();
+        continue;
+      }
+
+      uint8_t outData[pktSize];
+      SerialOutFIFO.popBytes(outData, pktSize);
+
+      if (_dev) {
+        _dev->write(outData, pktSize); // write the packet out
+        _dev->flush();
+      }
+
     }
-    return false;
+
+    //TODO: verify why this is necessary
+    interrupts();
+  }
+
+  return false;
 }
 
+// Sent ASYNC
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
@@ -677,10 +699,10 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 #ifndef DEBUG_CRSF_NO_OUTPUT
     SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
     SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-    //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
 }
 
+// Sent SYNC
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
     uint8_t outBuffer[RCframeLength + 4] = {0};
@@ -699,6 +721,7 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 #endif
 }
 
+// Sent SYNC
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
     const uint8_t totalBufferLen = 14;
