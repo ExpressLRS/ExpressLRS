@@ -291,7 +291,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     default:
         Power = PWR_50mW;
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-7);
+            Radio.SetOutputPower(-9);
         #else
             Radio.SetOutputPower(-8);
         #endif
