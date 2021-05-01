@@ -4,7 +4,7 @@
 static LPF LPF_OPENTX_SYNC_MARGIN(3);
 static LPF LPF_OPENTX_SYNC_OFFSET(3);
 
-void TXModule::begin(Stream* dev)
+void TXModule::begin(HardwareSerial* dev)
 {
   _dev = dev;
 }

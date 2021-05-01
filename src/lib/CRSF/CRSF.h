@@ -54,9 +54,9 @@ public:
     static uint32_t BadPktsCountResult; // need to latch the results
 
 #if CRSF_TX_MODULE        
-    void begin(Stream* dev) override; //setup timers etc
+    void begin(HardwareSerial* dev) override; //setup timers etc
 #else
-    void begin(Stream* dev);
+    void begin(HardwareSerial* dev);
 #endif
 
     void end(); //stop timers etc

@@ -74,7 +74,7 @@ uint32_t CRSF::LastMspRequestSent = 0;
 #endif // CRSF_TX_MODULE
 
 
-void CRSF::begin(Stream* dev)
+void CRSF::begin(HardwareSerial* dev)
 {
 #if CRSF_TX_MODULE
   TXModule::begin(dev);
@@ -591,9 +591,9 @@ bool CRSF::UARTwdt()
                 Serial.println("CRSF UART Disconnected");
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
                 SyncWaitPeriodCounter = now; // set to begin wait for auto sync offset calculation
-                CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-                CRSF::OpenTXsyncOffset = 0;
-                CRSF::OpenTXsyncLastSent = 0;
+                syncOffsetSafeMargin = 1000;
+                syncOffset = 0;
+                syncLastSent = 0;
 #endif
                 disconnected();
                 CRSFstate = false;
@@ -611,9 +611,9 @@ bool CRSF::UARTwdt()
             if (_dev) {
 #ifdef PLATFORM_ESP32
                 _dev->flush();
-                //TODO: _dev->updateBaudRate(UARTrequestedBaud);
+                _dev->updateBaudRate(UARTrequestedBaud);
 #else
-                //TODO: _dev->begin(UARTrequestedBaud);
+                _dev->begin(UARTrequestedBaud);
 #endif
             }
 

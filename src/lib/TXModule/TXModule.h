@@ -30,7 +30,7 @@ class TXModule
 {
 protected:
   // Device throught which the TXModule is connected to a handset
-  Stream* _dev;
+  HardwareSerial* _dev;
 
   // Packet frequency / sync
   uint32_t packetInterval = 5000;  // default to 200hz as per 'normal'
@@ -52,7 +52,7 @@ public:
   TXModule() {}
   virtual ~TXModule() {}
 
-  virtual void begin(Stream* dev);
+  virtual void begin(HardwareSerial* dev);
 
   // Synchronisation with the handset (if supported)
   void setPacketInterval(uint32_t interval);
@@ -69,10 +69,4 @@ public:
   virtual void sendSyncPacketToTX() {}
   virtual void flushTxBuffers() {}
   virtual void consumeInputByte(uint8_t in, volatile uint16_t* channels) {}
-};
-
-class RCProtocol
-{
-  public:
-  uint32_t getSyncPacketInterval() { return OpenTXsyncPacketInterval; }
 };

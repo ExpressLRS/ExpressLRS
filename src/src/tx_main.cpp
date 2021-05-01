@@ -657,18 +657,13 @@ void setup()
 {
   TxInitSerial(CRSF_Port, CRSF_OPENTX_FAST_BAUDRATE);
 
-  // what is this? CRSF baud rate? -> "upload speed"! (whatever this is....)
-  //Serial.begin(460800);
-  Serial.begin(115200);
+  // backpack / debug serial speed
+  Serial.begin(460800);
 
   TxInitLeds();
   TxInitBuzzer();
   TxInitButton();
 
-  //TODO: trigger UID init?
-  // at the moment, this is done "statically" at bootstrap init
-  // (see common.cpp; uint8_t UID[6])
-  
   long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
   FHSSrandomiseFHSSsequence(macSeed);
 
@@ -687,7 +682,7 @@ void setup()
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
 
-  //TODO: What is this???
+  // setting sync word is not supported on sx1280
   #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
   #endif
@@ -722,11 +717,14 @@ void setup()
   
   hwTimer.init();
 
-  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  // uncomment to automatically start the RX timer and leave it running
+  //hwTimer.resume();
 
   // Init serial port
   UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
-  UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
+
+  // allows a delay before the first time the UARTwdt() function is called
+  UARTwdtLastChecked = millis() + UARTwdtInterval;
   
   Serial.print("Starting CRSF @ ");
   Serial.print(UARTcurrentBaud);
@@ -808,11 +806,9 @@ void loop()
   #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-  //TODO: de-active for now, let's get back to it later
   button.handle();
   #endif
 
-  // TODO: check if that really works, should not be hooked on debug port right? 
   if (Serial.available())
   {
     uint8_t c = Serial.read();
