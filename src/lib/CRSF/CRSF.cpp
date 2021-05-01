@@ -53,7 +53,7 @@ uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
 
 uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
 
-volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
+volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
@@ -252,7 +252,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
+void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameType)
 {
     if (!CRSF::CRSFstate)
     {
@@ -264,7 +264,7 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
+    outBuffer[2] = frameType;
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
@@ -274,6 +274,99 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
         outBuffer[5 + i] = val[i];
     }
 
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+
+    outBuffer[LUArespLength + 3] = crc;
+
+#ifdef PLATFORM_ESP32
+    portENTER_CRITICAL(&FIFOmux);
+#endif
+    SerialOutFIFO.push(LUArespLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+#ifdef PLATFORM_ESP32
+    portEXIT_CRITICAL(&FIFOmux);
+#endif
+}
+void CRSF::sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count){
+   
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
+    uint8_t LUArespLength =  2 + len + 12 + 1;  //header + device name + field_count
+    uint8_t outBuffer[LUArespLength + 5] = {0};
+
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO;
+
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+
+    for (uint8_t i = 0; i < len; ++i)
+    {
+        outBuffer[5 + i] = val[i];
+    }
+    outBuffer[5+len+12] = field_count;
+    
+
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+
+    outBuffer[LUArespLength + 3] = crc;
+
+#ifdef PLATFORM_ESP32
+    portENTER_CRITICAL(&FIFOmux);
+#endif
+    SerialOutFIFO.push(LUArespLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+#ifdef PLATFORM_ESP32
+    portEXIT_CRITICAL(&FIFOmux);
+#endif 
+}
+void CRSF::sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHelper *field_name, uint8_t len_name,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t len_unit)
+{
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+    
+    uint8_t fieldname[len_name + 1];
+    uint8_t fieldunit[len_unit + 1];
+
+    uint8_t LUArespLength = 2+ 4 + (len_name+1) + len_setup2 + (len_unit+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    uint8_t outBuffer[LUArespLength + 5] = {0};
+    
+    memcpy(fieldname,field_name,(len_name + 1));
+    memcpy(fieldunit,field_unit,(len_unit + 1));
+
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    
+    outBuffer[5] = fieldid;
+    outBuffer[6] = 0x00; //fieldchunk;
+    outBuffer[7] = 0x00; //fieldparent;
+    outBuffer[8] = fieldtype;
+    for (uint8_t i = 0; i < (len_name+1); ++i)
+    {
+        outBuffer[(9 + i)] = fieldname[i];
+    }
+    //outBuffer[len_name+9] = 0x02; //fieldvalue;
+    //outBuffer[len_name+10] = 0x00; //fieldmin;
+    //outBuffer[len_name+11] = 0x04; //fieldmax;
+    //outBuffer[len_name+12] = 0x01; //fielddefault;
+    for (uint8_t i = 0; i < len_setup2; ++i)
+    {
+        outBuffer[((len_name+1) +9+ i)] = fieldsetup2[i];
+    }
+    for (uint8_t i = 0; i < (len_unit+1); ++i)
+    {
+        outBuffer[((len_name+1) + 9 + len_setup2 + i)] = fieldunit[i];
+    }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
     outBuffer[LUArespLength + 3] = crc;
@@ -433,11 +526,12 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
         const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
+        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
             SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
-            ParameterUpdateData[0] = SerialInBuffer[5];
-            ParameterUpdateData[1] = SerialInBuffer[6];
+            ParameterUpdateData[0] = packetType;
+            ParameterUpdateData[1] = SerialInBuffer[5];
+            ParameterUpdateData[2] = SerialInBuffer[6];
             RecvParameterUpdate();
             return true;
         }

@@ -54,7 +54,7 @@ public:
 
     static void (*RecvParameterUpdate)();
 
-    static volatile uint8_t ParameterUpdateData[2];
+    static volatile uint8_t ParameterUpdateData[3];
 
     /////Variables/////
 
@@ -75,7 +75,9 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    void sendLUAresponse(uint8_t val[], uint8_t len);
+    void sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameType);
+    void sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHelper *field_name, uint8_t len_name,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t len_unit);
+    void sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
