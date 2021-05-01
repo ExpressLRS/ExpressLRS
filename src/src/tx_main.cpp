@@ -489,7 +489,6 @@ void UARTconnected()
   }
 
   Serial.println("resuming radio timer");
-  Serial.flush();
   hwTimer.resume();
   
 #if defined(TARGET_NAMIMNORC_TX)

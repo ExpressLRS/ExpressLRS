@@ -83,7 +83,6 @@ void CRSF::begin(Stream* dev)
 #endif
 
   Serial.println("About to start CRSF task...");
-  Serial.flush();
 
 #if defined(PLATFORM_ESP32) and defined(CRSF_TX_MODULE)
   mutexOutFIFO = xSemaphoreCreateMutex();
@@ -279,10 +278,9 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket(volatile uint16_t* channels)
     {
         CRSFstate = true;
         Serial.println("CRSF UART Connected");
-        Serial.flush();
 
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
+        syncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
         LPF_OPENTX_SYNC_MARGIN.init(0);
         LPF_OPENTX_SYNC_OFFSET.init(0);
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE

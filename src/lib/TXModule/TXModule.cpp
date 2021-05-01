@@ -42,7 +42,7 @@ void ICACHE_RAM_ATTR TXModule::onRadioPacketSent()
 
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
       // wait until we stablize after changing pkt rate
-      if (millis() > (syncWaitPeriodCounter + autoSyncWaitPeriod)) {
+      if (millis() > (syncWaitPeriodCounter + AutoSyncWaitPeriod)) {
         syncOffsetSafeMargin =
             LPF_OPENTX_SYNC_MARGIN.update((syncOffsetSafeMargin - syncOffset) +
                                           //TODO: no magic numbers
