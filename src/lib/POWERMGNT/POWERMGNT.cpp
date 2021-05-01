@@ -254,23 +254,47 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(-15);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-17);
+        #else
+            Radio.SetOutputPower(-15);
+        #endif
         break;
     case PWR_25mW:
-        Radio.SetOutputPower(-11);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-13);
+        #else
+            Radio.SetOutputPower(-11);
+        #endif
         break;
     case PWR_50mW:
-        Radio.SetOutputPower(-8);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-9);
+        #else
+            Radio.SetOutputPower(-8);
+        #endif
         break;
     case PWR_100mW:
-        Radio.SetOutputPower(-5);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-6);
+        #else
+            Radio.SetOutputPower(-5);
+        #endif
         break;
     case PWR_250mW:
-        Radio.SetOutputPower(-1);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-2);
+        #else
+            Radio.SetOutputPower(-1);
+        #endif
         break;
     default:
         Power = PWR_50mW;
-        Radio.SetOutputPower(-8);
+        #ifdef TARGET_HappyModel_ES24TX_2400_TX
+            Radio.SetOutputPower(-9);
+        #else
+            Radio.SetOutputPower(-8);
+        #endif
         break;
     }
 #elif defined(TARGET_TX_ESP32_LORA1280F27)
