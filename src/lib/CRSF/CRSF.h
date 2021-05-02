@@ -75,9 +75,10 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    void sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameType);
-    void sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHelper *field_name, uint8_t len_name,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t len_unit);
-    void sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count);
+    void sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2);
+    //void sendCRSFcmdParam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_info, uint8_t infolength);
+    void sendCRSFparam(crsf_frame_type_e frame, uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength);
+    //void sendCRSFdevice(uint8_t val[], uint8_t len, uint8_t field_count);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 

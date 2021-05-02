@@ -21,6 +21,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
+#define CHUNK_MAX_NUMBER_OF_BYTES 30
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
@@ -252,14 +253,16 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameType)
+void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
+    char val2[len2+1];
+    memcpy(val2,elrsInfo,(len2 + 1));
 
-    uint8_t LUArespLength = len + 2;
+    uint8_t LUArespLength = len + 2 + (len2+1);
     uint8_t outBuffer[LUArespLength + 5] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -273,6 +276,10 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameTy
     {
         outBuffer[5 + i] = val[i];
     }
+    for (uint8_t i = 0; i < (len2+1); ++i)
+    {
+        outBuffer[5 + i + len] = val2[i];
+    }
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
@@ -287,100 +294,97 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameTy
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-void CRSF::sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count){
-   
-    if (!CRSF::CRSFstate)
-    {
-        return;
-    }
 
-    uint8_t LUArespLength =  2 + len + 12 + 1;  //header + device name + field_count
-    uint8_t outBuffer[LUArespLength + 5] = {0};
-
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO;
-
-    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-
-    for (uint8_t i = 0; i < len; ++i)
-    {
-        outBuffer[5 + i] = val[i];
-    }
-    outBuffer[5+len+12] = field_count;
-    
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
-
-    outBuffer[LUArespLength + 3] = crc;
-
-#ifdef PLATFORM_ESP32
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-    SerialOutFIFO.push(LUArespLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
-#ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL(&FIFOmux);
-#endif 
-}
-void CRSF::sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHelper *field_name, uint8_t len_name,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t len_unit)
+//sendCRSF param can take anytype of fieldtype if fieldsetup2 is set properly
+void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
+    uint8_t LUArespLength;
+    uint8_t wholePacketSize = (2+(namelength+1) + len_setup2 + (unitlength+1));
+    uint8_t chunks = 0;        
     
-    uint8_t fieldname[len_name + 1];
-    uint8_t fieldunit[len_unit + 1];
+    /**
+     *calculate how many chunks needed for this field 
+     */
+    chunks = (wholePacketSize/(CHUNK_MAX_NUMBER_OF_BYTES));
+    if(wholePacketSize % (CHUNK_MAX_NUMBER_OF_BYTES)){
+        chunks = chunks + 1;
+    }
+    //calculate how much byte this packet contains
+    uint8_t maxiter;
+            if((chunks - fieldchunk) > 0){
+                maxiter = CHUNK_MAX_NUMBER_OF_BYTES;
+            } else {
+                maxiter = wholePacketSize % (CHUNK_MAX_NUMBER_OF_BYTES+1);
+            }
 
-    uint8_t LUArespLength = 2+ 4 + (len_name+1) + len_setup2 + (len_unit+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
-    uint8_t outBuffer[LUArespLength + 5] = {0};
-    
-    memcpy(fieldname,field_name,(len_name + 1));
-    memcpy(fieldunit,field_unit,(len_unit + 1));
+    //if it is device info, we dont chunk
+    if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
+        LUArespLength = 2 + (namelength+1) + len_setup2;
+    } else {
+        LUArespLength = 2+ 2 + maxiter; //header, fieldsetup1(fieldid, fieldchunk),
+                                        // chunk-ed packets below
+                                        //fieldsetup1(fieldparent,fieldtype),field name, 
+                                        //fieldsetup2(value,min,max,default),field unit
+    }
+    //create outbuffer size
+    uint8_t outBuffer[maxiter + 5 + 2 + 2] = {0}; 
 
+    //if it is device info, we dont chunk
+    if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
+        
+           //header, field name, fieldsetup2(11 byte + 1 fieldcount)
+        
+        memcpy(outBuffer+5,field_name,(namelength + 1));
+        memcpy(outBuffer+(5 + (namelength+1)),fieldsetup2,len_setup2);
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    outBuffer[2] = frame;
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
     
-    outBuffer[5] = fieldid;
-    outBuffer[6] = 0x00; //fieldchunk;
-    outBuffer[7] = 0x00; //fieldparent;
-    outBuffer[8] = fieldtype;
-    for (uint8_t i = 0; i < (len_name+1); ++i)
-    {
-        outBuffer[(9 + i)] = fieldname[i];
-    }
-    //outBuffer[len_name+9] = 0x02; //fieldvalue;
-    //outBuffer[len_name+10] = 0x00; //fieldmin;
-    //outBuffer[len_name+11] = 0x04; //fieldmax;
-    //outBuffer[len_name+12] = 0x01; //fielddefault;
-    for (uint8_t i = 0; i < len_setup2; ++i)
-    {
-        outBuffer[((len_name+1) +9+ i)] = fieldsetup2[i];
-    }
-    for (uint8_t i = 0; i < (len_unit+1); ++i)
-    {
-        outBuffer[((len_name+1) + 9 + len_setup2 + i)] = fieldunit[i];
-    }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
     outBuffer[LUArespLength + 3] = crc;
 
+    } else {
+        uint8_t chunkBuffer[wholePacketSize] = {0};
+        //it is byte op, we can use memcpy with index to
+        // destination memory.
+        memcpy(chunkBuffer+2,field_name,(namelength + 1));  
+        memcpy(chunkBuffer+(2 + (namelength+1)),fieldsetup2,len_setup2);
+        memcpy(chunkBuffer+(2 + (namelength+1) + len_setup2),field_unit,(unitlength + 1));
+        
+        chunkBuffer[0] = fieldparent; //fieldparent;
+        chunkBuffer[1] = fieldtype;
+        
+        outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        outBuffer[1] = LUArespLength + 2;   //received as #data in lua
+        outBuffer[2] = frame; //received as command in lua
+        // all below received as data in lua
+        outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        outBuffer[5] = fieldid;
+        outBuffer[6] = ((chunks - fieldchunk)); //fieldchunk;
+                
+        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),maxiter);
+        uint8_t crc = crsf_crc.calc(&outBuffer[2], 2+2+maxiter + 1);
+        outBuffer[maxiter + 7] = crc;
+    }
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(LUArespLength + 4); // length
+    SerialOutFIFO.push(LUArespLength + 4);
     SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
-}
 
+}
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
@@ -523,7 +527,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
-    if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    if (packetType != CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&

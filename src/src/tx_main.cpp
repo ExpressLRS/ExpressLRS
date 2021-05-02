@@ -57,7 +57,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #endif
 
 #define LUA_VERSION 3
-#define LUA_FIELD_AMOUNT 3
+#define LUA_FIELD_AMOUNT 5
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -98,14 +98,18 @@ LPF LPD_DownlinkLQ(1);
 volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
+//LUA VARIABLES//
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
+uint8_t luaWarningFLags = 0;
+uint8_t suppressedLuaWarningFlags = 0xFF;
 uint32_t LuaLastUpdated = 0;
+uint8_t luaDevice[6] = {0x45,0x4C, 0x52, 0x53, 0x46, 0x00};
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
-bool InBindingMode = false;
+uint8_t InBindingMode = 0;
 uint8_t BindingPackage[5];
 uint8_t BindingSendCount = 0;
 void EnterBindingMode();
@@ -480,27 +484,24 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-void sendLuaParams()
-{
-  uint8_t luaParams[] = {0xFF,
-                         (uint8_t)(InBindingMode | (webUpdateMode << 1)),
-                         (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
-                         (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval),
-                      #ifdef USE_DYNAMIC_POWER
-                         (uint8_t)(config.GetPower()),
-                      #else
-                         (uint8_t)(POWERMGNT.currPower()),
-                      #endif
-                         (uint8_t)Regulatory_Domain_Index,
-                         (uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)LUA_VERSION};
-
-  crsf.sendLUAresponse(luaParams, 10, CRSF_FRAMETYPE_PARAMETER_WRITE);
+void suppressCurrentLuaWarning(void){ //0 to suppress
+  suppressedLuaWarningFlags = ~luaWarningFLags;
+}
+uint8_t getLuaWarning(void){ //1 if alarm
+return luaWarningFLags & suppressedLuaWarningFlags;
 }
 
-void sendLuaFieldCrsf(uint8_t idx){
+void sendLuaParams()
+{
+  uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
+                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)(getLuaWarning())};
+
+  crsf.sendELRSparam(luaParams, 4, 0x2E,F("none"),4);
+}
+
+void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
   switch(idx){
     case 2:
     {
@@ -512,29 +513,63 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[38] = 0x00;//min
       fieldsetup2[39] = 0x07;//max
       fieldsetup2[40] = 0x01;//default
-      crsf.sendLUAField(0x02,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
       break;
     }
     case 3:
     {
-      uint8_t fieldsetup2[4] = {(uint8_t)(POWERMGNT.currPower()),//value
-                              0x00,//min
-                              0x07,//max
-                              0x01};//default
-      crsf.sendLUAField(0x03,CRSF_UINT8,F("power"),5,fieldsetup2,4,F("mW"),2);
+      char textSelection[31]={"10;25;50;100;250;500;1000;2000"};
+      uint8_t fieldsetup2[4+31];
+      memcpy(fieldsetup2,textSelection,31);
+      fieldsetup2[30] = 0x00;
+      #ifdef USE_DYNAMIC_POWER
+      fieldsetup2[31] = (uint8_t)(config.GetPower());
+      #else
+      fieldsetup2[31] = (uint8_t)(POWERMGNT.currPower());//value
+      #endif
+      fieldsetup2[32] = 0x00;//min
+      fieldsetup2[33] = 0x07;//max
+      fieldsetup2[34] = 0x01;//default
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
       break;
     }
     case 4:
+    {
+      uint8_t fieldsetup2[2];
+      fieldsetup2[0] = (uint8_t)(InBindingMode);//status
+      fieldsetup2[1] = 200;//timeout
+      if(InBindingMode){
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
+      } else {
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
+      }
       break;
+    }
     case 5:
+    {
+      uint8_t fieldsetup2[2];
+      fieldsetup2[1] = 200;//timeout
+      if(webUpdateMode){
+        fieldsetup2[0] = 2;
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
+      } else {
+        fieldsetup2[0] = 0;
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+      }
       break;
+
+    }
     default: //ID 1
     {
-      uint8_t fieldsetup2[4] = {(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate),//value
-                              0x00,//min
-                              0x03,//max
-                              0x01};//default
-      crsf.sendLUAField(0x01,CRSF_UINT8,F("pkt.Rate"),8,fieldsetup2,4,F("Hz"),2);
+      char textSelection[26]={"500;250;200;150;100;50;25"};
+      uint8_t fieldsetup2[4+26];
+      memcpy(fieldsetup2,textSelection,26);
+      fieldsetup2[25] = 0x00;
+      fieldsetup2[26] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
+      fieldsetup2[27] = 0x00;//min
+      fieldsetup2[28] = 0x06;//max
+      fieldsetup2[29] = 0x01;//default
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
       break;
     }
   }
@@ -572,8 +607,6 @@ void UARTconnected()
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
-    crsf.sendLUADevice(luaCommitPacket, 7, LUA_FIELD_AMOUNT);
-    delay(100);
     sendLuaParams();
     delay(100);
   }
@@ -598,16 +631,19 @@ void HandleUpdateParameter()
     return;
   }
 
-  switch(crsf.ParameterUpdateData[0])
-  {
-  case 0x2D: //device name +11 AND fieldcount
+  switch(crsf.ParameterUpdateData[0]){
+  case CRSF_FRAMETYPE_PARAMETER_WRITE:
     switch (crsf.ParameterUpdateData[1])
     {
     case 0: // special case for sending commit packet
+    {
       Serial.println("send all lua params");
-      crsf.sendLUADevice(luaCommitPacket, 6, LUA_FIELD_AMOUNT);
+      uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+      fieldsetup2[12] = LUA_FIELD_AMOUNT;
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+      //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
       break;
-
+    }
     case 1:
       if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
       {
@@ -652,28 +688,12 @@ void HandleUpdateParameter()
     break;
 
     case 4:
-      break;
-    case 0xFE:
-      if (crsf.ParameterUpdateData[2] == 1)
-      {
-#ifdef PLATFORM_ESP32
-        webUpdateMode = true;
-        Serial.println("Wifi Update Mode Requested!");
-        sendLuaParams();
-        sendLuaParams();
-        BeginWebUpdate();
-#else
-        webUpdateMode = false;
-        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-#endif
-      break;
-      }
-
-    case 0xFF:
       if (crsf.ParameterUpdateData[2] == 1)
       {
         Serial.println("Binding requested from LUA");
         EnterBindingMode();
+      } else if(crsf.ParameterUpdateData[2] == 6){
+          sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
       }
       else
       {
@@ -681,17 +701,43 @@ void HandleUpdateParameter()
         ExitBindingMode();
       }
       break;
+      
+    case 5:
+      if (crsf.ParameterUpdateData[2] == 1)
+      {
+  #ifdef PLATFORM_ESP32
+        webUpdateMode = true;
+        Serial.println("Wifi Update Mode Requested!");
+        sendLuaParams();
+        sendLuaParams();
+        BeginWebUpdate();
+  #else
+        webUpdateMode = false;
+        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+  #endif
+      } else if(crsf.ParameterUpdateData[2] == 6){
+          sendLuaFieldCrsf(crsf.ParameterUpdateData[1],0);
+      }
+      break;
+    case 0x2E:
+      suppressCurrentLuaWarning();
 
+      break;
     default:
     break;
     }
   break;
 
   case CRSF_FRAMETYPE_DEVICE_PING:
-    crsf.sendLUADevice(luaCommitPacket, 6, LUA_FIELD_AMOUNT);
+  {
+    uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0}; //12bytes of unknown data + 1byte of field count 
+    fieldsetup2[12] = LUA_FIELD_AMOUNT;
+    crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+    //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
     break;
+  }
   case CRSF_FRAMETYPE_PARAMETER_READ: //param info
-    sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
+  sendLuaFieldCrsf(crsf.ParameterUpdateData[1],crsf.ParameterUpdateData[2]);
     break;
 }
 
@@ -1125,7 +1171,8 @@ void EnterBindingMode()
   UID[5] = BindingUID[5];
 
   CRCInitializer = 0;
-  InBindingMode = true;
+
+  InBindingMode = 2;
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1156,7 +1203,7 @@ void ExitBindingMode()
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 
-  InBindingMode = false;
+  InBindingMode = 0;
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
