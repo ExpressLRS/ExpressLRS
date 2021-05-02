@@ -5,85 +5,61 @@
 
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
-
 #ifdef PLATFORM_ESP32
 void ESP32uartTask(void *pvParameters);
 #endif
 
-CRSF         crsf;
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+
+volatile crsf_channels_s CRSFBase::PackedRCdataOut;
+volatile crsfPayloadLinkstatistics_s CRSFBase::LinkStatistics;
+
+#if CRSF_TX_MODULE
+
+CRSF_TXModule crsfTx;
+
+static void nullCallback(void) {}
+
+void (*CRSF_TXModule::disconnected)() = nullCallback; // called when CRSF stream is lost
+void (*CRSF_TXModule::connected)() = nullCallback;    // called when CRSF stream is regained
+void (*CRSF_TXModule::RecvParameterUpdate)() = nullCallback; // called when recv parameter update req, ie from LUA
+
+/// UART Handling ///
+uint32_t CRSF_TXModule::GoodPktsCountResult = 0;
+uint32_t CRSF_TXModule::BadPktsCountResult = 0;
+uint32_t CRSF_TXModule::GoodPktsCount = 0;
+uint32_t CRSF_TXModule::BadPktsCount = 0;
+
+volatile bool CRSF_TXModule::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+
+volatile uint8_t CRSF_TXModule::SerialInPacketLen = 0; // length of the CRSF packet as measured
+volatile uint8_t CRSF_TXModule::SerialInPacketPtr = 0; // index where we are reading/writing
+volatile uint8_t CRSF_TXModule::ParameterUpdateData[2] = {0};
+
+volatile inBuffer_U CRSF_TXModule::inBuffer;
+
+bool CRSF_TXModule::CRSFstate = false;
 
 ///Out FIFO to buffer messages///
 FIFO MspWriteFIFO;
 
-
-volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
-
-void inline CRSF::nullCallback(void) {}
-
-void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
-void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
-
-void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
-
-/// UART Handling ///
-uint32_t CRSF::GoodPktsCountResult = 0;
-uint32_t CRSF::BadPktsCountResult = 0;
-
-volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
-
-volatile inBuffer_U CRSF::inBuffer;
-
-// current and sent switch values, used for prioritising sequential switch transmission
-//uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
-//uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
-
-//uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
-
-volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
-
-volatile crsf_channels_s CRSF::PackedRCdataOut;
-volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
-
-#if CRSF_TX_MODULE
-
-/// OpenTX mixer sync ///
-
-/// UART Handling ///
-uint32_t CRSF::GoodPktsCount = 0;
-uint32_t CRSF::BadPktsCount = 0;
+uint8_t CRSF_TXModule::MspData[ELRS_MSP_BUFFER] = {0};
+uint8_t CRSF_TXModule::MspDataLength = 0;
+volatile uint8_t CRSF_TXModule::MspRequestsInTransit = 0;
+uint32_t CRSF_TXModule::LastMspRequestSent = 0;
 
 //TODO: needs to be somewhere else
 uint32_t UARTwdtLastChecked;
 uint32_t UARTcurrentBaud;
 
-bool CRSF::CRSFstate = false;
-
-uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
-uint8_t CRSF::MspDataLength = 0;
-volatile uint8_t CRSF::MspRequestsInTransit = 0;
-uint32_t CRSF::LastMspRequestSent = 0;
-
-#endif // CRSF_TX_MODULE
-
-
-void CRSF::begin(TransportLayer* dev)
+void CRSF_TXModule::begin(TransportLayer* dev)
 {
-#if CRSF_TX_MODULE
   TXModule::begin(dev);
-#else
-  _dev = dev;
-#endif
-
-  Serial.println("About to start CRSF task...");
 }
 
-#if CRSF_TX_MODULE
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
+void ICACHE_RAM_ATTR CRSF_TXModule::sendLinkStatisticsToTX()
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSF_TXModule::CRSFstate)
     {
         return;
     }
@@ -103,9 +79,9 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     if (_dev) _dev->sendAsync(outBuffer, LinkStatisticsFrameLength + 4);
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
+void CRSF_TXModule::sendLUAresponse(uint8_t val[], uint8_t len)
 {
-    if (!CRSF::CRSFstate)
+    if (!CRSF_TXModule::CRSFstate)
     {
         return;
     }
@@ -135,7 +111,7 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
     if (_dev) _dev->sendAsync(outBuffer, LUArespLength + 4);
 }
 
-void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
+void ICACHE_RAM_ATTR CRSF_TXModule::sendTelemetryToTX(uint8_t *data)
 {
     if (data[2] == CRSF_FRAMETYPE_MSP_RESP)
     {
@@ -148,7 +124,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
         return;
     }
 
-    if (CRSF::CRSFstate)
+    if (CRSF_TXModule::CRSFstate)
     {
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
         if (_dev) _dev->sendAsync(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
@@ -156,10 +132,10 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 }
 
 
-void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
+void ICACHE_RAM_ATTR CRSF_TXModule::sendSyncPacketToTX() // in values in us.
 {
     uint32_t now = millis();
-    if (CRSF::CRSFstate && now >= (syncLastSent + OpenTXsyncPacketInterval))
+    if (CRSF_TXModule::CRSFstate && now >= (syncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate = packetInterval * 10; //convert from us to right format
         int32_t offset = syncOffset * 10 - syncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
@@ -195,7 +171,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
 
 
-bool ICACHE_RAM_ATTR CRSF::ProcessPacket(volatile uint16_t* channels)
+bool ICACHE_RAM_ATTR CRSF_TXModule::ProcessPacket(volatile uint16_t* channels)
 {
     if (CRSFstate == false)
     {
@@ -210,11 +186,11 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket(volatile uint16_t* channels)
         connected();
     }
 
-    const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+    const uint8_t packetType = CRSF_TXModule::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+        const volatile uint8_t *SerialInBuffer = CRSF_TXModule::inBuffer.asUint8_t;
         if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
             SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
         {
@@ -234,15 +210,15 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket(volatile uint16_t* channels)
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
     {
-        volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
+        volatile uint8_t *SerialInBuffer = CRSF_TXModule::inBuffer.asUint8_t;
+        const uint8_t length = CRSF_TXModule::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         return true;
     }
     return false;
 }
 
-uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
+uint8_t* ICACHE_RAM_ATTR CRSF_TXModule::GetMspMessage()
 {
     if (MspDataLength > 0)
     {
@@ -251,7 +227,7 @@ uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
     return NULL;
 }
 
-void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
+void ICACHE_RAM_ATTR CRSF_TXModule::ResetMspQueue()
 {
     MspWriteFIFO.flush();
     MspDataLength = 0;
@@ -259,7 +235,7 @@ void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
     memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
-void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
+void ICACHE_RAM_ATTR CRSF_TXModule::UnlockMspMessage()
 {
     // current msp message is sent so restore next buffered write
     if (MspWriteFIFO.peek() > 0)
@@ -276,7 +252,7 @@ void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
+void ICACHE_RAM_ATTR CRSF_TXModule::AddMspMessage(mspPacket_t* packet)
 {
     if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE)
     {
@@ -310,7 +286,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     AddMspMessage(totalBufferLen, outBuffer);
 }
 
-void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
+void ICACHE_RAM_ATTR CRSF_TXModule::AddMspMessage(const uint8_t length, volatile uint8_t* data)
 {
     uint32_t now = millis();
     if (length > ELRS_MSP_BUFFER)
@@ -357,10 +333,9 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
     }
 }
 
-#if CRSF_TX_MODULE
-void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in, volatile uint16_t* channels)
+void ICACHE_RAM_ATTR CRSF_TXModule::consumeInputByte(uint8_t in, volatile uint16_t* channels)
 {
-  volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+  volatile uint8_t *SerialInBuffer = CRSF_TXModule::inBuffer.asUint8_t;
 
   if (CRSFframeActive == false) {
     // stage 1 wait for sync byte //
@@ -424,15 +399,14 @@ void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in, volatile uint16_t* chann
     }
   }
 }
-#endif
 
-void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
+void ICACHE_RAM_ATTR CRSF_TXModule::flushTxBuffers()
 {
   if (_dev) _dev->flushOutput();
 }
 
 
-bool CRSF::UARTwdt()
+bool CRSF_TXModule::UARTwdt()
 {
     uint32_t now = millis();
     bool retval = false;
@@ -487,62 +461,13 @@ bool CRSF::UARTwdt()
     return retval;
 }
 
-#elif CRSF_RX_MODULE // !CRSF_TX_MODULE
-
-// Sent ASYNC
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
-{
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
-
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
-
-    outBuffer[LinkStatisticsFrameLength + 3] = crc;
-
-#ifndef DEBUG_CRSF_NO_OUTPUT
-    if (_dev) _dev->sendAsync(outBuffer, LinkStatisticsFrameLength + 4);
-#endif
-}
-
-// Sent SYNC
-void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
-{
-    uint8_t outBuffer[RCframeLength + 4] = {0};
-
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = RCframeLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
-
-    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], RCframeLength + 1);
-
-    outBuffer[RCframeLength + 3] = crc;
-#ifndef DEBUG_CRSF_NO_OUTPUT
-    if (_dev) _dev->write(outBuffer, RCframeLength + 4);
-#endif
-}
-
-// Sent SYNC
-void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
-{
-    const uint8_t totalBufferLen = 14;
-    if (_dev) _dev->write(data, totalBufferLen);
-}
-#endif // !CRSF_TX_MODULE && !CRSF_RX_MODULE
-
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn(
+void ICACHE_RAM_ATTR CRSF_TXModule::GetChannelDataIn(
     volatile uint16_t *channels)  // data is packed as 11 bits per channel
 {
   if (!channels) return;
 
   const volatile crsf_channels_t *rcChannels =
-      &CRSF::inBuffer.asRCPacket_t.channels;
+      &CRSF_TXModule::inBuffer.asRCPacket_t.channels;
 
   channels[0] = (rcChannels->ch0);
   channels[1] = (rcChannels->ch1);
@@ -563,3 +488,59 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn(
 
   updateSwitchValues(channels);
 }
+
+#elif CRSF_RX_MODULE // !CRSF_TX_MODULE
+
+CRSF_RXModule crsfRx;
+
+void CRSF_RXModule::begin(TransportLayer* dev)
+{
+  _dev = dev;
+}
+
+// Sent ASYNC
+void ICACHE_RAM_ATTR CRSF_RXModule::sendLinkStatisticsToFC()
+{
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+
+    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[1] = LinkStatisticsFrameLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+
+    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
+
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
+
+    outBuffer[LinkStatisticsFrameLength + 3] = crc;
+
+#ifndef DEBUG_CRSF_NO_OUTPUT
+    if (_dev) _dev->sendAsync(outBuffer, LinkStatisticsFrameLength + 4);
+#endif
+}
+
+// Sent SYNC
+void ICACHE_RAM_ATTR CRSF_RXModule::sendRCFrameToFC()
+{
+    uint8_t outBuffer[RCframeLength + 4] = {0};
+
+    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[1] = RCframeLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+
+    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
+
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], RCframeLength + 1);
+
+    outBuffer[RCframeLength + 3] = crc;
+#ifndef DEBUG_CRSF_NO_OUTPUT
+    if (_dev) _dev->write(outBuffer, RCframeLength + 4);
+#endif
+}
+
+// Sent SYNC
+void ICACHE_RAM_ATTR CRSF_RXModule::sendMSPFrameToFC(uint8_t* data)
+{
+    const uint8_t totalBufferLen = 14;
+    if (_dev) _dev->write(data, totalBufferLen);
+}
+#endif // !CRSF_TX_MODULE && !CRSF_RX_MODULE

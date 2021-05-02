@@ -192,32 +192,32 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     GenerateChannelDataHybridSwitch8(TXdataBuffer, ChannelData, CurrentSwitches, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
+    UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsfRx);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsfRx.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsfRx.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsfRx.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsfRx.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(CurrentSwitches[0]), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(CurrentSwitches[0]), crsfRx.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
-        TEST_ASSERT_EQUAL(N_to_CRSF(CurrentSwitches[forceSwitch], 15), crsf.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(N_to_CRSF(CurrentSwitches[forceSwitch], 15), crsfRx.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
     else if (forceSwitch != 0)
     {
         uint16_t ch;
         switch (forceSwitch)
         {
-        case 1: ch = crsf.PackedRCdataOut.ch5; break;
-        case 2: ch = crsf.PackedRCdataOut.ch6; break;
-        case 3: ch = crsf.PackedRCdataOut.ch7; break;
-        case 4: ch = crsf.PackedRCdataOut.ch8; break;
-        case 5: ch = crsf.PackedRCdataOut.ch9; break;
-        case 6: ch = crsf.PackedRCdataOut.ch10; break;
+        case 1: ch = crsfRx.PackedRCdataOut.ch5; break;
+        case 2: ch = crsfRx.PackedRCdataOut.ch6; break;
+        case 3: ch = crsfRx.PackedRCdataOut.ch7; break;
+        case 4: ch = crsfRx.PackedRCdataOut.ch8; break;
+        case 5: ch = crsfRx.PackedRCdataOut.ch9; break;
+        case 6: ch = crsfRx.PackedRCdataOut.ch10; break;
         default:
             TEST_FAIL_MESSAGE("forceSwitch not handled");
         }
-        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(CurrentSwitches[forceSwitch]), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(CurrentSwitches[forceSwitch]), crsfRx.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
     }
 }
 
@@ -312,22 +312,22 @@ void test_decoding10bit()
     GenerateChannelData10bit(TXdataBuffer, ChannelData, CurrentSwitches, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData10bit(TXdataBuffer, &crsf);
+    UnpackChannelData10bit(TXdataBuffer, &crsfRx);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[0] & 0b11111111110, crsfRx.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[1] & 0b11111111110, crsfRx.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[2] & 0b11111111110, crsfRx.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelData[3] & 0b11111111110, crsfRx.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch4); // Switch 0
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch5); // Switch 1
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch6); // Switch 2
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch7); // Switch 3
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch8); // Switch 4
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch9); // Switch 5
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch10); // Switch 6
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch11); // Switch 7
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsfRx.PackedRCdataOut.ch4); // Switch 0
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsfRx.PackedRCdataOut.ch5); // Switch 1
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsfRx.PackedRCdataOut.ch6); // Switch 2
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsfRx.PackedRCdataOut.ch7); // Switch 3
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsfRx.PackedRCdataOut.ch8); // Switch 4
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsfRx.PackedRCdataOut.ch9); // Switch 5
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsfRx.PackedRCdataOut.ch10); // Switch 6
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsfRx.PackedRCdataOut.ch11); // Switch 7
 }
 
 int main(int argc, char **argv)

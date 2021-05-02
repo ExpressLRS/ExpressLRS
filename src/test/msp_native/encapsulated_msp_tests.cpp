@@ -22,10 +22,10 @@ void test_encapsulated_msp_send(void)
     // AND the transcoded packet will be sent to the Stream object associated with the CRSF class
 
     tl.begin(&ss);
-    crsf.begin(&tl);
+    crsfTx.begin(&tl);
     
     // Make sure no msp messages are in the fifo
-    crsf.ResetMspQueue();
+    crsfTx.ResetMspQueue();
 
     // Build an MSP packet with the MSP_SET_VTX_CONFIG cmd
     mspPacket_t packet;
@@ -39,9 +39,9 @@ void test_encapsulated_msp_send(void)
     packet.addByte(0x00);   // don't enable pitmode
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    crsf.AddMspMessage(&packet);
+    crsfTx.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data = crsfTx.GetMspMessage();
 
     // Assert that the correct number of total bytes were sent to the stream
     TEST_ASSERT_NOT_EQUAL(NULL, data);
@@ -72,10 +72,10 @@ void test_encapsulated_msp_send_too_long(void)
     // AND nothing will be sent to the stream
 
     tl.begin(&ss);
-    crsf.begin(&tl);
+    crsfTx.begin(&tl);
 
     // Make sure no msp messages are in the fifo
-    crsf.ResetMspQueue();
+    crsfTx.ResetMspQueue();
 
     // Build an MSP packet with a payload that is too long to send (>4 bytes)
     mspPacket_t packet;
@@ -90,9 +90,9 @@ void test_encapsulated_msp_send_too_long(void)
     packet.addByte(0x05);
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    crsf.AddMspMessage(&packet);
+    crsfTx.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data = crsfTx.GetMspMessage();
     // Assert that nothing was sent to the stream
     TEST_ASSERT_EQUAL(NULL, data);
 }

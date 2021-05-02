@@ -26,7 +26,7 @@ typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
 #endif
 
 typedef void (*UnpackChannelDataFunc)(
-    volatile uint8_t* Buffer, CRSF* crsf);
+    volatile uint8_t* Buffer, CRSFBase* crsf);
 
 #if TARGET_TX or defined UNIT_TEST
 extern GenerateChannelDataFunc GenerateChannelData;
@@ -58,8 +58,8 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
     volatile uint8_t* switches);
 #endif
 
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf);
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf);
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSFBase *crsf);
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSFBase *crsf);
 
 #endif
 

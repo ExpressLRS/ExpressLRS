@@ -1,5 +1,4 @@
-#ifndef H_CRSF
-#define H_CRSF
+#pragma once
 
 #include "targets.h"
 #include "crsf_protocol.h"
@@ -22,73 +21,46 @@
 #include "driver/gpio.h"
 #endif
 
+class CRSFBase
+{
+public:
+    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
 
-class CRSF
+    //static volatile crsf_sensor_battery_s TLMbattSensor;
+};
+
 #if CRSF_TX_MODULE
-    : public TXModule
-#endif
+
+class CRSF_TXModule
+    : public TXModule, public CRSFBase
 {
 
 public:
-    CRSF()
-#if CRSF_TX_MODULE
-        : TXModule()
-#endif
+    CRSF_TXModule() : TXModule()
     {}
 
     static void (*disconnected)();
     static void (*connected)();
-
     static void (*RecvParameterUpdate)();
 
     static volatile uint8_t ParameterUpdateData[2];
-
-    /////Variables/////
-
-    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
-    static volatile crsf_sensor_battery_s TLMbattSensor;
 
     /// UART Handling ///
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 
-#if CRSF_TX_MODULE        
     void begin(TransportLayer* dev) override; //setup timers etc
-#else
-    void begin(TransportLayer* dev);
-#endif
 
-
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
-    void sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
+    void ICACHE_RAM_ATTR sendSyncPacketToTX() override;
 
     void sendLUAresponse(uint8_t val[], uint8_t len);
 
-    static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
-
-    uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
-    void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
-
-///// Variables for OpenTX Syncing //////////////////////////
-#if CRSF_TX_MODULE
-    void ICACHE_RAM_ATTR sendSyncPacketToTX() override;
-#endif
-
-    /////////////////////////////////////////////////////////////
-
     static void ICACHE_RAM_ATTR GetChannelDataIn(volatile uint16_t* channels);
-
-    static void inline nullCallback(void);
-
-#if CRSF_TX_MODULE
     void consumeInputByte(uint8_t in, volatile uint16_t* channels) override;
-#endif
 
-#if CRSF_TX_MODULE
     bool UARTwdt();
 
     static uint8_t* GetMspMessage();
@@ -96,22 +68,18 @@ public:
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
-#endif
 
 private:
-#if CRSF_RX_MODULE
-    TransportLayer* _dev = nullptr;
-#endif
     
-    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
-    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
+    // since we get a copy of the serial data use this flag to know when to ignore it
+    static volatile bool CRSFframeActive;
 
     static volatile inBuffer_U inBuffer;
-    static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
-    static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
-
-#if CRSF_TX_MODULE
+    // length of the CRSF packet as measured
+    static volatile uint8_t SerialInPacketLen;
+    // index where we are reading/writing
+    static volatile uint8_t SerialInPacketPtr;
 
     /// UART Handling ///
     static uint32_t GoodPktsCount;
@@ -124,10 +92,35 @@ private:
 
     bool ProcessPacket(volatile uint16_t* channels);
     void flushTxBuffers() override;
-#endif
+
 };
 
-extern CRSF crsf;
+extern CRSF_TXModule crsfTx;
+
+#endif
+
+#if CRSF_RX_MODULE        
+
+class CRSF_RXModule : public CRSFBase
+{
+public:
+    CRSF_RXModule() {}
+
+    void begin(TransportLayer* dev);
+
+    void ICACHE_RAM_ATTR sendRCFrameToFC();
+    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
+    void sendLinkStatisticsToFC();
+
+    /////////////////////////////////////////////////////////////
+private:
+    TransportLayer* _dev = nullptr;
+};
+
+extern CRSF_RXModule crsfRx;
+
+#endif
+
 
 // Serial settings:
 //  TODO: this needs to go away
@@ -136,5 +129,3 @@ extern uint32_t UARTcurrentBaud;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 #define UARTwdtInterval 1000
-
-#endif

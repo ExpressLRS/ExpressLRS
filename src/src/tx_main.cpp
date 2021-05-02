@@ -160,8 +160,8 @@ void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
     for (;;)
     {
       // checks and baud changing on error
-      if (!crsf.UARTwdt()) {
-        crsf.poll(ChannelData);
+      if (!crsfTx.UARTwdt()) {
+        crsfTx.poll(ChannelData);
       }
     }
 }
@@ -209,15 +209,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     {
         case ELRS_TELEMETRY_TYPE_LINK:
             // RSSI received is signed, proper polarity (negative value = -dBm)
-            crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-            crsf.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
-            crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-            crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
-            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
-            crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
-            crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            crsfTx.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
+            crsfTx.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
+            crsfTx.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
+            crsfTx.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
+            crsfTx.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
+            crsfTx.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
+            crsfTx.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+            crsfTx.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            crsfTx.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
             break;
 
@@ -282,7 +282,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   Serial.print(ModParams->interval);
   Serial.println("us");
  
-  crsf.setPacketInterval(ModParams->interval);
+  crsfTx.setPacketInterval(ModParams->interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 
@@ -324,7 +324,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint8_t maxLength;
   uint8_t packageIndex;
 #ifdef FEATURE_OPENTX_SYNC
-  crsf.onRadioPacketSent(); // tells the crsf that we want to send data now - this allows opentx packet syncing
+  crsfTx.onRadioPacketSent(); // tells the crsf that we want to send data now - this allows opentx packet syncing
 #endif
 
   /////// This Part Handles the Telemetry Response ///////
@@ -442,12 +442,12 @@ void sendLuaParams()
                          (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval),
                          (uint8_t)(POWERMGNT.currPower()),
                          (uint8_t)Regulatory_Domain_Index,
-                         (uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)crsfTx.BadPktsCountResult,
+                         (uint8_t)((crsfTx.GoodPktsCountResult & 0xFF00) >> 8),
+                         (uint8_t)(crsfTx.GoodPktsCountResult & 0xFF),
                          (uint8_t)LUA_VERSION};
 
-  crsf.sendLUAresponse(luaParams, 10);
+  crsfTx.sendLUAresponse(luaParams, 10);
 }
 
 void UARTdisconnected()
@@ -486,7 +486,7 @@ void UARTconnected()
   //inital state variables, maybe move elsewhere?
   for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
-    crsf.sendLUAresponse(luaCommitPacket, 7);
+    crsfTx.sendLUAresponse(luaCommitPacket, 7);
     delay(100);
     sendLuaParams();
     delay(100);
@@ -518,42 +518,42 @@ void HandleUpdateParameter()
     return;
   }
 
-  switch (crsf.ParameterUpdateData[0])
+  switch (crsfTx.ParameterUpdateData[0])
   {
   case 0: // special case for sending commit packet
     Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket, 7);
+    crsfTx.sendLUAresponse(luaCommitPacket, 7);
     break;
 
   case 1:
-    if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
+    if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsfTx.ParameterUpdateData[1])))
     {
       Serial.print("Request AirRate: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+      Serial.println(crsfTx.ParameterUpdateData[1]);
+      config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsfTx.ParameterUpdateData[1]));
     }
     break;
 
   case 2:
-    if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
+    if ((crsfTx.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsfTx.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       Serial.print("Request TLM interval: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+      Serial.println(crsfTx.ParameterUpdateData[1]);
+      config.SetTlm((expresslrs_tlm_ratio_e)crsfTx.ParameterUpdateData[1]);
     }
     break;
 
   case 3:
     Serial.print("Request Power: ");
-    Serial.println(crsf.ParameterUpdateData[1]);
-    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+    Serial.println(crsfTx.ParameterUpdateData[1]);
+    config.SetPower((PowerLevels_e)crsfTx.ParameterUpdateData[1]);
     break;
 
   case 4:
     break;
 
   case 0xFE:
-    if (crsf.ParameterUpdateData[1] == 1)
+    if (crsfTx.ParameterUpdateData[1] == 1)
     {
 #ifdef PLATFORM_ESP32
       webUpdateMode = true;
@@ -575,7 +575,7 @@ void HandleUpdateParameter()
     }
 
   case 0xFF:
-    if (crsf.ParameterUpdateData[1] == 1)
+    if (crsfTx.ParameterUpdateData[1] == 1)
     {
       Serial.println("Binding requested from LUA");
       EnterBindingMode();
@@ -675,9 +675,9 @@ void setup()
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 
-  crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-  crsf.disconnected = &UARTdisconnected;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  crsfTx.connected = &UARTconnected; // it will auto init when it detects UART connection
+  crsfTx.disconnected = &UARTdisconnected;
+  crsfTx.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
 
   Serial.println("ExpressLRS TX Module Booted...");
@@ -735,9 +735,9 @@ void setup()
 
   //CRSF_Port.flush();
   CRSF_Port.begin(&TX_SERIAL, true);
-  crsf.begin(&CRSF_Port);
+  crsfTx.begin(&CRSF_Port);
 
-  // not sure if this should before or after "crsf.begin()"
+  // not sure if this should before or after "crsfTx.begin()"
   // it seems more logical here
   //
 #ifdef PLATFORM_ESP32
@@ -784,7 +784,7 @@ void loop()
   CheckConfigChangePending();
 
 #ifdef FEATURE_OPENTX_SYNC
-  // Serial.println(crsf.OpenTXsyncOffset);
+  // Serial.println(crsfTx.OpenTXsyncOffset);
 #endif
 
   if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
@@ -804,8 +804,8 @@ void loop()
 
   #ifdef PLATFORM_STM32
   // checks and baud changing on error
-  if (!crsf.UARTwdt()) {
-    crsf.poll(ChannelData);
+  if (!crsfTx.UARTwdt()) {
+    crsfTx.poll(ChannelData);
   }
   #endif // PLATFORM_STM32
 
@@ -829,14 +829,14 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
-    crsf.sendLinkStatisticsToTX();
+    crsfTx.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
 
   #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
   {
-      crsf.sendTelemetryToTX(CRSFinBuffer);
+      crsfTx.sendTelemetryToTX(CRSFinBuffer);
       TelemetryReceiver.Unlock();
   }
   #endif
@@ -855,13 +855,13 @@ void loop()
     if (mspTransferActive)
     {
       // unlock buffer for msp messages
-      crsf.UnlockMspMessage();
+      crsfTx.UnlockMspMessage();
       mspTransferActive = false;
     }
     // we are not sending so look for next msp package
     else
     {
-      uint8_t* currentMspData = crsf.GetMspMessage();
+      uint8_t* currentMspData = crsfTx.GetMspMessage();
       // if we have a new msp package start sending
       if (currentMspData != NULL)
       {
@@ -946,7 +946,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
-    crsf.AddMspMessage(packet);
+    crsfTx.AddMspMessage(packet);
   }
 }
 

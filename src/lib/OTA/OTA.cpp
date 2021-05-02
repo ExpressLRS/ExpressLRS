@@ -131,7 +131,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
  * Input: Buffer
  * Output: crsf->PackedRCdataOut
  */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSFBase *crsf)
 {
     // The analog channels
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
@@ -216,7 +216,7 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
 
 #if TARGET_RX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSFBase *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);

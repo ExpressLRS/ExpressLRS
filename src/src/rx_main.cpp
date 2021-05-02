@@ -204,21 +204,21 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     }
 
     int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+    crsfRx.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    crsfRx.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
     if (rssiDBM0 > 0) rssiDBM0 = 0;
     if (rssiDBM1 > 0) rssiDBM1 = 0;
 
     // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
-    crsf.LinkStatistics.active_antenna = antenna;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
-    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
-    //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
+    crsfRx.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
+    crsfRx.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
+    crsfRx.LinkStatistics.active_antenna = antenna;
+    crsfRx.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
+    crsfRx.LinkStatistics.uplink_Link_quality = uplinkLQ;
+    crsfRx.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    //Serial.println(crsfRx.LinkStatistics.uplink_RSSI_1);
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -294,10 +294,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
             // OpenTX RSSI as -dBm is fine and supports +dBm values as well
             // but the value in linkstatistics is "positivized" (inverted polarity)
-            Radio.TXdataBuffer[2] = -crsf.LinkStatistics.uplink_RSSI_1;
-            Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
-            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+            Radio.TXdataBuffer[2] = -crsfRx.LinkStatistics.uplink_RSSI_1;
+            Radio.TXdataBuffer[3] = -crsfRx.LinkStatistics.uplink_RSSI_2;
+            Radio.TXdataBuffer[4] = crsfRx.LinkStatistics.uplink_SNR;
+            Radio.TXdataBuffer[5] = crsfRx.LinkStatistics.uplink_Link_quality;
             Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
             break;
@@ -686,13 +686,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case RC_DATA_PACKET: //Standard RC Data Packet
 
       if (UnpackChannelData) {
-        UnpackChannelData(Radio.RXdataBuffer, &crsf);
+        UnpackChannelData(Radio.RXdataBuffer, &crsfRx);
 #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 #endif
         if (connectionState != disconnected) {
-          crsf.sendRCFrameToFC();
+          crsfRx.sendRCFrameToFC();
         }
       }
       break;
@@ -712,7 +712,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else if (MspReceiver.HasFinishedData())
         {
-            crsf.sendMSPFrameToFC(MspData);
+            crsfRx.sendMSPFrameToFC(MspData);
             MspReceiver.Unlock();
         }
         break;
@@ -1085,9 +1085,9 @@ static void cycleRfMode()
         Serial.println(ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
-        crsf.sendLinkStatisticsToFC();
+        crsfRx.sendLinkStatisticsToFC();
         delay(100);
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
         Radio.RXnb();
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
@@ -1157,7 +1157,7 @@ void setup()
     Radio.RXnb();
 
     CRSF_SERIAL.begin(&CRSF_TX_SERIAL);
-    crsf.begin(&CRSF_SERIAL);
+    crsfRx.begin(&CRSF_SERIAL);
     hwTimer.init();
     hwTimer.stop();
 }
@@ -1206,8 +1206,8 @@ void loop()
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
         Serial.println("Air rate change req via sync");
-        crsf.sendLinkStatisticsToFC();
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC();
+        crsfRx.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
     if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
@@ -1236,7 +1236,7 @@ void loop()
         if (connectionState != disconnected)
         {
             getRFlinkInfo();
-            crsf.sendLinkStatisticsToFC();
+            crsfRx.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = millis();
         }
     }
