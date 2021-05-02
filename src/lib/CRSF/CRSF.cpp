@@ -253,14 +253,16 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameType)
+void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
+    char val2[len2+1];
+    memcpy(val2,elrsInfo,(len2 + 1));
 
-    uint8_t LUArespLength = len + 2;
+    uint8_t LUArespLength = len + 2 + (len2+1);
     uint8_t outBuffer[LUArespLength + 5] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -273,6 +275,10 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameTy
     for (uint8_t i = 0; i < len; ++i)
     {
         outBuffer[5 + i] = val[i];
+    }
+    for (uint8_t i = 0; i < (len2+1); ++i)
+    {
+        outBuffer[5 + i + len] = val2[i];
     }
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
@@ -288,8 +294,8 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, crsf_frame_type_e frameTy
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-void CRSF::sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count){
-   
+void CRSF::sendCRSFdevice(uint8_t val[], uint8_t len, uint8_t field_count){
+
     if (!CRSF::CRSFstate)
     {
         return;
@@ -304,13 +310,13 @@ void CRSF::sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count){
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-
     for (uint8_t i = 0; i < len; ++i)
     {
         outBuffer[5 + i] = val[i];
     }
+    //outBuffer[5+len+1] - outBuffer[5+len+11] are "unknown"
     outBuffer[5+len+12] = field_count;
-    
+
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
@@ -325,21 +331,86 @@ void CRSF::sendLUADevice(uint8_t val[], uint8_t len, uint8_t field_count){
     portEXIT_CRITICAL(&FIFOmux);
 #endif 
 }
-void CRSF::sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHelper *field_name, uint8_t len_name,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t len_unit)
+void CRSF::sendCRSFparam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, uint8_t fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
-    
-    uint8_t fieldname[len_name + 1];
-    uint8_t fieldunit[len_unit + 1];
 
-    uint8_t LUArespLength = 2+ 4 + (len_name+1) + len_setup2 + (len_unit+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    uint8_t fieldname[namelength + 1];
+    uint8_t fieldunit[unitlength + 1];
+    uint8_t LUArespLength = 2+ 4 + (namelength+1) + len_setup2 + (unitlength+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    /**
+    if(LUArespLength > 50){
+        uint8_t fieldchunk_remainder;    
+        fieldchunk_remainder = LUArespLength % 50;
+        if(fieldchunk_remainder > 1){
+            fieldchunk = (LUArespLength/50);
+        } else {
+            fieldchunk = (LUArespLength/50) - 1;
+        }
+    } else {
+        fieldchunk = 0;
+    }
+    */
     uint8_t outBuffer[LUArespLength + 5] = {0};
-    
-    memcpy(fieldname,field_name,(len_name + 1));
-    memcpy(fieldunit,field_unit,(len_unit + 1));
+
+    memcpy(fieldname,field_name,(namelength + 1));
+    //if(!((fieldtype == CRSF_STRING) || (fieldtype == CRSF_FOLDER))){
+        memcpy(fieldunit,field_unit,(unitlength + 1));
+    //}
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;
+    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+
+    outBuffer[5] = fieldid;
+    outBuffer[6] = fieldchunk; //fieldchunk;
+    outBuffer[7] = fieldparent; //fieldparent;
+    outBuffer[8] = fieldtype;
+    for (uint8_t i = 0; i < (namelength+1); ++i)
+    {
+        outBuffer[(9 + i)] = fieldname[i];
+    }
+    for (uint8_t i = 0; i < len_setup2; ++i)
+    {
+        outBuffer[(9 + (namelength+1) + i)] = fieldsetup2[i];
+    }
+    for (uint8_t i = 0; i < (unitlength+1); ++i)
+    {
+        outBuffer[(9 + (namelength+1) + len_setup2 + i)] = fieldunit[i];
+    }
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+
+    outBuffer[LUArespLength + 3] = crc;
+
+#ifdef PLATFORM_ESP32
+    portENTER_CRITICAL(&FIFOmux);
+#endif
+    SerialOutFIFO.push(LUArespLength + 4); // length
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+#ifdef PLATFORM_ESP32
+    portEXIT_CRITICAL(&FIFOmux);
+#endif
+}
+void CRSF::sendCRSFcmdParam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_info, uint8_t infolength)
+{
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
+    uint8_t fieldname[namelength + 1];
+    uint8_t fieldinfo[infolength + 1];
+
+    uint8_t LUArespLength = 2+ 4 + (namelength+1) + len_setup2 + (infolength+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    uint8_t outBuffer[LUArespLength + 5] = {0};
+
+    memcpy(fieldname,field_name,(namelength + 1));
+    memcpy(fieldinfo,field_info,(infolength + 1));
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
@@ -347,31 +418,26 @@ void CRSF::sendLUAField(uint8_t fieldid, uint8_t fieldtype,const __FlashStringHe
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-    
+
     outBuffer[5] = fieldid;
-    outBuffer[6] = 0x00; //fieldchunk;
-    outBuffer[7] = 0x00; //fieldparent;
-    outBuffer[8] = fieldtype;
-    for (uint8_t i = 0; i < (len_name+1); ++i)
+    outBuffer[6] = fieldchunk; //fieldchunk;
+    outBuffer[7] = fieldparent; //fieldparent;
+    outBuffer[8] = CRSF_COMMAND;
+    for (uint8_t i = 0; i < (namelength+1); ++i)
     {
         outBuffer[(9 + i)] = fieldname[i];
     }
-    //outBuffer[len_name+9] = 0x02; //fieldvalue;
-    //outBuffer[len_name+10] = 0x00; //fieldmin;
-    //outBuffer[len_name+11] = 0x04; //fieldmax;
-    //outBuffer[len_name+12] = 0x01; //fielddefault;
     for (uint8_t i = 0; i < len_setup2; ++i)
     {
-        outBuffer[((len_name+1) +9+ i)] = fieldsetup2[i];
+        outBuffer[(9 + (namelength+1) + i)] = fieldsetup2[i];
     }
-    for (uint8_t i = 0; i < (len_unit+1); ++i)
+    for (uint8_t i = 0; i < (infolength+1); ++i)
     {
-        outBuffer[((len_name+1) + 9 + len_setup2 + i)] = fieldunit[i];
+        outBuffer[(9 + (namelength+1) + len_setup2 + i)] = fieldinfo[i];
     }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
     outBuffer[LUArespLength + 3] = crc;
-
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
