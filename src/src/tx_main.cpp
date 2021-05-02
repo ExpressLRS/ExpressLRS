@@ -161,7 +161,7 @@ void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
     {
       // checks and baud changing on error
       if (!crsfTx.UARTwdt()) {
-        crsfTx.poll(ChannelData);
+        crsfTx.poll(&channels);
       }
     }
 }
