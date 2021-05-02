@@ -693,7 +693,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 #endif
         if (connectionState != disconnected) {
-          crsfRx.sendRCFrameToFC();
+          crsfRx.sendRCFrameToFC(&channels);
         }
       }
       break;
@@ -1086,9 +1086,9 @@ static void cycleRfMode()
         Serial.println(ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
-        crsfRx.sendLinkStatisticsToFC();
+        crsfRx.sendLinkStatisticsToFC(&channels);
         delay(100);
-        crsfRx.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC(&channels); // need to send twice, not sure why, seems like a BF bug?
         Radio.RXnb();
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
@@ -1207,8 +1207,8 @@ void loop()
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
         Serial.println("Air rate change req via sync");
-        crsfRx.sendLinkStatisticsToFC();
-        crsfRx.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC(&channels);
+        crsfRx.sendLinkStatisticsToFC(&channels); // need to send twice, not sure why, seems like a BF bug?
     }
 
     if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
@@ -1237,7 +1237,7 @@ void loop()
         if (connectionState != disconnected)
         {
             getRFlinkInfo();
-            crsfRx.sendLinkStatisticsToFC();
+            crsfRx.sendLinkStatisticsToFC(&channels);
             SendLinkStatstoFCintervalLastSent = millis();
         }
     }
