@@ -2,11 +2,8 @@
 
 #include "targets.h"
 
-// #ifndef TARGET_NATIVE
-// #include "HardwareSerial.h"
-// #endif
-
 #include "transport.h"
+#include "channels.h"
 
 #define OpenTXsyncPacketInterval 200  // in ms
 
@@ -67,9 +64,9 @@ public:
   void onChannelDataIn();
 
   // Call this periodically
-  void poll(volatile uint16_t* channels);
+  void poll(Channels* chan);
 
   virtual void sendSyncPacketToTX() {}
   virtual void flushTxBuffers() {}
-  virtual void consumeInputByte(uint8_t in, volatile uint16_t* channels) {}
+  virtual void consumeInputByte(uint8_t in, Channels* chan) {}
 };

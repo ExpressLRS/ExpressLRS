@@ -3,6 +3,8 @@
 
 #include "CRSF.h"
 
+struct Channels;
+
 // expresslrs packet header types
 // 00 -> standard 4 channel data packet
 // 01 -> switch data packet
@@ -16,17 +18,13 @@
 // Define GenerateChannelData() function pointer
 #ifdef ENABLE_TELEMETRY
 typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
-                                        volatile uint16_t* channels,
-                                        volatile uint8_t* switches,
-                                        bool TelemetryStatus);
+                                        Channels* chan, bool TelemetryStatus);
 #else
-typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
-                                        volatile uint16_t* channels,
-                                        volatile uint8_t* switches);
+typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer, Channels* chan);
 #endif
 
 typedef void (*UnpackChannelDataFunc)(
-    volatile uint8_t* Buffer, CRSFBase* crsf);
+    volatile uint8_t* Buffer, Channels* chan);
 
 #if TARGET_TX or defined UNIT_TEST
 extern GenerateChannelDataFunc GenerateChannelData;
@@ -41,25 +39,22 @@ void OTAInitMethods();
 
 #if defined(UNIT_TEST)
 
+void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
+
 #ifdef ENABLE_TELEMETRY
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              volatile uint16_t* channels,
-                                              volatile uint8_t* switches,
-                                              bool TelemetryStatus);
+                                              Channels* chan, bool TelemetryStatus);
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels,
-    volatile uint8_t* switches, bool TelemetryStatus);
+    volatile uint8_t* Buffer, Channels* chan, bool TelemetryStatus);
 #else
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              volatile uint16_t* channels,
-                                              volatile uint8_t* switches);
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels,
-    volatile uint8_t* switches);
+                                              Channels* chan);
+void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer,
+                                                      Channels* chan);
 #endif
 
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSFBase *crsf);
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSFBase *crsf);
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels *chan);
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan);
 
 #endif
 

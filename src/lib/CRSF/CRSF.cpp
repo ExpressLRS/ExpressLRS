@@ -11,9 +11,6 @@ void ESP32uartTask(void *pvParameters);
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
-volatile crsf_channels_s CRSFBase::PackedRCdataOut;
-volatile crsfPayloadLinkstatistics_s CRSFBase::LinkStatistics;
-
 #if CRSF_TX_MODULE
 
 CRSF_TXModule crsfTx;
@@ -57,7 +54,7 @@ void CRSF_TXModule::begin(TransportLayer* dev)
   TXModule::begin(dev);
 }
 
-void ICACHE_RAM_ATTR CRSF_TXModule::sendLinkStatisticsToTX()
+void ICACHE_RAM_ATTR CRSF_TXModule::sendLinkStatisticsToTX(Channels* chan)
 {
     if (!CRSF_TXModule::CRSFstate)
     {
@@ -70,7 +67,7 @@ void ICACHE_RAM_ATTR CRSF_TXModule::sendLinkStatisticsToTX()
     outBuffer[1] = LinkStatisticsFrameLength + 2;
     outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(outBuffer + 3, (byte *)&chan->LinkStatistics, LinkStatisticsFrameLength);
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
@@ -171,7 +168,7 @@ void ICACHE_RAM_ATTR CRSF_TXModule::sendSyncPacketToTX() // in values in us.
 
 
 
-bool ICACHE_RAM_ATTR CRSF_TXModule::ProcessPacket(volatile uint16_t* channels)
+bool ICACHE_RAM_ATTR CRSF_TXModule::ProcessPacket(Channels* chan)
 {
     if (CRSFstate == false)
     {
@@ -205,7 +202,7 @@ bool ICACHE_RAM_ATTR CRSF_TXModule::ProcessPacket(volatile uint16_t* channels)
     {
         onChannelDataIn();
         GoodPktsCount++;
-        GetChannelDataIn(channels);
+        GetChannelDataIn(chan);
         return true;
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
@@ -333,7 +330,7 @@ void ICACHE_RAM_ATTR CRSF_TXModule::AddMspMessage(const uint8_t length, volatile
     }
 }
 
-void ICACHE_RAM_ATTR CRSF_TXModule::consumeInputByte(uint8_t in, volatile uint16_t* channels)
+void ICACHE_RAM_ATTR CRSF_TXModule::consumeInputByte(uint8_t in, Channels* chan)
 {
   volatile uint8_t *SerialInBuffer = CRSF_TXModule::inBuffer.asUint8_t;
 
@@ -383,7 +380,7 @@ void ICACHE_RAM_ATTR CRSF_TXModule::consumeInputByte(uint8_t in, volatile uint16
           crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
       if (CalculatedCRC == in) {
-        if (ProcessPacket(channels)) {
+        if (ProcessPacket(chan)) {
           // delayMicroseconds(50);
           send();
         }
@@ -461,32 +458,31 @@ bool CRSF_TXModule::UARTwdt()
     return retval;
 }
 
-void ICACHE_RAM_ATTR CRSF_TXModule::GetChannelDataIn(
-    volatile uint16_t *channels)  // data is packed as 11 bits per channel
+void ICACHE_RAM_ATTR CRSF_TXModule::GetChannelDataIn(Channels *chan)
 {
-  if (!channels) return;
+  if (!chan) return;
 
   const volatile crsf_channels_t *rcChannels =
       &CRSF_TXModule::inBuffer.asRCPacket_t.channels;
 
-  channels[0] = (rcChannels->ch0);
-  channels[1] = (rcChannels->ch1);
-  channels[2] = (rcChannels->ch2);
-  channels[3] = (rcChannels->ch3);
-  channels[4] = (rcChannels->ch4);
-  channels[5] = (rcChannels->ch5);
-  channels[6] = (rcChannels->ch6);
-  channels[7] = (rcChannels->ch7);
-  channels[8] = (rcChannels->ch8);
-  channels[9] = (rcChannels->ch9);
-  channels[10] = (rcChannels->ch10);
-  channels[11] = (rcChannels->ch11);
-  channels[12] = (rcChannels->ch12);
-  channels[13] = (rcChannels->ch13);
-  channels[14] = (rcChannels->ch14);
-  channels[15] = (rcChannels->ch15);
+  chan->ChannelData[0] = (rcChannels->ch0);
+  chan->ChannelData[1] = (rcChannels->ch1);
+  chan->ChannelData[2] = (rcChannels->ch2);
+  chan->ChannelData[3] = (rcChannels->ch3);
+  chan->ChannelData[4] = (rcChannels->ch4);
+  chan->ChannelData[5] = (rcChannels->ch5);
+  chan->ChannelData[6] = (rcChannels->ch6);
+  chan->ChannelData[7] = (rcChannels->ch7);
+  chan->ChannelData[8] = (rcChannels->ch8);
+  chan->ChannelData[9] = (rcChannels->ch9);
+  chan->ChannelData[10] = (rcChannels->ch10);
+  chan->ChannelData[11] = (rcChannels->ch11);
+  chan->ChannelData[12] = (rcChannels->ch12);
+  chan->ChannelData[13] = (rcChannels->ch13);
+  chan->ChannelData[14] = (rcChannels->ch14);
+  chan->ChannelData[15] = (rcChannels->ch15);
 
-  updateSwitchValues(channels);
+  chan->updateSwitchValues();
 }
 
 #endif // CRSF_TX_MODULE
@@ -509,7 +505,7 @@ void ICACHE_RAM_ATTR CRSF_RXModule::sendLinkStatisticsToFC()
     outBuffer[1] = LinkStatisticsFrameLength + 2;
     outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
 
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    memcpy(outBuffer + 3, (byte *)&channels.LinkStatistics, LinkStatisticsFrameLength);
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
@@ -529,7 +525,7 @@ void ICACHE_RAM_ATTR CRSF_RXModule::sendRCFrameToFC()
     outBuffer[1] = RCframeLength + 2;
     outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
+    memcpy(outBuffer + 3, (byte *)&channels.PackedRCdataOut, RCframeLength);
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], RCframeLength + 1);
 

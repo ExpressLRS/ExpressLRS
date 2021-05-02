@@ -7,18 +7,18 @@
  */
 
 #include "OTA.h"
+#include "channels.h"
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
 #if TARGET_TX or defined UNIT_TEST
-#include "channels.h"
 
 static uint8_t sentSwitches[N_SWITCHES] = {0};
 
 /**
  * Record the value of a switch that was sent to the rx
  */
-static void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value)
+void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value)
 {
     sentSwitches[index] = value;
 }
@@ -35,24 +35,24 @@ uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
     int i;
     for (i = firstSwitch; i < N_SWITCHES; i++)
     {
-        if (CurrentSwitches[i] != SentSwitches[i]) //
+        if (channels.CurrentSwitches[i] != sentSwitches[i]) //
             break;
     }
     // if we didn't find a changed switch, we get here with i==N_SWITCHES
     if (i == N_SWITCHES)
     {
-        i = NextSwitchIndex;
+        i = channels.NextSwitchIndex;
     }
 
     // keep track of which switch to send next if there are no changed switches
     // during the next call.
-    NextSwitchIndex = (i + 1) % 8;
+    channels.NextSwitchIndex = (i + 1) % 8;
 
 #ifdef HYBRID_SWITCHES_8
     // for hydrid switches 0 is sent on every packet, skip it in round-robin
-    if (NextSwitchIndex == 0)
+    if (channels.NextSwitchIndex == 0)
     {
-        NextSwitchIndex = 1;
+        channels.NextSwitchIndex = 1;
     }
 #endif
 
@@ -75,14 +75,14 @@ uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
  */
 #ifdef ENABLE_TELEMETRY
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels,
-    volatile uint8_t* switches, bool TelemetryStatus)
+    volatile uint8_t* Buffer, Channels* chan, bool TelemetryStatus)
 #else
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, volatile uint16_t* channels,
-    volatile uint8_t* switches)
+    volatile uint8_t* Buffer, Channels* chan)
 #endif
 {
+  volatile uint16_t* channels = chan->ChannelData;
+
   Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((channels[0]) >> 3);
   Buffer[2] = ((channels[1]) >> 3);
@@ -101,7 +101,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = switches[nextSwitchIndex]; // switches globals as well
+  uint8_t value = chan->CurrentSwitches[nextSwitchIndex];
 
   Buffer[6] =
 #ifdef ENABLE_TELEMETRY
@@ -109,7 +109,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
 #endif
       // switch 0 is one bit sent on every packet - intended for low latency
       // arm/disarm
-      switches[0] << 6 |
+      chan->CurrentSwitches[0] << 6 |
       // tell the receiver which switch index this is
       bitclearedSwitchIndex << 3 |
       // include the switch value
@@ -131,16 +131,16 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
  * Input: Buffer
  * Output: crsf->PackedRCdataOut
  */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSFBase *crsf)
+void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels* chan)
 {
     // The analog channels
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+    chan->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
+    chan->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
+    chan->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
+    chan->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
 
     // The low latency switch
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b01000000) >> 6);
+    chan->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b01000000) >> 6);
 
     // The round-robin switch, switchIndex is actually index-1 
     // to leave the low bit open for switch 7 (sent as 0b11x)
@@ -150,26 +150,26 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
     switch (switchIndex) {
         case 0:  
-            crsf->PackedRCdataOut.ch5 = switchValue;
+            chan->PackedRCdataOut.ch5 = switchValue;
             break;
         case 1:
-            crsf->PackedRCdataOut.ch6 = switchValue;
+            chan->PackedRCdataOut.ch6 = switchValue;
             break;
         case 2:
-            crsf->PackedRCdataOut.ch7 = switchValue;
+            chan->PackedRCdataOut.ch7 = switchValue;
             break;
         case 3:
-            crsf->PackedRCdataOut.ch8 = switchValue;
+            chan->PackedRCdataOut.ch8 = switchValue;
             break;
         case 4:
-            crsf->PackedRCdataOut.ch9 = switchValue;
+            chan->PackedRCdataOut.ch9 = switchValue;
             break;
         case 5:
-            crsf->PackedRCdataOut.ch10 = switchValue;
+            chan->PackedRCdataOut.ch10 = switchValue;
             break;
         case 6:   // Because AUX1 (index 0) is the low latency switch, the low bit
         case 7:   // of the switchIndex can be used as data, and arrives as index "6"
-            crsf->PackedRCdataOut.ch11 = N_to_CRSF(Buffer[6] & 0b1111, 15);
+            chan->PackedRCdataOut.ch11 = N_to_CRSF(Buffer[6] & 0b1111, 15);
             break;
     }
 }
@@ -183,17 +183,14 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 
 #ifdef ENABLE_TELEMETRY
 void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              volatile uint16_t* channels,
-                                              volatile uint8_t* switches,
-                                              bool TelemetryStatus)
+                                              Channels* chan, bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              volatile uint16_t* channels,
-                                              volatile uint8_t* switches)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, Channels* chan)
 #endif
 {
-  if (!channels) return;
-  
+  if (!chan) return;
+  volatile uint16_t* channels = chan->ChannelData;
+
   Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((channels[0]) >> 3);
   Buffer[2] = ((channels[1]) >> 3);
@@ -216,20 +213,20 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
 
 #if TARGET_RX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSFBase *crsf)
+void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan)
 {
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b10000000);
-    crsf->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b01000000);
-    crsf->PackedRCdataOut.ch6 = BIT_to_CRSF(Buffer[6] & 0b00100000);
-    crsf->PackedRCdataOut.ch7 = BIT_to_CRSF(Buffer[6] & 0b00010000);
-    crsf->PackedRCdataOut.ch8 = BIT_to_CRSF(Buffer[6] & 0b00001000);
-    crsf->PackedRCdataOut.ch9 = BIT_to_CRSF(Buffer[6] & 0b00000100);
-    crsf->PackedRCdataOut.ch10 = BIT_to_CRSF(Buffer[6] & 0b00000010);
-    crsf->PackedRCdataOut.ch11 = BIT_to_CRSF(Buffer[6] & 0b00000001);
+    chan->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
+    chan->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
+    chan->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
+    chan->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+    chan->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b10000000);
+    chan->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b01000000);
+    chan->PackedRCdataOut.ch6 = BIT_to_CRSF(Buffer[6] & 0b00100000);
+    chan->PackedRCdataOut.ch7 = BIT_to_CRSF(Buffer[6] & 0b00010000);
+    chan->PackedRCdataOut.ch8 = BIT_to_CRSF(Buffer[6] & 0b00001000);
+    chan->PackedRCdataOut.ch9 = BIT_to_CRSF(Buffer[6] & 0b00000100);
+    chan->PackedRCdataOut.ch10 = BIT_to_CRSF(Buffer[6] & 0b00000010);
+    chan->PackedRCdataOut.ch11 = BIT_to_CRSF(Buffer[6] & 0b00000001);
 }
 
 #endif

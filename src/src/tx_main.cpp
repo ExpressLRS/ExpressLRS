@@ -209,15 +209,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     {
         case ELRS_TELEMETRY_TYPE_LINK:
             // RSSI received is signed, proper polarity (negative value = -dBm)
-            crsfTx.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-            crsfTx.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
-            crsfTx.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-            crsfTx.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            crsfTx.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
-            crsfTx.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
-            crsfTx.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsfTx.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
-            crsfTx.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            channels.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
+            channels.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
+            channels.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
+            channels.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
+            channels.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
+            channels.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
+            channels.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+            channels.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            channels.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
             break;
 
@@ -397,9 +397,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       BindingSendCount++;
     } else if (GenerateChannelData) {
 #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, ChannelData, CurrentSwitches, TelemetryReceiver.GetCurrentConfirm());
+      GenerateChannelData(Radio.TXdataBuffer, &channels,
+                          TelemetryReceiver.GetCurrentConfirm());
 #else
-      GenerateChannelData(Radio.TXdataBuffer, ChannelData, CurrentSwitches);
+      GenerateChannelData(Radio.TXdataBuffer, &channels);
 #endif
     }
   }
@@ -805,7 +806,7 @@ void loop()
   #ifdef PLATFORM_STM32
   // checks and baud changing on error
   if (!crsfTx.UARTwdt()) {
-    crsfTx.poll(ChannelData);
+    crsfTx.poll(&channels);
   }
   #endif // PLATFORM_STM32
 
@@ -829,7 +830,8 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
-    crsfTx.sendLinkStatisticsToTX();
+
+    crsfTx.sendLinkStatisticsToTX(&channels);
     TLMpacketReported = now;
   }
 

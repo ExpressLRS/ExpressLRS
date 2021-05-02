@@ -21,19 +21,9 @@
 #include "driver/gpio.h"
 #endif
 
-class CRSFBase
-{
-public:
-    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
-
-    //static volatile crsf_sensor_battery_s TLMbattSensor;
-};
-
 #if CRSF_TX_MODULE
 
-class CRSF_TXModule
-    : public TXModule, public CRSFBase
+class CRSF_TXModule : public TXModule
 {
 
 public:
@@ -52,14 +42,14 @@ public:
 
     void begin(TransportLayer* dev) override; //setup timers etc
 
-    void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    void ICACHE_RAM_ATTR sendLinkStatisticsToTX(Channels* chan);
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
     void ICACHE_RAM_ATTR sendSyncPacketToTX() override;
 
     void sendLUAresponse(uint8_t val[], uint8_t len);
 
-    static void ICACHE_RAM_ATTR GetChannelDataIn(volatile uint16_t* channels);
-    void consumeInputByte(uint8_t in, volatile uint16_t* channels) override;
+    static void ICACHE_RAM_ATTR GetChannelDataIn(Channels* chan);
+    void consumeInputByte(uint8_t in, Channels* chan) override;
 
     bool UARTwdt();
 
@@ -90,7 +80,7 @@ private:
     static volatile uint8_t MspRequestsInTransit;
     static uint32_t LastMspRequestSent;
 
-    bool ProcessPacket(volatile uint16_t* channels);
+    bool ProcessPacket(Channels* chan);
     void flushTxBuffers() override;
 
 };
@@ -101,7 +91,7 @@ extern CRSF_TXModule crsfTx;
 
 #if CRSF_RX_MODULE        
 
-class CRSF_RXModule : public CRSFBase
+class CRSF_RXModule
 {
 public:
     CRSF_RXModule() {}

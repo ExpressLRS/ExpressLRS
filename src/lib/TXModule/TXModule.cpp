@@ -70,10 +70,10 @@ void ICACHE_RAM_ATTR TXModule::send()
     flushTxBuffers();
 }
 
-void ICACHE_RAM_ATTR TXModule::poll(volatile uint16_t* channels)
+void ICACHE_RAM_ATTR TXModule::poll(Channels* chan)
 {
   while (_dev && _dev->available()) {
     char inChar = _dev->read();
-    consumeInputByte(inChar, channels);
+    consumeInputByte(inChar, chan);
   }
 }
