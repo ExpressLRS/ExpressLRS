@@ -24,10 +24,12 @@ local wifiupdatemode = false;
 local SX127x_RATES = {
     list = {'25Hz(-123dbm)', '50Hz(-120dbm)', '100Hz(-117dbm)', '200Hz(-112dbm)'},
     values = {0x06, 0x05, 0x04, 0x02},
+    rates = { 25, 50, 100, 200 },
 }
 local SX128x_RATES = {
     list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
     values = {0x06, 0x05, 0x03, 0x01, 0x00},
+    rates = { 25, 50, 150, 250, 500 },
 }
 local tx_lua_version = {
     selected = 1,
@@ -42,6 +44,7 @@ local AirRate = {
     selected = 99,
     list = SX127x_RATES.list,
     values = SX127x_RATES.values,
+    rates = SX127x_RATES.rates,
     max_allowed = #SX127x_RATES.values,
 }
 
@@ -52,6 +55,7 @@ local TLMinterval = {
     selected = 99,
     list = {'Off', '1:128', '1:64', '1:32', '1:16', '1:8', '1:4', '1:2'},
     values = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    rates = { 1, 128, 64, 32, 16, 8, 4, 2 },
     max_allowed = 8,
 }
 
@@ -81,7 +85,7 @@ local function binding(item, event)
     else
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0xFF, 0x01})
     end
-    
+
     playTone(2000, 50, 0)
     item.exec = false
     return 0
@@ -221,12 +225,12 @@ local function refreshLCD()
 
     local yOffset = radio_data.topOffset;
     local lOffset = radio_data.leftOffset;
-    
+
     lcd.clear()
     if wifiupdatemode == true then --make this less hacky later
         lcd.drawText(lOffset, yOffset, "Goto http://10.0.0.1   ", INVERS)
     -- elseif bindmode == true then
-    else	
+    else
         lcd.drawText(lOffset, yOffset, 'ExpressLRS ' .. commitSha .. '  ' .. tostring(UartBadPkts) .. ':' .. tostring(UartGoodPkts), INVERS)
     end
 
@@ -246,6 +250,10 @@ local function refreshLCD()
                 if 0 < item.selected and item.selected <= #item.list and gotFirstResp then
                 --if 0 < item.selected and item.selected <= #item.list and item.selected <= item.max_allowed then
                     value = item.list[item.selected]
+                    -- Apply the view function to the value if present
+                    if item.view ~= nil then
+                        value = item.view(item, value)
+                    end
                 end
                 lcd.drawText(lOffset, item_y, item.name, radio_data.textSize)
                 lcd.drawText(radio_data.xOffset, item_y, value, getFlags(idx) + radio_data.textSize)
@@ -303,60 +311,84 @@ period.
 ]]--
 
 function GetIndexOf(t,val)
-    for k,v in ipairs(t) do 
-        if v == val then 
-            return k 
+    for k,v in ipairs(t) do
+        if v == val then
+            return k
         end
     end
 end
 
+local function viewTlmInterval(item, value)
+    -- Calculate the burst telemetry rate the same way it is defined in rx_main
+    local TELEM_MIN_LINK_INTERVAL = 512 -- defined in rx_main, ms per link packet
+    local hz = AirRate.rates[AirRate.selected]
+    local ratiodiv = TLMinterval.rates[TLMinterval.selected]
+    local burst = math.floor(math.floor(TELEM_MIN_LINK_INTERVAL * hz / ratiodiv) / 1000)
+    -- Reserve one slot for LINK telemetry
+    burst = (burst > 1) and (burst - 1) or 1
+    -- Calculate bandwidth using packets per second and burst
+    local telemPPS = hz / ratiodiv
+    local bandwidth = math.floor(5 * 8 * telemPPS * burst / (burst + 1) + 0.5)
+
+    if ratiodiv == 1 then
+        return value
+    else
+        return string.format("%s (%dbps)", value, bandwidth)
+    end
+end
+
+local function loadViewFunctions()
+    TLMinterval.view = viewTlmInterval
+end
+
 local function processResp()
     local command, data = crossfireTelemetryPop()
-    if (data == nil) then
-        return
-    else
-        if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
-        
-            if(data[3] == 0xFF) and (#data == 12 or force_use_lua == true) then
-                bindmode = bit32.btest(0x01, data[4]) -- bind mode active 
-                wifiupdatemode = bit32.btest(0x02, data[4]) 
-                if StopUpdate == false then 
+    if (data == nil) then return end
+
+    if (command == 0x2D) and (data[1] == 0xEA) and (data[2] == 0xEE) then
+        -- Type 0xff - "sendLuaParams"
+        if( data[3] == 0xFF) then
+            gotFirstResp = true
+
+            if (#data == 12 or force_use_lua == true) then
+                bindmode = bit32.btest(0x01, data[4]) -- bind mode active
+                wifiupdatemode = bit32.btest(0x02, data[4])
+                if StopUpdate == false then
                     TLMinterval.selected = GetIndexOf(TLMinterval.values,data[6])
                     MaxPower.selected = GetIndexOf(MaxPower.values,data[7])
                     tx_lua_version.selected = GetIndexOf(tx_lua_version.values,data[12])
                     if data[8] == 6 then
                         -- ISM 2400 band (SX128x)
                         AirRate.list = SX128x_RATES.list
+                        AirRate.rates = SX128x_RATES.rates
                         AirRate.values = SX128x_RATES.values
                         AirRate.max_allowed = #SX128x_RATES.values
                     else
                         -- 433/868/915 (SX127x)
                         AirRate.list = SX127x_RATES.list
+                        AirRate.rates = SX127x_RATES.rates
                         AirRate.values = SX127x_RATES.values
                         AirRate.max_allowed = #SX127x_RATES.values
                     end
                     RFfreq.selected = GetIndexOf(RFfreq.values,data[8])
                     AirRate.selected =  GetIndexOf(AirRate.values, data[5])
                 end
-                
-                UartBadPkts = data[9]
-                UartGoodPkts = data[10] * 256 + data[11] 
 
-            elseif(data[3] == 0xFE) and #data == 9 then -- First half of commit sha
-                commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. shaLUT[data[7]+1] .. shaLUT[data[8]+1] .. shaLUT[data[9]+1]
-            end
-            
-            if gotFirstResp == false then -- detect when first contact is made with TX module
-                gotFirstResp = true
-            end
-            if needResp == true then
-                needResp = false
-            end
+                UartBadPkts = data[9]
+                UartGoodPkts = data[10] * 256 + data[11]
+            end -- if correct amount of data for version
+
+        -- Type 0xfe - "luaCommitPacket"
+        elseif(data[3] == 0xFE) and #data == 9 then
+            commitSha = shaLUT[data[4]+1] .. shaLUT[data[5]+1] .. shaLUT[data[6]+1] .. shaLUT[data[7]+1] .. shaLUT[data[8]+1] .. shaLUT[data[9]+1]
         end
+
+        needResp = false
     end
 end
 
 local function init_func()
+    loadViewFunctions()
 end
 
 local function bg_func(event)
@@ -380,12 +412,12 @@ local function run_func(event)
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
         NewReqTime = getTime()
     end
-    
+
     if needResp == true and (getTime() > (NewReqTime + ReqWaitTime)) then
         crossfireTelemetryPush(0x2D, {0xEE, 0xEA, 0x00, 0x00}) -- ping until we get a resp
         NewReqTime = getTime()
     end
-    
+
     processResp() -- check if we have data from the module
 
     local type = menu.selected
@@ -458,4 +490,4 @@ local function run_func(event)
 end
 
 --return {run = run_func, background = bg_func, init = init_func}
-return {run = run_func}
+return {run = run_func, init = init_func}

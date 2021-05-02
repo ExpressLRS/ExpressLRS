@@ -883,6 +883,7 @@ static void setupSerial()
 static void setupConfigAndPocCheck()
 {
     eeprom.Begin();
+    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
 #ifndef MY_UID
