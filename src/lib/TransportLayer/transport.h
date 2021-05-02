@@ -37,9 +37,9 @@ public:
     
     // Stream methods
     int available() override { return _dev ? _dev->available() : 0; }
-    int read() { return _dev ? _dev->read() : 0; }
-    int peek() { return _dev ? _dev->peek() : 0; }
-    void flush() { flushOutput(); }
+    int read() override { return _dev ? _dev->read() : 0; }
+    int peek() override { return _dev ? _dev->peek() : 0; }
+    void flush() override { flushOutput(); }
 
     // Print methods
     size_t write(uint8_t c) override
@@ -47,7 +47,7 @@ public:
         return _dev ? _dev->write(c) : 0;
     }
 
-    size_t write(uint8_t *c, int l)
+    size_t write(uint8_t *c, int l) override
     {
         return _dev ? _dev->write(c,l) : 0;
     }

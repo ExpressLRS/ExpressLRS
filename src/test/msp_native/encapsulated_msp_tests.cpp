@@ -8,6 +8,7 @@
 // Mock out the serial port using a string stream
 std::string buf;
 StringStream ss(buf);
+TransportLayer tl;
 
 // Create a CRSF object to test,
 // using the StringStream as a mock UART
@@ -20,7 +21,8 @@ void test_encapsulated_msp_send(void)
     // THEN the mspPacket_t will be transcoded into an embedded crsf msp packet
     // AND the transcoded packet will be sent to the Stream object associated with the CRSF class
 
-    crsf.begin(&ss);
+    tl.begin(&ss);
+    crsf.begin(&tl);
     
     // Make sure no msp messages are in the fifo
     crsf.ResetMspQueue();
@@ -69,7 +71,8 @@ void test_encapsulated_msp_send_too_long(void)
     // THEN the mspPacket_t will NOT be transcoded into an embedded crsf msp packet
     // AND nothing will be sent to the stream
 
-    crsf.begin(&ss);
+    tl.begin(&ss);
+    crsf.begin(&tl);
 
     // Make sure no msp messages are in the fifo
     crsf.ResetMspQueue();

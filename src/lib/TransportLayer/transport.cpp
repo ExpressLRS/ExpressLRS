@@ -27,7 +27,8 @@ void TransportLayer::end()
 
 #define timeout 1000
   while (outFIFO.peek() > 0) {
-    poll(nullptr);
+    flushInput();
+    flushOutput();
     if (millis() - startTime > timeout) {
       break;
     }
