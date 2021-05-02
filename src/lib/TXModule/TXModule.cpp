@@ -1,10 +1,12 @@
 #include "TXModule.h"
 #include "LowPassFilter.h"
 
+#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
 static LPF LPF_OPENTX_SYNC_MARGIN(3);
 static LPF LPF_OPENTX_SYNC_OFFSET(3);
+#endif
 
-void TXModule::begin(HardwareSerial* dev)
+void TXModule::begin(TransportLayer* dev)
 {
   _dev = dev;
 }

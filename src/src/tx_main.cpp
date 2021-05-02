@@ -41,9 +41,9 @@ SX1280Driver Radio;
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
-HardwareSerial CRSF_Port = SerialPort;
+HardwareSerial TX_SERIAL = SerialPort;
 #elif CRSF_TX_MODULE_STM32
-HardwareSerial CRSF_Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+HardwareSerial TX_SERIAL(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
 #include "stm32f3xx_hal.h"
 #include "stm32f3xx_hal_gpio.h"
@@ -52,6 +52,8 @@ HardwareSerial CRSF_Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #include "stm32f1xx_hal_gpio.h"
 #endif
 #endif
+
+TransportLayer CRSF_Port;
 
 #if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
 uint8_t LEDfadeDiv;
@@ -146,9 +148,9 @@ TaskHandle_t xESP32uartTask = NULL;
 void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
 {
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
-    CRSF_Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
-                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
-                     false, 500);
+    TX_SERIAL.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
+                    GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
+                    false, 500);
     crsf.duplex_set_RX();
     vTaskDelay(500);
     crsf.flush_port_input();
@@ -655,7 +657,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-  TxInitSerial(CRSF_Port, CRSF_OPENTX_FAST_BAUDRATE);
+  TxInitSerial(TX_SERIAL, CRSF_OPENTX_FAST_BAUDRATE);
 
   // backpack / debug serial speed
   Serial.begin(460800);
@@ -730,7 +732,8 @@ void setup()
   Serial.print(UARTcurrentBaud);
   Serial.println("bps");
 
-  CRSF_Port.flush();  
+  //CRSF_Port.flush();
+  CRSF_Port.begin(&TX_SERIAL, true);
   crsf.begin(&CRSF_Port);
 
   // not sure if this should before or after "crsf.begin()"

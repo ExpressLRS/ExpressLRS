@@ -54,12 +54,11 @@ public:
     static uint32_t BadPktsCountResult; // need to latch the results
 
 #if CRSF_TX_MODULE        
-    void begin(HardwareSerial* dev) override; //setup timers etc
+    void begin(TransportLayer* dev) override; //setup timers etc
 #else
-    void begin(HardwareSerial* dev);
+    void begin(TransportLayer* dev);
 #endif
 
-    void end(); //stop timers etc
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
@@ -88,15 +87,9 @@ public:
 #if CRSF_TX_MODULE
     void consumeInputByte(uint8_t in, volatile uint16_t* channels) override;
 #endif
-    bool RXhandleUARTout();
-
-    void flush_port_input(void);
 
 #if CRSF_TX_MODULE
     bool UARTwdt();
-
-    static void duplex_set_RX();
-    static void duplex_set_TX();
 
     static uint8_t* GetMspMessage();
     static void UnlockMspMessage();
@@ -107,7 +100,7 @@ public:
 
 private:
 #if CRSF_RX_MODULE
-    HardwareSerial* _dev = nullptr;
+    TransportLayer* _dev = nullptr;
 #endif
     
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured

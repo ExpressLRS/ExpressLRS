@@ -1,9 +1,12 @@
 #pragma once
 
 #include "targets.h"
-#ifndef TARGET_NATIVE
-#include "HardwareSerial.h"
-#endif
+
+// #ifndef TARGET_NATIVE
+// #include "HardwareSerial.h"
+// #endif
+
+#include "transport.h"
 
 #define OpenTXsyncPacketInterval 200  // in ms
 
@@ -30,7 +33,7 @@ class TXModule
 {
 protected:
   // Device throught which the TXModule is connected to a handset
-  HardwareSerial* _dev;
+  TransportLayer* _dev;
 
   // Packet frequency / sync
   uint32_t packetInterval = 5000;  // default to 200hz as per 'normal'
@@ -52,7 +55,7 @@ public:
   TXModule() {}
   virtual ~TXModule() {}
 
-  virtual void begin(HardwareSerial* dev);
+  virtual void begin(TransportLayer* dev);
 
   // Synchronisation with the handset (if supported)
   void setPacketInterval(uint32_t interval);

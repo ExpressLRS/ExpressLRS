@@ -14,13 +14,8 @@ CRSF         crsf;
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
-FIFO SerialOutFIFO;
 FIFO MspWriteFIFO;
 
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-SemaphoreHandle_t mutexOutFIFO = NULL;
-#endif
 
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
@@ -74,7 +69,7 @@ uint32_t CRSF::LastMspRequestSent = 0;
 #endif // CRSF_TX_MODULE
 
 
-void CRSF::begin(HardwareSerial* dev)
+void CRSF::begin(TransportLayer* dev)
 {
 #if CRSF_TX_MODULE
   TXModule::begin(dev);
@@ -83,42 +78,7 @@ void CRSF::begin(HardwareSerial* dev)
 #endif
 
   Serial.println("About to start CRSF task...");
-
-#if defined(PLATFORM_ESP32) and defined(CRSF_TX_MODULE)
-  mutexOutFIFO = xSemaphoreCreateMutex();
-#endif
-  //The master module requires that the serial communication is bidirectional
-  //The Reciever uses seperate rx and tx pins
-
-#if CRSF_TX_MODULE
-  duplex_set_RX();
-#endif
 }
-
-void CRSF::end()
-{
-#if CRSF_TX_MODULE
-    uint32_t startTime = millis();
-    #define timeout 2000
-    while (SerialOutFIFO.peek() > 0)
-    {
-        poll(nullptr);
-        if (millis() - startTime > 1000)
-        {
-            break;
-        }
-    }
-#endif // CRSF_TX_MODULE
-}
-
-void CRSF::flush_port_input(void)
-{
-  // Make sure there is no garbage on the UART at the start
-  while (_dev && _dev->available()) {
-    _dev->read();
-  }
-}
-
 
 #if CRSF_TX_MODULE
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
@@ -140,16 +100,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
 
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
+    if (_dev) _dev->sendAsync(outBuffer, LinkStatisticsFrameLength + 4);
 }
 
 void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
@@ -181,16 +132,7 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
     outBuffer[LUArespLength + 3] = crc;
 
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-
-    SerialOutFIFO.push(LUArespLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
+    if (_dev) _dev->sendAsync(outBuffer, LUArespLength + 4);
 }
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
@@ -209,17 +151,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     if (CRSF::CRSFstate)
     {
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-        xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
-#endif
-
-        SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
-        SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-        xSemaphoreGive(mutexOutFIFO);
-#endif
+        if (_dev) _dev->sendAsync(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
     }
 }
 
@@ -256,16 +188,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         outBuffer[OpenTXsyncFrameLength + 3] = crc;
 
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-        portENTER_CRITICAL(&FIFOmux);
-#endif
-
-        SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-        portEXIT_CRITICAL(&FIFOmux);
-#endif
+        if (_dev) _dev->sendAsync(outBuffer, OpenTXsyncFrameLength + 4);
         syncLastSent = now;
     }
 }
@@ -492,7 +415,7 @@ void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in, volatile uint16_t* chann
       } else {
         Serial.println("UART CRC failure");
         // cleanup input buffer
-        flush_port_input();
+        if (_dev) _dev->flushInput();
         BadPktsCount++;
       }
       CRSFframeActive = false;
@@ -505,76 +428,9 @@ void ICACHE_RAM_ATTR CRSF::consumeInputByte(uint8_t in, volatile uint16_t* chann
 
 void ICACHE_RAM_ATTR CRSF::flushTxBuffers()
 {
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
-    {
-        if (SerialOutFIFO.size() >= (peekVal + 1))
-        {
-            duplex_set_TX();
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-#endif
-
-            uint8_t OutPktLen = SerialOutFIFO.pop();
-            uint8_t OutData[OutPktLen];
-
-            SerialOutFIFO.popBytes(OutData, OutPktLen);
-
-#if defined(PLATFORM_ESP32) && defined(CRSF_TX_MODULE)
-            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-#endif
-
-            if (_dev) {
-              _dev->write(OutData, OutPktLen);  // write the packet out
-              _dev->flush();
-            }
-
-            duplex_set_RX();
-
-            // make sure there is no garbage on the UART left over
-            flush_port_input();
-        }
-    }
+  if (_dev) _dev->flushOutput();
 }
 
-
-void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
-{
-#ifdef PLATFORM_ESP32
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
-    #ifdef UART_INVERTED
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
-    gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #else
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, false);
-    gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #endif
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#endif
-}
-
-void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
-{
-#ifdef PLATFORM_ESP32
-    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
-    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    #ifdef UART_INVERTED
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
-    #else
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
-    #endif
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#endif
-}
 
 bool CRSF::UARTwdt()
 {
@@ -606,22 +462,14 @@ bool CRSF::UARTwdt()
             Serial.print(UARTrequestedBaud);
             Serial.println(" baud");
 
-            SerialOutFIFO.flush();
-
-            if (_dev) {
-#ifdef PLATFORM_ESP32
-                _dev->flush();
-                _dev->updateBaudRate(UARTrequestedBaud);
-#else
-                _dev->begin(UARTrequestedBaud);
-#endif
-            }
-
             // re-init with a different baud rate
+            if (_dev) _dev->updateBaudRate(UARTrequestedBaud);
             UARTcurrentBaud = UARTrequestedBaud;
-            duplex_set_RX();
+
+            //duplex_set_RX();
+            
             // cleanup input buffer
-            flush_port_input();
+            if (_dev) _dev->flushInput();
 
             retval = true;
         }
@@ -640,45 +488,6 @@ bool CRSF::UARTwdt()
 }
 
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
-bool CRSF::RXhandleUARTout()
-{
-  // let's flush these buffers
-  while (SerialOutFIFO.size()) {
-
-    //TODO: verify why this is necessary
-    noInterrupts();
-
-    // Fetch packet size first
-    uint8_t pktSize =
-      SerialOutFIFO.pop();
-
-    if (pktSize > 0) {
-
-      if (SerialOutFIFO.size() < pktSize) {
-        // framing error, drop!
-
-        // dropping rest of payload
-        SerialOutFIFO.flush();
-        interrupts();
-        continue;
-      }
-
-      uint8_t outData[pktSize];
-      SerialOutFIFO.popBytes(outData, pktSize);
-
-      if (_dev) {
-        _dev->write(outData, pktSize); // write the packet out
-        _dev->flush();
-      }
-
-    }
-
-    //TODO: verify why this is necessary
-    interrupts();
-  }
-
-  return false;
-}
 
 // Sent ASYNC
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
@@ -694,9 +503,9 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
 
     outBuffer[LinkStatisticsFrameLength + 3] = crc;
+
 #ifndef DEBUG_CRSF_NO_OUTPUT
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    if (_dev) _dev->sendAsync(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
 }
 

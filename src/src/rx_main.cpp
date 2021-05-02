@@ -91,6 +91,8 @@ Telemetry telemetry;
     #define CRSF_RX_SERIAL Serial
 #endif
 
+TransportLayer CRSF_SERIAL;
+
 #ifdef ENABLE_TELEMETRY
     StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
     static uint8_t telemetryBurstCount;
@@ -427,7 +429,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     alreadyTLMresp = false;
     uplinkLQ = LQCalc.getLQ();
     LQCalc.inc();
-    crsf.RXhandleUARTout();
+    CRSF_SERIAL.flushOutput();
 }
 
 //////////////////////////////////////////////////////////////
@@ -790,9 +792,8 @@ void beginWebsever()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
-    //
-    crsf.end();
-    CRSF_TX_SERIAL.end();
+
+    CRSF_SERIAL.end();
     BeginWebUpdate();
     webUpdateMode = true;
 #endif
@@ -1154,7 +1155,9 @@ void setup()
     MspReceiver.ResetState();
     MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
     Radio.RXnb();
-    crsf.begin(&CRSF_TX_SERIAL);
+
+    CRSF_SERIAL.begin(&CRSF_TX_SERIAL);
+    crsf.begin(&CRSF_SERIAL);
     hwTimer.init();
     hwTimer.stop();
 }
@@ -1168,7 +1171,7 @@ void loop()
 
     if (hwTimer.running == false)
     {
-        crsf.RXhandleUARTout();
+        CRSF_SERIAL.flushOutput();
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
