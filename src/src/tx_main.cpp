@@ -151,9 +151,11 @@ void ICACHE_RAM_ATTR ESP32uartTask(void *pvParameters)
     TX_SERIAL.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                     false, 500);
-    crsf.duplex_set_RX();
+
+    //CRSF_Port.disableTX();
     vTaskDelay(500);
-    crsf.flush_port_input();
+    CRSF_Port.flushInput();
+
     (void)pvParameters;
     for (;;)
     {
@@ -562,7 +564,6 @@ void HandleUpdateParameter()
       if (xESP32uartTask != NULL) {
         vTaskDelete(xESP32uartTask);
       }
-      crsf.end();
       CRSF_Port.end();
 
       BeginWebUpdate();

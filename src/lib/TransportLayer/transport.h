@@ -47,7 +47,7 @@ public:
         return _dev ? _dev->write(c) : 0;
     }
 
-    size_t write(uint8_t *c, int l) override
+    size_t write(uint8_t *c, int l)
     {
         return _dev ? _dev->write(c,l) : 0;
     }
