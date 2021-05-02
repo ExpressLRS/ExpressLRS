@@ -16,7 +16,6 @@ extern SX1280Driver Radio;
 extern hwTimer hwTimer;
 
 #include "CRSF.h"
-extern CRSF crsf;
 
 #include <WiFi.h>
 #include <DNSServer.h>

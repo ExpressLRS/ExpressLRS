@@ -489,7 +489,9 @@ void ICACHE_RAM_ATTR CRSF_TXModule::GetChannelDataIn(
   updateSwitchValues(channels);
 }
 
-#elif CRSF_RX_MODULE // !CRSF_TX_MODULE
+#endif // CRSF_TX_MODULE
+
+#if CRSF_RX_MODULE // !CRSF_TX_MODULE
 
 CRSF_RXModule crsfRx;
 
@@ -543,4 +545,5 @@ void ICACHE_RAM_ATTR CRSF_RXModule::sendMSPFrameToFC(uint8_t* data)
     const uint8_t totalBufferLen = 14;
     if (_dev) _dev->write(data, totalBufferLen);
 }
-#endif // !CRSF_TX_MODULE && !CRSF_RX_MODULE
+
+#endif // CRSF_RX_MODULE
