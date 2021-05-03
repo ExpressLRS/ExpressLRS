@@ -1010,10 +1010,10 @@ void ExitBindingMode()
 void SendUIDOverMSP()
 {
   BindingPackage[0] = MSP_ELRS_BIND;
-  BindingPackage[1] = UID[2];
-  BindingPackage[2] = UID[3];
-  BindingPackage[3] = UID[4];
-  BindingPackage[4] = UID[5];
+  BindingPackage[1] = MasterUID[2];
+  BindingPackage[2] = MasterUID[3];
+  BindingPackage[3] = MasterUID[4];
+  BindingPackage[4] = MasterUID[5];
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
