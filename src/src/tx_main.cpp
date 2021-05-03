@@ -18,6 +18,7 @@ SX1280Driver Radio;
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
+#include "crc.h"
 #include "elrs_eeprom.h"
 #include "config.h"
 #include "hwTimer.h"
@@ -395,12 +396,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // counter can be increased even for normal msp messages since it's reset
       // if a real bind message should be sent
       BindingSendCount++;
-    } else if (GenerateChannelData) {
+    } else if (ota.GenerateChannelData) {
 #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, &channels,
+      ota.GenerateChannelData(Radio.TXdataBuffer, &channels,
                           TelemetryReceiver.GetCurrentConfirm());
 #else
-      GenerateChannelData(Radio.TXdataBuffer, &channels);
+      ota.GenerateChannelData(Radio.TXdataBuffer, &channels);
 #endif
     }
   }
@@ -672,7 +673,12 @@ void setup()
   FHSSrandomiseFHSSsequence(macSeed);
 
   // Set callbacks
-  OTAInitMethods();
+#ifdef HYBRID_SWITCHES_8
+  ota.init(OTA::HybridSwitches8);
+#else
+  ota.init(OTA::Data10bit);
+#endif
+
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
 

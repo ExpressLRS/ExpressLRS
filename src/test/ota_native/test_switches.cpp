@@ -24,10 +24,10 @@ HardwareSerial CRSF_Port = HardwareSerial();
  */
 void test_round_robin(void)
 {
-    uint8_t expectedIndex = channels.NextSwitchIndex;
+    uint8_t expectedIndex = ota.NextSwitchIndex;
 
     for(uint8_t i = 0; i < 10; i++) {
-        uint8_t nsi = getNextSwitchIndex();
+        uint8_t nsi = ota.getNextSwitchIndex();
         TEST_ASSERT_EQUAL(expectedIndex, nsi);
         expectedIndex++;
         if (expectedIndex == 8) {
@@ -46,35 +46,35 @@ void test_priority(void)
 {
     uint8_t nsi;
 
-    channels.NextSwitchIndex = 0; // this would be the next switch if nothing changed
+    ota.NextSwitchIndex = 0; // this would be the next switch if nothing changed
 
     // set all switches and sent values to be equal
     for(uint8_t i = 0; i < N_SWITCHES; i++) {
-        setSentSwitch(i, 0);
-        channels.CurrentSwitches[i] = 0;
+        ota.setSentSwitch(i, 0);
+        ota.setCurrentSwitch(i, 0);
     }
 
     // set two switches' current value to be different
-    channels.CurrentSwitches[4] = 1;
-    channels.CurrentSwitches[6] = 1;
+    ota.setCurrentSwitch(4, 1);
+    ota.setCurrentSwitch(6, 1);
 
     // we expect to get the lowest changed switch
-    nsi = getNextSwitchIndex();
+    nsi = ota.getNextSwitchIndex();
     TEST_ASSERT_EQUAL(4, nsi);
 
     // The sending code would then change the sent value to match:
-    setSentSwitch(4, 1);
+    ota.setSentSwitch(4, 1);
 
     // so now we expect to get 6 (the other changed switch we set above)
-    nsi = getNextSwitchIndex();
+    nsi = ota.getNextSwitchIndex();
     TEST_ASSERT_EQUAL(6, nsi);
 
     // The sending code would then change the sent value to match:
-    setSentSwitch(6, 1);
+    ota.setSentSwitch(6, 1);
 
     // Now all sent values should match the current values, and we expect
     // to get the last returned value +1
-    nsi = getNextSwitchIndex();
+    nsi = ota.getNextSwitchIndex();
     TEST_ASSERT_EQUAL(7, nsi);
 }
 
@@ -98,18 +98,18 @@ void test_encodingHybrid8(bool highResChannel)
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
-        channels.CurrentSwitches[i] =  i % 3;
-        setSentSwitch(i, i % 3); // make all the sent values match
+        ota.setCurrentSwitch(i, i % 3);
+        ota.setSentSwitch(i, i % 3); // make all the sent values match
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
     if (highResChannel)
-        channels.NextSwitchIndex = 7;
+        ota.NextSwitchIndex = 7;
     else
-        channels.NextSwitchIndex = 3;
+        ota.NextSwitchIndex = 3;
 
     // encode it
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &channels, false);
+    ota.GenerateChannelDataHybridSwitch8(TXdataBuffer, &channels, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -130,7 +130,7 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
     // byte 6 is the switch encoding
-    TEST_ASSERT_EQUAL(channels.CurrentSwitches[0], (TXdataBuffer[6] & 0b0100000)>>6);
+    TEST_ASSERT_EQUAL(ota.CurrentSwitches[0], (TXdataBuffer[6] & 0b0100000)>>6);
     // top bit is undefined
     // expect switch 0 in bit 6
     // index-1 in 3-5
@@ -138,12 +138,12 @@ void test_encodingHybrid8(bool highResChannel)
     if (highResChannel)
     {
         TEST_ASSERT_EQUAL(7, ((TXdataBuffer[6] & 0b110000)>>3) + 1);
-        TEST_ASSERT_EQUAL(channels.CurrentSwitches[7], TXdataBuffer[6] & 0b1111);
+        TEST_ASSERT_EQUAL(ota.CurrentSwitches[7], TXdataBuffer[6] & 0b1111);
     }
     else
     {
         TEST_ASSERT_EQUAL(3, ((TXdataBuffer[6] & 0b111000)>>3) + 1);
-        TEST_ASSERT_EQUAL(channels.CurrentSwitches[3], TXdataBuffer[6] & 0b0111);
+        TEST_ASSERT_EQUAL(ota.CurrentSwitches[3], TXdataBuffer[6] & 0b0111);
     }
 }
 
@@ -174,25 +174,25 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
-        channels.CurrentSwitches[i] =  i % 3;
-        setSentSwitch(i, i % 3); // make all the sent values match
+        ota.setCurrentSwitch(i, i % 3);
+        ota.setSentSwitch(i, i % 3); // make all the sent values match
     }
-    channels.CurrentSwitches[forceSwitch] = switchval;
-    setSentSwitch(forceSwitch, switchval);
+    ota.setCurrentSwitch(forceSwitch, switchval);
+    ota.setSentSwitch(forceSwitch, switchval);
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
     // nextSwitchIndex=0 is invalid, since the previous getNextSwitchIndex()
     // would have skipped it
     if (forceSwitch == 0)
-        channels.NextSwitchIndex = 1;
+        ota.NextSwitchIndex = 1;
     else
-        channels.NextSwitchIndex = forceSwitch;
+        ota.NextSwitchIndex = forceSwitch;
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &channels, false);
+    ota.GenerateChannelDataHybridSwitch8(TXdataBuffer, &channels, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelDataHybridSwitch8(TXdataBuffer, &channels);
+    ota.UnpackChannelDataHybridSwitch8(TXdataBuffer, &channels);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(channels.ChannelData[0] & 0b11111111110, channels.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
@@ -200,9 +200,9 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     TEST_ASSERT_EQUAL(channels.ChannelData[2] & 0b11111111110, channels.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
     TEST_ASSERT_EQUAL(channels.ChannelData[3] & 0b11111111110, channels.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(channels.CurrentSwitches[0]), channels.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
+    TEST_ASSERT_EQUAL(BIT_to_CRSF(ota.CurrentSwitches[0]), channels.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
-        TEST_ASSERT_EQUAL(N_to_CRSF(channels.CurrentSwitches[forceSwitch], 15), channels.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(N_to_CRSF(ota.CurrentSwitches[forceSwitch], 15), channels.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
     else if (forceSwitch != 0)
     {
         uint16_t ch;
@@ -217,7 +217,7 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         default:
             TEST_FAIL_MESSAGE("forceSwitch not handled");
         }
-        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(channels.CurrentSwitches[forceSwitch]), channels.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(ota.CurrentSwitches[forceSwitch]), channels.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
     }
 }
 
@@ -260,7 +260,7 @@ void test_encoding10bit()
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, &channels, false);
+    ota.GenerateChannelData10bit(TXdataBuffer, &channels, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -309,10 +309,10 @@ void test_decoding10bit()
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &channels, false);
+    ota.GenerateChannelData10bit(TXdataBuffer, &channels, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData10bit(TXdataBuffer, &channels);
+    ota.UnpackChannelData10bit(TXdataBuffer, &channels);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(channels.ChannelData[0] & 0b11111111110, channels.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits

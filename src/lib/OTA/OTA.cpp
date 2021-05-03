@@ -9,21 +9,52 @@
 #include "OTA.h"
 #include "channels.h"
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-
-#if TARGET_TX or defined UNIT_TEST
+OTA ota;
 
 static uint8_t sentSwitches[N_SWITCHES] = {0};
 
 /**
+ * Convert the rc data corresponding to switches to 3 bit values.
+ * The output is mapped evenly across 6 output values (0-5)
+ * With a special value 7 indicating the middle so it works
+ * with switches with a middle position as well as 6-position
+ */
+void ICACHE_RAM_ATTR OTA::updateSwitchValues(Channels* chan)
+{
+  // AUX1 is arm switch, one bit
+  CurrentSwitches[0] = CRSF_to_BIT(chan->ChannelData[4]);
+
+  // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
+  const uint16_t CHANNEL_BIN_COUNT = 6;
+  const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
+  for (int i = 1; i < N_SWITCHES - 1; i++) {
+    uint16_t ch = chan->ChannelData[i + 4];
+    // If channel is within 1/4 a BIN of being in the middle use special value 7
+    if (ch < (CRSF_CHANNEL_VALUE_MID - CHANNEL_BIN_SIZE / 4) ||
+        ch > (CRSF_CHANNEL_VALUE_MID + CHANNEL_BIN_SIZE / 4))
+      CurrentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+    else
+      CurrentSwitches[i] = 7;
+  }  // for N_SWITCHES
+
+  // AUXx is High Resolution 16-pos (4-bit)
+  CurrentSwitches[N_SWITCHES - 1] = CRSF_to_N(chan->ChannelData[N_SWITCHES - 1 + 4], 16);
+}
+
+/**
  * Record the value of a switch that was sent to the rx
  */
-void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value)
+void OTA::setSentSwitch(uint8_t index, uint8_t value)
 {
     sentSwitches[index] = value;
 }
 
-uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
+void OTA::setCurrentSwitch(uint8_t index, uint8_t value)
+{
+    CurrentSwitches[index] = value;
+}
+
+uint8_t ICACHE_RAM_ATTR OTA::getNextSwitchIndex()
 {
     int firstSwitch = 0; // sequential switches includes switch 0
 
@@ -35,24 +66,24 @@ uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
     int i;
     for (i = firstSwitch; i < N_SWITCHES; i++)
     {
-        if (channels.CurrentSwitches[i] != sentSwitches[i]) //
+        if (CurrentSwitches[i] != sentSwitches[i]) //
             break;
     }
     // if we didn't find a changed switch, we get here with i==N_SWITCHES
     if (i == N_SWITCHES)
     {
-        i = channels.NextSwitchIndex;
+        i = NextSwitchIndex;
     }
 
     // keep track of which switch to send next if there are no changed switches
     // during the next call.
-    channels.NextSwitchIndex = (i + 1) % 8;
+    NextSwitchIndex = (i + 1) % 8;
 
 #ifdef HYBRID_SWITCHES_8
     // for hydrid switches 0 is sent on every packet, skip it in round-robin
-    if (channels.NextSwitchIndex == 0)
+    if (NextSwitchIndex == 0)
     {
-        channels.NextSwitchIndex = 1;
+        NextSwitchIndex = 1;
     }
 #endif
 
@@ -74,10 +105,10 @@ uint8_t ICACHE_RAM_ATTR getNextSwitchIndex()
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+void ICACHE_RAM_ATTR OTA::GenerateChannelDataHybridSwitch8(
     volatile uint8_t* Buffer, Channels* chan, bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
+void ICACHE_RAM_ATTR OTA::GenerateChannelDataHybridSwitch8(
     volatile uint8_t* Buffer, Channels* chan)
 #endif
 {
@@ -94,14 +125,14 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
               ((channels[3] & 0b110) >> 1);
 
   // find the next switch to send
-  uint8_t nextSwitchIndex = getNextSwitchIndex(); // needs to go away
+  uint8_t nextSwitchIndex = ota.getNextSwitchIndex(); // needs to go away
   // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to
   // 0-6 (0b110) If the two high bits are 0b11, the receiver knows it is the
   // last switch and can use that bit to store data
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = chan->CurrentSwitches[nextSwitchIndex];
+  uint8_t value = ota.CurrentSwitches[nextSwitchIndex];
 
   Buffer[6] =
 #ifdef ENABLE_TELEMETRY
@@ -109,7 +140,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
 #endif
       // switch 0 is one bit sent on every packet - intended for low latency
       // arm/disarm
-      chan->CurrentSwitches[0] << 6 |
+      ota.CurrentSwitches[0] << 6 |
       // tell the receiver which switch index this is
       bitclearedSwitchIndex << 3 |
       // include the switch value
@@ -118,9 +149,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
   // update the sent value
   sentSwitches[nextSwitchIndex] = value;
 }
-#endif
 
-#if TARGET_RX or defined UNIT_TEST
 /**
  * Hybrid switches decoding of over the air data
  *
@@ -131,7 +160,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
  * Input: Buffer
  * Output: crsf->PackedRCdataOut
  */
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels* chan)
+void ICACHE_RAM_ATTR OTA::UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels* chan)
 {
     // The analog channels
     chan->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
@@ -174,18 +203,14 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Ch
     }
 }
 
-#endif
-#endif // HYBRID_SWITCHES_8
 
-#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 
-#if TARGET_TX or defined UNIT_TEST
 
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
+void ICACHE_RAM_ATTR OTA::GenerateChannelData10bit(volatile uint8_t* Buffer,
                                               Channels* chan, bool TelemetryStatus)
 #else
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, Channels* chan)
+void ICACHE_RAM_ATTR OTA::GenerateChannelData10bit(volatile uint8_t* Buffer, Channels* chan)
 #endif
 {
   if (!chan) return;
@@ -209,11 +234,9 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, Channels
   Buffer[6] |= CRSF_to_BIT(channels[10]) << 1;
   Buffer[6] |= CRSF_to_BIT(channels[11]) << 0;
 }
-#endif
 
-#if TARGET_RX or defined UNIT_TEST
 
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan)
+void ICACHE_RAM_ATTR OTA::UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan)
 {
     chan->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
     chan->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
@@ -229,39 +252,15 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *
     chan->PackedRCdataOut.ch11 = BIT_to_CRSF(Buffer[6] & 0b00000001);
 }
 
-#endif
-
-#endif // !HYBRID_SWITCHES_8
-
-#if TARGET_TX or defined UNIT_TEST
-GenerateChannelDataFunc GenerateChannelData;
-#endif
-
-#if TARGET_RX or defined UNIT_TEST
-UnpackChannelDataFunc UnpackChannelData;
-#endif
-
-void OTAInitMethods()
+void OTA::init(Mode m)
 {
-  // TODO: this could be read from configuration
-#if defined HYBRID_SWITCHES_8
-
-#if TARGET_TX or defined UNIT_TEST
-  GenerateChannelData = GenerateChannelDataHybridSwitch8;
-#endif
-#if TARGET_RX or defined UNIT_TEST
-  UnpackChannelData = UnpackChannelDataHybridSwitch8;
-#endif
-
-#else
-
-#if TARGET_TX or defined UNIT_TEST
-  GenerateChannelData = GenerateChannelData10bit;
-#endif
-#if TARGET_RX or defined UNIT_TEST
-  UnpackChannelData = UnpackChannelData10bit;
-#endif
-
-#endif
+  if (OTA::HybridSwitches8 == m) {
+    GenerateChannelData = GenerateChannelDataHybridSwitch8;
+    UnpackChannelData = UnpackChannelDataHybridSwitch8;
+  }
+  else {
+    GenerateChannelData = GenerateChannelData10bit;
+    UnpackChannelData = UnpackChannelData10bit;
+  }     
 }
 

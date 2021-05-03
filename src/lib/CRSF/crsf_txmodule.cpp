@@ -1,5 +1,9 @@
-#include "CRSF.h"
 #include "crsf_txmodule.h"
+#include "CRSF.h"
+#include "OTA.h"
+#include "crc.h"
+#include "msp.h"
+#include "msptypes.h"
 
 extern GENERIC_CRC8 crsf_crc;
 CRSF_TXModule crsfTx;
@@ -192,6 +196,8 @@ bool ICACHE_RAM_ATTR CRSF_TXModule::ProcessPacket(Channels* chan)
         onChannelDataIn();
         GoodPktsCount++;
         GetChannelDataIn(chan);
+        //TODO: this needs to go away!
+        ota.updateSwitchValues(chan);
         return true;
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
@@ -470,6 +476,4 @@ void ICACHE_RAM_ATTR CRSF_TXModule::GetChannelDataIn(Channels *chan)
   chan->ChannelData[13] = (rcChannels->ch13);
   chan->ChannelData[14] = (rcChannels->ch14);
   chan->ChannelData[15] = (rcChannels->ch15);
-
-  chan->updateSwitchValues();
 }

@@ -1,5 +1,7 @@
 #include "crsf_rxmodule.h"
 #include "channels.h"
+#include "transport.h"
+#include "crc.h"
 
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 

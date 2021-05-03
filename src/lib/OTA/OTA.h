@@ -1,7 +1,7 @@
 #ifndef H_OTA
 #define H_OTA
 
-#include "CRSF.h"
+#include <stdint.h>
 
 struct Channels;
 
@@ -15,58 +15,79 @@ struct Channels;
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-// Define GenerateChannelData() function pointer
+// current and sent switch values
+#define N_SWITCHES 8
+
+class OTA
+{
+  // Define GenerateChannelData() function pointer
 #ifdef ENABLE_TELEMETRY
-typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
-                                        Channels* chan, bool TelemetryStatus);
+  typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
+                                          Channels* chan, bool TelemetryStatus);
 #else
-typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer, Channels* chan);
+  typedef void (*GenerateChannelDataFunc)(volatile uint8_t* Buffer,
+                                          Channels* chan);
 #endif
 
-typedef void (*UnpackChannelDataFunc)(
-    volatile uint8_t* Buffer, Channels* chan);
+  typedef void (*UnpackChannelDataFunc)(volatile uint8_t* Buffer,
+                                        Channels* chan);
 
-#if TARGET_TX or defined UNIT_TEST
-extern GenerateChannelDataFunc GenerateChannelData;
-#endif
+public:
+  enum Mode { HybridSwitches8 = 0, Data10bit };
 
-#if TARGET_RX or defined UNIT_TEST
-extern UnpackChannelDataFunc UnpackChannelData;
-#endif
+  GenerateChannelDataFunc GenerateChannelData;
+  UnpackChannelDataFunc UnpackChannelData;
 
-// This could be called again if the config changes, for instance
-void OTAInitMethods();
+  // This could be called again if the config changes, for instance
+  void init(Mode m);
 
-#if defined(UNIT_TEST)
+  /**
+   * Determine which switch to send next.
+   * If any switch has changed since last sent, we send the lowest index changed
+   * switch and set nextSwitchIndex to that value + 1. If no switches have
+   * changed then we send nextSwitchIndex and increment the value. For pure
+   * sequential switches, all 8 switches are part of the round-robin sequence.
+   * For hybrid switches, switch 0 is sent with every packet and the rest of the
+   * switches are in the round-robin.
+   */
+  uint8_t getNextSwitchIndex();
 
-void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
+  void updateSwitchValues(Channels* chan);
+
+private:
+  friend void test_round_robin(void);
+  friend void test_priority(void);
+  friend void test_encodingHybrid8(bool highResChannel);
+  friend void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval);
+  friend void test_encoding10bit();
+  friend void test_decoding10bit();
+
+  // stored switch values
+  uint8_t CurrentSwitches[N_SWITCHES];
+
+  // which switch should be sent in the next rc packet
+  uint8_t NextSwitchIndex;
+
+  void setSentSwitch(uint8_t index, uint8_t value);
+  void setCurrentSwitch(uint8_t index, uint8_t value);
 
 #ifdef ENABLE_TELEMETRY
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              Channels* chan, bool TelemetryStatus);
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(
-    volatile uint8_t* Buffer, Channels* chan, bool TelemetryStatus);
+  static void GenerateChannelData10bit(volatile uint8_t* Buffer, Channels* chan,
+                                       bool TelemetryStatus);
+  static void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer,
+                                               Channels* chan,
+                                               bool TelemetryStatus);
 #else
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer,
-                                              Channels* chan);
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer,
-                                                      Channels* chan);
+  static void GenerateChannelData10bit(volatile uint8_t* Buffer,
+                                       Channels* chan);
+  static void GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer,
+                                               Channels* chan);
 #endif
 
-void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels *chan);
-void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan);
+  static void UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, Channels *chan);
+  static void UnpackChannelData10bit(volatile uint8_t* Buffer, Channels *chan);
+};
 
-#endif
-
-/**
- * Determine which switch to send next.
- * If any switch has changed since last sent, we send the lowest index changed switch
- * and set nextSwitchIndex to that value + 1.
- * If no switches have changed then we send nextSwitchIndex and increment the value.
- * For pure sequential switches, all 8 switches are part of the round-robin sequence.
- * For hybrid switches, switch 0 is sent with every packet and the rest of the switches
- * are in the round-robin.
- */
-uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
+extern OTA ota;
 
 #endif  // H_OTA

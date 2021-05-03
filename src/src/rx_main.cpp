@@ -2,6 +2,7 @@
 #include "common.h"
 #include "LowPassFilter.h"
 #include "channels.h"
+#include "transport.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -686,8 +687,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
 
-      if (UnpackChannelData) {
-        UnpackChannelData(Radio.RXdataBuffer, &channels);
+      if (ota.UnpackChannelData) {
+        ota.UnpackChannelData(Radio.RXdataBuffer, &channels);
 #ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -1119,7 +1120,11 @@ void setup()
     setupConfigAndPocCheck();
 
     // Setup up packing/unpacking methods
-    OTAInitMethods();
+#ifdef HYBRID_SWITCHES_8
+    ota.init(OTA::HybridSwitches8);
+#else
+    ota.init(OTA::Data10bit);
+#endif
     
     Serial.println("ExpressLRS Module Booting...");
 #if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_FCC_915

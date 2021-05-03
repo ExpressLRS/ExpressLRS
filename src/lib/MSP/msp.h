@@ -13,7 +13,7 @@
     return;\
   }
 
-typedef enum {
+enum mspState_e {
     MSP_IDLE,
     MSP_HEADER_START,
     MSP_HEADER_X,
@@ -23,21 +23,22 @@ typedef enum {
     MSP_CHECKSUM_V2_NATIVE,
 
     MSP_COMMAND_RECEIVED
-} mspState_e;
+};
 
-typedef enum {
+enum mspPacketType_e {
     MSP_PACKET_UNKNOWN,
     MSP_PACKET_COMMAND,
     MSP_PACKET_RESPONSE
-} mspPacketType_e;
+};
 
-typedef struct __attribute__((packed)) {
+struct __attribute__((packed)) mspHeaderV2_t {
     uint8_t  flags;
     uint16_t function;
     uint16_t payloadSize;
-} mspHeaderV2_t;
+};
 
-typedef struct {
+struct mspPacket_t
+{
     mspPacketType_e type;
     uint8_t         flags;
     uint16_t        function;
@@ -81,7 +82,7 @@ typedef struct {
 
         return payload[payloadReadIterator++];
     }
-} mspPacket_t;
+};
 
 /////////////////////////////////////////////////
 
