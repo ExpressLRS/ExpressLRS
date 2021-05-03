@@ -193,12 +193,14 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
+constexpr uint32_t FREQ_STEP_fixed = uint32_t(double(FREQ_STEP) * 256.0);
+
 void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
-  
-  int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+
+  uint32_t FRQ = ((freq << 8) / FREQ_STEP_fixed) >> 8;
 
   uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
   uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
@@ -464,7 +466,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 {
   int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return (rawSNR / 4.0);
+  return rawSNR >> 2;
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
