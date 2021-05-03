@@ -960,7 +960,11 @@ void EnterBindingMode()
       return;
   }
 
-  // Start periodically sending the current UID as MSP packets
+  // Disable the TX timer and wait for any TX to complete
+  hwTimer.stop();
+  while (busyTransmitting);
+
+  // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();
 
   // Set UID to special binding values
@@ -978,6 +982,8 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
   Radio.SetFrequencyReg(GetInitialFreq());
+  // Start transmitting again
+  hwTimer.resume();
 
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
