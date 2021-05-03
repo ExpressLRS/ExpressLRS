@@ -8,11 +8,6 @@
 extern GENERIC_CRC8 crsf_crc;
 CRSF_RXModule crsfRx;
 
-void CRSF_RXModule::begin(TransportLayer* dev)
-{
-  _dev = dev;
-}
-
 // Sent ASYNC
 void ICACHE_RAM_ATTR CRSF_RXModule::sendLinkStatisticsToFC(Channels* chan)
 {

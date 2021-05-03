@@ -1,23 +1,19 @@
 #pragma once
 
 #include <stdint.h>
+#include "RXModule.h"
 
 struct Channels;
 class TransportLayer;
 
-class CRSF_RXModule
+class CRSF_RXModule : public RXModule
 {
 public:
     CRSF_RXModule() {}
 
-    void begin(TransportLayer* dev);
-
-    void sendRCFrameToFC(Channels* chan);
-    void sendLinkStatisticsToFC(Channels* chan);
-    void sendMSPFrameToFC(uint8_t* data);
-
-private:
-    TransportLayer* _dev = nullptr;
+    void sendRCFrameToFC(Channels* chan) override;
+    void sendLinkStatisticsToFC(Channels* chan) override;
+    void sendMSPFrameToFC(uint8_t* data) override;
 };
 
 extern CRSF_RXModule crsfRx;
