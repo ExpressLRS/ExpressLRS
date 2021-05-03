@@ -13,6 +13,14 @@
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
 
 #ifdef PLATFORM_STM32
+/* ICACHE_RAM_ATTR1 is always linked into RAM */
+#define ICACHE_RAM_ATTR1  __section(".ram_code")
+/* ICACHE_RAM_ATTR2 is linked into RAM only if enough space */
+#if RAM_CODE_LIMITED
+#define ICACHE_RAM_ATTR2
+#else
+#define ICACHE_RAM_ATTR2 __section(".ram_code")
+#endif
 #define ICACHE_RAM_ATTR //nothing//
 #else
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
