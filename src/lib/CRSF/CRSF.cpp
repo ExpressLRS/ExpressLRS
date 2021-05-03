@@ -110,14 +110,24 @@ void CRSF::Begin()
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
 
+    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
+    #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
+
+    USART1->CR1 &= ~USART_CR1_UE;
+    USART1->CR2 &= ~(USART_CR2_LINEN | USART_CR2_CLKEN);
+    USART1->CR3 &= ~(USART_CR3_IREN | USART_CR3_SCEN);
+    USART1->CR3 |= USART_CR3_HDSEL;
+    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV;
+    USART1->CR1 |= USART_CR1_UE;
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -703,6 +713,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     #endif
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
+#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    CRSF::Port.enableHalfDuplexRx();
 #endif
 }
 
@@ -721,6 +733,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #endif
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
+#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    // writing to the port switches the mode
 #endif
 }
 
