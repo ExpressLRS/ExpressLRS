@@ -225,15 +225,16 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
-  if (ModParams == ExpressLRS_currAirRate_Modparams)
-    return;
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
-  if (RFperf == ExpressLRS_currAirRate_RFperfParams)
+  bool invertIQ = UID[5] & 0x01;
+  if ((ModParams == ExpressLRS_currAirRate_Modparams)
+    && (RFperf == ExpressLRS_currAirRate_RFperfParams)
+    && (invertIQ == Radio.IQinverted))
     return;
 
   Serial.println("set rate");
   hwTimer.updateInterval(ModParams->interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -971,7 +972,6 @@ void EnterBindingMode()
   UID[5] = BindingUID[5];
 
   CRCInitializer = 0;
-
   InBindingMode = true;
 
   // Start attempting to bind
@@ -1010,10 +1010,10 @@ void ExitBindingMode()
 void SendUIDOverMSP()
 {
   BindingPackage[0] = MSP_ELRS_BIND;
-  BindingPackage[1] = UID[2];
-  BindingPackage[2] = UID[3];
-  BindingPackage[3] = UID[4];
-  BindingPackage[4] = UID[5];
+  BindingPackage[1] = MasterUID[2];
+  BindingPackage[2] = MasterUID[3];
+  BindingPackage[3] = MasterUID[4];
+  BindingPackage[4] = MasterUID[5];
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
