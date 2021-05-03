@@ -103,8 +103,8 @@ uint32_t HWtimerPauseDuration = 0;
 #define OPENTX_LUA_UPDATE_INTERVAL 1000
 uint8_t luaWarningFLags = 0;
 uint8_t suppressedLuaWarningFlags = 0xFF;
-uint8_t luaDevice[6] = {0x45,0x4C, 0x52, 0x53, 0x46, 0x00};
 uint32_t LuaLastUpdated = 0;
+uint8_t luaDevice[6] = {0x45,0x4C, 0x52, 0x53, 0x46, 0x00};
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
 uint32_t PacketLastSentMicros = 0;
@@ -401,7 +401,7 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  crsf.sendLUAresponse(luaParams, 4, 0x2E,F("none"),4);
+  crsf.sendELRSparam(luaParams, 4, 0x2E,F("none"),4);
 }
 
 void sendLuaFieldCrsf(uint8_t idx){
@@ -416,7 +416,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[38] = 0x00;//min
       fieldsetup2[39] = 0x07;//max
       fieldsetup2[40] = 0x01;//default
-      crsf.sendCRSFparam(0x02,0x00,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,0x00,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
       break;
     }
     case 3:
@@ -429,7 +429,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[32] = 0x00;//min
       fieldsetup2[33] = 0x07;//max
       fieldsetup2[34] = 0x01;//default
-      crsf.sendCRSFparam(0x03,0x00,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,0x00,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
       break;
     }
     case 4:
@@ -438,9 +438,9 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[0] = (uint8_t)(InBindingMode);//status
       fieldsetup2[1] = 200;//timeout
       if(InBindingMode){
-        crsf.sendCRSFcmdParam(0x04,0x00,0x00,F("bind"),4,fieldsetup2,2,F("binding"),7);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,0x00,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
       } else {
-        crsf.sendCRSFcmdParam(0x04,0x00,0x00,F("bind"),4,fieldsetup2,2,F("rdy"),3);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,0x00,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
       }
       break;
     }
@@ -450,10 +450,10 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[1] = 200;//timeout
       if(webUpdateMode){
         fieldsetup2[0] = 2;
-        crsf.sendCRSFcmdParam(0x05,0x00,0x00,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,0x00,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
       } else {
         fieldsetup2[0] = 0;
-        crsf.sendCRSFcmdParam(0x05,0x00,0x00,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,0x00,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
       }
       break;
 
@@ -468,7 +468,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[27] = 0x00;//min
       fieldsetup2[28] = 0x06;//max
       fieldsetup2[29] = 0x01;//default
-      crsf.sendCRSFparam(0x01,0x00,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,0x00,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
       break;
     }
   }
@@ -541,10 +541,14 @@ void HandleUpdateParameter()
     switch (crsf.ParameterUpdateData[1])
     {
     case 0: // special case for sending commit packet
+    {
       Serial.println("send all lua params");
-      crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
+      uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+      fieldsetup2[12] = LUA_FIELD_AMOUNT;
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+      //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
       break;
-
+    }
     case 1:
       if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2])))
       {
@@ -612,11 +616,16 @@ void HandleUpdateParameter()
     }
   break;
   case CRSF_FRAMETYPE_DEVICE_PING:
-  crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
-  break;
+  {
+    uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0}; //12bytes of unknown data + 1byte of field count 
+    fieldsetup2[12] = LUA_FIELD_AMOUNT;
+    crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+    //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
+    break;
+  }
   case CRSF_FRAMETYPE_PARAMETER_READ: //param info
   sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
-  break;
+    break;
 }
 
   UpdateParamReq = false;

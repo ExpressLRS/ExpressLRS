@@ -253,7 +253,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2)
+void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)
     {
@@ -294,6 +294,7 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len, uint8_t frameType, const 
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
+/**
 void CRSF::sendCRSFdevice(uint8_t val[], uint8_t len, uint8_t field_count){
 
     if (!CRSF::CRSFstate)
@@ -331,16 +332,25 @@ void CRSF::sendCRSFdevice(uint8_t val[], uint8_t len, uint8_t field_count){
     portEXIT_CRITICAL(&FIFOmux);
 #endif 
 }
-void CRSF::sendCRSFparam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, uint8_t fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
-{
+*/
+
+void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
+{//sendCRSF param can take anytype of fieldtype if fieldsetup2 is set properly
     if (!CRSF::CRSFstate)
     {
         return;
     }
-
+    uint8_t y = 0;
     uint8_t fieldname[namelength + 1];
     uint8_t fieldunit[unitlength + 1];
-    uint8_t LUArespLength = 2+ 4 + (namelength+1) + len_setup2 + (unitlength+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    uint8_t LUArespLength;
+    if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
+        y=4;
+        LUArespLength = 2 + (namelength+1) + len_setup2;   //header, field name, fieldsetup2(11 byte + 1 fieldcount)
+    } else {
+        y=0;
+        LUArespLength = 2+ 4 + (namelength+1) + len_setup2 + (unitlength+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+    }
     /**
     if(LUArespLength > 50){
         uint8_t fieldchunk_remainder;    
@@ -362,26 +372,29 @@ void CRSF::sendCRSFparam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparen
     //}
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    outBuffer[2] = frame;
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-
-    outBuffer[5] = fieldid;
-    outBuffer[6] = fieldchunk; //fieldchunk;
-    outBuffer[7] = fieldparent; //fieldparent;
-    outBuffer[8] = fieldtype;
+    if(frame == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY){
+        outBuffer[5] = fieldid;
+        outBuffer[6] = fieldchunk; //fieldchunk;
+        outBuffer[7] = fieldparent; //fieldparent;
+        outBuffer[8] = fieldtype;
+    }
     for (uint8_t i = 0; i < (namelength+1); ++i)
     {
-        outBuffer[(9 + i)] = fieldname[i];
+        outBuffer[((9-y) + i)] = fieldname[i];
     }
     for (uint8_t i = 0; i < len_setup2; ++i)
     {
-        outBuffer[(9 + (namelength+1) + i)] = fieldsetup2[i];
+        outBuffer[((9-y) + (namelength+1) + i)] = fieldsetup2[i];
     }
-    for (uint8_t i = 0; i < (unitlength+1); ++i)
-    {
-        outBuffer[(9 + (namelength+1) + len_setup2 + i)] = fieldunit[i];
+    if(frame == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY){
+        for (uint8_t i = 0; i < (unitlength+1); ++i)
+        {
+            outBuffer[(9 + (namelength+1) + len_setup2 + i)] = fieldunit[i];
+        }
     }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
@@ -396,6 +409,7 @@ void CRSF::sendCRSFparam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparen
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
+/**
 void CRSF::sendCRSFcmdParam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_info, uint8_t infolength)
 {
     if (!CRSF::CRSFstate)
@@ -447,7 +461,7 @@ void CRSF::sendCRSFcmdParam(uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldpa
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-
+*/
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
     if (data[2] == CRSF_FRAMETYPE_MSP_RESP)
@@ -581,7 +595,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
-    if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    if (packetType != CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&

@@ -66,11 +66,3 @@
 
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
-
-
-
-#todolist
-#1 field chunk
-#2 warning screen for bad packets
-#3 beep param change
-
