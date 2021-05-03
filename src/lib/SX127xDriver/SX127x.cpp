@@ -193,21 +193,23 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
-{
-  currFreq = freq;
-  SetMode(SX127x_OPMODE_STANDBY);
+// Disabled: we don't need no floating point!!!
+//
+// void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
+// {
+//   currFreq = freq;
+//   SetMode(SX127x_OPMODE_STANDBY);
   
-  int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
+//   int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
-  uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
-  uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
-  uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
+//   uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
+//   uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
+//   uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
 
-  WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
+//   WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
-  hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
-}
+//   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+// }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq)
 {
@@ -464,7 +466,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 {
   int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return (rawSNR / 4.0);
+  return rawSNR / 4;
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()

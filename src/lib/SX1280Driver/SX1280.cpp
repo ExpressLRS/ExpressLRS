@@ -203,18 +203,20 @@ void SX1280Driver::ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_R
     }
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
-{
-    WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
+// Disabled: we don't need no floating point!!!
+//
+// void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
+// {
+//     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
-    uint32_t freq = (uint32_t)((double)Reqfreq / (double)FREQ_STEP);
-    buf[0] = (uint8_t)((freq >> 16) & 0xFF);
-    buf[1] = (uint8_t)((freq >> 8) & 0xFF);
-    buf[2] = (uint8_t)(freq & 0xFF);
+//     uint32_t freq = (uint32_t)((double)Reqfreq / (double)FREQ_STEP);
+//     buf[0] = (uint8_t)((freq >> 16) & 0xFF);
+//     buf[1] = (uint8_t)((freq >> 8) & 0xFF);
+//     buf[2] = (uint8_t)(freq & 0xFF);
 
-    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf));
-    currFreq = Reqfreq;
-}
+//     hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf));
+//     currFreq = Reqfreq;
+// }
 
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t freq)
 {

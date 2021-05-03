@@ -7,6 +7,8 @@
 #include <cstdint>
 #endif
 
+#define FREQ_STEP 61.03515625
+
 class SX127xDriver
 {
 
@@ -76,8 +78,9 @@ public:
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
 
-    #define FREQ_STEP 61.03515625
-    void SetFrequencyHz(uint32_t freq);
+    // Disabled: we don't need no floating point!!!
+    //void SetFrequencyHz(uint32_t freq);
+
     void SetFrequencyReg(uint32_t freq);
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();

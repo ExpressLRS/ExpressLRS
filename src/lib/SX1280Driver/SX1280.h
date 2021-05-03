@@ -76,7 +76,10 @@ public:
     void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ);
     void ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
-    void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
+
+    // Disable: frequency is pre-computed and set by register value
+    //void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
+
     void ICACHE_RAM_ATTR SetFrequencyReg(uint32_t freq);
     void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
     void SetOutputPower(int8_t power);
