@@ -55,12 +55,6 @@ public:
   void updateSwitchValues(Channels* chan);
 
 private:
-  friend void test_round_robin(void);
-  friend void test_priority(void);
-  friend void test_encodingHybrid8(bool highResChannel);
-  friend void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval);
-  friend void test_encoding10bit();
-  friend void test_decoding10bit();
 
   // stored switch values
   uint8_t CurrentSwitches[N_SWITCHES];
@@ -68,8 +62,17 @@ private:
   // which switch should be sent in the next rc packet
   uint8_t NextSwitchIndex;
 
+#ifdef UNIT_TEST
   void setSentSwitch(uint8_t index, uint8_t value);
   void setCurrentSwitch(uint8_t index, uint8_t value);
+
+  friend void test_round_robin(void);
+  friend void test_priority(void);
+  friend void test_encodingHybrid8(bool highResChannel);
+  friend void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval);
+  friend void test_encoding10bit();
+  friend void test_decoding10bit();
+#endif
 
 #ifdef ENABLE_TELEMETRY
   static void GenerateChannelData10bit(volatile uint8_t* Buffer, Channels* chan,

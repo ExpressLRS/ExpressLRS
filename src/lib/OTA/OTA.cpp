@@ -41,6 +41,7 @@ void ICACHE_RAM_ATTR OTA::updateSwitchValues(Channels* chan)
   CurrentSwitches[N_SWITCHES - 1] = CRSF_to_N(chan->ChannelData[N_SWITCHES - 1 + 4], 16);
 }
 
+#ifdef UNIT_TEST
 /**
  * Record the value of a switch that was sent to the rx
  */
@@ -53,6 +54,7 @@ void OTA::setCurrentSwitch(uint8_t index, uint8_t value)
 {
     CurrentSwitches[index] = value;
 }
+#endif
 
 uint8_t ICACHE_RAM_ATTR OTA::getNextSwitchIndex()
 {
