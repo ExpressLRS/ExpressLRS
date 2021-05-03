@@ -40,10 +40,21 @@ SX1280Driver Radio;
 #include "config.h"
 #include "POWERMGNT.h"
 
+
 #if !defined(USE_SBUS)
+
+#define RX_BAUDRATE CRSF_RX_BAUDRATE
+#define RX_SERIAL_CONFIG SERIAL_8N1
+
 RXModule* rxMod = &crsfRx;
+
 #else
+
+#define RX_BAUDRATE 100000
+#define RX_SERIAL_CONFIG SERIAL_8E2
+
 RXModule* rxMod = &sbusRxModule;
+
 #endif
 
 
@@ -860,7 +871,7 @@ static void setupSerial()
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RX_BAUDRATE);
 
     TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
@@ -871,7 +882,7 @@ static void setupSerial()
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RX_BAUDRATE);
     CRSF_RX_SERIAL.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
@@ -880,17 +891,17 @@ static void setupSerial()
     TX_SERIAL.setRx((PinName)NC);
     TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    TX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    TX_SERIAL.begin(RX_BAUDRATE); //TODO: possibly something different
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
+    Serial.begin(RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    Serial.begin(CRSF_RX_BAUDRATE);
+    Serial.begin(RX_BAUDRATE, RX_SERIAL_CONFIG);
 #endif
 
 }
