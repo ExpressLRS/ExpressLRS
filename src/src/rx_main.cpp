@@ -220,18 +220,13 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
 }
 
-void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link
 {
-    if (InBindingMode)
-    {
-        return;
-    }
-
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
     hwTimer.updateInterval(ModParams->interval);
-    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
+    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, UID[5] & 0x01);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
@@ -1068,9 +1063,11 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode()
 {
+    if (connectionState == connected || InBindingMode || webUpdateMode)
+        return;
+
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
-    if (connectionState != connected && LockRFmode == false && !webUpdateMode
-        && (millis() - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
+    if (LockRFmode == false && (millis() - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
     {
         RFmodeLastCycled = millis();
         LastSyncPacket = millis();           // reset this variable
@@ -1090,8 +1087,7 @@ static void cycleRfMode()
     } // if time to switch RF mode
 
     // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (connectionState != connected && !webUpdateMode && !InBindingMode
-        && (millis() - LEDLastUpdate > LED_INTERVAL_DISCONNECTED))
+    if (millis() - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
     {
         #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
@@ -1385,13 +1381,14 @@ void EnterBindingMode()
     UID[5] = BindingUID[5];
 
     CRCInitializer = 0;
+    InBindingMode = true;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(RATE_DEFAULT);
     Radio.SetFrequencyReg(GetInitialFreq());
-
-    InBindingMode = true;
+    // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
+    Radio.RXnb();
 
     Serial.print("Entered binding mode at freq = ");
     Serial.println(Radio.currFreq);
