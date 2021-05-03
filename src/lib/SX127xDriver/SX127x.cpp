@@ -241,9 +241,8 @@ bool SX127xDriver::DetectChip()
       Serial.print(i + 1);
       Serial.print(" of 10 tries) REG_VERSION == ");
 
-      char buffHex[5];
-      sprintf(buffHex, "0x%02X", version);
-      Serial.print(buffHex);
+      Serial.print("0x");
+      Serial.print(version, HEX);
       Serial.println();
       delay(200);
       i++;

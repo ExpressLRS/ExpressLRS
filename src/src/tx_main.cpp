@@ -13,7 +13,6 @@ SX1280Driver Radio;
 #include "channels.h"
 #include "CRSF.h"
 #include "FHSS.h"
-// #include "debug.h"
 #include "POWERMGNT.h"
 #include "msp.h"
 #include "msptypes.h"
