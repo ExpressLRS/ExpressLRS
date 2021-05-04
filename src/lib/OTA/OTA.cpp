@@ -182,10 +182,10 @@ void ICACHE_RAM_ATTR UnpackChannelData11bit(volatile uint8_t* Buffer, CRSF *crsf
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00011100) >> 2);
     crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00000011) >> 0) | ((Buffer[6] & 0b10000000) >> 7);
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[6] & 0b01110000) >> 4);
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(Buffer[6] & 0b00001000);
-    crsf->PackedRCdataOut.ch5 = BIT_to_CRSF(Buffer[6] & 0b00000100);
-    crsf->PackedRCdataOut.ch6 = BIT_to_CRSF(Buffer[6] & 0b00000010);
-    crsf->PackedRCdataOut.ch7 = BIT_to_CRSF(Buffer[6] & 0b00000001);
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b00001000) >> 3);
+    crsf->PackedRCdataOut.ch5 = BIT_to_CRSF((Buffer[6] & 0b00000100) >> 2);
+    crsf->PackedRCdataOut.ch6 = BIT_to_CRSF((Buffer[6] & 0b00000010) >> 1);
+    crsf->PackedRCdataOut.ch7 = BIT_to_CRSF((Buffer[6] & 0b00000001) >> 0);
 }
 #else
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)

@@ -363,13 +363,21 @@ static inline uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t val)
 // Returns 1 if val is greater than CRSF_CHANNEL_VALUE_MID
 static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t val)
 {
+    #ifdef USE_11BIT_RC_CHANNELS
+    return (val > 1023) ? 1 : 0;
+    #else
     return (val > CRSF_CHANNEL_VALUE_MID) ? 1 : 0;
+    #endif
 }
 
 // Convert a bit into either the CRSF value for 1000 or 2000
 static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t val)
 {
+    #ifdef USE_11BIT_RC_CHANNELS
+    return (val) ? 2047 : 0;
+    #else
     return (val) ? CRSF_CHANNEL_VALUE_2000 : CRSF_CHANNEL_VALUE_1000;
+    #endif
 }
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
