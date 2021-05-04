@@ -188,6 +188,7 @@ void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
+static void HandleUARTin();
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -964,6 +965,7 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+    telemetry.ResetState();
 #ifdef PLATFORM_ESP8266
     if (!init_success)
     {
@@ -971,6 +973,7 @@ static void setupRadio()
         beginWebsever();
         while (1)
         {
+            HandleUARTin();
             HandleWebUpdate();
             if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
             {
@@ -980,6 +983,7 @@ static void setupRadio()
                 LED = !LED;
                 LEDLastUpdate = millis();
             }
+            delay(1);
         }
     }
 #else // target does not have wifi
@@ -991,6 +995,7 @@ static void setupRadio()
         #endif
         delay(LED_INTERVAL_ERROR);
         Serial.println("Failed to detect RF chipset!!!");
+        HandleUARTin();
     }
 #endif
 
@@ -1030,6 +1035,19 @@ static void ws2812Blink()
         }
     }
 #endif
+}
+
+static void HandleUARTin()
+{
+    while (CRSF_RX_SERIAL.available())
+    {
+        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
+
+        if (telemetry.ShouldCallBootloader())
+        {
+            reset_into_bootloader();
+        }
+    }
 }
 
 static void updateTelemetryBurst()
@@ -1150,11 +1168,6 @@ void setup()
 
 void loop()
 {
-    #ifdef ENABLE_TELEMETRY
-    uint8_t *nextPayload = 0;
-    uint8_t nextPlayloadSize = 0;
-    #endif
-
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
@@ -1174,6 +1187,7 @@ void loop()
     if (webUpdateMode)
     {
         HandleWebUpdate();
+        HandleUARTin();
         if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
         {
             #ifdef GPIO_PIN_LED
@@ -1312,25 +1326,15 @@ void loop()
             LEDPulseCounter++;
         }
     }
-
-
-    while (CRSF_RX_SERIAL.available())
+    HandleUARTin();
+    #ifdef ENABLE_TELEMETRY
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
+    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
     {
-        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-
-        #ifdef ENABLE_TELEMETRY
-        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
-        {
-            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
-        }
-        #endif
+        TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
     }
-
+    #endif
     updateTelemetryBurst();
 }
 
@@ -1358,7 +1362,9 @@ void reset_into_bootloader(void)
     blinfo->reset_type = 0xACDC;
 
     HAL_NVIC_SystemReset();
-#endif /* PLATFORM_STM32 */
+#elif defined(PLATFORM_ESP8266) 
+    ESP.rebootIntoUartDownloadMode();
+#endif 
 }
 
 void EnterBindingMode()
