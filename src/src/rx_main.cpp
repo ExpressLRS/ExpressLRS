@@ -957,6 +957,7 @@ static void setupBindingFromConfig()
 #endif
 }
 
+#if defined(PLATFORM_ESP8266)
 static void WebUpdateLoop()
 {
     HandleWebUpdate();
@@ -969,6 +970,7 @@ static void WebUpdateLoop()
         LEDLastUpdate = millis();
     }
 }
+#endif
 
 static void HandleUARTin()
 {
