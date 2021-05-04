@@ -8,11 +8,10 @@
 // Mock out the serial port using a string stream
 std::string buf;
 StringStream ss(buf);
+TransportLayer tl;
 
 // Create a CRSF object to test,
 // using the StringStream as a mock UART
-CRSF crsf(&ss);
-HardwareSerial CRSF::Port = HardwareSerial();
 
 void test_encapsulated_msp_send(void)
 {
@@ -22,8 +21,11 @@ void test_encapsulated_msp_send(void)
     // THEN the mspPacket_t will be transcoded into an embedded crsf msp packet
     // AND the transcoded packet will be sent to the Stream object associated with the CRSF class
 
+    tl.begin(&ss);
+    crsfTx.begin(&tl);
+    
     // Make sure no msp messages are in the fifo
-    crsf.ResetMspQueue();
+    crsfTx.ResetMspQueue();
 
     // Build an MSP packet with the MSP_SET_VTX_CONFIG cmd
     mspPacket_t packet;
@@ -37,9 +39,9 @@ void test_encapsulated_msp_send(void)
     packet.addByte(0x00);   // don't enable pitmode
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    crsf.AddMspMessage(&packet);
+    crsfTx.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data = crsfTx.GetMspMessage();
 
     // Assert that the correct number of total bytes were sent to the stream
     TEST_ASSERT_NOT_EQUAL(NULL, data);
@@ -69,8 +71,11 @@ void test_encapsulated_msp_send_too_long(void)
     // THEN the mspPacket_t will NOT be transcoded into an embedded crsf msp packet
     // AND nothing will be sent to the stream
 
+    tl.begin(&ss);
+    crsfTx.begin(&tl);
+
     // Make sure no msp messages are in the fifo
-    crsf.ResetMspQueue();
+    crsfTx.ResetMspQueue();
 
     // Build an MSP packet with a payload that is too long to send (>4 bytes)
     mspPacket_t packet;
@@ -85,9 +90,9 @@ void test_encapsulated_msp_send_too_long(void)
     packet.addByte(0x05);
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    crsf.AddMspMessage(&packet);
+    crsfTx.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data = crsfTx.GetMspMessage();
     // Assert that nothing was sent to the stream
     TEST_ASSERT_EQUAL(NULL, data);
 }

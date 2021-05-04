@@ -5,7 +5,7 @@
 
 // Mock the serial port using a string stream class
 // This will allow us to assert what gets sent on the serial port
-class StringStream : public Stream
+class StringStream : public HardwareSerial
 {
 public:
     StringStream(std::string &s) : buf(s), position(0) { }

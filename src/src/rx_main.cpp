@@ -1,6 +1,8 @@
 #include "targets.h"
 #include "common.h"
 #include "LowPassFilter.h"
+#include "channels.h"
+#include "transport.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -71,13 +73,12 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 
-/* CRSF_TX_SERIAL is used by CRSF output */
+/* TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
-    HardwareSerial CRSF_TX_SERIAL(USART2);
+    HardwareSerial TX_SERIAL(USART2);
 #else
-    #define CRSF_TX_SERIAL Serial
+    #define TX_SERIAL Serial
 #endif
-CRSF crsf(CRSF_TX_SERIAL);
 
 /* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
@@ -87,10 +88,12 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define CRSF_RX_SERIAL CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
 #elif defined(TARGET_RX_FM30_MINI)
-    #define CRSF_RX_SERIAL CRSF_TX_SERIAL
+    #define CRSF_RX_SERIAL TX_SERIAL
 #else
     #define CRSF_RX_SERIAL Serial
 #endif
+
+TransportLayer PulsePort;
 
 #ifdef ENABLE_TELEMETRY
     StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -203,21 +206,21 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     }
 
     int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+    channels.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    channels.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
     if (rssiDBM0 > 0) rssiDBM0 = 0;
     if (rssiDBM1 > 0) rssiDBM1 = 0;
 
     // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
-    crsf.LinkStatistics.active_antenna = antenna;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
-    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
-    //Serial.println(crsf.LinkStatistics.uplink_RSSI_1);
+    channels.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
+    channels.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
+    channels.LinkStatistics.active_antenna = antenna;
+    channels.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
+    channels.LinkStatistics.uplink_Link_quality = uplinkLQ;
+    channels.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    //Serial.println(crsfRx.LinkStatistics.uplink_RSSI_1);
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
@@ -288,10 +291,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
             // OpenTX RSSI as -dBm is fine and supports +dBm values as well
             // but the value in linkstatistics is "positivized" (inverted polarity)
-            Radio.TXdataBuffer[2] = -crsf.LinkStatistics.uplink_RSSI_1;
-            Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
-            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+            Radio.TXdataBuffer[2] = -channels.LinkStatistics.uplink_RSSI_1;
+            Radio.TXdataBuffer[3] = -channels.LinkStatistics.uplink_RSSI_2;
+            Radio.TXdataBuffer[4] = channels.LinkStatistics.uplink_SNR;
+            Radio.TXdataBuffer[5] = channels.LinkStatistics.uplink_Link_quality;
             Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
             break;
@@ -423,7 +426,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     alreadyTLMresp = false;
     uplinkLQ = LQCalc.getLQ();
     LQCalc.inc();
-    crsf.RXhandleUARTout();
+    PulsePort.flushOutput();
 }
 
 //////////////////////////////////////////////////////////////
@@ -678,16 +681,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        UnpackChannelData(Radio.RXdataBuffer, &crsf);
-        #ifdef ENABLE_TELEMETRY
+
+      if (ota.UnpackChannelData) {
+        ota.UnpackChannelData(Radio.RXdataBuffer, &channels);
+#ifdef ENABLE_TELEMETRY
         telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
         TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        if (connectionState != disconnected)
-        {
-            crsf.sendRCFrameToFC();
+#endif
+        if (connectionState != disconnected) {
+          crsfRx.sendRCFrameToFC(&channels);
         }
-        break;
+      }
+      break;
 
     case MSP_DATA_PACKET:
         currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
@@ -704,7 +709,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else if (MspReceiver.HasFinishedData())
         {
-            crsf.sendMSPFrameToFC(MspData);
+            crsfRx.sendMSPFrameToFC(MspData);
             MspReceiver.Unlock();
         }
         break;
@@ -784,6 +789,8 @@ void beginWebsever()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
+
+    PulsePort.end();
     BeginWebUpdate();
     webUpdateMode = true;
 #endif
@@ -842,10 +849,10 @@ static void setupSerial()
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
 
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
+    TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
 #endif /* TARGET_R9SLIMPLUS_RX */
 #if defined(TARGET_RX_GHOST_ATTO_V1)
     // USART1 is used for RX (half duplex)
@@ -856,11 +863,11 @@ static void setupSerial()
 
     // USART2 is used for TX (half duplex)
     // Note: these must be set before begin()
-    CRSF_TX_SERIAL.setHalfDuplex();
-    CRSF_TX_SERIAL.setRx((PinName)NC);
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    TX_SERIAL.setHalfDuplex();
+    TX_SERIAL.setRx((PinName)NC);
+    TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    TX_SERIAL.begin(CRSF_RX_BAUDRATE);
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
@@ -1077,9 +1084,9 @@ static void cycleRfMode()
         Serial.println(ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
-        crsf.sendLinkStatisticsToFC();
+        crsfRx.sendLinkStatisticsToFC(&channels);
         delay(100);
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC(&channels); // need to send twice, not sure why, seems like a BF bug?
         Radio.RXnb();
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
@@ -1108,6 +1115,13 @@ void setup()
     // Init EEPROM and load config, checking powerup count
     setupConfigAndPocCheck();
 
+    // Setup up packing/unpacking methods
+#ifdef HYBRID_SWITCHES_8
+    ota.init(OTA::HybridSwitches8);
+#else
+    ota.init(OTA::Data10bit);
+#endif
+    
     Serial.println("ExpressLRS Module Booting...");
 #if defined Regulatory_Domain_AU_915 || defined Regulatory_Domain_FCC_915
     Serial.println("Setting 915MHz Mode");
@@ -1143,7 +1157,9 @@ void setup()
     MspReceiver.ResetState();
     MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
     Radio.RXnb();
-    crsf.Begin();
+
+    PulsePort.begin(&TX_SERIAL);
+    crsfRx.begin(&PulsePort);
     hwTimer.init();
     hwTimer.stop();
 }
@@ -1157,7 +1173,7 @@ void loop()
 
     if (hwTimer.running == false)
     {
-        crsf.RXhandleUARTout();
+        PulsePort.flushOutput();
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
@@ -1192,8 +1208,8 @@ void loop()
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
         Serial.println("Air rate change req via sync");
-        crsf.sendLinkStatisticsToFC();
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        crsfRx.sendLinkStatisticsToFC(&channels);
+        crsfRx.sendLinkStatisticsToFC(&channels); // need to send twice, not sure why, seems like a BF bug?
     }
 
     if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
@@ -1222,7 +1238,7 @@ void loop()
         if (connectionState != disconnected)
         {
             getRFlinkInfo();
-            crsf.sendLinkStatisticsToFC();
+            crsfRx.sendLinkStatisticsToFC(&channels);
             SendLinkStatstoFCintervalLastSent = millis();
         }
     }

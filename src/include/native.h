@@ -28,7 +28,6 @@ public:
 
     // Print methods
     virtual size_t write(uint8_t c) = 0;
-    virtual size_t write(uint8_t *s, int l) = 0;
 };
 
 class HardwareSerial: public Stream {

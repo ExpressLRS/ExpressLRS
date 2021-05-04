@@ -16,7 +16,6 @@ extern SX1280Driver Radio;
 extern hwTimer hwTimer;
 
 #include "CRSF.h"
-extern CRSF crsf;
 
 #include <WiFi.h>
 #include <DNSServer.h>
@@ -130,7 +129,6 @@ void BeginWebUpdate()
 {
     hwTimer.stop();
     Radio.End();
-    crsf.End();
 
     Serial.println("Begin Webupdater");
     Serial.println("Stopping Radio");
