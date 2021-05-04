@@ -181,6 +181,7 @@ void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
+static void HandleUARTin();
 
 static uint8_t minLqForChaos()
 {
@@ -996,6 +997,7 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+    telemetry.ResetState();
 #ifdef PLATFORM_ESP8266
     if (!init_success)
     {
@@ -1056,6 +1058,19 @@ static void ws2812Blink()
         }
     }
 #endif
+}
+
+static void HandleUARTin()
+{
+    while (CRSF_RX_SERIAL.available())
+    {
+        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
+
+        if (telemetry.ShouldCallBootloader())
+        {
+            reset_into_bootloader();
+        }
+    }
 }
 
 static void updateTelemetryBurst()
@@ -1323,7 +1338,6 @@ void loop()
             LEDPulseCounter++;
         }
     }
-
     #ifdef ENABLE_TELEMETRY
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
