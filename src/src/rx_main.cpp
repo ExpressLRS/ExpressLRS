@@ -419,10 +419,15 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 {
     updatePhaseLock();
     NonceRX++;
-    alreadyFHSS = false;
-    alreadyTLMresp = false;
+
+    // Save the LQ value before the inc() reduces it by 1
     uplinkLQ = LQCalc.getLQ();
-    LQCalc.inc();
+    // Only advance the LQI period counter if we didn't send Telemetry this period
+    if (!alreadyTLMresp)
+        LQCalc.inc();
+
+    alreadyTLMresp = false;
+    alreadyFHSS = false;
     crsf.RXhandleUARTout();
 }
 
@@ -829,7 +834,6 @@ void inline RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
-    LQCalc.add(); // Adds packet to LQ calculation otherwise an artificial drop in LQ is seen due to sending TLM.
 #if defined(PRINT_RX_SCOREBOARD)
     Serial.write('T');
 #endif
