@@ -11,11 +11,7 @@ using namespace std;
 
 Telemetry::Telemetry()
 {
-    telemetry_state = TELEMETRY_IDLE;
-    currentTelemetryByte = 0;
-    currentPayloadIndex = 0;
-    callBootloader = false;
-    receivedPackages = 0;
+    ResetState();
 }
 
 bool Telemetry::ShouldCallBootloader()

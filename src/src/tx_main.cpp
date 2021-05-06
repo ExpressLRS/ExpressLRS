@@ -738,7 +738,6 @@ void setup()
     delay(1000);
   }
   #ifdef ENABLE_TELEMETRY
-  TelemetryReceiver.ResetState();
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif
   POWERMGNT.setDefaultPower();
@@ -755,7 +754,6 @@ void setup()
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
-  MspSender.ResetState();
 }
 
 void loop()
