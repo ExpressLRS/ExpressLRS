@@ -83,7 +83,6 @@
 #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 16
-#define GPIO_PIN_LED 16
 #define GPIO_PIN_BUTTON 0
 #define timerOffset -1
 
