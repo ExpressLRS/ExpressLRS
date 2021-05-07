@@ -129,9 +129,12 @@ def reset_to_bootloader(args):
     s.flush()
     rx_target = rl.read_line().strip()
     flash_target = re.sub("_VIA_.*", "", args.target.upper())
-    dbg_print("RX Target '%s', trying to flash '%s'" % (rx_target, flash_target))
-    if flash_target != "" and rx_target != flash_target:
+    if rx_target == "":
+        dbg_print("Cannot detect RX target, blindly flashing!")
+    if rx_target != flash_target:
         raise WrongTargetSelected("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+    elif flash_target != "":
+        dbg_print("Verified RX target '%s'" % (flash_target))
     time.sleep(.5)
     s.close()
 
@@ -162,4 +165,8 @@ if __name__ == '__main__':
         dbg_print(str(err))
 
     if args.reset_to_bl:
-        reset_to_bootloader(args)
+        try:
+            reset_to_bootloader(args)
+        except WrongTargetSelected as err:
+            dbg_print(str(err))
+            exit(-1)
