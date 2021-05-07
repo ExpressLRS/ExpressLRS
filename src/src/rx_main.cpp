@@ -1343,6 +1343,8 @@ struct bootloader {
 
 void reset_into_bootloader(void)
 {
+    CRSF_TX_SERIAL.println((const char *)&target_name[4]);
+    CRSF_TX_SERIAL.flush();
 #if defined(PLATFORM_STM32)
     delay(100);
     Serial.println("Jumping to Bootloader...");
@@ -1361,6 +1363,7 @@ void reset_into_bootloader(void)
 
     HAL_NVIC_SystemReset();
 #elif defined(PLATFORM_ESP8266)
+    delay(100);
     ESP.rebootIntoUartDownloadMode();
 #endif
 }
