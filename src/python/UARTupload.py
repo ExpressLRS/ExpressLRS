@@ -20,7 +20,7 @@ def dbg_print(line=''):
     return
 
 
-def uart_upload(port, filename, baudrate, ghst=False, key=None):
+def uart_upload(port, filename, baudrate, ghst=False, key=None, target=""):
     half_duplex = False
 
     dbg_print("=================== FIRMWARE UPLOAD ===================\n")
@@ -139,6 +139,13 @@ def uart_upload(port, filename, baudrate, ghst=False, key=None):
                         gotBootloader = True
                         break
 
+                    elif "_RX_" in line:
+                        flash_target = re.sub("_VIA_.*", "", target.upper())
+                        if line != flash_target:
+                            raise Exception("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
+                        elif flash_target != "":
+                            dbg_print("Verified RX target '%s'" % flash_target)
+
             dbg_print("    Got into bootloader after: %u attempts\n" % currAttempt)
 
             # sanity check! Make sure the bootloader is started
@@ -223,7 +230,7 @@ def on_upload(source, target, env):
                 envkey = flag.split("=")[1]
 
     try:
-        uart_upload(upload_port, firmware_path, upload_speed, ghst, key=envkey)
+        uart_upload(upload_port, firmware_path, upload_speed, ghst, key=envkey, target=env['PIOENV'])
     except Exception as e:
         dbg_print("{0}\n".format(e))
         return -1
