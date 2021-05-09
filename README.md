@@ -73,7 +73,9 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [DIY JR Bay](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
     - [DIY Slim TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
     - [DIY Slimmer TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
-    - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Beta Support, 250 mW output power)
+    - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power)
+    - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Beta Support, 100 mW output power)
+    - [HappyModel TX](http://www.happymodel.cn/index.php/2021/04/12/happymodel-2-4g-expresslrs-elrs-micro-tx-module-es24tx/) (Full Support, 250 mW output power)
 - **RX**
     - [GHOST Atto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
     - [GHOST Zepto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
@@ -81,6 +83,8 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [DIY Nano RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano) (Full Support, CRSF Nano Footprint, WiFi Updating)
     - [DIY Nano CCG RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_CCG_Nano) (Full Support, CRSF Nano Pinout, STM32 Based)
     - [DIY Nano Ceramic RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano_Ceramic) (Full Support, CRSF Nano Footprint, WiFi Updating, Built in antenna)
+    - [HappyModel PP RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, STM32 Based)
+    - [HappyModel EP1/EP2 RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, ESP8285 Based, WiFi Updating)
 
 **For a more exhaustive list refer to the [Supported Hardware](https://github.com/AlessandroAU/ExpressLRS/wiki/Supported-Hardware) page on the wiki**
 
