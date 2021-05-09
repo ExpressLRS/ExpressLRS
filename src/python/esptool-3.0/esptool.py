@@ -224,7 +224,7 @@ class ESPLoader(object):
     ROM_INVALID_RECV_MSG = 0x05   # response if an invalid message is received
 
     # Maximum block sized for RAM and Flash writes, respectively.
-    ESP_RAM_BLOCK   = 0x1800
+    ESP_RAM_BLOCK   = 0x0800
 
     FLASH_WRITE_SIZE = 0x400
 
@@ -1201,7 +1201,7 @@ class ESP8266ROM(ESPLoader):
 class ESP8266StubLoader(ESP8266ROM):
     """ Access class for ESP8266 stub loader, runs on top of ROM.
     """
-    FLASH_WRITE_SIZE = 0x4000  # matches MAX_WRITE_BLOCK in stub_loader.c
+    FLASH_WRITE_SIZE = 0x0800  # matches MAX_WRITE_BLOCK in stub_loader.c
     IS_STUB = True
 
     def __init__(self, rom_loader):
@@ -3577,11 +3577,11 @@ def main(custom_commandline=None):
         if args.override_vddsdio:
             esp.override_vddsdio(args.override_vddsdio)
 
-        if args.baud > initial_baud:
-            try:
-                esp.change_baud(args.baud)
-            except NotImplementedInROMError:
-                print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d" % initial_baud)
+        # if args.baud > initial_baud:
+        #     try:
+        #         esp.change_baud(args.baud)
+        #     except NotImplementedInROMError:
+        #         print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d" % initial_baud)
 
         # override common SPI flash parameter stuff if configured to do so
         if hasattr(args, "spi_connection") and args.spi_connection is not None:
