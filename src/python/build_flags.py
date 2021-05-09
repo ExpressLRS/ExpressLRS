@@ -53,6 +53,9 @@ def process_flags(path):
     if not os.path.isfile(path):
         return
     parse_flags(path)
+
+def condense_flags():
+    global build_flags
     for line in build_flags:
         # Some lines have multiple flags so this will split them and remove them all
         for flag in re.findall("!-D\s*[^\s]+", line):
@@ -103,8 +106,8 @@ def get_git_sha():
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
-
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
+condense_flags()
 
 env['BUILD_FLAGS'] = build_flags
 print("build flags: %s" % env['BUILD_FLAGS'])
