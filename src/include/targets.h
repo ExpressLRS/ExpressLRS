@@ -310,7 +310,7 @@ High = Ant2
 //#define GPIO_PIN_BUTTON         PA12
 #define timerOffset             1
 
-#elif defined(TARGET_TX_GHOST)
+#elif defined(TARGET_TX_GHOST) // GHOST TX FULL AND LITE
 #define GPIO_PIN_NSS             PA15
 #define GPIO_PIN_BUSY            PB15
 #define GPIO_PIN_DIO1            PB2
@@ -324,12 +324,10 @@ High = Ant2
 #define GPIO_PIN_RCSIGNAL_TX     PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
 #define GPIO_PIN_LED_WS2812      PB6
 #define GPIO_PIN_LED_WS2812_FAST PB_6
-#ifndef TARGET_TX_GHOST_LITE
-    #define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
-    #define GPIO_PIN_RF_AMP_DET      PA3
-    #define GPIO_PIN_ANT_CTRL_1      PA9
-    #define GPIO_PIN_ANT_CTRL_2      PB13
-#endif
+#define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
+#define GPIO_PIN_ANT_CTRL_1      PA9
+#define GPIO_PIN_ANT_CTRL_2      PB13
+#define GPIO_PIN_RF_AMP_DET      PA3  // Voltage detector pin 
 #define GPIO_PIN_BUZZER          PC13
 #define timerOffset              1
 
