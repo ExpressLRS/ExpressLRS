@@ -145,28 +145,28 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
     case PWR_10mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-13);
+            Radio.SetOutputPower(3); // These will have to change. 
         #else
             Radio.SetOutputPower(0);
         #endif
         break;
     case PWR_25mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-9);
+            Radio.SetOutputPower(7);
         #else
             Radio.SetOutputPower(4);
         #endif
         break;
     case PWR_100mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-4);
+            Radio.SetOutputPower(13);
         #else
             Radio.SetOutputPower(10);
         #endif
         break;
     case PWR_250mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-2);
+            Radio.SetOutputPower(13);
         #else
             Radio.SetOutputPower(13);
         #endif
@@ -175,7 +175,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     default:
         Power = PWR_50mW;
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-7);
+            Radio.SetOutputPower(10);
         #else
             Radio.SetOutputPower(7);
         #endif
