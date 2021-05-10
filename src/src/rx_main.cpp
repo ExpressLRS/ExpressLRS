@@ -492,26 +492,23 @@ static void ICACHE_RAM_ATTR updateDiversity()
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
-    updateDiversity();
 
-    bool tlmSent = false;
-    bool didFHSS = false;
-    
-    didFHSS = HandleFHSS();
-    tlmSent = HandleSendTelemetryResponse();
+    updateDiversity();
+    bool didFHSS = HandleFHSS();
+    bool tlmSent = HandleSendTelemetryResponse();
 
     #if !defined(Regulatory_Domain_ISM_2400)
-    if (didFHSS == false)
+    if (!didFHSS && !tlmSent)
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
         Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
+
+        if ((micros() - LastValidPacketMicros) > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
+        {
+            Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
+        }                 
     }
     #endif /* Regulatory_Domain_ISM_2400 */
-
-    if (!didFHSS && !tlmSent && (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval)) // packet timeout AND didn't DIDN'T just hop or send TLM
-    {
-        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data 
-    }
 
     #if defined(PRINT_RX_SCOREBOARD)
     if (!LQCalc.currentIsSet())
