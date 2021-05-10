@@ -150,8 +150,8 @@ bool disableWebServer = false;
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
-bool alreadyFHSS = false;
-bool alreadyTLMresp = false;
+volatile bool alreadyFHSS = false;
+volatile bool alreadyTLMresp = false;
 
 uint32_t beginProcessing;
 uint32_t beginProcessingCycleCount;
@@ -362,9 +362,11 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    PFDloop.calcResult();
     if (connectionState != disconnected)
     {
+        PFDloop.calcResult();
+        PFDloop.reset();
+
         RawOffset = PFDloop.getResult();
         Offset = LPF_Offset.update(RawOffset);
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
@@ -372,14 +374,14 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
         if (connectionState != connected)
         {
-            hwTimer.phaseShift((RawOffset >> 1));
+            hwTimer.phaseShift(RawOffset >> 1);
         }
         else
         {
-            hwTimer.phaseShift((Offset >> 2));
+            hwTimer.phaseShift(Offset >> 2);
         }
 
-        if (RXtimerState == tim_locked)
+        if (RXtimerState == tim_locked && (micros() - beginProcessing) < ExpressLRS_currAirRate_Modparams->interval)
         {
             if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
             {
@@ -393,14 +395,9 @@ void ICACHE_RAM_ATTR updatePhaseLock()
                 }
             }
         }
-        else
-        {
-            hwTimer.phaseShift((RawOffset >> 1));
-        }
         prevOffset = Offset;
         prevRawOffset = RawOffset;
     }
-    PFDloop.reset();
 
 #ifndef DEBUG_SUPPRESS
     Serial.print(Offset);
@@ -499,31 +496,26 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
 
-#if defined(PRINT_RX_SCOREBOARD)
-    if (!LQCalc.currentIsSet())
-        Serial.write(lastPacketCrcError ? '.' : '_');
-    lastPacketCrcError = false;
-#endif
-
     bool tlmSent = false;
     bool didFHSS = false;
 
-    if (currentlyProcessing == false) // stop race condition
+    if (!currentlyProcessing && !alreadyFHSS && !alreadyTLMresp) // stop race condition
     {
         updateDiversity();
         didFHSS = HandleFHSS();
         tlmSent = HandleSendTelemetryResponse();
     }
 
-    if (didFHSS || tlmSent)
+    if (!didFHSS && !tlmSent && (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval)) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
-        return;
+        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data 
     }
 
-    if (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
-    {
-        Radio.RXnb(); //seems to cause issues with tlm. disable for now. Should be caight by HandleFHSS() every 4th packet ANYWAY
-    }
+    #if defined(PRINT_RX_SCOREBOARD)
+    if (!LQCalc.currentIsSet())
+        Serial.write(lastPacketCrcError ? '.' : '_');
+    lastPacketCrcError = false;
+    #endif
 }
 
 void LostConnection()
@@ -542,6 +534,8 @@ void LostConnection()
     prevOffset = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
+    alreadyTLMresp = false;
+    alreadyFHSS = false;
     // Make first LED cycle turn it on
     LED = false;
 
@@ -633,6 +627,7 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    currentlyProcessing = true;
     beginProcessing = micros();
 
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -656,8 +651,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #if defined(PRINT_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
+        currentlyProcessing = false;
         return;
     }
+    PFDloop.extEvent(beginProcessing + 250);
 
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;
@@ -672,11 +669,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     #endif
     bool currentMspConfirmValue;
 
-    currentlyProcessing = true;
     LastValidPacketPrevMicros = LastValidPacketMicros;
     LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
-    PFDloop.extEvent(beginProcessing + 250);
 
     getRFlinkInfo();
 
@@ -826,7 +821,7 @@ void sampleButton()
 #endif
 }
 
-void inline RXdoneISR()
+void ICACHE_RAM_ATTR RXdoneISR()
 {
     ProcessRFPacket();
 }
@@ -1228,9 +1223,12 @@ void loop()
 
     if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
-        if (connectionState != disconnected)
+        if (connectionState == disconnected)
         {
             getRFlinkInfo();
+        }
+        if (connectionState != disconnected)
+        {
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = millis();
         }
