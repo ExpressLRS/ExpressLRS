@@ -492,16 +492,21 @@ static void ICACHE_RAM_ATTR updateDiversity()
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
+    updateDiversity();
 
     bool tlmSent = false;
     bool didFHSS = false;
+    
+    didFHSS = HandleFHSS();
+    tlmSent = HandleSendTelemetryResponse();
 
-    if (!currentlyProcessing && !alreadyFHSS && !alreadyTLMresp) // stop race condition
+    #if !defined(Regulatory_Domain_ISM_2400)
+    if (didFHSS == false)
     {
-        updateDiversity();
-        didFHSS = HandleFHSS();
-        tlmSent = HandleSendTelemetryResponse();
+        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
+        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
     }
+    #endif /* Regulatory_Domain_ISM_2400 */
 
     if (!didFHSS && !tlmSent && (micros() - LastValidPacketMicros > ExpressLRS_currAirRate_Modparams->interval)) // packet timeout AND didn't DIDN'T just hop or send TLM
     {
@@ -651,7 +656,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         currentlyProcessing = false;
         return;
     }
-    PFDloop.extEvent(beginProcessing + 250);
+    PFDloop.extEvent(beginProcessing + 200);
 
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;
@@ -752,20 +757,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    bool didFHSS = HandleFHSS();
-    HandleSendTelemetryResponse();
     LQCalc.add(); // Received a packet, that's the definition of LQ
-
-#if !defined(Regulatory_Domain_ISM_2400)
-    if (didFHSS == false)
-    {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-    }
-#else
-    (void)didFHSS; // silence compiler warning
-#endif /* Regulatory_Domain_ISM_2400 */
-
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
