@@ -131,7 +131,6 @@ int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
-bool lowRateMode = false;
 
 // LED Blinking state
 static bool LED = false;
@@ -154,13 +153,11 @@ volatile bool alreadyFHSS = false;
 volatile bool alreadyTLMresp = false;
 
 uint32_t beginProcessing;
-uint32_t beginProcessingCycleCount;
 uint32_t doneProcessing;
 
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
-uint32_t ModuleBootTime = 0;
 uint32_t volatile LastValidPacketMicros = 0; // Needs to be volatile to stop race condition as variable might be updated during if() in loop()
 uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
@@ -520,24 +517,23 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection()
 {
-    if (connectionState == disconnected)
-    {
-        return; // Already disconnected
-    }
-
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
     FreqCorrection = 0;
     Offset = 0;
+    OffsetDx = 0;
+    OffsetSlow = 0;
+    RawOffset = 0;
     prevOffset = 0;
+    GotConnectionMillis = 0;
+    uplinkLQ = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    // Make first LED cycle turn it on
-    LED = false;
+    LED = false; // Make first LED cycle turn it on
 
     if (!InBindingMode)
     {
