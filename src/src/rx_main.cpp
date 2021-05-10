@@ -521,6 +521,7 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
+    hwTimer.phaseShift(0);
     FreqCorrection = 0;
     Offset = 0;
     OffsetDx = 0;
