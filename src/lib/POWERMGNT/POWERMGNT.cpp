@@ -67,10 +67,6 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
-#if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
-    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
-    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
-#endif
     CurrentPower = PWR_COUNT;
 }
 
@@ -145,39 +141,39 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
     case PWR_10mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(3); // These will have to change. 
+            Radio.SetOutputPower(-16);
         #else
-            Radio.SetOutputPower(0);
+            Radio.SetOutputPower(-16);
         #endif
         break;
     case PWR_25mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(7);
+            Radio.SetOutputPower(-14);
         #else
-            Radio.SetOutputPower(4);
+            Radio.SetOutputPower(-14);
         #endif
         break;
     case PWR_100mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(13);
+            Radio.SetOutputPower(-8);
         #else
-            Radio.SetOutputPower(10);
+            Radio.SetOutputPower(-8);
         #endif
         break;
     case PWR_250mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(13);
+            Radio.SetOutputPower(-4);
         #else
-            Radio.SetOutputPower(13);
+            Radio.SetOutputPower(-4);
         #endif
         break;
     case PWR_50mW:
     default:
         Power = PWR_50mW;
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(10);
+            Radio.SetOutputPower(-11);
         #else
-            Radio.SetOutputPower(7);
+            Radio.SetOutputPower(-11);
         #endif
         break;
     }

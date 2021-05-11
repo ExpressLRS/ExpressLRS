@@ -311,25 +311,25 @@ High = Ant2
 #define timerOffset             1
 
 #elif defined(TARGET_TX_GHOST) // GHOST TX FULL AND LITE
-#define GPIO_PIN_NSS             PA15
-#define GPIO_PIN_BUSY            PB15
-#define GPIO_PIN_DIO1            PB2
-#define GPIO_PIN_MOSI            PA7
-#define GPIO_PIN_MISO            PA6
-#define GPIO_PIN_SCK             PA5
-#define GPIO_PIN_RST             PB0
-#define GPIO_PIN_RX_ENABLE       PA8  // These may be swapped
-#define GPIO_PIN_TX_ENABLE       PB14 // These may be swapped
-#define GPIO_PIN_RCSIGNAL_RX     PA10 // S.PORT (Only needs one wire )
-#define GPIO_PIN_RCSIGNAL_TX     PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
-#define GPIO_PIN_LED_WS2812      PB6
-#define GPIO_PIN_LED_WS2812_FAST PB_6
-#define GPIO_PIN_RF_AMP_EN       PB11 // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
-#define GPIO_PIN_ANT_CTRL_1      PA9
-#define GPIO_PIN_ANT_CTRL_2      PB13
-#define GPIO_PIN_RF_AMP_DET      PA3  // Voltage detector pin 
-#define GPIO_PIN_BUZZER          PC13
-#define timerOffset              1
+#define GPIO_PIN_NSS                PA15
+#define GPIO_PIN_BUSY               PB15
+#define GPIO_PIN_DIO1               PB2
+#define GPIO_PIN_MOSI               PA7
+#define GPIO_PIN_MISO               PA6
+#define GPIO_PIN_SCK                PA5
+#define GPIO_PIN_RST                PB0
+#define GPIO_PIN_TX_ENABLE          PA8  // Works on Lite
+#define GPIO_PIN_RX_ENABLE          PB14 // Works on Lite
+#define GPIO_PIN_ANT_CTRL_1         PA9
+#define GPIO_PIN_ANT_CTRL_2         PB13
+#define GPIO_PIN_RCSIGNAL_RX        PA10 // S.PORT (Only needs one wire )
+#define GPIO_PIN_RCSIGNAL_TX        PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
+#define GPIO_PIN_LED_WS2812         PB6
+#define GPIO_PIN_LED_WS2812_FAST    PB_6
+#define GPIO_PIN_PA_SE2622L_ENABLE  PB11  // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
+#define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin 
+#define GPIO_PIN_BUZZER             PC13
+#define timerOffset                 1
 
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
