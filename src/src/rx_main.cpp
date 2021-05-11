@@ -181,6 +181,28 @@ void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
 
+static uint8_t minLqForChaos()
+{
+#if defined(Regulatory_Domain_AU_433) || defined(DRegulatory_Domain_EU_433)
+    // The math breaks down below because with 3 hops and 4 packets per hop
+    // there's zero chance you won't RX a packet from any other TX
+    return 75;
+#else
+    // When determining if a connection is achieved, we want a minimum LQ
+    // to prove that we didn't just randomly happen on a second TX transmitting
+    // on the same channel that we are able to parse valid packets from.
+    // The most packets we'd see is all the packets for a hop (FHSShopInterval)
+    // on one of the NR_FHSS_ENTRIES channels. This value must be corrected for
+    // regulatory domains where the FHSS will wrap back around before 100 LQI
+    // packets are counted. Converted to percent, rounded up (by adding 1)
+    // FHSShopInterval * (1 / NR_FHSS_ENTRIES) * max(100[LQ] / (FHSShopInterval * NR_FHSS_ENTRIES), 1) * 100 + 1
+    // With a interval of 4 this works out to: FCC2.4=6, FCC915=11, AU915=26, EU868=60, EU/AU433=1112 :(
+    return max(
+        (100U * 100U) / (NR_FHSS_ENTRIES * NR_FHSS_ENTRIES) + 1, // case where FHSShopInterval * NR_FHSS_ENTRIES < 100 (LQ wrap)
+        ExpressLRS_currAirRate_Modparams->FHSShopInterval * 100U / NR_FHSS_ENTRIES + 1 // no wrap
+    );
+#endif
+}
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
@@ -1179,7 +1201,7 @@ void loop()
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
-    if (connectionState == tentative && (uplinkLQ <= (100-(100/ExpressLRS_currAirRate_Modparams->FHSShopInterval)) || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (uplinkLQ <= minLqForChaos() || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -1195,7 +1217,7 @@ void loop()
         LostConnection();
     }
 
-    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > (100 - (100 / (ExpressLRS_currAirRate_Modparams->FHSShopInterval + 1))))) //detects when we are connected
+    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > minLqForChaos())) //detects when we are connected
     {
         GotConnection();
     }
@@ -1219,7 +1241,7 @@ void loop()
         buttonLastSampled = millis();
     }
 
-    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)) && (abs(OffsetDx) <= 5))
+    if ((RXtimerState == tim_tentative) && ((millis() - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
     {
         RXtimerState = tim_locked;
         #ifndef DEBUG_SUPPRESS
