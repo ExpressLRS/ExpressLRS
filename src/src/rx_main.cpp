@@ -59,7 +59,7 @@ uint32_t LEDWS2812LastUpdate;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
-#define DEBUG_SUPPRESS // supresses debug messages on uart
+//#define DEBUG_SUPPRESS // supresses debug messages on uart
 //#define PRINT_RX_SCOREBOARD // print a letter for each packet received or missed
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -107,8 +107,8 @@ static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// Filters ////////////////
 LPF LPF_Offset(2);
-LPF LPF_OffsetSlow(3);
-LPF LPF_OffsetDx(4);
+LPF LPF_OffsetSlow(4);
+LPF LPF_OffsetDx(5);
 
 // LPF LPF_UplinkRSSI(5);
 LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
@@ -366,18 +366,9 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
         Offset = LPF_Offset.update(RawOffset);
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
-        OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
+        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
 
-        if (connectionState != connected)
-        {
-            hwTimer.phaseShift(RawOffset >> 1);
-        }
-        else
-        {
-            hwTimer.phaseShift(Offset >> 2);
-        }
-
-        if (RXtimerState == tim_locked && (micros() - LastValidPacket) < ExpressLRS_currAirRate_Modparams->interval)
+        if (RXtimerState == tim_locked && LQCalc.currentIsSet())
         {
             if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
             {
@@ -391,6 +382,16 @@ void ICACHE_RAM_ATTR updatePhaseLock()
                 }
             }
         }
+
+        if (connectionState != connected)
+        {
+            hwTimer.phaseShift(RawOffset >> 1);
+        }
+        else
+        {
+            hwTimer.phaseShift(Offset >> 2);
+        }
+
         prevOffset = Offset;
         prevRawOffset = RawOffset;
     }
@@ -412,6 +413,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 {
     updatePhaseLock();
     NonceRX++;
+
+    if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
+    {
+        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
+    }
 
     // Save the LQ value before the inc() reduces it by 1
     uplinkLQ = LQCalc.getLQ();
@@ -497,15 +503,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool tlmSent = HandleSendTelemetryResponse();
 
     #if !defined(Regulatory_Domain_ISM_2400)
-    if (!didFHSS && !tlmSent)
+    if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection);         //as above but corrects a different PPM offset based on freq error
-
-        if ((micros() - LastValidPacketMicros) > ExpressLRS_currAirRate_Modparams->interval) // packet timeout AND didn't DIDN'T just hop or send TLM
-        {
-            Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-        }                 
+        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);         //as above but corrects a different PPM offset based on freq error            
     }
     #endif /* Regulatory_Domain_ISM_2400 */
 
@@ -522,7 +523,10 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
+    FreqCorrection = 0;
+    Radio.SetPPMoffsetReg(FreqCorrection);
     hwTimer.phaseShift(0);
+    Serial.println(FreqCorrection);
     FreqCorrection = 0;
     Offset = 0;
     OffsetDx = 0;
@@ -547,7 +551,6 @@ void LostConnection()
 
     RFmodeCycleMultiplier = 1;
     Serial.println("lost conn");
-    Serial.println(FreqCorrection);
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
@@ -745,6 +748,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
+                 hwTimer.phaseShift(150);
                  TentativeConnection();
              }
          }
@@ -1226,7 +1230,7 @@ void loop()
         buttonLastSampled = millis();
     }
 
-    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)) && (OffsetDx <= 5))
+    if ((RXtimerState == tim_tentative) && (millis() > (GotConnectionMillis + ConsiderConnGoodMillis)) && (abs(OffsetDx) <= 5))
     {
         RXtimerState = tim_locked;
         #ifndef DEBUG_SUPPRESS
