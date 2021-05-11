@@ -360,7 +360,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         PFDloop.reset();
         RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
         Offset = LPF_Offset.update(RawOffset);
-        OffsetDx = LPF_OffsetDx.update(RawOffset - OffsetDx);
+        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
 
         if (RXtimerState == tim_locked && LQCalc.currentIsSet())
         {
