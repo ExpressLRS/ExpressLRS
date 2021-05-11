@@ -141,7 +141,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
     case PWR_10mW:
         #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-16); // These will have to change. 
+            Radio.SetOutputPower(-16);
         #else
             Radio.SetOutputPower(-16);
         #endif
