@@ -381,7 +381,7 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 #endif
 #if defined(GPIO_PIN_PA_SE2622L_ENABLE) && (GPIO_PIN_PA_SE2622L_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, LOW);
+    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, HIGH);
 #endif
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
