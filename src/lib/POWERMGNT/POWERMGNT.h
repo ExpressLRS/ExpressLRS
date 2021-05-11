@@ -27,7 +27,11 @@
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || \
       defined(TARGET_TX_ESP32_LORA1280F27)   || \
       defined(TARGET_TX_GHOST)
+#if defined(TARGET_TX_GHOST_LITE)
+#define MaxPower PWR_100mW
+#else
 #define MaxPower PWR_250mW
+#endif
 #define DefaultPowerEnum PWR_50mW
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
