@@ -430,11 +430,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     updatePhaseLock();
     NonceRX++;
 
-    if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    {
-        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    }
-
     // Save the LQ value before the inc() reduces it by 1
     uplinkLQ = LQCalc.getLQ();
     // Only advance the LQI period counter if we didn't send Telemetry this period
@@ -518,16 +513,18 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
-    #if !defined(Regulatory_Domain_ISM_2400)
-    if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
+    if (!didFHSS && !tlmSent)
     {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);         //as above but corrects a different PPM offset based on freq error
+        if (LQCalc.currentIsSet())
+        {
+        #if !defined(Regulatory_Domain_ISM_2400)
+            HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+            Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);    // as above but corrects a different PPM offset based on freq error
+        #endif /* Regulatory_Domain_ISM_2400 */
+        }
+        else
+            Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
     }
-    #else
-        (void)didFHSS;
-        (void)tlmSent;
-    #endif /* Regulatory_Domain_ISM_2400 */
 
     #if defined(PRINT_RX_SCOREBOARD)
     if (!LQCalc.currentIsSet())
