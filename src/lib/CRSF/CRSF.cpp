@@ -22,6 +22,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
+#define CHUNK_MAX_NUMBER_OF_BYTES 30
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
@@ -344,12 +345,26 @@ void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldc
     uint8_t fieldname[namelength + 1];
     uint8_t fieldunit[unitlength + 1];
     uint8_t LUArespLength;
+    uint8_t wholeChunkSize = (2+(namelength+1) + len_setup2 + (unitlength+1));
+    uint8_t chunks = 0;        
+    chunks = (wholeChunkSize/(CHUNK_MAX_NUMBER_OF_BYTES));
+    if(wholeChunkSize % (CHUNK_MAX_NUMBER_OF_BYTES)){
+        chunks = chunks + 1;
+    }
+    uint8_t currentChunk;
+    currentChunk = chunks - (fieldchunk+1);
+    uint8_t maxiter;
+            if(currentChunk > 0){
+                maxiter = CHUNK_MAX_NUMBER_OF_BYTES;
+            } else {
+                maxiter = wholeChunkSize % (CHUNK_MAX_NUMBER_OF_BYTES+1);
+            }
     if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
         y=4;
         LUArespLength = 2 + (namelength+1) + len_setup2;   //header, field name, fieldsetup2(11 byte + 1 fieldcount)
     } else {
         y=0;
-        LUArespLength = 2+ 4 + (namelength+1) + len_setup2 + (unitlength+1);   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
+        LUArespLength = 2+ 2 + maxiter;   //header, fieldsetup1(fieldid, fieldchunk,fieldparent,fieldtype),field name, fieldsetup2(value,min,max,default),field unit
     }
     /**
     if(LUArespLength > 50){
@@ -364,41 +379,42 @@ void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldc
         fieldchunk = 0;
     }
     */
-    uint8_t outBuffer[LUArespLength + 5] = {0};
+    uint8_t chunkBuffer[wholeChunkSize] = {0};
+    memcpy(chunkBuffer+2,field_name,(namelength + 1)); //it is byte op, we can use memcpy with index to
+                                                    // destination memory.
+    memcpy(chunkBuffer+(2 + (namelength+1)),fieldsetup2,len_setup2);
+    memcpy(chunkBuffer+(2 + (namelength+1) + len_setup2),field_unit,(unitlength + 1));
+    
+        chunkBuffer[0] = fieldparent; //fieldparent;
+        chunkBuffer[1] = fieldtype;
+    
+    uint8_t outBuffer[maxiter + 5 + 2 + 2] = {0};   //5 byte header + 2 byte (fieldid,fieldchunk) + 1 byte crc
 
-    memcpy(fieldname,field_name,(namelength + 1));
-    //if(!((fieldtype == CRSF_STRING) || (fieldtype == CRSF_FOLDER))){
-        memcpy(fieldunit,field_unit,(unitlength + 1));
-    //}
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = frame;
-
+    outBuffer[1] = LUArespLength + 2;   //received as #data in lua
+    outBuffer[2] = frame; //received as command in lua
+    // all below received as data in lua
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
     if(frame == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY){
         outBuffer[5] = fieldid;
-        outBuffer[6] = fieldchunk; //fieldchunk;
-        outBuffer[7] = fieldparent; //fieldparent;
-        outBuffer[8] = fieldtype;
-    }
-    for (uint8_t i = 0; i < (namelength+1); ++i)
-    {
-        outBuffer[((9-y) + i)] = fieldname[i];
-    }
-    for (uint8_t i = 0; i < len_setup2; ++i)
-    {
-        outBuffer[((9-y) + (namelength+1) + i)] = fieldsetup2[i];
-    }
-    if(frame == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY){
-        for (uint8_t i = 0; i < (unitlength+1); ++i)
-        {
-            outBuffer[(9 + (namelength+1) + len_setup2 + i)] = fieldunit[i];
-        }
-    }
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+        outBuffer[6] = currentChunk; //fieldchunk;
+        //CHUNK STARTS HERE
+            }
+            
+   memcpy(outBuffer+7,chunkBuffer+((((chunks-1) - currentChunk)*CHUNK_MAX_NUMBER_OF_BYTES)),maxiter);
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], 2+2+maxiter + 1);
 
-    outBuffer[LUArespLength + 3] = crc;
+    outBuffer[maxiter + 7] = crc;
+
+    //////////////////////////////////////////////////////////////////
+    
+
+    /////////////////////////////////////////////////////////////////
+
+
+
+
 
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);

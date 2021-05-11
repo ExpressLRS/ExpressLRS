@@ -404,7 +404,7 @@ void sendLuaParams()
   crsf.sendELRSparam(luaParams, 4, 0x2E,F("none"),4);
 }
 
-void sendLuaFieldCrsf(uint8_t idx){
+void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
   switch(idx){
     case 2:
     {
@@ -416,7 +416,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[38] = 0x00;//min
       fieldsetup2[39] = 0x07;//max
       fieldsetup2[40] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,0x00,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
       break;
     }
     case 3:
@@ -429,7 +429,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[32] = 0x00;//min
       fieldsetup2[33] = 0x07;//max
       fieldsetup2[34] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,0x00,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
       break;
     }
     case 4:
@@ -438,9 +438,9 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[0] = (uint8_t)(InBindingMode);//status
       fieldsetup2[1] = 200;//timeout
       if(InBindingMode){
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,0x00,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
       } else {
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,0x00,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
       }
       break;
     }
@@ -450,10 +450,10 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[1] = 200;//timeout
       if(webUpdateMode){
         fieldsetup2[0] = 2;
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,0x00,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
       } else {
         fieldsetup2[0] = 0;
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,0x00,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
       }
       break;
 
@@ -468,7 +468,7 @@ void sendLuaFieldCrsf(uint8_t idx){
       fieldsetup2[27] = 0x00;//min
       fieldsetup2[28] = 0x06;//max
       fieldsetup2[29] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,0x00,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
+      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
       break;
     }
   }
@@ -580,7 +580,7 @@ void HandleUpdateParameter()
         Serial.println("Binding requested from LUA");
         EnterBindingMode();
       } else if(crsf.ParameterUpdateData[2] == 6){
-          sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
+          sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
       }
       else
       {
@@ -604,7 +604,7 @@ void HandleUpdateParameter()
         Serial.println("Wifi Update Mode Requested but not supported on this platform!");
   #endif
       } else if(crsf.ParameterUpdateData[2] == 6){
-          sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
+          sendLuaFieldCrsf(crsf.ParameterUpdateData[1],0);
       }
       break;
     case 0x2E:
@@ -624,7 +624,7 @@ void HandleUpdateParameter()
     break;
   }
   case CRSF_FRAMETYPE_PARAMETER_READ: //param info
-  sendLuaFieldCrsf(crsf.ParameterUpdateData[1]);
+  sendLuaFieldCrsf(crsf.ParameterUpdateData[1],crsf.ParameterUpdateData[2]);
     break;
 }
 
