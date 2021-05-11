@@ -107,8 +107,8 @@ static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// Filters ////////////////
 LPF LPF_Offset(2);
-LPF LPF_OffsetSlow(4);
-LPF LPF_OffsetDx(5);
+LPF LPF_OffsetSlow(3);
+LPF LPF_OffsetDx(4);
 
 // LPF LPF_UplinkRSSI(5);
 LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
@@ -366,7 +366,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
         Offset = LPF_Offset.update(RawOffset);
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
-        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
+        OffsetDx = LPF_OffsetDx.update(RawOffset - OffsetDx);
 
         if (RXtimerState == tim_locked && LQCalc.currentIsSet())
         {
@@ -519,6 +519,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection()
 {
+    Serial.println("lost conn");
+    RFmodeCycleMultiplier = 1;
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
@@ -527,7 +529,6 @@ void LostConnection()
     Radio.SetPPMoffsetReg(FreqCorrection);
     hwTimer.phaseShift(0);
     Serial.println(FreqCorrection);
-    FreqCorrection = 0;
     Offset = 0;
     OffsetDx = 0;
     OffsetSlow = 0;
@@ -537,6 +538,7 @@ void LostConnection()
     uplinkLQ = 0;
     LPF_Offset.init(0);
     LPF_OffsetSlow.init(0);
+    LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
     alreadyFHSS = false;
     LED = false; // Make first LED cycle turn it on
@@ -545,12 +547,10 @@ void LostConnection()
     {
         hwTimer.stop();
         delay(ExpressLRS_currAirRate_Modparams->interval/250); // delay 4x packet interval (make sure radio is not busy)
+        SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index);
         Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
         Radio.RXnb();
     }
-
-    RFmodeCycleMultiplier = 1;
-    Serial.println("lost conn");
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
@@ -748,7 +748,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
-                 hwTimer.phaseShift(150);
                  TentativeConnection();
              }
          }
