@@ -539,7 +539,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 void LostConnection()
 {
     Serial.print(F("lost conn fc=")); Serial.print(FreqCorrection, DEC);
-    Serial.print(F(" off=")); Serial.println(Offset, DEC);
+    Serial.print(F(" fo=")); Serial.println(hwTimer.FreqOffset, DEC);
 
     RFmodeCycleMultiplier = 1;
     connectionStatePrev = connectionState;
