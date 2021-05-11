@@ -67,10 +67,6 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
-#if defined(GPIO_PIN_RF_AMP_EN) && (GPIO_PIN_RF_AMP_EN != UNDEF_PIN)
-    pinMode(GPIO_PIN_RF_AMP_EN, OUTPUT);
-    digitalWrite(GPIO_PIN_RF_AMP_EN, HIGH);
-#endif
     CurrentPower = PWR_COUNT;
 }
 
