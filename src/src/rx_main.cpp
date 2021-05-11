@@ -59,7 +59,7 @@ uint32_t LEDWS2812LastUpdate;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 ///////////////////
 
-//#define DEBUG_SUPPRESS // supresses debug messages on uart
+#define DEBUG_SUPPRESS // supresses debug messages on uart
 //#define PRINT_RX_SCOREBOARD // print a letter for each packet received or missed
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -107,7 +107,6 @@ static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// Filters ////////////////
 LPF LPF_Offset(2);
-LPF LPF_OffsetSlow(3);
 LPF LPF_OffsetDx(4);
 
 // LPF LPF_UplinkRSSI(5);
@@ -121,16 +120,14 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
-volatile bool currentlyProcessing = false;
 int32_t RawOffset;
 int32_t prevRawOffset;
 int32_t Offset;
-int32_t OffsetSlow;
 int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
-uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 
 // LED Blinking state
 static bool LED = false;
@@ -149,8 +146,8 @@ bool disableWebServer = false;
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
-volatile bool alreadyFHSS = false;
-volatile bool alreadyTLMresp = false;
+bool alreadyFHSS = false;
+bool alreadyTLMresp = false;
 
 uint32_t beginProcessing;
 uint32_t doneProcessing;
@@ -158,8 +155,6 @@ uint32_t doneProcessing;
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
-uint32_t volatile LastValidPacketMicros = 0; // Needs to be volatile to stop race condition as variable might be updated during if() in loop()
-uint32_t LastValidPacketPrevMicros = 0; //Previous to the last valid packet (used to measure the packet interval)
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 
@@ -365,7 +360,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         PFDloop.reset();
         RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
         Offset = LPF_Offset.update(RawOffset);
-        OffsetSlow = LPF_OffsetSlow.update(RawOffset);
         OffsetDx = LPF_OffsetDx.update(RawOffset - OffsetDx);
 
         if (RXtimerState == tim_locked && LQCalc.currentIsSet())
@@ -506,8 +500,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool()); //corrects for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);         //as above but corrects a different PPM offset based on freq error            
+        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);         //as above but corrects a different PPM offset based on freq error
     }
+    #else
+        (void)didFHSS;
+        (void)tlmSent;
     #endif /* Regulatory_Domain_ISM_2400 */
 
     #if defined(PRINT_RX_SCOREBOARD)
@@ -519,25 +516,25 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection()
 {
-    Serial.println("lost conn");
+    Serial.print(F("lost conn fc=")); Serial.print(FreqCorrection, DEC);
+    Serial.print(F(" off=")); Serial.println(Offset, DEC);
+
     RFmodeCycleMultiplier = 1;
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
     FreqCorrection = 0;
-    Radio.SetPPMoffsetReg(FreqCorrection);
-    hwTimer.phaseShift(0);
-    Serial.println(FreqCorrection);
+    #if !defined(Regulatory_Domain_ISM_2400)
+    Radio.SetPPMoffsetReg(0);
+    #endif
     Offset = 0;
     OffsetDx = 0;
-    OffsetSlow = 0;
     RawOffset = 0;
     prevOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
     LPF_Offset.init(0);
-    LPF_OffsetSlow.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
     alreadyFHSS = false;
@@ -547,8 +544,7 @@ void LostConnection()
     {
         hwTimer.stop();
         delay(ExpressLRS_currAirRate_Modparams->interval/250); // delay 4x packet interval (make sure radio is not busy)
-        SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index);
-        Radio.SetFrequencyReg(GetInitialFreq()); // in conn lost state we always want to listen on freq index 0
+        SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index); // also sets to initialFreq
         Radio.RXnb();
     }
 
@@ -577,7 +573,6 @@ void ICACHE_RAM_ATTR TentativeConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
-    LPF_OffsetSlow.init(0);
     RFmodeLastCycled = millis(); // give another 3 sec for lock to occur
 
 #if WS2812_LED_IS_USED
@@ -629,7 +624,6 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    currentlyProcessing = true;
     beginProcessing = micros();
 
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
@@ -653,7 +647,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #if defined(PRINT_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
-        currentlyProcessing = false;
         return;
     }
     PFDloop.extEvent(beginProcessing + 200);
@@ -671,8 +664,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     #endif
     bool currentMspConfirmValue;
 
-    LastValidPacketPrevMicros = LastValidPacketMicros;
-    LastValidPacketMicros = beginProcessing;
     LastValidPacket = millis();
 
     getRFlinkInfo();
@@ -763,7 +754,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
 
     doneProcessing = micros();
-    currentlyProcessing = false;
 #if defined(PRINT_RX_SCOREBOARD)
     if (type != SYNC_PACKET) Serial.write('R');
 #endif
