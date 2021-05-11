@@ -363,8 +363,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
     {
         PFDloop.calcResult();
         PFDloop.reset();
-
-        RawOffset = PFDloop.getResult();
+        RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
         Offset = LPF_Offset.update(RawOffset);
         OffsetSlow = LPF_OffsetSlow.update(RawOffset);
         OffsetDx = abs(LPF_OffsetDx.update(RawOffset - prevOffset));
@@ -378,7 +377,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             hwTimer.phaseShift(Offset >> 2);
         }
 
-        if (RXtimerState == tim_locked && (micros() - beginProcessing) < ExpressLRS_currAirRate_Modparams->interval)
+        if (RXtimerState == tim_locked && (micros() - LastValidPacket) < ExpressLRS_currAirRate_Modparams->interval)
         {
             if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
             {
@@ -548,6 +547,7 @@ void LostConnection()
 
     RFmodeCycleMultiplier = 1;
     Serial.println("lost conn");
+    Serial.println(FreqCorrection);
 
 #ifdef GPIO_PIN_LED_GREEN
     digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
