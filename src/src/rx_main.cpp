@@ -57,6 +57,7 @@ uint32_t LEDWS2812LastUpdate;
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 30
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
+#define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
 #define DEBUG_SUPPRESS // supresses debug messages on uart
@@ -577,6 +578,9 @@ void LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
+    // Subtract out the amount of time it took to get here from the ISR firing
+    // plus the desired slack space between the packet coming and our timer
+    hwTimer.phaseShift(PFDloop.getExtEventTime() - micros());
     hwTimer.resume();
     PFDloop.reset();
     connectionStatePrev = connectionState;
@@ -663,7 +667,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         #endif
         return;
     }
-    PFDloop.extEvent(beginProcessing + 200);
+    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
 #ifdef HYBRID_SWITCHES_8
     uint8_t SwitchEncModeExpected = 0b01;

@@ -6,8 +6,8 @@
 class PFD
 {
 private:
-    uint32_t intEventTime = 0; 
-    uint32_t extEventTime = 0;  
+    uint32_t intEventTime = 0;
+    uint32_t extEventTime = 0;
     int32_t result;
     bool gotExtEvent;
     bool gotIntEvent;
@@ -20,7 +20,7 @@ public:
     }
 
     inline void intEvent(uint32_t time) // internal osc event
-    { 
+    {
         intEventTime = time;
         gotIntEvent = true;
     }
@@ -40,4 +40,7 @@ public:
     {
         return result;
     }
+
+    uint32_t getIntEventTime() const { return intEventTime; }
+    uint32_t getExtEventTime() const { return extEventTime; }
 };
