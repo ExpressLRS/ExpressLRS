@@ -183,25 +183,17 @@ void OnELRSBindMSP(uint8_t* packet);
 
 static uint8_t minLqForChaos()
 {
-#if defined(Regulatory_Domain_AU_433) || defined(DRegulatory_Domain_EU_433)
-    // The math breaks down below because with 3 hops and 4 packets per hop
-    // there's zero chance you won't RX a packet from any other TX
-    return 75;
-#else
-    // When determining if a connection is achieved, we want a minimum LQ
-    // to prove that we didn't just randomly happen on a second TX transmitting
-    // on the same channel that we are able to parse valid packets from.
-    // The most packets we'd see is all the packets for a hop (FHSShopInterval)
-    // on one of the NR_FHSS_ENTRIES channels. This value must be corrected for
-    // regulatory domains where the FHSS will wrap back around before 100 LQI
-    // packets are counted. Converted to percent, rounded up (by adding 1)
-    // FHSShopInterval * (1 / NR_FHSS_ENTRIES) * max(100[LQ] / (FHSShopInterval * NR_FHSS_ENTRIES), 1) * 100 + 1
-    // With a interval of 4 this works out to: FCC2.4=6, FCC915=11, AU915=26, EU868=60, EU/AU433=1112 :(
-    return max(
-        (100U * 100U) / (NR_FHSS_ENTRIES * NR_FHSS_ENTRIES) + 1, // case where FHSShopInterval * NR_FHSS_ENTRIES < 100 (LQ wrap)
-        ExpressLRS_currAirRate_Modparams->FHSShopInterval * 100U / NR_FHSS_ENTRIES + 1 // no wrap
-    );
-#endif
+    // Determine the most number of CRC-passing packets we could receive on
+    // a single channel out of 100 packets that fill the LQcalc span.
+    // The LQ must be GREATER THAN this value, not >=
+    // The amount of time we coexist on the same channel is
+    // 100 divided by the total number of packets in a FHSS loop (rounded up)
+    // and there would be 4x packets received each time it passes by so
+    // FHSShopInterval * ceil(100 / FHSShopInterval * NR_FHSS_ENTRIES) or
+    // FHSShopInterval * trunc((100 + (FHSShopInterval * NR_FHSS_ENTRIES) - 1) / (FHSShopInterval * NR_FHSS_ENTRIES))
+    // With a interval of 4 this works out to: 2.4=4, FCC915=4, AU915=8, EU868=8, EU/AU433=36
+    uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    return interval * ((interval * NR_FHSS_ENTRIES + 99) / (interval * NR_FHSS_ENTRIES));
 }
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -1201,7 +1193,7 @@ void loop()
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
-    if (connectionState == tentative && (uplinkLQ <= minLqForChaos() || abs(OffsetDx) > 10 || Offset > 100) && (millis() > (LastSyncPacket + ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime)))
+    if (connectionState == tentative && (millis() - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
@@ -1217,7 +1209,7 @@ void loop()
         LostConnection();
     }
 
-    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (uplinkLQ > minLqForChaos())) //detects when we are connected
+    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (Offset < 100) && (uplinkLQ > minLqForChaos())) //detects when we are connected
     {
         GotConnection();
     }
