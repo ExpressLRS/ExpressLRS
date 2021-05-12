@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
+#ifndef UNIT_TEST
+
 #include "FHSS.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -11,11 +12,12 @@
 #include "SX1280Driver.h"
 #endif
 
-#define One_Bit_Switches
+#endif // UNIT_TEST
 
+extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
-extern uint8_t CRCCaesarCipher;
-extern uint8_t DeviceAddr;
+extern uint8_t MasterUID[6];
+extern uint16_t CRCInitializer;
 
 typedef enum
 {
@@ -78,9 +80,11 @@ typedef struct expresslrs_rf_pref_params_s
     uint32_t RFmodeCycleInterval;
     uint32_t RFmodeCycleAddtionalTime;
     uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-    uint32_t SyncPktIntervalConnected; // how often to send the SYNC_PACKET packet (ms) when there we have a connection
+    uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
+
+#ifndef UNIT_TEST
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #define RATE_MAX 4
@@ -106,7 +110,7 @@ typedef struct expresslrs_mod_settings_s
 #define RATE_DEFAULT 0
 typedef struct expresslrs_mod_settings_s
 {
-    uint8_t index;
+    int8_t index;
     expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
     SX1280_RadioLoRaBandwidths_t bw;
     SX1280_RadioLoRaSpreadingFactors_t sf;
@@ -120,10 +124,12 @@ typedef struct expresslrs_mod_settings_s
 
 #endif
 
+
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index);
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
+uint16_t RateEnumToHz(expresslrs_RFrates_e eRate);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
@@ -131,6 +137,8 @@ extern uint8_t ExpressLRS_nextAirRateIndex;
 //extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
 //extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
+
+#endif // UNIT_TEST
 
 #define AUX1 5
 #define AUX2 6
@@ -141,5 +149,7 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX7 11
 #define AUX8 12
 
-//ELRS SPECIFIC OTA CRC 
-#define ELRS_CRC_POLY 0x83
+//ELRS SPECIFIC OTA CRC
+//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
+#define ELRS_CRC_POLY 0x07 // 0x83
+#define ELRS_CRC14_POLY 0x2E57 // 0x372B

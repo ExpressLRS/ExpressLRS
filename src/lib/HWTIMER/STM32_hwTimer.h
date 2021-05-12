@@ -1,38 +1,36 @@
 #pragma once
 
-#include <Arduino.h>
 #include <stdio.h>
-#include "../../src/targets.h"
+#include "targets.h"
 
 #define TimerIntervalUSDefault 20000
 
-//HardwareTimer *MyTim;
 
 class hwTimer
 {
 public:
-    //static TIM_TypeDef *Instance;
     static HardwareTimer *MyTim;
 
     static volatile uint32_t HWtimerInterval;
-    static volatile bool TickTock;
+    static volatile bool isTick;
     static volatile int32_t PhaseShift;
-    static volatile int32_t FreqShift;
-    static volatile bool ResetNextLoop;
+    static volatile int32_t FreqOffset;
+    static volatile uint32_t PauseDuration;
     static bool running;
     static bool alreadyInit;
-    static volatile uint32_t LastCallbackMicrosTick;
-    static volatile uint32_t LastCallbackMicrosTock;
 
     static void init();
     static void stop();
+    static void pause(uint32_t duration);
     static void resume();
     static void callback(void);
-
     static void updateInterval(uint32_t newTimerInterval);
+    static void resetFreqOffset();
+    static void incFreqOffset();
+    static void decFreqOffset();
     static void phaseShift(int32_t newPhaseShift);
 
-    static void inline nullCallback();
+    static void inline nullCallback(void);
     static void (*callbackTick)();
     static void (*callbackTock)();
 };

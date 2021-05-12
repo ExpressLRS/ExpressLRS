@@ -1,6 +1,6 @@
 #ifdef PLATFORM_ESP32
 
-#include <Arduino.h>
+#include "targets.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -29,12 +29,13 @@ extern CRSF crsf;
 
 const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
 const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
-const char *myHostname = "expresslrs";
+const char *myHostname = "elrs_tx";
 
 unsigned int status = WL_IDLE_STATUS;
 
 const byte DNS_PORT = 53;
 IPAddress apIP(10, 0, 0, 1);
+IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 WebServer server(80);
 
@@ -128,8 +129,8 @@ void WebUpdateHandleNotFound()
 void BeginWebUpdate()
 {
     hwTimer.stop();
-    crsf.End();
     Radio.End();
+    crsf.End();
 
     Serial.println("Begin Webupdater");
     Serial.println("Stopping Radio");
@@ -137,9 +138,10 @@ void BeginWebUpdate()
     WiFi.persistent(false);
     WiFi.disconnect();   //added to start with the wifi off, avoid crashing
     WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
+    WiFi.setHostname(myHostname);
+    delay(500);
+    WiFi.softAPConfig(apIP, apIP, netMsk);
     WiFi.softAP(ssid, password);
-    delay(1000);
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
 
     server.on("/", WebUpdateHandleRoot);
     server.on("/css.css", WebUpdateSendcss);
@@ -183,15 +185,22 @@ void BeginWebUpdate()
 
     dnsServer.start(DNS_PORT, "*", apIP);
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+
+    if (!MDNS.begin(myHostname))
+    {
+      Serial.println("Error starting mDNS");
+      return;
+    }
+    MDNS.addService("http", "tcp", 80);
+
     server.begin();
-    MDNS.begin(myHostname);
 }
 
 void HandleWebUpdate()
 {
     dnsServer.processNextRequest();
     server.handleClient();
-    delay(1);
+    yield();
 }
 
 #endif

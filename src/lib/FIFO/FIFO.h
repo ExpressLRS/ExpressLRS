@@ -31,10 +31,9 @@
 
 #pragma once
 
-#include <Arduino.h>
-#include "../../src/targets.h"
+#include "targets.h"
 
-#define FIFO_SIZE 256
+#define FIFO_SIZE 255
 
 class FIFO
 {
