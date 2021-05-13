@@ -109,38 +109,38 @@ void OLED::updateScreen(PowerLevels_e power, expresslrs_RFrates_e rate, expressl
     u8g2.drawStr(0,10, "ExpressLRS develop");
     switch (rate)
     {
-    case RATE_500HZ : u8g2.drawStr(0,20, "Rate: 500 Hz");
-    case RATE_250HZ : u8g2.drawStr(0,20, "Rate: 250 Hz");
-    case RATE_200HZ : u8g2.drawStr(0,20, "Rate: 200 Hz");
-    case RATE_150HZ : u8g2.drawStr(0,20, "Rate: 150 Hz");
-    case RATE_100HZ : u8g2.drawStr(0,20, "Rate: 100 Hz");
-    case RATE_50HZ : u8g2.drawStr(0,20, "Rate: 50 Hz");
-    case RATE_25HZ : u8g2.drawStr(0,20, "Rate: 25 Hz");
-    case RATE_4HZ : u8g2.drawStr(0,20, "Rate: 4 Hz");
+    case RATE_500HZ: u8g2.drawStr(0,20, "Rate: 500 Hz");
+    case RATE_250HZ: u8g2.drawStr(0,20, "Rate: 250 Hz");
+    case RATE_200HZ: u8g2.drawStr(0,20, "Rate: 200 Hz");
+    case RATE_150HZ: u8g2.drawStr(0,20, "Rate: 150 Hz");
+    case RATE_100HZ: u8g2.drawStr(0,20, "Rate: 100 Hz");
+    case RATE_50HZ: u8g2.drawStr(0,20, "Rate: 50 Hz");
+    case RATE_25HZ: u8g2.drawStr(0,20, "Rate: 25 Hz");
+    case RATE_4HZ: u8g2.drawStr(0,20, "Rate: 4 Hz");
     default: u8g2.drawStr(0,20, "Rate: ERROR");
     }
-    switch ((PowerLevels_e)power)
+    switch (power)
     {
-    case PWR_10mW : u8g2.drawStr(0,30, "Power: 10mW");
-    case PWR_25mW : u8g2.drawStr(0,30, "Power: 25mW");
-    case PWR_100mW : u8g2.drawStr(0,30, "Power: 100mW");
-    case PWR_250mW : u8g2.drawStr(0,30, "Power: 250mW");
-    case PWR_500mW : u8g2.drawStr(0,30, "Power: 500mmW");
-    case PWR_1000mW : u8g2.drawStr(0,30, "Power: 1000mW");
-    case PWR_2000mW : u8g2.drawStr(0,30, "Power: 2000mW");
-    case PWR_50mW : u8g2.drawStr(0,30, "Power: 50mW");
+    case PWR_10mW: u8g2.drawStr(0,30, "Power: 10mW");
+    case PWR_25mW: u8g2.drawStr(0,30, "Power: 25mW");
+    case PWR_100mW: u8g2.drawStr(0,30, "Power: 100mW");
+    case PWR_250mW: u8g2.drawStr(0,30, "Power: 250mW");
+    case PWR_500mW: u8g2.drawStr(0,30, "Power: 500mmW");
+    case PWR_1000mW: u8g2.drawStr(0,30, "Power: 1000mW");
+    case PWR_2000mW: u8g2.drawStr(0,30, "Power: 2000mW");
+    case PWR_50mW: u8g2.drawStr(0,30, "Power: 50mW");
     default:u8g2.drawStr(0,30, "Power: Error");
     }
     switch (ratio)
     {
-    case 0 : u8g2.drawStr(0,40, "Telem: OFF");
-    case 1 : u8g2.drawStr(0,40, "Telem: 1:128");
-    case 2 : u8g2.drawStr(0,40, "Telem: 1:64");
-    case 3 : u8g2.drawStr(0,40, "Telem: 1:32");
-    case 4 : u8g2.drawStr(0,40, "Telem: 1:16");
-    case 5 : u8g2.drawStr(0,40, "Telem: 1:8");
-    case 6 : u8g2.drawStr(0,40, "Telem: 1:4");
-    case 7 : u8g2.drawStr(0,40, "Telem: 1:2");
+    case TLM_RATIO_NO_TLM: u8g2.drawStr(0,40, "Telem: OFF");
+    case TLM_RATIO_1_128: u8g2.drawStr(0,40, "Telem: 1:128");
+    case TLM_RATIO_1_64: u8g2.drawStr(0,40, "Telem: 1:64");
+    case TLM_RATIO_1_32: u8g2.drawStr(0,40, "Telem: 1:32");
+    case TLM_RATIO_1_16: u8g2.drawStr(0,40, "Telem: 1:16");
+    case TLM_RATIO_1_8: u8g2.drawStr(0,40, "Telem: 1:8");
+    case TLM_RATIO_1_4: u8g2.drawStr(0,40, "Telem: 1:4");
+    case TLM_RATIO_1_2: u8g2.drawStr(0,40, "Telem: 1:2");
     default: u8g2.drawStr(0,40, "Telem: error");
     }
     u8g2.drawStr(0,50, "Bind");
