@@ -579,7 +579,6 @@ void LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    hwTimer.resume();
     PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
@@ -598,6 +597,8 @@ void ICACHE_RAM_ATTR TentativeConnection()
     LEDWS2812LastUpdate = millis();
 #endif
 
+    // The caller MUST call hwTimer.resume(). It is not done here because
+    // the timer ISR will fire immediately and preempt any other code
 }
 
 void GotConnection()
@@ -680,6 +681,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     bool telemetryConfirmValue;
     #endif
     bool currentMspConfirmValue;
+    bool doStartTimer = false;
 
     LastValidPacket = millis();
 
@@ -759,6 +761,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection();
+                 doStartTimer = true;
              }
          }
          break;
@@ -776,6 +779,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 #if defined(PRINT_RX_SCOREBOARD)
     if (type != SYNC_PACKET) Serial.write('R');
 #endif
+    if (doStartTimer)
+        hwTimer.resume(); // will throw an interrupt immediately
 }
 
 void beginWebsever()
