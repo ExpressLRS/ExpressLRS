@@ -7,7 +7,8 @@ void (*hwTimer::callbackTick)() = &nullCallback;
 void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::isTick = false;
+volatile bool hwTimer::isTick = true;
+volatile bool hwTimer::SkipCallback = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
 volatile uint32_t hwTimer::PauseDuration = 0;
@@ -64,8 +65,11 @@ void hwTimer::pause(uint32_t duration)
 
 void hwTimer::resume()
 {
-    isTick = false;
+    isTick = true;
     running = true;
+    SkipCallback = true; //skip first callback
+    MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
+    MyTim->setCount(0);
     MyTim->resume();
     MyTim->refresh();
 }
@@ -73,8 +77,6 @@ void hwTimer::resume()
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval;
-    // Wait until the next tick to update to not mess up the phase
-    // (no MyTim->setOverflow() here)
 }
 
 void hwTimer::resetFreqOffset()
@@ -94,16 +96,16 @@ void hwTimer::decFreqOffset()
 
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
-    int32_t minVal = -(hwTimer::HWtimerInterval >> 4);
-    int32_t maxVal = (hwTimer::HWtimerInterval >> 4);
-
+    int32_t minVal = -(hwTimer::HWtimerInterval >> 2);
+    int32_t maxVal = (hwTimer::HWtimerInterval >> 2);
     hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
 
 void hwTimer::callback(void)
 {
-    if (!running)
+    if (SkipCallback)
     {
+        SkipCallback = false;
         return;
     }
 

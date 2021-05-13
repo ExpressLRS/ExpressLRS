@@ -121,6 +121,7 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
+uint32_t TockTime;
 int32_t RawOffset;
 int32_t prevRawOffset;
 int32_t Offset;
@@ -373,7 +374,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
     {
         PFDloop.calcResult();
         PFDloop.reset();
-        RawOffset = constrain(PFDloop.getResult(), -(int32_t)(ExpressLRS_currAirRate_Modparams->interval/4), (int32_t)(ExpressLRS_currAirRate_Modparams->interval/4));
+        RawOffset = PFDloop.getResult();
         Offset = LPF_Offset.update(RawOffset);
         OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
 
@@ -527,6 +528,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         Serial.write(lastPacketCrcError ? '.' : '_');
     lastPacketCrcError = false;
     #endif
+    TockTime = micros();
 }
 
 void LostConnection()
@@ -549,6 +551,7 @@ void LostConnection()
     prevOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
+    LQCalc.reset();
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
@@ -557,9 +560,9 @@ void LostConnection()
 
     if (!InBindingMode)
     {
+        while(micros() - TockTime > 250); // time it just after the tock()
         hwTimer.stop();
-        delay(ExpressLRS_currAirRate_Modparams->interval/250); // delay 4x packet interval (make sure radio is not busy)
-        SetRFLinkRate(ExpressLRS_currAirRate_Modparams->index); // also sets to initialFreq
+        SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
 
@@ -580,8 +583,8 @@ void ICACHE_RAM_ATTR TentativeConnection()
 {
     // Subtract out the amount of time it took to get here from the ISR firing
     // plus the desired slack space between the packet coming and our timer
-    hwTimer.phaseShift(PFDloop.getExtEventTime() - micros());
     hwTimer.resume();
+    hwTimer.phaseShift(PFDloop.getExtEventTime() - micros());
     PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
@@ -599,6 +602,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     WS281BsetLED(LEDcolor);
     LEDWS2812LastUpdate = millis();
 #endif
+    
 }
 
 void GotConnection()
@@ -1188,7 +1192,6 @@ void loop()
     #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
-        SetRFLinkRate(ExpressLRS_nextAirRateIndex);
         LostConnection();
         LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
