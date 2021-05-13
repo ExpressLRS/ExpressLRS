@@ -579,10 +579,7 @@ void LostConnection()
 
 void ICACHE_RAM_ATTR TentativeConnection()
 {
-    // Subtract out the amount of time it took to get here from the ISR firing
-    // plus the desired slack space between the packet coming and our timer
     hwTimer.resume();
-    hwTimer.phaseShift(PFDloop.getExtEventTime() - micros());
     PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
@@ -754,7 +751,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 ExpressLRS_nextAirRateIndex = indexIN;
              }
 
-             if (NonceRX != Radio.RXdataBuffer[2] || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
+             if (connectionState == disconnected
+                || NonceRX != Radio.RXdataBuffer[2]
+                || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
              {
                  //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
