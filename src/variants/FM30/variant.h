@@ -118,6 +118,10 @@ extern "C" {
 #define PIN_SERIAL_RX           PA10
 #define PIN_SERIAL_TX           PA9
 
+// Adjust IRQ priority
+#define TIM_IRQ_PRIO            3
+#define EXTI_IRQ_PRIO           4
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
