@@ -69,9 +69,12 @@ void hwTimer::resume()
     running = true;
     SkipCallback = true; //skip first callback
     #if defined(TARGET_TX)
+    MyTim->setPrescaleFactor(MyTim->getTimerClkFreq() / 1000000); // 1us per tick
+    MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
+    #else
     MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
-    MyTim->setCount(0);
     #endif
+    MyTim->setCount(0);
     MyTim->resume();
     MyTim->refresh();
 }
