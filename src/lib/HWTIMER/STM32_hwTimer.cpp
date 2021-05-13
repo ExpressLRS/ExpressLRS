@@ -68,8 +68,10 @@ void hwTimer::resume()
     isTick = true;
     running = true;
     SkipCallback = true; //skip first callback
+    #if defined(TARGET_TX)
     MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
     MyTim->setCount(0);
+    #endif
     MyTim->resume();
     MyTim->refresh();
 }
@@ -103,11 +105,13 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
 
 void hwTimer::callback(void)
 {
+    #if !defined(TARGET_TX)
     if (SkipCallback)
     {
         SkipCallback = false;
         return;
     }
+    #endif
 
     if (hwTimer::isTick)
     {
