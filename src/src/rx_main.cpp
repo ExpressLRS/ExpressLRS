@@ -121,7 +121,6 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 
-uint32_t TockTime;
 int32_t RawOffset;
 int32_t prevRawOffset;
 int32_t Offset;
@@ -528,7 +527,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         Serial.write(lastPacketCrcError ? '.' : '_');
     lastPacketCrcError = false;
     #endif
-    TockTime = micros();
 }
 
 void LostConnection()
@@ -560,7 +558,7 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        while(micros() - TockTime > 250); // time it just after the tock()
+        while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
         hwTimer.stop();
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
@@ -602,7 +600,7 @@ void ICACHE_RAM_ATTR TentativeConnection()
     WS281BsetLED(LEDcolor);
     LEDWS2812LastUpdate = millis();
 #endif
-    
+
 }
 
 void GotConnection()

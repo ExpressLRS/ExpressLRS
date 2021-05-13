@@ -41,6 +41,6 @@ public:
         return result;
     }
 
-    uint32_t getIntEventTime() const { return intEventTime; }
-    uint32_t getExtEventTime() const { return extEventTime; }
+    volatile uint32_t getIntEventTime() const { return intEventTime; }
+    volatile uint32_t getExtEventTime() const { return extEventTime; }
 };
