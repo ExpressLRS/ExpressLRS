@@ -13,7 +13,6 @@ public:
 
     static volatile uint32_t HWtimerInterval;
     static volatile bool isTick;
-    static volatile bool SkipCallback;
     static volatile int32_t PhaseShift;
     static volatile int32_t FreqOffset;
     static volatile uint32_t PauseDuration;

@@ -7,8 +7,7 @@ void (*hwTimer::callbackTick)() = &nullCallback;
 void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-volatile bool hwTimer::isTick = true;
-volatile bool hwTimer::SkipCallback = false;
+volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
 volatile uint32_t hwTimer::PauseDuration = 0;
@@ -65,18 +64,16 @@ void hwTimer::pause(uint32_t duration)
 
 void hwTimer::resume()
 {
-    isTick = true;
+    isTick = false;
     running = true;
-    SkipCallback = true; //skip first callback
     #if defined(TARGET_TX)
-    MyTim->setPrescaleFactor(MyTim->getTimerClkFreq() / 1000000); // 1us per tick
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
     #else
     MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
     #endif
     MyTim->setCount(0);
     MyTim->resume();
-    MyTim->refresh();
+    MyTim->refresh(); // will trigger the interrupt immediately, but will update the prescaler shadow reg
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
@@ -108,14 +105,6 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
 
 void hwTimer::callback(void)
 {
-    #if !defined(TARGET_TX)
-    if (SkipCallback)
-    {
-        SkipCallback = false;
-        return;
-    }
-    #endif
-
     if (hwTimer::isTick)
     {
 #if defined(TARGET_TX)
@@ -130,7 +119,7 @@ void hwTimer::callback(void)
             MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
             hwTimer::callbackTick();
         }
-#else        
+#else
         MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
         MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
