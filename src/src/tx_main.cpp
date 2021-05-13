@@ -401,7 +401,7 @@ void sendLuaParams()
 
 void UARTdisconnected()
 {
-  #if defined(GPIO_PIN_BUZZER) && !defined(DISABLE_BUZZER)
+  #if defined(GPIO_PIN_BUZZER)
   const uint16_t beepFreq[] = {676, 520};
   const uint16_t beepDurations[] = {300, 150};
   for (int i = 0; i < 2; i++)
@@ -420,7 +420,7 @@ void UARTdisconnected()
 
 void UARTconnected()
 {
-  #if defined(GPIO_PIN_BUZZER) && !defined(DISABLE_BUZZER)
+  #if defined(GPIO_PIN_BUZZER) && !defined(DISABLE_STARTUP_BEEP)
   const uint16_t beepFreq[] = {520, 676};
   const uint16_t beepDurations[] = {150, 300};
   for (int i = 0; i < 2; i++)
@@ -632,7 +632,7 @@ void setup()
     digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
   #endif // GPIO_PIN_LED_RED
 
-  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_BUZZER)
+  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_STARTUP_BEEP)
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
     // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
@@ -722,14 +722,14 @@ void setup()
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_BUZZER)
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
       tone(GPIO_PIN_BUZZER, 480, 200);
     #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
     delay(200);
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_BUZZER)
+    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
       tone(GPIO_PIN_BUZZER, 400, 200);
     #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
