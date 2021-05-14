@@ -27,7 +27,10 @@ SX1280Driver Radio;
 #include "stubborn_receiver.h"
 #endif
 #include "stubborn_sender.h"
+
+#ifdef HAS_OLED
 #include "OLED.h"
+#endif
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
