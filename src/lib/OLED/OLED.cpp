@@ -118,7 +118,7 @@ void OLED::updateScreen(const char * rate, const char * ratio, const char * powe
     u8g2.sendBuffer();
 }
 
-#endif
+
 
 
 const char * OLED::getPowerString(int power){
@@ -165,3 +165,5 @@ const char * OLED::getTLMRatioString(int ratio){
     default: return "Telem: error";
     }
 }
+
+#endif
