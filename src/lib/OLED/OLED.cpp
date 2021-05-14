@@ -4,7 +4,6 @@
 #include "OLED.h"
 #include "POWERMGNT.h"
 #include <U8g2lib.h>
-#include "common.h"
 
 U8G2_SH1106_128X64_NONAME_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
 
@@ -103,52 +102,6 @@ void OLED::displayLogo(){
     u8g2.clearBuffer();
     u8g2.drawXBM(0, 0, 128, 64, ELRSlogo);
     u8g2.sendBuffer();
-}
-
-
-const char * OLED::getPowerString(PowerLevels_e power){
-    switch (power)
-    {
-    case PWR_10mW: return "Power: 10mW";
-    case PWR_25mW: return "Power: 25mW";
-    case PWR_100mW: return "Power: 100mW";
-    case PWR_250mW: return "Power: 250mW";
-    case PWR_500mW: return "Power: 500mmW";
-    case PWR_1000mW: return "Power: 1000mW";
-    case PWR_2000mW: return "Power: 2000mW";
-    case PWR_50mW: return "Power: 50mW";
-    default: return "Power: Error";
-    }
-}
-
-const char * OLED::getRateString(expresslrs_RFrates_e rate){
-    switch (rate)
-    {
-    case RATE_500HZ: return "Rate: 500 Hz";
-    case RATE_250HZ: return "Rate: 250 Hz";
-    case RATE_200HZ: return "Rate: 200 Hz";
-    case RATE_150HZ: return "Rate: 150 Hz";
-    case RATE_100HZ: return "Rate: 100 Hz";
-    case RATE_50HZ: return "Rate: 50 Hz";
-    case RATE_25HZ: return "Rate: 25 Hz";
-    case RATE_4HZ: return "Rate: 4 Hz";
-    default: return "Rate: ERROR";
-    }
-}
-
-char * OLED::getTLMRatioString(expresslrs_tlm_ratio_e ratio){
-    switch (ratio)
-    {
-    case TLM_RATIO_NO_TLM: return "Telem: OFF";
-    case TLM_RATIO_1_128: return "Telem: 1:128";
-    case TLM_RATIO_1_64: return "Telem: 1:64";
-    case TLM_RATIO_1_32: return "Telem: 1:32";
-    case TLM_RATIO_1_16: return "Telem: 1:16";
-    case TLM_RATIO_1_8: return "Telem: 1:8";
-    case TLM_RATIO_1_4: return "Telem: 1:4";
-    case TLM_RATIO_1_2: return "Telem: 1:2";
-    default: return "Telem: error";
-    }
 }
 
 void OLED::updateScreen(const char * rate, const char * ratio, const char * power, const char * commit){

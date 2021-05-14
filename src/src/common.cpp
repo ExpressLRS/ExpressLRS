@@ -1,4 +1,5 @@
 #include "common.h"
+#include "POWERMGNT.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 
@@ -180,5 +181,51 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
     case RATE_25HZ: return 25;
     case RATE_4HZ: return 4;
     default: return 1;
+    }
+}
+
+
+const char * getPowerString(PowerLevels_e power){
+    switch (power)
+    {
+    case PWR_10mW: return "Power: 10mW";
+    case PWR_25mW: return "Power: 25mW";
+    case PWR_100mW: return "Power: 100mW";
+    case PWR_250mW: return "Power: 250mW";
+    case PWR_500mW: return "Power: 500mmW";
+    case PWR_1000mW: return "Power: 1000mW";
+    case PWR_2000mW: return "Power: 2000mW";
+    case PWR_50mW: return "Power: 50mW";
+    default: return "Power: Error";
+    }
+}
+
+const char * getRateString(expresslrs_RFrates_e rate){
+    switch (rate)
+    {
+    case RATE_500HZ: return "Rate: 500 Hz";
+    case RATE_250HZ: return "Rate: 250 Hz";
+    case RATE_200HZ: return "Rate: 200 Hz";
+    case RATE_150HZ: return "Rate: 150 Hz";
+    case RATE_100HZ: return "Rate: 100 Hz";
+    case RATE_50HZ: return "Rate: 50 Hz";
+    case RATE_25HZ: return "Rate: 25 Hz";
+    case RATE_4HZ: return "Rate: 4 Hz";
+    default: return "Rate: ERROR";
+    }
+}
+
+char * getTLMRatioString(expresslrs_tlm_ratio_e ratio){
+    switch (ratio)
+    {
+    case TLM_RATIO_NO_TLM: return "Telem: OFF";
+    case TLM_RATIO_1_128: return "Telem: 1:128";
+    case TLM_RATIO_1_64: return "Telem: 1:64";
+    case TLM_RATIO_1_32: return "Telem: 1:32";
+    case TLM_RATIO_1_16: return "Telem: 1:16";
+    case TLM_RATIO_1_8: return "Telem: 1:8";
+    case TLM_RATIO_1_4: return "Telem: 1:4";
+    case TLM_RATIO_1_2: return "Telem: 1:2";
+    default: return "Telem: error";
     }
 }
