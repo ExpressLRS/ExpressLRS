@@ -1,6 +1,5 @@
 #pragma once
 
-#include "POWERMGNT.h"
 #ifndef UNIT_TEST
 
 #include "FHSS.h"
@@ -131,10 +130,6 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index);
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
 uint16_t RateEnumToHz(expresslrs_RFrates_e eRate);
-const char * getPowerString(PowerLevels_e power);
-const char * getRateString(expresslrs_RFrates_e rate);
-char * getTLMRatioString(expresslrs_tlm_ratio_e ratio);
-
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;

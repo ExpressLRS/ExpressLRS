@@ -484,9 +484,9 @@ void HandleUpdateParameter()
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
     #if defined(HAS_OLED)
-      OLED.updateScreen(getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
-                        getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getPowerString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
                         (char *)thisCommit);// Convert commit to char array
     #endif
     }
@@ -499,9 +499,9 @@ void HandleUpdateParameter()
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
-      OLED.updateScreen(getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]),
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]),
                         (char *)thisCommit);// Convert commit to char array
     #endif
     }
@@ -512,9 +512,9 @@ void HandleUpdateParameter()
     Serial.println(crsf.ParameterUpdateData[1]);
     config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
-      OLED.updateScreen(getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                        getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval),
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
+                        OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval),
                         (char *)thisCommit);// Convert commit to char array
     #endif
     break;
@@ -788,9 +788,9 @@ void setup()
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
   #if defined(HAS_OLED)
-    OLED.updateScreen(getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                  getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                  getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
+    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                  OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                  OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
                         (char *)thisCommit); // Convert commit to char array
   #endif
 }

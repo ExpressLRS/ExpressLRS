@@ -11,5 +11,8 @@ private:
 
 public:
     static void displayLogo();
+    const char * getPowerString(int power);
+    const char * getRateString(int rate);
+    const char * getTLMRatioString(int ratio);
     static void updateScreen(const char * rate, const char * ratio, const char * power, const char * commit);
 };

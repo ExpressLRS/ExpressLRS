@@ -119,3 +119,49 @@ void OLED::updateScreen(const char * rate, const char * ratio, const char * powe
 }
 
 #endif
+
+
+const char * OLED::getPowerString(int power){
+    switch (power)
+    {
+    case 0: return "Power: 10mW";
+    case 1: return "Power: 25mW";
+    case 3: return "Power: 100mW";
+    case 4: return "Power: 250mW";
+    case 5: return "Power: 500mmW";
+    case 6: return "Power: 1000mW";
+    case 7: return "Power: 2000mW";
+    case 2: return "Power: 50mW";
+    default: return "Power: Error";
+    }
+}
+
+const char * OLED::getRateString(int rate){
+    switch (rate)
+    {
+    case 0: return "Rate: 500 Hz";
+    case 1: return "Rate: 250 Hz";
+    case 2: return "Rate: 200 Hz";
+    case 3: return "Rate: 150 Hz";
+    case 4: return "Rate: 100 Hz";
+    case 5: return "Rate: 50 Hz";
+    case 6: return "Rate: 25 Hz";
+    case 7: return "Rate: 4 Hz";
+    default: return "Rate: ERROR";
+    }
+}
+
+const char * OLED::getTLMRatioString(int ratio){
+    switch (ratio)
+    {
+    case 0: return "Telem: OFF";
+    case 1: return "Telem: 1:128";
+    case 2: return "Telem: 1:64";
+    case 3: return "Telem: 1:32";
+    case 4: return "Telem: 1:16";
+    case 5: return "Telem: 1:8";
+    case 6: return "Telem: 1:4";
+    case 7: return "Telem: 1:2";
+    default: return "Telem: error";
+    }
+}
