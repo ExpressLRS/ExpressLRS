@@ -621,9 +621,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
-
-
-
 void setup()
 {
 #if defined(TARGET_TX_GHOST)
