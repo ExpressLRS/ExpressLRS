@@ -1,3 +1,5 @@
+#ifdef HAS_OLED
+
 #include "targets.h"
 #include "OLED.h"
 #include "POWERMGNT.h"
@@ -162,3 +164,5 @@ void OLED::updateScreen(const char * rate, const char * ratio, const char * powe
     u8g2.drawStr(0,60, "Wifi Update");
     u8g2.sendBuffer();
 }
+
+#endif
