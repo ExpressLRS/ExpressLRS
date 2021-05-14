@@ -103,46 +103,59 @@ void OLED::displayLogo(){
     u8g2.sendBuffer();
 }
 
-void OLED::updateScreen(PowerLevels_e power, expresslrs_RFrates_e rate, expresslrs_tlm_ratio_e ratio){
+
+const char * OLED::getPowerString(PowerLevels_e power){
+    switch (power)
+    {
+    case PWR_10mW: return "Power: 10mW";
+    case PWR_25mW: return "Power: 25mW";
+    case PWR_100mW: return "Power: 100mW";
+    case PWR_250mW: return "Power: 250mW";
+    case PWR_500mW: return "Power: 500mmW";
+    case PWR_1000mW: return "Power: 1000mW";
+    case PWR_2000mW: return "Power: 2000mW";
+    case PWR_50mW: return "Power: 50mW";
+    default: return "Power: Error";
+    }
+}
+
+const char * OLED::getRateString(expresslrs_RFrates_e rate){
+    switch (rate)
+    {
+    case RATE_500HZ: return "Rate: 500 Hz";
+    case RATE_250HZ: return "Rate: 250 Hz";
+    case RATE_200HZ: return "Rate: 200 Hz";
+    case RATE_150HZ: return "Rate: 150 Hz";
+    case RATE_100HZ: return "Rate: 100 Hz";
+    case RATE_50HZ: return "Rate: 50 Hz";
+    case RATE_25HZ: return "Rate: 25 Hz";
+    case RATE_4HZ: return "Rate: 4 Hz";
+    default: return "Rate: ERROR";
+    }
+}
+
+char * OLED::getTLMRatioString(expresslrs_tlm_ratio_e ratio){
+    switch (ratio)
+    {
+    case TLM_RATIO_NO_TLM: return "Telem: OFF";
+    case TLM_RATIO_1_128: return "Telem: 1:128";
+    case TLM_RATIO_1_64: return "Telem: 1:64";
+    case TLM_RATIO_1_32: return "Telem: 1:32";
+    case TLM_RATIO_1_16: return "Telem: 1:16";
+    case TLM_RATIO_1_8: return "Telem: 1:8";
+    case TLM_RATIO_1_4: return "Telem: 1:4";
+    case TLM_RATIO_1_2: return "Telem: 1:2";
+    default: return "Telem: error";
+    }
+}
+
+void OLED::updateScreen(const char * rate, const char * ratio, const char * power){
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_courR08_tr);
     u8g2.drawStr(0,10, "ExpressLRS develop");
-    switch (rate)
-    {
-    case RATE_500HZ: u8g2.drawStr(0,20, "Rate: 500 Hz");
-    case RATE_250HZ: u8g2.drawStr(0,20, "Rate: 250 Hz");
-    case RATE_200HZ: u8g2.drawStr(0,20, "Rate: 200 Hz");
-    case RATE_150HZ: u8g2.drawStr(0,20, "Rate: 150 Hz");
-    case RATE_100HZ: u8g2.drawStr(0,20, "Rate: 100 Hz");
-    case RATE_50HZ: u8g2.drawStr(0,20, "Rate: 50 Hz");
-    case RATE_25HZ: u8g2.drawStr(0,20, "Rate: 25 Hz");
-    case RATE_4HZ: u8g2.drawStr(0,20, "Rate: 4 Hz");
-    default: u8g2.drawStr(0,20, "Rate: ERROR");
-    }
-    switch (power)
-    {
-    case PWR_10mW: u8g2.drawStr(0,30, "Power: 10mW");
-    case PWR_25mW: u8g2.drawStr(0,30, "Power: 25mW");
-    case PWR_100mW: u8g2.drawStr(0,30, "Power: 100mW");
-    case PWR_250mW: u8g2.drawStr(0,30, "Power: 250mW");
-    case PWR_500mW: u8g2.drawStr(0,30, "Power: 500mmW");
-    case PWR_1000mW: u8g2.drawStr(0,30, "Power: 1000mW");
-    case PWR_2000mW: u8g2.drawStr(0,30, "Power: 2000mW");
-    case PWR_50mW: u8g2.drawStr(0,30, "Power: 50mW");
-    default:u8g2.drawStr(0,30, "Power: Error");
-    }
-    switch (ratio)
-    {
-    case TLM_RATIO_NO_TLM: u8g2.drawStr(0,40, "Telem: OFF");
-    case TLM_RATIO_1_128: u8g2.drawStr(0,40, "Telem: 1:128");
-    case TLM_RATIO_1_64: u8g2.drawStr(0,40, "Telem: 1:64");
-    case TLM_RATIO_1_32: u8g2.drawStr(0,40, "Telem: 1:32");
-    case TLM_RATIO_1_16: u8g2.drawStr(0,40, "Telem: 1:16");
-    case TLM_RATIO_1_8: u8g2.drawStr(0,40, "Telem: 1:8");
-    case TLM_RATIO_1_4: u8g2.drawStr(0,40, "Telem: 1:4");
-    case TLM_RATIO_1_2: u8g2.drawStr(0,40, "Telem: 1:2");
-    default: u8g2.drawStr(0,40, "Telem: error");
-    }
+    u8g2.drawStr(0,20, rate);
+    u8g2.drawStr(0,30, ratio);
+    u8g2.drawStr(0,40, power);
     u8g2.drawStr(0,50, "Bind");
     u8g2.drawStr(0,60, "Wifi Update");
     u8g2.sendBuffer();

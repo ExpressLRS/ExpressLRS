@@ -481,9 +481,9 @@ void HandleUpdateParameter()
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
     #if defined(HAS_OLED)
-      OLED.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
-                        (expresslrs_RFrates_e)crsf.ParameterUpdateData[1], 
-                        (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)));
     #endif
     }
     break;
@@ -495,9 +495,9 @@ void HandleUpdateParameter()
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
-      OLED.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
-                        (expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate, 
-                        (expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]));
     #endif
     }
     break;
@@ -507,9 +507,9 @@ void HandleUpdateParameter()
     Serial.println(crsf.ParameterUpdateData[1]);
     config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
-      OLED.updateScreen((PowerLevels_e)crsf.ParameterUpdateData[1],
-                        (expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate, 
-                        (expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval);
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval));
     #endif
     break;
 
@@ -781,6 +781,11 @@ void setup()
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
+  #if defined(HAS_OLED)
+    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                  OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                  OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)));
+  #endif
 }
 
 void loop()

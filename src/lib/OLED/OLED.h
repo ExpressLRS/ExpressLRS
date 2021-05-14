@@ -10,9 +10,11 @@ class OLED
 
 private:
 
-
 public:
+    char * getTLMRatioString(expresslrs_tlm_ratio_e ratio);
+    const char * getRateString(expresslrs_RFrates_e rate);
+    const char * getPowerString(PowerLevels_e power);
     static void displayLogo();
-    static void updateScreen(PowerLevels_e power, expresslrs_RFrates_e rate, expresslrs_tlm_ratio_e ratio);
+    static void updateScreen(const char * rate, const char * ratio, const char * power);
 
 };
