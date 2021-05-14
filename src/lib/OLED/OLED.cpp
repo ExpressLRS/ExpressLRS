@@ -97,24 +97,37 @@ static unsigned char ELRSlogo[] = {
 
 
 void OLED::displayLogo(){
-    
     u8g2.begin();
     u8g2.clearBuffer();
+    #if defined HAS_OLED_128_32
     u8g2.drawXBM(0, 0, 128, 64, ELRSlogo);
+    #else
+    u8g2.drawXBM(0, 0, 128, 64, ELRSlogo);
+    #endif
     u8g2.sendBuffer();
 }
 
-void OLED::updateScreen(const char * rate, const char * ratio, const char * power, const char * commit){
-
+void OLED::updateScreen(const char * power, const char * rate, const char * ratio, const char * commit){
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_courR08_tr);
-    u8g2.drawStr(0,10, "ExpressLRS");
-    u8g2.drawStr(12,10, commit);
-    u8g2.drawStr(0,20, rate);
-    u8g2.drawStr(0,30, ratio);
-    u8g2.drawStr(0,40, power);
-    u8g2.drawStr(0,50, "Bind");
-    u8g2.drawStr(0,60, "Wifi Update");
+
+    #if defined HAS_OLED_128_32
+        u8g2.setFont(u8g2_font_timR14_tr);
+        u8g2.drawStr(0,30, rate);
+        u8g2.setFont(u8g2_font_timR14_tr);
+        u8g2.drawStr(75,30, ratio);
+        u8g2.drawStr(0,60, power);
+        u8g2.setFont(u8g2_font_timR10_tr);
+        u8g2.drawStr(75,55, "TELEM");
+    #else
+        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.drawStr(0,10, "ExpressLRS");
+        u8g2.drawStr(12,10, commit);
+        u8g2.drawStr(0,20, rate);
+        u8g2.drawStr(0,30, ratio);
+        u8g2.drawStr(0,40, power);
+        u8g2.drawStr(0,50, "Bind");
+        u8g2.drawStr(0,60, "Wifi Update");
+    #endif
     u8g2.sendBuffer();
 }
 
@@ -124,45 +137,45 @@ void OLED::updateScreen(const char * rate, const char * ratio, const char * powe
 const char * OLED::getPowerString(int power){
     switch (power)
     {
-    case 0: return "Power: 10mW";
-    case 1: return "Power: 25mW";
-    case 3: return "Power: 100mW";
-    case 4: return "Power: 250mW";
-    case 5: return "Power: 500mmW";
-    case 6: return "Power: 1000mW";
-    case 7: return "Power: 2000mW";
-    case 2: return "Power: 50mW";
-    default: return "Power: Error";
+    case 0: return "10 mW";
+    case 1: return "25 mW";
+    case 3: return "100 mW";
+    case 4: return "250 mW";
+    case 5: return "500 mmW";
+    case 6: return "1000 mW";
+    case 7: return "2000 mW";
+    case 2: return "50 mW";
+    default: return "Error";
     }
 }
 
 const char * OLED::getRateString(int rate){
     switch (rate)
     {
-    case 0: return "Rate: 500 Hz";
-    case 1: return "Rate: 250 Hz";
-    case 2: return "Rate: 200 Hz";
-    case 3: return "Rate: 150 Hz";
-    case 4: return "Rate: 100 Hz";
-    case 5: return "Rate: 50 Hz";
-    case 6: return "Rate: 25 Hz";
-    case 7: return "Rate: 4 Hz";
-    default: return "Rate: ERROR";
+    case 0: return "500 Hz";
+    case 1: return "250 Hz";
+    case 2: return "200 Hz";
+    case 3: return "150 Hz";
+    case 4: return "100 Hz";
+    case 5: return "50 Hz";
+    case 6: return "25 Hz";
+    case 7: return "4 Hz";
+    default: return "ERROR";
     }
 }
 
 const char * OLED::getTLMRatioString(int ratio){
     switch (ratio)
     {
-    case 0: return "Telem: OFF";
-    case 1: return "Telem: 1:128";
-    case 2: return "Telem: 1:64";
-    case 3: return "Telem: 1:32";
-    case 4: return "Telem: 1:16";
-    case 5: return "Telem: 1:8";
-    case 6: return "Telem: 1:4";
-    case 7: return "Telem: 1:2";
-    default: return "Telem: error";
+    case 0: return "OFF";
+    case 1: return "1:128";
+    case 2: return "1:64";
+    case 3: return "1:32";
+    case 4: return "1:16";
+    case 5: return "1:8";
+    case 6: return "1:4";
+    case 7: return "1:2";
+    default: return "error";
     }
 }
 

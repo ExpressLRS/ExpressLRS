@@ -485,7 +485,7 @@ void HandleUpdateParameter()
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getPowerString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
                         (char *)thisCommit);// Convert commit to char array
     #endif
@@ -500,7 +500,7 @@ void HandleUpdateParameter()
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]),
                         (char *)thisCommit);// Convert commit to char array
     #endif
@@ -513,7 +513,7 @@ void HandleUpdateParameter()
     config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                        OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval),
                         (char *)thisCommit);// Convert commit to char array
     #endif
@@ -789,7 +789,7 @@ void setup()
   crsf.Begin();
   #if defined(HAS_OLED)
     OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                  OLED.getPowerString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                  OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                   OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)),
                         (char *)thisCommit); // Convert commit to char array
   #endif
