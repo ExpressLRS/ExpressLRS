@@ -31,7 +31,9 @@ labels: 'bug'
 
 <!--- Suggest a reason for the bug or how to fix it. -->
 
-## Context
+## Details
+
+<!--- Additional details you think might be relevant -->
 
 <!--- How has this issue affected you? What are you trying to accomplish? -->
 <!--- Did you make any changes to the boilerplate after cloning it? -->
