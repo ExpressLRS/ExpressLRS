@@ -66,15 +66,19 @@ void hwTimer::resume()
 {
     isTick = false;
     running = true;
+    #if defined(TARGET_TX)
+    MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
+    #else
+    MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
+    #endif
+    MyTim->setCount(0);
     MyTim->resume();
-    MyTim->refresh();
+    MyTim->refresh(); // will trigger the interrupt immediately, but will update the prescaler shadow reg
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     hwTimer::HWtimerInterval = newTimerInterval;
-    // Wait until the next tick to update to not mess up the phase
-    // (no MyTim->setOverflow() here)
 }
 
 void hwTimer::resetFreqOffset()
@@ -94,19 +98,13 @@ void hwTimer::decFreqOffset()
 
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
-    int32_t minVal = -(hwTimer::HWtimerInterval >> 4);
-    int32_t maxVal = (hwTimer::HWtimerInterval >> 4);
-
+    int32_t minVal = -(hwTimer::HWtimerInterval >> 2);
+    int32_t maxVal = (hwTimer::HWtimerInterval >> 2);
     hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
 
 void hwTimer::callback(void)
 {
-    if (!running)
-    {
-        return;
-    }
-
     if (hwTimer::isTick)
     {
 #if defined(TARGET_TX)
@@ -121,7 +119,7 @@ void hwTimer::callback(void)
             MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
             hwTimer::callbackTick();
         }
-#else        
+#else
         MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
         MyTim->setOverflow(adjustedInterval, TICK_FORMAT);
