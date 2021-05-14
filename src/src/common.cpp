@@ -182,5 +182,3 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
     default: return 1;
     }
 }
-
-
