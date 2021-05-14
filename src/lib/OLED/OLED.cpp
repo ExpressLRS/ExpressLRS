@@ -149,10 +149,12 @@ char * OLED::getTLMRatioString(expresslrs_tlm_ratio_e ratio){
     }
 }
 
-void OLED::updateScreen(const char * rate, const char * ratio, const char * power){
+void OLED::updateScreen(const char * rate, const char * ratio, const char * power, const char * commit){
+
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_courR08_tr);
-    u8g2.drawStr(0,10, "ExpressLRS develop");
+    u8g2.drawStr(0,10, "ExpressLRS");
+    u8g2.drawStr(12,10, commit);
     u8g2.drawStr(0,20, rate);
     u8g2.drawStr(0,30, ratio);
     u8g2.drawStr(0,40, power);

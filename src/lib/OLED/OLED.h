@@ -15,6 +15,5 @@ public:
     const char * getRateString(expresslrs_RFrates_e rate);
     const char * getPowerString(PowerLevels_e power);
     static void displayLogo();
-    static void updateScreen(const char * rate, const char * ratio, const char * power);
-
+    static void updateScreen(const char * rate, const char * ratio, const char * power, const char * commit);
 };
