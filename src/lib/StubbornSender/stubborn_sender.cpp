@@ -112,6 +112,16 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
             nextSenderState = SENDER_IDLE;
             waitUntilTelemetryConfirm = !telemetryConfirmValue;
         }
+        // switch to resync if tx does not confirm value fast enough
+        else if (senderState == WAIT_UNTIL_NEXT_CONFIRM)
+        {
+            waitCount++;
+            if (waitCount > maxWaitCount)
+            {
+                waitUntilTelemetryConfirm = !telemetryConfirmValue;
+                nextSenderState = RESYNC;
+            }
+        }
 
         break;
     case SENDER_IDLE:

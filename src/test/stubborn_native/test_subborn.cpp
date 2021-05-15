@@ -212,6 +212,64 @@ void test_stubborn_link_resyncs(void)
     receiver.Unlock();
 }
 
+void test_stubborn_link_resyncs_during_last_confirm(void)
+{
+    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t buffer[100];
+    uint8_t *data;
+    uint8_t maxLength;
+    uint8_t packageIndex;
+
+    receiver.ResetState();
+    receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
+
+    sender.ResetState();
+    sender.SetDataToTransmit(sizeof(batterySequence), batterySequence, 1);
+
+    // send and confirm twelfe packages
+    for (int i = 0; i < sizeof(batterySequence); i++)
+    {
+        sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        receiver.ReceiveData(packageIndex, data);
+        sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    }
+
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    TEST_ASSERT_EQUAL(0, packageIndex);
+
+    // now reset receiver so the receiver sends the wrong confirm value
+    // all communication would be stuck since sender waits for final confirmation
+    receiver.ResetState();
+    receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
+
+    // wait for resync to happen
+    for(int i = 0; i < sender.GetMaxPacketsBeforeResync() + 1; i++)
+    {
+        sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        TEST_ASSERT_EQUAL(0, packageIndex);
+        receiver.ReceiveData(packageIndex, data);
+        sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    }
+
+    // resync active
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    TEST_ASSERT_EQUAL(ELRS_TELEMETRY_MAX_PACKAGES, packageIndex);
+    receiver.ReceiveData(packageIndex, data);
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    TEST_ASSERT_EQUAL(false, sender.IsActive());
+
+    // both are in sync again
+    sender.SetDataToTransmit(sizeof(batterySequence), batterySequence, 1);
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    receiver.ReceiveData(packageIndex, data);
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    TEST_ASSERT_EQUAL(2, packageIndex);
+
+    receiver.Unlock();
+}
+
 void test_stubborn_link_sends_data_until_confirmation(void)
 {
     uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
@@ -282,6 +340,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_stubborn_link_resyncs);
     RUN_TEST(test_stubborn_link_sends_data_until_confirmation);
     RUN_TEST(test_stubborn_link_multiple_packages);
+    RUN_TEST(test_stubborn_link_resyncs_during_last_confirm);
     UNITY_END();
 
     return 0;
