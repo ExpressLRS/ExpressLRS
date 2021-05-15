@@ -4,12 +4,6 @@ about: You found a bug in expresslrs. 🐞
 labels: 'bug'
 ---
 
-<!-- Please use the following issue template or your issue will be closed -->
-
-## Expected Behavior
-
-<!--- What should have happened? -->
-
 ## Current Behavior
 
 <!--- What went wrong? -->
@@ -45,3 +39,9 @@ labels: 'bug'
 
 - TX hardware:
 - RX hardware:
+- Handset model:
+- OpenTX version (including nightly number)
+- ELRS version (TX & RX MUST MATCH):
+- Packet Rate:
+- Telemetry Ratio:
+- user_defines:
