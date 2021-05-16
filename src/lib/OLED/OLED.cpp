@@ -55,7 +55,7 @@ void ghostChase(){
         u8g2.clearBuffer();
         #ifndef TARGET_TX_GHOST_LITE
             u8g2.drawXBMP((26 + i), 16, 32, 32, ghost);
-            u8g2.drawXBMP((-30 + (i*4)), 16, 32, 32, elrs32);
+            u8g2.drawXBMP((-31 + (i*4)), 16, 32, 32, elrs32);
         #else
             u8g2.drawXBMP((26 + i), 0, 32, 32, ghost);
             u8g2.drawXBMP((-31 + (i*4)), 0, 32, 32, elrs32);
@@ -103,7 +103,7 @@ void OLED::displayLogo(){
  *               ratio = telemetry rate char array (1:128) 
  * @return void
  */
-void OLED::updateScreen(const char * power, const char * rate, const char * ratio, const char * commit){
+void OLED::updateScreen(const char * power, const char * rate, const char * ratio, const char * commitStr){
     u8g2.clearBuffer();
 
     #if defined HAS_OLED_128_32
@@ -115,14 +115,18 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(80,28, "TELEM");
     #else
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(12,10, commit);
-        u8g2.drawStr(0,20, rate);
-        u8g2.drawStr(0,30, ratio);
-        u8g2.drawStr(0,40, power);
-        u8g2.drawStr(0,50, "Bind");
-        u8g2.drawStr(0,60, "Wifi Update");
+        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.drawStr(0,24, "Hash: ");
+        u8g2.drawStr(38,24, commitStr);
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,42, rate);
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(70,42 , ratio);
+        u8g2.drawStr(0,57, power);
+        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.drawStr(70,53, "TELEM");
     #endif
     u8g2.sendBuffer();
 }
@@ -188,6 +192,21 @@ const char * OLED::getTLMRatioString(int ratio){
     case 7: return "1:2";
     default: return "error";
     }
+}
+
+/**
+ * Returns commit string (Char array)
+ *
+ * @param values commit = unsigned 8 byte int array for the commit.
+ * @return commit string in char array format. 
+ */
+void OLED::setCommitString(const uint8_t * commit, char * commitStr){
+
+    for(int i = 0; i < 6; i++ ){
+        if (commit[i] < 10) commitStr[i] = commit[i] + 48; // gets us 0 to 9
+        else commitStr[i] = commit[i] + 87; // gets us a to f
+    }
+
 }
 
 #endif

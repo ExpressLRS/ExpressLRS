@@ -20,15 +20,18 @@
 // OLED specific header files. 
 #include <U8g2lib.h>   // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
+
 class OLED
 {
 
 private:
+
 
 public:
     static void displayLogo();
     const char * getPowerString(int power);
     const char * getRateString(int rate);
     const char * getTLMRatioString(int ratio);
-    static void updateScreen(const char * power, const char * rate, const char * ratio, const char * commit);
+    void setCommitString(const uint8_t * commit, char * commitStr);
+    static void updateScreen(const char * power, const char * rate, const char * ratio, const char * commitStr);
 };
