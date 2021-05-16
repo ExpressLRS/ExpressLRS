@@ -1060,19 +1060,6 @@ static void ws2812Blink()
 #endif
 }
 
-static void HandleUARTin()
-{
-    while (CRSF_RX_SERIAL.available())
-    {
-        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-    }
-}
-
 static void updateTelemetryBurst()
 {
 #if defined(ENABLE_TELEMETRY)

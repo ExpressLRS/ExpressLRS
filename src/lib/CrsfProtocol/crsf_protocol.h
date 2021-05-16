@@ -376,7 +376,7 @@ static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t val)
     //#ifdef USE_11BIT_RC_CHANNELS
     //return (val) ? 2047 : 0;
     //#else
-    return (val) ? CRSF_CHANNEL_VALUE_2000-1 : CRSF_CHANNEL_VALUE_1000+1;
+    return (val) ? (CRSF_CHANNEL_VALUE_2000 - 1) : (CRSF_CHANNEL_VALUE_1000 + 1);
     //#endif
 }
 
