@@ -523,9 +523,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #endif /* Regulatory_Domain_ISM_2400 */
 
     #if defined(PRINT_RX_SCOREBOARD)
-    if (!LQCalc.currentIsSet())
+    static bool lastPacketWasTelemetry = false;
+    if (!LQCalc.currentIsSet() && !lastPacketWasTelemetry)
         Serial.write(lastPacketCrcError ? '.' : '_');
     lastPacketCrcError = false;
+    lastPacketWasTelemetry = tlmSent;
     #endif
 }
 
