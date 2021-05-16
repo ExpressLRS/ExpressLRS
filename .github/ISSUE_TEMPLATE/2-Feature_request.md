@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: You want to propose a new feature or enhancement to expresslrs. 🎉
+about: You want to propose a new feature or enhancement to ExpressLRS. 🎉
 labels: 'enhancement'
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: You found a bug in expresslrs. 🐞
+about: You found a bug in ExpressLRS. 🐞
 labels: 'bug'
 ---
 
@@ -41,7 +41,7 @@ labels: 'bug'
 - RX hardware:
 - Handset model:
 - OpenTX version (including nightly number)
-- ELRS version (TX & RX MUST MATCH):
+- ExpressLRS version (TX & RX MUST MATCH):
 - Packet Rate:
 - Telemetry Ratio:
 - user_defines:
