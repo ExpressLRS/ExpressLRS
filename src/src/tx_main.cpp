@@ -1041,6 +1041,7 @@ void ExitBindingMode()
 
   InBindingMode = false;
   MspSender.ResetState();
+  SetRFLinkRate(config.GetRate()); //return to original rate
 
   Serial.println("Exiting binding mode");
 }
