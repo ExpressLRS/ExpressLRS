@@ -112,8 +112,8 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(70,15 , ratio);
         u8g2.drawStr(0,32, power);
-        u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(80,28, "TELEM");
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(70,32, commitStr);
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
