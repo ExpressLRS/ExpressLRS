@@ -53,18 +53,25 @@ void ghostChase(){
     // Using i < 16 and (i*4) to get 64 total pixels. Change to i < 32 (i*2) to slow animation. 
     for(int i = 0; i < 20; i++){
         u8g2.clearBuffer();
-        u8g2.drawXBMP((26 + i), 16, 32, 32, ghost);
-        u8g2.drawXBMP((-30 + (i*4)), 16, 32, 32, elrs32);
+        #ifndef TARGET_TX_GHOST_LITE
+            u8g2.drawXBMP((26 + i), 16, 32, 32, ghost);
+            u8g2.drawXBMP((-30 + (i*4)), 16, 32, 32, elrs32);
+        #else
+            u8g2.drawXBMP((26 + i), 0, 32, 32, ghost);
+            u8g2.drawXBMP((-31 + (i*4)), 0, 32, 32, elrs32);
+        #endif
         u8g2.sendBuffer();
     }
     /**
      *  Animation for the ghost logo expanding in the center of the screen.
      *  helper function just draw's the XBM strings.   
      */
+    #ifndef TARGET_TX_GHOST_LITE
     helper(38,12,40,elrs40);
     helper(36,8,48,elrs48);
     helper(34,4,56,elrs56);
     helper(32,0,64,elrs64);
+    #endif
 }
 
 /**
@@ -76,11 +83,11 @@ void ghostChase(){
 void OLED::displayLogo(){
     u8g2.begin();
     u8g2.clearBuffer();
-    #if defined HAS_OLED_128_32
-    u8g2.drawXBM(48, 0, 32, 32, elrs32);
+    #if defined TARGET_TX_GHOST
+        ghostChase();
     #else
-        #if defined TARGET_TX_GHOST
-            ghostChase();
+        #if defined HAS_OLED_128_32
+            u8g2.drawXBM(48, 0, 32, 32, elrs32);
         #else
             u8g2.drawXBM(16, 16, 64, 64, elrs64);
         #endif
