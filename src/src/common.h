@@ -140,14 +140,14 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
 #endif // UNIT_TEST
 
-#define AUX1 5
-#define AUX2 6
-#define AUX3 7
-#define AUX4 8
-#define AUX5 9
-#define AUX6 10
-#define AUX7 11
-#define AUX8 12
+#define AUX1 4
+#define AUX2 5
+#define AUX3 6
+#define AUX4 7
+#define AUX5 8
+#define AUX6 9
+#define AUX7 10
+#define AUX8 11
 
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
