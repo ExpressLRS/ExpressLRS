@@ -195,10 +195,10 @@ const char * OLED::getTLMRatioString(int ratio){
 }
 
 /**
- * Returns commit string (Char array)
+ * Sets the commit string by converting unsigned integers to signed char's (Char array)
  *
- * @param values commit = unsigned 8 byte int array for the commit.
- * @return commit string in char array format. 
+ * @param values commit = unsigned 8 byte int array for the commit and char array for commit string.
+ * @return void
  */
 void OLED::setCommitString(const uint8_t * commit, char * commitStr){
 
