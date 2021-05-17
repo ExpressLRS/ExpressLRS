@@ -27,7 +27,7 @@ Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, an
 - Connect GND and 3,3 from the modules 3-pin header to the S7V8F3 regulators GND and VOUT.
 - Connect GND and VIN from the regulator and SP from the module to the modul-bay connector of the Jumper T-Lite.
 
-<img src="img/08.jpg" width="30%"> <img src="img/09.jpg" width="30%"> <img src="img/07.jpg" width="30%">
+<img src="img/08.jpg" width="30%"> <img src="img/09.jpg" width="30%">
 
 UNCONFIRMED: It might be possible to connect SHDN from the regulator to the module bays VOUT and VIN from the regulator directly to the battery + side. So the regulator is powered directly by the battery, but only enabled if the module is selected by OpenTX. By doing this you will be able to draw more current for running the module at higher output power, but it might drain the battery over very long time even if the remote is shut down. But this option needs some more investigation, i guess the pullup on the SHDN pin needs to be removed and maybe replaced by a pulldown. 
 
