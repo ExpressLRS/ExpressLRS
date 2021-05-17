@@ -1,29 +1,105 @@
 /// LED SUPPORT ///////
+uint8_t LEDfade=0;
+int8_t LEDfadeAmount = 2;
+constexpr uint32_t LEDupdateInterval = 100;
+uint32_t LEDupdateCounterMillis;
+
+static connectionState_e lastState = disconnected;
+
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
 #include <NeoPixelBus.h>
-const uint16_t PixelCount = 2; // this example assumes 2 pixel
-#define colorSaturation 50
-NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
-
-RgbColor red(colorSaturation, 0, 0);
-RgbColor green(0, colorSaturation, 0);
-RgbColor blue(0, 0, colorSaturation);
-RgbColor white(colorSaturation);
-RgbColor black(0);
-
-HslColor hslRed(red);
-HslColor hslGreen(green);
-HslColor hslBlue(blue);
-HslColor hslWhite(white);
-HslColor hslBlack(black);
+static const uint16_t PixelCount = 2; // this example assumes 2 pixel
+#ifdef WS2812_IS_GRB
+static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
+#else
+static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
+#endif
 #endif
 
-void updateLEDs(uint8_t isRXconnected, uint8_t tlm)
-{
+static uint32_t colors[8] = {
+    0xFFFFFF,     // RATE_500HZ  white
+    0xFF00FF,     // RATE_250HZ  magenta
+    0x8000FF,     // RATE_200HZ  violet
+    0x0000FF,     // RATE_150HZ  blue
+    0x00FF00,     // RATE_100HZ  green
+    0xFFFFFF,     // RATE_50HZ   yellow
+    0xFF8000,     // RATE_25HZ   orange
+    0xFF0000      // RATE_4HZ    red
+};
+
+static uint32_t rate_colors[RATE_MAX] = {
+    0x00FF00,     // 500/200 hz  green
+    0xFFFFFF,     // 250/100 hz  yellow
+    0xFF8000,     // 150/50 hz   orange
+    0xFF0000      // 50/25 hz    red
+};
+
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
-    #define ON(on) ((ExpressLRS_currAirRate_Modparams->enum_rate & on) ? 0 : LED_MAX_BRIGHTNESS)
-    strip.ClearTo(RgbColor(ON(0b100), ON(0b010), ON(0b001)));
+void WS281Binit()
+{
+    strip.Begin();
+}
+
+void WS281BsetLED(uint32_t color)
+{
+    strip.ClearTo(RgbColor(HtmlColor(color)));
     strip.Show();
-    #undef ON
+}
+
+void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RGB data
+{
+    strip.ClearTo(RgbColor(r, g, b));
+    strip.Show();
+}
+#endif
+
+void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate)
+{
+#if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || (defined(WS2812_LED_IS_USED) && !defined(TARGET_NAMIMNORC_TX))
+    uint32_t color = rate_colors[rate];
+    if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
+    {
+        if (LEDfade == 30)
+        {
+            LEDfadeAmount = -2;
+        }
+        else if (LEDfade == 0)
+        {
+            LEDfadeAmount = 2;
+        }
+
+        LEDfade += LEDfadeAmount;
+        LEDupdateCounterMillis = now;
+        lastState = connectionState;
+        WS281BsetLED(
+            (color >> 16) * LEDfade / 256,
+            ((color >> 8) & 0xFF) * LEDfade / 256,
+            (color & 0xFF) * LEDfade / 256
+        );
+    }
+    if ((connectionState != disconnected) && (lastState == disconnected))
+    {
+        lastState = connectionState;
+        WS281BsetLED(color);
+    }
+#endif
+}
+
+void startupLEDs()
+{
+#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+    // do startup blinkies for fun
+    WS281Binit();
+    for (uint8_t i = 0; i < RATE_ENUM_MAX; i++)
+    {
+        WS281BsetLED(colors[i]);
+        delay(100);
+    }
+    for (uint8_t i = 0; i < RATE_ENUM_MAX; i++)
+    {
+        WS281BsetLED(colors[RATE_ENUM_MAX-i-1]);
+        delay(100);
+    }
+    WS281BsetLED(0);
 #endif
 }

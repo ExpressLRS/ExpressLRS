@@ -527,6 +527,8 @@ Designed by NamimnoRC
 #error "Unknown target!"
 #endif
 
+#define WS2812_IS_GRB
+
 #ifdef GPIO_PIN_LED_WS2812
 #ifndef GPIO_PIN_LED_WS2812_FAST
 #error "WS2812 support requires _FAST pin!"

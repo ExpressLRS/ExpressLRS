@@ -43,11 +43,6 @@ button button;
 #endif
 
 #if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
-uint8_t LEDfadeDiv;
-uint8_t LEDfade;
-bool LEDfadeDir;
-constexpr uint32_t LEDupdateInterval = 100;
-uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
@@ -240,10 +235,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
-
-#ifdef PLATFORM_ESP32
-  updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
-#endif
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -610,25 +601,7 @@ void setup()
 #endif
   Serial.begin(460800);
 
-  /**
-   * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
-   * else we will use GPIO_PIN_LED_GREEN and _RED.
-   **/
-  #if WS2812_LED_IS_USED // do startup blinkies for fun
-      WS281Binit();
-      uint32_t col = 0x0000FF;
-      for (uint8_t j = 0; j < 3; j++)
-      {
-          for (uint8_t i = 0; i < 5; i++)
-          {
-              WS281BsetLED(col << j*8);
-              delay(15);
-              WS281BsetLED(0, 0, 0);
-              delay(35);
-          }
-      }
-      WS281BsetLED(0xff, 0, 0);
-  #endif
+  startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -689,9 +662,6 @@ void setup()
 #endif
 
 #ifdef PLATFORM_ESP32
-#ifdef GPIO_PIN_LED
-  strip.Begin();
-#endif
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
@@ -767,21 +737,8 @@ void loop()
 {
   uint32_t now = millis();
   static bool mspTransferActive = false;
-  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
-      if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
-      {
-          uint8_t LEDcolor[3] = {0};
-          if (LEDfade == 30 || LEDfade == 0)
-          {
-              LEDfadeDir = !LEDfadeDir;
-          }
 
-          LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-          LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-          WS281BsetLED(LEDcolor);
-          LEDupdateCounterMillis = now;
-      }
-  #endif
+  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index);
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
