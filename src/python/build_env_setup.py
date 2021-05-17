@@ -48,4 +48,9 @@ elif platform in ['espressif8266']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
-        
+
+def build_html(source, target, env):
+    env.Execute("html/compile.sh")
+
+env.AddPreAction("${BUILD_DIR}/src/ESP32_WebUpdate.cpp.o", build_html)
+env.AddPreAction("${BUILD_DIR}/src/ESP8266_WebUpdate.cpp.o", build_html)
