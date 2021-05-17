@@ -69,6 +69,9 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
 
+  instance->IRQneedsClear = true;
+  instance->ClearIRQFlags();
+
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
   SetSyncWord(currSyncWord);
   hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
