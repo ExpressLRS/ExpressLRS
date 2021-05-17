@@ -401,7 +401,7 @@ void sendLuaParams()
 
 void UARTdisconnected()
 {
-  #ifdef GPIO_PIN_BUZZER
+  #if defined(GPIO_PIN_BUZZER)
   const uint16_t beepFreq[] = {676, 520};
   const uint16_t beepDurations[] = {300, 150};
   for (int i = 0; i < 2; i++)
@@ -420,7 +420,7 @@ void UARTdisconnected()
 
 void UARTconnected()
 {
-  #ifdef GPIO_PIN_BUZZER
+  #if defined(GPIO_PIN_BUZZER) && !defined(DISABLE_STARTUP_BEEP)
   const uint16_t beepFreq[] = {520, 676};
   const uint16_t beepDurations[] = {150, 300};
   for (int i = 0; i < 2; i++)
@@ -632,7 +632,7 @@ void setup()
     digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
   #endif // GPIO_PIN_LED_RED
 
-  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_STARTUP_BEEP)
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
     // Annoying startup beeps
     #ifndef JUST_BEEP_ONCE
@@ -1007,6 +1007,7 @@ void ExitBindingMode()
 
   InBindingMode = false;
   MspSender.ResetState();
+  SetRFLinkRate(config.GetRate()); //return to original rate
 
   Serial.println("Exiting binding mode");
 }
