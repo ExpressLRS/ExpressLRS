@@ -1327,9 +1327,19 @@ void loop()
     #ifdef ENABLE_TELEMETRY
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+    if (!TelemetrySender.IsActive())
     {
-        TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+        // unlock payload after sender is done
+        if (telemetry.GetCurrentPayload())
+        {
+            telemetry.UnlockCurrentPayload();
+        }
+
+        // check for next telemetry payload to be sent
+        if (telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+        }
     }
     #endif
     updateTelemetryBurst();
