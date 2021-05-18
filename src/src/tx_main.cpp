@@ -462,14 +462,12 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
         break;
       }
       case 6:
-      {
-        char textSelection[7]={0};
-        sprintf(textSelection,"%x",thisCommit);
-        //for (int i=0;i < 6;i++) {
-        //snprintf(textSelection[i],1,"%x",thisCommit[i]);
-        //}
+      { 
+        uint8_t hextoascii[17] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
         uint8_t fieldsetup2[5+7];
-        memcpy(fieldsetup2,textSelection,7);
+        for(int i = 0; i<6; i++){
+        fieldsetup2[i] = hextoascii[thisCommit[i]];
+        }
         fieldsetup2[6] = 0x3B;
         fieldsetup2[7] = 0x00;
         fieldsetup2[8] = 0x00;//value
