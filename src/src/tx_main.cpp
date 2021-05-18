@@ -103,7 +103,6 @@ uint32_t HWtimerPauseDuration = 0;
 uint8_t luaWarningFLags = 0;
 uint8_t suppressedLuaWarningFlags = 0xFF;
 uint32_t LuaLastUpdated = 0;
-uint8_t luaCommitPacket[7] = {thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5],0x00};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -499,7 +498,7 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  crsf.sendELRSparam(luaParams, 4, 0x2E,F("none"),4);
+  crsf.sendELRSparam(luaParams,4, 0x2E,F("none"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
 }
 uint8_t allLUAparamSent = 0;  
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
@@ -565,8 +564,8 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
         for(int i = 0; i<6; i++){
         fieldsetup2[i] = hextoascii[thisCommit[i]];
         }
-        fieldsetup2[6] = 0x3B;
-        fieldsetup2[7] = 0x00;
+        fieldsetup2[6] = 0x3B;//text selection seperator
+        fieldsetup2[7] = 0x00;//null terminate text selection
         fieldsetup2[8] = 0x00;//value
         fieldsetup2[9] = 0x00;//min
         fieldsetup2[10] = 0x00;//max
@@ -580,15 +579,27 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       }
       default: //ID 1
       {
-        char textSelection[26]={"500;250;200;150;100;50;25"};
-        uint8_t fieldsetup2[4+26];
-        memcpy(fieldsetup2,textSelection,26);
-        fieldsetup2[25] = 0x00;
-        fieldsetup2[26] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
-        fieldsetup2[27] = 0x00;//min
-        fieldsetup2[28] = 0x06;//max
-        fieldsetup2[29] = 0x01;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
+        char textSelection[71]={"500(x);250(x);200(-112dbm);150(x);100(-117dbm);50(-120dbm);25(-123dbm)"};
+        uint8_t fieldsetup2[4+71];
+        memcpy(fieldsetup2,textSelection,71);
+        fieldsetup2[70] = 0x00;//null terminate text selection
+        fieldsetup2[71] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
+        fieldsetup2[72] = 0x00;//min
+        fieldsetup2[73] = 0x06;//max
+        fieldsetup2[74] = 0x01;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,75,F("Hz"),2);
+#elif defined(Regulatory_Domain_ISM_2400)
+        char textSelection[77]={"500(-105dbm);250(-108dbm);200(x);150(-112dbm);100(x);50(-117dbm);25(-120dbm)"};
+        uint8_t fieldsetup2[4+77];
+        memcpy(fieldsetup2,textSelection,77);
+        fieldsetup2[76] = 0x00;//null terminate text selection
+        fieldsetup2[77] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
+        fieldsetup2[78] = 0x00;//min
+        fieldsetup2[79] = 0x06;//max
+        fieldsetup2[80] = 0x01;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,81,F("Hz"),2);
+#endif
         break;
       }
     }
@@ -761,6 +772,7 @@ void HandleUpdateParameter()
 
   case CRSF_FRAMETYPE_DEVICE_PING:
   {
+    allLUAparamSent = 0;
     uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0}; //12bytes of unknown data + 1byte of field count 
     fieldsetup2[12] = LUA_FIELD_AMOUNT;
     crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);

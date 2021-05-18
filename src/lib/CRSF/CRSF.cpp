@@ -314,24 +314,24 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fie
         chunks = chunks + 1;
     }
     //calculate how much byte this packet contains
-    uint8_t maxiter;
+    uint8_t currentPacketSize;
             if((chunks - fieldchunk) > 0){
-                maxiter = CHUNK_MAX_NUMBER_OF_BYTES;
+                currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
             } else {
-                maxiter = wholePacketSize % (CHUNK_MAX_NUMBER_OF_BYTES+1);
+                currentPacketSize = wholePacketSize % (CHUNK_MAX_NUMBER_OF_BYTES+1);
             }
 
     //if it is device info, we dont chunk
     if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
         LUArespLength = 2 + (namelength+1) + len_setup2;
     } else {
-        LUArespLength = 2+ 2 + maxiter; //header, fieldsetup1(fieldid, fieldchunk),
+        LUArespLength = 2+ 2 + currentPacketSize; //header, fieldsetup1(fieldid, fieldchunk),
                                         // chunk-ed packets below
                                         //fieldsetup1(fieldparent,fieldtype),field name, 
                                         //fieldsetup2(value,min,max,default),field unit
     }
     //create outbuffer size
-    uint8_t outBuffer[maxiter + 5 + 2 + 2] = {0}; 
+    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
 
     //if it is device info, we dont chunk
     if(frame == CRSF_FRAMETYPE_DEVICE_INFO){
@@ -359,7 +359,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fie
         memcpy(chunkBuffer+(2 + (namelength+1)),fieldsetup2,len_setup2);
         memcpy(chunkBuffer+(2 + (namelength+1) + len_setup2),field_unit,(unitlength + 1));
         
-        chunkBuffer[0] = fieldparent; //fieldparent;
+        chunkBuffer[0] = fieldparent;
         chunkBuffer[1] = fieldtype;
 
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -369,11 +369,11 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fie
         outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
         outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
         outBuffer[5] = fieldid;
-        outBuffer[6] = ((chunks - fieldchunk)); //fieldchunk;
+        outBuffer[6] = ((chunks - fieldchunk)); //remaining chunk to send;
                 
-        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),maxiter);
-        uint8_t crc = crsf_crc.calc(&outBuffer[2], 2+2+maxiter + 1);
-        outBuffer[maxiter + 7] = crc;
+        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),currentPacketSize);
+        uint8_t crc = crsf_crc.calc(&outBuffer[2], 2+2+currentPacketSize + 1);
+        outBuffer[currentPacketSize + 7] = crc;
     }
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
