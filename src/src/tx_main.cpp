@@ -141,8 +141,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
-  //Serial.println("TLMpacket0");
-
+  
   if ((inCRC != calculatedCRC))
   {
 #ifndef DEBUG_SUPPRESS
@@ -164,7 +163,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   {
     connectionState = connected;
     LPD_DownlinkLQ.init(100);
+#ifndef DEBUG_SUPPRESS
     Serial.println("got downlink conn");
+#endif
   }
 
   LastTLMpacketRecvMillis = millis();
@@ -235,8 +236,9 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   if (RFperf == ExpressLRS_currAirRate_RFperfParams)
     return;
-
+#ifndef DEBUG_SUPPRESS
   Serial.println("set rate");
+#endif
   hwTimer.updateInterval(ModParams->interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, bool(UID[5] & 0x01));
 
@@ -403,8 +405,10 @@ void sendLuaParams()
 
   crsf.sendELRSparam(luaParams, 4, 0x2E,F("none"),4);
 }
-
+uint8_t allLUAparamSent = 0;  
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
+
+  uint8_t sentChunk = 0;
   switch(idx){
     case 2:
     {
@@ -416,7 +420,7 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       fieldsetup2[38] = 0x00;//min
       fieldsetup2[39] = 0x07;//max
       fieldsetup2[40] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
       break;
     }
     case 3:
@@ -429,7 +433,7 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       fieldsetup2[32] = 0x00;//min
       fieldsetup2[33] = 0x07;//max
       fieldsetup2[34] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
+      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
       break;
     }
     case 4:
@@ -438,9 +442,9 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       fieldsetup2[0] = (uint8_t)(InBindingMode);//status
       fieldsetup2[1] = 200;//timeout
       if(InBindingMode){
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
       } else {
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
       }
       break;
     }
@@ -450,13 +454,15 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       fieldsetup2[1] = 200;//timeout
       if(webUpdateMode){
         fieldsetup2[0] = 2;
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
       } else {
         fieldsetup2[0] = 0;
-        crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
       }
+      if(sentChunk == 0){
+        allLUAparamSent = 1;
+        }
       break;
-
     }
     default: //ID 1
     {
@@ -468,10 +474,11 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       fieldsetup2[27] = 0x00;//min
       fieldsetup2[28] = 0x06;//max
       fieldsetup2[29] = 0x01;//default
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
+      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
       break;
     }
   }
+  
 }
 
 void UARTdisconnected()
@@ -538,12 +545,15 @@ void HandleUpdateParameter()
 
   switch(crsf.ParameterUpdateData[0]){
   case CRSF_FRAMETYPE_PARAMETER_WRITE:
+  allLUAparamSent = 0;
     switch (crsf.ParameterUpdateData[1])
     {
     case 0: // special case for sending commit packet
     {
+#ifndef DEBUG_SUPPRESS
       Serial.println("send all lua params");
-      uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+#endif
+      uint8_t fieldsetup2[13] = {0};
       fieldsetup2[12] = LUA_FIELD_AMOUNT;
       crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
       //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
@@ -552,8 +562,10 @@ void HandleUpdateParameter()
     case 1:
       if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2])))
       {
+#ifndef DEBUG_SUPPRESS
         Serial.print("Request AirRate: ");
         Serial.println(crsf.ParameterUpdateData[2]);
+#endif
         ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]);
         config.SetRate(ExpressLRS_nextAirRateIndex);
       }
@@ -562,29 +574,37 @@ void HandleUpdateParameter()
     case 2:
       if ((crsf.ParameterUpdateData[2] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[2] >= (uint8_t)TLM_RATIO_NO_TLM))
       {
+#ifndef DEBUG_SUPPRESS
         Serial.print("Request TLM interval: ");
         Serial.println(ExpressLRS_currAirRate_Modparams->TLMinterval);
+#endif
         config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]);
       }
       break;
 
     case 3:
+#ifndef DEBUG_SUPPRESS
       Serial.print("Request Power: ");
       Serial.println(crsf.ParameterUpdateData[2]);
+#endif
       config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[2]);
       break;
 
     case 4:
       if (crsf.ParameterUpdateData[2] == 1)
       {
+#ifndef DEBUG_SUPPRESS
         Serial.println("Binding requested from LUA");
+#endif
         EnterBindingMode();
       } else if(crsf.ParameterUpdateData[2] == 6){
           sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
       }
       else
       {
+#ifndef DEBUG_SUPPRESS
         Serial.println("Binding stopped  from LUA");
+#endif
         ExitBindingMode();
       }
 
@@ -593,16 +613,20 @@ void HandleUpdateParameter()
     case 5:
       if (crsf.ParameterUpdateData[2] == 1)
       {
-  #ifdef PLATFORM_ESP32
+#ifdef PLATFORM_ESP32
         webUpdateMode = true;
+  #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested!");
+  #endif
         sendLuaParams();
         sendLuaParams();
         BeginWebUpdate();
   #else
         webUpdateMode = false;
+  #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested but not supported on this platform!");
   #endif
+#endif
       } else if(crsf.ParameterUpdateData[2] == 6){
           sendLuaFieldCrsf(crsf.ParameterUpdateData[1],0);
       }
@@ -642,7 +666,9 @@ static void ConfigChangeCommit()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
   // Write the uncommitted eeprom values
+#ifndef DEBUG_SUPPRESS
   Serial.println("EEPROM COMMIT");
+#endif
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
   sendLuaParams();
@@ -799,8 +825,9 @@ void setup()
   crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &ParamUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
-
+#ifndef DEBUG_SUPPRESS
   Serial.println("ExpressLRS TX Module Booted...");
+#endif
 
   POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
@@ -1002,7 +1029,9 @@ void OnTxPowerPacket(mspPacket_t *packet)
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
+#ifndef DEBUG_SUPPRESS
   Serial.println("TX setpower");
+#endif
 
   switch (txPower)
   {
@@ -1110,9 +1139,10 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_DEFAULT);
   Radio.SetFrequencyReg(GetInitialFreq());
-
+#ifndef DEBUG_SUPPRESS
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
+#endif
 }
 
 void ExitBindingMode()
@@ -1136,7 +1166,9 @@ void ExitBindingMode()
   InBindingMode = 0;
   MspSender.ResetState();
 
+#ifndef DEBUG_SUPPRESS
   Serial.println("Exiting binding mode");
+#endif
 }
 
 void SendUIDOverMSP()
