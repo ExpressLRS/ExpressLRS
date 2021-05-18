@@ -515,7 +515,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);    // as above but corrects a different PPM offset based on freq error
+        Radio.SetPPMoffsetReg(FreqCorrection);
     }
     #else
         (void)didFHSS;

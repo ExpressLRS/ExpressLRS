@@ -28,7 +28,7 @@ const uint8_t SX127x_AllowedSyncwords[105] =
      193, 196, 199, 201, 204, 205, 208, 209,
      212, 213, 219, 220, 221, 223, 227, 229,
      235, 239, 240, 242, 243, 246, 247, 255};
-     
+
 //////////////////////////////////////////////
 
 SX127xDriver::SX127xDriver()
@@ -200,7 +200,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
-  
+
   int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
   uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
@@ -409,19 +409,15 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
   return -1;
 }
 
+/**
+ * Set the PPMcorrection register to adjust data rate to frequency error
+ * @param offset is in Hz or FREQ_STEP (FREQ_HZ_TO_REG_VAL) units, whichever
+ *    was used to SetFrequencyHz/SetFrequencyReg
+ */
 void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset)
 {
-  int32_t offsetValue = ((int32_t)243) * (offset << 8) / ((((int32_t)SX127xDriver::currFreq / 1000000)) << 8);
-  offsetValue >>= 8;
-
-  uint8_t regValue = offsetValue & 0b01111111;
-
-  if (offsetValue < 0)
-  {
-    regValue = regValue | 0b10000000; //set neg bit for 2s complement
-  }
-
-  hal.writeRegister(SX127x_PPMOFFSET, regValue);
+  int8_t offsetPPM = constrain((offset * 1e6 / currFreq) * 95 / 100, -128, 127);
+  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM);
 }
 
 bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool()
