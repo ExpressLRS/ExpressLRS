@@ -57,7 +57,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #endif
 
 #define LUA_VERSION 3
-#define LUA_FIELD_AMOUNT 5
+#define LUA_FIELD_AMOUNT 6
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -103,8 +103,7 @@ uint32_t HWtimerPauseDuration = 0;
 uint8_t luaWarningFLags = 0;
 uint8_t suppressedLuaWarningFlags = 0xFF;
 uint32_t LuaLastUpdated = 0;
-uint8_t luaDevice[6] = {0x45,0x4C, 0x52, 0x53, 0x46, 0x00};
-uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
+uint8_t luaCommitPacket[7] = {thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5],0x00};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -506,80 +505,94 @@ uint8_t allLUAparamSent = 0;
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
 
   uint8_t sentChunk = 0;
-  switch(idx){
-    case 2:
-    {
-      char textSelection[37]={"off;1/128;1/64;1/32;1/16;1/8;1/4;1/2"};
-      uint8_t fieldsetup2[4+37];
-      memcpy(fieldsetup2,textSelection,37);
-      fieldsetup2[36] = 0x00;
-      fieldsetup2[37] = (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval);//value
-      fieldsetup2[38] = 0x00;//min
-      fieldsetup2[39] = 0x07;//max
-      fieldsetup2[40] = 0x01;//default
-      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
-      break;
-    }
-    case 3:
-    {
-      char textSelection[31]={"10;25;50;100;250;500;1000;2000"};
-      uint8_t fieldsetup2[4+31];
-      memcpy(fieldsetup2,textSelection,31);
-      fieldsetup2[30] = 0x00;
-      #ifdef USE_DYNAMIC_POWER
-      fieldsetup2[31] = (uint8_t)(config.GetPower());
-      #else
-      fieldsetup2[31] = (uint8_t)(POWERMGNT.currPower());//value
-      #endif
-      fieldsetup2[32] = 0x00;//min
-      fieldsetup2[33] = 0x07;//max
-      fieldsetup2[34] = 0x01;//default
-      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
-      break;
-    }
-    case 4:
-    {
-      uint8_t fieldsetup2[2];
-      fieldsetup2[0] = (uint8_t)(InBindingMode);//status
-      fieldsetup2[1] = 200;//timeout
-      if(InBindingMode){
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
-      } else {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
+  if(!allLUAparamSent){
+    switch(idx){
+      case 2:
+      {
+        char textSelection[37]={"off;1/128;1/64;1/32;1/16;1/8;1/4;1/2"};
+        uint8_t fieldsetup2[4+37];
+        memcpy(fieldsetup2,textSelection,37);
+        fieldsetup2[36] = 0x00;
+        fieldsetup2[37] = (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval);//value
+        fieldsetup2[38] = 0x00;//min
+        fieldsetup2[39] = 0x07;//max
+        fieldsetup2[40] = 0x01;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+        break;
       }
-      break;
-    }
-    case 5:
-    {
-      uint8_t fieldsetup2[2];
-      fieldsetup2[1] = 200;//timeout
-      if(webUpdateMode){
-        fieldsetup2[0] = 2;
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
-      } else {
-        fieldsetup2[0] = 0;
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+      case 3:
+      {
+        char textSelection[31]={"10;25;50;100;250;500;1000;2000"};
+        uint8_t fieldsetup2[4+31];
+        memcpy(fieldsetup2,textSelection,31);
+        fieldsetup2[30] = 0x00;
+        fieldsetup2[31] = (uint8_t)(POWERMGNT.currPower());//value
+        fieldsetup2[32] = 0x00;//min
+        fieldsetup2[33] = 0x07;//max
+        fieldsetup2[34] = 0x01;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
+        break;
       }
-      if(sentChunk == 0){
-        allLUAparamSent = 1;
+      case 4:
+      {
+        uint8_t fieldsetup2[2];
+        fieldsetup2[0] = (uint8_t)(InBindingMode);//status
+        fieldsetup2[1] = 200;//timeout
+        if(InBindingMode){
+          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
+        } else {
+          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
         }
-      break;
-    }
-    default: //ID 1
-    {
-      char textSelection[26]={"500;250;200;150;100;50;25"};
-      uint8_t fieldsetup2[4+26];
-      memcpy(fieldsetup2,textSelection,26);
-      fieldsetup2[25] = 0x00;
-      fieldsetup2[26] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
-      fieldsetup2[27] = 0x00;//min
-      fieldsetup2[28] = 0x06;//max
-      fieldsetup2[29] = 0x01;//default
-      sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
-      break;
+        break;
+      }
+      case 5:
+      {
+        uint8_t fieldsetup2[2];
+        fieldsetup2[1] = 200;//timeout
+        if(webUpdateMode){
+          fieldsetup2[0] = 2;
+          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
+        } else {
+          fieldsetup2[0] = 0;
+          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
+        }
+        break;
+      }
+      case 6:
+      { 
+        uint8_t hextoascii[17] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+        uint8_t fieldsetup2[5+7];
+        for(int i = 0; i<6; i++){
+        fieldsetup2[i] = hextoascii[thisCommit[i]];
+        }
+        fieldsetup2[6] = 0x3B;
+        fieldsetup2[7] = 0x00;
+        fieldsetup2[8] = 0x00;//value
+        fieldsetup2[9] = 0x00;//min
+        fieldsetup2[10] = 0x00;//max
+        fieldsetup2[11] = 0x00;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x06,chunk,0x00,CRSF_TEXT_SELECTION,F("commit:"),7,fieldsetup2,12,F(" "),1);
+        
+        if(sentChunk == 0){
+          allLUAparamSent = 1;
+          }
+        break;
+      }
+      default: //ID 1
+      {
+        char textSelection[26]={"500;250;200;150;100;50;25"};
+        uint8_t fieldsetup2[4+26];
+        memcpy(fieldsetup2,textSelection,26);
+        fieldsetup2[25] = 0x00;
+        fieldsetup2[26] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
+        fieldsetup2[27] = 0x00;//min
+        fieldsetup2[28] = 0x06;//max
+        fieldsetup2[29] = 0x01;//default
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,30,F("Hz"),2);
+        break;
+      }
     }
   }
-  
 }
 
 void UARTdisconnected()
@@ -651,7 +664,6 @@ void HandleUpdateParameter()
       uint8_t fieldsetup2[13] = {0};
       fieldsetup2[12] = LUA_FIELD_AMOUNT;
       crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
-      //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
       break;
     }
     case 1:
@@ -752,7 +764,6 @@ void HandleUpdateParameter()
     uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0}; //12bytes of unknown data + 1byte of field count 
     fieldsetup2[12] = LUA_FIELD_AMOUNT;
     crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
-    //crsf.sendCRSFdevice(luaDevice, 6, LUA_FIELD_AMOUNT);
     break;
   }
   case CRSF_FRAMETYPE_PARAMETER_READ: //param info
