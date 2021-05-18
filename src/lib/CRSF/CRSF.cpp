@@ -296,11 +296,11 @@ void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __
 }
 
 //sendCRSF param can take anytype of fieldtype if fieldsetup2 is set properly
-void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
+uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength)
 {
     if (!CRSF::CRSFstate)
     {
-        return;
+        return 0;
     }
     uint8_t LUArespLength;
     uint8_t wholePacketSize = (2+(namelength+1) + len_setup2 + (unitlength+1));
@@ -361,7 +361,7 @@ void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldc
         
         chunkBuffer[0] = fieldparent; //fieldparent;
         chunkBuffer[1] = fieldtype;
-        
+
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
         outBuffer[1] = LUArespLength + 2;   //received as #data in lua
         outBuffer[2] = frame; //received as command in lua
@@ -383,7 +383,7 @@ void CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldid, uint8_t fieldc
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
-
+    return ((chunks - fieldchunk));
 }
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
@@ -527,21 +527,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
-    if (packetType != CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-    {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
-        {
-            ParameterUpdateData[0] = packetType;
-            ParameterUpdateData[1] = SerialInBuffer[5];
-            ParameterUpdateData[2] = SerialInBuffer[6];
-            RecvParameterUpdate();
-            return true;
-        }
-        Serial.println("Got Other Packet");
-    }
-    else if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
         GoodPktsCount++;
@@ -554,6 +540,19 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         return true;
+    } else {
+        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        {
+            ParameterUpdateData[0] = packetType;
+            ParameterUpdateData[1] = SerialInBuffer[5];
+            ParameterUpdateData[2] = SerialInBuffer[6];
+            RecvParameterUpdate();
+            return true;
+        }
+        Serial.println("Got Other Packet");        
+        //GoodPktsCount++;        
     }
     return false;
 }

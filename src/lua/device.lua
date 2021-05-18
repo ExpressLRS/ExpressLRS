@@ -419,7 +419,7 @@ local function refreshNext()
       end
     elseif time > fieldTimeout and not edit then --reload lua field
       crossfireTelemetryPush(0x2C, { deviceId, 0xEA, fieldId, fieldChunk })
-      fieldTimeout = time + 200 -- 2s
+      fieldTimeout = time + 500 -- 2s
     end
   elseif command == 0x29 then
     parseDeviceInfoMessage(data)
