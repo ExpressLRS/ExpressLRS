@@ -43,10 +43,8 @@ public:
     bool ShouldCallBootloader();
     #ifdef ENABLE_TELEMETRY
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
-    uint8_t* GetCurrentPayload();
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
-    void UnlockCurrentPayload();
     #endif
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);

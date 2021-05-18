@@ -30,6 +30,12 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     uint8_t oldPayloadIndex = currentPayloadIndex;
     uint8_t realLength = 0;
 
+    if (payloadTypes[currentPayloadIndex].locked)
+    {
+        payloadTypes[currentPayloadIndex].locked = false;
+        payloadTypes[currentPayloadIndex].updated = false;
+    }
+
     do
     {
         currentPayloadIndex = (currentPayloadIndex + 1) % payloadTypesCount;
@@ -61,25 +67,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     *nextPayloadSize = 0;
     *payloadData = 0;
     return false;
-}
-
-void Telemetry::UnlockCurrentPayload()
-{
-    if (payloadTypes[currentPayloadIndex].locked)
-    {
-        payloadTypes[currentPayloadIndex].locked = false;
-        payloadTypes[currentPayloadIndex].updated = false;
-    }
-}
-
-uint8_t* Telemetry::GetCurrentPayload()
-{
-    if (payloadTypes[currentPayloadIndex].locked)
-    {
-        return payloadTypes[currentPayloadIndex].data;
-    }
-
-    return 0;
 }
 
 uint8_t Telemetry::UpdatedPayloadCount()

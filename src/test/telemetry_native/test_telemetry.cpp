@@ -46,10 +46,15 @@ void test_function_battery(void)
     }
 
     // simulate sending done + send another message of the same type to make sure that the repeated sending of only one type works
-    telemetry.UnlockCurrentPayload();
+
+    // this unlocks the data but does not send it again since it's not updated
+    TEST_ASSERT_EQUAL(false, telemetry.GetNextPayload(&receivedLength, &data));
+
+    // update data
     sentLength = sendData(batterySequence2, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
+    // now it's ready to be sent
     telemetry.GetNextPayload(&receivedLength, &data);
     TEST_ASSERT_NOT_EQUAL(0, data);
 
