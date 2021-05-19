@@ -760,6 +760,12 @@ bool CRSF::UARTwdt()
             CRSF::Port.updateBaudRate(UARTrequestedBaud);
 #else
             CRSF::Port.begin(UARTrequestedBaud);
+            #if defined(TARGET_TX_GHOST)
+            USART1->CR1 &= ~USART_CR1_UE;
+            USART1->CR3 |= USART_CR3_HDSEL;
+            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+            USART1->CR1 |= USART_CR1_UE;
+            #endif
 #endif
             UARTcurrentBaud = UARTrequestedBaud;
             duplex_set_RX();
