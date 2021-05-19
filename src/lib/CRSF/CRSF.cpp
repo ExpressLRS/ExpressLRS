@@ -363,7 +363,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     uint32_t now = millis();
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
-        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        uint32_t packetRate;
+        if (CRSF::UARTcurrentBaud == 115200 && (CRSF::RequestedRCpacketInterval == 2000)){
+            CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        }else{
+            CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        }
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
         uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
