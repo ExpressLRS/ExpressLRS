@@ -364,7 +364,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate;
-        if (CRSF::UARTcurrentBaud == 115200 && (CRSF::RequestedRCpacketInterval == 2000))
+        if (CRSF::UARTcurrentBaud == 115200 && CRSF::RequestedRCpacketInterval == 2000)
         {
             packetRate = 40000; //constrain to 250hz max 
         }
