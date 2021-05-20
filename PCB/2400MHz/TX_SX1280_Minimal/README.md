@@ -1,6 +1,6 @@
 # 2.4GHz Minimal Tx
 
-Very Small 2.4GHz eLRS Module to fit INTO the Jumper T-Lite or other Transmitters.
+-very Small 2.4GHz eLRS Module to fit INTO the Jumper T-Lite or other Transmitters.
 
 ### PCB manufacturing
 
@@ -27,24 +27,21 @@ Upload the Gerber file to https://jlcpcb.com/RAT.  Check the price for 5, 10, an
 - Connect GND and 3,3 from the modules 3-pin header to the S7V8F3 regulators GND and VOUT.
 - Connect GND and VIN from the regulator and SP from the module to the modul-bay connector of the Jumper T-Lite.
 
-<img src="img/08.jpg" width="30%"> <img src="img/09.jpg" width="30%">
+<img src="img/08.jpg" width="30%"> <img src="img/09.jpg" width="30%"> <img src="img/07.jpg" width="30%">
 
-UNCONFIRMED: It might be possible to connect SHDN from the regulator to the module bays VOUT and VIN from the regulator directly to the battery + side. So the regulator is powered directly by the battery, but only enabled if the module is selected by OpenTX. By doing this you will be able to draw more current for running the module at higher output power, but it might drain the battery over very long time even if the remote is shut down. But this option needs some more investigation, i guess the pullup on the SHDN pin needs to be removed and maybe replaced by a pulldown. 
+- Alternatively connect SHDN from the regulator to the module bays VOUT and VIN from the regulator directly to the battery + side. So the regulator is powered directly by the battery, but only enabled if the module is selected by OpenTX. By doing this you will be able to draw more current for running the module at higher output power, but it might drain the battery over very long time even if the remote is shut down.
 
-**Please check the temperature of the module, i added a small heatsink to both sides (ESP32 and SX1280 module) i had lying around from my raspberry pi - just to be on the save side.**
+**Please check the temperature of the module, it might be nessessary to add a small heatsink to both sides (ESP32 and SX1280 module)**
 
 ### STLs
 
-- Print the 2nd Antenna Mount for the Jumper T-Lite, TPU worked perfect for me as it keeps it a bit flexible. Angled pigtail for the ELRS antenna goes into the bottom hole (cut a small slot into the T-Lite case to put the cable through), T-Lite antenna trough the center hole, 2 small screws are used to fix it on the two mounting holes of the T-Lite. Front ring can be used to clip on a strap.
-
-<img src="img/antenna_1.png" width="30%"> <img src="img/01.jpg" width="30%"> <img src="img/02.jpg" width="30%">
+- Print the 2nd Antenna Mount for the Jumper T-Lite.
 
 ### Build Pics
 
-<img src="img/04.jpg" width="30%"> <img src="img/06.jpg" width="30%"> <img src="img/08.jpg" width="30%"> 
-<img src="img/09.jpg" width="30%"> <img src="img/11.jpg" width="30%"> <img src="img/12.jpg" width="30%"> 
-<img src="img/13.jpg" width="30%">
-
+<img src="img/01.jpg" width="30%"> <img src="img/02.jpg" width="30%"> <img src="img/03.jpg" width="30%">
+<img src="img/04.jpg" width="30%"> <img src="img/05.jpg" width="30%"> <img src="img/06.jpg" width="30%">
+<img src="img/07.jpg" width="30%"> <img src="img/08.jpg" width="30%"> <img src="img/09.jpg" width="30%">
 
 ### Schematic and PCB layout
 
