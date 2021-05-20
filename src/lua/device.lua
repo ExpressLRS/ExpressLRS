@@ -484,14 +484,14 @@ local function runDevicePage(event)
   end
   if elrsFlags > 0 then
     lcd.clear()
-    lcd.drawScreenTitle(deviceName..":"..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
+    lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
     --lcd.drawText(20,10,"WARNING :", DBLSIZE + BLINK)
-    lcd.drawText(20,20,elrsFlagsInfo.." "..tostring(elrsFlags),0)
+    lcd.drawText(20,20,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
     lcd.drawText(20,50,"ok",BLINK + INVERS)
 
   else
     lcd.clear()
-    lcd.drawScreenTitle(deviceName..":"..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
+    lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
     for y = 1, 7 do
       local field = getField(pageOffset+y)
       if not field then
