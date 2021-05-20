@@ -40,11 +40,11 @@ SX1280Driver Radio;
 #endif
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
-#ifdef BLE_HID_JOYSTICK 
+#endif
+#ifdef BLE_HID_JOYSTICK
 #include "ESP32_BLE_HID.h"
 bool BLEjoystickActive = false;
 volatile bool BLEjoystickRefresh = false;
-#endif
 #endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)

@@ -35,13 +35,13 @@ extern CRSF crsf;
 #define enableBrake false
 #define enableSteering false
 
-BleGamepad bleGamepad("ExpressLRS-Joystick", "ELRS", 100);
+BleGamepad bleGamepad("ExpressLRS Joystick", "ELRS", 100);
 
 void BluetoothJoystickBegin()
 {
     bleGamepad.setAutoReport(false);
     Serial.println("Starting BLE Joystick!");
-    bleGamepad.setControllerType(CONTROLLER_TYPE_MULTI_AXIS);
+    bleGamepad.setControllerType(CONTROLLER_TYPE_GAMEPAD);
     bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
 
@@ -65,14 +65,16 @@ void BluetoothJoystickUpdateValues()
         }
 
         bleGamepad.setX(data[0]);
-        bleGamepad.setY(-data[1]);
-        bleGamepad.setRudder(data[2]);
-        bleGamepad.setThrottle(data[3]);
-        bleGamepad.setSlider1(data[4]);
-        bleGamepad.setSlider2(data[5]);
-        bleGamepad.setRX(data[6]);
-        bleGamepad.setRY(data[7]);
+        bleGamepad.setY(data[1]);
+        bleGamepad.setRX(data[2]);
+        bleGamepad.setRY(data[3]);
+        bleGamepad.setRudder(data[4]);
+        bleGamepad.setThrottle(data[5]);
+        bleGamepad.setSlider1(data[6]);
+        bleGamepad.setSlider2(data[7]);
     }
 }
 
+#else
+inline void BluetoothJoystickSendReport() {}
 #endif
