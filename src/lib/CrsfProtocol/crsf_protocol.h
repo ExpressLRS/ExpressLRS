@@ -290,6 +290,126 @@ typedef struct crsfPayloadLinkstatistics_s
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
+// only 1st properties has the same type on all lua packet type.
+struct tagLuaProperties1{
+    uint8_t id;
+    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
+    uint8_t parent;
+    crsf_value_type_e type;
+}PACKED; // probably a pointer to a flash string
+struct tagLuaDeviceProperties {
+    uint8_t etc[12];
+    uint8_t fieldamount; //number of field of params this device has
+}PACKED;
+struct tagLuaTextSelectionProperties{
+    uint8_t value;
+    uint8_t min;
+    uint8_t max;
+    uint8_t defaultValue;
+}PACKED;
+
+struct tagLuaCommandProperties{
+    uint8_t status;
+    uint8_t timeout;
+}PACKED;
+
+struct tagLuaUint8Properties{
+    uint8_t value;
+    uint8_t min;
+    uint8_t max;
+    uint8_t defaultValue;
+}PACKED;
+struct tagLuaInt8Properties{
+    int8_t value;
+    int8_t min;
+    int8_t max;
+    int8_t defaultValue;
+}PACKED;
+struct tagLuaUint16Properties{
+    uint16_t value;
+    uint16_t min;
+    uint16_t max;
+    uint16_t defaultValue;
+}PACKED;
+struct tagLuaInt16Properties{
+    int16_t value;
+    int16_t min;
+    int16_t max;
+    int16_t defaultValue;
+}PACKED;
+struct tagLuaFloatProperties{
+    float value;
+    float min;
+    float max;
+    float defaultValue;
+}PACKED;
+
+struct tagLuaDevice {
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaDeviceProperties luaDeviceProperties;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_textSelection {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    const char *textOption; // pointer to select options
+    struct tagLuaTextSelectionProperties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_command {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaCommandProperties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+
+struct tagLuaItem_uint8 {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaUint8Properties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_int8 {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaInt8Properties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_uint16 {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaUint16Properties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_int16 {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaInt16Properties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_float {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    struct tagLuaFloatProperties luaProperties2;
+    const char *label2;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_string {
+    struct tagLuaProperties1 luaProperties1;
+    const char *label1; // probably a pointer to a flash string
+    const char *label2;
+    uint8_t size;
+} PACKED;
+
+
+
+
 // typedef struct crsfOpenTXsyncFrame_s
 // {
 //     uint32_t adjustedRefreshRate;

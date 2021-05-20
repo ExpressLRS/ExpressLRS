@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
+#include "luaParams.h"
 
 extern const unsigned char target_name[];
 extern const uint8_t target_name_size;

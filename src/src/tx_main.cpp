@@ -10,6 +10,8 @@ SX1280Driver Radio;
 #endif
 
 #include "CRSF.h"
+
+#include "luaParams.h"
 #include "FHSS.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
@@ -56,8 +58,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_VERSION 3
-#define LUA_FIELD_AMOUNT 6
+uint8_t allLUAparamSent = 0;  
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -500,7 +501,14 @@ void sendLuaParams()
 
   crsf.sendELRSparam(luaParams,4, 0x2E,F("none"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
 }
-uint8_t allLUAparamSent = 0;  
+
+void resetLuaParams(){
+  setLuaTextSelectionValue(&luaAirRate,config.GetRate());
+  setLuaTextSelectionValue(&luaTlmRate,config.GetTlm());
+  setLuaTextSelectionValue(&luaPower,config.GetPower());
+  allLUAparamSent = 0;
+}
+
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
 
   uint8_t sentChunk = 0;
@@ -508,57 +516,30 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
     switch(idx){
       case 2:
       {
-        char textSelection[37]={"off;1/128;1/64;1/32;1/16;1/8;1/4;1/2"};
-        uint8_t fieldsetup2[4+37];
-        memcpy(fieldsetup2,textSelection,37);
-        fieldsetup2[36] = 0x00;
-        fieldsetup2[37] = (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval);//value
-        fieldsetup2[38] = 0x00;//min
-        fieldsetup2[39] = 0x07;//max
-        fieldsetup2[40] = 0x01;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x02,chunk,0x00,CRSF_TEXT_SELECTION,F("tlm.Rate"),8,fieldsetup2,41,F(" "),1);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaTlmRate,luaTlmRate.size);
         break;
       }
       case 3:
       {
-        char textSelection[31]={"10;25;50;100;250;500;1000;2000"};
-        uint8_t fieldsetup2[4+31];
-        memcpy(fieldsetup2,textSelection,31);
-        fieldsetup2[30] = 0x00;
-        fieldsetup2[31] = (uint8_t)(POWERMGNT.currPower());//value
-        fieldsetup2[32] = 0x00;//min
-        fieldsetup2[33] = 0x07;//max
-        fieldsetup2[34] = 0x01;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x03,chunk,0x00,CRSF_TEXT_SELECTION,F("power"),5,fieldsetup2,35,F("mW"),2);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaPower,luaPower.size);
         break;
       }
       case 4:
       {
-        uint8_t fieldsetup2[2];
-        fieldsetup2[0] = (uint8_t)(InBindingMode);//status
-        fieldsetup2[1] = 200;//timeout
-        if(InBindingMode){
-          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("binding"),7);
-        } else {
-          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x04,chunk,0x00,CRSF_COMMAND,F("bind"),4,fieldsetup2,2,F("rdy"),3);
-        }
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaBind,luaBind.size);
         break;
       }
       case 5:
       {
-        uint8_t fieldsetup2[2];
-        fieldsetup2[1] = 200;//timeout
-        if(webUpdateMode){
-          fieldsetup2[0] = 2;
-          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("updating"),8);
-        } else {
-          fieldsetup2[0] = 0;
-          sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x05,chunk,0x00,CRSF_COMMAND,F("webupdate"),9,fieldsetup2,2,F("rdy"),3);
-        }
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
+        if(sentChunk == 0){
+          allLUAparamSent = 1;
+          }
         break;
       }
-      case 6:
+      case 6: //commit
       { 
+/** 
         uint8_t hextoascii[17] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
         uint8_t fieldsetup2[5+7];
         for(int i = 0; i<6; i++){
@@ -575,31 +556,11 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
         if(sentChunk == 0){
           allLUAparamSent = 1;
           }
-        break;
+*/        break;
       }
       default: //ID 1
       {
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
-        char textSelection[71]={"500(x);250(x);200(-112dbm);150(x);100(-117dbm);50(-120dbm);25(-123dbm)"};
-        uint8_t fieldsetup2[4+71];
-        memcpy(fieldsetup2,textSelection,71);
-        fieldsetup2[70] = 0x00;//null terminate text selection
-        fieldsetup2[71] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
-        fieldsetup2[72] = 0x00;//min
-        fieldsetup2[73] = 0x06;//max
-        fieldsetup2[74] = 0x01;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,75,F("Hz"),2);
-#elif defined(Regulatory_Domain_ISM_2400)
-        char textSelection[77]={"500(-105dbm);250(-108dbm);200(x);150(-112dbm);100(x);50(-117dbm);25(-120dbm)"};
-        uint8_t fieldsetup2[4+77];
-        memcpy(fieldsetup2,textSelection,77);
-        fieldsetup2[76] = 0x00;//null terminate text selection
-        fieldsetup2[77] = (uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate);//value
-        fieldsetup2[78] = 0x00;//min
-        fieldsetup2[79] = 0x06;//max
-        fieldsetup2[80] = 0x01;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x01,chunk,0x00,CRSF_TEXT_SELECTION,F("pkt.Rate"),8,fieldsetup2,81,F("Hz"),2);
-#endif
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
         break;
       }
     }
@@ -672,9 +633,9 @@ void HandleUpdateParameter()
 #ifndef DEBUG_SUPPRESS
       Serial.println("send all lua params");
 #endif
-      uint8_t fieldsetup2[13] = {0};
-      fieldsetup2[12] = LUA_FIELD_AMOUNT;
-      crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+
+      
+      sendLuaParams();
       break;
     }
     case 1:
@@ -773,9 +734,7 @@ void HandleUpdateParameter()
   case CRSF_FRAMETYPE_DEVICE_PING:
   {
     allLUAparamSent = 0;
-    uint8_t fieldsetup2[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0}; //12bytes of unknown data + 1byte of field count 
-    fieldsetup2[12] = LUA_FIELD_AMOUNT;
-    crsf.sendCRSFparam(CRSF_FRAMETYPE_DEVICE_INFO,0,0,0,CRSF_STRING,F("ELRS"), 4,fieldsetup2,13,F(" "),1);
+    crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
     break;
   }
   case CRSF_FRAMETYPE_PARAMETER_READ: //param info
@@ -802,8 +761,10 @@ static void ConfigChangeCommit()
 #endif
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
+  resetLuaParams();
   sendLuaParams();
 }
+
 
 static void CheckConfigChangePending()
 {
@@ -996,7 +957,7 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-  
+  resetLuaParams();
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
@@ -1220,6 +1181,7 @@ void EnterBindingMode()
   CRCInitializer = 0;
 
   InBindingMode = 2;
+  setLuaCommandValue(&luaBind,InBindingMode);
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1253,6 +1215,7 @@ void ExitBindingMode()
   CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = 0;
+  setLuaCommandValue(&luaBind,InBindingMode);
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
@@ -1271,7 +1234,7 @@ void SendUIDOverMSP()
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = true;
+  InBindingMode = 2;
 }
 
 
