@@ -1,4 +1,4 @@
-![Banner](img/banner.png)
+![Banner](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/banner.png)
 
 ## Need help? Confused? Join the Community!
  * [<img src="https://camo.githubusercontent.com/79fcdc7c43f1a1d7c175827976ffee8177814a016fb1b9578ff70f1aef759578/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f646973636f72642e737667" width="15" height="15"> Community Discord](https://discord.gg/dS6ReFY)
@@ -26,12 +26,12 @@ ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depe
 
 ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manufacturers are preparing to offer offical ELRS hardware soon so stay tuned. 
 
-![LatencyChart](img/Average%20Total%20Latency.png)
+![LatencyChart](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/Average%20Total%20Latency.png)
 
 ExpressLRS aims to achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This compromise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.   
 
 **2.4GHz Comparison**
-![RangeVsPacketRate](img/pktrate_vs_sens.png)
+![RangeVsPacketRate](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/pktrate_vs_sens.png)
 
 More information can be found in the [wiki](https://github.com/AlessandroAU/ExpressLRS/wiki). 
 
@@ -44,7 +44,7 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
 
 ### 900 MHz Hardware:
 
-<img src="/img/900Mhardware.jpg" width = "80%">
+<img src="https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/900Mhardware.jpg" width = "80%">
 
 - **TX**
     - [FrSky R9M (2018)](https://www.frsky-rc.com/product/r9m/) (Full Support, requires resistor mod)
@@ -67,7 +67,7 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
 
 ### 2.4 GHz Hardware:
 
-<img src="/img/24Ghardware.jpg" width = "80%">
+<img src="https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/24Ghardware.jpg" width = "80%">
 
 - **TX**
     - [DIY JR Bay](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
@@ -122,4 +122,4 @@ Check the [wiki page](https://github.com/AlessandroAU/ExpressLRS/wiki/Range-Comp
 ## Legal Stuff
 The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. **USE AT YOUR OWN RISK**
 
-[![Banner](img/footer.png)](https://github.com/AlessandroAU/ExpressLRS/wiki#community)
+[![Banner](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/footer.png)](https://github.com/AlessandroAU/ExpressLRS/wiki#community)
