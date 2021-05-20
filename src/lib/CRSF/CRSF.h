@@ -21,7 +21,6 @@
 #include "driver/gpio.h"
 #endif
 
-
 class CRSF
 {
 
@@ -76,8 +75,10 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
+    void getTextSelectionStructToArray(void * luaStruct, uint8_t *outarray);
     void sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2);
-    uint8_t sendCRSFparam(crsf_frame_type_e frame, uint8_t fieldid, uint8_t fieldchunk, uint8_t fieldparent, crsf_value_type_e fieldtype,const __FlashStringHelper *field_name,uint8_t namelength,uint8_t fieldsetup2[],uint8_t len_setup2,const __FlashStringHelper *field_unit, uint8_t unitlength);
+    uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, void * luaData, uint8_t wholePacketSize);
+    void sendCRSFdevice(void * luaData, uint8_t wholePacketSize);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
