@@ -19,7 +19,7 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         env.AddPostAction("buildprog", opentx.gen_frsky)
     elif "APLHA_900_TX" in target_name:
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
-    elif "_R9M_" in target_name or "ES915TX" or "GHOST_2400_TX" in target_name:
+    elif "_R9M_" in target_name or "ES915TX" in target_name or "GHOST_2400_TX" in target_name:
         env.AddPostAction("buildprog", opentx.gen_elrs)
         env.AddPreAction("upload", opentx.gen_elrs)
         if "WIFI" in target_name:
