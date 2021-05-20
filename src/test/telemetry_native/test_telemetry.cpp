@@ -31,7 +31,6 @@ void test_function_battery(void)
 {
     telemetry.ResetState();
     uint8_t batterySequence[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
-    uint8_t batterySequence2[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
     int length = sizeof(batterySequence);
     int sentLength = sendData(batterySequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
@@ -43,24 +42,6 @@ void test_function_battery(void)
     for (int i = 0; i < length; i++)
     {
         TEST_ASSERT_EQUAL(batterySequence[i], data[i]);
-    }
-
-    // simulate sending done + send another message of the same type to make sure that the repeated sending of only one type works
-
-    // this unlocks the data but does not send it again since it's not updated
-    TEST_ASSERT_EQUAL(false, telemetry.GetNextPayload(&receivedLength, &data));
-
-    // update data
-    sentLength = sendData(batterySequence2, length);
-    TEST_ASSERT_EQUAL(length, sentLength);
-
-    // now it's ready to be sent
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
-
-    for (int i = 0; i < length; i++)
-    {
-        TEST_ASSERT_EQUAL(batterySequence2[i], data[i]);
     }
 }
 
