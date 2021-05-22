@@ -69,6 +69,6 @@ def parse(melodyOrRTTTL):
 		if retVal != "":
 			retVal = "{" + retVal[:-1] + "}"
 		else:
-			raise ValueError('Blank RTTTL melody detected')
+			raise ValueError("Blank RTTTL melody detected")
 		return retVal
 
