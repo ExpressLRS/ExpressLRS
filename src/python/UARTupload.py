@@ -216,7 +216,12 @@ def on_upload(source, target, env):
             if "GHST=" in flag:
                 ghst = eval(flag.split("=")[1])
 
-    uart_upload(upload_port, firmware_path, upload_speed, ghst)
+    try:
+        uart_upload(upload_port, firmware_path, upload_speed, ghst)
+    except Exception as e:
+        dbg_print("{0}\n".format(e))
+        return -1
+    return 0
 
 
 if __name__ == '__main__':

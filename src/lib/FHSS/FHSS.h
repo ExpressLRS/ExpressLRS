@@ -28,8 +28,8 @@ extern volatile uint8_t FHSSptr;
 extern uint8_t NumOfFHSSfrequencies;
 extern int32_t FreqCorrection;
 
-#define FreqCorrectionMax 200000
-#define FreqCorrectionMin -20000
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
+#define FreqCorrectionMin ((int32_t)(-100000/FREQ_STEP))
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
 
@@ -67,10 +67,10 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(926900000)};
 #elif defined Regulatory_Domain_EU_868
 /* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
- * Note: these frequencies fall in the license free H-band, but in combination with 500kHz 
+ * Note: these frequencies fall in the license free H-band, but in combination with 500kHz
  * LoRa modem bandwidth used by ExpressLRS (EU allows up to 125kHz modulation BW only) they
- * will never pass RED certification and they are ILLEGAL to use. 
- * 
+ * will never pass RED certification and they are ILLEGAL to use.
+ *
  * Therefore we simply maximize the usage of available spectrum so laboratory testing of the software won't disturb existing
  * 868MHz ISM band traffic too much.
  */
@@ -91,7 +91,7 @@ const uint32_t FHSSfreqs[] = {
 #elif defined Regulatory_Domain_EU_433
 /* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
- * of the spectrum, nothing else. As such, these are likely illegal to use. 
+ * of the spectrum, nothing else. As such, these are likely illegal to use.
  */
 const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(433100000),
@@ -241,7 +241,7 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(2472400000),
     FREQ_HZ_TO_REG_VAL(2473400000),
     FREQ_HZ_TO_REG_VAL(2474400000),
-    
+
     FREQ_HZ_TO_REG_VAL(2475400000),
     FREQ_HZ_TO_REG_VAL(2476400000),
     FREQ_HZ_TO_REG_VAL(2477400000),
