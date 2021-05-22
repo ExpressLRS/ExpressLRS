@@ -25,7 +25,7 @@ def _validate_serialrx(rl, config, expected):
         expected = [expected]
     rl.set_delimiters(["# "])
     rl.clear()
-    rl.write("get serialrx_%s\r\n" % config)
+    rl.write_str("get serialrx_%s" % config)
     line = rl.read_line(1.).strip()
     for key in expected:
         key = " = %s" % key
@@ -49,7 +49,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     rl = SerialHelper.SerialHelper(s, 3., ['CCC', "# "])
     rl.clear()
     # Send start command '#'
-    rl.write("#\r\n", half_duplex)
+    rl.write_str("#", half_duplex)
     start = rl.read_line(2.).strip()
     #dbg_print("BF INIT: '%s'" % start.replace("\r", ""))
     if "CCC" in start:
@@ -79,7 +79,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
 
     rl.set_delimiters(["\n"])
     rl.clear()
-    rl.write("serial\r\n")
+    rl.write_str("serial")
 
     while True:
         line = rl.read_line().strip()
@@ -104,7 +104,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
 
     dbg_print("Enabling serial passthrough...")
     dbg_print("  CMD: '%s'" % cmd)
-    rl.write(cmd + '\n')
+    rl.write_str(cmd)
     time.sleep(.2)
     s.close()
     dbg_print("======== PASSTHROUGH DONE ========")
