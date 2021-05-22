@@ -2,7 +2,7 @@ import gzip
 import shutil
 import os, glob
 
-FIRMWARE_PACKING_ENABLED = False
+FIRMWARE_PACKING_ENABLED = True
 
 
 #
@@ -49,7 +49,7 @@ def compressFirmware(source, target, env):
         build_dir = env.subst("$BUILD_DIR")
         image_name = env.subst("$PROGNAME")
         source_file = os.path.join(build_dir, image_name + ".bin")
-        target_file = source_file
+        target_file = source_file + ".gz"
         binary_compress(target_file, source_file)
 
 
