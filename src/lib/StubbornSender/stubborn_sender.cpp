@@ -1,4 +1,8 @@
+#if PLATFORM_PIC32
+#include <stdint.h> // This is included in the pic32 compiler downloaded by platformio
+#else
 #include <cstdint>
+#endif
 #include "stubborn_sender.h"
 
 StubbornSender::StubbornSender(uint8_t maxPackageIndex)

@@ -1,6 +1,10 @@
 #pragma once
 
+#if PLATFORM_PIC32
+#include <stdint.h> // This is included in the pic32 compiler downloaded by platformio
+#else
 #include <cstdint>
+#endif
 
 // The number of times to resend the same package index before going to RESYNC
 #define SSENDER_MAX_MISSED_PACKETS 20

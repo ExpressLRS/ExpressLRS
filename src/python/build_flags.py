@@ -122,6 +122,8 @@ if fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
 elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_STM32*'):
     sys.stdout.write("\u001b[32mBuilding for STM32 Platform\n")
+elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_PIC32*'):
+    sys.stdout.write("\u001b[32mBuilding for PIC32 Platform\n")
 elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP8266*'):
     sys.stdout.write("\u001b[32mBuilding for ESP8266/ESP8285 Platform\n")
     if fnmatch.filter(env['BUILD_FLAGS'], '-DAUTO_WIFI_ON_INTERVAL*'):

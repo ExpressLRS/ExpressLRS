@@ -39,8 +39,12 @@
  */
 
 #include "ucrc_t.h"
-#include <cstdio>
 #include <errno.h>
+#if PLATFORM_PIC32
+#include <stdino.h> // This is included in the pic32 compiler downloaded by platformio
+#else
+#include <cstdio>
+#endif
 
 uCRC_t::uCRC_t(const std::string &Name, uint8_t Bits, uint64_t Poly, uint64_t Init, bool RefIn, bool RefOut, uint64_t XorOut) : name(Name),
                                                                                                                                 poly(Poly),

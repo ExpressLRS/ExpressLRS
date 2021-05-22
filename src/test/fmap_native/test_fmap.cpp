@@ -1,4 +1,8 @@
+#if PLATFORM_PIC32
+#include <stdint.h> // This is included in the pic32 compiler downloaded by platformio
+#else
 #include <cstdint>
+#endif
 #include <crsf_protocol.h>
 #include <unity.h>
 #include <iostream>

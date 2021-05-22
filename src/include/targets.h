@@ -12,7 +12,7 @@
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
 
-#ifdef PLATFORM_STM32
+#if defined(PLATFORM_STM32) || defined(PLATFORM_PIC32) // Is this right? 
 #define ICACHE_RAM_ATTR //nothing//
 #else
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
@@ -502,6 +502,25 @@ Designed by NamimnoRC
 #define GPIO_LED_GREEN_INVERTED 1
 // Unused pins
 #define GPIO_PIN_UART1TX_INVERT PF6
+
+#elif defined(TARGET_TX_TRACER)
+#define GPIO_PIN_NSS            1
+#define GPIO_PIN_BUSY           2
+#define GPIO_PIN_DIO1           33
+#define GPIO_PIN_DIO2           34
+#define GPIO_PIN_DIO3           35
+#define GPIO_PIN_MOSI           44
+#define GPIO_PIN_MISO           23
+#define GPIO_PIN_SCK            15
+#define GPIO_PIN_RST            24
+// #define GPIO_PIN_RX_ENABLE    43
+// #define GPIO_PIN_TX_ENABLE       42// CTX on SE2431L
+// // #define GPIO_PIN_ANT_CTRL_2      42// Low for left (stock), high for right (empty)
+#define GPIO_PIN_RCSIGNAL_RX     50// UART1
+#define GPIO_PIN_RCSIGNAL_TX     51 // UART1
+// #define GPIO_PIN_SDA            4 // EEPROM ST M24C02-W
+// #define GPIO_PIN_SCL            14 // EEPROM ST M24C02-W
+//#define GPIO_PIN_BUZZER       UNDEF_PIN
 
 #else
 #error "Unknown target!"

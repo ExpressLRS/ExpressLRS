@@ -1,5 +1,10 @@
+#if PLATFORM_PIC32
+#include <stdint.h> // This is included in the pic32 compiler downloaded by platformio
+#include <string.h>   // This is included in the pic32 compiler downloaded by platformio
+#else
 #include <cstdint>
 #include <cstring>
+#endif
 #include "telemetry.h"
 
 #if defined(UNIT_TEST)

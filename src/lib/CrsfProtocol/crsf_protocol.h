@@ -1,7 +1,12 @@
 #pragma once
 
+#if PLATFORM_PIC32
+#include <stdint.h> // This is included in the pic32 compiler downloaded by platformio
+#include <math.h>   // This is included in the pic32 compiler downloaded by platformio
+#else
 #include <cstdint>
 #include <cmath>
+#endif
 
 
 #if TARGET_TX && PLATFORM_STM32
