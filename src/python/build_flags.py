@@ -39,9 +39,7 @@ def parse_flags(path):
                         sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
                         sys.stdout.flush()
                     if "MY_STARTUP_MELODY=" in define:
-                        defineValue = define.split('"')[1::2][0].split("|") # notes|bpm|transpose
-                        transposeBySemitones = int(defineValue[2]) if len(defineValue) > 2 else 0
-                        parsedMelody = melodyparser.parseMelody(defineValue[0].strip(), int(defineValue[1]), transposeBySemitones)
+                        parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
                         define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
                     if not define in build_flags:
                         build_flags.append(define)

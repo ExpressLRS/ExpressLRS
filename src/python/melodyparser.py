@@ -51,3 +51,24 @@ def generateArrayString(melodyArray):
 	for element in melodyArray:
 		elements.append("{" + str(element[0]) + "," + str(element[1]) + "}")
 	return "{" + ','.join(elements) + "}"
+
+def parse(melodyOrRTTTL):
+	# If | in melody it is original notes|bpm|transpose format
+	if ('|' in melodyOrRTTTL):
+		defineValue = melodyOrRTTTL.split("|")
+		transposeBySemitones = int(defineValue[2]) if len(defineValue) > 2 else 0
+		return parseMelody(defineValue[0].strip(), int(defineValue[1]), transposeBySemitones)
+	# Else assume RTTL
+	else:
+		from rtttl import RTTTL
+		retVal = ""
+		tune = RTTTL(melodyOrRTTTL)
+		for freq, msec in tune.notes():
+			retVal += f"{{{freq:.0f},{msec:.0f}}},"
+
+		if retVal != "":
+			retVal = "{" + retVal[:-1] + "}"
+		else:
+			raise ValueError('Blank RTTTL melody detected')
+		return retVal
+
