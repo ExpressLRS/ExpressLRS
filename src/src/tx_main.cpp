@@ -509,12 +509,14 @@ void HandleUpdateParameter()
   case 3:
     Serial.print("Request Power: ");
     Serial.println(crsf.ParameterUpdateData[1]);
-    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-    #endif
+    if((PowerLevels_e)crsf.ParameterUpdateData[1] <= MaxPower){
+      config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
+                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+      #endif
+    }
     break;
 
   case 4:
