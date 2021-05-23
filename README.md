@@ -24,7 +24,7 @@ ExpressLRS is an open source RC link for RC applications. It is based on the fan
 
 ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depending on your preference of range or low latency. At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `500 Hz` is currently supported with a custom openTX binary with future plans to extend this to `1000 Hz`.
 
-ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manufacturers are preparing to offer offical ELRS hardware soon so stay tuned. 
+ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **SiYi FM30 Hardware (Rx and TX)**, **GHOST hardware (RX and TX)** or **Custom PCBs** can be made if you enjoy tinkering. Happy Model released official ExpressLRS hardware (RX and TX) and several other manufacturers are preparing to offer offical ELRS hardware soon so stay tuned. 
 
 ![LatencyChart](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/Average%20Total%20Latency.png)
 
