@@ -24,7 +24,7 @@ ExpressLRS is an open source RC link for RC applications. It is based on the fan
 
 ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depending on your preference of range or low latency. At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `500 Hz` is currently supported with a custom openTX binary with future plans to extend this to `1000 Hz`.
 
-ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **GHOST ATTO/ZEPTO Receivers** or **Custom PCBs** can be made if you enjoy tinkering. Several manufacturers are preparing to offer offical ELRS hardware soon so stay tuned. 
+ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **SiYi FM30 Hardware (Rx and TX)**, **GHOST hardware (RX and TX)** or **Custom PCBs** can be made if you enjoy tinkering. Happy Model released official ExpressLRS hardware (RX and TX) and several other manufacturers are preparing to offer offical ELRS hardware soon so stay tuned. 
 
 ![LatencyChart](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/Average%20Total%20Latency.png)
 
@@ -58,7 +58,7 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
     - [FrSky R9 Mini](https://www.frsky-rc.com/product/r9-mini-ota/) (Full Support, OTA version can be used)
     - [FrSky R9mx](https://www.frsky-rc.com/product/r9-mx/) (Full Support)
-    - [FrSky R9 Slim+](https://www.frsky-rc.com/product/r9-slim-ota/) (Full Support, OTA version can be used, diversity not yet implemented)
+    - [FrSky R9 Slim+](https://www.frsky-rc.com/product/r9-slim-ota/) (Full Support, OTA version can be used)
     - [Jumper R900 mini](https://www.jumper-b2b.com/jumper-r900-mini-receiver-900mhz-long-range-rx-p0083.html) (Full Support, only flashable via STLink, Bad Stock antenna)
     - [DIY mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_Mini_v1.1) (Full Support, supports WiFi Updates)
     - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_20x20_0805_SMD) (Full Support, supports WiFi Updates)
@@ -73,12 +73,12 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [DIY JR Bay](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
     - [DIY Slim TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
     - [DIY Slimmer TX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
-    - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power)
-    - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Beta Support, 100 mW output power)
+    - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
+    - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [HappyModel TX](http://www.happymodel.cn/index.php/2021/04/12/happymodel-2-4g-expresslrs-elrs-micro-tx-module-es24tx/) (Full Support, 250 mW output power)
 - **RX**
-    - [GHOST Atto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
-    - [GHOST Zepto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Only STLink Flashing)
+    - [GHOST Atto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Initial flashing with STLINK then both STLINK and BF passthrough)
+    - [GHOST Zepto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Initial flashing with STLINK then both STLINK and BF passthrough)
     - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_20x20) (Full Support, easy to build. WiFi Updating)
     - [DIY Nano RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_Nano) (Full Support, CRSF Nano Footprint, WiFi Updating)
     - [DIY Nano CCG RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/2400MHz/RX_CCG_Nano) (Full Support, CRSF Nano Pinout, STM32 Based)
