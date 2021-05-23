@@ -58,7 +58,7 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
     - [FrSky R9 Mini](https://www.frsky-rc.com/product/r9-mini-ota/) (Full Support, OTA version can be used)
     - [FrSky R9mx](https://www.frsky-rc.com/product/r9-mx/) (Full Support)
-    - [FrSky R9 Slim+](https://www.frsky-rc.com/product/r9-slim-ota/) (Full Support, OTA version can be used, diversity not yet implemented)
+    - [FrSky R9 Slim+](https://www.frsky-rc.com/product/r9-slim-ota/) (Full Support, OTA version can be used)
     - [Jumper R900 mini](https://www.jumper-b2b.com/jumper-r900-mini-receiver-900mhz-long-range-rx-p0083.html) (Full Support, only flashable via STLink, Bad Stock antenna)
     - [DIY mini RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_Mini_v1.1) (Full Support, supports WiFi Updates)
     - [DIY 20x20 RX](https://github.com/AlessandroAU/ExpressLRS/tree/master/PCB/900MHz/RX_20x20_0805_SMD) (Full Support, supports WiFi Updates)
