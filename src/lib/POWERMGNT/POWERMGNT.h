@@ -84,4 +84,7 @@ public:
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static void setDefaultPower();
     static void init();
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+        static void changePower();
+    #endif
 };

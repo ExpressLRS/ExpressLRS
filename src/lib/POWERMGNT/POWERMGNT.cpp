@@ -410,3 +410,27 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
     return Power;
 }
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+
+void POWERMGNT::changePower()
+{
+    switch(CurrentPower)
+    {
+      case PWR_100mW:
+        setPower(PWR_250mW);
+        break;
+      case PWR_250mW:
+        setPower(PWR_500mW);
+        break;
+      case PWR_500mW:
+        setPower(PWR_100mW);
+        break;
+      default:
+        setPower(PWR_100mW);
+        break;
+    }
+}
+
+
+#endif
