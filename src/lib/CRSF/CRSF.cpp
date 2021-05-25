@@ -11,6 +11,19 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 SemaphoreHandle_t mutexOutFIFO = NULL;
+#elif PLATFORM_PIC32
+#include "wiring.h"
+// HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler, int pinT, int pinR, ppsFunctionType ppsT, ppsFunctionType ppsR);
+// Or 
+// HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler);
+p32_uart * uartP;
+isrFunc isrHandler;
+ppsFunctionType ppsT, ppsR;
+// int irq = 0; //Find real value
+// int vec = 0;//Find real value
+int ip1 = 0; //Find real value
+int sp1 = 0;//Find real value
+HardwareSerial CRSF::Port(uartP, 0, 0, 0, 0, isrHandler, 0, 0, ppsT, ppsR);
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -162,6 +175,9 @@ void CRSF::End()
 
 void CRSF::flush_port_input(void)
 {
+    #ifdef PLATFORM_PIC32
+    HardwareSerial Port = CRSF::Port;
+#endif
     // Make sure there is no garbage on the UART at the start
     while (CRSF::Port.available())
     {
@@ -260,7 +276,12 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
     }
 
     uint8_t LUArespLength = len + 2;
+    #ifdef PLATFORM_PIC32
+    uint8_t outBuffer[LUArespLength + 5];
+    memset(outBuffer, 0, LUArespLength + 5);
+    #else
     uint8_t outBuffer[LUArespLength + 5] = {0};
+    #endif
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;

@@ -36,7 +36,11 @@ ELRS_EEPROM::Begin()
         EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
     #endif // STM32_USE_FLASH
 #else /* !PLATFORM_STM32 */
-    EEPROM.begin(RESERVED_EEPROM_SIZE);
+    #if defined(PLATFORM_PIC32)
+        EEPROM.begin(); // Come back to this to see how EEPROM is working on pic32
+    #else
+        EEPROM.begin(RESERVED_EEPROM_SIZE);
+    #endif
 #endif /* PLATFORM_STM32 */
 }
 
