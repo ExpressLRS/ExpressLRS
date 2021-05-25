@@ -10,3 +10,7 @@
 #ifdef PLATFORM_STM32
 #include "STM32_hwTimer.h"
 #endif
+
+#ifdef PLATFORM_PIC32
+#include "PIC32_hwTimer.h"
+#endif
