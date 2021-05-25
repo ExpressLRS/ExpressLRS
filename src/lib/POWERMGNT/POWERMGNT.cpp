@@ -105,6 +105,18 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_25mW;
         break;
     }
+#elif defined(TARGET_RX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(8);
+        break;
+    case PWR_25mW:
+    default:
+        Radio.SetOutputPower(13);
+        Power = PWR_25mW;
+        break;
+    }
 #elif defined(TARGET_NAMIMNORC_TX)
     // Control Flash 2.4GHz TX module
     int8_t rfpower = -18;
@@ -337,6 +349,53 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     default:
         Power = PWR_50mW;
         Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
+        break;
+    }
+#elif defined(TARGET_TX_BETAFPV_900_V1)
+    switch (Power)
+    {
+    case PWR_100mW:
+        Radio.SetOutputPower(0b0000);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(0b0001);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(0b1000);
+        break;
+    case PWR_1000mW:
+        Radio.SetOutputPower(0b1111);
+        break;
+    case PWR_50mW:
+    default:
+        Radio.SetOutputPower(0b0000);
+        Power = PWR_50mW;
+        break;
+    }
+#elif defined(TARGET_TX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-15);    
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-11);     
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(-10);   
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-9);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(-3);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(13);
+        break;
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-8);  
         break;
     }
 #elif defined(TARGET_RX)

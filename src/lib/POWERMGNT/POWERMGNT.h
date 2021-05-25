@@ -24,6 +24,10 @@
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_100mW
 
+#elif defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+#define MaxPower PWR_500mW
+#define DefaultPowerEnum PWR_50mW
+
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || \
       defined(TARGET_TX_ESP32_LORA1280F27)   || \
       defined(TARGET_TX_GHOST)
