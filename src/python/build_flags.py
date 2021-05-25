@@ -34,7 +34,7 @@ def parse_flags(path):
                 if define.startswith("-D") or define.startswith("!-D"):
                     if "MY_BINDING_PHRASE" in define:
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
-                        UIDbytes = (str(bindingPhraseHash[0]) + "," + str(bindingPhraseHash[1]) + "," + str(bindingPhraseHash[2]) + ","+ str(bindingPhraseHash[3]) + "," + str(bindingPhraseHash[4]) + "," + str(bindingPhraseHash[5]))
+                        UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
                         define = "-DMY_UID=" + UIDbytes
                         sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
                         sys.stdout.flush()
