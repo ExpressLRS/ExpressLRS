@@ -595,6 +595,21 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+void ShortPressISR()
+{
+  EnterBindingMode();
+}
+
+void LongPressISR()
+{
+  if( !InBindingMode)
+  {
+    POWERMGNT.changePower();
+  }
+}
+#endif
+
 void setup()
 {
 #if defined(TARGET_TX_GHOST)
@@ -679,6 +694,12 @@ void setup()
   digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
+#endif
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+  POWERMGNT.powerLedInit();
+  button.buttonShortPress = &ShortPressISR;
+  button.buttonLongPress = &LongPressISR;
 #endif
 
 #ifdef PLATFORM_ESP32
