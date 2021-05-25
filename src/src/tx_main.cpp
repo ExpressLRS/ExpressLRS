@@ -595,20 +595,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-void ShortPressISR()
-{
-  EnterBindingMode();
-}
-
-void LongPressISR()
-{
-  if( !InBindingMode)
-  {
-    POWERMGNT.changePower();
-  }
-}
-#endif
 
 void setup()
 {
@@ -698,8 +684,8 @@ void setup()
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
   POWERMGNT.powerLedInit();
-  button.buttonShortPress = &ShortPressISR;
-  button.buttonLongPress = &LongPressISR;
+  button.buttonShortPress = &EnterBindingMode;
+  button.buttonLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
 #ifdef PLATFORM_ESP32

@@ -417,7 +417,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 
-void POWERMGNT::changePower()
+void POWERMGNT::handleCyclePower()
 {
     switch(CurrentPower)
     {
