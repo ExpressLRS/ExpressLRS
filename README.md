@@ -24,11 +24,13 @@ ExpressLRS is an open source RC link for RC applications. It is based on the fan
 
 ExpressLRS can run at various packet rates, up to `500hz` or down to `25hz` depending on your preference of range or low latency. At `900 MHz` a maximum of `200 Hz` packet rate is supported. At `2.4 GHz` a blistering `500 Hz` is currently supported with a custom openTX binary with future plans to extend this to `1000 Hz`.
 
+ExpressLRS supports [telemetry](https://github.com/ExpressLRS/ExpressLRS/wiki/OpenTX-and-Betaflight-Setup#telemetry) as optional feature. Enabling telemetry also adds support for the betaflight lua script.
+
 ExpressLRS can be flashed into existing **Frsky R9M hardware (RX and TX)**, **Jumper R900 RXs**, **SiYi FM30 Hardware (Rx and TX)**, **GHOST hardware (RX and TX)** or **Custom PCBs** can be made if you enjoy tinkering. Happy Model released official ExpressLRS hardware (RX and TX) and several other manufacturers are preparing to offer offical ELRS hardware soon so stay tuned.
 
 ![LatencyChart](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/Average%20Total%20Latency.png)
 
-ExpressLRS aims to achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure.  However, only basic telemetry is currently provided (**VBAT**, downlink/uplink **LQ** and downlink/uplink **RSSI**), work is underway for full telemetry support. This compromise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.
+ExpressLRS aims to achieve the best possible link preformance for both latency and range. This is achieved with an optimised over the air packet structure. This compromise allows ExpressLRS to achieve simultaneous **better latency AND range** compared to other options in the market. For example, **ExpressLRS 2.4GHz 150Hz** mode offers the same range as **GHST Normal** while delivering near **triple** the packet update rate. Similarly, **ExpressLRS 900MHz 200Hz** will dramatically out-range **Crossfire 150Hz** and **ExpressLRS 50Hz** will out-range **Crossfire 50Hz** watt per watt.
 
 **2.4GHz Comparison**
 ![RangeVsPacketRate](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/pktrate_vs_sens.png)
@@ -123,3 +125,4 @@ Check the [wiki page](https://github.com/ExpressLRS/ExpressLRS/wiki/Range-Compet
 The use and operation of this type of device may require a license and some countries may forbid its use. It is entirely up to the end user to ensure compliance with local regulations. This is experimental software/hardware and there is no guarantee of stability or reliability. **USE AT YOUR OWN RISK**
 
 [![Banner](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/footer.png)](https://github.com/ExpressLRS/ExpressLRS/wiki#community)
+
