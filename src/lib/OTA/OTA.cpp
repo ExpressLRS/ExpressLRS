@@ -49,7 +49,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
   // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
   // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex];
+  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11;
 
   Buffer[6] =
 #ifdef ENABLE_TELEMETRY
@@ -89,14 +89,14 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     // The low latency switch
     crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b01000000) >> 6);
 
-    // The round-robin switch, switchIndex is actually index-1 
+    // The round-robin switch, switchIndex is actually index-1
     // to leave the low bit open for switch 7 (sent as 0b11x)
     // where x is the high bit of switch 7
     uint8_t switchIndex = (Buffer[6] & 0b111000) >> 3;
     uint16_t switchValue = SWITCH3b_to_CRSF(Buffer[6] & 0b111);
 
     switch (switchIndex) {
-        case 0:  
+        case 0:
             crsf->PackedRCdataOut.ch5 = switchValue;
             break;
         case 1:
