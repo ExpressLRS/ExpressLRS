@@ -47,9 +47,9 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   // If the two high bits are 0b11, the receiver knows it is the last switch and can use
   // that bit to store data
   uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
-  // currentSwitches[] is 0-15 for index 1, 0-2 for index 2-7
+  // currentSwitches[] is 0-15 for index 6, 0-2 for index 0-5
   // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex] & 0b11;
+  uint8_t value = crsf->currentSwitches[nextSwitchIndex];
 
   Buffer[6] =
 #ifdef ENABLE_TELEMETRY
