@@ -513,14 +513,17 @@ Designed by NamimnoRC
 #define GPIO_PIN_MISO           23
 #define GPIO_PIN_SCK            15
 #define GPIO_PIN_RST            24
+#define GPIO_PIN_LED_WS2812         3
+#define GPIO_PIN_LED_WS2812_FAST    3
 // #define GPIO_PIN_RX_ENABLE    43
 // #define GPIO_PIN_TX_ENABLE       42// CTX on SE2431L
 // // #define GPIO_PIN_ANT_CTRL_2      42// Low for left (stock), high for right (empty)
 #define GPIO_PIN_RCSIGNAL_RX     50// UART1
 #define GPIO_PIN_RCSIGNAL_TX     51 // UART1
-// #define GPIO_PIN_SDA            4 // EEPROM ST M24C02-W
-// #define GPIO_PIN_SCL            14 // EEPROM ST M24C02-W
+#define GPIO_PIN_SDA            4 // EEPROM ST M24C02-W
+#define GPIO_PIN_SCL            14 // EEPROM ST M24C02-W
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
+
 
 #else
 #error "Unknown target!"

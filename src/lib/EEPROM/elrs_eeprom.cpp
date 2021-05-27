@@ -1,7 +1,7 @@
 #include "elrs_eeprom.h"
 #include "targets.h"
 
-#if defined(PLATFORM_STM32)
+#if defined(PLATFORM_STM32) || defined(PLATFORM_PIC32)
     #if TARGET_USE_EEPROM && \
             defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && \
             defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
@@ -37,6 +37,10 @@ ELRS_EEPROM::Begin()
     #endif // STM32_USE_FLASH
 #else /* !PLATFORM_STM32 */
     #if defined(PLATFORM_PIC32)
+            /* Initialize I2C */
+        // Wire.setSDA(GPIO_PIN_SDA);
+        // Wire.setSCL(GPIO_PIN_SCL);// need to adjust this to begin with maybe the i2c buys address
+        Wire.begin();
         EEPROM.begin(); // Come back to this to see how EEPROM is working on pic32
     #else
         EEPROM.begin(RESERVED_EEPROM_SIZE);

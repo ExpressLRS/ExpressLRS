@@ -8,10 +8,14 @@
 #define BRIGHTNESS 10 // 1...256
 #endif
 
+#ifdef PLATFORM_PIC32
+#define __NOP() Nop()
+#endif
+
 static uint8_t current_rgb[3];
 
 static inline void LEDsend_1(void) {
-        digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, HIGH);
+        digitalWrite(GPIO_PIN_LED_WS2812_FAST, HIGH);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -24,7 +28,7 @@ static inline void LEDsend_1(void) {
 #if !defined(STM32F1)
         __NOP();
 #endif
-        digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
+        digitalWrite(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP();
@@ -34,14 +38,14 @@ static inline void LEDsend_1(void) {
 }
 
 static inline void LEDsend_0(void) {
-        digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, HIGH);
+        digitalWrite(GPIO_PIN_LED_WS2812_FAST, HIGH);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP();
 #if !defined(STM32F1)
         __NOP(); __NOP(); __NOP(); __NOP();
 #endif
-        digitalWriteFast(GPIO_PIN_LED_WS2812_FAST, LOW);
+        digitalWrite(GPIO_PIN_LED_WS2812_FAST, LOW);
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
