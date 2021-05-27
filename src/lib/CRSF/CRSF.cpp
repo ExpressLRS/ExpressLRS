@@ -302,18 +302,10 @@ void CRSF::sendCRSFdevice(void * luaData, uint8_t wholePacketSize)
     {
         return;
     }
-    uint8_t LUArespLength;
-    uint8_t currentPacketSize;
-                currentPacketSize = (wholePacketSize) % (CHUNK_MAX_NUMBER_OF_BYTES+1);
-            
-
-    //if it is device info, we dont chunk
-        LUArespLength = 2+ currentPacketSize; //header, fieldsetup1(fieldid, fieldchunk),
-                                        // chunk-ed packets below
-                                        //fieldsetup1(fieldparent,fieldtype),field name, 
-                                        //fieldsetup2(value,min,max,default),field unit
+    uint8_t LUArespLength;      
+    LUArespLength = 2+ wholePacketSize; //2 bytes of header, name , 12 bytes of 'nonsense', 1 byte of lua field amount
     //create outbuffer size
-    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
+    uint8_t outBuffer[wholePacketSize + 5 + 2 + 2] = {0}; 
         //it is byte op, we can use memcpy with index to
         // destination memory.
             struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
@@ -337,15 +329,73 @@ void CRSF::sendCRSFdevice(void * luaData, uint8_t wholePacketSize)
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-void CRSF::getTextSelectionStructToArray(void * luaStruct, uint8_t *outarray){
+void CRSF::getLuaTextSelectionStructToArray(void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
-    memcpy(&outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
-    memcpy(&outarray[sizeof(p1->luaProperties1)],p1->label1,strlen(p1->label1)+1);
-    memcpy(&outarray[sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)],p1->textOption,strlen(p1->textOption)+1);
-    memcpy(&outarray[sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)],&p1->luaProperties2,sizeof(p1->luaProperties2));
-    memcpy(&outarray[sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)+sizeof(p1->luaProperties2)],p1->label2,strlen(p1->label2)+1);
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->textOption,strlen(p1->textOption)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
 }
-//sendCRSF param can take anytype of fieldtype if fieldsetup2 is set properly
+void CRSF::getLuaCommandStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+/** we dont use these yet for OUR LUA
+void CRSF::getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaint8StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaint16StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_int16 *p1 = (struct tagLuaItem_int16*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_float *p1 = (struct tagLuaItem_float*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);    
+}
+
+void CRSF::getLuaStringStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->label2,strlen(p1->label2)+1);
+    
+}
+*/
+//sendCRSF param can take anytype of lua field settings
 uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, void * luaData, uint8_t wholePacketSize)
 {
     if (!CRSF::CRSFstate)
@@ -375,7 +425,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
             }
 
     //if it is device info, we dont chunk
-        LUArespLength = 2+2+ currentPacketSize; //header, fieldsetup1(fieldid, fieldchunk),
+        LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
                                         // chunk-ed packets below
                                         //fieldsetup1(fieldparent,fieldtype),field name, 
                                         //fieldsetup2(value,min,max,default),field unit
@@ -387,79 +437,45 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         switch(dataType){
         case CRSF_TEXT_SELECTION:
         {
-            
-            struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->textOption,strlen(p1->textOption)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
-            //getTextSelectionStructToArray(luaData, chunkBuffer);
+            getLuaTextSelectionStructToArray(luaData, chunkBuffer);
             break;
         }
         case CRSF_COMMAND:
         {
-            struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaCommandStructToArray(luaData, chunkBuffer);
             break;
         }
 /** we dont have to include this for now. since we dont need it yet?
-        case CRSF_STRING:
-        {
-            struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->label2,strlen(p1->label2)+1);
-            break;
-        } 
         case CRSF_UINT8:
         {
-            struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaUint8StructToArray(luaData,chunkBuffer);
             break;
         }
         case CRSF_INT8:
         {
-            struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaint8StructToArray(luaData,chunkBuffer);
             break;
         }
         case CRSF_UINT16:
         {
-            struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaUint16StructToArray(luaData,chunkBuffer);
             break;
         }
         case CRSF_INT16:
         {
-            struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaint16StructToArray(luaData,chunkBuffer);
             break;
         }
         case CRSF_FLOAT:
         {
-            struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaData;
-            memcpy(chunkBuffer,&p1->luaProperties1,sizeof(p1->luaProperties1));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-            memcpy(chunkBuffer+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+            getLuaFloatStructToArray(luaData,chunkBuffer);
             break;
         }
+        case CRSF_STRING:
+        {
+            getLuaStringStructToArray(luaData,chunkBuffer);
+            break;
+        } 
 */
     }
         memcpy(outBuffer+7,chunkBuffer+2+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),currentPacketSize);
@@ -486,6 +502,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
 #endif
     return ((chunks - (fieldchunk+1)));
 }
+
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
     if (data[2] == CRSF_FRAMETYPE_MSP_RESP)

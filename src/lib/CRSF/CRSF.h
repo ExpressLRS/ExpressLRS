@@ -75,7 +75,6 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    void getTextSelectionStructToArray(void * luaStruct, uint8_t *outarray);
     void sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2);
     uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, void * luaData, uint8_t wholePacketSize);
     void sendCRSFdevice(void * luaData, uint8_t wholePacketSize);
@@ -152,6 +151,16 @@ private:
 #endif
 
     static void flush_port_input(void);
+    void getLuaTextSelectionStructToArray(void * luaStruct, uint8_t *outarray);
+    void getLuaCommandStructToArray(void * luaStruct, uint8_t *outarray);
+    /** we dont need these yet for OUR LUA
+     void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
+     void getLuaint8StructToArray(void * luaStruct, uint8_t *outarray);
+     void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
+     void getLuaint16StructToArray(void * luaStruct, uint8_t *outarray);
+     void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
+     void getLuaStringStructToArray(void * luaStruct, uint8_t *outarray);
+*/ 
 };
 
 #endif

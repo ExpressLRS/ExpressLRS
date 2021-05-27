@@ -70,9 +70,18 @@
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
-#define LUA_FIELD_AMOUNT 6
+
 #define LUA_DEVICE_SIZE(X) sizeof(tagLuaDeviceProperties)+strlen(X.label1)+1
 #define LUA_TEXTSELECTION_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+strlen(X.textOption)+1+sizeof(tagLuaTextSelectionProperties)+strlen(X.label2)+1
+#define LUA_COMMAND_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaCommandProperties)+strlen(X.label2)+1
+/**we dont use this yet for OUR LUA
+#define LUA_UINT8_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaUint8Properties)+strlen(X.label2)+1
+#define LUA_INT8_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaInt8Properties)+strlen(X.label2)+1
+#define LUA_UINT16_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaUint16Properties)+strlen(X.label2)+1
+#define LUA_INT16_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaInt16Properties)+strlen(X.label2)+1
+#define LUA_FLOAT_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaFloatProperties)+strlen(X.label2)+1
+#define LUA_STRING_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaStringProperties)+strlen(X.label2)+1
+*/
 
 /* CRC8 implementation with polynom = x​7​+ x​6​+ x​4​+ x​2​+ x​0 ​(0xD5) */
 static const unsigned char crc8tab[256] = {
@@ -412,11 +421,6 @@ struct tagLuaItem_string {
 } PACKED;
 
 
-extern struct tagLuaDevice luaDevice;
-extern struct tagLuaItem_textSelection luaAirRate;
-extern struct tagLuaItem_textSelection luaTlmRate;
-extern struct tagLuaItem_textSelection luaPower;
-extern struct tagLuaItem_textSelection luaReg;
 
 
 // typedef struct crsfOpenTXsyncFrame_s
