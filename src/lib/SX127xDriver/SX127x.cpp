@@ -460,7 +460,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 {
   int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return (rawSNR / 4.0);
+  return (rawSNR / 4);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
