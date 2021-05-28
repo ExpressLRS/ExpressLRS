@@ -15,7 +15,7 @@ public:
     SX127xDriver();
     ///////Callback Function Pointers/////
     static void inline nullCallback(void);
-    
+
     static void (*RXdoneCallback)(); //function pointer for callback
     static void (*TXdoneCallback)(); //function pointer for callback
 
@@ -55,7 +55,6 @@ public:
     uint32_t HeadRoom;
     uint32_t LastTXdoneMicros;
     uint32_t TXdoneMicros;
-    bool IRQneedsClear = true;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////

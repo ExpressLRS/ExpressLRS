@@ -69,7 +69,6 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
 
-  instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
 
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
@@ -271,7 +270,6 @@ bool SX127xDriver::DetectChip()
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   //hal.TXRXdisable();
-  instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   //instance->TXdoneMicros = micros();
@@ -285,7 +283,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   //   Serial.println("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
-  instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.TXenable();
@@ -303,8 +300,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
-  //hal.TXRXdisable();
-  instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
   instance->LastPacketRSSI = instance->GetLastPacketRSSI();
@@ -319,7 +314,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   Serial.println("abort RX");
   //   return; // we were already TXing so abort
   // }
-  instance->IRQneedsClear = true;
   instance->ClearIRQFlags();
   instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
@@ -469,11 +463,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
 
 void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 {
-  if (IRQneedsClear)
-  {
-    hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
-    IRQneedsClear = false;
-  }
+  hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
 }
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
