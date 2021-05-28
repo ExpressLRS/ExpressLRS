@@ -1,7 +1,6 @@
 #include "config.h"
 #include "common.h"
 #include "POWERMGNT.h"
-#include "luaParams.h"
 
 void
 TxConfig::Load()

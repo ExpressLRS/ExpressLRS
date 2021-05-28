@@ -63,8 +63,7 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_VERSION 3
-#define LUA_FIELD_AMOUNT 6
+uint8_t allLUAparamSent = 0;  
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -405,7 +404,14 @@ void sendLuaParams()
 
   crsf.sendELRSparam(luaParams,4, 0x2E,F("none"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
 }
-uint8_t allLUAparamSent = 0;  
+
+void resetLuaParams(){
+  setLuaTextSelectionValue(&luaAirRate,config.GetRate());
+  setLuaTextSelectionValue(&luaTlmRate,config.GetTlm());
+  setLuaTextSelectionValue(&luaPower,config.GetPower());
+  allLUAparamSent = 0;
+}
+
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
 
   uint8_t sentChunk = 0;
@@ -429,6 +435,9 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       case 5:
       {
         sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
+        if(sentChunk == 0){
+          allLUAparamSent = 1;
+          }
         break;
       }
       case 6: //commit
@@ -648,8 +657,10 @@ static void ConfigChangeCommit()
 #endif
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
+  resetLuaParams();
   sendLuaParams();
 }
+
 
 static void CheckConfigChangePending()
 {
@@ -854,6 +865,7 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  resetLuaParams();
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
@@ -1111,6 +1123,7 @@ void EnterBindingMode()
   CRCInitializer = 0;
 
   InBindingMode = 2;
+  setLuaCommandValue(&luaBind,InBindingMode);
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1141,6 +1154,7 @@ void ExitBindingMode()
   CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = 0;
+  setLuaCommandValue(&luaBind,InBindingMode);
   MspSender.ResetState();
 
 #ifndef DEBUG_SUPPRESS
@@ -1158,7 +1172,7 @@ void SendUIDOverMSP()
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = true;
+  InBindingMode = 2;
 }
 
 
