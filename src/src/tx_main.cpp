@@ -404,9 +404,9 @@ void sendLuaParams()
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,(uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate);
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower());
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));
   allLUAparamSent = 0;
 }
 
