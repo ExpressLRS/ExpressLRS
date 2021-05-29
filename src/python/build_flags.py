@@ -65,7 +65,7 @@ def get_git_sha():
     # Don't try to pull the git revision when doing tests, as
     # `pio remote test` doesn't copy the entire repository, just the files
     if env['PIOPLATFORM'] == "native":
-        return "0x00,0x11,0x22,0x33,0x44,0x55"
+        return "012345"
 
     try:
         import git
@@ -90,6 +90,7 @@ def get_git_sha():
             git_root = git_repo.git.rev_parse("--show-toplevel")
             ExLRS_Repo = git.Repo(git_root)
             sha = ExLRS_Repo.head.object.hexsha
+            
         except git.InvalidGitRepositoryError:
             pass
     if not sha:
@@ -100,7 +101,7 @@ def get_git_sha():
             sha = data.split()[1].strip()
         else:
             sha = "000000"
-    return ",".join(["0x%s" % x for x in sha[:6]])
+    return ",".join(["%s" % ord(x) for x in sha[:6]])
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines

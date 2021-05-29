@@ -15,10 +15,12 @@
 #define LUA_STRING_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaStringProperties)+strlen(X.label2)+1
 */
 
-#define LUA_FIELD_AMOUNT 5
+#define LUA_FIELD_AMOUNT 6
+
 
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
 void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
+void setLuaCommandInfo(struct tagLuaItem_command *textSelectionStruct, const char *newvalue);
 extern struct tagLuaDevice luaDevice;
 extern struct tagLuaItem_textSelection luaAirRate;
 extern struct tagLuaItem_textSelection luaTlmRate;
@@ -26,6 +28,7 @@ extern struct tagLuaItem_textSelection luaPower;
 extern struct tagLuaItem_textSelection luaReg;
 extern struct tagLuaItem_command luaBind;
 extern struct tagLuaItem_command luaWebUpdate;
+extern struct tagLuaItem_command luaCommit;
 
 
 #endif
