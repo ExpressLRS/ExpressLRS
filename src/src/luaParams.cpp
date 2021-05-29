@@ -1,5 +1,7 @@
 
 #include "luaParams.h"
+
+const char thisCommit[] = {LATEST_COMMIT};
 struct tagLuaDevice luaDevice = {
     "ELRS",
     {
@@ -43,7 +45,7 @@ struct tagLuaItem_textSelection luaTlmRate = {
         0,
         CRSF_TEXT_SELECTION
     },
-    "Pkt.Rate",
+    "Tlm.Rate",
     "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
     {
         0,
@@ -104,6 +106,22 @@ struct tagLuaItem_command luaWebUpdate = {
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 
+struct tagLuaItem_command luaCommit = {
+    {
+        6,
+        0,
+        0,
+        CRSF_COMMAND
+    },
+    "commit",
+    {
+        0,
+        200
+    },
+    thisCommit,
+    LUA_COMMAND_SIZE(luaCommit)
+};
+
 
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
@@ -112,4 +130,9 @@ void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_
 void setLuaCommandValue(struct tagLuaItem_command *luaStruct, uint8_t newvalue){
     struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
     p1->luaProperties2.status = newvalue;
+}
+
+void setLuaCommandInfo(struct tagLuaItem_command *luaStruct, const char *newvalue){
+    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
+    p1->label2 = newvalue;
 }

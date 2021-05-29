@@ -53,8 +53,6 @@ uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
-const uint8_t thisCommit[6] = {LATEST_COMMIT};
-
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -435,31 +433,18 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       case 5:
       {
         sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
-        if(sentChunk == 0){
+        /**if(sentChunk == 0){
           allLUAparamSent = 1;
-          }
+          }*/
         break;
       }
       case 6: //commit
       { 
-/** 
-        uint8_t hextoascii[17] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
-        uint8_t fieldsetup2[5+7];
-        for(int i = 0; i<6; i++){
-        fieldsetup2[i] = hextoascii[thisCommit[i]];
-        }
-        fieldsetup2[6] = 0x3B;//text selection seperator
-        fieldsetup2[7] = 0x00;//null terminate text selection
-        fieldsetup2[8] = 0x00;//value
-        fieldsetup2[9] = 0x00;//min
-        fieldsetup2[10] = 0x00;//max
-        fieldsetup2[11] = 0x00;//default
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,0x06,chunk,0x00,CRSF_TEXT_SELECTION,F("commit:"),7,fieldsetup2,12,F(" "),1);
-        
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaCommit,luaCommit.size);
         if(sentChunk == 0){
           allLUAparamSent = 1;
-          }
-*/        break;
+        }
+        break;
       }
       default: //ID 1
       {
