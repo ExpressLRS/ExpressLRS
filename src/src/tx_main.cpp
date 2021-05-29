@@ -366,9 +366,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-  busyTransmitting = true;
-  PacketLastSentMicros = micros();
-  SendRCdataToRF();
+  if ((int32_t)(micros() - crsf.RCdataLastRecv) < 1000000) // safety check 
+  {
+    busyTransmitting = true;
+    PacketLastSentMicros = micros();
+    SendRCdataToRF();
+  }
 }
 
 /*
