@@ -510,9 +510,9 @@ void sendLuaParams()
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,config.GetRate());
-  setLuaTextSelectionValue(&luaTlmRate,config.GetTlm());
-  setLuaTextSelectionValue(&luaPower,config.GetPower());
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate));
+  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));
   allLUAparamSent = 0;
 }
 
