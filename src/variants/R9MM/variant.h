@@ -122,9 +122,6 @@ extern "C" {
 /*----------------------------------------------------------------------------
  *        Arduino objects - C++ only
  *----------------------------------------------------------------------------*/
- 
- #define TIM_IRQ_PRIO       3
- #define EXTI_IRQ_PRIO      4
 
 #ifdef __cplusplus
 // These serial port names are intended to allow libraries and architecture-neutral
