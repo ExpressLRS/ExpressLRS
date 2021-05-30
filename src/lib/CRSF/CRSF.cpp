@@ -326,6 +326,11 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
 #endif
 }
 
+uint32_t ICACHE_RAM_ATTR CRSF::GetRCdataLastRecv()
+{
+    return CRSF::RCdataLastRecv;
+}
+
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
