@@ -93,7 +93,7 @@ extern "C" {
 #define ALT4 (1 << (STM_PIN_AFNUM_SHIFT+3))
 
 // Adjust IRQ priority
-#define TIM_IRQ_PRIO            3
+#define TIM_IRQ_PRIO            4
 #define EXTI_IRQ_PRIO           4
 
 #ifdef __cplusplus
