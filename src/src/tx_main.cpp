@@ -102,8 +102,6 @@ uint32_t HWtimerPauseDuration = 0;
 uint32_t LuaLastUpdated = 0;
 uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
 
-uint32_t PacketLastSentMicros = 0;
-
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
@@ -366,10 +364,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-  if ((int32_t)(micros() - crsf.GetRCdataLastRecv()) < 1000000) // safety check 
+  // Do not send a stale channels packet to the RX if one has not been received from the handset
+  // *Do* send data if a packet has never been received from handset and the timer is running
+  //     this is the case when bench testing and TXing without a handset
+  uint32_t lastRcData = crsf.GetRCdataLastRecv();
+  if (!lastRcData || (micros() - lastRcData < 1000000))
   {
     busyTransmitting = true;
-    PacketLastSentMicros = micros();
     SendRCdataToRF();
   }
 }
