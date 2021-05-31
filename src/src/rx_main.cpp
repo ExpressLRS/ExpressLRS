@@ -149,6 +149,7 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
+volatile bool doTock = false;
 
 uint32_t beginProcessing;
 uint32_t doneProcessing;
@@ -503,11 +504,8 @@ static void ICACHE_RAM_ATTR updateDiversity()
 #endif
 }
 
-void ICACHE_RAM_ATTR HWtimerCallbackTock()
+void ICACHE_RAM_ATTR handleTock()
 {
-    PFDloop.intEvent(micros()); // our internal osc just fired
-
-    updateDiversity();
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -529,6 +527,22 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     lastPacketCrcError = false;
     lastPacketWasTelemetry = tlmSent;
     #endif
+}
+
+void ICACHE_RAM_ATTR HWtimerCallbackTock()
+{
+    PFDloop.intEvent(micros()); // our internal osc just fired
+
+    updateDiversity();
+
+    if(Radio.IsBusy())
+    {
+        doTock = true;
+    }
+    else
+    {
+        handleTock();
+    }
 }
 
 void LostConnection()
@@ -644,6 +658,10 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
+    if (doTock) {
+        doTock = false;
+        handleTock();
+    }
     beginProcessing = micros();
 
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;

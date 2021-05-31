@@ -44,6 +44,7 @@ public:
     uint8_t currPWR = 0b0000;
     SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
     bool IQinverted = false;
+    volatile bool isBusy = false;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -86,6 +87,7 @@ public:
 
     /////////////////Utility Funcitons//////////////////
     void ClearIRQFlags();
+    bool IsBusy();
 
     //////////////RX related Functions/////////////////
 

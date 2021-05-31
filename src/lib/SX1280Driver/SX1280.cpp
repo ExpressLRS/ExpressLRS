@@ -319,13 +319,13 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
 
 void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
 {
-    noInterrupts();
+    instance->isBusy = true;
     instance->currOpmode = SX1280_MODE_FS;
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     uint8_t FIFOaddr = instance->GetRxBufferAddr();
     hal.ReadBuffer(FIFOaddr, instance->RXdataBuffer, TXRXBuffSize);
     instance->GetLastPacketStats();
-    interrupts();
+    instance->isBusy = false;
     instance->RXdoneCallback();
 }
 
@@ -386,4 +386,9 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
     instance->LastPacketRSSI = -(int8_t)(status[0] / 2);
     instance->LastPacketSNR = (int8_t)status[1] / 4;
+}
+
+bool ICACHE_RAM_ATTR SX1280Driver::IsBusy()
+{
+    return instance->isBusy;
 }
