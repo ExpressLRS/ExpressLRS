@@ -301,12 +301,12 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
   //hal.TXRXdisable();
-  instance->isBusy = true;
+  instance->isInSPITransaction = true;
   instance->ClearIRQFlags();
   hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
   instance->LastPacketRSSI = instance->GetLastPacketRSSI();
   instance->LastPacketSNR = instance->GetLastPacketSNR();
-  instance->isBusy = false;
+  instance->isInSPITransaction = false;
   RXdoneCallback();
 }
 
@@ -469,9 +469,9 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
   hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
 }
 
-bool ICACHE_RAM_ATTR SX127xDriver::IsBusy()
+bool ICACHE_RAM_ATTR SX127xDriver::IsInSPITransaction()
 {
-  return instance->isBusy;
+  return instance->isInSPITransaction;
 }
 // int16_t MeasureNoiseFloor() TODO disabled for now
 // {

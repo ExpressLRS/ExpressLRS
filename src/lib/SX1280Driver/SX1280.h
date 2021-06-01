@@ -43,7 +43,7 @@ public:
     uint32_t currFreq = 2400000000;
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
     bool IQinverted = false;
-    volatile bool isBusy = false;
+    volatile bool isInSPITransaction = false;
 
     // static uint8_t currPWR;
     // static uint8_t maxPWR;
@@ -91,7 +91,7 @@ public:
     static void RXnbISR(); //ISR for non-blocking RC routine
 
     void  ClearIrqStatus(uint16_t irqMask);
-    bool IsBusy();
+    bool IsInSPITransaction();
 
     void GetStatus();
 

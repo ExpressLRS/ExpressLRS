@@ -149,7 +149,7 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
-volatile bool doTock = false;
+volatile bool deferTockHandling = false;
 
 uint32_t beginProcessing;
 uint32_t doneProcessing;
@@ -535,9 +535,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     updateDiversity();
 
-    if(Radio.IsBusy())
+    if(Radio.IsInSPITransaction())
     {
-        doTock = true;
+        deferTockHandling = true;
     }
     else
     {
@@ -658,8 +658,8 @@ void GotConnection()
 
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
-    if (doTock) {
-        doTock = false;
+    if (deferTockHandling) {
+        deferTockHandling = false;
         handleTock();
     }
     beginProcessing = micros();
