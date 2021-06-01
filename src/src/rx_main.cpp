@@ -535,12 +535,16 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     updateDiversity();
 
+    // If the radio was interrupted while reading from SPI then we defer our writing to the radio
     if(Radio.IsInSPITransaction())
     {
+        // by setting this flag, the interrupted SPI read, when it completes will call ProcessRFPacket,
+        // which will call our Tock handler for us if this flag is set. 
         deferTockHandling = true;
     }
     else
     {
+        // The SPI is available so do the work now.
         handleTock();
     }
 }
