@@ -6,4 +6,3 @@
 .vscode/launch.json
 python/__pycache__/
 *.pyc
-super_defines.txt
