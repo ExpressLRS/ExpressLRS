@@ -57,6 +57,8 @@ uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
+#define DEBUG_SUPPRESS
+
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
 #define MSP_PACKET_SEND_INTERVAL 10LU
