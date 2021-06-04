@@ -295,7 +295,7 @@ struct tagLuaProperties1{
     uint8_t id;
     uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
     uint8_t parent;
-    crsf_value_type_e type;
+    uint8_t type;
 }PACKED; // probably a pointer to a flash string
 struct tagLuaDeviceProperties {
     uint8_t etc[12];
