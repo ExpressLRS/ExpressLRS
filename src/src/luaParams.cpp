@@ -17,13 +17,17 @@ struct tagLuaItem_textSelection luaAirRate = {
         1,
         0,
         0,
-        CRSF_TEXT_SELECTION
+        (uint8_t)CRSF_TEXT_SELECTION
     },
     "Pkt.Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
-    "500(x);250(x);200(-112dbm);150(x);100(-117dbm);50(-120dbm);25(-123dbm)",
+    "x;x;200(-112dbm);x;100(-117dbm);50(-120dbm);25(-123dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
-    "500(-105dbm);250(-108dbm);200(x);150(-112dbm);100(x);50(-117dbm);25(-120dbm)",
+    #ifdef USE_500HZ
+    "500(-105dbm);250(-108dbm);x;150(-112dbm);x;50(-117dbm);x",
+    #else
+    "x;250(-108dbm);x;150(-112dbm);x;50(-117dbm);25(-120dbm)",
+    #endif
 #endif
     {
         0,
@@ -43,7 +47,7 @@ struct tagLuaItem_textSelection luaTlmRate = {
         2,
         0,
         0,
-        CRSF_TEXT_SELECTION
+        (uint8_t)CRSF_TEXT_SELECTION
     },
     "Tlm.Rate",
     "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
@@ -61,7 +65,7 @@ struct tagLuaItem_textSelection luaPower = {
         3,
         0,
         0,
-        CRSF_TEXT_SELECTION
+        (uint8_t)CRSF_TEXT_SELECTION
     },
     "Power",
     "10;25;50;100;250;500;1000;2000",
@@ -80,7 +84,7 @@ struct tagLuaItem_command luaBind = {
         4,
         0,
         0,
-        CRSF_COMMAND
+        (uint8_t)CRSF_COMMAND
     },
     "Bind",
     {
@@ -95,7 +99,7 @@ struct tagLuaItem_command luaWebUpdate = {
         5,
         0,
         0,
-        CRSF_COMMAND
+        (uint8_t)CRSF_COMMAND
     },
     "webUpdate",
     {
@@ -111,7 +115,7 @@ struct tagLuaItem_command luaCommit = {
         6,
         0,
         0,
-        CRSF_COMMAND
+        (uint8_t)CRSF_COMMAND
     },
     "commit",
     {
