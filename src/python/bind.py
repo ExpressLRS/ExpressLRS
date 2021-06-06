@@ -17,7 +17,7 @@ def send_bind_command(args):
         dbg_print("  * Using half duplex (GHST)")
     else:
         BindInitSeq = bootloader.get_bind_seq('CRSF', args.type)
-        dbg_print("  * Using full duplex (CFSF)")
+        dbg_print("  * Using full duplex (CRSF)")
     s.write(BindInitSeq)
     s.flush()
     time.sleep(.5)
