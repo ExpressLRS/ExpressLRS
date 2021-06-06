@@ -17,21 +17,21 @@ static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_L
 #endif
 
 static uint32_t colors[8] = {
-    0xFFFFFF,     // RATE_500HZ  white
-    0xFF00FF,     // RATE_250HZ  magenta
-    0x8000FF,     // RATE_200HZ  violet
-    0x0000FF,     // RATE_150HZ  blue
-    0x00FF00,     // RATE_100HZ  green
-    0xFFFFFF,     // RATE_50HZ   yellow
-    0xFF8000,     // RATE_25HZ   orange
-    0xFF0000      // RATE_4HZ    red
+    0xFFFFFF,     // white
+    0xFF00FF,     // magenta
+    0x8000FF,     // violet
+    0x0000FF,     // blue
+    0x00FF00,     // green
+    0xFFFFFF,     // yellow
+    0xFF8000,     // orange
+    0xFF0000      // red
 };
 
 static uint32_t rate_colors[RATE_MAX] = {
-    0x00FF00,     // 500/200 hz  green
-    0xFFFFFF,     // 250/100 hz  yellow
-    0xFF8000,     // 150/50 hz   orange
-    0xFF0000      // 50/25 hz    red
+    0x00FF00,     // 500/250/200 hz  green
+    0xFFFFFF,     // 250/150/100 hz  yellow
+    0xFF8000,     // 150/50/50 hz    orange
+    0xFF0000      // 50/25/25 hz     red
 };
 
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
