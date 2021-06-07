@@ -159,7 +159,8 @@ void BeginWebUpdate()
     server.on(
         "/update", HTTP_POST, []() {
       server.sendHeader("Connection", "close");
-      server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+      server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "Update completed.");
+      delay(200);
       ESP.restart(); }, []() {
       HTTPUpload& upload = server.upload();
       if (upload.status == UPLOAD_FILE_START) {
