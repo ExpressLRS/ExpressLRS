@@ -148,10 +148,7 @@ static void WebUpdateSendNetworks()
   }
 }
 
-static void WebUpdateAccessPoint(void)
-{
-  Serial.println("Starting Access Point");
-  String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+static void sendResponse(const String &msg, WiFiMode_t mode) {
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", msg);
   server.client().stop();
@@ -159,15 +156,18 @@ static void WebUpdateAccessPoint(void)
   changeMode = WIFI_AP;
 }
 
+static void WebUpdateAccessPoint(void)
+{
+  Serial.println("Starting Access Point");
+  String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+  sendResponse(msg, WIFI_AP);
+}
+
 static void WebUpdateConnect(void)
 {
   Serial.println("Connecting to home network");
   String msg = String("Connected to network '") + ssid + "', connect to http://elrs_rx.local from a browser on that network";
-  server.sendHeader("Connection", "close");
-  server.send(200, "text/plain", msg);
-  server.client().stop();
-  changeTime = millis();
-  changeMode = WIFI_STA;
+  sendResponse(msg, WIFI_STA);
 }
 
 static void WebUpdateSetHome(void)
@@ -189,11 +189,7 @@ static void WebUpdateForget(void)
   config.SetPassword("");
   config.Commit();
   String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
-  server.sendHeader("Connection", "close");
-  server.send(200, "text/plain", msg);
-  server.client().stop();
-  changeTime = millis();
-  changeMode = WIFI_AP;
+  sendResponse(msg, WIFI_AP);
 }
 
 static void WebUpdateHandleNotFound()
