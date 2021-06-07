@@ -31,6 +31,7 @@
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED 2
+#define GPIO_PIN_BUTTON 0
 
 #elif defined(TARGET_TTGO_LORA_V1_AS_RX)
 
@@ -327,7 +328,7 @@ High = Ant2
 #define GPIO_PIN_LED_WS2812         PB6
 #define GPIO_PIN_LED_WS2812_FAST    PB_6
 #define GPIO_PIN_PA_SE2622L_ENABLE  PB11  // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
-#define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin 
+#define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin
 #define GPIO_PIN_BUZZER             PC13
 #define timerOffset                 1
 
