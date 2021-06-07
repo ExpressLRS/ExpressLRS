@@ -62,7 +62,7 @@
 					<legend>
 						<h2>Join Network:</h2>
 					</legend>
-					<form action="/sethome" id="sethome" method="post" autocomplete="off">
+					<form action="/sethome" id="sethome" method="POST" autocomplete="off">
 						<div class="group">
 							<div class="autocomplete">
 								<input id="network" type="text" name="network" placeholder="SSID" />
@@ -73,7 +73,7 @@
 						<input type="submit" value="Join">
 					</form>
 					<br><br>
-					<a href="/connect" id="hashome">Connect to &quot;home&quot; network <span id="homenet"></span></a>
+					<a id="connect" href="#">Connect to &quot;home&quot; network <span id="homenet"></span></a>
 					<br><br>
 				</fieldset>
 			</div>
@@ -83,9 +83,9 @@
 					<legend>
 						<h2>Home Network: <span id="ssid"></span></h2>
 					</legend>
-					<a href="/forget">Forget &quot;home&quot; network and disconnect</a>
+					<a id="forget" href="#">Forget &quot;home&quot; network and disconnect</a>
 					<br><br>
-					<a href="/access">Disconnect and start Access Point</a>
+					<a id="access" href="#">Disconnect and start Access Point</a>
 					<br><br>
 				</fieldset>
 			</div>

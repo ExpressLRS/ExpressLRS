@@ -36,9 +36,9 @@ static const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi netwo
 static const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
 static const char *myHostname = "elrs_tx";
 
-static wifi_mode_t wifiMode = WIFI_MODE_NULL;
-static wifi_mode_t changeMode = WIFI_MODE_NULL;
-static unsigned long changeTime = 0;
+static volatile wifi_mode_t wifiMode = WIFI_MODE_NULL;
+static volatile wifi_mode_t changeMode = WIFI_MODE_NULL;
+static volatile unsigned long changeTime = 0;
 
 static const byte DNS_PORT = 53;
 static IPAddress apIP(10, 0, 0, 1);
@@ -154,18 +154,22 @@ static void WebUpdateAccessPoint(void)
 {
   Serial.println("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+  server.sendHeader("Connection", "close");
   server.send(200, "text/plain", msg);
-  changeMode = WIFI_AP;
+  server.client().stop();
   changeTime = millis();
+  changeMode = WIFI_AP;
 }
 
 static void WebUpdateConnect(void)
 {
   Serial.println("Connecting to home network");
   String msg = String("Connected to network '") + ssid + "', connect to http://elrs_tx.local from a browser on that network";
+  server.sendHeader("Connection", "close");
   server.send(200, "text/plain", msg);
-  changeMode = WIFI_STA;
+  server.client().stop();
   changeTime = millis();
+  changeMode = WIFI_STA;
 }
 
 static void WebUpdateSetHome(void)
@@ -187,9 +191,11 @@ static void WebUpdateForget(void)
   config.SetPassword("");
   config.Commit();
   String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
+  server.sendHeader("Connection", "close");
   server.send(200, "text/plain", msg);
-  changeMode = WIFI_AP;
+  server.client().stop();
   changeTime = millis();
+  changeMode = WIFI_AP;
 }
 
 static void WebUpdateHandleNotFound()
@@ -367,7 +373,13 @@ void HandleWebUpdate()
     if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && changeTime > (millis() - 500)) {
       switch(changeMode) {
         case WIFI_AP:
+          Serial.println("Changing to AP mode");
           WiFi.disconnect();
+          wifiMode = WIFI_AP;
+          WiFi.mode(wifiMode);
+          WiFi.softAPConfig(apIP, apIP, netMsk);
+          WiFi.softAP(ssid, password);
+          WiFi.scanNetworks(true);
           break;
         case WIFI_STA:
           WiFi.mode(WIFI_STA);

@@ -223,6 +223,39 @@ _('upload_form').addEventListener('submit', (e) => {
     uploadFile();
 });
 
+function callback(title, msg, url) {
+    return function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (this.readyState == 4) {
+                if (this.status == 200) {
+                    cuteAlert({
+                        type: "info",
+                        title: title,
+                        message: this.responseText
+                    });
+                }
+                else {
+                    cuteAlert({
+                        type: "error",
+                        title: title,
+                        message: msg
+                    });
+                }
+            }
+        };
+        xmlhttp.open("POST", url, true);
+        xmlhttp.send();
+    }
+}
+
+_('sethome').addEventListener('submit', callback("Set Home Network", "An error occurred setting the home network", "/sethome"));
+_('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect"));
+_('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access"));
+_('forget').addEventListener('click', callback("Forget Home Network",  "An error occurred forgetting the home network", "/forget"));
+
 //=========================================================
 
 // Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/
