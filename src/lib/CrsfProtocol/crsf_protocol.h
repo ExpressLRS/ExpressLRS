@@ -298,7 +298,7 @@ struct tagLuaProperties1{
     uint8_t type;
 }PACKED; // probably a pointer to a flash string
 struct tagLuaDeviceProperties {
-    uint8_t etc[12];
+    uint8_t etc[12]; //empty 12 bytes space
     uint8_t fieldamount; //number of field of params this device has
 }PACKED;
 struct tagLuaTextSelectionProperties{
@@ -345,65 +345,65 @@ struct tagLuaFloatProperties{
 }PACKED;
 
 struct tagLuaDevice {
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //device name
     struct tagLuaDeviceProperties luaDeviceProperties;
     uint8_t size;
 } PACKED;
 struct tagLuaItem_textSelection {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
-    const char *textOption; // pointer to select options
+    const char *label1; //param name
+    const char *textOption; //ascii representative of param value
     struct tagLuaTextSelectionProperties luaProperties2;
-    const char *label2;
+    const char *label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_command {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //command name
     struct tagLuaCommandProperties luaProperties2;
-    const char *label2;
+    const char *label2; //command info
     uint8_t size;
 } PACKED;
 
 struct tagLuaItem_uint8 {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //param name
     struct tagLuaUint8Properties luaProperties2;
-    const char *label2;
+    const char *label2;//param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_int8 {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //param name
     struct tagLuaInt8Properties luaProperties2;
-    const char *label2;
+    const char *label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_uint16 {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //param name
     struct tagLuaUint16Properties luaProperties2;
-    const char *label2;
+    const char *label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_int16 {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //param name
     struct tagLuaInt16Properties luaProperties2;
-    const char *label2;
+    const char *label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_float {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
+    const char *label1; //param name
     struct tagLuaFloatProperties luaProperties2;
-    const char *label2;
+    const char *label2;//param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_string {
     struct tagLuaProperties1 luaProperties1;
-    const char *label1; // probably a pointer to a flash string
-    const char *label2;
+    const char *label1; //param name
+    const char *label2; //string value
     uint8_t size;
 } PACKED;
 

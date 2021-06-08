@@ -67,6 +67,8 @@ uint32_t LEDupdateCounterMillis;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
+#define LUA_PKTCOUNT_INTERVAL_MS 3000LU
+
 uint8_t allLUAparamSent = 0;  
 
 /// define some libs to use ///
@@ -101,6 +103,7 @@ uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
+uint32_t LUApacketCountReported = 0;
 
 LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
@@ -508,7 +511,7 @@ void sendLuaParams()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  crsf.sendELRSparam(luaParams,4, 0x2E,F("none"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+  crsf.sendELRSparam(luaParams,4, 0x2E,F(" "),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
 }
 
 void resetLuaParams(){
@@ -516,6 +519,13 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));
   allLUAparamSent = 0;
+}
+
+
+void updateLUApacketCount(){
+  setLuaUint8Value(&luaBadPkt,(uint8_t)crsf.BadPktsCountResult);
+  setLuaUint16Value(&luaGoodPkt,(uint16_t)crsf.GoodPktsCountResult);
+  resetLuaParams();
 }
 
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
@@ -548,12 +558,23 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
       }
       case 6: //commit
       { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaCommit,luaCommit.size);
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT8,&luaBadPkt,luaBadPkt.size);
+        break;
+      }
+      case 7:
+      { 
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT16,&luaGoodPkt,luaGoodPkt.size);
+        break;
+      }
+      case 8:
+      { 
+        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,&luaCommit,luaCommit.size);
         if(sentChunk == 0){
           allLUAparamSent = 1;
         }
         break;
       }
+
       default: //ID 1
       {
         sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
@@ -1028,6 +1049,11 @@ void loop()
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
+  }
+/* sample packet count only when LUA is not busy, since LUA protocol will interfere packet count*/
+  if ((allLUAparamSent) && (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUApacketCountReported))){
+      LUApacketCountReported = now;
+      updateLUApacketCount();
   }
 
   #ifdef ENABLE_TELEMETRY

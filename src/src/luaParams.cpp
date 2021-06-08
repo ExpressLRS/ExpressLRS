@@ -19,7 +19,7 @@ struct tagLuaItem_textSelection luaAirRate = {
         0,
         (uint8_t)CRSF_TEXT_SELECTION
     },
-    "Pkt.Rate",
+    "P.Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
     "x;x;200(-112dbm);x;100(-117dbm);50(-120dbm);25(-123dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
@@ -49,7 +49,7 @@ struct tagLuaItem_textSelection luaTlmRate = {
         0,
         (uint8_t)CRSF_TEXT_SELECTION
     },
-    "Tlm.Rate",
+    "T.Rate",
     "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
     {
         0,
@@ -57,7 +57,7 @@ struct tagLuaItem_textSelection luaTlmRate = {
         7,    
         0
     },
-    "Pkt",
+    " ",
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
 };
 struct tagLuaItem_textSelection luaPower = {
@@ -67,7 +67,7 @@ struct tagLuaItem_textSelection luaPower = {
         0,
         (uint8_t)CRSF_TEXT_SELECTION
     },
-    "Power",
+    "Pwr",
     "10;25;50;100;250;500;1000;2000",
     {
         0,
@@ -91,7 +91,7 @@ struct tagLuaItem_command luaBind = {
         0,
         200
     },
-    "rdy",
+    " ",
     LUA_COMMAND_SIZE(luaBind)
 };
 struct tagLuaItem_command luaWebUpdate = {
@@ -101,29 +101,60 @@ struct tagLuaItem_command luaWebUpdate = {
         0,
         (uint8_t)CRSF_COMMAND
     },
-    "webUpdate",
+    "Update",
     {
         0,
         200
     },
-    "rdy",
+    " ",
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 
-struct tagLuaItem_command luaCommit = {
+struct tagLuaItem_uint8 luaBadPkt = {
     {
         6,
         0,
         0,
-        (uint8_t)CRSF_COMMAND
+        (uint8_t)CRSF_UINT8
     },
-    "commit",
+    "Bad",
     {
         0,
-        200
+        0,
+        254,
+        0
+    },
+    " ",
+    LUA_UINT8_SIZE(luaBadPkt)
+};
+struct tagLuaItem_uint16 luaGoodPkt = {
+    {
+        7,
+        0,
+        0,
+        (uint8_t)CRSF_UINT16
+    },
+    "Good",
+    {
+        0,
+        0,
+        511,
+        0
+    },
+    " ",
+    LUA_UINT16_SIZE(luaGoodPkt)
+};
+
+struct tagLuaItem_string luaCommit = {
+    {
+        8,
+        0,
+        0,
+        (uint8_t)CRSF_STRING
     },
     thisCommit,
-    LUA_COMMAND_SIZE(luaCommit)
+    " ",
+    LUA_STRING_SIZE(luaCommit)
 };
 
 
@@ -135,8 +166,17 @@ void setLuaCommandValue(struct tagLuaItem_command *luaStruct, uint8_t newvalue){
     struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
     p1->luaProperties2.status = newvalue;
 }
-
+void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue){
+    struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
+    p1->luaProperties2.value = newvalue;
+}
+void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
+    struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
+    p1->luaProperties2.value = (newvalue >> 8) | (newvalue << 8);
+}
+/**
 void setLuaCommandInfo(struct tagLuaItem_command *luaStruct, const char *newvalue){
     struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
     p1->label2 = newvalue;
 }
+ */

@@ -151,14 +151,17 @@ private:
     static void flush_port_input(void);
     void getLuaTextSelectionStructToArray(void * luaStruct, uint8_t *outarray);
     void getLuaCommandStructToArray(void * luaStruct, uint8_t *outarray);
-    /** we dont need these yet for OUR LUA
+    void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
+    void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
+      /** we dont need these yet for OUR LUA
      void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaint8StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaint16StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaStringStructToArray(void * luaStruct, uint8_t *outarray);
 */ 
+    void getLuaStringStructToArray(void * luaStruct, uint8_t *outarray);
+
 };
 
 #endif
