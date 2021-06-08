@@ -221,39 +221,22 @@ static void WebUpdateHandleNotFound()
 
 static void startWifi() {
   WiFi.persistent(false);
-  WiFi.disconnect();   //added to start with the wifi off, avoid crashing
-  WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
   WiFi.setHostname(myHostname);
-  delay(500);
   WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info){
-    switch(event) {
-      case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("Access Point enabled");
-        wifiMode = WIFI_AP;
-        WiFi.mode(wifiMode);
-        WiFi.softAPConfig(apIP, apIP, netMsk);
-        WiFi.softAP(ssid, password);
-        WiFi.scanNetworks(true);
-        break;
-      case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("Connected as Wifi station");
-        break;
-      default:
-        break;
+    if(event == SYSTEM_EVENT_STA_DISCONNECTED) {
+      changeTime = millis();
+      changeMode = WIFI_AP;
     }
   });
   if (config.GetSSID()[0]==0) {
-    Serial.println("Access Point enabled");
-    wifiMode = WIFI_AP;
-    WiFi.mode(wifiMode);
-    WiFi.softAPConfig(apIP, apIP, netMsk);
-    WiFi.softAP(ssid, password);
-    WiFi.scanNetworks(true);
+    changeTime = millis();
+    changeMode = WIFI_AP;
   } else {
     Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
-    wifiMode = WIFI_STA;
-    WiFi.mode(wifiMode);
-    WiFi.begin(config.GetSSID(), config.GetPassword());
+    changeTime = millis();
+    changeMode = WIFI_STA;
   }
 }
 
@@ -366,29 +349,30 @@ void BeginWebUpdate()
 
 void HandleWebUpdate()
 {
-    if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && changeTime > (millis() - 500)) {
-      switch(changeMode) {
-        case WIFI_AP:
-          Serial.println("Changing to AP mode");
-          WiFi.disconnect();
-          wifiMode = WIFI_AP;
-          WiFi.mode(wifiMode);
-          WiFi.softAPConfig(apIP, apIP, netMsk);
-          WiFi.softAP(ssid, password);
-          WiFi.scanNetworks(true);
-          break;
-        case WIFI_STA:
-          WiFi.mode(WIFI_STA);
-          wifiMode = WIFI_STA;
-          WiFi.begin(config.GetSSID(), config.GetPassword());
-        default:
-          break;
-      }
-      changeMode = WIFI_MODE_NULL;
+  if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && changeTime > (millis() - 500)) {
+    switch(changeMode) {
+      case WIFI_AP:
+        Serial.println("Changing to AP mode");
+        WiFi.disconnect();
+        wifiMode = WIFI_AP;
+        WiFi.mode(wifiMode);
+        WiFi.softAPConfig(apIP, apIP, netMsk);
+        WiFi.softAP(ssid, password);
+        WiFi.scanNetworks(true);
+        break;
+      case WIFI_STA:
+        Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
+        WiFi.mode(WIFI_STA);
+        wifiMode = WIFI_STA;
+        WiFi.begin(config.GetSSID(), config.GetPassword());
+      default:
+        break;
     }
-    dnsServer.processNextRequest();
-    server.handleClient();
-    yield();
+    changeMode = WIFI_MODE_NULL;
+  }
+  dnsServer.processNextRequest();
+  server.handleClient();
+  yield();
 }
 
 #endif
