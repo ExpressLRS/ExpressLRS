@@ -63,9 +63,9 @@ uint32_t LEDupdateCounterMillis;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_PKTCOUNT_INTERVAL_MS 3000LU
+//#define LUA_PKTCOUNT_INTERVAL_MS 3000LU
 
-uint8_t allLUAparamSent = 0;  
+volatile uint8_t allLUAparamSent = 0;  
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -638,6 +638,7 @@ void HandleUpdateParameter()
   case CRSF_FRAMETYPE_DEVICE_PING:
   {
     allLUAparamSent = 0;
+    updateLUApacketCount();
     crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
     break;
   }
@@ -959,10 +960,10 @@ void loop()
     TLMpacketReported = now;
   }
 /* sample packet count only when LUA is not busy, since LUA protocol will interfere packet count*/
-  if ((allLUAparamSent) && (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUApacketCountReported))){
-      LUApacketCountReported = now;
-      updateLUApacketCount();
-  }
+//  if ((allLUAparamSent) && (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUApacketCountReported))){
+//      LUApacketCountReported = now;
+//      updateLUApacketCount();
+//  }
 
   #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
