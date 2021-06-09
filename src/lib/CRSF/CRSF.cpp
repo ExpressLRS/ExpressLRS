@@ -347,6 +347,11 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
 #endif
 }
 
+uint32_t ICACHE_RAM_ATTR CRSF::GetRCdataLastRecv()
+{
+    return CRSF::RCdataLastRecv;
+}
+
 void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
@@ -387,7 +392,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
         uint32_t packetRate;
         if (CRSF::UARTcurrentBaud == 115200 && CRSF::RequestedRCpacketInterval == 2000)
         {
-            packetRate = 40000; //constrain to 250hz max 
+            packetRate = 40000; //constrain to 250hz max
         }
         else
         {
@@ -928,13 +933,13 @@ void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
         // If channel is within 1/4 a BIN of being in the middle use special value 7
         if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
             || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
-            currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+            currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT) & 0b111;
         else
             currentSwitches[i] = 7;
     } // for N_SWITCHES
 
     // AUXx is High Resolution 16-pos (4-bit)
-    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16);
+    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16) & 0b1111;
 }
 
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel

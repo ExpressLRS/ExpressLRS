@@ -84,7 +84,7 @@ extern "C" {
 //#define HAL_DAC_MODULE_ENABLED
 
 // Adjust IRQ priority
-#define TIM_IRQ_PRIO            3
+#define TIM_IRQ_PRIO            4
 #define EXTI_IRQ_PRIO           4
 
 #ifdef __cplusplus

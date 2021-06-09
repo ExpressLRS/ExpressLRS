@@ -91,6 +91,7 @@ public:
     /////////////////////////////////////////////////////////////
 
     static void ICACHE_RAM_ATTR GetChannelDataIn();
+    static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
     static void ICACHE_RAM_ATTR updateSwitchValues();
 
     static void inline nullCallback(void);

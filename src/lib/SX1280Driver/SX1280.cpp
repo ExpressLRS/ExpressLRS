@@ -7,7 +7,7 @@ SX1280Driver *SX1280Driver::instance = NULL;
 
 //DEBUG_SX1280_OTA_TIMING
 
-/* Steps for startup 
+/* Steps for startup
 
 1. If not in STDBY_RC mode, then go to this mode by sending the command:
 SetStandby(STDBY_RC)
@@ -287,7 +287,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     endTX = micros();
 #endif
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    
+
 #ifdef DEBUG_SX1280_OTA_TIMING
     Serial.print("TOA: ");
     Serial.println(endTX - beginTX);
