@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include "targets.h"
+#include "PIC32_Timer_Library.h"
 
 #define TimerIntervalUSDefault 20000
 
