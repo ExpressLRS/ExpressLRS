@@ -67,7 +67,7 @@ uint32_t LEDupdateCounterMillis;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-//#define LUA_PKTCOUNT_INTERVAL_MS 3000LU
+#define LUA_PKTCOUNT_INTERVAL_MS 1500LU
 
 volatile uint8_t allLUAparamSent = 0;  
 
@@ -103,7 +103,7 @@ uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
-uint32_t LUApacketCountReported = 0;
+uint32_t LUAfieldReported = 0;
 
 LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
@@ -529,9 +529,9 @@ void updateLUApacketCount(){
 }
 
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
-
   uint8_t sentChunk = 0;
   if(!allLUAparamSent){
+    LUAfieldReported = millis();
     switch(idx){
       case 2:
       {
@@ -1052,10 +1052,10 @@ void loop()
     TLMpacketReported = now;
   }
 /* sample packet count only when LUA is not busy, since LUA protocol will interfere packet count*/
-//  if ((allLUAparamSent) && (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUApacketCountReported))){
-//      LUApacketCountReported = now;
-//      updateLUApacketCount();
-//  }
+  if (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
+      LUAfieldReported = now;
+      updateLUApacketCount();
+  }
 
   #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
