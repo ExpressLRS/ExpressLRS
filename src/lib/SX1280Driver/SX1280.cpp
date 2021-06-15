@@ -57,7 +57,7 @@ bool SX1280Driver::Begin()
     Serial.print("Read Vers: ");
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
     Serial.println(firmwareRev);
-    if ((firmwareRev == 0) || (firmwareRev == 65536))
+    if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
         return false;
