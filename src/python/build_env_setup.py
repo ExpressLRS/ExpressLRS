@@ -17,20 +17,15 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
     if target_name == "FRSKY_TX_R9M_VIA_STLINK_OLD_BOOTLOADER_DEPRECATED":
         print("you are using the old bootloader, please update this will be removed soon")
         env.AddPostAction("buildprog", opentx.gen_frsky)
-    elif "APLHA_900_TX" in target_name:
-        env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
-    elif "_R9M_" in target_name or "ES915TX" in target_name or "GHOST_2400_TX" in target_name or \
-         "NAMIMNORC_VOYAGER" in target_name or "NAMIMNORC_FLASH" in target_name:
+
+    elif "_WIFI" in target_name:
         env.AddPostAction("buildprog", opentx.gen_elrs)
         env.AddPreAction("upload", opentx.gen_elrs)
-        if "WIFI" in target_name:
-            env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
-        else:
-            env.Replace(UPLOADCMD=stlink.on_upload)
-    elif "_STLINK" in target_name:
-        env.Replace(UPLOADCMD=stlink.on_upload)
+        env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(UPLOADCMD=UARTupload.on_upload)
+
     elif "_DFU" in target_name:
         board = env.BoardConfig()
         # PIO's ststm32 forces stm32f103 to upload via maple_upload,
@@ -38,6 +33,14 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
             "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
             "-D"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
+
+    else:
+        if "_TX_" in target_name:
+            # Generate '.elrs' files only for STM32 based TX modules
+            env.AddPostAction("buildprog", opentx.gen_elrs)
+            env.AddPreAction("upload", opentx.gen_elrs)
+        env.Replace(UPLOADCMD=stlink.on_upload)
+
 elif platform in ['espressif8266']:
     env.AddPostAction("buildprog", esp_compress.compressFirmware)
     env.AddPreAction("${BUILD_DIR}/spiffs.bin",
