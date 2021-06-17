@@ -364,6 +364,23 @@ High = Ant2
 
 #define timerOffset          1
 
+#elif defined(TARGET_SX1280_RX_CCG_DIV_NANO)
+#define GPIO_PIN_NSS         PA3
+#define GPIO_PIN_MOSI        PA7
+#define GPIO_PIN_MISO        PA6
+#define GPIO_PIN_SCK         PA5
+
+#define GPIO_PIN_DIO1        PC6
+#define GPIO_PIN_RST         PA15
+#define GPIO_PIN_BUSY        PA11
+
+#define GPIO_PIN_RCSIGNAL_RX PB7  // USART1
+#define GPIO_PIN_RCSIGNAL_TX PB6  // USART1
+
+#define GPIO_PIN_LED_RED     PB0
+
+#define timerOffset          1
+
 #elif defined(TARGET_NAMIMNORC_TX)
 /*
 Designed by NamimnoRC

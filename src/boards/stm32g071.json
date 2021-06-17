@@ -1,0 +1,46 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0plus",
+    "extra_flags": "-DSTM32G0xx=1 -DSTM32G071xx=1 -DSTM32G0=1",
+    "f_cpu": "64000000L",
+    "ldscript": "ldscript.ld",
+    "framework_extra_flags": {
+      "arduino": "-D__CORTEX_SC=0"
+    },
+    "mcu": "stm32g071gbu6",
+    "product_line": "STM32G071xx",
+    "variants_dir": "variants",
+    "variant": "G071GB"
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32G071GB",
+    "openocd_target": "stm32g0x",
+    "svd_path": "STM32G071.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "libopencm3",
+    "stm32cube",
+    "zephyr"
+  ],
+  "name": "CCG DIV G0",
+  "upload": {
+    "maximum_ram_size": 36864,
+    "maximum_size": 131072,
+    "protocol": "mbed",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "cmsis-dap",
+      "blackmagic",
+      "mbed"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32g071gb.html",
+  "vendor": "ST"
+}

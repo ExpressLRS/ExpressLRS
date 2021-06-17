@@ -14,10 +14,11 @@ volatile uint32_t hwTimer::PauseDuration = 0;
 bool hwTimer::running = false;
 bool hwTimer::alreadyInit = false;
 
-#if defined(TIM1)
+#if defined(TIM1) && !(STM32G071xx)
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM1);
 #else
 // FM30_mini (STM32F373xC) no advanced timer but TIM2 is 32-bit general purpose
+// Arduino framework does not support TIM1 for STM32G0xx so TIM2 is used.
 HardwareTimer(*hwTimer::MyTim) = new HardwareTimer(TIM2);
 #endif
 
