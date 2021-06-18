@@ -18,25 +18,35 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
         print("you are using the old bootloader, please update this will be removed soon")
         env.AddPostAction("buildprog", opentx.gen_frsky)
 
+    # Check whether the target is using WIFI (backpack logger) upload
     elif "_WIFI" in target_name:
+        # Generate 'firmware.elrs' file to be used for uploading (prio to bin file).
+        # This enables support for OTA updates with the "overlay double" R9M module
+        # bootloader. Bin file upload also requires the correct FLASH_OFFSET value
+        # and that can be ignored when '.elrs' file is used.
         env.AddPostAction("buildprog", opentx.gen_elrs)
         env.AddPreAction("upload", opentx.gen_elrs)
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
 
+    # Check whether the target is using FC passthrough upload (receivers)
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(UPLOADCMD=UARTupload.on_upload)
 
+    # Check whether the target is using DFU upload
     elif "_DFU" in target_name:
         board = env.BoardConfig()
         # PIO's ststm32 forces stm32f103 to upload via maple_upload,
-        # but we really actually truly want dfu-util
+        # but we really actually truly want dfu-util.
         env.Replace(UPLOADER="dfu-util", UPLOADERFLAGS=["-d", "0483:df11",
             "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
             "-D"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
 
+    # Default to ST-Link uploading
+    # Note: this target is also used to build 'firmware.elrs' binary
+    #       for handset flashing
     else:
         if "_TX_" in target_name:
-            # Generate '.elrs' files only for STM32 based TX modules
+            # Generate 'firmware.elrs' file for TX targets only
             env.AddPostAction("buildprog", opentx.gen_elrs)
             env.AddPreAction("upload", opentx.gen_elrs)
         env.Replace(UPLOADCMD=stlink.on_upload)
