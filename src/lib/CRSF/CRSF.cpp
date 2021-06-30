@@ -66,6 +66,10 @@ volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
+
+#define MAX_BYTES_SENT_IN_UART_OUT 32
+uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
+
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
 #define AutoSyncWaitPeriod 2000
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
@@ -88,8 +92,6 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
-volatile uint8_t CRSF::MspRequestsInTransit = 0;
-uint32_t CRSF::LastMspRequestSent = 0;
 #endif // CRSF_TX_MODULE
 
 
@@ -290,11 +292,6 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
-    if (data[2] == CRSF_FRAMETYPE_MSP_RESP)
-    {
-        MspRequestsInTransit--;
-    }
-
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
     {
         Serial.print("too large");
@@ -478,7 +475,6 @@ void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
 {
     MspWriteFIFO.flush();
     MspDataLength = 0;
-    MspRequestsInTransit = 0;
     memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
@@ -535,23 +531,9 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
 
 void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
 {
-    uint32_t now = millis();
     if (length > ELRS_MSP_BUFFER)
     {
         return;
-    }
-
-    // only store one CRSF_FRAMETYPE_MSP_REQ
-    if ((MspRequestsInTransit > 0 && data[2] == CRSF_FRAMETYPE_MSP_REQ))
-    {
-        if (LastMspRequestSent + ELRS_MSP_REQ_TIMEOUT_MS < now)
-        {
-            MspRequestsInTransit = 0;
-        }
-        else
-        {
-            return;
-        }
     }
 
     // store next msp message
@@ -571,12 +553,6 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
         {
             MspWriteFIFO.push(data[i]);
         }
-    }
-
-    if (data[2] == CRSF_FRAMETYPE_MSP_REQ)
-    {
-        MspRequestsInTransit++;
-        LastMspRequestSent = now;
     }
 }
 
@@ -667,39 +643,59 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
 {
-    sendSyncPacketToTX(); // calculate mixer sync packet if needed
+    // both static to split up larger packages
+    static uint8_t packageLength = 0;
+    static uint8_t sendingOffset = 0;
+    uint8_t writeLength = 0;
 
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
-    {
-        if (SerialOutFIFO.size() >= (peekVal + 1))
-        {
-            duplex_set_TX();
+    // calculate mixer sync packet if needed
+    sendSyncPacketToTX();
 
-#ifdef PLATFORM_ESP32
-            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-#endif
-
-            uint8_t OutPktLen = SerialOutFIFO.pop();
-            uint8_t OutData[OutPktLen];
-
-            SerialOutFIFO.popBytes(OutData, OutPktLen);
+    // check if we have data in the output FIFO that needs to be written or a large package was split up and we need to send the second part
+    if (sendingOffset > 0 || SerialOutFIFO.peek() > 0) {
+        duplex_set_TX();
 
 #ifdef PLATFORM_ESP32
-            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+        portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
+        // no package is in transit so get new data from the fifo
+        if (sendingOffset == 0) {
+            packageLength = SerialOutFIFO.pop();
+            SerialOutFIFO.popBytes(CRSFoutBuffer, packageLength);
 
-            CRSF::Port.write(OutData, OutPktLen); // write the packet out
-            CRSF::Port.flush();
-
-            duplex_set_RX();
-
-            // make sure there is no garbage on the UART left over
-            flush_port_input();
+            // if the package is long we need to split it up so it fits in the sending interval
+            if (packageLength > MAX_BYTES_SENT_IN_UART_OUT) {
+                writeLength = MAX_BYTES_SENT_IN_UART_OUT;
+            } else {
+                writeLength = packageLength;
+            }
         }
+        else {
+            // large package in transit send remaining bytes
+            writeLength = packageLength;
+        }
+
+#ifdef PLATFORM_ESP32
+        portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+#endif
+
+        // write the packet out, if it's a large package the offset holds the starting position
+        CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+        CRSF::Port.flush();
+
+        sendingOffset += writeLength;
+        packageLength -= writeLength;
+
+        // after everything was writen reset the offset so a new package can be fetched from the fifo
+        if (packageLength == 0) {
+            sendingOffset = 0;
+        }
+        duplex_set_RX();
+
+        // make sure there is no garbage on the UART left over
+        flush_port_input();
     }
 }
-
 
 void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
