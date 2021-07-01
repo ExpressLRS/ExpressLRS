@@ -662,18 +662,15 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         if (sendingOffset == 0) {
             packageLength = SerialOutFIFO.pop();
             SerialOutFIFO.popBytes(CRSFoutBuffer, packageLength);
-
-            // if the package is long we need to split it up so it fits in the sending interval
-            if (packageLength > MAX_BYTES_SENT_IN_UART_OUT) {
-                writeLength = MAX_BYTES_SENT_IN_UART_OUT;
-            } else {
-                writeLength = packageLength;
-            }
         }
-        else {
-            // large package in transit send remaining bytes
+
+        // if the package is long we need to split it up so it fits in the sending interval
+        if (packageLength > MAX_BYTES_SENT_IN_UART_OUT) {
+            writeLength = MAX_BYTES_SENT_IN_UART_OUT;
+        } else {
             writeLength = packageLength;
         }
+
 
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
