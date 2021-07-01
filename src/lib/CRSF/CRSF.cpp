@@ -10,7 +10,6 @@ HardwareSerial CRSF::Port = SerialPort;
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
-SemaphoreHandle_t mutexOutFIFO = NULL;
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -104,7 +103,6 @@ void CRSF::Begin()
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #ifdef PLATFORM_ESP32
-    mutexOutFIFO = xSemaphoreCreateMutex();
     disableCore0WDT();
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
 
@@ -302,12 +300,12 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     {
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
 #ifdef PLATFORM_ESP32
-        xSemaphoreTake(mutexOutFIFO, portMAX_DELAY);
+        portENTER_CRITICAL(&FIFOmux);
 #endif
         SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
         SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
 #ifdef PLATFORM_ESP32
-        xSemaphoreGive(mutexOutFIFO);
+        portEXIT_CRITICAL(&FIFOmux);
 #endif
     }
 }
