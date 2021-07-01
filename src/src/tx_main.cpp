@@ -805,9 +805,7 @@ void loop()
     #endif // GPIO_PIN_LED_RED
   }
 
-  #ifdef PLATFORM_STM32
-    crsf.handleUARTin();
-  #endif // PLATFORM_STM32
+  crsf.handleUARTin();
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
