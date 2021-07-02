@@ -744,7 +744,6 @@ void setup()
   #ifdef ENABLE_TELEMETRY
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif
-  POWERMGNT.setDefaultPower();
 
   eeprom.Begin(); // Init the eeprom
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage

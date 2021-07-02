@@ -22,7 +22,7 @@
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define MaxPower PWR_1000mW
-#define DefaultPowerEnum PWR_100mW
+#define DefaultPowerEnum PWR_50mW
 
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || \
       defined(TARGET_TX_ESP32_LORA1280F27)   || \
