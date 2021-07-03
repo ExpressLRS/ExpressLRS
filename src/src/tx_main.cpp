@@ -707,7 +707,6 @@ void setup()
 
   Serial.println("ExpressLRS TX Module Booted...");
 
-  POWERMGNT.init();
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
@@ -744,6 +743,8 @@ void setup()
   #ifdef ENABLE_TELEMETRY
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif
+
+  POWERMGNT.init();
 
   eeprom.Begin(); // Init the eeprom
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
