@@ -193,27 +193,28 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 600);  
+        analogWrite(GPIO_PIN_RFamp_APC2, 600);
         break;
     case PWR_25mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 770);  
-        break;
-    case PWR_50mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 950);  
-        break;
-    case PWR_250mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1480); 
-        break;
-    case PWR_500mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 2000); 
-        break;
-    case PWR_1000mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 3500); 
+        analogWrite(GPIO_PIN_RFamp_APC2, 770);
         break;
     case PWR_100mW:
-    default:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1150);  
+        analogWrite(GPIO_PIN_RFamp_APC2, 1150);
         CurrentPower = PWR_100mW;
+        break;
+    case PWR_250mW:
+        analogWrite(GPIO_PIN_RFamp_APC2, 1480);
+        break;
+    case PWR_500mW:
+        analogWrite(GPIO_PIN_RFamp_APC2, 2000);
+        break;
+    case PWR_1000mW:
+        analogWrite(GPIO_PIN_RFamp_APC2, 3500);
+        break;
+    case PWR_50mW:
+    default:
+        analogWrite(GPIO_PIN_RFamp_APC2, 950);
+        CurrentPower = PWR_50mW;
         break;
     }
 #elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
