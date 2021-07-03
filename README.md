@@ -110,7 +110,7 @@ Anyone can add an entry to the table, and entries should include the:
 | ---- | -------- | -------- | --------- | ---------------------- | ------------ | ----------- |
 | 40Km | 900M | 50HZ | 10mW | No | Snipes | https://www.youtube.com/watch?v=0QWN9qWoSYY |
 | 35Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dBmTRhgVcyY |
-| 30Km | 900M | 50HZ | 1W | No | Snipes | https://www.youtube.com/watch?v=SbWvFIpVkto |
+| 20Km | 2.4G | 150HZ | 100mW | Yes | Pairan | https://youtu.be/B9-AItJ9WS0 |
 | 10Km | 2.4G | 500HZ | 10mW | Yes | mrscythe | https://youtu.be/IpiPEZrCGtg |
 | 10Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dJYfWLtXVg8 |
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
