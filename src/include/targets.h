@@ -128,6 +128,8 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    /* PB3: RX = HIGH, TX = LOW */
+    #define GPIO_PIN_RX_ENABLE      PB3
 #elif defined(TARGET_R9SLIMPLUS_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
