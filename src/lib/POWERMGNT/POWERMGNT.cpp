@@ -339,6 +339,35 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
         break;
     }
+#elif defined(TARGET_ES900TX)
+    Radio.SetOutputPower(0b0000);
+
+    switch (Power)
+    {
+    case PWR_10mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 41);
+        break;
+    case PWR_25mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 60);
+        break;
+    case PWR_100mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 90);
+        break;
+    case PWR_250mW:
+       dacWrite(GPIO_PIN_RFamp_APC2, 110);
+        break;
+    case PWR_500mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 132);
+        break;
+    case PWR_1000mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 190);
+        break;
+    case PWR_50mW:
+    default:
+        dacWrite(GPIO_PIN_RFamp_APC2, 73);
+        Power = PWR_50mW;
+        break;
+    }
 #elif defined(TARGET_RX)
 #ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
