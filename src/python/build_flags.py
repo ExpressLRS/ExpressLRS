@@ -105,6 +105,7 @@ def get_git_sha():
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
+build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", env['PIOENV'].upper()))
 condense_flags()
 
 env['BUILD_FLAGS'] = build_flags
