@@ -353,7 +353,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #endif
     }
 
-    Radio.TXdataBuffer[0] = (NonceFHSSresult << 2) | (Radio.TXdataBuffer[0] & 0b11);
+    Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
