@@ -351,9 +351,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       #else
       GenerateChannelData(Radio.TXdataBuffer, &crsf);
       #endif
-    }
 
-    Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
+      // artificially inject the nonce on data packets, this will be overwritten with the CRC after it's calculated
+      Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
+    }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////

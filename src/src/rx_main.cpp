@@ -651,7 +651,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     Radio.RXdataBuffer[0] = type;
-    if (type != SYNC_PACKET) {
+    if (type == RC_DATA_PACKET) {
         Radio.RXdataBuffer[0] |= (NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval) << 2;
     }
 
@@ -660,7 +660,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     if (inCRC != calculatedCRC)
     {
         bool nonceUpdated = false;
-        if (type != SYNC_PACKET) {
+        if (type == RC_DATA_PACKET) {
             for (int nonceOffset=1 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
             {
                 Radio.RXdataBuffer[0] = type;
