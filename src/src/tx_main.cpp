@@ -352,11 +352,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelData(Radio.TXdataBuffer, &crsf);
       #endif
     }
+
+    Radio.TXdataBuffer[0] = (NonceFHSSresult << 2) | (Radio.TXdataBuffer[0] & 0b11);
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
+  Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
   Radio.TXnb(Radio.TXdataBuffer, 8);

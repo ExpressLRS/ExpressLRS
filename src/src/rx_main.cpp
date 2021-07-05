@@ -163,7 +163,7 @@ uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 #if defined(PRINT_RX_SCOREBOARD)
-static bool lastPacketCrcError;
+static char lastPacketType = '_';
 #endif
 ///////////////////////////////////////////////////////////////
 
@@ -525,8 +525,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #if defined(PRINT_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
     if (!LQCalc.currentIsSet() && !lastPacketWasTelemetry)
-        Serial.write(lastPacketCrcError ? '.' : '_');
-    lastPacketCrcError = false;
+        Serial.write(lastPacketType);
+    lastPacketType = '_';
     lastPacketWasTelemetry = tlmSent;
     #endif
 }
@@ -651,23 +651,49 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     Radio.RXdataBuffer[0] = type;
+    Radio.RXdataBuffer[0] |= (NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval) << 2;
+
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
     if (inCRC != calculatedCRC)
     {
-        #ifndef DEBUG_SUPPRESS
-        Serial.print("CRC error on RF packet: ");
-        for (int i = 0; i < 8; i++)
+        bool nonceUpdated = false;
+        for (int nonceOffset=1 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
         {
-            Serial.print(Radio.RXdataBuffer[i], HEX);
-            Serial.print(",");
+            Radio.RXdataBuffer[0] = type;
+            Radio.RXdataBuffer[0] |= (NonceRX + nonceOffset) << 2;
+            uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+            if (crc == inCRC)
+            {
+                NonceRX += nonceOffset;
+                nonceUpdated = true;
+                #ifndef DEBUG_SUPPRESS
+                    Serial.println("NonceRX recovered with offset %d", nonceOffset);
+                #endif
+                break;
+            }
         }
-        Serial.println("");
+        #ifndef DEBUG_SUPPRESS
+        if (!nonceUpdated) {
+            Serial.print("CRC error on RF packet: ");
+            for (int i = 0; i < 8; i++)
+            {
+                Serial.print(Radio.RXdataBuffer[i], HEX);
+                Serial.print(",");
+            }
+            Serial.println("");
+        }
         #endif
         #if defined(PRINT_RX_SCOREBOARD)
-            lastPacketCrcError = true;
+        if (nonceUpdated) {
+            lastPacketType = '=';
+        } else {
+            lastPacketType = '.';
+        }
         #endif
-        return;
+        if (!nonceUpdated) {
+            return;
+        }
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
