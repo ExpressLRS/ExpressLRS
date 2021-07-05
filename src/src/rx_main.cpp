@@ -650,33 +650,31 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
-    Radio.RXdataBuffer[0] = type;
-    if (type == RC_DATA_PACKET) {
-        Radio.RXdataBuffer[0] |= (NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval) << 2;
-    }
+    // artificially inject the nonce on data packets for the CRC calculation
+    NonceRX = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    Radio.RXdataBuffer[0] = type | ((NonceRX & 0b11) << 2);
 
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
     if (inCRC != calculatedCRC)
     {
         bool nonceUpdated = false;
-        if (type == RC_DATA_PACKET) {
-            for (int nonceOffset=1 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
+        
+        for (int nonceOffset=1 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
+        {
+            Radio.RXdataBuffer[0] = type | (((NonceRX + nonceOffset) & 0b11) << 2);
+            uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+            if (crc == inCRC)
             {
-                Radio.RXdataBuffer[0] = type;
-                Radio.RXdataBuffer[0] |= (NonceRX + nonceOffset) << 2;
-                uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-                if (crc == inCRC)
-                {
-                    NonceRX += nonceOffset;
-                    nonceUpdated = true;
-                    #ifndef DEBUG_SUPPRESS
-                        Serial.println("NonceRX recovered with offset %d", nonceOffset);
-                    #endif
-                    break;
-                }
+                NonceRX += nonceOffset;
+                nonceUpdated = true;
+                #ifndef DEBUG_SUPPRESS
+                    Serial.println("NonceRX recovered with offset %d", nonceOffset);
+                #endif
+                break;
             }
         }
+            
         #ifndef DEBUG_SUPPRESS
         if (!nonceUpdated) {
             Serial.print("CRC error on RF packet: ");
