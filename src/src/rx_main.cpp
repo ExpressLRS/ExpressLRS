@@ -651,51 +651,48 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     // artificially inject the nonce on data packets for the CRC calculation
-    NonceRX = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-    Radio.RXdataBuffer[0] = type | ((NonceRX & 0b11) << 2);
+    NonceRX %= ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    Radio.RXdataBuffer[0] = type | (NonceRX << 2);
 
-    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-
-    if (inCRC != calculatedCRC)
+    int packetFound = -1;
+    for (int nonceOffset=0 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
     {
-        bool nonceUpdated = false;
-        
-        for (int nonceOffset=1 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
+        uint8_t tryNonce = (NonceRX + nonceOffset) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        Radio.RXdataBuffer[0] = type | (tryNonce << 2);
+        uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+        if (crc == inCRC)
         {
-            Radio.RXdataBuffer[0] = type | (((NonceRX + nonceOffset) & 0b11) << 2);
-            uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-            if (crc == inCRC)
-            {
-                NonceRX += nonceOffset;
-                nonceUpdated = true;
-                #ifndef DEBUG_SUPPRESS
-                    Serial.println("NonceRX recovered with offset %d", nonceOffset);
-                #endif
-                break;
-            }
+            NonceRX = tryNonce;
+            packetFound = nonceOffset;
+            #ifndef DEBUG_SUPPRESS
+                Serial.println("NonceRX recovered with offset %d", nonceOffset);
+            #endif
+            break;
         }
-            
-        #ifndef DEBUG_SUPPRESS
-        if (!nonceUpdated) {
-            Serial.print("CRC error on RF packet: ");
-            for (int i = 0; i < 8; i++)
-            {
-                Serial.print(Radio.RXdataBuffer[i], HEX);
-                Serial.print(",");
-            }
-            Serial.println("");
+    }
+        
+    #ifndef DEBUG_SUPPRESS
+    if (packetFound == -1) {
+        Serial.print("CRC error on RF packet: ");
+        for (int i = 0; i < 8; i++)
+        {
+            Serial.print(Radio.RXdataBuffer[i], HEX);
+            Serial.print(",");
         }
-        #endif
-        #if defined(PRINT_RX_SCOREBOARD)
-        if (nonceUpdated) {
-            lastPacketType = '=';
-        } else {
-            lastPacketType = '.';
-        }
-        #endif
-        if (!nonceUpdated) {
-            return;
-        }
+        Serial.println("");
+    }
+    #endif
+    #if defined(PRINT_RX_SCOREBOARD)
+    if (packetFound == -1) {
+        lastPacketType = '.';
+    } else if (packetFound == 0)
+        lastPacketType = '_';
+    } else {
+        lastPacketType = '0' + packetFound;
+    }
+    #endif
+    if (packetFound == -1) {
+        return;
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
