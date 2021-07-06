@@ -651,8 +651,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     // artificially inject the nonce on data packets for the CRC calculation
-    NonceRX %= ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-
     int packetFound = -1;
     for (int nonceOffset=0 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
     {
@@ -661,7 +659,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
         if (crc == inCRC)
         {
-            NonceRX = tryNonce;
+            NonceRX += nonceOffset;
             packetFound = nonceOffset;
             #ifndef DEBUG_SUPPRESS
                 Serial.print("NonceRX recovered with offset ");
