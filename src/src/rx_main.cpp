@@ -642,6 +642,8 @@ void GotConnection()
 #endif
 }
 
+static int8_t nonceOffset[] = {0, -1, 1};
+
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
@@ -652,18 +654,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     // artificially inject the nonce on data packets for the CRC calculation
     int packetFound = -1;
-    for (int nonceOffset=0 ; nonceOffset<ExpressLRS_currAirRate_Modparams->FHSShopInterval ; nonceOffset++)
+    for (int offset=0 ; offset<3 ; offset++)
     {
-        uint8_t tryNonce = (NonceRX + nonceOffset) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        uint8_t tryNonce = (NonceRX + nonceOffset[offset]) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
         Radio.RXdataBuffer[0] = type | (tryNonce << 2);
         uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
         if (crc == inCRC)
         {
-            NonceRX += nonceOffset;
-            packetFound = nonceOffset;
+            NonceRX += nonceOffset[offset];
+            packetFound = offset;
             #ifndef DEBUG_SUPPRESS
                 Serial.print("NonceRX recovered with offset ");
-                Serial.println(nonceOffset);
+                Serial.println(nonceOffset[offset]);
             #endif
             break;
         }
@@ -681,13 +683,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     #endif
     #if defined(PRINT_RX_SCOREBOARD)
-    if (packetFound == -1) {
-        lastPacketType = '.';
-    } else if (packetFound == 0)
-        lastPacketType = '_';
-    } else {
-        lastPacketType = '0' + packetFound;
-    }
+    lastPacketType = "._-+"[packetFound+1];
     #endif
     if (packetFound == -1) {
         return;
