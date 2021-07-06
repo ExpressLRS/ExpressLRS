@@ -43,6 +43,9 @@ def on_upload(source, target, env):
         print(" ** UPLOADING TO: %s" % addr)
         try:
             subprocess.check_call(cmd + [addr])
+            print()
+            print("** UPLOAD SUCCESS. Flashing in progress.")
+            print("** Please wait for LED to resume blinking before disconnecting power")
             return
         except subprocess.CalledProcessError:
             print("FAILED!")
