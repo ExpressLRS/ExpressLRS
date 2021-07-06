@@ -653,7 +653,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     // artificially inject the nonce on data packets for the CRC calculation
-    int packetFound = 255;
+    int packetFound = -1;
     for (int offset=0 ; offset<3 ; offset++)
     {
         uint8_t tryNonce = (NonceRX + nonceOffset[offset]) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
@@ -685,7 +685,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     #if defined(PRINT_RX_SCOREBOARD)
     lastPacketType = "._-+"[packetFound+1];
     #endif
-    if (packetFound == 255) {
+    if (packetFound == -1) {
         return;
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
