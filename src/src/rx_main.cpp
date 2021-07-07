@@ -661,7 +661,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
         if (crc == inCRC)
         {
-            NonceRX += nonceOffset[offset];
+            if (NonceRX / ExpressLRS_currAirRate_Modparams->FHSShopInterval == (NonceRX + nonceOffset[offset]) / ExpressLRS_currAirRate_Modparams->FHSShopInterval)
+            {
+                NonceRX += nonceOffset[offset];
+            }
             packetFound = offset;
             #ifndef DEBUG_SUPPRESS
                 Serial.print("NonceRX recovered with offset ");
