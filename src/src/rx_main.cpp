@@ -653,29 +653,29 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
     // artificially inject the nonce on data packets for the CRC calculation
-    int packetFound = -1;
-    for (int offset=0 ; offset<3 ; offset++)
+    int foundNonceIndex = -1;
+    for (int index=0 ; index<3 ; index++)
     {
-        uint8_t tryNonce = (NonceRX + nonceOffset[offset]) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        uint8_t tryNonce = (NonceRX + nonceOffset[index]) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
         Radio.RXdataBuffer[0] = type | (tryNonce << 2);
         uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
         if (crc == inCRC)
         {
-            if (NonceRX / ExpressLRS_currAirRate_Modparams->FHSShopInterval == (NonceRX + nonceOffset[offset]) / ExpressLRS_currAirRate_Modparams->FHSShopInterval)
+            if (NonceRX / ExpressLRS_currAirRate_Modparams->FHSShopInterval == (NonceRX + nonceOffset[index]) / ExpressLRS_currAirRate_Modparams->FHSShopInterval)
             {
-                NonceRX += nonceOffset[offset];
+                NonceRX += nonceOffset[index];
             }
-            packetFound = offset;
+            foundNonceIndex = index;
             #ifndef DEBUG_SUPPRESS
                 Serial.print("NonceRX recovered with offset ");
-                Serial.println(nonceOffset[offset]);
+                Serial.println(nonceOffset[index]);
             #endif
             break;
         }
     }
         
     #ifndef DEBUG_SUPPRESS
-    if (packetFound == -1) {
+    if (foundNonceIndex == -1) {
         Serial.print("CRC error on RF packet: ");
         for (int i = 0; i < 8; i++)
         {
@@ -686,9 +686,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     #endif
     #if defined(PRINT_RX_SCOREBOARD)
-    lastPacketType = "._-+"[packetFound+1];
+    lastPacketType = "._-+"[foundNonceIndex+1];
     #endif
-    if (packetFound == -1) {
+    if (foundNonceIndex == -1) {
         return;
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
