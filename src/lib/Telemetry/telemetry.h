@@ -41,6 +41,7 @@ public:
     bool RXhandleUARTin(uint8_t data);
     void ResetState();
     bool ShouldCallBootloader();
+    bool ShouldCallEnterBind();
     #ifdef ENABLE_TELEMETRY
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
@@ -56,4 +57,5 @@ private:
     volatile crsf_telemetry_package_t *telemetryPackageHead;
     uint8_t receivedPackages;
     bool callBootloader;
+    bool callEnterBind;
 };

@@ -21,6 +21,13 @@ bool Telemetry::ShouldCallBootloader()
     return bootloader;
 }
 
+bool Telemetry::ShouldCallEnterBind()
+{
+    bool enterBind = callEnterBind;
+    callEnterBind = false;
+    return enterBind;
+}
+
 #ifdef ENABLE_TELEMETRY
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, MSP_RESP);
 
@@ -176,9 +183,14 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
 void Telemetry::AppendTelemetryPackage()
 {
-    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 0x62 && CRSFinBuffer[4] == 0x6c)
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 'b' && CRSFinBuffer[4] == 'l')
     {
         callBootloader = true;
+        return;
+    }
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 'b' && CRSFinBuffer[4] == 'd')
+    {
+        callEnterBind = true;
         return;
     }
     #ifdef ENABLE_TELEMETRY
