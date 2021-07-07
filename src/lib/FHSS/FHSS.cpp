@@ -45,6 +45,8 @@ void FHSSrandomiseFHSSsequence(long seed)
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_EU_868
     Serial.println("Setting 868MHz Mode");
+#elif defined Regulatory_Domain_IN_866
+    Serial.println("Setting 866MHz Mode");
 #elif defined Regulatory_Domain_AU_433
     Serial.println("Setting 433MHz EU Mode");
 #elif defined Regulatory_Domain_EU_433

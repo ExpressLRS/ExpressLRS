@@ -133,6 +133,9 @@ if fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_915*'):
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_868*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 868EU\n")
 
+elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_IN_866*'):
+    sys.stdout.write("\u001b[32mBuilding for SX1276 866IN\n")
+
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_433*'):
     sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")
 
