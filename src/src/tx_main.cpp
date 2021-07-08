@@ -151,11 +151,8 @@ void ICACHE_RAM_ATTR UpdateDynamicPower ()
   // snr = Radio.RXdataBuffer[4];
   // lq = Radio.RXdataBuffer[5];
 
-  if(rssi > -130 && rssi < 0)
-  {  
-    dynamic_power_rssi_sum += rssi;
-    dynamic_power_rssi_n++;
-  }
+  dynamic_power_rssi_sum += rssi;
+  dynamic_power_rssi_n++;
 
   if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
     return;
