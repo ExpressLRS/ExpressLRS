@@ -125,6 +125,85 @@ void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
+#ifdef USE_DYNAMIC_POWER
+#define DYNAMIC_POWER_MIN_RECORD_NUM 5 // average at least this number of records
+
+// The threshold at which the TX power will be increased
+#define DYN_POWER_MIN_RSSI -85
+// The threshold at which the TX power will be decreased
+#define DYN_POWER_MAX_RSSI -75
+
+uint32_t last_dynamic_power_check = 0;
+int32_t sum_rssi = 0;
+int32_t n_rssi = 0;
+#endif
+
+// Assume this function is called from telemtry handler.
+void ICACHE_RAM_ATTR RecordRssiForDynamicPower ()
+{
+  #ifdef USE_DYNAMIC_POWER
+
+  int8_t rssi;
+  // uint8_t snr, lq;
+
+  if(Radio.RXdataBuffer[2] == 0 || Radio.RXdataBuffer[3] == 0)
+  {
+    rssi = (Radio.RXdataBuffer[2] == 0)? Radio.RXdataBuffer[3] : Radio.RXdataBuffer[2];
+  }
+  else // diversity handling
+  {
+    rssi = (Radio.RXdataBuffer[2] < Radio.RXdataBuffer[3])? Radio.RXdataBuffer[3] : Radio.RXdataBuffer[2];
+  }
+  // snr = Radio.RXdataBuffer[4];
+  // lq = Radio.RXdataBuffer[5];
+
+  if(rssi > -130 && rssi < 0)
+  {  
+    sum_rssi += rssi;
+    n_rssi++;
+  }
+
+  #endif  
+}
+
+// Assume this function is called within the main loop()
+void ICACHE_RAM_ATTR UpdateDynamicPower ()
+{
+  #ifdef USE_DYNAMIC_POWER
+
+  if(n_rssi < DYNAMIC_POWER_MIN_RECORD_NUM)
+    return;
+
+  int32_t avg_rssi = sum_rssi / n_rssi;
+
+  // Serial.print("Dynamic power: ");
+  // Serial.print(avg_rssi); 
+  // Serial.print(", "); 
+  // Serial.println(n_rssi);
+
+  // Serial.print("CurrentPower: ");
+  // Serial.println(POWERMGNT.currPower());
+
+  // Serial.print("SetPower: ");
+  // Serial.println((PowerLevels_e)config.GetPower());
+
+
+  if (avg_rssi < DYN_POWER_MIN_RSSI) {
+    Serial.print("Power increase");
+    POWERMGNT.incPower();
+  }
+
+  // decrease power only up to the set power from the LUA script
+  if (avg_rssi > DYN_POWER_MAX_RSSI && POWERMGNT.currPower() > (PowerLevels_e)config.GetPower()) {
+    Serial.print("Power decrease");
+    POWERMGNT.decPower(); 
+  }
+
+  sum_rssi = 0;
+  n_rssi = 0;
+  #endif  
+}
+
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
@@ -177,6 +256,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
+
+            RecordRssiForDynamicPower();
             break;
 
         #ifdef ENABLE_TELEMETRY
@@ -878,6 +959,10 @@ void loop()
       }
     }
   }
+
+  #ifdef USE_DYNAMIC_POWER
+  UpdateDynamicPower();
+  #endif
 }
 
 void OnRFModePacket(mspPacket_t *packet)
