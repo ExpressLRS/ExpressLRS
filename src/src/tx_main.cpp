@@ -127,25 +127,18 @@ uint8_t baseMac[6];
 
 #ifdef USE_DYNAMIC_POWER
 #define DYNAMIC_POWER_MIN_RECORD_NUM 5 // average at least this number of records
-
-// The threshold at which the TX power will be increased
-#define DYN_POWER_MIN_RSSI -85
-// The threshold at which the TX power will be decreased
-#define DYN_POWER_MAX_RSSI -75
-
-static int32_t dynamic_power_rssi_sum, dynamic_power_rssi_n;
+static int32_t dynamic_power_rssi_sum;
+static int32_t dynamic_power_rssi_n;
 #endif
 
 // Assume this function is called from telemtry handler.
-void UpdateDynamicPower ()
+void ICACHE_RAM_ATTR UpdateDynamicPower ()
 {
   #ifdef USE_DYNAMIC_POWER
 
   int8_t rssi;
-  // uint8_t snr, lq;
-
-  int8_t rssi_1 = Radio.RXdataBuffer[2];
-  int8_t rssi_2 = Radio.RXdataBuffer[3];
+  int8_t rssi_1 = crsf.LinkStatistics.uplink_RSSI_1;
+  int8_t rssi_2 = crsf.LinkStatistics.uplink_RSSI_2;
 
   if(rssi_2 == 0)
   {
@@ -170,6 +163,10 @@ void UpdateDynamicPower ()
   // ======== Update the power actually at below:
 
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
+  int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
+
+  int32_t rssi_inc_threshold = expected_RXsensitivity + 20;
+  int32_t rssi_dec_threshold = expected_RXsensitivity + 40;
 
   // Serial.print("Dynamic power: ");
   // Serial.print(avg_rssi); 
@@ -182,13 +179,13 @@ void UpdateDynamicPower ()
   // Serial.print("SetPower: ");
   // Serial.println((PowerLevels_e)config.GetPower());
 
-  if (avg_rssi < DYN_POWER_MIN_RSSI) {
+  if (avg_rssi < rssi_inc_threshold) {
     // Serial.print("Power increase");
     POWERMGNT.incPower();
   }
 
   // decrease power only up to the set power from the LUA script
-  if (avg_rssi > DYN_POWER_MAX_RSSI && POWERMGNT.currPower() > (PowerLevels_e)config.GetPower()) {
+  if (avg_rssi > rssi_dec_threshold && POWERMGNT.currPower() > (PowerLevels_e)config.GetPower()) {
     // Serial.print("Power decrease");
     POWERMGNT.decPower(); 
   }
