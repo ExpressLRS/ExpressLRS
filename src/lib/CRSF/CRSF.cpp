@@ -122,18 +122,17 @@ void CRSF::Begin()
 
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
 
-    USART1->CR1 &= ~USART_CR1_UE;
-    USART1->CR2 &= ~(USART_CR2_LINEN | USART_CR2_CLKEN);
-    USART1->CR3 &= ~(USART_CR3_IREN | USART_CR3_SCEN);
-    USART1->CR3 |= USART_CR3_HDSEL;
-    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV;
-    USART1->CR1 |= USART_CR1_UE;
-
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
     USART1->CR3 |= USART_CR3_HDSEL;
-    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
     USART1->CR1 |= USART_CR1_UE;
+#endif
+#if defined(TARGET_TX_FM30_MINI)
+    USART2->CR1 &= ~USART_CR1_UE;
+    USART2->CR3 |= USART_CR3_HDSEL;
+    USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+    USART2->CR1 |= USART_CR1_UE;
 #endif
     Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
@@ -782,8 +781,14 @@ bool CRSF::UARTwdt()
             #if defined(TARGET_TX_GHOST)
             USART1->CR1 &= ~USART_CR1_UE;
             USART1->CR3 |= USART_CR3_HDSEL;
-            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
             USART1->CR1 |= USART_CR1_UE;
+            #endif
+            #if defined(TARGET_TX_FM30_MINI)
+            USART2->CR1 &= ~USART_CR1_UE;
+            USART2->CR3 |= USART_CR3_HDSEL;
+            USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+            USART2->CR1 |= USART_CR1_UE;
             #endif
 #endif
             UARTcurrentBaud = UARTrequestedBaud;

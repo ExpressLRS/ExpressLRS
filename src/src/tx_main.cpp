@@ -604,7 +604,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void setup()
 {
-#if defined(TARGET_TX_GHOST) || defined(TARGET_TX_FM30_MINI)
+#if defined(TARGET_TX_GHOST)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
 #endif
@@ -688,8 +688,8 @@ void setup()
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
 #if defined(TARGET_TX_FM30_MINI)
-  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
-  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW); // BRY: set to HIGH for production
+    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
+    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
 #ifdef PLATFORM_ESP32
