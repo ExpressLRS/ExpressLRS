@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <unity.h>
 #include <crc.h>
 #include "common.h"
 
