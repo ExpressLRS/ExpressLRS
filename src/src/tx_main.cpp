@@ -131,8 +131,8 @@ static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 #endif
 
-// Assume this function is called from telemtry handler.
-void ICACHE_RAM_ATTR UpdateDynamicPower ()
+// Assume this function is called from telemtry interrupt handler (keep it as simple as possible).
+void ICACHE_RAM_ATTR DynamicPower_Calculate ()
 {
   #ifdef USE_DYNAMIC_POWER
 
@@ -154,10 +154,16 @@ void ICACHE_RAM_ATTR UpdateDynamicPower ()
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
 
+  #endif  
+}
+
+// Assume this function is called inside loop(). Heavy functions goes here.
+void DynamicPower_Update()
+{
+  #ifdef USE_DYNAMIC_POWER
+ 
   if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
     return;
-
-  // ======== Update the power actually at below:
 
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
   int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
@@ -184,12 +190,12 @@ void ICACHE_RAM_ATTR UpdateDynamicPower ()
   // decrease power only up to the set power from the LUA script
   if (avg_rssi > rssi_dec_threshold && POWERMGNT.currPower() > (PowerLevels_e)config.GetPower()) {
     // Serial.print("Power decrease");
-    POWERMGNT.decPower(); 
+    POWERMGNT.decPower();
   }
 
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
-  #endif  
+  #endif    
 }
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
@@ -245,7 +251,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
-            UpdateDynamicPower();
+            DynamicPower_Calculate();
             break;
 
         #ifdef ENABLE_TELEMETRY
@@ -917,6 +923,9 @@ void loop()
       TelemetryReceiver.Unlock();
   }
   #endif
+
+  // Actual update of dynamic power is done here
+  DynamicPower_Update();
 
   // only send msp data when binding is not active
   if (InBindingMode)
