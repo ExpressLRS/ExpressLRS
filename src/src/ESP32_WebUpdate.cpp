@@ -185,7 +185,7 @@ void BeginWebUpdate()
 
     dnsServer.start(DNS_PORT, "*", apIP);
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    
+
     if (!MDNS.begin(myHostname))
     {
       Serial.println("Error starting mDNS");
@@ -200,7 +200,7 @@ void HandleWebUpdate()
 {
     dnsServer.processNextRequest();
     server.handleClient();
-    delay(1);
+    yield();
 }
 
 #endif

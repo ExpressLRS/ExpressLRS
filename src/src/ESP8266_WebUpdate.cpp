@@ -168,6 +168,5 @@ void HandleWebUpdate(void)
   dnsServer.processNextRequest();
   //mdns.update();
   yield();
-  delay(1);
 }
 #endif

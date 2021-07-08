@@ -8,6 +8,7 @@ import serials_find
 import BFinitPassthrough
 import SerialHelper
 import re
+import bootloader
 
 SCRIPT_DEBUG = 0
 BAUDRATE_DEFAULT = 420000
@@ -19,7 +20,7 @@ def dbg_print(line=''):
     return
 
 
-def uart_upload(port, filename, baudrate, ghst=False):
+def uart_upload(port, filename, baudrate, ghst=False, key=None):
     half_duplex = False
 
     dbg_print("=================== FIRMWARE UPLOAD ===================\n")
@@ -28,11 +29,13 @@ def uart_upload(port, filename, baudrate, ghst=False):
 
     logging.basicConfig(level=logging.ERROR)
 
-    BootloaderInitSeq1 = bytes([0xEC,0x04,0x32,0x62,0x6c,0x0A]) # CRSF
     if ghst:
-        BootloaderInitSeq1 = bytes([0x89,0x04,0x32,0x62,0x6c,0x0A]) # GHST
+        BootloaderInitSeq1 = bootloader.get_init_seq('GHST', key)
         half_duplex = True
         dbg_print("  Using GHST (half duplex)!\n")
+    else:
+        BootloaderInitSeq1 = bootloader.get_init_seq('CRSF', key)
+        dbg_print("  Using CRSF (full duplex)!\n")
     BootloaderInitSeq2 = bytes([0x62,0x62,0x62,0x62,0x62,0x62])
 
     if not os.path.exists(filename):
@@ -199,6 +202,7 @@ def uart_upload(port, filename, baudrate, ghst=False):
 
 
 def on_upload(source, target, env):
+    envkey = None
     ghst = False
     firmware_path = str(source[0])
 
@@ -215,8 +219,15 @@ def on_upload(source, target, env):
         for flag in flags:
             if "GHST=" in flag:
                 ghst = eval(flag.split("=")[1])
+            elif "BL_KEY=" in flag:
+                envkey = flag.split("=")[1]
 
-    uart_upload(upload_port, firmware_path, upload_speed, ghst)
+    try:
+        uart_upload(upload_port, firmware_path, upload_speed, ghst, key=envkey)
+    except Exception as e:
+        dbg_print("{0}\n".format(e))
+        return -1
+    return 0
 
 
 if __name__ == '__main__':

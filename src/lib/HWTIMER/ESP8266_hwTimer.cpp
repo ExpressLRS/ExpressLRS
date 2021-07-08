@@ -71,8 +71,8 @@ void ICACHE_RAM_ATTR hwTimer::decFreqOffset()
 
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 {
-    int32_t minVal = -(hwTimer::HWtimerInterval >> 4);
-    int32_t maxVal = (hwTimer::HWtimerInterval >> 4);
+    int32_t minVal = -(hwTimer::HWtimerInterval >> 2);
+    int32_t maxVal = (hwTimer::HWtimerInterval >> 2);
 
     hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal) * HWTIMER_TICKS_PER_US;
 }

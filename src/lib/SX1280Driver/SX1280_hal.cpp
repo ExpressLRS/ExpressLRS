@@ -57,6 +57,13 @@ void SX1280Hal::init()
     digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
 #endif
 
+#if defined(GPIO_PIN_PA_SE2622L_ENABLE) && (GPIO_PIN_PA_SE2622L_ENABLE != UNDEF_PIN)
+    Serial.print("Use PA ctrl pin: ");
+    Serial.println(GPIO_PIN_PA_SE2622L_ENABLE);
+    pinMode(GPIO_PIN_PA_SE2622L_ENABLE, OUTPUT);
+    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, LOW);
+#endif
+
 #if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     Serial.print("Use TX pin: ");
     Serial.println(GPIO_PIN_TX_ENABLE);
@@ -351,11 +358,18 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 #if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 #endif
+#if defined(GPIO_PIN_PA_SE2622L_ENABLE) && (GPIO_PIN_PA_SE2622L_ENABLE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, HIGH);
+#endif
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
 #if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+#endif
+#if defined(TARGET_TX_GHOST_LITE)
+    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
+    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
 #endif
 }
 
@@ -366,11 +380,18 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 #if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 #endif
+#if defined(GPIO_PIN_PA_SE2622L_ENABLE) && (GPIO_PIN_PA_SE2622L_ENABLE != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, HIGH);
+#endif
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
 #endif
 #if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+#endif
+#if defined(TARGET_TX_GHOST_LITE)
+    digitalWrite(GPIO_PIN_ANT_CTRL_1, LOW);
+    digitalWrite(GPIO_PIN_ANT_CTRL_2, HIGH);
 #endif
 }
 
