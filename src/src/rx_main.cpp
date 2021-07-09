@@ -650,6 +650,24 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
+    int hops = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+
+    /*
+     * Calculate valid nonce offsets for the current nonce. This gauruntees that an adjusted nonce remains in
+     * the same FHSS bin
+     */
+    int8_t nonceOffset[16];
+    int index = 0;
+    nonceOffset[index++] = 0;
+    int curNonce = NonceRX % hops;
+
+    for (int i=-1 ; i>=-curNonce ; i--) {
+        nonceOffset[index++] = i;
+    }
+    for (int i=1 ; i<hops - curNonce ; i++) {
+        nonceOffset[index++] = i;
+    }
+
     /*
      * The transmitter has calculated the CRC with it's nonce artificially injected into the data packet.
      * 
@@ -659,20 +677,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
      * If the nonce can be recovered, then we can adjust the nonce to the correct value. But, this can
      * only be done if the adjusted nonce will keep the reciever in the same FHSS bin.
      */
-    static int8_t nonceOffset[] = {0, -1, 1};
     int foundNonceIndex = -1;
-    for (int index=0 ; index<(int)sizeof(nonceOffset) ; index++)
+    for (int index=0 ; index<hops ; index++)
     {
-        uint8_t tryNonce = (NonceRX + nonceOffset[index]) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        uint8_t tryNonce = (NonceRX + nonceOffset[index]) % hops;
         Radio.RXdataBuffer[0] = type | (tryNonce << 2);
         uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
         if (crc == inCRC)
         {
-            // Ensure we remain in the same FHSS bin if we update the nonce
-            if (NonceRX / ExpressLRS_currAirRate_Modparams->FHSShopInterval == (NonceRX + nonceOffset[index]) / ExpressLRS_currAirRate_Modparams->FHSShopInterval)
-            {
-                NonceRX += nonceOffset[index];
-            }
+            NonceRX += nonceOffset[index];
             foundNonceIndex = index;
             #ifndef DEBUG_SUPPRESS
                 Serial.print("NonceRX recovered with offset ");
