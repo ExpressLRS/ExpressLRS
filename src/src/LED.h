@@ -6,6 +6,7 @@ uint32_t LEDupdateCounterMillis;
 
 static connectionState_e lastState = disconnected;
 static uint32_t lastColor = 0xFFFFFFFF;
+static uint32_t lastPower = 0xFFFFFFFF;
 
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
 #include <NeoPixelBus.h>
@@ -54,7 +55,7 @@ void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RG
 }
 #endif
 
-void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate)
+void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
 #if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || (defined(WS2812_LED_IS_USED) && !defined(TARGET_NAMIMNORC_TX))
     uint32_t color = rate_colors[rate];
@@ -78,11 +79,17 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate)
             (color & 0xFF) * LEDfade / 256
         );
     }
-    if (((connectionState != disconnected) && (lastState == disconnected)) || lastColor != color)
+    if (((connectionState != disconnected) && (lastState == disconnected)) || lastColor != color || lastPower != power)
     {
         lastState = connectionState;
         lastColor = color;
-        WS281BsetLED(color);
+        lastPower = power;
+        int dim = fmap(power, 0, PWR_COUNT-1, 10, 255);
+        WS281BsetLED(
+            (color >> 16) * dim / 256,
+            ((color >> 8) & 0xFF) * dim / 256,
+            (color & 0xFF) * dim / 256
+        );
     }
 #endif
 }

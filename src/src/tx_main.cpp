@@ -11,9 +11,9 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "FHSS.h"
-#include "LED.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
+#include "LED.h"
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
@@ -738,7 +738,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index);
+  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
