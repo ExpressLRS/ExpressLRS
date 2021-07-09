@@ -12,7 +12,8 @@
 
 #if defined(TARGET_1000mW_MODULE) || \
     defined(TARGET_R9M_TX)        || \
-    defined(TARGET_TX_ES915TX)
+    defined(TARGET_TX_ES915TX)    || \
+    defined(TARGET_ES900TX)
 #ifdef UNLOCK_HIGHER_POWER
 #define MaxPower PWR_1000mW
 #else
@@ -22,7 +23,7 @@
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define MaxPower PWR_1000mW
-#define DefaultPowerEnum PWR_100mW
+#define DefaultPowerEnum PWR_50mW
 
 #elif defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 #define MaxPower PWR_500mW

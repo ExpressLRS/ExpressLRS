@@ -515,7 +515,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
-        Radio.SetPPMoffsetReg(FreqCorrection*FREQ_STEP);    // as above but corrects a different PPM offset based on freq error
+        Radio.SetPPMoffsetReg(FreqCorrection);
     }
     #else
         (void)didFHSS;
@@ -1405,16 +1405,15 @@ void ExitBindingMode()
         return;
     }
 
-    InBindingMode = false;
-
     LostConnection();
 
-    // Sets params to allow sync after binding and not instantly change RF mode
-    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
-    RFmodeLastCycled = millis();
+    // Force RF cycling to start at the beginning immediately
+    scanIndex = RATE_MAX;
+    RFmodeLastCycled = 0;
 
-    Serial.print("Exit binding mode at freq = ");
-    Serial.println(Radio.currFreq);
+    // Do this last as LostConnection() will wait for a tock that never comes
+    // if we're in binding mode
+    InBindingMode = false;
 }
 
 void OnELRSBindMSP(uint8_t* packet)
