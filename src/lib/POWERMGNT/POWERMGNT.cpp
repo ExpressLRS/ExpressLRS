@@ -75,6 +75,7 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+    powerLedInit();
     setDefaultPower();
 }
 
@@ -409,8 +410,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(0b0000);
         break;
     }
-    CurrentPower = Power;
-    powerLedUpdate();
 #elif defined(TARGET_TX_BETAFPV_2400_V1)
     switch (Power)
     {
@@ -437,8 +436,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-10);
         break;
     }
-    CurrentPower = Power;
-    powerLedUpdate();
 #elif defined(TARGET_RX)
 #ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
@@ -449,11 +446,44 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
+    powerLedUpdate();
     return Power;
 }
 
+void POWERMGNT::powerLedUpdate()
+{
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    switch (CurrentPower)
+    {
+    case PWR_250mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_500mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_10mW:
+    case PWR_25mW:
+    case PWR_50mW:
+    case PWR_100mW:
+    default:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+        break;
+    }
+#endif
+}
 
+void POWERMGNT::powerLedInit()
+{
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
+    pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
+#endif
+}
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 void POWERMGNT::handleCyclePower()
 {
     switch(CurrentPower)
@@ -472,46 +502,4 @@ void POWERMGNT::handleCyclePower()
         break;
     }
 }
-
-void POWERMGNT::powerLedInit()
-{
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
-    pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
-}
-
-void POWERMGNT::powerLedUpdate()
-{
-    switch (CurrentPower)
-    {
-    case PWR_10mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-        break;
-    case PWR_25mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-        break;
-    case PWR_50mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-        break;
-    case PWR_100mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-        break;
-    case PWR_250mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-        break;
-    case PWR_500mW:
-        digitalWrite(GPIO_PIN_LED_BLUE, LOW);
-        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
-        break;
-    default:
-        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
-        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-        break;
-    }
-}
-
 #endif
