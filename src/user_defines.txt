@@ -62,3 +62,6 @@
 
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
+
+#If commented out the LED is RGB otherwise GRB
+#-DWS2812_IS_GRB
