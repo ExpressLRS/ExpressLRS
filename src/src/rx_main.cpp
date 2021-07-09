@@ -163,7 +163,7 @@ uint32_t SendLinkStatstoFCintervalLastSent = 0;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 #if defined(PRINT_RX_SCOREBOARD)
-static bool lastPacketCrcError;
+static char lastPacketType = '_';
 #endif
 ///////////////////////////////////////////////////////////////
 
@@ -525,8 +525,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #if defined(PRINT_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
     if (!LQCalc.currentIsSet() && !lastPacketWasTelemetry)
-        Serial.write(lastPacketCrcError ? '.' : '_');
-    lastPacketCrcError = false;
+        Serial.write(lastPacketType);
+    lastPacketType = '_';
     lastPacketWasTelemetry = tlmSent;
     #endif
 }
@@ -650,12 +650,53 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
 
-    Radio.RXdataBuffer[0] = type;
-    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+    int hops = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if (inCRC != calculatedCRC)
+    /*
+     * Calculate valid nonce offsets for the current nonce. This gauruntees that an adjusted nonce remains in
+     * the same FHSS bin
+     */
+    int8_t nonceOffset[16];
+    int index = 0;
+    nonceOffset[index++] = 0;
+    int curNonce = NonceRX % hops;
+
+    for (int i=-1 ; i>=-curNonce ; i--) {
+        nonceOffset[index++] = i;
+    }
+    for (int i=1 ; i<hops - curNonce ; i++) {
+        nonceOffset[index++] = i;
+    }
+
+    /*
+     * The transmitter has calculated the CRC with it's nonce artificially injected into the data packet.
+     * 
+     * This allows the code below to recover from timer drift by checking the CRC with the nonce either side
+     * of the expected nonce if it fails CRC check.
+     * 
+     * If the nonce can be recovered, then we can adjust the nonce to the correct value. But, this can
+     * only be done if the adjusted nonce will keep the reciever in the same FHSS bin.
+     */
+    int foundNonceIndex = -1;
+    for (int index=0 ; index<hops ; index++)
     {
-        #ifndef DEBUG_SUPPRESS
+        uint8_t tryNonce = (NonceRX + nonceOffset[index]) % hops;
+        Radio.RXdataBuffer[0] = type | (tryNonce << 2);
+        uint16_t crc = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+        if (crc == inCRC)
+        {
+            NonceRX += nonceOffset[index];
+            foundNonceIndex = index;
+            #ifndef DEBUG_SUPPRESS
+                Serial.print("NonceRX recovered with offset ");
+                Serial.println(nonceOffset[index]);
+            #endif
+            break;
+        }
+    }
+        
+    #ifndef DEBUG_SUPPRESS
+    if (foundNonceIndex == -1) {
         Serial.print("CRC error on RF packet: ");
         for (int i = 0; i < 8; i++)
         {
@@ -663,12 +704,17 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
             Serial.print(",");
         }
         Serial.println("");
-        #endif
-        #if defined(PRINT_RX_SCOREBOARD)
-            lastPacketCrcError = true;
-        #endif
+    }
+    #endif
+    #if defined(PRINT_RX_SCOREBOARD)
+    lastPacketType = "._-+"[foundNonceIndex+1];
+    #endif
+
+    if (foundNonceIndex == -1) {
+        // All CRC check failed and could not recover nonce
         return;
     }
+
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
 #ifdef HYBRID_SWITCHES_8
