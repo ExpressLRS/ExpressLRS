@@ -5,6 +5,7 @@ constexpr uint32_t LEDupdateInterval = 100;
 uint32_t LEDupdateCounterMillis;
 
 static connectionState_e lastState = disconnected;
+static uint32_t lastColor = 0xFFFFFFFF;
 
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
 #include <NeoPixelBus.h>
@@ -77,9 +78,10 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate)
             (color & 0xFF) * LEDfade / 256
         );
     }
-    if ((connectionState != disconnected) && (lastState == disconnected))
+    if (((connectionState != disconnected) && (lastState == disconnected)) || lastColor != color)
     {
         lastState = connectionState;
+        lastColor = color;
         WS281BsetLED(color);
     }
 #endif
