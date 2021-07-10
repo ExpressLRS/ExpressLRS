@@ -168,8 +168,8 @@ void DynamicPower_Update()
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
   int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
 
-  int32_t rssi_inc_threshold = expected_RXsensitivity + 20;
-  int32_t rssi_dec_threshold = expected_RXsensitivity + 40;
+  int32_t rssi_inc_threshold = expected_RXsensitivity + 15;
+  int32_t rssi_dec_threshold = expected_RXsensitivity + 30;
 
   // Serial.print("Dynamic power: ");
   // Serial.print(avg_rssi); 
@@ -182,13 +182,13 @@ void DynamicPower_Update()
   // Serial.print("SetPower: ");
   // Serial.println((PowerLevels_e)config.GetPower());
 
-  if (avg_rssi < rssi_inc_threshold) {
+  if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
     // Serial.print("Power increase");
     POWERMGNT.incPower();
   }
 
   // decrease power only up to the set power from the LUA script
-  if (avg_rssi > rssi_dec_threshold && POWERMGNT.currPower() > (PowerLevels_e)config.GetPower()) {
+  if (avg_rssi > rssi_dec_threshold) {
     // Serial.print("Power decrease");
     POWERMGNT.decPower();
   }
