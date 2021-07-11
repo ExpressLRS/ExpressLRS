@@ -41,6 +41,11 @@ if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOAD
             "-s", "%s:leave" % board.get("upload.offset_address", "0x08001000"),
             "-D"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
 
+    # Check whether the target is using UART/SERIAL upload
+    elif "_UART" in target_name:
+        env.Replace(UPLOADER="stm32flash", UPLOADERFLAGS=["-g", "0x08000000",
+            "-b", "115200"], UPLOADCMD='$UPLOADER $UPLOADERFLAGS "${SOURCE.get_abspath()}"')
+
     # Default to ST-Link uploading
     # Note: this target is also used to build 'firmware.elrs' binary
     #       for handset flashing

@@ -15,7 +15,13 @@
         extEEPROM EEPROM(kbits_2, 1, 1, TARGET_EEPROM_ADDR);
     #else
         #define STM32_USE_FLASH 1
-        #include <stm32_eeprom.h>
+        #if TARGET_TX_STM32F405_E28_SX1280 // platform = ststm32@14.0.1
+            extern "C" {
+            #include "utility/stm32_eeprom.h"
+            }
+        #else
+            #include <stm32_eeprom.h> 
+        #endif
     #endif
 #else
     #include <EEPROM.h>

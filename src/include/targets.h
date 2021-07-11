@@ -334,6 +334,26 @@ High = Ant2
 #define GPIO_PIN_BUZZER             PC13
 #define timerOffset                 1
 
+#elif defined(TARGET_TX_STM32F405_E28_SX1280)
+#define GPIO_PIN_BUSY               PB10
+#define GPIO_PIN_DIO1               PB11
+#define GPIO_PIN_NSS                PA4
+#define GPIO_PIN_SCK                PA5
+#define GPIO_PIN_MISO               PA6
+#define GPIO_PIN_MOSI               PA7
+#define GPIO_PIN_RST                PB3
+#define GPIO_PIN_TX_ENABLE          PA1
+#define GPIO_PIN_RX_ENABLE          PB12
+#define GPIO_PIN_RCSIGNAL_RX        PC7
+#define GPIO_PIN_RCSIGNAL_TX        PC6
+#define GPIO_PIN_LED_RED            PA8
+#define GPIO_LED_RED_INVERTED   1
+
+#define GIMBAL_ROLL                 PB1
+#define GIMBAL_PITCH                PB0
+#define GIMBAL_YAW                  PA3
+#define GIMBAL_THROTTLE             PA2
+
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_BUSY 21
