@@ -1,0 +1,39 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F405xx -DSTM32F4xx",
+    "f_cpu": "168000000L",
+    "ldscript": "variants/ELRS_STM32F405RG/ldscript.ld",
+    "mcu": "stm32f405rgt6",
+    "product_line": "STM32F405xx",
+    "variants_dir": "variants",
+      "variant": "ELRS_STM32F405RG"
+  },
+  "debug": {
+    "jlink_device": "STM32F405RG",
+    "openocd_target": "stm32f4x",
+    "svd_path": "STM32F40x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "stm32cube",
+    "libopencm3"
+  ],
+  "name": "ELRS STM32F405RG",
+  "upload": {
+    "maximum_ram_size": 131072,
+    "maximum_size": 1048576,
+    "protocol": "serial",
+    "protocols": [
+      "blackmagic",
+      "dfu",
+      "jlink",
+      "serial",
+      "stlink"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f405rg.html",
+  "vendor": "Generic"
+}

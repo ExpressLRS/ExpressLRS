@@ -254,7 +254,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
-#elif defined(TARGET_TX_ESP32_E28_SX1280_V1)
+#elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_STM32F405_E28_SX1280)
     switch (Power)
     {
     case PWR_10mW:
