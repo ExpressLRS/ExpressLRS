@@ -165,6 +165,8 @@ void GPIO_SetupPin(GPIO_TypeDef *regs, uint32_t pos, uint32_t mode, int pullup)
   } else {
     mode = (mode >> 4) & 0xff;
     LL_GPIO_SetPinMode(regs, bit_pos, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetPinOutputType(regs, bit_pos, LL_GPIO_OUTPUT_PUSHPULL);
+    LL_GPIO_SetPinSpeed(regs, bit_pos, LL_GPIO_SPEED_FREQ_LOW);
     LL_GPIO_SetPinPull(regs, bit_pos, (0 < pullup ? LL_GPIO_PULL_UP : LL_GPIO_PULL_DOWN));
     if (pos & 0x8) {
       LL_GPIO_SetAFPin_8_15(regs, bit_pos, mode);
