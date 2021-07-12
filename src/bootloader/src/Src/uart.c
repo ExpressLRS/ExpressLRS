@@ -171,11 +171,15 @@ void uart_flush(void)
 
 void USARTx_IRQ_handler(USART_TypeDef * uart)
 {
-  uint32_t SR = uart->StatReg, CR = uart->CR1;
+  uint32_t CR = uart->CR1;
+  uint32_t SR = uart->StatReg;
   /* Check for RX data */
   if (SR & RX_ISR_LST) {
+    // Always read even if there is an error bit set, as this resets the error bits
     uint8_t data = (uint8_t)LL_USART_ReceiveData8(uart);
-    if (CR & USART_CR1_RXNEIE) {
+    // If RX is in interrupt mode, the RX not-empty bit is set, and the received byte
+    // has no framing errors (framing errors still generate RXNE), add to the RX fifo
+    if ((CR & USART_CR1_RXNEIE) && (SR & USART_SR_RXNE) && !(SR & USART_ISR_FE)) {
       uint8_t next = rx_head;
       if ((next + 1) != rx_tail) {
         rx_buffer[rx_head++] = data;
@@ -184,9 +188,9 @@ void USARTx_IRQ_handler(USART_TypeDef * uart)
     }
   }
 
-  // Check if TX is enabled and TX Empty IRQ triggered
-  if ((SR & (USART_SR_TXE)) && (CR & USART_CR1_TXEIE)) {
-    //  Check if data available
+  // If TX is in interrupt mode, and TX empty bit set
+  if ((CR & USART_CR1_TXEIE) && (SR & USART_SR_TXE)) {
+    //  Check if data in TX fifo still to send, else switch to RX mode
     if (tx_head <= tx_tail)
       duplex_state_set(DUPLEX_RX);
     else
