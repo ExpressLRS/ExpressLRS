@@ -10,7 +10,7 @@ HardwareSerial CRSF::Port = SerialPort;
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
-SemaphoreHandle_t mutexOutFIFO = NULL;
+
 #elif PLATFORM_PIC32
 #include "wiring.h"
 // HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler, int pinT, int pinR, ppsFunctionType ppsT, ppsFunctionType ppsR);
@@ -24,6 +24,7 @@ ppsFunctionType ppsT, ppsR;
 int ip1 = 0; //Find real value
 int sp1 = 0;//Find real value
 HardwareSerial CRSF::Port(uartP, 0, 0, 0, 0, isrHandler, 0, 0, ppsT, ppsR);
+
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
