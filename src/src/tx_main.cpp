@@ -126,9 +126,14 @@ void OnTLMRatePacket(mspPacket_t *packet);
 uint8_t baseMac[6];
 
 #ifdef USE_DYNAMIC_POWER
-#define DYNAMIC_POWER_MIN_RECORD_NUM 5 // average at least this number of records
+#define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
+#define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount, immediately boost to the max power configured.
+#define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
+#define DYNAMIC_POWER_MOVING_AVG_K 8 // Number of previous values for calculating moving average. Best with power of 2.
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
+static int32_t dynamic_power_avg_lq;
+static boolean dynamic_power_updated;
 #endif
 
 // Assume this function is called from telemtry interrupt handler (keep it as simple as possible).
@@ -139,6 +144,7 @@ void ICACHE_RAM_ATTR DynamicPower_Calculate ()
   int8_t rssi;
   int8_t rssi_1 = crsf.LinkStatistics.uplink_RSSI_1;
   int8_t rssi_2 = crsf.LinkStatistics.uplink_RSSI_2;
+  int32_t lq = crsf.LinkStatistics.uplink_Link_quality;
 
   if(rssi_2 == 0)
   {
@@ -154,6 +160,12 @@ void ICACHE_RAM_ATTR DynamicPower_Calculate ()
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
 
+  // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
+  lq = lq << 16;
+  dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + lq) / DYNAMIC_POWER_MOVING_AVG_K;
+
+  dynamic_power_updated = true;
+
   #endif  
 }
 
@@ -161,7 +173,25 @@ void ICACHE_RAM_ATTR DynamicPower_Calculate ()
 void DynamicPower_Update()
 {
   #ifdef USE_DYNAMIC_POWER
- 
+  // if telemetry is not arrived, quick return.
+  if (!dynamic_power_updated)
+    return;
+
+  dynamic_power_updated = false;
+
+  int32_t lq_diff = (dynamic_power_avg_lq>>16) - crsf.LinkStatistics.uplink_Link_quality;
+  PowerLevels_e config_max_power = (PowerLevels_e)config.GetPower();
+
+  // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
+  if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || crsf.LinkStatistics.uplink_Link_quality <= DYNAMIC_POWER_BOOST_LQ_MIN)
+  {
+    if (POWERMGNT.currPower() < config_max_power)
+    {      
+      POWERMGNT.setPower(config_max_power);
+    }
+  }
+
+  // Dynamic power needs at least DYNAMIC_POWER_MIN_RECORD_NUM amount of telemetry records to update.
   if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
     return;
 
@@ -195,6 +225,12 @@ void DynamicPower_Update()
 
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
+
+  Serial.print(crsf.LinkStatistics.uplink_Link_quality);
+  Serial.print("/");
+  Serial.print(dynamic_power_avg_lq>>16);
+  Serial.print("/");
+  Serial.println(lq_diff);
   #endif    
 }
 
@@ -471,7 +507,11 @@ void sendLuaParams()
                          (uint8_t)(InBindingMode | (webUpdateMode << 1)),
                          (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
                          (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval),
+                      #ifdef USE_DYNAMIC_POWER
+                         (uint8_t)(config.GetPower()),
+                      #else
                          (uint8_t)(POWERMGNT.currPower()),
+                      #endif
                          (uint8_t)Regulatory_Domain_Index,
                          (uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
