@@ -226,11 +226,11 @@ void DynamicPower_Update()
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
 
-  Serial.print(crsf.LinkStatistics.uplink_Link_quality);
-  Serial.print("/");
-  Serial.print(dynamic_power_avg_lq>>16);
-  Serial.print("/");
-  Serial.println(lq_diff);
+  // Serial.print(crsf.LinkStatistics.uplink_Link_quality);
+  // Serial.print("/");
+  // Serial.print(dynamic_power_avg_lq>>16);
+  // Serial.print("/");
+  // Serial.println(lq_diff);
   #endif    
 }
 
