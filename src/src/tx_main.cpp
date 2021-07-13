@@ -151,7 +151,7 @@ void DynamicPower_Update()
   int32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
   int32_t lq_diff = (dynamic_power_avg_lq>>16) - lq_current;
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
-  if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || crsf.LinkStatistics.uplink_Link_quality <= DYNAMIC_POWER_BOOST_LQ_MIN)
+  if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
       POWERMGNT.setPower((PowerLevels_e)config.GetPower());
       // restart the rssi sampling after a boost up
@@ -199,12 +199,11 @@ void DynamicPower_Update()
   // Serial.print("SetPower: ");
   // Serial.println((PowerLevels_e)config.GetPower());
 
+  // increase power only up to the set power from the LUA script
   if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
     // Serial.print("Power increase");
     POWERMGNT.incPower();
   }
-
-  // decrease power only up to the set power from the LUA script
   if (avg_rssi > rssi_dec_threshold) {
     // Serial.print("Power decrease");
     POWERMGNT.decPower();
