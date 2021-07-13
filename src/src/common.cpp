@@ -23,7 +23,6 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #include "SX1280Driver.h"
 extern SX1280Driver Radio;
 
-#ifdef USE_500HZ
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_LI_4_6, 2000, TLM_RATIO_1_128, 4, 12},
     {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
@@ -35,20 +34,6 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {1, RATE_250HZ, -108, 3300, 3000, 2500, 2000, 4000},
     {2, RATE_150HZ, -112, 5871, 3500, 2500, 2000, 4000},
     {3, RATE_50HZ, -117, 18443, 4000, 2500, 2000, 4000}};
-#else
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
-    {1, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
-    {2, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 4, 12},
-    {3, RATE_25HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF10, SX1280_LORA_CR_LI_4_6, 40000, TLM_RATIO_NO_TLM, 4, 12}};
-
-expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_250HZ, -108, 3300, 3000, 2500, 2000, 4000},
-    {1, RATE_150HZ, -112, 5871, 3500, 2500, 2000, 4000},
-    {2, RATE_50HZ, -117, 18443, 4000, 2500, 2000, 4000},
-    {3, RATE_25HZ, -120, 35625, 6000, 4000, 2000, 4000}};
-#endif
-
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);

@@ -112,7 +112,6 @@ private:
     static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
 
     static volatile inBuffer_U inBuffer;
-    static volatile uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN + 1]; //index 0 hold the length of the datapacket
 
     static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
 
@@ -123,6 +122,7 @@ private:
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
     static uint32_t OpenTXsyncOffsetSafeMargin;
+    static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
     static uint32_t SyncWaitPeriodCounter;
 #endif
@@ -135,8 +135,6 @@ private:
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
-    static volatile uint8_t MspRequestsInTransit;
-    static uint32_t LastMspRequestSent;
 #ifdef PLATFORM_ESP32
     static void ESP32uartTask(void *pvParameters);
     static void ESP32syncPacketTask(void *pvParameters);

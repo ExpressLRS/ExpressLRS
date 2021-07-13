@@ -9,7 +9,7 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-PowerLevels_e POWERMGNT::CurrentPower = (PowerLevels_e)DefaultPowerEnum;
+PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
 
 PowerLevels_e POWERMGNT::incPower()
 {
@@ -63,11 +63,19 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
     analogWriteResolution(12);
+
+    // WARNING: The two calls to analogWrite below are needed for the
+    // lite pro, as it seems that the very first calls to analogWrite
+    // fail for an unknown reason (suspect Arduino lib bug). These
+    // set power to 50mW, which should get overwitten shortly after
+    // boot by whatever is set in the EEPROM. @wvarty
+    analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+    analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
-    CurrentPower = PWR_COUNT;
+    setDefaultPower();
 }
 
 void POWERMGNT::setDefaultPower()
@@ -180,32 +188,32 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(TARGET_R9M_LITE_PRO_TX)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
+    analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
+
     switch (Power)
     {
+    case PWR_10mW:
+        analogWrite(GPIO_PIN_RFamp_APC2, 600);
+        break;
+    case PWR_25mW:
+        analogWrite(GPIO_PIN_RFamp_APC2, 770);
+        break;
     case PWR_100mW:
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC2, 732); //0-4095  590mV
-        CurrentPower = PWR_100mW;
+        analogWrite(GPIO_PIN_RFamp_APC2, 1150);
         break;
     case PWR_250mW:
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC2, 1080); //0-4095 870mV this is actually 200mw
-        CurrentPower = PWR_250mW;
+        analogWrite(GPIO_PIN_RFamp_APC2, 1480);
         break;
     case PWR_500mW:
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC2, 1356); //0-4095 1.093V
-        CurrentPower = PWR_500mW;
+        analogWrite(GPIO_PIN_RFamp_APC2, 2000);
         break;
     case PWR_1000mW:
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC2, 1853); //0-4095 1.493V
-        CurrentPower = PWR_1000mW;
+        analogWrite(GPIO_PIN_RFamp_APC2, 3500);
         break;
+    case PWR_50mW:
     default:
-        CurrentPower = PWR_100mW;
-        analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-        analogWrite(GPIO_PIN_RFamp_APC2, 732);  //0-4095 590mV
+        analogWrite(GPIO_PIN_RFamp_APC2, 950);
+        Power = PWR_50mW;
         break;
     }
 #elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
@@ -337,6 +345,35 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     default:
         Power = PWR_50mW;
         Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
+        break;
+    }
+#elif defined(TARGET_ES900TX)
+    Radio.SetOutputPower(0b0000);
+
+    switch (Power)
+    {
+    case PWR_10mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 41);
+        break;
+    case PWR_25mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 60);
+        break;
+    case PWR_100mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 90);
+        break;
+    case PWR_250mW:
+       dacWrite(GPIO_PIN_RFamp_APC2, 110);
+        break;
+    case PWR_500mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 132);
+        break;
+    case PWR_1000mW:
+        dacWrite(GPIO_PIN_RFamp_APC2, 190);
+        break;
+    case PWR_50mW:
+    default:
+        dacWrite(GPIO_PIN_RFamp_APC2, 73);
+        Power = PWR_50mW;
         break;
     }
 #elif defined(TARGET_RX)
