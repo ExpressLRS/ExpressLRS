@@ -32,6 +32,7 @@
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED 2
+#define GPIO_PIN_BUTTON 0
 
 #elif defined(TARGET_TTGO_LORA_V1_AS_RX)
 
@@ -129,6 +130,8 @@ https://github.com/jaxxzer
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
     #define GPIO_PIN_BUTTON         PC13  // pullup e.g. LOW when pressed
+    /* PB3: RX = HIGH, TX = LOW */
+    #define GPIO_PIN_RX_ENABLE      PB3
 #elif defined(TARGET_R9SLIMPLUS_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
@@ -231,7 +234,7 @@ https://github.com/jaxxzer
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
-#define GPIO_PIN_RFamp_APC2           PA5  //100mW@590mV, 200mW@870mV, 500mW@1.093V, 1W@1.493V
+#define GPIO_PIN_RFamp_APC2           PA5
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS            PB12 // confirmed
@@ -329,7 +332,7 @@ High = Ant2
 #define GPIO_PIN_LED_WS2812         PB6
 #define GPIO_PIN_LED_WS2812_FAST    PB_6
 #define GPIO_PIN_PA_SE2622L_ENABLE  PB11  // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
-#define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin 
+#define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin
 #define GPIO_PIN_BUZZER             PC13
 #define GPIO_PIN_OLED_CS            PC14
 #define GPIO_PIN_OLED_RST           PB12
@@ -509,6 +512,22 @@ Designed by NamimnoRC
 #define GPIO_LED_GREEN_INVERTED 1
 // Unused pins
 #define GPIO_PIN_UART1TX_INVERT PF6
+
+#elif defined(TARGET_ES900TX)
+#define GPIO_PIN_NSS            5
+#define GPIO_PIN_DIO0           26
+#define GPIO_PIN_DIO1           25
+#define GPIO_PIN_MOSI           23
+#define GPIO_PIN_MISO           19
+#define GPIO_PIN_SCK            18
+#define GPIO_PIN_RST            14
+#define GPIO_PIN_RX_ENABLE      13
+#define GPIO_PIN_TX_ENABLE      12
+#define GPIO_PIN_RCSIGNAL_RX    2
+#define GPIO_PIN_RCSIGNAL_TX    2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
+#define GPIO_PIN_LED            27
+#define GPIO_PIN_FAN_EN         17
+#define GPIO_PIN_RFamp_APC2     25
 
 #else
 #error "Unknown target!"
