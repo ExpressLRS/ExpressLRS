@@ -118,12 +118,20 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(8);
+        Radio.SetOutputPower(-15);
         break;
     case PWR_25mW:
+        Radio.SetOutputPower(-10);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(-8);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-5);
+        break;
     default:
-        Radio.SetOutputPower(13);
-        Power = PWR_25mW;
+        Radio.SetOutputPower(-8);
+        Power = PWR_50mW;
         break;
     }
 #elif defined(TARGET_NAMIMNORC_TX)
@@ -401,9 +409,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_500mW:
         Radio.SetOutputPower(0b1000);
         break;
-    case PWR_1000mW:
-        Radio.SetOutputPower(0b1111);
-        break;
     case PWR_50mW:
     default:
         Power = PWR_100mW;
@@ -414,26 +419,26 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(-15);
+        Radio.SetOutputPower(-18);
         break;
     case PWR_25mW:
-        Radio.SetOutputPower(-11);
+        Radio.SetOutputPower(-15);
         break;
     case PWR_50mW:
-        Radio.SetOutputPower(-10);
+        Radio.SetOutputPower(-13);
         break;
     case PWR_100mW:
         Radio.SetOutputPower(-9);
         break;
     case PWR_250mW:
-        Radio.SetOutputPower(-3);
+        Radio.SetOutputPower(-4);
         break;
     case PWR_500mW:
-        Radio.SetOutputPower(13);
+        Radio.SetOutputPower(3);
         break;
     default:
         Power = PWR_50mW;
-        Radio.SetOutputPower(-10);
+        Radio.SetOutputPower(-13);
         break;
     }
 #elif defined(TARGET_RX)
