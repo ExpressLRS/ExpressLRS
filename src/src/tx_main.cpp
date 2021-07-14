@@ -133,7 +133,7 @@ uint8_t baseMac[6];
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
-static boolean dynamic_power_updated;
+static bool dynamic_power_updated;
 #endif
 
 // Assume this function is called inside loop(). Heavy functions goes here.
@@ -273,7 +273,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
+            #ifdef USE_DYNAMIC_POWER
             dynamic_power_updated = true;
+            #endif
             break;
 
         #ifdef ENABLE_TELEMETRY
@@ -597,9 +599,12 @@ void HandleUpdateParameter()
     break;
 
   case 3:
-    Serial.print("Request Power: ");
-    Serial.println(crsf.ParameterUpdateData[1]);
-    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+    {
+      Serial.print("Request Power: ");
+      PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
+      Serial.println(newPower, DEC);
+      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+    }
     break;
 
   case 4:
