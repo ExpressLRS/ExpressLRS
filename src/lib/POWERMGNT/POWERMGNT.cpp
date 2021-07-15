@@ -124,8 +124,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-3);
         break;
     case PWR_100mW:
-        Radio.SetOutputPower(1);
-        break;
     default:
         Radio.SetOutputPower(1);
         Power = PWR_100mW;
@@ -397,16 +395,13 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(TARGET_TX_BETAFPV_900_V1)
     switch (Power)
     {
-    case PWR_100mW:
-        Radio.SetOutputPower(0b0000);
-        break;
     case PWR_250mW:
         Radio.SetOutputPower(0b0011);
         break;
     case PWR_500mW:
         Radio.SetOutputPower(0b1000);
         break;
-    case PWR_50mW:
+    case PWR_100mW:
     default:
         Power = PWR_100mW;
         Radio.SetOutputPower(0b0000);
@@ -421,9 +416,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_25mW:
         Radio.SetOutputPower(-15);
         break;
-    case PWR_50mW:
-        Radio.SetOutputPower(-13);
-        break;
     case PWR_100mW:
         Radio.SetOutputPower(-9);
         break;
@@ -433,6 +425,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_500mW:
         Radio.SetOutputPower(3);
         break;
+    case PWR_50mW:    
     default:
         Power = PWR_50mW;
         Radio.SetOutputPower(-13);
@@ -490,16 +483,14 @@ void POWERMGNT::handleCyclePower()
 {
     switch (CurrentPower)
     {
-      case PWR_100mW:
+    case PWR_100mW:
         setPower(PWR_250mW);
         break;
-      case PWR_250mW:
+    case PWR_250mW:
         setPower(PWR_500mW);
         break;
-      case PWR_500mW:
-        setPower(PWR_100mW);
-        break;
-      default:
+    case PWR_500mW:   
+    default:
         setPower(PWR_100mW);
         break;
     }
