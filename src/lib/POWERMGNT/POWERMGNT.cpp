@@ -488,7 +488,7 @@ void POWERMGNT::powerLedInit()
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 void POWERMGNT::handleCyclePower()
 {
-    switch(CurrentPower)
+    switch (CurrentPower)
     {
       case PWR_100mW:
         setPower(PWR_250mW);

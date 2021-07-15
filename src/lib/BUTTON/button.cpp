@@ -119,7 +119,7 @@ void button::sampleButton()
         }
     }
 
-    if(shortPressTime == 3)
+    if (shortPressTime == 3)
     {
         Serial.println("button triple pressed");
         buttonTriplePress();
