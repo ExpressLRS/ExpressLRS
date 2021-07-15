@@ -690,7 +690,7 @@ void setup()
 #endif
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-  button.buttonShortPress = &EnterBindingMode;
+  button.buttonTriplePress = &EnterBindingMode;
   button.buttonLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
