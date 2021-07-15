@@ -118,20 +118,17 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        Radio.SetOutputPower(-15);
-        break;
-    case PWR_25mW:
         Radio.SetOutputPower(-10);
         break;
     case PWR_50mW:
-        Radio.SetOutputPower(-8);
+        Radio.SetOutputPower(-3);
         break;
     case PWR_100mW:
-        Radio.SetOutputPower(-5);
+        Radio.SetOutputPower(1);
         break;
     default:
-        Radio.SetOutputPower(-8);
-        Power = PWR_50mW;
+        Radio.SetOutputPower(1);
+        Power = PWR_100mW;
         break;
     }
 #elif defined(TARGET_NAMIMNORC_TX)
