@@ -24,17 +24,16 @@ Requirements:
 1. 0 every n hops
 2. No two repeated channels
 3. Equal occurance of each (or as even as possible) of each channel
-4. Pesudorandom
+4. Pseudorandom
 
 Approach:
-  Initialise an array of flags indicating which channels have not yet been assigned and a counter of how many channels are available
-  Iterate over the FHSSsequence array using index
-    if index is a multiple of SYNC_INTERVAL assign the sync channel index (0)
-    otherwise, generate a random number between 0 and the number of channels left to be assigned
-    find the index of the nth remaining channel
-    if the index is a repeat, generate a new random number
-    if the index is not a repeat, assing it to the FHSSsequence array, clear the availability flag and decrement the available count
-    if there are no available channels left, reset the flags array and the count
+  Initialise an array of channels are available
+
+  While there are spaces left in the FHSSsequence array
+    randomise the array of channels by iterating through and swapping each
+    entry with another random entry. Skip the first entry, leaving it as
+    the sync channel index (0).
+    copy the array the the FHSS sequence, advance FHSS sequence offset
 */
 void FHSSrandomiseFHSSsequence(long seed)
 {
@@ -55,87 +54,50 @@ void FHSSrandomiseFHSSsequence(long seed)
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-    Serial.print("Number of FHSS frequencies =");
+    Serial.print("Number of FHSS frequencies = ");
     Serial.println(NR_FHSS_ENTRIES);
 
     rngSeed(seed);
 
-    uint8_t isAvailable[NR_FHSS_ENTRIES];
+    unsigned int sequencePosition = 0;
 
-    resetIsAvailable(isAvailable);
-
-    // Fill the FHSSsequence with channel indices
-    // The 0 index is special - the 'sync' channel. The sync channel appears every
-    // syncInterval hops. The other channels are randomly distributed between the
-    // sync channels
-    const int SYNC_INTERVAL = NR_FHSS_ENTRIES;
-
-    int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
-    unsigned int prev = 0;           // needed to prevent repeats of the same index
-
-    // for each slot in the sequence table
-    for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++)
+    uint8_t randomisedEntries[NR_FHSS_ENTRIES];
+    // initialize array
+    for (unsigned int i = 0; i < NR_FHSS_ENTRIES; i++)
     {
-        if (i % SYNC_INTERVAL == 0)
-        {
-            // assign sync channel 0
-            FHSSsequence[i] = 0;
-            prev = 0;
-        }
-        else
-        {
-            // pick one of the available channels. May need to loop to avoid repeats
-            unsigned int index;
-            do
-            {
-                int c = rngN(nLeft); // returnc 0<c<nLeft
-                // find the c'th entry in the isAvailable array
-                // can skip 0 as that's the sync channel and is never available for normal allocation
-                index = 1;
-                int found = 0;
-                while (index < NR_FHSS_ENTRIES)
-                {
-                    if (isAvailable[index])
-                    {
-                        if (found == c)
-                            break;
-                        found++;
-                    }
-                    index++;
-                }
-                if (index == NR_FHSS_ENTRIES)
-                {
-                    // This should never happen
-                    Serial.print("FAILED to find the available entry!\n");
-                    // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
-                    // Use the sync channel
-                    index = 0;
-                    break;
-                }
-            } while (index == prev); // can't use index if it repeats the previous value
+        randomisedEntries[i] = i; // assign the value to the sequence array
+    }
 
-            FHSSsequence[i] = index; // assign the value to the sequence array
-            isAvailable[index] = 0;  // clear the flag
-            prev = index;            // remember for next iteration
-            nLeft--;                 // reduce the count of available channels
-            if (nLeft == 0)
+    while (sequencePosition < NR_SEQUENCE_ENTRIES) {
+
+        // randomise the next batch of entries by swapping, but skip the first entry
+        for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
+        {
+            int rand = rngN(NR_FHSS_ENTRIES-1)+1; // random number between 1 and NR_FHSS_ENTRIES
+            uint8_t temp = randomisedEntries[i];
+            randomisedEntries[i] = randomisedEntries[rand]; // assign the value to the sequence array
+            randomisedEntries[rand] = temp;
+        }
+
+        // set FHSS Sequence by copying the randomised array entries over
+        for (unsigned int i = 0; i < NR_FHSS_ENTRIES && sequencePosition+i < NR_SEQUENCE_ENTRIES; i++)
+        {
+            FHSSsequence[sequencePosition+i] = randomisedEntries[i]; // assign the value to the sequence array
+
+            // output FHSS sequence
+            Serial.print(FHSSsequence[sequencePosition+i]);
+            if ((sequencePosition+i + 1) % 10 == 0)
             {
-                // we've assigned all of the channels, so reset for next cycle
-                resetIsAvailable(isAvailable);
-                nLeft = NR_FHSS_ENTRIES - 1;
+                Serial.println();
             }
-        }
+            else
+            {
+                Serial.print(" ");
+            }
 
-        Serial.print(FHSSsequence[i]);
-        if ((i + 1) % 10 == 0)
-        {
-            Serial.println();
         }
-        else
-        {
-            Serial.print(" ");
-        }
-    } // for each element in FHSSsequence
+        sequencePosition += NR_FHSS_ENTRIES;
+    }
 
     Serial.println();
 }
