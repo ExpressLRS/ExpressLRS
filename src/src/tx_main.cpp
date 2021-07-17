@@ -407,9 +407,6 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
-#if defined(TARGET_NAMIMNORC_TX)
-  WS281BsetLED(0xff, 0, 0);
-#endif
 }
 
 void UARTconnected()
@@ -434,9 +431,6 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
-#if defined(TARGET_NAMIMNORC_TX)
-  WS281BsetLED(0, 0xff, 0);
-#endif
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()

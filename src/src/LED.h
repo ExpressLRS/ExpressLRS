@@ -61,7 +61,7 @@ void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RG
 
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
-#if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || (defined(WS2812_LED_IS_USED) && !defined(TARGET_NAMIMNORC_TX))
+#if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || defined(WS2812_LED_IS_USED)
     uint32_t color = rate_colors[rate];
     if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
     {
