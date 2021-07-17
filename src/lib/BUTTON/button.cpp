@@ -3,9 +3,11 @@
 void inline button::nullCallback(void) {}
 void (*button::buttonShortPress)() = &nullCallback; // callbacks
 void (*button::buttonLongPress)() = &nullCallback;  // callbacks
+void (*button::buttonTriplePress)() = &nullCallback;  // callbacks
 
 uint32_t button::buttonLastPressed = 0;
 uint32_t button::buttonLastPressedLong = 0;
+uint32_t button::buttonLastPressedShort = 0;
 
 bool button::buttonPrevState = true;   //active high, therefore true as default.
 bool button::buttonIsDown = false;     //is the button currently being held down?
@@ -14,6 +16,9 @@ bool button::buttonIsDownLong = false; //is the button currently being held down
 uint32_t button::debounceDelay = 30;      //how long the switch must change state to be considered
 uint32_t button::longPressDelay = 500;    //how long the switch must hold state to be considered a long press
 uint32_t button::longPressInterval = 500; //how long the switch must hold long state to be reapeated.
+uint32_t button::triplePressInterval = 500; //how long the switch short press time to be recounted
+
+uint8_t button::shortPressTime = 0;
 
 int button::buttonPin = -1;
 bool button::activeHigh = true;
@@ -50,6 +55,8 @@ void button::sampleButton()
             {
                 Serial.println("button short pressed");
                 buttonShortPress();
+                buttonLastPressedShort = now;
+                shortPressTime++;
             }
             buttonIsDown = false; //button has been released at some point
             buttonIsDownLong = false;
@@ -63,6 +70,8 @@ void button::sampleButton()
             {
                 Serial.println("button short pressed");
                 buttonShortPress();
+                buttonLastPressedShort = now;
+                shortPressTime++;
             }
             buttonIsDown = false; //button has been released at some point
             buttonIsDownLong = false;
@@ -108,6 +117,17 @@ void button::sampleButton()
             buttonIsDownLong = true;
             buttonLongPress();
         }
+    }
+
+    if (shortPressTime == 3)
+    {
+        Serial.println("button triple pressed");
+        buttonTriplePress();
+        shortPressTime = 0;    
+    }
+    if ((millis() - buttonLastPressedShort) > triplePressInterval)
+    {
+        shortPressTime = 0;
     }
 
     buttonPrevState = currState;
