@@ -42,10 +42,6 @@ SX1280Driver Radio;
 button button;
 #endif
 
-#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
-#include "STM32F3_WS2812B_LED.h"
-#endif
-
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 //// CONSTANTS ////

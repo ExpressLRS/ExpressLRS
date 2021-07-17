@@ -18,6 +18,10 @@ static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_L
 #endif
 #endif
 
+#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
+#include "STM32F3_WS2812B_LED.h"
+#endif
+
 static uint32_t colors[8] = {
     0xFFFFFF,     // white
     0xFF00FF,     // magenta
@@ -109,6 +113,10 @@ void startupLEDs()
         WS281BsetLED(colors[RATE_ENUM_MAX-i-1]);
         delay(100);
     }
+    #if WS2812_LED_IS_USED
+    WS281BsetLED(0, 0, 0);
+    #else
     WS281BsetLED(0);
+    #endif
 #endif
 }
