@@ -130,7 +130,7 @@ void BeginWebUpdate(void)
   WiFi.disconnect();   //added to start with the wifi off, avoid crashing
   WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
   WiFi.setOutputPower(13);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11B);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   wifi_station_set_hostname(myHostname);
   delay(500);
   WiFi.softAPConfig(apIP, apIP, netMsk);
