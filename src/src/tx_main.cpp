@@ -28,6 +28,10 @@ SX1280Driver Radio;
 #endif
 #include "stubborn_sender.h"
 
+#ifdef HAS_OLED
+#include "OLED.h"
+#endif
+
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -71,6 +75,10 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+#if defined(HAS_OLED)
+OLED OLED;
+char commitStr[7] = "commit";
+#endif
 
 volatile uint8_t NonceTX;
 
@@ -261,9 +269,12 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
         case ELRS_TELEMETRY_TYPE_LINK:
-            // RSSI received is signed, proper polarity (negative value = -dBm)
-            crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-            crsf.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
+            // Antenna is the high bit in the RSSI_1 value
+            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
+            // RSSI received is signed, inverted polarity (positive value = -dBm)
+            // OpenTX's value is signed and will display +dBm and -dBm properly
+            crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
+            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
             crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
@@ -586,6 +597,11 @@ void HandleUpdateParameter()
       Serial.print("Request AirRate: ");
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+    #endif
     }
     break;
 
@@ -595,6 +611,11 @@ void HandleUpdateParameter()
       Serial.print("Request TLM interval: ");
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
+    #endif
     }
     break;
 
@@ -604,6 +625,12 @@ void HandleUpdateParameter()
       PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
       Serial.println(newPower, DEC);
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+      
+      #if defined(HAS_OLED)
+       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
+                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+      #endif
     }
     break;
 
@@ -642,6 +669,7 @@ void HandleUpdateParameter()
   default:
     break;
   }
+
   UpdateParamReq = false;
   if (config.IsModified())
   {
@@ -716,6 +744,10 @@ void setup()
   Serial.setRx(PA3);
 #endif
   Serial.begin(460800);
+#if defined(HAS_OLED)
+  OLED.displayLogo();
+  OLED.setCommitString(thisCommit, commitStr);
+#endif
 
   /**
    * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
@@ -869,10 +901,16 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
+  #if defined(HAS_OLED)
+    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                  OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                  OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+  #endif
 }
 
 void loop()
