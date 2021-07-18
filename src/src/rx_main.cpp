@@ -987,6 +987,10 @@ static void HandleUARTin()
         {
             reset_into_bootloader();
         }
+        if (telemetry.ShouldCallEnterBind())
+        {
+            EnterBindingMode();
+        }
     }
 }
 
@@ -1367,13 +1371,23 @@ void reset_into_bootloader(void)
 
 void EnterBindingMode()
 {
-    if ((connectionState == connected) || InBindingMode || webUpdateMode) {
+    if ((connectionState == connected) || InBindingMode) {
         // Don't enter binding if:
         // - we're already connected
         // - we're already binding
-        // - we're in web update mode
         Serial.println("Cannot enter binding mode!");
         return;
+    }
+    if (webUpdateMode) {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        wifiOff();
+        webUpdateMode = false;
+        Radio.RXdoneCallback = &RXdoneISR;
+        Radio.TXdoneCallback = &TXdoneISR;
+        Radio.Begin();
+        crsf.Begin();
+        hwTimer.resume();
+#endif
     }
 
     // Set UID to special binding values
