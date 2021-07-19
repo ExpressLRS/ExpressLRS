@@ -34,7 +34,10 @@ def get_git_version(env):
             try:
                 ver = git_repo.git.describe("--tags", "--exact-match")
             except git.exc.GitCommandError:
-                ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
+                try:
+                    ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
+                except git.exc.GitCommandError:
+                    ver = "unknown"
             hash = git_repo.git.rev_parse("--short", "HEAD")
         except git.InvalidGitRepositoryError:
             pass
