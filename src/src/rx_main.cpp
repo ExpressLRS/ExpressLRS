@@ -2,7 +2,7 @@
 #include "common.h"
 #include "LowPassFilter.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)
@@ -293,10 +293,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             #endif
             Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
-            // OpenTX RSSI as -dBm is fine and supports +dBm values as well
-            // but the value in linkstatistics is "positivized" (inverted polarity)
-            Radio.TXdataBuffer[2] = -crsf.LinkStatistics.uplink_RSSI_1;
-            Radio.TXdataBuffer[3] = -crsf.LinkStatistics.uplink_RSSI_2;
+            // The value in linkstatistics is "positivized" (inverted polarity)
+            // and must be inverted on the TX side. Positive values are used
+            // so save a bit to encode which antenna is in use
+            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
+            Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
             Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
             Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
             Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
@@ -986,6 +987,10 @@ static void HandleUARTin()
         {
             reset_into_bootloader();
         }
+        if (telemetry.ShouldCallEnterBind())
+        {
+            EnterBindingMode();
+        }
     }
 }
 
@@ -1139,6 +1144,8 @@ void setup()
     Serial.println("Setting 915MHz Mode");
 #elif defined Regulatory_Domain_EU_868
     Serial.println("Setting 868MHz Mode");
+#elif defined Regulatory_Domain_IN_866
+    Serial.println("Setting 866MHz Mode");
 #elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
     Serial.println("Setting 433MHz Mode");
 #elif defined Regulatory_Domain_ISM_2400
@@ -1366,13 +1373,23 @@ void reset_into_bootloader(void)
 
 void EnterBindingMode()
 {
-    if ((connectionState == connected) || InBindingMode || webUpdateMode) {
+    if ((connectionState == connected) || InBindingMode) {
         // Don't enter binding if:
         // - we're already connected
         // - we're already binding
-        // - we're in web update mode
         Serial.println("Cannot enter binding mode!");
         return;
+    }
+    if (webUpdateMode) {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        wifiOff();
+        webUpdateMode = false;
+        Radio.RXdoneCallback = &RXdoneISR;
+        Radio.TXdoneCallback = &TXdoneISR;
+        Radio.Begin();
+        crsf.Begin();
+        hwTimer.resume();
+#endif
     }
 
     // Set UID to special binding values

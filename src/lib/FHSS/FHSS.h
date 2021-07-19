@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280Driver.h"
@@ -20,8 +20,10 @@
 #define Regulatory_Domain_Index 5
 #elif defined Regulatory_Domain_ISM_2400
 #define Regulatory_Domain_Index 6
-#else
+#elif defined Regulatory_Domain_IN_866
 #define Regulatory_Domain_Index 7
+#else
+#define Regulatory_Domain_Index 8
 #endif
 
 extern volatile uint8_t FHSSptr;
@@ -88,6 +90,19 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(868525000), // Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
     FREQ_HZ_TO_REG_VAL(869050000),
     FREQ_HZ_TO_REG_VAL(869575000)};
+#elif defined Regulatory_Domain_IN_866
+/**
+ * India currently delicensed the 865-867 MHz band with a maximum of 1W Transmitter power,
+ * 4Watts Effective Radiated Power and 200Khz carrier bandwidth as per
+ * https://dot.gov.in/sites/default/files/Delicensing%20in%20865-867%20MHz%20band%20%5BGSR%20564%20%28E%29%5D_0.pdf .
+ * There is currently no mention of Direct-sequence spread spectrum,
+ * So these frequencies are a subset of Regulatory_Domain_EU_868 frequencies.
+ */
+const uint32_t FHSSfreqs[] = {
+    FREQ_HZ_TO_REG_VAL(865375000),
+    FREQ_HZ_TO_REG_VAL(865900000),
+    FREQ_HZ_TO_REG_VAL(866425000),
+    FREQ_HZ_TO_REG_VAL(866950000)};
 #elif defined Regulatory_Domain_EU_433
 /* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
