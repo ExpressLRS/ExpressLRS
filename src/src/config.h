@@ -3,6 +3,9 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
+extern const unsigned char target_name[];
+extern const uint8_t target_name_size;
+
 #define TX_CONFIG_VERSION   1
 #define RX_CONFIG_VERSION   1
 #define UID_LEN             6
