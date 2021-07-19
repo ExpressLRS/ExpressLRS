@@ -7,7 +7,7 @@ SX1280Driver *SX1280Driver::instance = NULL;
 
 //DEBUG_SX1280_OTA_TIMING
 
-/* Steps for startup 
+/* Steps for startup
 
 1. If not in STDBY_RC mode, then go to this mode by sending the command:
 SetStandby(STDBY_RC)
@@ -57,7 +57,7 @@ bool SX1280Driver::Begin()
     Serial.print("Read Vers: ");
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
     Serial.println(firmwareRev);
-    if ((firmwareRev == 0) || (firmwareRev == 65536))
+    if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
         return false;
@@ -287,7 +287,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     endTX = micros();
 #endif
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    
+
 #ifdef DEBUG_SX1280_OTA_TIMING
     Serial.print("TOA: ");
     Serial.println(endTX - beginTX);
