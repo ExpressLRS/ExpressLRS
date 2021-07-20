@@ -14,6 +14,8 @@ function get_mode() {
                 document.getElementById('apmode').style.display = 'block';
                 if (data.ssid) {
                     document.getElementById('homenet').textContent = data.ssid;
+                } else {
+                    document.getElementById('connect').style.display = 'none';
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
@@ -191,11 +193,20 @@ function progressHandler(event) {
 function completeHandler(event) {
     _("status").innerHTML = "";
     _("progressBar").value = 0;
-    cuteAlert({
-      type: "success",
-      title: "Update Succeeded",
-      message: event.target.responseText
-    });
+    var data = JSON.parse(event.target.responseText);
+    if (data.status === 'ok') {
+        cuteAlert({
+            type: 'success',
+            title: "Update Succeeded",
+            message: data.msg
+        });
+    } else {
+        cuteAlert({
+            type: 'error',
+            title: "Update Failed",
+            message: data.msg
+        });
+    }
 }
 
 function errorHandler(event) {
@@ -223,7 +234,7 @@ _('upload_form').addEventListener('submit', (e) => {
     uploadFile();
 });
 
-function callback(title, msg, url) {
+function callback(title, msg, url, getdata) {
     return function(e) {
         e.stopPropagation();
         e.preventDefault();
@@ -247,14 +258,18 @@ function callback(title, msg, url) {
             }
         };
         xmlhttp.open("POST", url, true);
-        xmlhttp.send();
+        if (getdata) data = getdata();
+        else data = null;
+        xmlhttp.send(data);
     }
 }
 
-_('sethome').addEventListener('submit', callback("Set Home Network", "An error occurred setting the home network", "/sethome"));
-_('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect"));
-_('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access"));
-_('forget').addEventListener('click', callback("Forget Home Network",  "An error occurred forgetting the home network", "/forget"));
+_('sethome').addEventListener('submit', callback("Set Home Network", "An error occurred setting the home network", "/sethome", function() {
+    return new FormData(_('sethome'));
+}));
+_('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
+_('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
+_('forget').addEventListener('click', callback("Forget Home Network",  "An error occurred forgetting the home network", "/forget", null));
 
 //=========================================================
 

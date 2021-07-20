@@ -153,7 +153,7 @@ static void sendResponse(const String &msg, WiFiMode_t mode) {
   server.send(200, "text/plain", msg);
   server.client().stop();
   changeTime = millis();
-  changeMode = WIFI_AP;
+  changeMode = mode;
 }
 
 static void WebUpdateAccessPoint(void)
@@ -166,7 +166,7 @@ static void WebUpdateAccessPoint(void)
 static void WebUpdateConnect(void)
 {
   Serial.println("Connecting to home network");
-  String msg = String("Connected to network '") + ssid + "', connect to http://elrs_rx.local from a browser on that network";
+  String msg = String("Connected to network '") + config.GetSSID() + "', connect to http://elrs_rx.local from a browser on that network";
   sendResponse(msg, WIFI_STA);
 }
 
@@ -224,6 +224,9 @@ static void startWifi() {
   WiFi.setOutputPower(13);
   WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   WiFi.setHostname(myHostname);
+  WiFi.softAPConfig(apIP, apIP, netMsk);
+  WiFi.softAP(ssid, password);
+  WiFi.scanNetworks(true);
   WiFi.onStationModeGotIP([](const WiFiEventStationModeGotIP&){
     Serial.println("Connected as Wifi station");
   });
@@ -280,16 +283,16 @@ void BeginWebUpdate(void)
             if (Update.hasError()) {
               StreamString p = StreamString();
               Update.printError(p);
-              server.send(200, "text/plain", p.c_str());
+              server.send(200, "application/json", "{\"status\": \"error\", \"msg\": \"" + p + "\"}");
             } else {
               server.sendHeader("Connection", "close");
-              server.send(200, "text/plain", "Update complete, please wait for LED to start blinking before powering off receiver");
+              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering of the module\"}");
               server.client().stop();
               delay(100);
               ESP.restart();
             }
           } else {
-            server.send(200, "text/plain", "Wrong firmware uploaded, does not match Receiver type");
+            server.send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Wrong firmware uploaded, does not match Transmitter module type\"}");
           }
       },
     []() {
