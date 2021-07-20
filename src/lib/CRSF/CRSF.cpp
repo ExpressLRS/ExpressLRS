@@ -103,6 +103,7 @@ void CRSF::Begin()
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
+    CRSF::Port.setRxBufferSize(1024);
     flush_port_input();
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
