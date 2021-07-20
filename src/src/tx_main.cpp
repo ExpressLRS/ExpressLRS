@@ -48,15 +48,6 @@ SX1280Driver Radio;
 button button;
 #endif
 
-#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
-uint8_t LEDfadeDiv;
-uint8_t LEDfade;
-bool LEDfadeDir;
-constexpr uint32_t LEDupdateInterval = 100;
-uint32_t LEDupdateCounterMillis;
-#include "STM32F3_WS2812B_LED.h"
-#endif
-
 #define DEBUG_SUPPRESS
 
 //// CONSTANTS ////
@@ -656,37 +647,42 @@ void HandleUpdateParameter()
       break;
     }
     case 1:
-      if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
+      if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2])))
       {
-#ifndef DEBUG_SUPPRESS
+      #ifndef DEBUG_SUPPRESS
         Serial.print("Request AirRate: ");
-        Serial.println(crsf.ParameterUpdateData[1]);
-        config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+        Serial.println(crsf.ParameterUpdateData[2]);
+      #endif
+        config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]));
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                          OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]), 
                           OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
       #endif
       }
       break;
 
   case 2:
-    if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
+    if ((crsf.ParameterUpdateData[2] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[2] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
+    #ifndef DEBUG_SUPPRESS
       Serial.print("Request TLM interval: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+      Serial.println(crsf.ParameterUpdateData[2]);
+    #endif
+      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]), commitStr);
     #endif
     }
     break;
 
   case 3:
     {
+      #ifndef DEBUG_SUPPRESS
       Serial.print("Request Power: ");
+      #endif
       PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
       Serial.println(newPower, DEC);
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
