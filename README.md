@@ -10,7 +10,7 @@ If you would like to support the development of ExpressLRS please feel free to m
 [![Donate](https://img.shields.io/badge/Donate-PayPal-253B80.svg)](https://www.paypal.com/donate?hosted_button_id=FLHGG9DAFYQZU)
 
 ## Quick Start Guide
-If you have hardware that you want to flash, please refer to our guides on the [wiki](https://github.com/ExpressLRS/ExpressLRS/wiki/), and our [FAQ](https://github.com/ExpressLRS/ExpressLRS/wiki/FAQ)
+If you have hardware that you want to flash, please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
 
 ## High Performance LoRa Radio Link
 
@@ -35,11 +35,7 @@ ExpressLRS aims to achieve the best possible link performance for both latency a
 **2.4GHz Comparison**
 ![RangeVsPacketRate](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/pktrate_vs_sens.png)
 
-More information can be found in the [wiki](https://github.com/ExpressLRS/ExpressLRS/wiki).
-
-## Starting Out
-
-After taking a look at the [supported Hardware](https://github.com/ExpressLRS/ExpressLRS/wiki/Supported-Hardware) and making sure you have the required hardware, the [Quick Start Guide](https://github.com/ExpressLRS/ExpressLRS/wiki/Toolchain-and-Git-Setup) is written to walk through the process of flashing ELRS for the first time
+More information can be found on the [website](https://www.expresslrs.org/).
 
 
 ## Supported Hardware
@@ -55,6 +51,7 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [TTGO LoRa V1/V2](http://www.lilygo.cn/products.aspx?TypeId=50003&fid=t3:50003:3) (Full Support, V2 recommended w/50 mW power limit)
     - [Namimno Voyager 900 TX](http://www.namimno.com/product.html) (Full Support off the shelf)
     - [HappyModel ES915TX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
+    - [HappyModel ES900TX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - DIY Module (Full Support, 50mW limit, limited documentation)
 - **RX**
     - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
@@ -64,7 +61,8 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [Jumper R900 mini](https://www.jumper-b2b.com/jumper-r900-mini-receiver-900mhz-long-range-rx-p0083.html) (Full Support, only flashable via STLink, Bad Stock antenna)
     - [DIY mini RX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/900MHz/RX_Mini_v1.1) (Full Support, supports WiFi Updates)
     - [DIY 20x20 RX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/900MHz/RX_20x20_0805_SMD) (Full Support, supports WiFi Updates)
-     - [HappyModel ES915RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
+    - [HappyModel ES915RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)    
+    - [HappyModel ES900RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - [Namimno Voyager 900 RX](http://www.namimno.com/product.html) (Full Support off the shelf)
 
 ### 2.4 GHz Hardware:
@@ -87,8 +85,6 @@ After taking a look at the [supported Hardware](https://github.com/ExpressLRS/Ex
     - [DIY Nano Ceramic RX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/RX_Nano_Ceramic) (Full Support, CRSF Nano Footprint, WiFi Updating, Built in antenna)
     - [HappyModel PP RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, STM32 Based)
     - [HappyModel EP1/EP2 RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, ESP8285 Based, WiFi Updating)
-
-**For a more exhaustive list refer to the [Supported Hardware](https://github.com/ExpressLRS/ExpressLRS/wiki/Supported-Hardware) page on the wiki**
 
 ## Long Range Competition
 One of the most frequently asked questions that gets asked by people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
@@ -118,8 +114,6 @@ Anyone can add an entry to the table, and entries should include the:
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |
 | 3Km | 2.4G (ceramic chip antenna RX) | 500HZ | 100mW | No | Spec | https://www.youtube.com/watch?v=kfa6ugX46n8 |
 | 2.28Km | 900M | 50HZ | 10mW | No | Mike Malagoli | https://www.youtube.com/watch?v=qi4OygUAZxA&t=75s |
-
-Check the [wiki page](https://github.com/ExpressLRS/ExpressLRS/wiki/Range-Competition) for previous leaders!
 
 
 ## Legal Stuff
