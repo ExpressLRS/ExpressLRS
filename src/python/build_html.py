@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import subprocess
 
@@ -47,7 +48,7 @@ def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
         data = file.read()
     if mainfile.endswith('.html'):
-        data = html_minifier.html_minify(data).replace('@VERSION@', get_git_version(env))
+        data = html_minifier.html_minify(data).replace('@VERSION@', get_git_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
     if mainfile.endswith('.css'):
         data = rcssmin.cssmin(data)
     if mainfile.endswith('.js'):

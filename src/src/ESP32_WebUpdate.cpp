@@ -282,7 +282,7 @@ void BeginWebUpdate()
             if (Update.hasError()) {
               StreamString p = StreamString();
               Update.printError(p);
-              server.send(200, "application/json", "{\"status\": \"error\", \"msg\": \"" + p + "\"}");
+              server.send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
             } else {
               server.sendHeader("Connection", "close");
               server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering of the module\"}");
