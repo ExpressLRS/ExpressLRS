@@ -72,7 +72,7 @@ ELRS_EEPROM eeprom;
 TxConfig config;
 #if defined(HAS_OLED)
 OLED OLED;
-char commitStr[7] = "commit";
+char commitStr[7] = {LATEST_COMMIT};
 #endif
 
 volatile uint8_t NonceTX;
@@ -836,7 +836,7 @@ void setup()
   Serial.begin(460800);
 #if defined(HAS_OLED)
   OLED.displayLogo();
-  OLED.setCommitString(thisCommit, commitStr);
+//  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
   startupLEDs();
