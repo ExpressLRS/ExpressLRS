@@ -620,7 +620,7 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void HandleUpdateParameter()
 {
-  if (millis() > LuaLastUpdated + OPENTX_LUA_UPDATE_INTERVAL)
+  if ((millis() > LuaLastUpdated + OPENTX_LUA_UPDATE_INTERVAL) && (allLUAparamSent))
   {
     sendLuaParams();
     LuaLastUpdated = millis();
