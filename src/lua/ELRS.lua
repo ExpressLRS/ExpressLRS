@@ -74,9 +74,9 @@ local RFfreq = {
     editable = false,
     name = 'RF Freq',
     selected = 99,
-    list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM'},
-    values = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-    max_allowed = 6,
+    list = {'915 AU', '915 FCC', '868 EU', '433 AU', '433 EU', '2.4G ISM', '866 IN'},
+    values = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+    max_allowed = 7,
 }
 
 local function binding(item, event)

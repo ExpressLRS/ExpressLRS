@@ -1,7 +1,8 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
+#include "config.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 extern SX127xDriver Radio;
 #endif
@@ -10,6 +11,9 @@ extern SX127xDriver Radio;
 #include "SX1280Driver.h"
 extern SX1280Driver Radio;
 #endif
+
+uint8_t target_seen = 0;
+uint8_t target_pos = 0;
 
 #define STASSID "ExpressLRS RX"
 #define STAPSK "expresslrs"
@@ -26,8 +30,6 @@ IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 //MDNSResponder mdns;
 ESP8266WebServer server(80);
-
-ESP8266HTTPUpdateServer httpUpdater;
 
 /** Is this an IP? */
 boolean isIp(String str)
@@ -152,12 +154,60 @@ void BeginWebUpdate(void)
   server.on("/fwlink", WebUpdateHandleRoot);
   server.onNotFound(WebUpdateHandleNotFound);
 
-  // if (mdns.begin(myHostname, apIP))
-  // {
-  //   mdns.addService("http", "tcp", 80);
-  //   mdns.update();
-  // }
-  httpUpdater.setup(&server);
+    // handler for the /update form POST (once file upload finishes)
+  server.on("/update", HTTP_POST, [&](){
+      server.client().setNoDelay(true);
+      server.sendHeader("Connection", "close");
+      server.send(200, "text/plain", target_seen ? ((Update.hasError()) ? "FAIL" : "OK") : "WRONG FIRMWARE");
+      delay(100);
+      server.client().stop();
+      ESP.restart(); },
+    []() {
+      HTTPUpload& upload = server.upload();
+      if(upload.status == UPLOAD_FILE_START){
+          Serial.setDebugOutput(true);
+        WiFiUDP::stopAll();
+        Serial.printf("Update: %s\n", upload.filename.c_str());
+        uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+        if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
+          Update.printError(Serial);
+        }
+        target_seen = 0;
+        target_pos = 0;
+      } else if(upload.status == UPLOAD_FILE_WRITE){
+        if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
+          Update.printError(Serial);
+        }
+        if (!target_seen) {
+          for (size_t i=0 ; i<upload.currentSize ;i++) {
+            if (upload.buf[i] == target_name[target_pos]) {
+              ++target_pos;
+              if (target_pos >= target_name_size) {
+                target_seen = 1;
+              }
+            }
+            else {
+              target_pos = 0; // Startover
+            }
+          }
+        }
+      } else if(upload.status == UPLOAD_FILE_END){
+        if (target_seen) {
+          if(Update.end(true)){ //true to set the size to the current progress
+            Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+          } else {
+            Update.printError(Serial);
+          }
+        } else {
+          Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
+        }
+        Serial.setDebugOutput(false);
+      } else if(upload.status == UPLOAD_FILE_ABORTED){
+        Serial.println("Update was aborted");
+      }
+      delay(0);
+    });
+
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s in your browser\n", myHostname);
 }

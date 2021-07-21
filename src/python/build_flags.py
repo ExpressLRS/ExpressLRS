@@ -105,6 +105,7 @@ def get_git_sha():
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
+build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", env['PIOENV'].upper()))
 condense_flags()
 
 env['BUILD_FLAGS'] = build_flags
@@ -132,6 +133,9 @@ if fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_915*'):
 
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_868*'):
     sys.stdout.write("\u001b[32mBuilding for SX1276 868EU\n")
+
+elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_IN_866*'):
+    sys.stdout.write("\u001b[32mBuilding for SX1276 866IN\n")
 
 elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_433*'):
     sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")

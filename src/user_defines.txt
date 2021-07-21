@@ -18,6 +18,7 @@
 
 #-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
+#-DRegulatory_Domain_IN_866
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
@@ -65,3 +66,6 @@
 
 # Comment this to disable dynamic TX power management.
 #-DUSE_DYNAMIC_POWER
+
+#If commented out the LED is RGB otherwise GRB
+#-DWS2812_IS_GRB
