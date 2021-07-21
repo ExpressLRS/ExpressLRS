@@ -162,9 +162,9 @@ void DynamicPower_Update()
 
   // =============  RSSI-based power adjustment ==============
   // It is working slowly, suitable for a general long-range flights.
-  int8_t rssi;
+  
   // Get the RSSI from the selected antenna.  
-  rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
+  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
 
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
