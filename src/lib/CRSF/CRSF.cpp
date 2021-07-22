@@ -21,7 +21,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
-#define CHUNK_MAX_NUMBER_OF_BYTES 16
+#define CHUNK_MAX_NUMBER_OF_BYTES 16 //safe number of bytes to not get intterupted between rc packets
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 
@@ -649,7 +649,8 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
-
+    
+    static bool volatile LUAupdateIsPending;
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -657,6 +658,10 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         CRSF::RCdataLastRecv = micros();
         GoodPktsCount++;
         GetChannelDataIn();
+        if (LUAupdateIsPending){
+            LUAupdateIsPending = false;
+            RecvParameterUpdate();
+            }
         return true;
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
@@ -673,7 +678,8 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
-            RecvParameterUpdate();
+            LUAupdateIsPending = true;
+            
             return true;
         }
         Serial.println("Got Other Packet");        

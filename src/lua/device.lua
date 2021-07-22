@@ -486,8 +486,8 @@ local function runDevicePage(event)
     lcd.clear()
     lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
     --lcd.drawText(20,10,"WARNING :", DBLSIZE + BLINK)
-    lcd.drawText(20,20,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
-    lcd.drawText(20,50,"ok",BLINK + INVERS)
+    lcd.drawText(20,15,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
+    lcd.drawText(20,40,"ok",BLINK + INVERS)
 
   else
     lcd.clear()

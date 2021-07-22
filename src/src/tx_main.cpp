@@ -58,7 +58,7 @@ button button;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_PKTCOUNT_INTERVAL_MS 1500LU
+#define LUA_PKTCOUNT_INTERVAL_MS 1000LU
 
 volatile uint8_t allLUAparamSent = 0;  
 
@@ -103,10 +103,8 @@ volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
 //LUA VARIABLES//
-#define OPENTX_LUA_UPDATE_INTERVAL 1000
-uint8_t luaWarningFLags = 0;
+uint8_t luaWarningFLags = 0x01;
 uint8_t suppressedLuaWarningFlags = 0xFF;
-uint32_t LuaLastUpdated = 0;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -495,15 +493,24 @@ uint8_t getLuaWarning(void){ //1 if alarm
 return luaWarningFLags & suppressedLuaWarningFlags;
 }
 
-void sendLuaParams()
+void sendELRSstatus()
 {
   uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
                          (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  crsf.sendELRSparam(luaParams,4, 0x2E,F(" "),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
-}
+  switch(getLuaWarning()){
+    case 0x01:
+      {
+        crsf.sendELRSparam(luaParams,4, 0x2E,F("beta"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+        break;
+      }
+    default:
+      crsf.sendELRSparam(luaParams,4, 0x2E,F(" "),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+      break;
+  }
+  }
 
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate));
@@ -568,6 +575,7 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
 
       default: //ID 1
       {
+        sendELRSstatus();
         sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
         break;
       }
@@ -605,11 +613,7 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   //inital state variables, maybe move elsewhere?
-  for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
-  {
-    sendLuaParams();
-    delay(100);
-  }
+    delay(200);
   hwTimer.resume();
 }
 
@@ -620,10 +624,9 @@ void ICACHE_RAM_ATTR ParamUpdateReq()
 
 void HandleUpdateParameter()
 {
-  if ((millis() > LuaLastUpdated + OPENTX_LUA_UPDATE_INTERVAL) && (allLUAparamSent))
-  {
-    sendLuaParams();
-    LuaLastUpdated = millis();
+  if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
+      LUAfieldReported = millis();
+      updateLUApacketCount();
   }
 
   if (UpdateParamReq == false)
@@ -641,9 +644,7 @@ void HandleUpdateParameter()
 #ifndef DEBUG_SUPPRESS
       Serial.println("send all lua params");
 #endif
-
-      
-      sendLuaParams();
+      sendELRSstatus();
       break;
     }
     case 1:
@@ -722,8 +723,6 @@ void HandleUpdateParameter()
   #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested!");
   #endif
-        sendLuaParams();
-        sendLuaParams();
         BeginWebUpdate();
   #else
         webUpdateMode = false;
@@ -776,7 +775,6 @@ static void ConfigChangeCommit()
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
   resetLuaParams();
-  sendLuaParams();
 }
 
 
@@ -1047,11 +1045,7 @@ void loop()
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
-/* sample packet count only when LUA is not busy, since LUA protocol will interfere packet count*/
-  if (now >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
-      LUAfieldReported = now;
-      updateLUApacketCount();
-  }
+
 
   #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
