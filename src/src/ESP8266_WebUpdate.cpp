@@ -239,7 +239,7 @@ static void startWifi() {
     changeMode = WIFI_AP;
   } else {
     changeTime = millis();
-    changeMode = WIFI_AP;
+    changeMode = WIFI_STA;
   }
 }
 
