@@ -44,6 +44,9 @@ def get_git_version(env):
             pass
     return '%s (%s)' % (ver, hash)
 
+def build_version(out, env):
+    out.write('static const char PROGMEM VERSION[] = "%s";\n\n' % get_git_version(env))
+
 def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
         data = file.read()
@@ -64,12 +67,14 @@ def build_common(out, env):
 
 def build_tx_html(source, target, env):
     out = open("src/ESP32_WebContent.h", 'w')
+    build_version(out, env)
     build_html("tx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close
 
 def build_rx_html(source, target, env):
     out = open("src/ESP8266_WebContent.h", 'w')
+    build_version(out, env)
     build_html("rx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close

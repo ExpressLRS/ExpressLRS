@@ -127,6 +127,12 @@ static void WebUpdateSendMode()
   server.send(200, "application/json", s);
 }
 
+static void WebUpdateGetTarget()
+{
+  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
+  server.send(200, "application/json", s);
+}
+
 static void WebUpdateSendNetworks()
 {
   int numNetworks = WiFi.scanComplete();
@@ -265,6 +271,7 @@ void BeginWebUpdate()
     server.on("/forget", WebUpdateForget);
     server.on("/connect", WebUpdateConnect);
     server.on("/access", WebUpdateAccessPoint);
+    server.on("/target", WebUpdateGetTarget);
 
     server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
     server.on("/gen_204", WebUpdateHandleRoot);
