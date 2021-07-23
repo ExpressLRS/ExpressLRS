@@ -31,6 +31,7 @@ extern TxConfig config;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
+static bool force_update = false;
 
 static const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
 static const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
@@ -109,6 +110,8 @@ static void WebUpdateHandleRoot()
   { // If captive portal redirect instead of displaying the page.
     return;
   }
+  if (server.hasArg("force"))
+    force_update = true;
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
@@ -315,6 +318,8 @@ void BeginWebUpdate()
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
           Update.printError(Serial);
         }
+        if (force_update)
+          target_seen = true;
         if (!target_seen) {
           for (int i=0 ; i<upload.currentSize ;i++) {
             if (upload.buf[i] == target_name[target_pos]) {
