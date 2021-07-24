@@ -315,7 +315,7 @@ int8_t flashSTM32(uint32_t flash_addr)
 {
   int8_t result = -1;
   webSocket.broadcastTXT("STM32 Firmware Flash Requested!");
-  webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
+  //webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
   if (uploadedfilename.endsWith("firmware.elrs")) {
     result = stk500_write_file(uploadedfilename.c_str());
   } else if (uploadedfilename.endsWith("firmware.bin")) {
@@ -384,7 +384,7 @@ void handleFileUpload()
     }
     uploadedfilename = upload.filename;
 
-    webSocket.broadcastTXT("Uploading file: " + uploadedfilename);
+    //webSocket.broadcastTXT("Uploading file: " + uploadedfilename);
 
     if (!uploadedfilename.startsWith("/"))
     {
@@ -470,6 +470,8 @@ void setup()
   wifi_station_set_hostname("elrs_tx");
 
 #ifdef USE_WIFI_MANAGER
+  WiFi.persistent(false);
+  WiFi.disconnect(true);
   WiFiManager wifiManager;
   Serial.println("Starting ESP WiFiManager captive portal...");
   wifiManager.autoConnect("ESP WiFiManager");
