@@ -315,7 +315,9 @@ int8_t flashSTM32(uint32_t flash_addr)
 {
   int8_t result = -1;
   webSocket.broadcastTXT("STM32 Firmware Flash Requested!");
-  //webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
+  webSocket.broadcastTXT("  the firmware file: '");
+  webSocket.broadcastTXT(uploadedfilename);
+  webSocket.broadcastTXT("'");
   if (uploadedfilename.endsWith("firmware.elrs")) {
     result = stk500_write_file(uploadedfilename.c_str());
   } else if (uploadedfilename.endsWith("firmware.bin")) {
@@ -384,7 +386,8 @@ void handleFileUpload()
     }
     uploadedfilename = upload.filename;
 
-    //webSocket.broadcastTXT("Uploading file: " + uploadedfilename);
+    webSocket.broadcastTXT("Uploading file: ");
+    webSocket.broadcastTXT(uploadedfilename);
 
     if (!uploadedfilename.startsWith("/"))
     {
