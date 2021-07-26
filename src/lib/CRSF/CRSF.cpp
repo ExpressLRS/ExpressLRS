@@ -656,7 +656,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
-        GoodPktsCount++;
         GetChannelDataIn();
         if (LUAupdateIsPending){
             LUAupdateIsPending = false;
@@ -845,7 +844,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {
+                {        
+                    GoodPktsCount++;
                     if (ProcessPacket())
                     {
                         //delayMicroseconds(50);
