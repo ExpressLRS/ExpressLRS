@@ -529,7 +529,6 @@ void updateLUApacketCount(){
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
   uint8_t sentChunk = 0;
   if(!allLUAparamSent){
-    LUAfieldReported = millis();
     switch(idx){
       case 2:
       {
@@ -575,7 +574,6 @@ void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
 
       default: //ID 1
       {
-        sendELRSstatus();
         sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
         break;
       }
@@ -627,6 +625,7 @@ void HandleUpdateParameter()
   if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
       LUAfieldReported = millis();
       updateLUApacketCount();
+      sendELRSstatus();
   }
 
   if (UpdateParamReq == false)
