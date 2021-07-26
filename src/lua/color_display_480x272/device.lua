@@ -105,8 +105,8 @@ local function selectField(step)
     field = getField(newLineIndex)
   until newLineIndex == lineIndex or (field and field.type ~= 11 and field.name)
   lineIndex = newLineIndex
-  if lineIndex > 7 + pageOffset then
-    pageOffset = lineIndex - 7
+  if lineIndex > 11 + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
+    pageOffset = lineIndex - 11 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
   elseif lineIndex <= pageOffset then
     pageOffset = lineIndex - 1
   end
@@ -194,8 +194,9 @@ local function fieldSignedSave(field, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
-  lcd.drawNumber(89, y, field.value, LEFT + attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  -- lcd.drawNumber(140, y, field.value, LEFT + attr)    -- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) -- NOTE: original code getLastPos not available in Horus
+  lcd.drawText(140, y, field.value .. field.unit, attr)  -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- UINT8
@@ -256,8 +257,7 @@ local function formatFloat(num, decimals)
 end
 
 local function fieldFloatDisplay(field, y, attr)
-  lcd.drawText(89, y, formatFloat(field.value, field.prec), LEFT + attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  lcd.drawText(140, y, formatFloat(field.value, field.prec) .. field.unit, attr)
 end
 
 local function fieldFloatSave(field)
@@ -283,8 +283,9 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(89, y, field.values[field.value+1], attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  -- lcd.drawText(140, y, field.values[field.value+1], attr)			-- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) 				-- NOTE: original code getLastPos not available in Horus
+  lcd.drawText(140, y, field.values[field.value+1] .. field.unit, attr) -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- STRING
@@ -306,10 +307,12 @@ end
 
 local function fieldStringDisplay(field, y, attr)
   if edit == true and attr then
-    lcd.drawText(89, y, field.value, FIXEDWIDTH)
-    lcd.drawText(83+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
+    -- lcd.drawText(140, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
+    -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
+	lcd.drawText(140, y, field.value, attr)
+    lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), attr)
   else
-    lcd.drawText(89, y, field.value, attr)
+    lcd.drawText(140, y, field.value, attr)
   end
 end
 
@@ -332,9 +335,9 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-  lcd.drawText(0, y, field.name, attr)
+  lcd.drawText(1, y, field.name, attr)
   if field.info ~= "" then
-    lcd.drawText(89, y, "[" .. field.info .. "]")
+    lcd.drawText(140, y, "[" .. field.info .. "]")
   end
 end
 
@@ -403,23 +406,22 @@ local function parseElrsInfoMessage(data)
     return
   end
   badPkt = data[3]
-  goodPkt = (data[4]*256) + data[5]
+  goodPkt = (data[4]*255) + data[5]
   elrsFlags = data[6]
   elrsFlagsInfo,offset = fieldGetString(data,7)
 end
-
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
   if command == nil then
     local time = getTime()
     if fieldPopup then
-      if time > fieldTimeout then -- write lua field
+      if time > fieldTimeout then
         crossfireTelemetryPush(0x2D, { deviceId, 0xEA, fieldPopup.id, 6 })
         fieldTimeout = time + fieldPopup.timeout
       end
-    elseif time > fieldTimeout and not edit then --reload lua field
+    elseif time > fieldTimeout and not edit then
       crossfireTelemetryPush(0x2C, { deviceId, 0xEA, fieldId, fieldChunk })
-      fieldTimeout = time + 500 -- 2s
+      fieldTimeout = time + 200 -- 2s
     end
   elseif command == 0x29 then
     parseDeviceInfoMessage(data)
@@ -449,30 +451,30 @@ local function runDevicePage(event)
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, 0xEA, 0x2E, 0x00 })
     else
-    local field = getField(lineIndex)
-    if field.name then
-      if field.type == 10 then
-        if edit == false then
-          edit = true
-          charIndex = 1
-        else
-          charIndex = charIndex + 1
+      local field = getField(lineIndex)
+      if field.name then
+        if field.type == 10 then
+          if edit == false then
+            edit = true
+            charIndex = 1
+          else
+            charIndex = charIndex + 1
+          end
+        elseif field.type < 11 then
+          edit = not edit
         end
-      elseif field.type < 11 then
-        edit = not edit
-      end
-      if edit == false then
-        fieldTimeout = getTime() + 200 -- 2s
-        fieldId, fieldChunk = field.id, 0
-        fieldData = {}
-        functions[field.type+1].save(field)
+        if edit == false then
+          fieldTimeout = getTime() + 200 -- 2s
+          fieldId, fieldChunk = field.id, 0
+          fieldData = {}
+          functions[field.type+1].save(field)
+        end
       end
     end
-  end
   elseif edit then
-    if event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_NEXT_REPT then
+    if event == EVT_VIRTUAL_INC or event == EVT_VIRTUAL_INC_REPT then
       incrField(1)
-    elseif event == EVT_VIRTUAL_PREV or event == EVT_VIRTUAL_PREV_REPT then
+    elseif event == EVT_VIRTUAL_DEC or event == EVT_VIRTUAL_DEC_REPT then
       incrField(-1)
     end
   else
@@ -484,37 +486,36 @@ local function runDevicePage(event)
   end
   if elrsFlags > 0 then
     lcd.clear()
-    lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
-    --lcd.drawText(20,10,"WARNING :", DBLSIZE + BLINK)
-    lcd.drawText(20,15,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
-    lcd.drawText(20,40,"ok",BLINK + INVERS)
-
+    lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
+    lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)  
+    lcd.drawText(20,50,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
+    lcd.drawText(20,100,"ok",BLINK + INVERS)
   else
     lcd.clear()
-    lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
-    for y = 1, 7 do
+    lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
+    lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)
+    for y = 1, 11 do
       local field = getField(pageOffset+y)
       if not field then
         break
       elseif field.name == nil then
-        lcd.drawText(0, 1+8*y, "...")
+        lcd.drawText(1, y*22+10, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        lcd.drawText(0, 1+8*y, field.name)
+        lcd.drawText(1, y*22+10, field.name)
         if functions[field.type+1] then
-          functions[field.type+1].display(field, 1+8*y, attr)
+          functions[field.type+1].display(field, y*22+10, attr)
         end
       end
     end
   end
-
   return 0
 end
 
 local function runPopupPage(event)
   local result
   if fieldPopup.status == 3 then
-    result = popupConfirmation(fieldPopup.info, event)
+    result = popupConfirmation("Confirmation", fieldPopup.info, event)
   else
     result = popupWarning(fieldPopup.info, event)
   end
