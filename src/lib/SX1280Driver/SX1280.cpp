@@ -1,6 +1,7 @@
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include "SX1280.h"
+#include "util_calcs.h"
 
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
@@ -143,7 +144,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         break;
 
     case SX1280_MODE_FS:
-        hal.WriteCommand(SX1280_RADIO_SET_FS, 0x00);
+        hal.WriteCommand(SX1280_RADIO_SET_FS);
         switchDelay = 70;
         break;
 
@@ -165,6 +166,9 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         break;
 
     case SX1280_MODE_CAD:
+        hal.WriteCommand(SX1280_RADIO_SET_CADPARAMS, SX1280_LORA_CAD_04_SYMBOLS); // TODO
+        hal.WriteCommand(SX1280_RADIO_SET_CAD);
+        switchDelay = 100;
         break;
 
     default:
@@ -376,6 +380,13 @@ bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
     return 0;
 }
 
+int8_t SX1280Driver::GetRSSIinst() //instaneous rssi 
+{
+    uint8_t status[2];
+
+    hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, status, 2);
+    return -(int8_t)(status[1] / 2);
+}
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
@@ -384,4 +395,32 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
     instance->LastPacketRSSI = -(int8_t)(status[0] / 2);
     instance->LastPacketSNR = (int8_t)status[1] / 4;
+}
+
+float SX1280Driver::GetNoiseFloorInRange(uint32_t startFreq, uint32_t endFreq, uint32_t step)
+{
+  #define NF_NUM_AVERAGES 250
+  double avgNoiseFloor = 0;
+
+  //SX1280Driver::ConfigLoRaModParams(SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_LI_4_6);
+  instance->SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //disable IRQs
+  SX1280Driver::SetMode(SX1280_MODE_RX);
+  hal.RXenable();
+
+  for (uint8_t i = 0; i < NF_NUM_AVERAGES; i++)
+  {
+    double retVal = 0;
+    uint8_t count = 0;
+    for (uint32_t freq = startFreq; freq < endFreq; freq = freq + step)
+    {
+      instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+      SX1280Driver::SetFrequencyReg(freq);
+      delay(random(5, 10));
+      retVal += dbm2mw(SX1280Driver::GetRSSIinst());
+      count++;
+    }
+    retVal = retVal/count;
+    avgNoiseFloor = retVal + avgNoiseFloor;
+  }
+  return (mw2dbm(avgNoiseFloor/NF_NUM_AVERAGES));
 }

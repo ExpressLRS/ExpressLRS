@@ -1,5 +1,6 @@
 #include "targets.h"
 #include "common.h"
+#include "util_calcs.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -742,6 +743,30 @@ void setup()
     #endif // GPIO_PIN_LED_RED
     delay(1000);
   }
+
+while(1){
+  //// Measure Noise Floor and Compare to Ideal ////
+  static uint8_t noiseFloorHeadroom; // in dBm
+  #if defined(Regulatory_Domain_ISM_2400)
+  float meas_bandwidth_hz = 800000;
+  #else
+  float meas_bandwidth_hz = 500000;
+  #endif
+  
+  double expectedNF = thermal_noise_dbm(meas_bandwidth_hz);
+  double measNF = Radio.GetNoiseFloorInRange(FHSSfreqs[0], FHSSfreqs[NR_FHSS_ENTRIES-1], meas_bandwidth_hz);
+
+  Serial.print("Measured Noise Floor: ");
+  Serial.println(measNF);
+
+  Serial.print("Expected Noise Floor: ");
+  Serial.println(expectedNF);
+
+  noiseFloorHeadroom = (uint8_t)(measNF - expectedNF);
+  Serial.print("Noise Factor: ");
+  Serial.println(noiseFloorHeadroom);
+  
+}
   #ifdef ENABLE_TELEMETRY
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
   #endif

@@ -82,6 +82,7 @@ public:
     void SetOutputPower(int8_t power);
 
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
+    float GetNoiseFloorInRange(uint32_t startFreq, uint32_t endFreq, uint32_t step);
 
     static void TXnb(volatile uint8_t *data, uint8_t length);
     static void TXnbISR(); //ISR for non-blocking TX routine
@@ -92,6 +93,7 @@ public:
     void  ClearIrqStatus(uint16_t irqMask);
 
     void GetStatus();
+    int8_t GetRSSIinst();
 
     void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
     

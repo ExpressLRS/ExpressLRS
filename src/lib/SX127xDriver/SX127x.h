@@ -80,6 +80,7 @@ public:
     void SetFrequencyReg(uint32_t freq);
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
+    float GetNoiseFloorInRange(uint32_t startFreq, uint32_t endFreq, uint32_t step);
     void SetPPMoffsetReg(int32_t offset);
 
     ////////////////////////////////////////////////////
@@ -94,7 +95,7 @@ public:
     uint8_t UnsignedGetLastPacketRSSI();
     int8_t GetLastPacketRSSI();
     int8_t GetLastPacketSNR();
-    int8_t GetCurrRSSI();
+    int16_t GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
     static void TXnb(uint8_t volatile *data, uint8_t length);

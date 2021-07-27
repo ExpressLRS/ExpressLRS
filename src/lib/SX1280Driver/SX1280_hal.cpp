@@ -144,6 +144,18 @@ void SX1280Hal::reset(void)
     Serial.println("SX1280 Ready!");
 }
 
+void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command)
+{
+    WaitOnBusy();
+    digitalWrite(GPIO_PIN_NSS, LOW);
+
+    SPI.transfer((uint8_t)command);
+
+    digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    BusyDelay(12);
+}
+
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val)
 {
     WaitOnBusy();

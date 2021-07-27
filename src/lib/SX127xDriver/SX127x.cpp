@@ -1,4 +1,5 @@
 #include "SX127x.h"
+#include "util_calcs.h"
 
 SX127xHal hal;
 
@@ -273,27 +274,16 @@ bool SX127xDriver::DetectChip()
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
-  //hal.TXRXdisable();
   instance->ClearIRQFlags();
   instance->currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
-  //instance->TXdoneMicros = micros();
   TXdoneCallback();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 {
-  // if (instance->currOpmode == SX127x_OPMODE_TX)
-  // {
-  //   Serial.println("abort TX");
-  //   return; // we were already TXing so abort. this should never happen!!!
-  // }
   instance->ClearIRQFlags();
   instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.TXenable();
-
-  //instance->TXstartMicros = micros();
-  //instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
-
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(data, length);
 
@@ -313,11 +303,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-  // if (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)
-  // {
-  //   Serial.println("abort RX");
-  //   return; // we were already TXing so abort
-  // }
   instance->ClearIRQFlags();
   instance->SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
@@ -454,7 +439,7 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
   return (-157 + hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
+int16_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
 {
   return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
 }
@@ -470,25 +455,34 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
   hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
 }
 
-// int16_t MeasureNoiseFloor() TODO disabled for now
-// {
-//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
-//     float returnval = 0;
+float SX127xDriver::GetNoiseFloorInRange(uint32_t startFreq, uint32_t endFreq, uint32_t step)
+{
+  #define NF_NUM_AVERAGES 250
+  double avgNoiseFloor = 0;
 
-//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
-//     {
-//         FHSSsetCurrIndex(freq);
-//         Radio.SetMode(SX127X_CAD);
+  SX127xDriver::SetBandwidthCodingRate(SX127x_BW_500_00_KHZ, SX127x_CR_4_5);
+  hal.setRegValue(SX127X_REG_DIO_MAPPING_1, 0b00000000);
+  hal.RXenable();
 
-//         for (int i = 0; i < RSSI_FLOOR_NUM_READS; i++)
-//         {
-//             returnval = returnval + Radio.GetCurrRSSI();
-//             delay(5);
-//         }
-//     }
-//     returnval = returnval / NUM_READS;
-//     return (returnval);
-// }
+  for (uint8_t i = 0; i < NF_NUM_AVERAGES; i++)
+  {
+    double retVal = 0;
+    uint8_t count = 0;
+    for (uint32_t freq = startFreq; freq < endFreq; freq = freq + step)
+    {
+      instance->ClearIRQFlags();
+      SX127xDriver::SetMode(SX127x_OPMODE_STANDBY);
+      SX127xDriver::SetFrequencyReg(freq);
+      SX127xDriver::SetMode(SX127x_OPMODE_CAD);
+      delay(random(5, 10));
+      retVal += dbm2mw(SX127xDriver::GetCurrRSSI());
+      count++;
+    }
+    retVal = retVal/count;
+    avgNoiseFloor = retVal + avgNoiseFloor;
+  }
+  return (mw2dbm(avgNoiseFloor/NF_NUM_AVERAGES));
+}
 
 // uint8_t SX127xDriver::RunCAD() TODO
 // {

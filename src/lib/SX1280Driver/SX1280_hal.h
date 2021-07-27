@@ -51,6 +51,7 @@ public:
 
     void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size);
     void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command, uint8_t val);
+    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t value);
 

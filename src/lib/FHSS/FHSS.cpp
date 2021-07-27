@@ -2,8 +2,6 @@
 
 uint8_t volatile FHSSptr = 0;
 uint8_t FHSSsequence[256] = {0};
-
-//uint8_t NumOfFHSSfrequencies = 20;
 int32_t FreqCorrection = 0;
 
 // Set all of the flags in the array to true, except for the first one
