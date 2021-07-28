@@ -64,5 +64,8 @@
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
 
+# Comment this to disable dynamic TX power management.
+#-DUSE_DYNAMIC_POWER
+
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
