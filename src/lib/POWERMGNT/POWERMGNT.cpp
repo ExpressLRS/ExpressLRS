@@ -3,7 +3,7 @@
 #include "targets.h"
 
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 extern SX127xDriver Radio;
 #elif Regulatory_Domain_ISM_2400
 extern SX1280Driver Radio;
@@ -75,6 +75,7 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+    powerLedInit();
     setDefaultPower();
 }
 
@@ -111,6 +112,21 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     default:
         Radio.SetOutputPower(13);
         Power = PWR_25mW;
+        break;
+    }
+#elif defined(TARGET_RX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-10);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(-3);
+        break;
+    case PWR_100mW:
+    default:
+        Radio.SetOutputPower(1);
+        Power = PWR_100mW;
         break;
     }
 #elif defined(TARGET_NAMIMNORC_TX)
@@ -376,6 +392,45 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
+#elif defined(TARGET_TX_BETAFPV_900_V1)
+    switch (Power)
+    {
+    case PWR_250mW:
+        Radio.SetOutputPower(0b0011);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(0b1000);
+        break;
+    case PWR_100mW:
+    default:
+        Power = PWR_100mW;
+        Radio.SetOutputPower(0b0000);
+        break;
+    }
+#elif defined(TARGET_TX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-18);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-15);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-9);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(-4);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(3);
+        break;
+    case PWR_50mW:    
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-13);
+        break;
+    }
 #elif defined(TARGET_RX)
 #ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
@@ -386,5 +441,58 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
+    powerLedUpdate();
     return Power;
 }
+
+void POWERMGNT::powerLedUpdate()
+{
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    switch (CurrentPower)
+    {
+    case PWR_250mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_500mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_10mW:
+    case PWR_25mW:
+    case PWR_50mW:
+    case PWR_100mW:
+    default:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+        break;
+    }
+#endif
+}
+
+void POWERMGNT::powerLedInit()
+{
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
+    pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
+#endif
+}
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+void POWERMGNT::handleCyclePower()
+{
+    switch (CurrentPower)
+    {
+    case PWR_100mW:
+        setPower(PWR_250mW);
+        break;
+    case PWR_250mW:
+        setPower(PWR_500mW);
+        break;
+    case PWR_500mW:   
+    default:
+        setPower(PWR_100mW);
+        break;
+    }
+}
+#endif

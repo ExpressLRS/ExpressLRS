@@ -163,7 +163,7 @@ void CRSF::End()
             break;
         }
     }
-    CRSF::Port.end();
+    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
     Serial.println("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }

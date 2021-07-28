@@ -4,7 +4,7 @@
 #include "targets.h"
 #include "DAC.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280Driver.h"
@@ -24,6 +24,18 @@
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_50mW
+
+#elif defined(TARGET_TX_BETAFPV_900_V1)
+#define MaxPower PWR_500mW
+#define DefaultPowerEnum PWR_100mW
+
+#elif defined(TARGET_TX_BETAFPV_2400_V1)
+#define MaxPower PWR_500mW
+#define DefaultPowerEnum PWR_50mW
+
+#elif defined(TARGET_RX_BETAFPV_2400_V1)
+#define MaxPower PWR_100mW
+#define DefaultPowerEnum PWR_100mW
 
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || \
       defined(TARGET_TX_ESP32_LORA1280F27)   || \
@@ -81,4 +93,9 @@ public:
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static void setDefaultPower();
     static void init();
+    static void powerLedInit();
+    static void powerLedUpdate();
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+        static void handleCyclePower();
+    #endif
 };

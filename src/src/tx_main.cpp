@@ -1,7 +1,7 @@
 #include "targets.h"
 #include "common.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)
@@ -11,9 +11,9 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "FHSS.h"
-#include "LED.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
+#include "LED.h"
 #include "msp.h"
 #include "msptypes.h"
 #include <OTA.h>
@@ -28,6 +28,10 @@ SX1280Driver Radio;
 #endif
 #include "stubborn_sender.h"
 
+#ifdef HAS_OLED
+#include "OLED.h"
+#endif
+
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -40,15 +44,6 @@ SX1280Driver Radio;
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 button button;
-#endif
-
-#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
-uint8_t LEDfadeDiv;
-uint8_t LEDfade;
-bool LEDfadeDir;
-constexpr uint32_t LEDupdateInterval = 100;
-uint32_t LEDupdateCounterMillis;
-#include "STM32F3_WS2812B_LED.h"
 #endif
 
 const uint8_t thisCommit[6] = {LATEST_COMMIT};
@@ -71,6 +66,10 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+#if defined(HAS_OLED)
+OLED OLED;
+char commitStr[7] = "commit";
+#endif
 
 volatile uint8_t NonceTX;
 
@@ -166,9 +165,12 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
         case ELRS_TELEMETRY_TYPE_LINK:
-            // RSSI received is signed, proper polarity (negative value = -dBm)
-            crsf.LinkStatistics.uplink_RSSI_1 = Radio.RXdataBuffer[2];
-            crsf.LinkStatistics.uplink_RSSI_2 = Radio.RXdataBuffer[3];
+            // Antenna is the high bit in the RSSI_1 value
+            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
+            // RSSI received is signed, inverted polarity (positive value = -dBm)
+            // OpenTX's value is signed and will display +dBm and -dBm properly
+            crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
+            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
             crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
@@ -240,10 +242,6 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
-
-#ifdef PLATFORM_ESP32
-  updateLEDs(connectionState, ExpressLRS_currAirRate_Modparams->TLMinterval);
-#endif
 }
 
 void ICACHE_RAM_ATTR HandleFHSS()
@@ -420,9 +418,6 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
-#if defined(TARGET_NAMIMNORC_TX)
-  WS281BsetLED(0xff, 0, 0);
-#endif
 }
 
 void UARTconnected()
@@ -447,9 +442,6 @@ void UARTconnected()
     delay(100);
   }
   hwTimer.resume();
-#if defined(TARGET_NAMIMNORC_TX)
-  WS281BsetLED(0, 0xff, 0);
-#endif
 }
 
 void ICACHE_RAM_ATTR ParamUpdateReq()
@@ -483,6 +475,11 @@ void HandleUpdateParameter()
       Serial.print("Request AirRate: ");
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+    #endif
     }
     break;
 
@@ -492,13 +489,25 @@ void HandleUpdateParameter()
       Serial.print("Request TLM interval: ");
       Serial.println(crsf.ParameterUpdateData[1]);
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
+    #endif
     }
     break;
 
   case 3:
     Serial.print("Request Power: ");
     Serial.println(crsf.ParameterUpdateData[1]);
-    config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+    if((PowerLevels_e)crsf.ParameterUpdateData[1] <= MaxPower){
+      config.SetPower((PowerLevels_e)crsf.ParameterUpdateData[1]);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
+                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+      #endif
+    }
     break;
 
   case 4:
@@ -536,6 +545,7 @@ void HandleUpdateParameter()
   default:
     break;
   }
+
   UpdateParamReq = false;
   if (config.IsModified())
   {
@@ -602,6 +612,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+
 void setup()
 {
 #if defined(TARGET_TX_GHOST)
@@ -609,26 +620,12 @@ void setup()
   Serial.setRx(PA3);
 #endif
   Serial.begin(460800);
+#if defined(HAS_OLED)
+  OLED.displayLogo();
+  OLED.setCommitString(thisCommit, commitStr);
+#endif
 
-  /**
-   * Any TX's that have the WS2812 LED will use this the WS2812 LED pin
-   * else we will use GPIO_PIN_LED_GREEN and _RED.
-   **/
-  #if WS2812_LED_IS_USED // do startup blinkies for fun
-      WS281Binit();
-      uint32_t col = 0x0000FF;
-      for (uint8_t j = 0; j < 3; j++)
-      {
-          for (uint8_t i = 0; i < 5; i++)
-          {
-              WS281BsetLED(col << j*8);
-              delay(15);
-              WS281BsetLED(0, 0, 0);
-              delay(35);
-          }
-      }
-      WS281BsetLED(0xff, 0, 0);
-  #endif
+  startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -692,10 +689,12 @@ void setup()
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#ifdef PLATFORM_ESP32
-#ifdef GPIO_PIN_LED
-  strip.Begin();
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+  button.buttonTriplePress = &EnterBindingMode;
+  button.buttonLongPress = &POWERMGNT.handleCyclePower;
 #endif
+
+#ifdef PLATFORM_ESP32
   // Get base mac address
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
@@ -761,31 +760,24 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
+  #if defined(HAS_OLED)
+    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                  OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                  OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+  #endif
 }
 
 void loop()
 {
   uint32_t now = millis();
   static bool mspTransferActive = false;
-  #if WS2812_LED_IS_USED && !defined(TARGET_NAMIMNORC_TX)
-      if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
-      {
-          uint8_t LEDcolor[3] = {0};
-          if (LEDfade == 30 || LEDfade == 0)
-          {
-              LEDfadeDir = !LEDfadeDir;
-          }
 
-          LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-          LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-          WS281BsetLED(LEDcolor);
-          LEDupdateCounterMillis = now;
-      }
-  #endif
+  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
