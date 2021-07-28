@@ -709,6 +709,10 @@ void setup()
 
   Serial.println("ExpressLRS TX Module Booted...");
 
+  eeprom.Begin(); // Init the eeprom
+  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+  config.Load(); // Load the stored values from eeprom
+
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
   #if !defined(Regulatory_Domain_ISM_2400)
   //Radio.currSyncWord = UID[3];
@@ -747,10 +751,6 @@ void setup()
   #endif
 
   POWERMGNT.init();
-
-  eeprom.Begin(); // Init the eeprom
-  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
-  config.Load(); // Load the stored values from eeprom
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());

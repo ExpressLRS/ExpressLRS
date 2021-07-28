@@ -1,0 +1,96 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Welcome to your ExpressLRS System</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="main.css" />
+</head>
+
+<body>
+	<section id="header">
+		<div class="inner">
+			<img src="flag.svg" height="250" width="250" style="padding:20px;"></a>
+			<h1>Welcome to your <b>ExpressLRS</b><br /> update page<br />
+			</h1>
+			<p>From here you can update your <b>Transmitter</b> module with <b>@PLATFORM@</b> firmware<br />
+			<p>
+				<b>Firmware Rev. </b><var>@VERSION@</var>
+			<p>
+		</div>
+	</section>
+	<br>
+	<section id="one" class="main style1">
+		<div class="container">
+			<div align="left">
+				<legend>
+					<h2>Useful Links and Support:</h2>
+				</legend>
+				<h4><a href="https://github.com/ExpressLRS/ExpressLRS">GitHub Repository</a>
+				<h4><a href="https://discord.gg/dS6ReFY">Discord Chat</a>
+			</div>
+
+			<br>
+
+			<div align="left">
+				<fieldset>
+					Here you can update module firmware,
+					be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need
+					to reflash via USB/Serial.
+					<br><br>
+					<legend>
+						<h2>Firmware Update:</h2>
+					</legend>
+					<form id='upload_form' method='POST' enctype='multipart/form-data'>
+						<div class="group">
+							<input id='firmware_file' type='file' name='update'>
+							<input type='submit' value='Update'>
+						</div>
+						<br/>
+						<h3 id="status"></h3>
+						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
+					</form>
+					<br><br>
+				</fieldset>
+			</div>
+
+			<div align="left" id="apmode" style="display:none;">
+				<fieldset>
+					Here you can join a network and it will be saved as your &quot;home&quot; network.
+					When you are in range of your &quot;home&quot; network and start WiFi update the TX Module will automatically connect.
+					<legend>
+						<h2>Join Network:</h2>
+					</legend>
+					<form action="/sethome" id="sethome" method="POST" autocomplete="off">
+						<div class="group">
+							<div class="autocomplete">
+								<input id="network" type="text" name="network" placeholder="SSID" />
+								<div id="loader" style="float:right" class="loader"></div>
+							</div>
+						</div>
+						<input type="password" id="password" name="password" placeholder="Password" />
+						<input type="submit" value="Join">
+					</form>
+					<br><br>
+					<a id="connect" href="#">Connect to &quot;home&quot; network <span id="homenet"></span></a>
+					<br><br>
+				</fieldset>
+			</div>
+
+			<div align="left" id="stamode" style="display:none;">
+				<fieldset>
+					<legend>
+						<h2>Home Network: <span id="ssid"></span></h2>
+					</legend>
+					<a id="forget" href="#">Forget &quot;home&quot; network and disconnect</a>
+					<br><br>
+					<a id="access" href="#">Disconnect and start Access Point</a>
+					<br><br>
+				</fieldset>
+			</div>
+		</div>
+	</section>
+</body>
+<script src="scan.js"></script>
+</html>
