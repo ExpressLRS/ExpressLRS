@@ -7,8 +7,15 @@
  */
 
 #include "OTA.h"
+#include "helpers.h"
 
 #if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+
+#if defined HYBRID_CHANNELS or defined UNIT_TEST
+uint8_t rrChannelMask[3] = { 2, 12, 13 };
+uint8_t rrChannelMaskQueue[4] = { 0, 1, 0, 2 };
+uint8_t rrChannelMaskQueueIndex = 0;
+#endif
 
 #if TARGET_TX or defined UNIT_TEST
 /**
@@ -34,13 +41,25 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
   Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
+  #if defined HYBRID_CHANNELS or defined UNIT_TEST
+  Buffer[3] = ((crsf->ChannelDataIn[rrChannelMask[rrChannelMaskQueue[rrChannelMaskQueueIndex]]]) >> 3);
+  #else
   Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
+  #endif
   Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
   Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
                            ((crsf->ChannelDataIn[1] & 0b110) << 3) |
+                           #if defined HYBRID_CHANNELS or defined UNIT_TEST
+                           rrChannelMaskQueue[rrChannelMaskQueueIndex] << 2 |
+                           #else
                            ((crsf->ChannelDataIn[2] & 0b110) << 1) |
+                           #endif
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
+  #if defined HYBRID_CHANNELS or defined UNIT_TEST
+  rrChannelMaskQueueIndex = (rrChannelMaskQueueIndex + 1) % ARRAY_SIZE(rrChannelMaskQueue);
+  #endif
+  
   // find the next switch to send
   uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
   // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to 0-6 (0b110)
@@ -83,7 +102,24 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     // The analog channels
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
+    #if defined HYBRID_CHANNELS or defined UNIT_TEST
+    uint16_t rrChannelIndex = rrChannelMask[(Buffer[5] & 0b00001100) >> 2];
+    uint16_t rrChannelValue = Buffer[3] << 3;
+    switch (rrChannelIndex)
+    {
+      case 2:
+          crsf->PackedRCdataOut.ch2 = rrChannelValue;
+          break;
+      case 12:
+          crsf->PackedRCdataOut.ch12 = rrChannelValue;
+          break;
+      case 13:
+          crsf->PackedRCdataOut.ch13 = rrChannelValue;
+          break;
+    }
+    #else
     crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
+    #endif
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
 
     // The low latency switch
