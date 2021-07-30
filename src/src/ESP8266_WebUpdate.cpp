@@ -1,6 +1,15 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#include "config.h"
+
+#include <WiFiClient.h>
+#include <DNSServer.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
+#include <set>
+#include <StreamString.h>
+
+#include "ESP8266_WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -12,27 +21,32 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-uint8_t target_seen = 0;
-uint8_t target_pos = 0;
-
-#define STASSID "ExpressLRS RX"
-#define STAPSK "expresslrs"
-const char *myHostname = "elrs_rx";
-
-const char *ssid = STASSID;
-const char *password = STAPSK;
-
+#include "ESP8266_hwTimer.h"
 extern hwTimer hwTimer;
 
-const byte DNS_PORT = 53;
-IPAddress apIP(10, 0, 0, 1);
-IPAddress netMsk(255, 255, 255, 0);
-DNSServer dnsServer;
-//MDNSResponder mdns;
-ESP8266WebServer server(80);
+#include "config.h"
+extern RxConfig config;
+
+static bool target_seen = false;
+static uint8_t target_pos = 0;
+static bool force_update = false;
+
+static const char *ssid = "ExpressLRS RX";
+static const char *password = "expresslrs";
+static const char *myHostname = "elrs_rx";
+
+static volatile WiFiMode_t wifiMode = WIFI_OFF;
+static volatile WiFiMode_t changeMode = WIFI_OFF;
+static volatile unsigned long changeTime = 0;
+
+static const byte DNS_PORT = 53;
+static IPAddress apIP(10, 0, 0, 1);
+static IPAddress netMsk(255, 255, 255, 0);
+static DNSServer dnsServer;
+static ESP8266WebServer server(80);
 
 /** Is this an IP? */
-boolean isIp(String str)
+static boolean isIp(String str)
 {
   for (size_t i = 0; i < str.length(); i++)
   {
@@ -46,7 +60,7 @@ boolean isIp(String str)
 }
 
 /** IP to String? */
-String toStringIp(IPAddress ip)
+static String toStringIp(IPAddress ip)
 {
   String res = "";
   for (int i = 0; i < 3; i++)
@@ -57,7 +71,7 @@ String toStringIp(IPAddress ip)
   return res;
 }
 
-bool captivePortal()
+static bool captivePortal()
 {
   if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local"))
   {
@@ -70,29 +84,124 @@ bool captivePortal()
   return false;
 }
 
-void WebUpdateSendcss()
+static void WebUpdateSendCSS()
 {
-  server.send_P(200, "text/css", CSS);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/css", CSS, sizeof(CSS));
 }
 
-void WebUpdateSendReturn()
+static void WebUpdateSendJS()
 {
-  server.send_P(200, "text/html", GO_BACK);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/javascript", SCAN_JS, sizeof(SCAN_JS));
 }
 
-void WebUpdateHandleRoot()
+static void WebUpdateSendFlag()
+{
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "image/svg+xml", FLAG, sizeof(FLAG));
+}
+
+static void WebUpdateHandleRoot()
 {
   if (captivePortal())
   { // If captive portal redirect instead of displaying the page.
     return;
   }
+  if (server.hasArg("force"))
+    force_update = true;
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
-  server.send_P(200, "text/html", INDEX_HTML);
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, "text/html", INDEX_HTML, sizeof(INDEX_HTML));
 }
 
-void WebUpdateHandleNotFound()
+static void WebUpdateSendMode()
+{
+  String s;
+  if (wifiMode == WIFI_STA) {
+    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID() + "\"}";
+  } else {
+    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID() + "\"}";
+  }
+  server.send(200, "application/json", s);
+}
+
+static void WebUpdateGetTarget()
+{
+  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
+  server.send(200, "application/json", s);
+}
+
+static void WebUpdateSendNetworks()
+{
+  int numNetworks = WiFi.scanComplete();
+  if (numNetworks >= 0) {
+    Serial.printf("Found %d networks\n", numNetworks);
+    std::set<String> vs;
+    String s="[";
+    for(int i=0 ; i<numNetworks ; i++) {
+      String w = WiFi.SSID(i);
+      Serial.printf("found %s\n", w.c_str());
+      if (vs.find(w)==vs.end() && w.length()>0) {
+        if (!vs.empty()) s += ",";
+        s += "\"" + w + "\"";
+        vs.insert(w);
+      }
+    }
+    s+="]";
+    server.send(200, "application/json", s);
+  } else {
+    server.send(204, "application/json", "[]");
+  }
+}
+
+static void sendResponse(const String &msg, WiFiMode_t mode) {
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", msg);
+  server.client().stop();
+  changeTime = millis();
+  changeMode = mode;
+}
+
+static void WebUpdateAccessPoint(void)
+{
+  Serial.println("Starting Access Point");
+  String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+  sendResponse(msg, WIFI_AP);
+}
+
+static void WebUpdateConnect(void)
+{
+  Serial.println("Connecting to home network");
+  String msg = String("Connected to network '") + config.GetSSID() + "', connect to http://elrs_rx.local from a browser on that network";
+  sendResponse(msg, WIFI_STA);
+}
+
+static void WebUpdateSetHome(void)
+{
+  String ssid = server.arg("network");
+  String password = server.arg("password");
+
+  Serial.printf("Setting home network %s\n", ssid.c_str());
+  config.SetSSID(ssid.c_str());
+  config.SetPassword(password.c_str());
+  config.Commit();
+  WebUpdateConnect();
+}
+
+static void WebUpdateForget(void)
+{
+  Serial.println("Forget home network");
+  config.SetSSID("");
+  config.SetPassword("");
+  config.Commit();
+  String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
+  sendResponse(msg, WIFI_AP);
+}
+
+static void WebUpdateHandleNotFound()
 {
   if (captivePortal())
   { // If captive portal redirect instead of displaying the error page.
@@ -117,6 +226,32 @@ void WebUpdateHandleNotFound()
   server.send(404, "text/plain", message);
 }
 
+static void startWifi() {
+  WiFi.persistent(false);
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  WiFi.setOutputPower(13);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+  WiFi.setHostname(myHostname);
+  WiFi.softAPConfig(apIP, apIP, netMsk);
+  WiFi.softAP(ssid, password);
+  WiFi.scanNetworks(true);
+  WiFi.onStationModeGotIP([](const WiFiEventStationModeGotIP&){
+    Serial.println("Connected as Wifi station");
+  });
+  WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected &){
+    changeTime = millis();
+    changeMode = WIFI_AP;
+  });
+  if (config.GetSSID()[0]==0) {
+    changeTime = millis();
+    changeMode = WIFI_AP;
+  } else {
+    changeTime = millis();
+    changeMode = WIFI_STA;
+  }
+}
+
 void BeginWebUpdate(void)
 {
   hwTimer.stop();
@@ -128,21 +263,19 @@ void BeginWebUpdate(void)
   Serial.println("Stopping Radio");
   Radio.End();
 
-  WiFi.persistent(false);
-  WiFi.disconnect();   //added to start with the wifi off, avoid crashing
-  WiFi.mode(WIFI_OFF); //added to start with the wifi off, avoid crashing
-  WiFi.setOutputPower(13);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-  wifi_station_set_hostname(myHostname);
-  delay(500);
-  WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(ssid, password);
-
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(DNS_PORT, "*", apIP);
+  startWifi();
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/css.css", WebUpdateSendcss);
+  server.on("/main.css", WebUpdateSendCSS);
+  server.on("/scan.js", WebUpdateSendJS);
+  server.on("/flag.svg", WebUpdateSendFlag);
+  server.on("/mode.json", WebUpdateSendMode);
+  server.on("/networks.json", WebUpdateSendNetworks);
+  server.on("/sethome", WebUpdateSetHome);
+  server.on("/forget", WebUpdateForget);
+  server.on("/connect", WebUpdateConnect);
+  server.on("/access", WebUpdateAccessPoint);
+  server.on("/target", WebUpdateGetTarget);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
@@ -154,14 +287,24 @@ void BeginWebUpdate(void)
   server.on("/fwlink", WebUpdateHandleRoot);
   server.onNotFound(WebUpdateHandleNotFound);
 
-    // handler for the /update form POST (once file upload finishes)
+  // handler for the /update form POST (once file upload finishes)
   server.on("/update", HTTP_POST, [&](){
-      server.client().setNoDelay(true);
-      server.sendHeader("Connection", "close");
-      server.send(200, "text/plain", target_seen ? ((Update.hasError()) ? "FAIL" : "OK") : "WRONG FIRMWARE");
-      delay(100);
-      server.client().stop();
-      ESP.restart(); },
+          if (target_seen) {
+            if (Update.hasError()) {
+              StreamString p = StreamString();
+              Update.printError(p);
+              server.send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+            } else {
+              server.sendHeader("Connection", "close");
+              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering of the module\"}");
+              server.client().stop();
+              delay(100);
+              ESP.restart();
+            }
+          } else {
+            server.send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Wrong firmware uploaded, does not match Receiver module type\"}");
+          }
+      },
     []() {
       HTTPUpload& upload = server.upload();
       if(upload.status == UPLOAD_FILE_START){
@@ -172,18 +315,20 @@ void BeginWebUpdate(void)
         if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
           Update.printError(Serial);
         }
-        target_seen = 0;
+        target_seen = false;
         target_pos = 0;
       } else if(upload.status == UPLOAD_FILE_WRITE){
         if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
           Update.printError(Serial);
         }
+        if (force_update)
+          target_seen = true;
         if (!target_seen) {
           for (size_t i=0 ; i<upload.currentSize ;i++) {
             if (upload.buf[i] == target_name[target_pos]) {
               ++target_pos;
               if (target_pos >= target_name_size) {
-                target_seen = 1;
+                target_seen = true;
               }
             }
             else {
@@ -209,14 +354,49 @@ void BeginWebUpdate(void)
     });
 
   server.begin();
-  Serial.printf("HTTPUpdateServer ready! Open http://%s in your browser\n", myHostname);
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
+
+  dnsServer.start(DNS_PORT, "*", apIP);
+  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+
+  if (!MDNS.begin(myHostname))
+  {
+    Serial.println("Error starting mDNS");
+    return;
+  }
+  MDNS.addService("http", "tcp", 80);
+
+  server.begin();
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
 }
 
 void HandleWebUpdate(void)
 {
-  server.handleClient();
+  if (changeMode != wifiMode && changeMode != WIFI_OFF && changeTime > (millis() - 500)) {
+    switch(changeMode) {
+      case WIFI_AP:
+        Serial.println("Changing to AP mode");
+        WiFi.disconnect();
+        wifiMode = WIFI_AP;
+        WiFi.mode(wifiMode);
+        WiFi.softAPConfig(apIP, apIP, netMsk);
+        WiFi.softAP(ssid, password);
+        WiFi.scanNetworks(true);
+        break;
+      case WIFI_STA:
+        Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
+        WiFi.mode(WIFI_STA);
+        wifiMode = WIFI_STA;
+        WiFi.begin(config.GetSSID(), config.GetPassword());
+      default:
+        break;
+    }
+    changeMode = WIFI_OFF;
+  }
   dnsServer.processNextRequest();
-  //mdns.update();
+  server.handleClient();
+  MDNS.update();
   yield();
 }
+
 #endif

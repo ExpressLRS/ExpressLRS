@@ -79,6 +79,8 @@ TxConfig::SetDefaults()
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
+    SetSSID("");
+    SetPassword("");
     Commit();
 }
 
@@ -89,6 +91,20 @@ TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     {
         m_eeprom = eeprom;
     }
+}
+
+void
+TxConfig::SetSSID(const char *ssid)
+{
+    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
+    m_modified = true;
+}
+
+void
+TxConfig::SetPassword(const char *password)
+{
+    strncpy(m_config.password, password, sizeof(m_config.password)-1);
+    m_modified = true;
 }
 
 /////////////////////////////////////////////////////
@@ -163,6 +179,8 @@ RxConfig::SetDefaults()
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     SetIsBound(false);
     SetPowerOnCounter(0);
+    SetSSID("");
+    SetPassword("");
     Commit();
 }
 
@@ -173,4 +191,18 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     {
         m_eeprom = eeprom;
     }
+}
+
+void
+RxConfig::SetSSID(const char *ssid)
+{
+    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
+    m_modified = true;
+}
+
+void
+RxConfig::SetPassword(const char *password)
+{
+    strncpy(m_config.password, password, sizeof(m_config.password)-1);
+    m_modified = true;
 }

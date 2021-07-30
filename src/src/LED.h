@@ -28,14 +28,14 @@ static uint32_t colors[8] = {
     0x8000FF,     // violet
     0x0000FF,     // blue
     0x00FF00,     // green
-    0xFFFFFF,     // yellow
+    0xFFFF00,     // yellow
     0xFF8000,     // orange
     0xFF0000      // red
 };
 
 static uint32_t rate_colors[RATE_MAX] = {
     0x00FF00,     // 500/250/200 hz  green
-    0xFFFFFF,     // 250/150/100 hz  yellow
+    0xFFFF00,     // 250/150/100 hz  yellow
     0xFF8000,     // 150/50/50 hz    orange
     0xFF0000      // 50/25/25 hz     red
 };
