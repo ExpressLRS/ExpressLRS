@@ -135,10 +135,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     switch (Power)
     {
     case PWR_10mW:
-        rfpower = -18;
-        break;
+        // Tx can not do less than 25 mW
     case PWR_25mW:
         rfpower = -18;
+        Power = PWR_25mW;
         break;
     case PWR_100mW:
         rfpower = -12;

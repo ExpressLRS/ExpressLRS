@@ -14,7 +14,7 @@
     defined(TARGET_R9M_TX)        || \
     defined(TARGET_TX_ES915TX)    || \
     defined(TARGET_ES900TX)
-#ifdef UNLOCK_HIGHER_POWER
+#if defined(UNLOCK_HIGHER_POWER) || defined(TARGET_NAMIMNORC_TX)
 #define MaxPower PWR_1000mW
 #else
 #define MaxPower PWR_250mW
