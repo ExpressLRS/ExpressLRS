@@ -64,8 +64,16 @@ elif platform in ['espressif8266']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+
 elif platform in ['espressif32']:
     env.AddPreAction("${BUILD_DIR}/src/ESP32_WebUpdate.cpp.o", build_html.build_tx_html)
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
+        env.Replace(UPLOAD_PORT="elrx_tx.local")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+
+if "_WIFI" in target_name:
+    if "_TX_" in target_name:
+        env.Replace(UPLOAD_PORT="elrx_tx.local")
+    else:
+        env.Replace(UPLOAD_PORT="elrx_rx.local")

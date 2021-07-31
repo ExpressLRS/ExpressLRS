@@ -359,6 +359,9 @@ void BeginWebUpdate()
       return;
     }
     MDNS.addService("http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
 
     server.begin();
 }
