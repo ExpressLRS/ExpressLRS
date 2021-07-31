@@ -364,10 +364,11 @@ void BeginWebUpdate(void)
     Serial.println("Error starting mDNS");
     return;
   }
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-    MDNS.addServiceTxt("http", "tcp", "type", "rx");
-    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+  MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt("http", "tcp", "version", VERSION);
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
