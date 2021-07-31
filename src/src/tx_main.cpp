@@ -139,6 +139,13 @@ static bool dynamic_power_updated;
 void DynamicPower_Update()
 {
   #ifdef USE_DYNAMIC_POWER
+  // if a user selected to disable dynamic power (ch16)
+  if(CRSF_to_BIT(crsf.ChannelDataIn[15])) {
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
+    return;
+  }
+  
   // if telemetry is not arrived, quick return.
   if (!dynamic_power_updated)
     return;
