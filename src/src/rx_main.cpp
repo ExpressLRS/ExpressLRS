@@ -280,45 +280,43 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = 0b11; // tlm packet
 
-    switch (NextTelemetryType)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
     {
-        case ELRS_TELEMETRY_TYPE_LINK:
-            if (modeSupportsTelemetry) {
-                NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
-                telemetryBurstCount = 0;
-            } else {
-                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-            }
-            Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
+        if (modeSupportsTelemetry) {
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+            telemetryBurstCount = 0;
+        } else {
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        }
+        Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
-            // The value in linkstatistics is "positivized" (inverted polarity)
-            // and must be inverted on the TX side. Positive values are used
-            // so save a bit to encode which antenna is in use
-            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-            Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
-            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-            Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
-            break;
+        // The value in linkstatistics is "positivized" (inverted polarity)
+        // and must be inverted on the TX side. Positive values are used
+        // so save a bit to encode which antenna is in use
+        Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+        Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+        Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+    }
+    else
+    {
+        if (telemetryBurstCount < telemetryBurstMax)
+        {
+            telemetryBurstCount++;
+        }
+        else
+        {
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        }
 
-        case ELRS_TELEMETRY_TYPE_DATA:
-            if (telemetryBurstCount < telemetryBurstMax)
-            {
-                telemetryBurstCount++;
-            }
-            else
-            {
-                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-            }
-
-            TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-            Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
-            Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
-            Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
-            Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-            Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-            Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
-            break;
+        TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+        Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+        Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+        Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+        Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+        Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
     }
 
     uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
