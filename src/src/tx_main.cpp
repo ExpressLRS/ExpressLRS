@@ -870,7 +870,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
+  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
