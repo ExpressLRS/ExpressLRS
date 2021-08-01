@@ -305,19 +305,19 @@ void CRSF::sendCRSFdevice(void * luaData, uint8_t wholePacketSize)
     LUArespLength = 2+ wholePacketSize; //2 bytes of header, name , 12 bytes of 'nonsense', 1 byte of lua field amount
     //create outbuffer size
     uint8_t outBuffer[wholePacketSize + 5 + 2 + 2] = {0}; 
-        //it is byte op, we can use memcpy with index to
-        // destination memory.
-            struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
-            memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
-            memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));    
-        outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-        outBuffer[1] = LUArespLength + 2;   //received as #data in lua
-        outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua
-        // all below received as data in lua
-        outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-        outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-        uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
-        outBuffer[LUArespLength + 3] = crc;
+    //it is byte op, we can use memcpy with index to
+    // destination memory.
+    struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
+    memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
+    memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));    
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;   //received as #data in lua
+    outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua
+    // all below received as data in lua
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+    outBuffer[LUArespLength + 3] = crc;
     
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
@@ -492,8 +492,8 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
         outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-            outBuffer[5] = chunkBuffer[0];
-            outBuffer[6] = ((chunks - (fieldchunk+1))); //remaining chunk to send;
+        outBuffer[5] = chunkBuffer[0];
+        outBuffer[6] = ((chunks - (fieldchunk+1))); //remaining chunk to send;
 
         uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
         outBuffer[LUArespLength + 3] = crc;
@@ -649,17 +649,12 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         connected();
     }
     
-    static bool volatile LUAupdateIsPending;
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
         GetChannelDataIn();
-        if (LUAupdateIsPending){
-            LUAupdateIsPending = false;
-            RecvParameterUpdate();
-            }
         return true;
     }
     else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
@@ -676,7 +671,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
-            LUAupdateIsPending = true;
+            RecvParameterUpdate();
             
             return true;
         }
