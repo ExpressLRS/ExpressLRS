@@ -23,8 +23,8 @@ public:
     static void (*RXtimeout)(); //function pointer for callback
 
 ///////////Radio Variables////////
-    #define TXRXBuffSize 8
-    const uint8_t TXbuffLen = TXRXBuffSize; //TODO might not always be const
+    #define TXRXBuffSize 16
+    const uint8_t TXbuffLen = TXRXBuffSize;
     const uint8_t RXbuffLen = TXRXBuffSize;
 
     static volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
@@ -34,6 +34,7 @@ public:
     bool crcEnabled = false;
 
     //// Parameters ////
+    uint8_t PayloadLength = 8; // Dummy default value which is overwritten during setup.
     uint32_t currFreq = 0; // leave as 0 to ensure that it gets set
     uint8_t currSyncWord = SX127X_SYNC_WORD;
     uint8_t currPreambleLen = 0;
@@ -61,8 +62,8 @@ public:
     bool Begin();
     void End();
     bool DetectChip();
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength);
     void SetMode(SX127x_RadioOPmodes mode);
     void ConfigLoraDefaults();
 
@@ -97,7 +98,7 @@ public:
     int8_t GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
-    static void TXnb(uint8_t volatile *data, uint8_t length);
+    static void TXnb();
     static void TXnbISR(); //ISR for non-blocking TX routine
     /////////////Non-blocking RX related Functions///////////////
     static void RXnb();

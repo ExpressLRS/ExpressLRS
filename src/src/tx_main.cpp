@@ -325,7 +325,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   Serial.println("set rate");
   hwTimer.updateInterval(ModParams->interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -448,7 +448,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  Radio.TXnb(Radio.TXdataBuffer, 8);
+  Radio.TXnb();
 }
 
 /*
