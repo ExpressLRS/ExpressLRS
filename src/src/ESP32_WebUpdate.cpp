@@ -358,6 +358,11 @@ void BeginWebUpdate()
       Serial.println("Error starting mDNS");
       return;
     }
+
+    String instance = String(myHostname) + "_" + WiFi.macAddress();
+    instance.replace(":", "");
+    MDNS.setInstanceName(instance);
+
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "type", "tx");

@@ -45,6 +45,8 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static ESP8266WebServer server(80);
 
+static MDNSResponder::hMDNSService service;
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -364,11 +366,14 @@ void BeginWebUpdate(void)
     Serial.println("Error starting mDNS");
     return;
   }
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-  MDNS.addServiceTxt("http", "tcp", "type", "rx");
-  MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-  MDNS.addServiceTxt("http", "tcp", "version", VERSION);
+  
+  String instance = String(myHostname) + "_" + WiFi.macAddress();
+  instance.replace(":", "");
+  service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+  MDNS.addServiceTxt(service, "vendor", "elrs");
+  MDNS.addServiceTxt(service, "type", "rx");
+  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt(service, "version", VERSION);
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
