@@ -405,7 +405,8 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         return 0;
     }
     uint8_t LUArespLength;
-    uint8_t chunks = 0;        
+    uint8_t chunks = 0;    
+    uint8_t currentPacketSize;    
     
     /**
      *calculate how many chunks needed for this field 
@@ -414,20 +415,18 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
         chunks = chunks + 1;
     }
-    //calculate how much byte this packet contains
-    uint8_t currentPacketSize;
-            if((chunks - (fieldchunk+1)) > 0){
-                currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
-            } else {
-                if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
-                    currentPacketSize = (wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES);
-                } else {
-                    currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
-                }
-            }
 
-    //if it is device info, we dont chunk
-        LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
+    //calculate how much byte this packet contains
+    if((chunks - (fieldchunk+1)) > 0){
+        currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+    } else {
+        if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
+            currentPacketSize = (wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES);
+        } else {
+            currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+        }
+    }
+    LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
                                         // chunk-ed packets below
                                         //fieldsetup1(fieldparent,fieldtype),field name, 
                                         //fieldsetup2(value,min,max,default),field unit
@@ -436,7 +435,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
         //it is byte op, we can use memcpy with index to
         // destination memory.
-        switch(dataType){
+    switch(dataType){
         case CRSF_TEXT_SELECTION:
         {
             getLuaTextSelectionStructToArray(luaData, chunkBuffer);
@@ -457,7 +456,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
             getLuaUint16StructToArray(luaData,chunkBuffer);
             break;
         }
-// we dont have to include this for now. since we dont need it yet?
+    // we dont have to include this for now. since we dont need it yet?
         case CRSF_INT8:
         {
             //getLuaint8StructToArray(luaData,chunkBuffer);
@@ -473,7 +472,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
             //getLuaFloatStructToArray(luaData,chunkBuffer);
             break;
         }
-//
+    //
         case CRSF_STRING:
         {
             getLuaStringStructToArray(luaData,chunkBuffer);

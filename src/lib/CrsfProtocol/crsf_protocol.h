@@ -296,9 +296,12 @@ struct tagLuaProperties1{
     uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
     uint8_t parent;
     uint8_t type;
-}PACKED; // probably a pointer to a flash string
+}PACKED;
 struct tagLuaDeviceProperties {
-    uint8_t etc[12]; //empty 12 bytes space
+    uint8_t etc[12]; //12 unnecessary bytes space consist of
+                    //4 bytes hardware ID
+                    //4 bytes serial number
+                    //4 bytes software version
     uint8_t fieldamount; //number of field of params this device has
 }PACKED;
 struct tagLuaTextSelectionProperties{
