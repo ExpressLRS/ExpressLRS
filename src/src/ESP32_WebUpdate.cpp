@@ -33,9 +33,18 @@ static bool target_seen = false;
 static uint8_t target_pos = 0;
 static bool force_update = false;
 
+#define QUOTE(arg) #arg
+#define STR(macro) QUOTE(macro)
+
 static const char *ssid = "ExpressLRS TX Module"; // The name of the Wi-Fi network that will be created
 static const char *password = "expresslrs";       // The password required to connect to it, leave blank for an open network
 static const char *myHostname = "elrs_tx";
+static const char *home_wifi_ssid = ""
+#ifdef HOME_WIFI_SSID
+STR(HOME_WIFI_SSID)
+#endif
+;
+static const char *home_wifi_password = STR(HOME_WIFI_PASSWORD);
 
 static wl_status_t laststatus;
 static volatile wifi_mode_t wifiMode = WIFI_MODE_NULL;
@@ -238,6 +247,10 @@ static void startWifi() {
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(ssid, password);
   WiFi.scanNetworks(true);
+  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
+    config.SetSSID(home_wifi_ssid);
+    config.SetPassword(home_wifi_password);
+  }
   if (config.GetSSID()[0]==0) {
     changeTime = millis();
     changeMode = WIFI_AP;
