@@ -503,11 +503,11 @@ void sendELRSstatus()
   switch(getLuaWarning()){
     case 0x01:
       {
-        crsf.sendELRSparam(luaParams,4, 0x2E,F("beta"),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+        crsf.sendELRSparam(luaParams,4, 0x2E,"beta",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
         break;
       }
     default:
-      crsf.sendELRSparam(luaParams,4, 0x2E,F(" "),4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+      crsf.sendELRSparam(luaParams,4, 0x2E," ",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
       break;
   }
   }

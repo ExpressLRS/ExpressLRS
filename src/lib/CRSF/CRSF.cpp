@@ -254,7 +254,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const __FlashStringHelper *elrsInfo, uint8_t len2)
+void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)
     {
