@@ -688,7 +688,7 @@ void HandleUpdateParameter()
       #ifndef DEBUG_SUPPRESS
       Serial.print("Request Power: ");
       #endif
-      PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
+      PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[2];
       Serial.println(newPower, DEC);
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
       
