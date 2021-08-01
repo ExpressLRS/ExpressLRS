@@ -35,6 +35,7 @@ static const char *ssid = "ExpressLRS RX";
 static const char *password = "expresslrs";
 static const char *myHostname = "elrs_rx";
 
+static wl_status_t laststatus;
 static volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
@@ -236,13 +237,6 @@ static void startWifi() {
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(ssid, password);
   WiFi.scanNetworks(true);
-  WiFi.onStationModeGotIP([](const WiFiEventStationModeGotIP&){
-    Serial.println("Connected as Wifi station");
-  });
-  WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected &){
-    changeTime = millis();
-    changeMode = WIFI_AP;
-  });
   if (config.GetSSID()[0]==0) {
     changeTime = millis();
     changeMode = WIFI_AP;
@@ -250,6 +244,7 @@ static void startWifi() {
     changeTime = millis();
     changeMode = WIFI_STA;
   }
+  laststatus = WL_DISCONNECTED;
 }
 
 void BeginWebUpdate(void)
@@ -372,6 +367,24 @@ void BeginWebUpdate(void)
 
 void HandleWebUpdate(void)
 {
+  wl_status_t status = WiFi.status();
+  if (status != laststatus && wifiMode == WIFI_STA) {
+        Serial.printf("WiFi status %d\n", status);
+        switch(status) {
+          case WL_NO_SSID_AVAIL:
+          case WL_CONNECT_FAILED:
+          case WL_CONNECTION_LOST:
+            changeTime = millis();
+            changeMode = WIFI_AP;
+            break;
+          case WL_DISCONNECTED: // try reconnection
+            changeTime = millis();
+            break;
+          default:
+            break;
+        }
+        laststatus = status;
+  }
   if (changeMode != wifiMode && changeMode != WIFI_OFF && changeTime > (millis() - 500)) {
     switch(changeMode) {
       case WIFI_AP:
