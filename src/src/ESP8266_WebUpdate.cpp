@@ -9,6 +9,7 @@
 #include <set>
 #include <StreamString.h>
 
+#include "options.h"
 #include "ESP8266_WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -374,6 +375,7 @@ void BeginWebUpdate(void)
   MDNS.addServiceTxt(service, "type", "rx");
   MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
   MDNS.addServiceTxt(service, "version", VERSION);
+  MDNS.addServiceTxt(service, "options", compile_options);
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
@@ -400,6 +402,7 @@ void HandleWebUpdate(void)
       default:
         break;
     }
+    MDNS.notifyAPChange();
     changeMode = WIFI_OFF;
   }
   dnsServer.processNextRequest();
