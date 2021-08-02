@@ -701,9 +701,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
         {
-            bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf, NonceRX,
-                TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
-            #ifdef ENABLE_TELEMETRY
+            bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf
+            #if defined(HYBRID_SWITCHES_8)
+                 , NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval)
+            #endif
+            );
+            #if defined(ENABLE_TELEMETRY)
                 TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
             #else
                 UNUSED(telemetryConfirmValue);

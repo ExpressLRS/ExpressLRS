@@ -435,13 +435,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, NonceTX,
-        TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval),
-      #ifdef ENABLE_TELEMETRY
-        TelemetryReceiver.GetCurrentConfirm());
-      #else
-        false);
-      #endif
+      GenerateChannelData(Radio.TXdataBuffer, &crsf
+        #if defined(HYBRID_SWITCHES_8)
+          , NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval),
+          #ifdef ENABLE_TELEMETRY
+            TelemetryReceiver.GetCurrentConfirm()
+          #else
+            false
+          #endif
+        #endif
+      ); // end of GenerateChannelData()
     }
   }
 
