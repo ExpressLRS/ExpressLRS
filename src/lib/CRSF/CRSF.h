@@ -41,14 +41,6 @@ public:
     static volatile uint16_t ChannelDataIn[16];
     static volatile uint16_t ChannelDataOut[16];
 
-    // current and sent switch values
-    #define N_SWITCHES 8
-
-    static uint8_t currentSwitches[N_SWITCHES];
-    static uint8_t sentSwitches[N_SWITCHES];
-    // which switch should be sent in the next rc packet
-    static uint8_t nextSwitchIndex;
-
     static void (*disconnected)();
     static void (*connected)();
 
@@ -79,9 +71,6 @@ public:
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
-    uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
-    void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
-
 ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
@@ -92,7 +81,6 @@ public:
 
     static void ICACHE_RAM_ATTR GetChannelDataIn();
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
-    static void ICACHE_RAM_ATTR updateSwitchValues();
 
     static void inline nullCallback(void);
 

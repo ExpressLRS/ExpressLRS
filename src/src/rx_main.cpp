@@ -680,9 +680,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
-    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
-    bool telemetryConfirmValue;
-    #endif
     bool currentMspConfirmValue;
     bool doStartTimer = false;
 
@@ -693,14 +690,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        UnpackChannelData(Radio.RXdataBuffer, &crsf);
-        #ifdef ENABLE_TELEMETRY
-        telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
-        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
-        if (connectionState != disconnected)
         {
-            crsf.sendRCFrameToFC();
+            bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf, NonceRX,
+                TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+            #ifdef ENABLE_TELEMETRY
+                TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+            #else
+                UNUSED(telemetryConfirmValue);
+            #endif
+            if (connectionState != disconnected)
+            {
+                crsf.sendRCFrameToFC();
+            }
         }
         break;
 

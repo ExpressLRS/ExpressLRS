@@ -144,8 +144,8 @@ void DynamicPower_Update()
     return;
   dynamic_power_updated = false;
 
-  // =============  LQ-based power boost up ==============  
-  // Quick boost up of power when detected any emergency LQ drops. 
+  // =============  LQ-based power boost up ==============
+  // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   int32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
   int32_t lq_diff = (dynamic_power_avg_lq>>16) - lq_current;
@@ -158,12 +158,12 @@ void DynamicPower_Update()
       dynamic_power_rssi_n = 0;
   }
   // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
-  dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;   
+  dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
   // =============  RSSI-based power adjustment ==============
   // It is working slowly, suitable for a general long-range flights.
-  
-  // Get the RSSI from the selected antenna.  
+
+  // Get the RSSI from the selected antenna.
   int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
 
   dynamic_power_rssi_sum += rssi;
@@ -180,8 +180,8 @@ void DynamicPower_Update()
   int32_t rssi_dec_threshold = expected_RXsensitivity + 30;
 
   // Serial.print("Dynamic power: ");
-  // Serial.print(avg_rssi); 
-  // Serial.print(", "); 
+  // Serial.print(avg_rssi);
+  // Serial.print(", ");
   // Serial.println(dynamic_power_rssi_n);
 
   // Serial.print("CurrentPower: ");
@@ -208,7 +208,7 @@ void DynamicPower_Update()
   // Serial.print(dynamic_power_avg_lq>>16);
   // Serial.print("/");
   // Serial.println(lq_diff);
-  #endif    
+  #endif
 }
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
@@ -435,10 +435,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
+      GenerateChannelData(Radio.TXdataBuffer, &crsf, NonceTX,
+        TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval),
       #ifdef ENABLE_TELEMETRY
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
+        TelemetryReceiver.GetCurrentConfirm());
       #else
-      GenerateChannelData(Radio.TXdataBuffer, &crsf);
+        false);
       #endif
     }
   }
@@ -572,7 +574,7 @@ void HandleUpdateParameter()
       config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
+                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]),
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
     #endif
     }
@@ -586,7 +588,7 @@ void HandleUpdateParameter()
       config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
     #endif
     }
@@ -598,10 +600,10 @@ void HandleUpdateParameter()
       PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
       Serial.println(newPower, DEC);
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
-      
+
       #if defined(HAS_OLED)
        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
       #endif
     }
@@ -853,7 +855,7 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-  
+
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
