@@ -1,5 +1,6 @@
 #include "targets.h"
 #include "common.h"
+#include "helpers.h"
 #include "LowPassFilter.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
