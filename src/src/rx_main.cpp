@@ -647,13 +647,22 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
 
+    // Save the CRC value before removing it from packet
+    uint16_t inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
+
+    // The CRC was calculated on the TX with the type and FHSS slot in byte 0 except on SYNC packets
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
+    if (type == SYNC_PACKET)
+    {
+        Radio.RXdataBuffer[0] = type;
+    }
+    else
+    {
+        uint8_t NonceFHSSresult = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        Radio.RXdataBuffer[0] = type | (NonceFHSSresult << 2);
+    }
 
-    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
-
-    Radio.RXdataBuffer[0] = type;
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-
     if (inCRC != calculatedCRC)
     {
         #ifndef DEBUG_SUPPRESS
