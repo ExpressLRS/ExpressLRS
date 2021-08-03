@@ -35,6 +35,7 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
+#include "options.h"
 #include "POWERMGNT.h"
 
 #ifdef TARGET_RX_GHOST_ATTO_V1

@@ -26,6 +26,7 @@ extern hwTimer hwTimer;
 #include "CRSF.h"
 extern CRSF crsf;
 
+#include "options.h"
 #include "config.h"
 extern TxConfig config;
 
@@ -358,7 +359,17 @@ void BeginWebUpdate()
       Serial.println("Error starting mDNS");
       return;
     }
+
+    String instance = String(myHostname) + "_" + WiFi.macAddress();
+    instance.replace(":", "");
+    MDNS.setInstanceName(instance);
+
     MDNS.addService("http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt("http", "tcp", "version", VERSION);
+    MDNS.addServiceTxt("http", "tcp", "options", compile_options);
 
     server.begin();
 }

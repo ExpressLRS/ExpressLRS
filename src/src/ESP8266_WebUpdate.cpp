@@ -9,6 +9,7 @@
 #include <set>
 #include <StreamString.h>
 
+#include "options.h"
 #include "ESP8266_WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -44,6 +45,8 @@ static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static ESP8266WebServer server(80);
+
+static MDNSResponder::hMDNSService service;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -364,7 +367,15 @@ void BeginWebUpdate(void)
     Serial.println("Error starting mDNS");
     return;
   }
-  MDNS.addService("http", "tcp", 80);
+  
+  String instance = String(myHostname) + "_" + WiFi.macAddress();
+  instance.replace(":", "");
+  service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+  MDNS.addServiceTxt(service, "vendor", "elrs");
+  MDNS.addServiceTxt(service, "type", "rx");
+  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt(service, "version", VERSION);
+  MDNS.addServiceTxt(service, "options", compile_options);
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
@@ -391,6 +402,7 @@ void HandleWebUpdate(void)
       default:
         break;
     }
+    MDNS.notifyAPChange();
     changeMode = WIFI_OFF;
   }
   dnsServer.processNextRequest();
