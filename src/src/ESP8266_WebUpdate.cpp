@@ -383,7 +383,7 @@ void BeginWebUpdate(void)
   MDNS.addServiceTxt(service, "type", "rx");
   MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
   MDNS.addServiceTxt(service, "version", VERSION);
-  MDNS.addServiceTxt(service, "options", compile_options);
+  MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
