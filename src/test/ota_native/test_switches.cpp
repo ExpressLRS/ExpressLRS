@@ -383,7 +383,7 @@ void test_decoding10bit()
     GenerateChannelData10bit(TXdataBuffer, &crsf);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData10bit(TXdataBuffer, &crsf);
+    UnpackChannelData10bit(TXdataBuffer, &crsf, 0, 0);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
