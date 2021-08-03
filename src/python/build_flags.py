@@ -33,6 +33,7 @@ def parse_flags(path):
                 define = define.strip()
                 if define.startswith("-D") or define.startswith("!-D"):
                     if "MY_BINDING_PHRASE" in define:
+                        build_flags.append(define)
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
                         UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
                         define = "-DMY_UID=" + UIDbytes
