@@ -8,9 +8,6 @@
 
 #include "OTA.h"
 
-// Common SWITCHES_8 functions
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-
 static inline uint8_t ICACHE_RAM_ATTR Switches8NonceToSwitchIndex(uint8_t nonce)
 {
     // Returns the sequence (0 to 7, then 0 to 7 rotated left by 1):
@@ -22,8 +19,6 @@ static inline uint8_t ICACHE_RAM_ATTR Switches8NonceToSwitchIndex(uint8_t nonce)
     // Index 7 also can never fall on a telemetry slot
     return ((nonce & 0b111) + ((nonce >> 3) & 0b1)) % 8;
 }
-
-#endif
 
 #if TARGET_TX or defined UNIT_TEST
 
