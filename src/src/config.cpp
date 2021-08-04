@@ -37,41 +37,41 @@ TxConfig::Commit()
 
 // Setters
 void
-TxConfig::SetRate(uint32_t rate)
+TxConfig::SetRate(uint8_t modelId, uint8_t rate)
 {
-    if (m_config.rate != rate)
+    if (m_config.model_config[modelId].rate != rate)
     {
-        m_config.rate = rate;
+        m_config.model_config[modelId].rate = rate;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetTlm(uint32_t tlm)
+TxConfig::SetTlm(uint8_t modelId, uint8_t tlm)
 {
-    if (m_config.tlm != tlm)
+    if (m_config.model_config[modelId].tlm != tlm)
     {
-        m_config.tlm = tlm;
+        m_config.model_config[modelId].tlm = tlm;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetPower(uint32_t power)
+TxConfig::SetPower(uint8_t modelId, uint8_t power)
 {
-    if (m_config.power != power)
+    if (m_config.model_config[modelId].power != power)
     {
-        m_config.power = power;
+        m_config.model_config[modelId].power = power;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetSwitchMode(uint32_t switchMode)
+TxConfig::SetSwitchMode(uint8_t modelId, uint8_t switchMode)
 {
-    if (m_config.switchMode != switchMode)
+    if (m_config.model_config[modelId].switchMode != switchMode)
     {
-        m_config.switchMode = switchMode;
+        m_config.model_config[modelId].switchMode = switchMode;
         m_modified = true;
     }
 }
@@ -81,12 +81,14 @@ TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     m_config.version = TX_CONFIG_VERSION;
-    SetRate(modParams->index);
-    SetTlm(modParams->TLMinterval);
-    SetPower(DefaultPowerEnum);
-    SetSwitchMode(1);
     SetSSID("");
     SetPassword("");
+    for (int i=0 ; i<64 ; i++) {
+        SetRate(i, modParams->index);
+        SetTlm(i, modParams->TLMinterval);
+        SetPower(i, DefaultPowerEnum);
+        SetSwitchMode(i, 1);
+    }
     Commit();
 }
 

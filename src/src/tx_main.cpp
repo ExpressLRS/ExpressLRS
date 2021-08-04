@@ -98,6 +98,7 @@ LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
+volatile bool UpdateModelReq = false;
 uint32_t HWtimerPauseDuration = 0;
 
 char luaBadGoodString[10] = {"xxxxx/yyy"};
@@ -151,7 +152,7 @@ void DynamicPower_Update()
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
-      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower(crsf.getModelID()));
       // restart the rssi sampling after a boost up
       dynamic_power_rssi_sum = 0;
       dynamic_power_rssi_n = 0;
@@ -190,7 +191,7 @@ void DynamicPower_Update()
   // Serial.println((PowerLevels_e)config.GetPower());
 
   // increase power only up to the set power from the LUA script
-  if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
+  if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower(crsf.getModelID())) {
     // Serial.print("Power increase");
     POWERMGNT.incPower();
   }
@@ -280,13 +281,13 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
-  const uint8_t SwitchEncMode = config.GetSwitchMode() & 0b11;
+  const uint8_t SwitchEncMode = config.GetSwitchMode(crsf.getModelID()) & 0b11;
   uint8_t Index;
   uint8_t TLMrate;
   if (syncSpamCounter)
   {
-    Index = (config.GetRate() & 0b11);
-    TLMrate = (config.GetTlm() & 0b111);
+    Index = (config.GetRate(crsf.getModelID()) & 0b11);
+    TLMrate = (config.GetTlm(crsf.getModelID()) & 0b111);
   }
   else
   {
@@ -500,7 +501,7 @@ void registerLuaParameters() {
         Serial.print("Request AirRate: ");
         Serial.println(arg);
       #endif
-        config.SetRate(arg);
+        config.SetRate(crsf.getModelID(), arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)arg), 
@@ -515,7 +516,7 @@ void registerLuaParameters() {
         Serial.print("Request TLM interval: ");
         Serial.println(arg);
       #endif
-        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+        config.SetTlm(crsf.getModelID(), (expresslrs_tlm_ratio_e)arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
@@ -529,8 +530,7 @@ void registerLuaParameters() {
       Serial.print("Request Power: ");
       Serial.println(newPower, DEC);
     #endif
-      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
-      
+      config.SetPower(crsf.getModelID(), newPower < MaxPower ? newPower : MaxPower);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
@@ -541,7 +541,7 @@ void registerLuaParameters() {
     Serial.print("Request Switch Mode: ");
     uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
     Serial.println(newSwitchMode, DEC);
-    config.SetSwitchMode(newSwitchMode);
+    config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
     SetSwitchMode(newSwitchMode);
   });
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
@@ -588,11 +588,11 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   
   #ifdef USE_DYNAMIC_POWER
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
   #else
   setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
+  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
 }
 
 void updateLUApacketCount(){
@@ -636,8 +636,21 @@ void UARTconnected()
   hwTimer.resume();
 }
 
+static void ChangeRadioParams()
+{
+  SetRFLinkRate(config.GetRate(crsf.getModelID()));
+  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm(crsf.getModelID());
+  POWERMGNT.setPower((PowerLevels_e)config.GetPower(crsf.getModelID()));
+  SetSwitchMode(config.GetSwitchMode(crsf.getModelID()));
+}
+
 void HandleUpdateParameter()
 {
+  if (UpdateModelReq == true)
+  {
+    ChangeRadioParams();
+    UpdateModelReq = false;
+  }
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
@@ -645,11 +658,14 @@ void HandleUpdateParameter()
   }
 }
 
+void ICACHE_RAM_ATTR ModelUpdateReq()
+{
+  UpdateModelReq = true;
+}
+
 static void ConfigChangeCommit()
 {
-  SetRFLinkRate(config.GetRate());
-  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
-  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  ChangeRadioParams();
 
   // Write the uncommitted eeprom values
 #ifndef DEBUG_SUPPRESS
@@ -677,7 +693,7 @@ static void CheckConfigChangePending()
     // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
     // interrupts, FastForward the timer
     const uint32_t EEPROM_WRITE_DURATION = 30000; // us, ~27ms is where it starts getting off by one
-    const uint32_t cycleInterval = get_elrs_airRateConfig(config.GetRate())->interval;
+    const uint32_t cycleInterval = get_elrs_airRateConfig(config.GetRate(crsf.getModelID()))->interval;
     // Total time needs to be at least DURATION, rounded up to next cycle
     uint32_t pauseCycles = (EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval;
     // Pause won't return until paused, and has just passed the tick ISR (but not fired)
@@ -821,6 +837,7 @@ void setup()
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
   crsf.RecvParameterUpdate = &luaParamUpdateReq;
+  crsf.RecvModelUpdate = &ModelUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
 #ifndef DEBUG_SUPPRESS
   Serial.println("ExpressLRS TX Module Booted...");
@@ -868,10 +885,8 @@ void setup()
   POWERMGNT.init();
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
-  SetRFLinkRate(config.GetRate());
-  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
-  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-  
+  ChangeRadioParams();
+
   registerLuaParameters();
   registerLUAPopulateParams(updateLUApacketCount);
 
@@ -1118,7 +1133,7 @@ void ExitBindingMode()
   InBindingMode = 0;
   setLuaCommandValue(&luaBind,InBindingMode);
   MspSender.ResetState();
-  SetRFLinkRate(config.GetRate()); //return to original rate
+  SetRFLinkRate(config.GetRate(crsf.getModelID())); //return to original rate
 
 #ifndef DEBUG_SUPPRESS
   Serial.println("Exiting binding mode");

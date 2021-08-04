@@ -49,10 +49,13 @@ public:
     static uint8_t nextSwitchFirstIndex;
     // which switch should be sent in the next rc packet
     static uint8_t nextSwitchIndex;
+    // The model ID as received from the Transmitter
+    static uint8_t modelId;
 
     static void (*disconnected)();
     static void (*connected)();
 
+    static void (*RecvModelUpdate)();
     static void (*RecvParameterUpdate)();
 
     static volatile uint8_t ParameterUpdateData[3];
@@ -87,7 +90,9 @@ public:
     void ICACHE_RAM_ATTR setNextSwitchFirstIndex(int firstSwitchIndex);
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
-///// Variables for OpenTX Syncing //////////////////////////
+    uint8_t ICACHE_RAM_ATTR getModelID();
+
+    ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
