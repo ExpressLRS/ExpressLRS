@@ -23,7 +23,6 @@ public:
     /* Start a new period */
     void inc()
     {
-        LQprevious = currentIsSet();
         // Increment the counter by shifting one bit higher
         // If we've shifted out all the bits, move to next idx
         LQmask = LQmask << 1;
@@ -45,25 +44,41 @@ public:
             LQArray[LQbyte] &= ~LQmask;
             LQ -= 1;
         }
+
+        if (count < N)
+          ++count;
     }
 
     /* Return the current running total of bits set, in percent */
     uint8_t getLQ() const
     {
-        // Allow the compiler to optimize out some or all of the
-        // math if evenly divisible
-        if (100 % N == 0)
-            return (uint32_t)LQ * (100 / N);
-        else
-            return (uint32_t)LQ * 100 / N;
+        return (uint32_t)LQ * 100U / count;
+    }
+
+    /* Return the current running total of bits set, up to N */
+    uint8_t getLQRaw() const
+    {
+        return LQ;
+    }
+
+    /* Return the number of periods recorded so far, up to N */
+    uint8_t getCount() const
+    {
+        return count;
+    }
+
+    /* Return N, the size of the LQ history */
+    uint8_t getSize() const
+    {
+        return N;
     }
 
     /* Initialize and zero the history */
     void reset()
     {
+        count = 0;
         LQ = 0;
         LQbyte = 0;
-        LQprevious = false;
         LQmask = (1 << 0);
         for (uint8_t i = 0; i < (sizeof(LQArray)/sizeof(LQArray[0])); i++)
             LQArray[i] = 0;
@@ -75,16 +90,10 @@ public:
         return LQArray[LQbyte] & LQmask;
     }
 
-    /*  Return true if the previous period was add()ed */
-    bool previousIsSet() const
-    {
-        return LQprevious;
-    }
-
 private:
     uint8_t LQ;
     uint8_t LQbyte;
-    bool LQprevious;
+    uint8_t count;
     uint32_t LQmask;
     uint32_t LQArray[(N + 31)/32];
 };
