@@ -3,9 +3,6 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
-extern const unsigned char target_name[];
-extern const uint8_t target_name_size;
-
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)

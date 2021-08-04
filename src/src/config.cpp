@@ -2,11 +2,6 @@
 #include "common.h"
 #include "POWERMGNT.h"
 
-#define QUOTE(arg) #arg
-#define STR(macro) QUOTE(macro)
-const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
-const uint8_t target_name_size = sizeof(target_name);
-
 void
 TxConfig::Load()
 {
@@ -14,7 +9,7 @@ TxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != (TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
+    if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -116,7 +111,7 @@ RxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != (RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
+    if (m_config.version != (uint32_t)(RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
