@@ -45,7 +45,7 @@ def get_git_version(env):
     return '%s (%s)' % (ver, hash)
 
 def build_version(out, env):
-    out.write('static const char PROGMEM VERSION[] = "%s";\n\n' % get_git_version(env))
+    out.write('static const char VERSION[] = "%s";\n\n' % get_git_version(env))
 
 def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
