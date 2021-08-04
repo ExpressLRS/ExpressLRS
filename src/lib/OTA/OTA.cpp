@@ -8,9 +8,9 @@
 
 #include "OTA.h"
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-
 #if TARGET_TX or defined UNIT_TEST
+
+#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 /**
  * Hybrid switches packet encoding for sending over the air
  *
@@ -65,9 +65,35 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
 }
+#endif // HYBRID_SWITCHES_8
+
+#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
+{
+  Buffer[0] = RC_DATA_PACKET & 0b11;
+  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
+  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
+  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
+  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
+  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
+                           ((crsf->ChannelDataIn[1] & 0b110) << 3) |
+                           ((crsf->ChannelDataIn[2] & 0b110) << 1) |
+                           ((crsf->ChannelDataIn[3] & 0b110) >> 1);
+  Buffer[6] = CRSF_to_BIT(crsf->ChannelDataIn[4]) << 7;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[5]) << 6;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[6]) << 5;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[7]) << 4;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[8]) << 3;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[9]) << 2;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
+  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
+}
+#endif // !HYBRID_SWITCHES_8
+
 #endif
 
 #if TARGET_RX or defined UNIT_TEST
+
 /**
  * Hybrid switches decoding of over the air data
  *
@@ -121,37 +147,6 @@ void ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     }
 }
 
-#endif
-#endif // HYBRID_SWITCHES_8
-
-#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-
-#if TARGET_TX or defined UNIT_TEST
-
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
-{
-  Buffer[0] = RC_DATA_PACKET & 0b11;
-  Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
-  Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
-  Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
-  Buffer[4] = ((crsf->ChannelDataIn[3]) >> 3);
-  Buffer[5] = ((crsf->ChannelDataIn[0] & 0b110) << 5) |
-                           ((crsf->ChannelDataIn[1] & 0b110) << 3) |
-                           ((crsf->ChannelDataIn[2] & 0b110) << 1) |
-                           ((crsf->ChannelDataIn[3] & 0b110) >> 1);
-  Buffer[6] = CRSF_to_BIT(crsf->ChannelDataIn[4]) << 7;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[5]) << 6;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[6]) << 5;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[7]) << 4;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[8]) << 3;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[9]) << 2;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
-  Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
-}
-#endif
-
-#if TARGET_RX or defined UNIT_TEST
-
 void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
 {
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
@@ -169,5 +164,3 @@ void ICACHE_RAM_ATTR UnpackChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf
 }
 
 #endif
-
-#endif // !HYBRID_SWITCHES_8

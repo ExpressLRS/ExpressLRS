@@ -20,9 +20,7 @@ SX1280Driver Radio;
 #include "CRSF.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
-#ifdef ENABLE_TELEMETRY
 #include "stubborn_sender.h"
-#endif
 #include "stubborn_receiver.h"
 
 #include "FHSS.h"
@@ -35,6 +33,7 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "elrs_eeprom.h"
 #include "config.h"
+#include "options.h"
 #include "POWERMGNT.h"
 
 #ifdef TARGET_RX_GHOST_ATTO_V1
@@ -93,13 +92,11 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define CRSF_RX_SERIAL Serial
 #endif
 
-#ifdef ENABLE_TELEMETRY
-    StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
-    static uint8_t telemetryBurstCount;
-    static uint8_t telemetryBurstMax;
-    // Maximum ms between LINK_STATISTICS packets for determining burst max
-    #define TELEM_MIN_LINK_INTERVAL 512U
-#endif
+StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
+static uint8_t telemetryBurstCount;
+static uint8_t telemetryBurstMax;
+// Maximum ms between LINK_STATISTICS packets for determining burst max
+#define TELEM_MIN_LINK_INTERVAL 512U
 
 StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
 uint8_t MspData[ELRS_MSP_BUFFER];
@@ -129,6 +126,10 @@ int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+
+// Current OTA unpack function
+void ICACHE_RAM_ATTR (*UnpackChannelData)(volatile uint8_t* Buffer, CRSF *crsf) = UnpackChannelDataHybridSwitch8;
+bool modeSupportsTelemetry = true;
 
 // LED Blinking state
 static bool LED = false;
@@ -267,11 +268,9 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    #ifdef ENABLE_TELEMETRY
     uint8_t *data;
     uint8_t maxLength;
     uint8_t packageIndex;
-    #endif
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
@@ -282,47 +281,43 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = 0b11; // tlm packet
 
-    switch (NextTelemetryType)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
     {
-        case ELRS_TELEMETRY_TYPE_LINK:
-            #ifdef ENABLE_TELEMETRY
+        if (modeSupportsTelemetry) {
             NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
             telemetryBurstCount = 0;
-            #else
+        } else {
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-            #endif
-            Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
+        }
+        Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
 
-            // The value in linkstatistics is "positivized" (inverted polarity)
-            // and must be inverted on the TX side. Positive values are used
-            // so save a bit to encode which antenna is in use
-            Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-            Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
-            Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-            Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-            Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+        // The value in linkstatistics is "positivized" (inverted polarity)
+        // and must be inverted on the TX side. Positive values are used
+        // so save a bit to encode which antenna is in use
+        Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+        Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
+        Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+    }
+    else
+    {
+        if (telemetryBurstCount < telemetryBurstMax)
+        {
+            telemetryBurstCount++;
+        }
+        else
+        {
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        }
 
-            break;
-        #ifdef ENABLE_TELEMETRY
-        case ELRS_TELEMETRY_TYPE_DATA:
-            if (telemetryBurstCount < telemetryBurstMax)
-            {
-                telemetryBurstCount++;
-            }
-            else
-            {
-                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-            }
-
-            TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-            Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
-            Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
-            Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
-            Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-            Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-            Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
-            break;
-        #endif
+        TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+        Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+        Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+        Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+        Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+        Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
     }
 
     uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
@@ -672,17 +667,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
-#ifdef HYBRID_SWITCHES_8
-    uint8_t SwitchEncModeExpected = 0b01;
-#else
-    uint8_t SwitchEncModeExpected = 0b00;
-#endif
-    uint8_t SwitchEncMode;
     uint8_t indexIN;
     uint8_t TLMrateIn;
-    #if defined(ENABLE_TELEMETRY) && defined(HYBRID_SWITCHES_8)
     bool telemetryConfirmValue;
-    #endif
     bool currentMspConfirmValue;
     bool doStartTimer = false;
 
@@ -694,10 +681,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
         UnpackChannelData(Radio.RXdataBuffer, &crsf);
-        #ifdef ENABLE_TELEMETRY
-        telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
-        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        #endif
+        if (modeSupportsTelemetry) { // HYBRID8
+            telemetryConfirmValue = Radio.RXdataBuffer[6] & (1 << 7);
+            TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+        }
         if (connectionState != disconnected)
         {
             crsf.sendRCFrameToFC();
@@ -732,9 +719,22 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     case SYNC_PACKET: //sync packet from master
          indexIN = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
-         SwitchEncMode = (Radio.RXdataBuffer[3] & 0b00000110) >> 1;
+         switch((Radio.RXdataBuffer[3] & 0b00000110) >> 1) {
+             case 0b00:
+                UnpackChannelData = UnpackChannelData10bit;
+                modeSupportsTelemetry = false;
+                break;
+             case 0b01:
+                UnpackChannelData = UnpackChannelDataHybridSwitch8;
+                modeSupportsTelemetry = true;
+                break;
+             case 0b10:
+             case 0b11:
+             default:
+                break;
+         }
 
-         if (SwitchEncModeExpected == SwitchEncMode && Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
          {
              LastSyncPacket = millis();
 #if defined(PRINT_RX_SCOREBOARD)
@@ -1065,7 +1065,6 @@ static void ws2812Blink()
 
 static void updateTelemetryBurst()
 {
-#if defined(ENABLE_TELEMETRY)
     if (telemBurstValid)
         return;
     telemBurstValid = true;
@@ -1086,7 +1085,6 @@ static void updateTelemetryBurst()
 
     // Notify the sender to adjust its expected throughput
     TelemetrySender.UpdateTelemetryRate(hz, ratiodiv, telemetryBurstMax);
-#endif
 }
 
 /* If not connected will rotate through the RF modes looking for sync
@@ -1331,15 +1329,15 @@ void loop()
         }
     }
 
-    #ifdef ENABLE_TELEMETRY
-    uint8_t *nextPayload = 0;
-    uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
-    {
-        TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+    if (modeSupportsTelemetry) {
+        uint8_t *nextPayload = 0;
+        uint8_t nextPlayloadSize = 0;
+        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
+        }
+        updateTelemetryBurst();
     }
-    #endif
-    updateTelemetryBurst();
 }
 
 struct bootloader {

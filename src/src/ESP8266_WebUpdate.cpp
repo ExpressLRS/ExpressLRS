@@ -9,6 +9,7 @@
 #include <set>
 #include <StreamString.h>
 
+#include "options.h"
 #include "ESP8266_WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -31,10 +32,20 @@ static bool target_seen = false;
 static uint8_t target_pos = 0;
 static bool force_update = false;
 
+#define QUOTE(arg) #arg
+#define STR(macro) QUOTE(macro)
+
 static const char *ssid = "ExpressLRS RX";
 static const char *password = "expresslrs";
 static const char *myHostname = "elrs_rx";
+static const char *home_wifi_ssid = ""
+#ifdef HOME_WIFI_SSID
+STR(HOME_WIFI_SSID)
+#endif
+;
+static const char *home_wifi_password = STR(HOME_WIFI_PASSWORD);
 
+static wl_status_t laststatus;
 static volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
@@ -44,6 +55,8 @@ static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static ESP8266WebServer server(80);
+
+static MDNSResponder::hMDNSService service;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -236,13 +249,10 @@ static void startWifi() {
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(ssid, password);
   WiFi.scanNetworks(true);
-  WiFi.onStationModeGotIP([](const WiFiEventStationModeGotIP&){
-    Serial.println("Connected as Wifi station");
-  });
-  WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected &){
-    changeTime = millis();
-    changeMode = WIFI_AP;
-  });
+  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
+    config.SetSSID(home_wifi_ssid);
+    config.SetPassword(home_wifi_password);
+  }
   if (config.GetSSID()[0]==0) {
     changeTime = millis();
     changeMode = WIFI_AP;
@@ -250,6 +260,7 @@ static void startWifi() {
     changeTime = millis();
     changeMode = WIFI_STA;
   }
+  laststatus = WL_DISCONNECTED;
 }
 
 void BeginWebUpdate(void)
@@ -364,7 +375,15 @@ void BeginWebUpdate(void)
     Serial.println("Error starting mDNS");
     return;
   }
-  MDNS.addService("http", "tcp", 80);
+  
+  String instance = String(myHostname) + "_" + WiFi.macAddress();
+  instance.replace(":", "");
+  service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+  MDNS.addServiceTxt(service, "vendor", "elrs");
+  MDNS.addServiceTxt(service, "type", "rx");
+  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt(service, "version", VERSION);
+  MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
 
   server.begin();
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
@@ -372,6 +391,24 @@ void BeginWebUpdate(void)
 
 void HandleWebUpdate(void)
 {
+  wl_status_t status = WiFi.status();
+  if (status != laststatus && wifiMode == WIFI_STA) {
+        Serial.printf("WiFi status %d\n", status);
+        switch(status) {
+          case WL_NO_SSID_AVAIL:
+          case WL_CONNECT_FAILED:
+          case WL_CONNECTION_LOST:
+            changeTime = millis();
+            changeMode = WIFI_AP;
+            break;
+          case WL_DISCONNECTED: // try reconnection
+            changeTime = millis();
+            break;
+          default:
+            break;
+        }
+        laststatus = status;
+  }
   if (changeMode != wifiMode && changeMode != WIFI_OFF && changeTime > (millis() - 500)) {
     switch(changeMode) {
       case WIFI_AP:
@@ -391,6 +428,7 @@ void HandleWebUpdate(void)
       default:
         break;
     }
+    MDNS.notifyAPChange();
     changeMode = WIFI_OFF;
   }
   dnsServer.processNextRequest();
