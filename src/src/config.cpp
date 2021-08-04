@@ -67,6 +67,16 @@ TxConfig::SetPower(uint32_t power)
 }
 
 void
+TxConfig::SetSwitchMode(uint32_t switchMode)
+{
+    if (m_config.switchMode != switchMode)
+    {
+        m_config.switchMode = switchMode;
+        m_modified = true;
+    }
+}
+
+void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
@@ -74,6 +84,7 @@ TxConfig::SetDefaults()
     SetRate(modParams->index);
     SetTlm(modParams->TLMinterval);
     SetPower(DefaultPowerEnum);
+    SetSwitchMode(1);
     SetSSID("");
     SetPassword("");
     Commit();

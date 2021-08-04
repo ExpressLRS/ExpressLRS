@@ -3,7 +3,7 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
-#define TX_CONFIG_VERSION   2
+#define TX_CONFIG_VERSION   3
 #define RX_CONFIG_VERSION   2
 #define UID_LEN             6
 
@@ -12,6 +12,7 @@ typedef struct {
     uint32_t    rate;
     uint32_t    tlm;
     uint32_t    power;
+    uint32_t    switchMode;
     char        ssid[33];
     char        password[33];
 } tx_config_t;
@@ -26,6 +27,7 @@ public:
     uint32_t GetRate() const { return m_config.rate; }
     uint32_t GetTlm() const { return m_config.tlm; }
     uint32_t GetPower() const { return m_config.power; }
+    uint32_t GetSwitchMode() const { return m_config.switchMode; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -34,6 +36,7 @@ public:
     void SetRate(uint32_t rate);
     void SetTlm(uint32_t tlm);
     void SetPower(uint32_t power);
+    void SetSwitchMode(uint32_t switchMode);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);

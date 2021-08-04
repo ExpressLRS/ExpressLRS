@@ -52,6 +52,7 @@ volatile inBuffer_U CRSF::inBuffer;
 uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
 uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
 
+uint8_t CRSF::nextSwitchFirstIndex = 0;
 uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
 
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
@@ -184,11 +185,7 @@ void CRSF::flush_port_input(void)
  */
 uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
 {
-    int firstSwitch = 0; // sequential switches includes switch 0
-
-#if defined HYBRID_SWITCHES_8
-    firstSwitch = 1; // skip 0 since it is sent on every packet
-#endif
+    int firstSwitch = nextSwitchFirstIndex;
 
     // look for a changed switch
     int i;
@@ -206,16 +203,17 @@ uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
     // keep track of which switch to send next if there are no changed switches
     // during the next call.
     nextSwitchIndex = (i + 1) % 8;
-
-#ifdef HYBRID_SWITCHES_8
-    // for hydrid switches 0 is sent on every packet, skip it in round-robin
     if (nextSwitchIndex == 0)
     {
-        nextSwitchIndex = 1;
+        nextSwitchIndex = nextSwitchFirstIndex;
     }
-#endif
 
     return i;
+}
+
+void ICACHE_RAM_ATTR CRSF::setNextSwitchFirstIndex(int firstSwitchIndex)
+{
+    nextSwitchFirstIndex = firstSwitchIndex;
 }
 
 /**

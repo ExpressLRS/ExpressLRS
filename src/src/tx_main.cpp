@@ -27,9 +27,7 @@ SX1280Driver Radio;
 #include "LQCALC.h"
 #include "LowPassFilter.h"
 #include "telemetry_protocol.h"
-#ifdef ENABLE_TELEMETRY
 #include "stubborn_receiver.h"
-#endif
 #include "stubborn_sender.h"
 
 #ifdef HAS_OLED
@@ -73,6 +71,8 @@ OLED OLED;
 char commitStr[7] = {LATEST_COMMIT , 0};
 #endif
 
+static void ICACHE_RAM_ATTR (*GenerateChannelData)(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus) = GenerateChannelDataHybridSwitch8;
+
 volatile uint8_t NonceTX;
 
 #ifdef PLATFORM_ESP32
@@ -112,9 +112,7 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 
-#ifdef ENABLE_TELEMETRY
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
-#endif
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 // MSP packet handling function defs
@@ -274,21 +272,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             #endif
             break;
 
-        #ifdef ENABLE_TELEMETRY
         case ELRS_TELEMETRY_TYPE_DATA:
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
             break;
-        #endif
     }
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
-#ifdef HYBRID_SWITCHES_8
-  const uint8_t SwitchEncMode = 0b01;
-#else
-  const uint8_t SwitchEncMode = 0b00;
-#endif
+  const uint8_t SwitchEncMode = config.GetSwitchMode() & 0b11;
   uint8_t Index;
   uint8_t TLMrate;
   if (syncSpamCounter)
@@ -313,6 +305,28 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   SyncPacketLastSent = millis();
   if (syncSpamCounter)
     --syncSpamCounter;
+}
+
+void SetSwitchMode(uint32_t switchMode)
+{
+  switch(switchMode) {
+    case 0b00:
+      GenerateChannelData = GenerateChannelData10bit;
+      crsf.setNextSwitchFirstIndex(0);
+      break;
+    case 0b01:
+      GenerateChannelData = GenerateChannelDataHybridSwitch8;
+      crsf.setNextSwitchFirstIndex(1);
+      break;
+    case 0b10:
+      // Future switch-mode expansion
+    case 0b11:
+      // Future switch-mode expansion
+    default:
+      GenerateChannelData = GenerateChannelDataHybridSwitch8;
+      crsf.setNextSwitchFirstIndex(1);
+      break;
+  }
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -438,11 +452,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      #ifdef ENABLE_TELEMETRY
       GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
-      #else
-      GenerateChannelData(Radio.TXdataBuffer, &crsf);
-      #endif
     }
   }
 
@@ -527,6 +537,13 @@ void registerLuaParameters() {
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
   });
+  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
+    Serial.print("Request Switch Mode: ");
+    uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
+    Serial.println(newSwitchMode, DEC);
+    config.SetSwitchMode(newSwitchMode);
+    SetSwitchMode(newSwitchMode);
+  });
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
@@ -575,6 +592,7 @@ void resetLuaParams(){
   #else
   setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
+  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
 }
 
 void updateLUApacketCount(){
@@ -845,9 +863,7 @@ void setup()
     #endif // GPIO_PIN_LED_RED
     delay(1000);
   }
-  #ifdef ENABLE_TELEMETRY
   TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
-  #endif
 
   POWERMGNT.init();
 
@@ -921,13 +937,11 @@ void loop()
   }
 
 
-  #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
   {
       crsf.sendTelemetryToTX(CRSFinBuffer);
       TelemetryReceiver.Unlock();
   }
-  #endif
 
   // Actual update of dynamic power is done here
   DynamicPower_Update();
