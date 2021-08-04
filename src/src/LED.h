@@ -114,10 +114,6 @@ void startupLEDs()
         WS281BsetLED(colors[N_COLORS-i-1]);
         delay(1000/N_COLORS);
     }
-    #if WS2812_LED_IS_USED
-    WS281BsetLED(0, 0, 0);
-    #else
-    WS281BsetLED(0);
-    #endif
+    WS281BsetLED((uint32_t)0);
 #endif
 }
