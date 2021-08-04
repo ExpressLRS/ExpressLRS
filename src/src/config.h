@@ -8,10 +8,11 @@
 #define UID_LEN             6
 
 typedef struct {
-    uint8_t    rate:3;
-    uint8_t    tlm:3;
-    uint8_t    power:3;
-    uint8_t    switchMode:2;
+    uint8_t     rate:3;
+    uint8_t     tlm:3;
+    uint8_t     power:3;
+    uint8_t     switchMode:2;
+    uint8_t     modelMatch:1;
 } model_config_t;
 
 typedef struct {
@@ -32,6 +33,7 @@ public:
     uint8_t GetTlm(uint8_t modelId) const { return m_config.model_config[modelId].tlm; }
     uint8_t GetPower(uint8_t modelId) const { return m_config.model_config[modelId].power; }
     uint8_t GetSwitchMode(uint8_t modelId) const { return m_config.model_config[modelId].switchMode; }
+    bool GetModelMatch(uint8_t modelId) const { return m_config.model_config[modelId].modelMatch; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -41,6 +43,7 @@ public:
     void SetTlm(uint8_t modelId, uint8_t tlm);
     void SetPower(uint8_t modelId, uint8_t power);
     void SetSwitchMode(uint8_t modelId, uint8_t switchMode);
+    void SetModelMatch(uint8_t modelId, bool modelMatch);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);

@@ -44,6 +44,14 @@ struct tagLuaItem_textSelection luaSwitch = {
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaSwitch)
 };
+struct tagLuaItem_textSelection luaModelMatch = {
+    {5,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Model Match",
+    "Off;On",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaModelMatch)
+};
 struct tagLuaItem_command luaBind = {
     {0,(uint8_t)CRSF_COMMAND},//id,type
     "Bind",

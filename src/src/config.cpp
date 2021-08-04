@@ -77,6 +77,16 @@ TxConfig::SetSwitchMode(uint8_t modelId, uint8_t switchMode)
 }
 
 void
+TxConfig::SetModelMatch(uint8_t modelId, bool modelMatch)
+{
+    if (m_config.model_config[modelId].modelMatch != modelMatch)
+    {
+        m_config.model_config[modelId].modelMatch = modelMatch;
+        m_modified = true;
+    }
+}
+
+void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
@@ -88,6 +98,7 @@ TxConfig::SetDefaults()
         SetTlm(i, modParams->TLMinterval);
         SetPower(i, DefaultPowerEnum);
         SetSwitchMode(i, 1);
+        SetModelMatch(i, false);
     }
     Commit();
 }

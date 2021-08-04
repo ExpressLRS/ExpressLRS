@@ -302,6 +302,9 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
+  if (!InBindingMode && config.GetModelMatch(crsf.getModelID())) {
+    Radio.TXdataBuffer[6] ^= crsf.getModelID();
+  }
 
   SyncPacketLastSent = millis();
   if (syncSpamCounter)
@@ -544,6 +547,12 @@ void registerLuaParameters() {
     config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
     SetSwitchMode(newSwitchMode);
   });
+  registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
+    Serial.print("Request Model Match: ");
+    bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
+    Serial.println(newModelMatch, DEC);
+    config.SetModelMatch(crsf.getModelID(), newModelMatch);
+  });
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
@@ -593,6 +602,7 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
+  setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
 }
 
 void updateLUApacketCount(){
