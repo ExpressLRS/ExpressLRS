@@ -76,9 +76,12 @@ public:
     /* Initialize and zero the history */
     void reset()
     {
-        count = 0;
         LQ = 0;
         index = 0;
+        // count is reset to 1 to prevent divide by zero and
+        // typical usage pattern is to call add() on the first packet
+        // after a reset, which would increase `LQ` over `count`
+        count = 1;
         LQmask = (1 << 0);
         for (uint8_t i = 0; i < (sizeof(LQArray)/sizeof(LQArray[0])); i++)
             LQArray[i] = 0;
