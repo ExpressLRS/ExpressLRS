@@ -378,7 +378,7 @@ void BeginWebUpdate()
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-    MDNS.addServiceTxt("http", "tcp", "options", compile_options);
+    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
 
     server.begin();
 }
