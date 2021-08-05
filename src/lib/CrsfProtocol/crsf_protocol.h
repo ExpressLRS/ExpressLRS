@@ -299,9 +299,9 @@ struct tagLuaProperties1{
 }PACKED;
 struct tagLuaDeviceProperties {
     uint8_t etc[12]; //12 unnecessary bytes space consist of
-                    //4 bytes hardware ID
                     //4 bytes serial number
-                    //4 bytes software version
+                    //4 bytes hardware ID
+                    //4 bytes software ID
     uint8_t fieldamount; //number of field of params this device has
 }PACKED;
 struct tagLuaTextSelectionProperties{

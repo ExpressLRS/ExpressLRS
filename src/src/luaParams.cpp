@@ -13,11 +13,11 @@ struct tagLuaItem_textSelection luaAirRate = {
     {1,0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,chunk,parent,type
     "P.Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
-    "x;x;200(-112dbm);x;100(-117dbm);50(-120dbm);25(-123dbm);x",
+    "200(-112dbm);100(-117dbm);50(-120dbm);25(-123dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
-    "500(-105dbm);250(-108dbm);x;150(-112dbm);x;50(-117dbm);x;x",
+    "500(-105dbm);250(-108dbm);150(-112dbm);50(-117dbm)",
 #endif
-    {0,0,7,0},//value,min,max,default
+    {0,0,3,0},//value,min,max,default
     "Hz",
     LUA_TEXTSELECTION_SIZE(luaAirRate)
 };

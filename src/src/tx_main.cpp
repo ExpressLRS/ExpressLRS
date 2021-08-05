@@ -103,7 +103,7 @@ volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
 //LUA VARIABLES//
-uint8_t luaWarningFLags = 0x01;
+uint8_t luaWarningFLags = 0x00;
 uint8_t suppressedLuaWarningFlags = 0xFF;
 
 bool WaitRXresponse = false;
@@ -513,7 +513,7 @@ void sendELRSstatus()
   }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate));
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   
   #ifdef USE_DYNAMIC_POWER
@@ -652,13 +652,13 @@ void HandleUpdateParameter()
       break;
     }
     case 1:
-      if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2])))
-      {
+      if ((crsf.ParameterUpdateData[2] < RATE_MAX) && (crsf.ParameterUpdateData[2] >= 0))
+    {
       #ifndef DEBUG_SUPPRESS
         Serial.print("Request AirRate: ");
         Serial.println(crsf.ParameterUpdateData[2]);
       #endif
-        config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]));
+        config.SetRate(crsf.ParameterUpdateData[2]);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]), 
@@ -666,7 +666,6 @@ void HandleUpdateParameter()
       #endif
       }
       break;
-
   case 2:
     if ((crsf.ParameterUpdateData[2] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[2] >= (uint8_t)TLM_RATIO_NO_TLM))
     {
