@@ -9,6 +9,9 @@ public:
     LQCALC(void)
     {
         reset();
+        // count is reset here only once on construction to start LQ counting
+        // at 100% on first connect, but 0 out of N after a failsafe
+        count = 1;
     }
 
     /* Set the bit for the current period to true and update the running LQ */
@@ -76,12 +79,10 @@ public:
     /* Initialize and zero the history */
     void reset()
     {
+        // count is intentonally not zeroed here to start LQ counting up from 0
+        // after a failsafe, instead of down from 100
         LQ = 0;
         index = 0;
-        // count is reset to 1 to prevent divide by zero and
-        // typical usage pattern is to call add() on the first packet
-        // after a reset, which would increase `LQ` over `count`
-        count = 1;
         LQmask = (1 << 0);
         for (uint8_t i = 0; i < (sizeof(LQArray)/sizeof(LQArray[0])); i++)
             LQArray[i] = 0;
