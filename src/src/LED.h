@@ -22,6 +22,26 @@ static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_L
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
+#if defined(HAS_I2C_OLED_MENU)
+static uint32_t colors[9] = {
+    0xFFFFFF,     // white
+    0xFF00FF,     // magenta
+    0x8000FF,     // violet
+    0x0000FF,     // blue
+    0x00FF00,     // green
+    0xFFFFFF,     // yellow
+    0xFF8000,     // orange
+    0xFF0000,     // red
+    0x00FFFF      // cyan
+};
+
+uint8_t currentColor = 8;
+
+void setRGBColor(uint8_t color)
+{
+    currentColor = color;
+}
+#else
 static uint32_t colors[8] = {
     0xFFFFFF,     // white
     0xFF00FF,     // magenta
@@ -32,6 +52,9 @@ static uint32_t colors[8] = {
     0xFF8000,     // orange
     0xFF0000      // red
 };
+#endif
+
+
 
 static uint32_t rate_colors[RATE_MAX] = {
     0x00FF00,     // 500/250/200 hz  green
@@ -62,6 +85,9 @@ void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RG
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
 #if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || defined(WS2812_LED_IS_USED)
+#if defined(HAS_I2C_OLED_MENU)
+    WS281BsetLED(colors[currentColor]);
+#else
     uint32_t color = rate_colors[rate];
     if ((connectionState == disconnected) && (now > (LEDupdateCounterMillis + LEDupdateInterval)))
     {
@@ -95,6 +121,7 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
             (color & 0xFF) * dim / 256
         );
     }
+#endif
 #endif
 }
 

@@ -32,6 +32,10 @@ SX1280Driver Radio;
 #include "OLED.h"
 #endif
 
+#ifdef HAS_I2C_OLED_MENU
+#include "OLED_MENU.h"
+#endif
+
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -69,6 +73,12 @@ TxConfig config;
 #if defined(HAS_OLED)
 OLED OLED;
 char commitStr[7] = "commit";
+#endif
+
+#if defined(HAS_I2C_OLED_MENU)
+OLED_MENU OLED_MENU;
+extern void shortPressCallback(void);
+extern void longPressCallback(void);
 #endif
 
 volatile uint8_t NonceTX;
@@ -625,6 +635,10 @@ void setup()
   OLED.setCommitString(thisCommit, commitStr);
 #endif
 
+#if defined(HAS_I2C_OLED_MENU)
+  OLED_MENU.displayLockScreen();
+#endif
+
   startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -688,6 +702,11 @@ void setup()
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
   button.buttonTriplePress = &EnterBindingMode;
   button.buttonLongPress = &POWERMGNT.handleCyclePower;
+#endif
+
+#if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
+  button.buttonShortPress = &shortPressCallback;
+  button.buttonLongPress = &longPressCallback;
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -774,6 +793,10 @@ void loop()
   static bool mspTransferActive = false;
 
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
+
+#if defined(HAS_I2C_OLED_MENU)
+  OLED_MENU.updateScreen();
+#endif
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
