@@ -181,6 +181,7 @@ bool InBindingMode = false;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
+void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
 
 static uint8_t minLqForChaos()
@@ -992,6 +993,10 @@ static void HandleUARTin()
         {
             EnterBindingMode();
         }
+        if (telemetry.ShouldCallUpdateModelMatch())
+        {
+            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
     }
 }
 
@@ -1471,4 +1476,16 @@ void OnELRSBindMSP(uint8_t* packet)
 
     disableWebServer = true;
     ExitBindingMode();
+}
+
+void UpdateModelMatch(uint8_t model)
+{
+    config.SetModelId(model);
+    config.Commit();
+    delay(100);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#elif defined(PLATFORM_ESP8266)
+    ESP.restart();
+#endif
 }
