@@ -75,13 +75,14 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ)
+void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength)
 {
+    instance->PayloadLength = PayloadLength;
     IQinverted = InvertIQ;
     this->SetMode(SX1280_MODE_STDBY_XOSC);
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     ConfigLoRaModParams(bw, sf, cr);
-    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
+    SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, PayloadLength, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
     SetFrequencyReg(freq);
 }
 
@@ -298,7 +299,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 
 uint8_t FIFOaddr = 0;
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 {
     if (instance->currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
@@ -310,7 +311,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(volatile uint8_t *data, uint8_t length)
     }
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable();                      // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, length); //todo fix offset to equal fifo addr
+    hal.WriteBuffer(0x00, instance->TXdataBuffer, instance->PayloadLength); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
 #ifdef DEBUG_SX1280_OTA_TIMING
     beginTX = micros();
@@ -322,7 +323,7 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
     instance->currOpmode = SX1280_MODE_FS;
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     uint8_t FIFOaddr = instance->GetRxBufferAddr();
-    hal.ReadBuffer(FIFOaddr, instance->RXdataBuffer, TXRXBuffSize);
+    hal.ReadBuffer(FIFOaddr, instance->RXdataBuffer, instance->PayloadLength);
     instance->GetLastPacketStats();
     instance->RXdoneCallback();
 }
