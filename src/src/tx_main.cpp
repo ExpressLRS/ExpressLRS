@@ -140,12 +140,16 @@ static bool dynamic_power_updated;
 void DynamicPower_Update()
 {
   #ifdef USE_DYNAMIC_POWER
-  // if a user selected to disable dynamic power (ch16)
-  if(CRSF_to_BIT(crsf.ChannelDataIn[15])) {
-    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-    // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
-    return;
-  }
+
+  // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============  
+  #ifdef DYNAMIC_POWER_BOOST
+    // if a user selected to disable dynamic power (ch16)
+    if(CRSF_to_BIT(crsf.ChannelDataIn[DYNAMIC_POWER_BOOST])) {
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+      // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
+      return;
+    }
+  #endif  // DYNAMIC_POWER_BOOST
   
   // if telemetry is not arrived, quick return.
   if (!dynamic_power_updated)
@@ -187,17 +191,6 @@ void DynamicPower_Update()
   int32_t rssi_inc_threshold = expected_RXsensitivity + 15;
   int32_t rssi_dec_threshold = expected_RXsensitivity + 30;
 
-  // Serial.print("Dynamic power: ");
-  // Serial.print(avg_rssi); 
-  // Serial.print(", "); 
-  // Serial.println(dynamic_power_rssi_n);
-
-  // Serial.print("CurrentPower: ");
-  // Serial.println(POWERMGNT.currPower());
-
-  // Serial.print("SetPower: ");
-  // Serial.println((PowerLevels_e)config.GetPower());
-
   // increase power only up to the set power from the LUA script
   if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
     // Serial.print("Power increase");
@@ -211,12 +204,7 @@ void DynamicPower_Update()
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
 
-  // Serial.print(crsf.LinkStatistics.uplink_Link_quality);
-  // Serial.print("/");
-  // Serial.print(dynamic_power_avg_lq>>16);
-  // Serial.print("/");
-  // Serial.println(lq_diff);
-  #endif    
+  #endif  // USE_DYNAMIC_POWER
 }
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
