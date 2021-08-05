@@ -14,7 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#
+#ifdef HAS_I2C_OLED_MENU
 
 #include "targets.h"
 #include "OLED_MENU.h"
@@ -306,3 +306,5 @@ const char *OLED_MENU::getTLMRatioString(int ratio){
     default: return "error";
     }
 }
+
+#endif
