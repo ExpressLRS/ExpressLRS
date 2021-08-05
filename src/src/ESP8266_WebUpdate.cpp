@@ -134,10 +134,11 @@ static void WebUpdateSendMode()
 {
   String s;
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"STA\"");
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"AP\"");
   }
+  s += String(",\"ssid\":\"") + config.GetSSID() + "\",\"modelid\":" + String(config.GetModelId()) + "}";
   server.send(200, "application/json", s);
 }
 
@@ -214,6 +215,20 @@ static void WebUpdateForget(void)
   sendResponse(msg, WIFI_AP);
 }
 
+static void WebUpdateModelId(void)
+{
+  long modelid = server.arg("modelid").toInt();
+  if (modelid < 0 || modelid > 63) modelid = 0;
+  Serial.printf("Setting model match id %d\n", (uint8_t)modelid);
+  config.SetModelId((uint8_t)modelid);
+  config.Commit();
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", "Model Match updated, rebooting receiver");
+  server.client().stop();
+  delay(100);
+  ESP.restart();
+}
+
 static void WebUpdateHandleNotFound()
 {
   if (captivePortal())
@@ -287,6 +302,7 @@ void BeginWebUpdate(void)
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
+  server.on("/model", WebUpdateModelId);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);

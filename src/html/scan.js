@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", get_mode, false);
 var scanTimer = undefined;
 
+function _(el) {
+    return document.getElementById(el);
+}
+
 function get_mode() {
     var json_url = 'mode.json';
     xmlhttp = new XMLHttpRequest();
@@ -8,17 +12,18 @@ function get_mode() {
         if (this.readyState == 4 && this.status == 200) {
             var data = JSON.parse(this.responseText);
             if (data.mode==="STA") {
-                document.getElementById('stamode').style.display = 'block';
-                document.getElementById('ssid').textContent = data.ssid;
+                _('stamode').style.display = 'block';
+                _('ssid').textContent = data.ssid;
             } else {
-                document.getElementById('apmode').style.display = 'block';
+                _('apmode').style.display = 'block';
                 if (data.ssid) {
-                    document.getElementById('homenet').textContent = data.ssid;
+                    _('homenet').textContent = data.ssid;
                 } else {
-                    document.getElementById('connect').style.display = 'none';
+                    _('connect').style.display = 'none';
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
+            _('modelid').value = data.modelid;
         }
     };
     xmlhttp.open("POST", json_url, true);
@@ -32,8 +37,8 @@ function get_networks() {
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             var data = JSON.parse(this.responseText);
-            document.getElementById('loader').style.display = 'none';
-            autocomplete(document.getElementById('network'), data);
+            _('loader').style.display = 'none';
+            autocomplete(_('network'), data);
             clearInterval(scanTimer);
         }
     };
@@ -109,7 +114,7 @@ function autocomplete(inp, arr) {
 
     /*execute a function presses a key on the keyboard:*/
     inp.addEventListener("keydown", function (e) {
-        var x = document.getElementById(this.id + "autocomplete-list");
+        var x = _(this.id + "autocomplete-list");
         if (x) x = x.getElementsByTagName("div");
         if (e.keyCode == 40) {
             /*If the arrow DOWN key is pressed,
@@ -165,10 +170,6 @@ function autocomplete(inp, arr) {
 }
 
 //=========================================================
-
-function _(el) {
-    return document.getElementById(el);
-}
 
 function uploadFile() {
     var file = _("firmware_file").files[0];
@@ -269,7 +270,10 @@ _('sethome').addEventListener('submit', callback("Set Home Network", "An error o
 }));
 _('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
 _('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
-_('forget').addEventListener('click', callback("Forget Home Network",  "An error occurred forgetting the home network", "/forget", null));
+_('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
+if (_('modelmatch') != undefined) {
+    _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model", null));
+}
 
 //=========================================================
 
