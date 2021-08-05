@@ -4,7 +4,7 @@
 #include "elrs_eeprom.h"
 
 #define TX_CONFIG_VERSION   3
-#define RX_CONFIG_VERSION   2
+#define RX_CONFIG_VERSION   3
 #define UID_LEN             6
 
 typedef struct {
@@ -57,11 +57,16 @@ private:
 
 ///////////////////////////////////////////////////
 
+#ifndef MODEL_MATCH_ID
+#define MODEL_MATCH_ID 0
+#endif
+
 typedef struct {
     uint32_t    version;
     bool        isBound;
     uint8_t     uid[UID_LEN];
     uint8_t     powerOnCounter;
+    uint8_t     modelId;
     char        ssid[33];
     char        password[33];
 } rx_config_t;
@@ -82,6 +87,7 @@ public:
     }
     const uint8_t* GetUID() const { return m_config.uid; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
+    uint8_t  GetModelId() const { return m_config.modelId == 0xFF ? MODEL_MATCH_ID : m_config.modelId; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -90,6 +96,7 @@ public:
     void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
+    void SetModelId(uint8_t modelId);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);

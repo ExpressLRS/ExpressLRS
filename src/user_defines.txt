@@ -62,3 +62,6 @@
 
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
+
+# The model number defined in OpenTX, if you want to use model matching.
+#-DMODEL_MATCH_ID=0

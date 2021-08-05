@@ -735,7 +735,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
          }
 
-         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == (UID[5] ^ config.GetModelId()))
          {
              LastSyncPacket = millis();
 #if defined(PRINT_RX_SCOREBOARD)

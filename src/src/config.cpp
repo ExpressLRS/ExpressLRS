@@ -193,11 +193,22 @@ RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 }
 
 void
+RxConfig::SetModelId(uint8_t modelId)
+{
+    if (m_config.modelId != modelId)
+    {
+        m_config.modelId = modelId;
+        m_modified = true;
+    }
+}
+
+void
 RxConfig::SetDefaults()
 {
     m_config.version = RX_CONFIG_VERSION;
     SetIsBound(false);
     SetPowerOnCounter(0);
+    SetModelId(0xFF);
     SetSSID("");
     SetPassword("");
     Commit();
