@@ -553,6 +553,18 @@ void registerLuaParameters() {
     Serial.println(newModelMatch, DEC);
     config.SetModelMatch(crsf.getModelID(), newModelMatch);
   });
+  registerLUAParameter(&luaSetRXModel, [](uint8_t id, uint8_t arg){
+    Serial.print("Request Set RX Model: ");
+    uint8_t rxModel = crsf.ParameterUpdateData[2];
+    Serial.println(rxModel, DEC);
+    mspPacket_t msp;
+    msp.reset();
+    msp.makeCommand();
+    msp.function = MSP_SET_RX_CONFIG;
+    msp.addByte(MSP_ELRS_MODEL_ID);
+    msp.addByte(rxModel);
+    crsf.AddMspMessage(&msp);
+  });
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
@@ -603,6 +615,7 @@ void resetLuaParams(){
   #endif
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
+  setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 }
 
 void updateLUApacketCount(){

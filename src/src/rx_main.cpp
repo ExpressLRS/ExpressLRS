@@ -708,8 +708,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else if (MspReceiver.HasFinishedData())
         {
-            crsf.sendMSPFrameToFC(MspData);
-            MspReceiver.Unlock();
+            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+            {
+                UpdateModelMatch(MspData[9]);
+            }
+            else
+            {
+                crsf.sendMSPFrameToFC(MspData);
+                MspReceiver.Unlock();
+            }
         }
         break;
 
