@@ -42,12 +42,12 @@ typedef struct {
 class OLED_MENU
 {
 
-private:
+public:
     static uint32_t lastProcessTime;
     static uint8_t currentIndex;
-    static uint8_t showBaseIndex;
     static uint8_t screenLocked;
-
+private:
+    static uint8_t showBaseIndex;
     static menuShow_t currentItem[];
     static showString_t showString[];
 
@@ -62,7 +62,7 @@ private:
 
 public:
     void displayLockScreen();
-    void updateScreen(void);
+    static void updateScreen(void);
 
     static const char * getPowerString(int power);
     static const char * getRateString(int rate);
@@ -81,6 +81,9 @@ public:
 
     static void shortPressCB(void);
     static void longPressCB(void);
+    static void HandleUpdataMenu(void);
+    void ScreenLocked(void);
+    static void menuUpdata(void);
 };
 
 

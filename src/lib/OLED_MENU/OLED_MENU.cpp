@@ -22,7 +22,7 @@
 #include "XBMStrings.h" // Contains all the express logos and animation for UI
 
 
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_SCL, GPIO_PIN_OLED_SDA);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 
 extern void setRGBColor(uint8_t color);
 
@@ -30,6 +30,7 @@ void shortPressCallback(void);
 void longPressCallback(void);
 
 #define LOCKTIME 5000
+volatile bool MenuUpdateReq = false;
 
 menuShow_t OLED_MENU::currentItem[] ={
     {80,0,PKTRATE,pktRateLPCB,getRateString},
@@ -46,9 +47,10 @@ menuShow_t OLED_MENU::currentItem[] ={
 };
 
 showString_t OLED_MENU::showString[] ={
-    "PktRate ",
-    "TLM ",
+    "Pkt.rate ",
+    "TLM Ratio",
     "Power ",
+    "RF Freq"
     "Rgb ",
     "Bind ",
     "Update ",
@@ -59,15 +61,18 @@ uint8_t OLED_MENU::currentIndex = 0;
 uint8_t OLED_MENU::showBaseIndex = 0;
 uint8_t OLED_MENU::screenLocked = 0;
 
+
 void shortPressCallback(void)
 {
     OLED_MENU::shortPressCB();
+
 }
 
 
 void longPressCallback(void)
 {
     OLED_MENU::longPressCB();
+
 }
 
 void OLED_MENU::displayLockScreen()
@@ -75,36 +80,43 @@ void OLED_MENU::displayLockScreen()
     u8g2.begin();
     u8g2.clearBuffer();
 
-    u8g2.drawXBM(16, 16, 64, 64, elrs64); 
+    u8g2.drawXBM(36, 0, 64, 64, elrs64); 
 
+    u8g2.sendBuffer();
+}
+
+void OLED_MENU::ScreenLocked(void)
+{
+    uint32_t now = millis();
+    if(now - OLED_MENU::lastProcessTime > LOCKTIME) // LOCKTIME seconds later lock the screen
+    {
+        u8g2.clearBuffer();
+        OLED_MENU::screenLocked = 1;
+        u8g2.drawXBM(36, 0, 64, 64, elrs64);  
+        u8g2.sendBuffer();
+    }
+    
+}
+void OLED_MENU::menuUpdata(void)
+{
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_6x12_tf);
+    for(int i=showBaseIndex;i<(5+showBaseIndex);i++)
+    {
+        u8g2.drawUTF8(0, (i-showBaseIndex)*10+10, showString[i].str); //the row line num: 12 , 27 , 42 ,57
+        if(currentIndex == currentItem[i].index)
+        {
+            u8g2.drawUTF8(currentItem[i].line-10,(i-showBaseIndex)*10+10, ">");
+        }
+        
+        u8g2.drawUTF8(currentItem[i].line,(i-showBaseIndex)*10+10, currentItem[i].getStr(currentItem[i].value));
+    }
     u8g2.sendBuffer();
 }
 
 void OLED_MENU::updateScreen(void)
 {
-    uint32_t now = millis();
-    u8g2.clearBuffer();
-
-    if(now - lastProcessTime > LOCKTIME) // LOCKTIME seconds later lock the screen
-    {
-        screenLocked = 1;
-        u8g2.drawXBM(16, 16, 64, 64, elrs64);  
-    }
-    else
-    {
-        u8g2.setFont(u8g2_font_courR10_tr);
-        for(int i=showBaseIndex;i<(4+showBaseIndex);i++)
-        {
-            u8g2.drawStr(0, (i-showBaseIndex)*15+12, showString[i].str); //the row line num: 12 , 27 , 42 ,57
-            if(currentIndex == currentItem[i].index)
-            {
-                u8g2.drawStr(currentItem[i].line-10,(i-showBaseIndex)*15+12, ">");
-            }
-            
-            u8g2.drawStr(currentItem[i].line,(i-showBaseIndex)*15+12, currentItem[i].getStr(currentItem[i].value));
-        }
-    }
-    u8g2.sendBuffer();
+    OLED_MENU::menuUpdata();
 }
 
 void OLED_MENU::shortPressCB(void)
@@ -119,11 +131,12 @@ void OLED_MENU::shortPressCB(void)
             currentIndex = 0;
             showBaseIndex =0;
         }
-        if(currentIndex > 3) //each screen only shows 4 line menu
+        if(currentIndex > 4) //each screen only shows 4 line menu
         {
             showBaseIndex ++;
         }
     }
+     OLED_MENU::menuUpdata();
 }
 
 void OLED_MENU::longPressCB(void)
@@ -137,6 +150,7 @@ void OLED_MENU::longPressCB(void)
     {  
         currentItem[currentIndex].lpcb(currentIndex);
     }  
+     OLED_MENU::menuUpdata();
 }
 
 void OLED_MENU::pktRateLPCB(uint8_t i)

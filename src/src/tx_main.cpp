@@ -490,6 +490,11 @@ void HandleUpdateParameter()
                         OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
     #endif
+
+    #if defined(HAS_I2C_OLED_MENU)
+      OLED_MENU.updateScreen();
+    #endif
+
     }
     break;
 
@@ -504,6 +509,11 @@ void HandleUpdateParameter()
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
     #endif
+
+    #if defined(HAS_I2C_OLED_MENU)
+      OLED_MENU.updateScreen();
+    #endif
+
     }
     break;
 
@@ -516,6 +526,10 @@ void HandleUpdateParameter()
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
                           OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
                           OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+      #endif
+
+      #if defined(HAS_I2C_OLED_MENU)
+        OLED_MENU.updateScreen();
       #endif
     }
     break;
@@ -785,6 +799,10 @@ void setup()
                   OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                   OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
   #endif
+
+  #if defined(HAS_I2C_OLED_MENU)
+    OLED_MENU.updateScreen();
+  #endif
 }
 
 void loop()
@@ -794,10 +812,6 @@ void loop()
 
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
 
-#if defined(HAS_I2C_OLED_MENU)
-  OLED_MENU.updateScreen();
-#endif
-
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
     {
@@ -805,7 +819,7 @@ void loop()
       return;
     }
   #endif
-
+  OLED_MENU.ScreenLocked();
   HandleUpdateParameter();
   CheckConfigChangePending();
 

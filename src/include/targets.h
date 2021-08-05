@@ -564,7 +564,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED            16
 #define GPIO_PIN_BUTTON         25
 #define GPIO_PIN_OLED_RST -1
-#define GPIO_PIN_OLED_SCL 32
+#define GPIO_PIN_OLED_SCK 32
 #define GPIO_PIN_OLED_SDA 22
 
 #elif defined(TARGET_RX_BETAFPV_2400_V1)
@@ -612,8 +612,8 @@ Designed by NamimnoRC
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED            -1
-#define GPIO_PIN_LED_BLUE       17
-#define GPIO_PIN_LED_GREEN      16
+#define GPIO_PIN_LED_BLUE       -1
+#define GPIO_PIN_LED            16
 #define GPIO_PIN_BUTTON         25
 #define GPIO_PIN_OLED_RST -1
 #define GPIO_PIN_OLED_SCK 32
