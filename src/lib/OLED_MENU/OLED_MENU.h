@@ -25,19 +25,31 @@
 typedef void (*longPresscallback)(uint8_t i);
 typedef const char *(*getShowStr)(int i);
 
+
 typedef struct 
 {
     uint8_t line;
-    uint8_t value;
-    uint8_t index;
-    longPresscallback  lpcb;
+    uint8_t row;
     getShowStr getStr;
+} option_t;
+
+typedef struct box_t
+{
+    /* data */
+    uint8_t x;
+    uint8_t y;
+    uint8_t length;
+    uint8_t hight;
+};
+
+typedef struct 
+{
+    uint8_t index;
+    uint8_t value;
+    option_t option[2];
+    box_t box;
+    longPresscallback  lpcb;
 }  menuShow_t;
-
-typedef struct {
-    const char *str;
-}  showString_t;
-
 
 class OLED_MENU
 {
@@ -49,7 +61,6 @@ public:
 private:
     static uint8_t showBaseIndex;
     static menuShow_t currentItem[];
-    static showString_t showString[];
 
     enum{
     PKTRATE=0,
@@ -58,7 +69,7 @@ private:
     RGBCOLOR,
     BINDING,
     WIFIUPDATE
-};
+    };
 
 public:
     void displayLockScreen();
@@ -84,6 +95,8 @@ public:
     static void HandleUpdataMenu(void);
     void ScreenLocked(void);
     static void menuUpdata(void);
+
+    static const char *getOptionString(int index);
 };
 
 

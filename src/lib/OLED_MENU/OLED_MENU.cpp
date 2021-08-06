@@ -29,28 +29,86 @@ extern void setRGBColor(uint8_t color);
 void shortPressCallback(void);
 void longPressCallback(void);
 
-#define LOCKTIME 5000
+#define LOCKTIME 8000
 volatile bool MenuUpdateReq = false;
 
+const char *OLED_MENU::getOptionString(int index)
+{
+    switch(index)
+    {
+        case 0: return "Pkt.rate";
+        case 1: return "TLM Ratio";
+        case 2: return "Power";
+        case 3: return "RGB";
+        case 4: return "";
+        case 5: return "";
+        default:return "Error";
+    }
+}
+
 menuShow_t OLED_MENU::currentItem[] ={
-    {85,0,PKTRATE,pktRateLPCB,getRateString},
-
-    {85,1,TLMRADIO,tlmLPCB,getTLMRatioString},
-
-    {85,2,POWERLEVEL,powerLPCB,getPowerString},
-
-    {85,3,RGBCOLOR,rgbLPCB,getRgbString},
-
-    {85,4,BINDING,bindLPCB,getBindString},
+    {
+        0,
+        0,
+        {
+            {0,  20,  getOptionString},
+            {80, 20,  getRateString}
+        },
+        {80,10,30,10},
+        pktRateLPCB
+    },
+    {
+        1,
+        0,
+        {
+            {0,  30,  getOptionString},
+            {80, 30,  getTLMRatioString}
+        },
+        {80,20,30,10},
+        tlmLPCB
+    },
+    {
+        2,
+        0,
+        {
+            {0,  40,  getOptionString},
+            {80, 40,  getPowerString}
+        },
+        {80,30,30,10},
+        powerLPCB
+    },
+    {
+        3,
+        0,
+        {
+            {0,  50,  getOptionString},
+            {80, 50,  getRgbString}
+        },
+        {80,40,30,10},
+        rgbLPCB
+    },
+    {
+        4,
+        0,
+        {
+            {0, 60,  getOptionString},
+            {0, 60,  getBindString}
+        },
+        {0,50,30,10},
+        bindLPCB
+    },
+    {
+        5,
+        0,
+        {
+            {80, 60,  getOptionString},
+            {80, 60,  getUpdateiString}
+        },
+        {80,50,30,10},
+        updateLPCB
+    },
 };
 
-showString_t OLED_MENU::showString[] ={
-    " Pkt.rate ",
-    " TLM Ratio",
-    " Power ",
-    " RGB ",
-    " [Bind]    [Updata]",
-};
 
 uint32_t OLED_MENU::lastProcessTime=0;
 uint8_t OLED_MENU::currentIndex = 0;
@@ -61,14 +119,12 @@ uint8_t OLED_MENU::screenLocked = 0;
 void shortPressCallback(void)
 {
     OLED_MENU::shortPressCB();
-
 }
 
 
 void longPressCallback(void)
 {
     OLED_MENU::longPressCB();
-
 }
 
 void OLED_MENU::displayLockScreen()
@@ -91,7 +147,6 @@ void OLED_MENU::ScreenLocked(void)
         u8g2.drawXBM(36, 0, 64, 64, elrs64);  
         u8g2.sendBuffer();
     }
-    
 }
 void OLED_MENU::menuUpdata(void)
 {
@@ -100,23 +155,24 @@ void OLED_MENU::menuUpdata(void)
     u8g2.setFontMode(1);  /* activate transparent font mode */
     u8g2.setDrawColor(1); /* color 1 for the box */
     u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.setFont(u8g2_font_6x12_tf);
     u8g2.drawBox(0,0,128, 10);
     u8g2.setDrawColor(2);
     u8g2.drawUTF8(3,8, "ExpressLRS");
 
-    // u8g2.setFontMode(1);  /* activate transparent font mode */
-    // u8g2.setDrawColor(1); /* color 1 for the box */
-    u8g2.setFont(u8g2_font_6x12_tf);
-    for(int i=showBaseIndex;i<(5+showBaseIndex);i++)
+    for(int i=0;i<6;i++)
     {
-        u8g2.drawUTF8(0, (i-showBaseIndex)*10+10+10, showString[i].str); //the row line num: 12 , 27 , 42 ,57
+        u8g2.drawUTF8(currentItem[i].option[0].line,currentItem[i].option[0].row,currentItem[i].option[0].getStr(currentItem[i].index));
+        
         if(currentIndex == currentItem[i].index)
         {
-            u8g2.drawBox(currentItem[i].line,(i-showBaseIndex)*10+10, strlen(currentItem[i].getStr(currentItem[i].value))*6, 10);
+            u8g2.drawBox(currentItem[i].box.x,currentItem[i].box.y,currentItem[i].box.length,currentItem[i].box.hight);         
         }
+
         u8g2.setDrawColor(2);
-        u8g2.drawUTF8(currentItem[i].line,(i-showBaseIndex)*10+10+10, currentItem[i].getStr(currentItem[i].value));
+        u8g2.drawUTF8(currentItem[i].option[1].line,currentItem[i].option[1].row,currentItem[i].option[1].getStr(currentItem[i].value));
     }
+    
     u8g2.sendBuffer();
 }
 
@@ -132,14 +188,10 @@ void OLED_MENU::shortPressCB(void)
         lastProcessTime = millis();
         currentIndex ++;
 
-        if(currentIndex > (sizeof(currentItem)/sizeof(menuShow_t) -1)) //detect last index,then comeback to first
+        if(currentIndex > 5) //detect last index,then comeback to first
         {
             currentIndex = 0;
             showBaseIndex =0;
-        }
-        if(currentIndex > 4) //each screen only shows 4 line menu
-        {
-            showBaseIndex ++;
         }
     }
      OLED_MENU::menuUpdata();
@@ -238,13 +290,13 @@ void OLED_MENU::updateLPCB(uint8_t i)
 
 const char * OLED_MENU::getBindString(int bind)
 {
-    return "";
+    return "[Bind]";
 }
 
 
 const char * OLED_MENU::getUpdateiString(int update)
 {
-    return "";
+    return "[Update]";
 }
 
 
