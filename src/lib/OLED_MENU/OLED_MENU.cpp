@@ -18,7 +18,7 @@
 
 #include "targets.h"
 #include "OLED_MENU.h"
-
+#include "string.h"
 #include "XBMStrings.h" // Contains all the express logos and animation for UI
 
 
@@ -33,27 +33,23 @@ void longPressCallback(void);
 volatile bool MenuUpdateReq = false;
 
 menuShow_t OLED_MENU::currentItem[] ={
-    {80,0,PKTRATE,pktRateLPCB,getRateString},
+    {85,0,PKTRATE,pktRateLPCB,getRateString},
 
-    {80,1,TLMRADIO,tlmLPCB,getTLMRatioString},
+    {85,1,TLMRADIO,tlmLPCB,getTLMRatioString},
 
-    {80,2,POWERLEVEL,powerLPCB,getPowerString},
+    {85,2,POWERLEVEL,powerLPCB,getPowerString},
 
-    {80,3,RGBCOLOR,rgbLPCB,getRgbString},
+    {85,3,RGBCOLOR,rgbLPCB,getRgbString},
 
-    {80,4,BINDING,bindLPCB,getBindString},
-
-    {80,5,WIFIUPDATE,updateLPCB,getUpdateiString},
+    {85,4,BINDING,bindLPCB,getBindString},
 };
 
 showString_t OLED_MENU::showString[] ={
-    "Pkt.rate ",
-    "TLM Ratio",
-    "Power ",
-    "RF Freq"
-    "Rgb ",
-    "Bind ",
-    "Update ",
+    " Pkt.rate ",
+    " TLM Ratio",
+    " Power ",
+    " RGB ",
+    " [Bind]    [Updata]",
 };
 
 uint32_t OLED_MENU::lastProcessTime=0;
@@ -100,16 +96,26 @@ void OLED_MENU::ScreenLocked(void)
 void OLED_MENU::menuUpdata(void)
 {
     u8g2.clearBuffer();
+
+    u8g2.setFontMode(1);  /* activate transparent font mode */
+    u8g2.setDrawColor(1); /* color 1 for the box */
+    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.drawBox(0,0,128, 10);
+    u8g2.setDrawColor(2);
+    u8g2.drawUTF8(3,8, "ExpressLRS");
+
+    // u8g2.setFontMode(1);  /* activate transparent font mode */
+    // u8g2.setDrawColor(1); /* color 1 for the box */
     u8g2.setFont(u8g2_font_6x12_tf);
     for(int i=showBaseIndex;i<(5+showBaseIndex);i++)
     {
-        u8g2.drawUTF8(0, (i-showBaseIndex)*10+10, showString[i].str); //the row line num: 12 , 27 , 42 ,57
+        u8g2.drawUTF8(0, (i-showBaseIndex)*10+10+10, showString[i].str); //the row line num: 12 , 27 , 42 ,57
         if(currentIndex == currentItem[i].index)
         {
-            u8g2.drawUTF8(currentItem[i].line-10,(i-showBaseIndex)*10+10, ">");
+            u8g2.drawBox(currentItem[i].line,(i-showBaseIndex)*10+10, strlen(currentItem[i].getStr(currentItem[i].value))*6, 10);
         }
-        
-        u8g2.drawUTF8(currentItem[i].line,(i-showBaseIndex)*10+10, currentItem[i].getStr(currentItem[i].value));
+        u8g2.setDrawColor(2);
+        u8g2.drawUTF8(currentItem[i].line,(i-showBaseIndex)*10+10+10, currentItem[i].getStr(currentItem[i].value));
     }
     u8g2.sendBuffer();
 }
@@ -232,13 +238,13 @@ void OLED_MENU::updateLPCB(uint8_t i)
 
 const char * OLED_MENU::getBindString(int bind)
 {
-    return "bind";
+    return "";
 }
 
 
 const char * OLED_MENU::getUpdateiString(int update)
 {
-    return "update";
+    return "";
 }
 
 
