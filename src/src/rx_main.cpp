@@ -66,7 +66,8 @@ uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
 PFD PFDloop;
-GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
+GENERIC_CRC14 ota_crc14(ELRS_CRC14_POLY);
+GENERIC_CRC16 ota_crc16(ELRS_CRC16_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
@@ -325,7 +326,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
     }
 
-    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+    uint16_t crc = ota_crc14.calc(Radio.TXdataBuffer, 7, CRCInitializer);
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
@@ -649,10 +650,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     uint8_t type = Radio.RXdataBuffer[0] & 0b11;
 
-    uint16_t inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
-
-    Radio.RXdataBuffer[0] = type;
-    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+    uint16_t inCRC;
+    uint16_t calculatedCRC;
+    if (ExpressLRS_currAirRate_Modparams->PayloadLength == 10)
+    {
+        inCRC = ((uint16_t)Radio.RXdataBuffer[8] << 8) | Radio.RXdataBuffer[9];
+        calculatedCRC = ota_crc16.calc(Radio.RXdataBuffer, 8, CRCInitializer);
+    } else
+    {
+        inCRC = ( ( (uint16_t)(Radio.RXdataBuffer[0] & 0b11111100) ) << 6 ) | Radio.RXdataBuffer[7];
+        Radio.RXdataBuffer[0] = type;
+        calculatedCRC = ota_crc14.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+    }
 
     if (inCRC != calculatedCRC)
     {

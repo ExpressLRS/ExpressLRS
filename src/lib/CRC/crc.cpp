@@ -66,3 +66,35 @@ uint16_t ICACHE_RAM_ATTR GENERIC_CRC14::calc(volatile uint8_t *data, uint8_t len
     }
     return crc & 0x3FFF;
 }
+
+GENERIC_CRC16::GENERIC_CRC16(uint16_t poly)
+{
+    uint16_t crc;
+    for (uint16_t i = 0; i < crclen; i++)
+    {
+        crc = i << (16 - 8);
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            crc = (crc << 1) ^ ((crc & 0x2000) ? poly : 0);
+        }
+        crc16tab[i] = crc;
+    }
+}
+
+uint16_t ICACHE_RAM_ATTR GENERIC_CRC16::calc(uint8_t *data, uint8_t len, uint16_t crc)
+{
+    while (len--)
+    {
+        crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ (uint16_t) *data++) & 0x00FF];
+    }    
+    return crc;
+}
+
+uint16_t ICACHE_RAM_ATTR GENERIC_CRC16::calc(volatile uint8_t *data, uint8_t len, uint16_t crc)
+{
+    while (len--)
+    {
+        crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ (uint16_t) *data++) & 0x00FF];
+    }
+    return crc;
+}

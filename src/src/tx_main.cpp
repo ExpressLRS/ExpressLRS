@@ -61,7 +61,8 @@ const uint8_t thisCommit[6] = {LATEST_COMMIT};
 
 /// define some libs to use ///
 hwTimer hwTimer;
-GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
+GENERIC_CRC14 ota_crc14(ELRS_CRC14_POLY);
+GENERIC_CRC16 ota_crc16(ELRS_CRC16_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
@@ -217,7 +218,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
 
   Radio.RXdataBuffer[0] &= 0b11;
-  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+  uint16_t calculatedCRC = ota_crc14.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
@@ -445,9 +446,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
-  Radio.TXdataBuffer[7] = crc & 0xFF;
+  if (ExpressLRS_currAirRate_Modparams->PayloadLength == 10)
+  {
+      uint16_t crc = ota_crc16.calc(Radio.TXdataBuffer, 8, CRCInitializer);
+      Radio.TXdataBuffer[8] = crc >> 8;
+      Radio.TXdataBuffer[9] = crc & 0xFF;
+  } else
+  {
+      uint16_t crc = ota_crc14.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+      Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
+      Radio.TXdataBuffer[7] = crc & 0xFF;
+  }
 
   Radio.TXnb();
 }
