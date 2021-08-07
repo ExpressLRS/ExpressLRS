@@ -2,7 +2,7 @@
 #include "luaParams.h"
 
 const char thisCommit[] = {LATEST_COMMIT};
-struct tagLuaDevice luaDevice = {
+const struct tagLuaDevice luaDevice = {
     "ELRS",
     {{0},LUA_FIELD_AMOUNT},
     LUA_DEVICE_SIZE(luaDevice)

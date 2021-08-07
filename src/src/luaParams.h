@@ -26,7 +26,7 @@ void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t 
 void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
 void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
 
-extern struct tagLuaDevice luaDevice;
+extern const struct tagLuaDevice luaDevice;
 extern struct tagLuaItem_textSelection luaAirRate;
 extern struct tagLuaItem_textSelection luaTlmRate;
 extern struct tagLuaItem_textSelection luaPower;

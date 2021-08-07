@@ -295,7 +295,7 @@ void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const ch
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-void CRSF::sendCRSFdevice(void * luaData, uint8_t wholePacketSize)
+void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
 {
     if (!CRSF::CRSFstate)
     {
