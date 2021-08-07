@@ -221,7 +221,7 @@ void Telemetry::AppendTelemetryPackage()
         #if defined(UNIT_TEST)
         else
         {
-            cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
+            cout << "buffer not large enough for type " << (int)payloadTypes[idx].type  << " with size " << (int)payloadTypes[idx].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
         }
         #endif
     }
