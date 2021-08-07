@@ -254,6 +254,23 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
+void CRSF::sendVBattToTX(uint16_t vbatt)
+{
+// Only send if advanced telemetry is disabled, otherwise this will wipe out Current / mAh / Fuel
+#if !defined(ENABLE_TELEMETRY)
+  uint8_t packet[CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE+4] = {0};
+
+  packet[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+  packet[1] = CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE + 2;
+  packet[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
+  packet[3] = vbatt >> 8;
+  packet[4] = vbatt & 0xff;
+  packet[sizeof(packet)-1] = crsf_crc.calc(&packet[2], CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE + 1);;
+
+  sendTelemetryToTX(packet);
+#endif
+}
+
 void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)

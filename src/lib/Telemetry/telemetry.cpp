@@ -177,6 +177,26 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
     return true;
 }
 
+int Telemetry::findPayloadType(uint8_t type)
+{
+    for (int i = 0; i < payloadTypesCount; i++)
+        if (type == payloadTypes[i].type)
+            return i;
+    return -1;
+}
+
+/**
+ * Return the low byte of the VBatt sensor, up to 25.6V
+ **/
+uint8_t Telemetry::getVBattSensorLow()
+{
+    int idx = findPayloadType(CRSF_FRAMETYPE_BATTERY_SENSOR);
+    if (idx == -1)
+        return 0;
+
+    return payloadTypes[idx].data[CRSF_TELEMETRY_TYPE_INDEX+2];
+}
+
 void Telemetry::AppendTelemetryPackage()
 {
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 'b' && CRSFinBuffer[4] == 'l')
@@ -189,23 +209,21 @@ void Telemetry::AppendTelemetryPackage()
         callEnterBind = true;
         return;
     }
-    for (int8_t i = 0; i < payloadTypesCount; i++)
+
+    int idx = findPayloadType(CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX]);
+    if (idx != -1 && !payloadTypes[idx].locked)
     {
-        if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
+        if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[idx].size)
         {
-            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
-            {
-                memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
-                payloadTypes[i].updated = true;
-            }
-            #if defined(UNIT_TEST)
-            else
-            {
-                cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
-            }
-            #endif
-            return;
+            memcpy(payloadTypes[idx].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
+            payloadTypes[idx].updated = true;
         }
+        #if defined(UNIT_TEST)
+        else
+        {
+            cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
+        }
+        #endif
     }
 }
 #endif

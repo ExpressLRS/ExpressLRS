@@ -259,12 +259,12 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
         case ELRS_TELEMETRY_TYPE_LINK:
-            // Antenna is the high bit in the RSSI_1 value
-            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
             // RSSI received is signed, inverted polarity (positive value = -dBm)
             // OpenTX's value is signed and will display +dBm and -dBm properly
             crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
-            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
+            // Antenna is the high bit in the RSSI_2 value
+            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[3] >> 7;
+            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3] & 0x7f);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
             crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
@@ -272,7 +272,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
-            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
+            // MspConfirm is high bit of RSSI_1
+            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[2] >> 7);
+            crsf.sendVBattToTX(Radio.RXdataBuffer[6]);
 
             #ifdef USE_DYNAMIC_POWER
             dynamic_power_updated = true;

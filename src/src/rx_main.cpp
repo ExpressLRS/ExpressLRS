@@ -299,11 +299,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // The value in linkstatistics is "positivized" (inverted polarity)
         // and must be inverted on the TX side. Positive values are used
         // so save a bit to encode which antenna is in use
-        Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | ((MspReceiver.GetCurrentConfirm() ? 1 : 0) << 7);
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (antenna << 7);
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-        Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+        Radio.TXdataBuffer[6] = telemetry.getVBattSensorLow();
     }
     else
     {

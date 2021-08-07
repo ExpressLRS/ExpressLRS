@@ -45,6 +45,8 @@ public:
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
+    int findPayloadType(uint8_t type);
+    uint8_t getVBattSensorLow();
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     void AppendTelemetryPackage();
