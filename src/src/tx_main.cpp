@@ -488,7 +488,7 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
 }
 
 uint8_t iterateLUAparams(iterateLUAparams_func func, uint8_t arg1, uint8_t arg2){
-  uint8_t retval;
+  uint8_t retval = 0;
   switch(arg1){
     case 2:
     {
@@ -616,7 +616,6 @@ void updateLUApacketCount(){
 }
 
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
-  uint8_t sentChunk = 0;
   if(!allLUAparamSent){
     iterateLUAparams(SEND_LUA_PARAMS,idx,chunk);
   }
