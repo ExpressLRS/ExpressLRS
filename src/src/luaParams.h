@@ -20,22 +20,15 @@
 
 #define LUA_FIELD_AMOUNT 8
 
-
-void setLuaTextSelectionValue(struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
-void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
-void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
-void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
-
 extern const struct tagLuaDevice luaDevice;
-extern struct tagLuaItem_textSelection luaAirRate;
-extern struct tagLuaItem_textSelection luaTlmRate;
-extern struct tagLuaItem_textSelection luaPower;
-extern struct tagLuaItem_textSelection luaReg;
-extern struct tagLuaItem_command luaBind;
-extern struct tagLuaItem_command luaWebUpdate;
-extern struct tagLuaItem_uint8 luaBadPkt;
-extern struct tagLuaItem_uint16 luaGoodPkt;
-extern struct tagLuaItem_string luaCommit;
+extern const struct tagLuaItem_textSelection luaAirRate;
+extern const struct tagLuaItem_textSelection luaTlmRate;
+extern const struct tagLuaItem_textSelection luaPower;
+extern const struct tagLuaItem_command luaBind;
+extern const struct tagLuaItem_command luaWebUpdate;
+extern const struct tagLuaItem_uint8 luaBadPkt;
+extern const struct tagLuaItem_uint16 luaGoodPkt;
+extern const struct tagLuaItem_string luaCommit;
 
 
 #endif
