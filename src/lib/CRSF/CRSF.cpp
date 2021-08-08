@@ -1,7 +1,6 @@
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
 #include "telemetry_protocol.h"
-//#include "../../src/luaParams.h"
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
 #ifdef PLATFORM_ESP32
@@ -95,6 +94,8 @@ uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
+uint32_t CRSF::luaValues[32] = {0};
+uint8_t CRSF::luaEditableFlags[12] = {0};
 
 void CRSF::Begin()
 {
@@ -310,6 +311,7 @@ void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
     struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
     memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
     memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));    
+    memcpy(outBuffer+5+(strlen(p1->label1)+1),luaEditableFlags,12);
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;   //received as #data in lua
     outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua
@@ -329,6 +331,10 @@ void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
 #endif
 }
 
+uint8_t CRSF::setEditableFlag(uint8_t id, bool value){
+  luaEditableFlags[(id-1)/8] |= value << ((id-1)%8);
+  return value;
+}
 void CRSF::setLuaTextSelectionValue(const struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     luaValues[luaStruct->luaProperties1.id] = newvalue;
 }

@@ -19,7 +19,8 @@ const struct tagLuaItem_textSelection luaAirRate = {
 #endif
     {0,0,3,0},//value,min,max,default
     "Hz",
-    LUA_TEXTSELECTION_SIZE(luaAirRate)
+    LUA_TEXTSELECTION_SIZE(luaAirRate),
+    1
 };
 const struct tagLuaItem_textSelection luaTlmRate = {
     {2,0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,chunk,parent,type
@@ -27,7 +28,8 @@ const struct tagLuaItem_textSelection luaTlmRate = {
     "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
     {0,0,7,0},//value,min,max,default
     " ",
-    LUA_TEXTSELECTION_SIZE(luaTlmRate)
+    LUA_TEXTSELECTION_SIZE(luaTlmRate),
+    1
 };
 const struct tagLuaItem_textSelection luaPower = {
     {3,0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,chunk,parent,type
@@ -35,7 +37,8 @@ const struct tagLuaItem_textSelection luaPower = {
     "10;25;50;100;250;500;1000;2000",
     {0,0,7,0},//value,min,max,default
     "mW",
-    LUA_TEXTSELECTION_SIZE(luaPower)
+    LUA_TEXTSELECTION_SIZE(luaPower),
+    1
 };
 
 const struct tagLuaItem_command luaBind = {
@@ -43,14 +46,16 @@ const struct tagLuaItem_command luaBind = {
     "Bind",
     {0,200},//status,timeout
     " ",
-    LUA_COMMAND_SIZE(luaBind)
+    LUA_COMMAND_SIZE(luaBind),
+    1
 };
 const struct tagLuaItem_command luaWebUpdate = {
     {5,0,0,(uint8_t)CRSF_COMMAND},//id,chunk,parent,type
     "Update",
     {0,200},//status,timeout
     " ",
-    LUA_COMMAND_SIZE(luaWebUpdate)
+    LUA_COMMAND_SIZE(luaWebUpdate),
+    1
 };
 
 const struct tagLuaItem_uint8 luaBadPkt = {
@@ -58,19 +63,22 @@ const struct tagLuaItem_uint8 luaBadPkt = {
     "Bad",
     {0,0,254,0},//value,min,max,default
     " ",
-    LUA_UINT8_SIZE(luaBadPkt)
+    LUA_UINT8_SIZE(luaBadPkt),
+    0
 };
 const struct tagLuaItem_uint16 luaGoodPkt = {
     {7,0,0,(uint8_t)CRSF_UINT16},//id,chunk,parent,type
     "Good",
     {0,0,511,0},//value,min,max,default
     " ",
-    LUA_UINT16_SIZE(luaGoodPkt)
+    LUA_UINT16_SIZE(luaGoodPkt),
+    0
 };
 
 const struct tagLuaItem_string luaCommit = {
     {8,0,0,(uint8_t)CRSF_STRING},//id,chunk,parent,type
     thisCommit,
     " ",
-    LUA_STRING_SIZE(luaCommit)
+    LUA_STRING_SIZE(luaCommit),
+    0
 };

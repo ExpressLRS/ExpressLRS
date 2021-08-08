@@ -20,6 +20,11 @@
 
 #define LUA_FIELD_AMOUNT 8
 
+typedef enum{
+    SEND_LUA_PARAMS = 0,
+    SET_LUA_EDITABLE_FLAG
+}iterateLUAparams_func;
+
 extern const struct tagLuaDevice luaDevice;
 extern const struct tagLuaItem_textSelection luaAirRate;
 extern const struct tagLuaItem_textSelection luaTlmRate;
@@ -29,6 +34,5 @@ extern const struct tagLuaItem_command luaWebUpdate;
 extern const struct tagLuaItem_uint8 luaBadPkt;
 extern const struct tagLuaItem_uint16 luaGoodPkt;
 extern const struct tagLuaItem_string luaCommit;
-
 
 #endif

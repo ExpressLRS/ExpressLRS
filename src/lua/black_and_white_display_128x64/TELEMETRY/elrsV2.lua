@@ -135,6 +135,13 @@ local allParamsLoaded = 0
     offset = offset + 1
     return result, offset
   end
+
+  local function getBitBin(data, bitPosition)
+    if data ~= nil then
+      return bit32.band(bit32.rshift(data,bitPosition),1)
+    end
+      return 0
+    end
   
   local function parseDeviceInfoMessage(data)
     local offset
@@ -142,10 +149,10 @@ local allParamsLoaded = 0
     deviceName, offset = fieldGetString(data, 3)
     fields_count = data[offset+12]
     for i=1, fields_count do
-      fields[i] = { name=nil }
+      fields[i] = { name=nil, editable=getBitBin(data[(offset)+(math.floor((i-1)/8))],((i-1)%8)) }
     end
-  end
-  
+  end  
+      
   local function fieldGetValue(data, offset, size)
     local result = 0
     for i=0, size-1 do
@@ -469,17 +476,17 @@ local function runDevicePage(event)
       else
         local field = getField(lineIndex)
         if field.name then
-          if field.type == 10 then
+          if field.type == 10 and field.editable > 0 then
             if edit == false then
               edit = true
               charIndex = 1
             else
               charIndex = charIndex + 1
             end
-          elseif field.type < 11 then
+          elseif field.type < 11 and field.editable > 0 then
             edit = not edit
           end
-          if edit == false then
+          if edit == false and field.editable > 0 then
             fieldTimeout = getTime() + 200 -- 2s
             fieldId, fieldChunk = field.id, 0
             fieldData = {}

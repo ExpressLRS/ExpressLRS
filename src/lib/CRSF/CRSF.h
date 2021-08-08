@@ -106,6 +106,8 @@ public:
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
 
+
+    uint8_t setEditableFlag(uint8_t id, bool value);
     void setLuaTextSelectionValue(const struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
     void setLuaCommandValue(const struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
     void setLuaUint8Value(const struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
@@ -151,11 +153,9 @@ private:
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
-#endif
-
-    static void flush_port_input(void);
-
-    uint32_t luaValues[32];
+    
+    static uint32_t luaValues[32];
+    static uint8_t luaEditableFlags[12];
 
     void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);
     void getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray);
@@ -169,6 +169,11 @@ private:
      void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
 */ 
     void getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray);
+
+#endif
+
+    static void flush_port_input(void);
+
 
 };
 

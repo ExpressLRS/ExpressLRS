@@ -487,6 +487,89 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
+uint8_t iterateLUAparams(iterateLUAparams_func func, uint8_t arg1, uint8_t arg2){
+  uint8_t retval;
+  switch(arg1){
+    case 2:
+    {
+      if(func == SEND_LUA_PARAMS){
+        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaTlmRate,luaTlmRate.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaTlmRate.luaProperties1.id,luaTlmRate.editableFlag);
+      }
+      break;
+    }
+    case 3:
+    {
+      if(func == SEND_LUA_PARAMS){
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaPower,luaPower.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaPower.luaProperties1.id,luaPower.editableFlag);
+      }
+      break;
+    }
+    case 4:
+    {
+      if(func == SEND_LUA_PARAMS){
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_COMMAND,&luaBind,luaBind.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaBind.luaProperties1.id,luaBind.editableFlag);
+      }
+      break;
+    }
+    case 5:
+    {
+      if(func == SEND_LUA_PARAMS){
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaWebUpdate.luaProperties1.id,luaWebUpdate.editableFlag);
+      }
+      break;
+    }
+    case 6:
+    {
+      if(func == SEND_LUA_PARAMS){ 
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_UINT8,&luaBadPkt,luaBadPkt.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaBadPkt.luaProperties1.id,luaBadPkt.editableFlag);
+      }
+      break;
+    }
+    case 7:
+    {
+      if(func == SEND_LUA_PARAMS){ 
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_UINT16,&luaGoodPkt,luaGoodPkt.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaGoodPkt.luaProperties1.id,luaGoodPkt.editableFlag);
+      }
+      break;
+    }
+    case 8:
+    {
+      if(func == SEND_LUA_PARAMS){ 
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_STRING,&luaCommit,luaCommit.size);
+      if(retval == 0){
+        allLUAparamSent = 1;
+      }
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaCommit.luaProperties1.id,luaCommit.editableFlag);
+      }
+      break;
+    }
+
+    default: //ID 1
+    {
+      if(func == SEND_LUA_PARAMS){
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
+      } else if(func == SET_LUA_EDITABLE_FLAG){
+        retval = crsf.setEditableFlag(luaAirRate.luaProperties1.id,luaAirRate.editableFlag);
+      }
+      break;
+    }
+  }
+  return retval;
+}
+
 void suppressCurrentLuaWarning(void){ //0 to suppress
   suppressedLuaWarningFlags = ~luaWarningFLags;
 }
@@ -535,55 +618,7 @@ void updateLUApacketCount(){
 void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
   uint8_t sentChunk = 0;
   if(!allLUAparamSent){
-    switch(idx){
-      case 2:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaTlmRate,luaTlmRate.size);
-        break;
-      }
-      case 3:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaPower,luaPower.size);
-        break;
-      }
-      case 4:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaBind,luaBind.size);
-        break;
-      }
-      case 5:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
-        /**if(sentChunk == 0){
-          allLUAparamSent = 1;
-          }*/
-        break;
-      }
-      case 6: //commit
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT8,&luaBadPkt,luaBadPkt.size);
-        break;
-      }
-      case 7:
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT16,&luaGoodPkt,luaGoodPkt.size);
-        break;
-      }
-      case 8:
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,&luaCommit,luaCommit.size);
-        if(sentChunk == 0){
-          allLUAparamSent = 1;
-        }
-        break;
-      }
-
-      default: //ID 1
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
-        break;
-      }
-    }
+    iterateLUAparams(SEND_LUA_PARAMS,idx,chunk);
   }
 }
 
@@ -973,6 +1008,9 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  for(int i = 1;i<=LUA_FIELD_AMOUNT;i++){
+    iterateLUAparams(SET_LUA_EDITABLE_FLAG,i,0);
+  }
   resetLuaParams();
 
   hwTimer.init();
