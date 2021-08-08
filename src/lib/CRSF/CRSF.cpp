@@ -92,6 +92,9 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
+
+uint32_t CRSF::luaValues[32] = {0};
+uint8_t CRSF::luaEditableFlags[12] = {0};
 #endif // CRSF_TX_MODULE
 
 
@@ -102,9 +105,6 @@ void CRSF::Begin()
 #if CRSF_TX_MODULE
     UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
-
-uint32_t CRSF::luaValues[32] = {0};
-uint8_t CRSF::luaEditableFlags[12] = {0};
 
 #ifdef PLATFORM_ESP32
     disableCore0WDT();
