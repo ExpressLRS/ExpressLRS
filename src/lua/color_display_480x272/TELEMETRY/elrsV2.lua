@@ -415,7 +415,7 @@ local function parseElrsInfoMessage(data)
     return
   end
   badPkt = data[3]
-  goodPkt = (data[4]*255) + data[5]
+  goodPkt = (data[4]*256) + data[5]
   elrsFlags = data[6]
   elrsFlagsInfo,offset = fieldGetString(data,7)
 end
