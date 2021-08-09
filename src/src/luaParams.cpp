@@ -1,6 +1,16 @@
 
 #include "luaParams.h"
 
+#include "CRSF.h"
+
+extern CRSF crsf;
+
+volatile uint8_t allLUAparamSent = 0;  
+
+//LUA VARIABLES//
+static bool luaWarningFLags = false;
+static bool suppressedLuaWarningFlags = true;
+
 const char thisCommit[] = {LATEST_COMMIT, 0};
 const struct tagLuaDevice luaDevice = {
     "ELRS",
@@ -82,3 +92,84 @@ const struct tagLuaItem_string luaCommit = {
     LUA_STRING_SIZE(luaCommit),
     0
 };
+
+const void *luaParams[] = {
+    &luaAirRate,
+    &luaTlmRate,
+    &luaPower,
+    &luaBind,
+    &luaWebUpdate,
+    &luaBadPkt,
+    &luaGoodPkt,
+    &luaCommit
+};
+
+
+
+#define EDITABLE(T) ((struct T *)p)->luaProperties1.id,((struct T *)p)->editableFlag
+void setLUAEditFlags(uint8_t param)
+{
+  struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)luaParams[param-1];
+  switch(p->type) {
+    case CRSF_UINT8:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
+      break;
+    case CRSF_UINT16:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
+      break;
+    case CRSF_STRING:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
+      break;
+    case CRSF_COMMAND:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
+      break;
+    case CRSF_TEXT_SELECTION:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
+      break;
+  }
+}
+#undef EDITABLE
+
+#define TYPE(T) (struct T *)p,((struct T *)p)->size
+static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
+{
+  uint8_t retval = 0;
+  struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)luaParams[idx-1];
+  switch(p->type) {
+    case CRSF_UINT8:
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT8,TYPE(tagLuaItem_uint8));
+      break;
+    case CRSF_UINT16:
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT16,TYPE(tagLuaItem_uint16));
+      break;
+    case CRSF_STRING:
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,TYPE(tagLuaItem_string));
+      break;
+    case CRSF_COMMAND:
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,TYPE(tagLuaItem_command));
+      break;
+    case CRSF_TEXT_SELECTION:
+      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,TYPE(tagLuaItem_textSelection));
+      break;
+  }
+
+  if(retval == 0 && idx == LUA_FIELD_AMOUNT){
+    allLUAparamSent = 1;
+  }
+  return retval;
+}
+#undef TYPE
+
+void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
+  if(!allLUAparamSent){
+    iterateLUAparams(idx,chunk);
+  }
+}
+
+void suppressCurrentLuaWarning(void){ //0 to suppress
+  suppressedLuaWarningFlags = ~luaWarningFLags;
+}
+
+bool getLuaWarning(void){ //1 if alarm
+  return luaWarningFLags & suppressedLuaWarningFlags;
+}

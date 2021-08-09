@@ -61,8 +61,6 @@ button button;
 
 #define LUA_PKTCOUNT_INTERVAL_MS 1000LU
 
-volatile uint8_t allLUAparamSent = 0;  
-
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
@@ -103,9 +101,6 @@ LPF LPD_DownlinkLQ(1);
 volatile bool busyTransmitting;
 volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
-//LUA VARIABLES//
-uint8_t luaWarningFLags = 0x00;
-uint8_t suppressedLuaWarningFlags = 0xFF;
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -487,96 +482,6 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-uint8_t iterateLUAparams(iterateLUAparams_func func, uint8_t arg1, uint8_t arg2){
-  uint8_t retval = 0;
-  switch(arg1){
-    case 2:
-    {
-      if(func == SEND_LUA_PARAMS){
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaTlmRate,luaTlmRate.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaTlmRate.luaProperties1.id,luaTlmRate.editableFlag);
-      }
-      break;
-    }
-    case 3:
-    {
-      if(func == SEND_LUA_PARAMS){
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaPower,luaPower.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaPower.luaProperties1.id,luaPower.editableFlag);
-      }
-      break;
-    }
-    case 4:
-    {
-      if(func == SEND_LUA_PARAMS){
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_COMMAND,&luaBind,luaBind.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaBind.luaProperties1.id,luaBind.editableFlag);
-      }
-      break;
-    }
-    case 5:
-    {
-      if(func == SEND_LUA_PARAMS){
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaWebUpdate.luaProperties1.id,luaWebUpdate.editableFlag);
-      }
-      break;
-    }
-    case 6:
-    {
-      if(func == SEND_LUA_PARAMS){ 
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_UINT8,&luaBadPkt,luaBadPkt.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaBadPkt.luaProperties1.id,luaBadPkt.editableFlag);
-      }
-      break;
-    }
-    case 7:
-    {
-      if(func == SEND_LUA_PARAMS){ 
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_UINT16,&luaGoodPkt,luaGoodPkt.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaGoodPkt.luaProperties1.id,luaGoodPkt.editableFlag);
-      }
-      break;
-    }
-    case 8:
-    {
-      if(func == SEND_LUA_PARAMS){ 
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_STRING,&luaCommit,luaCommit.size);
-      if(retval == 0){
-        allLUAparamSent = 1;
-      }
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaCommit.luaProperties1.id,luaCommit.editableFlag);
-      }
-      break;
-    }
-
-    default: //ID 1
-    {
-      if(func == SEND_LUA_PARAMS){
-      retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,arg2,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
-      } else if(func == SET_LUA_EDITABLE_FLAG){
-        retval = crsf.setEditableFlag(luaAirRate.luaProperties1.id,luaAirRate.editableFlag);
-      }
-      break;
-    }
-  }
-  return retval;
-}
-
-void suppressCurrentLuaWarning(void){ //0 to suppress
-  suppressedLuaWarningFlags = ~luaWarningFLags;
-}
-uint8_t getLuaWarning(void){ //1 if alarm
-return luaWarningFLags & suppressedLuaWarningFlags;
-}
-
 void sendELRSstatus()
 {
   uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
@@ -584,17 +489,8 @@ void sendELRSstatus()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  switch(getLuaWarning()){
-    case 0x01:
-      {
-        crsf.sendELRSparam(luaParams,4, 0x2E,"beta",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
-        break;
-      }
-    default:
-      crsf.sendELRSparam(luaParams,4, 0x2E," ",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
-      break;
-  }
-  }
+  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " ", 4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+}
 
 void resetLuaParams(){
   crsf.setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
@@ -613,12 +509,6 @@ void updateLUApacketCount(){
   crsf.setLuaUint8Value(&luaBadPkt,(uint8_t)crsf.BadPktsCountResult);
   crsf.setLuaUint16Value(&luaGoodPkt,(uint16_t)crsf.GoodPktsCountResult);
   resetLuaParams();
-}
-
-void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
-  if(!allLUAparamSent){
-    iterateLUAparams(SEND_LUA_PARAMS,idx,chunk);
-  }
 }
 
 void UARTdisconnected()
@@ -1007,8 +897,9 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+
   for(int i = 1;i<=LUA_FIELD_AMOUNT;i++){
-    iterateLUAparams(SET_LUA_EDITABLE_FLAG,i,0);
+    setLUAEditFlags(i);
   }
   resetLuaParams();
 
