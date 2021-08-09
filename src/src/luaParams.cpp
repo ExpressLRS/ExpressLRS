@@ -1,3 +1,4 @@
+#ifdef TARGET_TX
 
 #include "luaParams.h"
 
@@ -173,3 +174,4 @@ void suppressCurrentLuaWarning(void){ //0 to suppress
 bool getLuaWarning(void){ //1 if alarm
   return luaWarningFLags & suppressedLuaWarningFlags;
 }
+#endif

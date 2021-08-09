@@ -1,6 +1,5 @@
 #pragma once
-#ifndef H_LUAPARAMS
-#define H_LUAPARAMS
+
 #include "common.h"
 #include "crsf_protocol.h"
 #define LUA_DEVICE_SIZE(X) (uint8_t)(sizeof(tagLuaDeviceProperties)+strlen(X.label1)+1)
@@ -38,5 +37,3 @@ extern void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk);
 
 extern void suppressCurrentLuaWarning(void);
 extern bool getLuaWarning(void);
-
-#endif
