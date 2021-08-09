@@ -16,10 +16,6 @@
 #define LUA_FLOAT_SIZE(X) sizeof(tagLuaProperties1)+strlen(X.label1)+1+sizeof(tagLuaFloatProperties)+strlen(X.label2)+1
 */
 
-
-#define LUA_FIELD_AMOUNT 8
-
-extern const struct tagLuaDevice luaDevice;
 extern const struct tagLuaItem_textSelection luaAirRate;
 extern const struct tagLuaItem_textSelection luaTlmRate;
 extern const struct tagLuaItem_textSelection luaPower;

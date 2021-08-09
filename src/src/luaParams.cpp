@@ -17,11 +17,12 @@ static bool suppressedLuaWarningFlags = true;
 static const void *paramDefinitions[32] = {0};
 static luaCallback paramCallbacks[32] = {0};
 static void (*populateHandler)() = 0;
+static uint8_t lastLuaField = 0;
 
 const char thisCommit[] = {LATEST_COMMIT, 0};
-const struct tagLuaDevice luaDevice = {
+static struct tagLuaDevice luaDevice = {
     "ELRS",
-    {{0},LUA_FIELD_AMOUNT},
+    {{0},0},
     LUA_DEVICE_SIZE(luaDevice)
 };
 
@@ -150,7 +151,7 @@ static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
         retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,TYPE(tagLuaItem_textSelection));
         break;
     }
-    if(retval == 0 && idx == LUA_FIELD_AMOUNT){
+    if(retval == 0 && idx == lastLuaField){
       allLUAparamSent = 1;
     }
   }
@@ -192,6 +193,8 @@ void registerLUAParameter(const void *definition, luaCallback callback)
   const struct tagLuaProperties1 *p = (const struct tagLuaProperties1 *)definition;
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
+  lastLuaField = max(lastLuaField, p->id);
+  luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
 }
 
 void registerLUAPopulateParams(void (*populate)())
