@@ -478,7 +478,7 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-void registerLuaCallbacks() {
+void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
@@ -571,7 +571,6 @@ void resetLuaParams(){
   #else
   crsf.setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
-  allLUAparamSent = 0;
 }
 
 void updateLUApacketCount(){
@@ -832,8 +831,7 @@ void setup()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
   registerLUAPopulateParams(updateLUApacketCount);
-  registerLuaCallbacks();
-  setLUAEditFlags();
+  registerLuaParameters();
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running

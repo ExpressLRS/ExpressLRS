@@ -6,8 +6,8 @@
 
 extern CRSF crsf;
 
-volatile uint8_t allLUAparamSent = 0;  
-volatile bool UpdateParamReq = false;
+static uint8_t allLUAparamSent = 0;  
+static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
 #define LUA_PKTCOUNT_INTERVAL_MS 1000LU
@@ -101,29 +101,24 @@ const struct tagLuaItem_string luaCommit = {
 };
 
 #define EDITABLE(T) ((struct T *)p)->luaProperties1.id,((struct T *)p)->editableFlag
-void setLUAEditFlags()
+static void setLUAEditFlag(const struct tagLuaProperties1 *p)
 {
-  for(int i = 0 ; i<32 ; i++){
-    struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)paramDefinitions[i];
-    if (p != 0) {
-      switch(p->type) {
-        case CRSF_UINT8:
-          crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
-          break;
-        case CRSF_UINT16:
-          crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
-          break;
-        case CRSF_STRING:
-          crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
-          break;
-        case CRSF_COMMAND:
-          crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
-          break;
-        case CRSF_TEXT_SELECTION:
-          crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
-          break;
-      }
-    }
+  switch(p->type) {
+    case CRSF_UINT8:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
+      break;
+    case CRSF_UINT16:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
+      break;
+    case CRSF_STRING:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
+      break;
+    case CRSF_COMMAND:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
+      break;
+    case CRSF_TEXT_SELECTION:
+      crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
+      break;
   }
 }
 #undef EDITABLE
@@ -194,6 +189,7 @@ void registerLUAParameter(const void *definition, luaCallback callback)
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
   lastLuaField = max(lastLuaField, p->id);
+  setLUAEditFlag(p);
   luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
 }
 
@@ -209,6 +205,7 @@ void luaHandleUpdateParameter()
 
   if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
       LUAfieldReported = millis();
+      allLUAparamSent = 0;
       populateHandler();
       sendELRSstatus();
   }

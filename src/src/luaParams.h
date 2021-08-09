@@ -25,8 +25,6 @@ extern const struct tagLuaItem_uint8 luaBadPkt;
 extern const struct tagLuaItem_uint16 luaGoodPkt;
 extern const struct tagLuaItem_string luaCommit;
 
-extern volatile uint8_t allLUAparamSent;
-extern void setLUAEditFlags();
 extern void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk);
 
 extern void suppressCurrentLuaWarning(void);
