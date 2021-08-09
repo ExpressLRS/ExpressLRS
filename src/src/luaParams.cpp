@@ -7,10 +7,15 @@
 extern CRSF crsf;
 
 volatile uint8_t allLUAparamSent = 0;  
+volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
+#define LUA_PKTCOUNT_INTERVAL_MS 1000LU
 static bool luaWarningFLags = false;
 static bool suppressedLuaWarningFlags = true;
+
+static luaCallback paramCallbacks[32] = {0};
+static void (*populateHandler)() = 0;
 
 const char thisCommit[] = {LATEST_COMMIT, 0};
 const struct tagLuaDevice luaDevice = {
@@ -18,7 +23,6 @@ const struct tagLuaDevice luaDevice = {
     {{0},LUA_FIELD_AMOUNT},
     LUA_DEVICE_SIZE(luaDevice)
 };
-
 
 const struct tagLuaItem_textSelection luaAirRate = {
     {1,0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,chunk,parent,type
@@ -108,25 +112,27 @@ const void *luaParams[] = {
 
 
 #define EDITABLE(T) ((struct T *)p)->luaProperties1.id,((struct T *)p)->editableFlag
-void setLUAEditFlags(uint8_t param)
+void setLUAEditFlags()
 {
-  struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)luaParams[param-1];
-  switch(p->type) {
-    case CRSF_UINT8:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
-      break;
-    case CRSF_UINT16:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
-      break;
-    case CRSF_STRING:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
-      break;
-    case CRSF_COMMAND:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
-      break;
-    case CRSF_TEXT_SELECTION:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
-      break;
+  for(int i = 0 ; i<LUA_FIELD_AMOUNT ; i++){
+    struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)luaParams[i];
+    switch(p->type) {
+      case CRSF_UINT8:
+        crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
+        break;
+      case CRSF_UINT16:
+        crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
+        break;
+      case CRSF_STRING:
+        crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
+        break;
+      case CRSF_COMMAND:
+        crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
+        break;
+      case CRSF_TEXT_SELECTION:
+        crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
+        break;
+    }
   }
 }
 #undef EDITABLE
@@ -174,4 +180,81 @@ void suppressCurrentLuaWarning(void){ //0 to suppress
 bool getLuaWarning(void){ //1 if alarm
   return luaWarningFLags & suppressedLuaWarningFlags;
 }
+
+void sendELRSstatus()
+{
+  uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
+                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
+                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
+                         (uint8_t)(getLuaWarning())};
+
+  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " ", 4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+}
+
+void ICACHE_RAM_ATTR luaParamUpdateReq()
+{
+  UpdateParamReq = true;
+}
+
+void registerLUACallback(uint8_t param, luaCallback callback)
+{
+  paramCallbacks[param] = callback;
+}
+
+void registerLUAPopulateParams(void (*populate)())
+{
+  populateHandler = populate;
+  populate();
+}
+
+void luaHandleUpdateParameter()
+{
+  static uint32_t LUAfieldReported = 0;
+
+  if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
+      LUAfieldReported = millis();
+      populateHandler();
+      sendELRSstatus();
+  }
+
+  if (UpdateParamReq == false)
+  {
+    return;
+  }
+
+  switch(crsf.ParameterUpdateData[0])
+  {
+    case CRSF_FRAMETYPE_PARAMETER_WRITE:
+      allLUAparamSent = 0;
+      if (crsf.ParameterUpdateData[1] == 0)
+      {
+        // special case for sending commit packet
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("send all lua params");
+  #endif
+        sendELRSstatus();
+      } else if (crsf.ParameterUpdateData[1] == 0x2E) {
+        suppressCurrentLuaWarning();
+      } else {
+        uint8_t param = crsf.ParameterUpdateData[1];
+        if (param <= LUA_FIELD_AMOUNT && paramCallbacks[param] != 0) {
+          paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
+        }
+      }
+      break;
+
+    case CRSF_FRAMETYPE_DEVICE_PING:
+        allLUAparamSent = 0;
+        populateHandler();
+        crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+        break;
+
+    case CRSF_FRAMETYPE_PARAMETER_READ: //param info
+      sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+      break;
+  }
+
+  UpdateParamReq = false;
+}
+
 #endif
