@@ -54,7 +54,7 @@ menuShow_t OLED_MENU::currentItem[] ={
             {0,  20,  getOptionString},
             {80, 20,  getRateString}
         },
-        {80,10,30,10},
+        {79,12,31,9},
         pktRateLPCB
     },
     {
@@ -64,7 +64,7 @@ menuShow_t OLED_MENU::currentItem[] ={
             {0,  30,  getOptionString},
             {80, 30,  getTLMRatioString}
         },
-        {80,20,30,10},
+        {79,21,31,10},
         tlmLPCB
     },
     {
@@ -74,7 +74,7 @@ menuShow_t OLED_MENU::currentItem[] ={
             {0,  40,  getOptionString},
             {80, 40,  getPowerString}
         },
-        {80,30,30,10},
+        {79,32,30,10},
         powerLPCB
     },
     {
@@ -84,27 +84,27 @@ menuShow_t OLED_MENU::currentItem[] ={
             {0,  50,  getOptionString},
             {80, 50,  getRgbString}
         },
-        {80,40,30,10},
+        {79,42,30,10},
         rgbLPCB
     },
     {
         4,
         0,
         {
-            {0, 60,  getOptionString},
-            {0, 60,  getBindString}
+            {0, 62,  getOptionString},
+            {0, 62,  getBindString}
         },
-        {0,50,30,10},
+        {0,53,30,11},
         bindLPCB
     },
     {
         5,
         0,
         {
-            {80, 60,  getOptionString},
-            {80, 60,  getUpdateiString}
+            {80, 62,  getOptionString},
+            {80, 62,  getUpdateiString}
         },
-        {80,50,30,10},
+        {79,53,30,11},
         updateLPCB
     },
 };
@@ -166,7 +166,7 @@ void OLED_MENU::menuUpdata(void)
         
         if(currentIndex == currentItem[i].index)
         {
-            u8g2.drawBox(currentItem[i].box.x,currentItem[i].box.y,currentItem[i].box.length,currentItem[i].box.hight);         
+            u8g2.drawBox(currentItem[i].box.x,currentItem[i].box.y,strlen(currentItem[i].option[1].getStr(currentItem[i].value))*6+1,currentItem[i].box.hight);         
         }
 
         u8g2.setDrawColor(2);
@@ -304,14 +304,14 @@ const char * OLED_MENU::getRgbString(int rgb)
 {
     switch (rgb)
     {
-    case 0: return "off";
-    case 1: return "cyan";
-    case 3: return "blue";
-    case 4: return "green";
-    case 5: return "white";
-    case 6: return "violet";
-    case 7: return "yellow";
-    case 2: return "magenta";
+    case 0: return "OFF";
+    case 1: return "Cyan";
+    case 3: return "Blue";
+    case 4: return "Green";
+    case 5: return "White";
+    case 6: return "Violet";
+    case 7: return "Yellow";
+    case 2: return "Magenta";
     default: return "Error";
     }
 }
