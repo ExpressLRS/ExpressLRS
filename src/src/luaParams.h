@@ -29,8 +29,6 @@ extern const struct tagLuaItem_uint8 luaBadPkt;
 extern const struct tagLuaItem_uint16 luaGoodPkt;
 extern const struct tagLuaItem_string luaCommit;
 
-extern const void *luaParams[LUA_FIELD_AMOUNT];
-
 extern volatile uint8_t allLUAparamSent;
 extern void setLUAEditFlags();
 extern void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk);
@@ -43,4 +41,4 @@ extern void luaHandleUpdateParameter();
 void registerLUAPopulateParams(void (*populate)());
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
-void registerLUACallback(uint8_t param, luaCallback callback);
+void registerLUAParameter(const void *definition, luaCallback callback);

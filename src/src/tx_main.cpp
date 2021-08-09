@@ -479,7 +479,7 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
 }
 
 void registerLuaCallbacks() {
-  registerLUACallback(luaAirRate.luaProperties1.id, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       #ifndef DEBUG_SUPPRESS
@@ -494,7 +494,7 @@ void registerLuaCallbacks() {
       #endif
     }
   });
-  registerLUACallback(luaTlmRate.luaProperties1.id, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       #ifndef DEBUG_SUPPRESS
@@ -509,7 +509,7 @@ void registerLuaCallbacks() {
       #endif
     }
   });
-  registerLUACallback(luaPower.luaProperties1.id, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     #ifndef DEBUG_SUPPRESS
       Serial.print("Request Power: ");
     #endif
@@ -523,7 +523,7 @@ void registerLuaCallbacks() {
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
   });
-  registerLUACallback(luaBind.luaProperties1.id, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
 #ifndef DEBUG_SUPPRESS
@@ -541,7 +541,7 @@ void registerLuaCallbacks() {
       ExitBindingMode();
     }
   });
-  registerLUACallback(luaWebUpdate.luaProperties1.id, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
 #ifdef PLATFORM_ESP32
