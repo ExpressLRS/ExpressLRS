@@ -9,6 +9,7 @@ SX127xDriver Radio;
 SX1280Driver Radio;
 #endif
 
+#include "BAUD_DETECT.h"
 #include "CRSF.h"
 
 #include "luaParams.h"
@@ -66,6 +67,7 @@ volatile uint8_t allLUAparamSent = 0;
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
+BAUD_DETECT BAUD;
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
@@ -843,7 +845,18 @@ void setup()
 
   startupLEDs();
 
-  #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+  while (1)
+  {
+
+    //BAUD.begin(GPIO_PIN_RCSIGNAL_RX);
+    Serial.println("autobaud");
+    delay(1000);
+    Serial.println(BAUD.uart_baud_detect2(UART_NUM_1));
+   // while (!BAUD.status());
+    //BAUD.print();
+  };
+
+#if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
     digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
   #endif // GPIO_PIN_LED_GREEN
@@ -968,6 +981,8 @@ void setup()
   #endif
 
   POWERMGNT.init();
+
+
 
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   SetRFLinkRate(config.GetRate());
