@@ -619,15 +619,17 @@ void UARTconnected()
 
 void HandleUpdateParameter()
 {
-  luaHandleUpdateParameter();
-  if (config.IsModified())
+  bool updated = luaHandleUpdateParameter();
+  if (updated && config.IsModified())
   {
+    Serial.println("modified");
     syncSpamCounter = syncSpamAmount;
   }
 }
 
 static void ConfigChangeCommit()
 {
+  Serial.println("commit");
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -834,8 +836,8 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
-  registerLUAPopulateParams(updateLUApacketCount);
   registerLuaParameters();
+  registerLUAPopulateParams(updateLUApacketCount);
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running

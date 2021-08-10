@@ -23,7 +23,7 @@ extern void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk);
 extern void suppressCurrentLuaWarning(void);
 extern bool getLuaWarning(void);
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
-extern void luaHandleUpdateParameter();
+extern bool luaHandleUpdateParameter();
 
 void registerLUAPopulateParams(void (*populate)());
 

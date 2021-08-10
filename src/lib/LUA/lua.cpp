@@ -124,7 +124,7 @@ void registerLUAPopulateParams(void (*populate)())
   populate();
 }
 
-void luaHandleUpdateParameter()
+bool luaHandleUpdateParameter()
 {
   static uint32_t LUAfieldReported = 0;
 
@@ -137,7 +137,7 @@ void luaHandleUpdateParameter()
 
   if (UpdateParamReq == false)
   {
-    return;
+    return false;
   }
 
   switch(crsf.ParameterUpdateData[0])
@@ -155,7 +155,7 @@ void luaHandleUpdateParameter()
         suppressCurrentLuaWarning();
       } else {
         uint8_t param = crsf.ParameterUpdateData[1];
-        if (param <= 32 && paramCallbacks[param] != 0) {
+        if (param < 32 && paramCallbacks[param] != 0) {
           paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
         }
       }
@@ -173,6 +173,7 @@ void luaHandleUpdateParameter()
   }
 
   UpdateParamReq = false;
+  return true;
 }
 
 #endif
