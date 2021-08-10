@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef TARGET_TX
+
 #include "crsf_protocol.h"
 
 #define LUA_DEVICE_SIZE(X) (uint8_t)(sizeof(tagLuaDeviceProperties)+strlen(X.label1)+1)
@@ -27,3 +29,5 @@ void registerLUAPopulateParams(void (*populate)());
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
 void registerLUAParameter(const void *definition, luaCallback callback);
+
+#endif

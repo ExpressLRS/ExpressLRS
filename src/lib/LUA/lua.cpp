@@ -1,3 +1,5 @@
+#ifdef TARGET_TX
+
 #include "lua.h"
 
 #include "CRSF.h"
@@ -172,3 +174,5 @@ void luaHandleUpdateParameter()
 
   UpdateParamReq = false;
 }
+
+#endif
