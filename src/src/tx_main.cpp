@@ -561,6 +561,9 @@ void registerLuaParameters() {
         sendLuaFieldCrsf(id,0);
     }
   });
+  registerLUAParameter(&luaBadPkt);
+  registerLUAParameter(&luaGoodPkt);
+  registerLUAParameter(&luaCommit);
 }
 
 void resetLuaParams(){

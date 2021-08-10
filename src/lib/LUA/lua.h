@@ -28,6 +28,6 @@ extern void luaHandleUpdateParameter();
 void registerLUAPopulateParams(void (*populate)());
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
-void registerLUAParameter(const void *definition, luaCallback callback);
+void registerLUAParameter(const void *definition, luaCallback callback = 0);
 
 #endif
