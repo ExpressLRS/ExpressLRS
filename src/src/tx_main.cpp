@@ -10,8 +10,9 @@ SX1280Driver Radio;
 #endif
 
 #include "CRSF.h"
-
+#include "lua.h"
 #include "luaParams.h"
+
 #include "FHSS.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
