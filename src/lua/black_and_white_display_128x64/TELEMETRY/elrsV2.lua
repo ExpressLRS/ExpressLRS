@@ -267,7 +267,7 @@ local allParamsLoaded = 0
   end
   
   local function fieldFloatDisplay(field, y, attr)
-    lcd.drawText(89, y, formatFloat(field.value, field.prec), LEFT + attr)
+    lcd.drawText(65, y, formatFloat(field.value, field.prec), LEFT + attr)
     lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
   end
   
@@ -294,7 +294,7 @@ local allParamsLoaded = 0
   end
   
   local function fieldTextSelectionDisplay(field, y, attr)
-    lcd.drawText(89, y, field.values[field.value+1], attr)
+    lcd.drawText(65, y, field.values[field.value+1], attr)
     lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
   end
   
@@ -317,10 +317,10 @@ local allParamsLoaded = 0
   
   local function fieldStringDisplay(field, y, attr)
     if edit == true and attr then
-      lcd.drawText(89, y, field.value, FIXEDWIDTH)
+      lcd.drawText(65, y, field.value, FIXEDWIDTH)
       lcd.drawText(83+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
     else
-      lcd.drawText(89, y, field.value, attr)
+      lcd.drawText(65, y, field.value, attr)
     end
   end
   
@@ -345,7 +345,7 @@ local allParamsLoaded = 0
   local function fieldCommandDisplay(field, y, attr)
     lcd.drawText(0, y, field.name, attr)
     if field.info ~= "" then
-      lcd.drawText(89, y, "[" .. field.info .. "]")
+      lcd.drawText(65, y, "[" .. field.info .. "]")
     end
   end
   
