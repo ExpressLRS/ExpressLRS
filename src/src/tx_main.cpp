@@ -511,11 +511,11 @@ void registerLuaParameters() {
     }
   });
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
+      PowerLevels_e newPower = (PowerLevels_e)arg;
     #ifndef DEBUG_SUPPRESS
       Serial.print("Request Power: ");
-    #endif
-      PowerLevels_e newPower = (PowerLevels_e)arg;
       Serial.println(newPower, DEC);
+    #endif
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
       
     #if defined(HAS_OLED)
@@ -622,14 +622,12 @@ void HandleUpdateParameter()
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
-    Serial.println("modified");
     syncSpamCounter = syncSpamAmount;
   }
 }
 
 static void ConfigChangeCommit()
 {
-  Serial.println("commit");
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
