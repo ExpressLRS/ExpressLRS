@@ -619,6 +619,13 @@ void UARTconnected()
 
 void HandleUpdateParameter()
 {
+  if(crsf.elrsLUAmode == true){
+    crsf.setLuaHiddenFlag(luaBadPkt.luaProperties1.id,true);
+    crsf.setLuaHiddenFlag(luaGoodPkt.luaProperties1.id,true);
+  } else {
+    crsf.setLuaHiddenFlag(luaBadPkt.luaProperties1.id,false);
+    crsf.setLuaHiddenFlag(luaGoodPkt.luaProperties1.id,false);
+  }
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
@@ -833,7 +840,7 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-
+  
   registerLuaParameters();
   registerLUAPopulateParams(updateLUApacketCount);
 

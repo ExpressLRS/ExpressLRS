@@ -150,6 +150,7 @@ typedef enum
     CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
+    CRSF_ADDRESS_ELRS_LUA = 0xEF
 } crsf_addr_e;
 
 //typedef struct crsf_addr_e asas;
