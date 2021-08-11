@@ -2,7 +2,6 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
-#include "luaParams.h"
 
 #define TX_CONFIG_VERSION   2
 #define RX_CONFIG_VERSION   2
