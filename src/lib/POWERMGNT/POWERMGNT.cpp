@@ -392,7 +392,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
-#elif defined(TARGET_TX_BETAFPV_900_V1)
+#elif defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
     switch (Power)
     {
     case PWR_250mW:
@@ -407,7 +407,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(0b0000);
         break;
     }
-#elif defined(TARGET_TX_BETAFPV_2400_V1)
+#elif defined(TARGET_TX_BETAFPV_2400_V1) || (TARGET_TX_BETAFPV_2400_MICRO_V1)
     switch (Power)
     {
     case PWR_10mW:
@@ -478,7 +478,7 @@ void POWERMGNT::powerLedInit()
 #endif
 }
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
 void POWERMGNT::handleCyclePower()
 {
     switch (CurrentPower)

@@ -25,11 +25,11 @@
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_50mW
 
-#elif defined(TARGET_TX_BETAFPV_900_V1)
+#elif defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
 #define MaxPower PWR_500mW
 #define DefaultPowerEnum PWR_100mW
 
-#elif defined(TARGET_TX_BETAFPV_2400_V1)
+#elif defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_2400_MICRO_V1)
 #define MaxPower PWR_500mW
 #define DefaultPowerEnum PWR_50mW
 
@@ -95,7 +95,7 @@ public:
     static void init();
     static void powerLedInit();
     static void powerLedUpdate();
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
         static void handleCyclePower();
     #endif
 };

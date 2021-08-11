@@ -25,7 +25,11 @@
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 
 extern void setRGBColor(uint8_t color);
-
+extern void menuSetRate(uint32_t rate);
+extern void menuSetTLM(uint32_t TLM);
+extern void menuSetPow(uint32_t pow);
+extern void uartConnected(void);
+extern void uartDisconnected(void);
 void shortPressCallback(void);
 void longPressCallback(void);
 
@@ -109,6 +113,7 @@ menuShow_t OLED_MENU::currentItem[] ={
     },
 };
 
+uint8_t Index_map_RateValue[4] = {0,1,3,5};   //500Hz  250Hz  150Hz  50Hz 
 
 uint32_t OLED_MENU::lastProcessTime=0;
 uint8_t OLED_MENU::currentIndex = 0;
@@ -140,8 +145,9 @@ void OLED_MENU::displayLockScreen()
 void OLED_MENU::ScreenLocked(void)
 {
     uint32_t now = millis();
-    if(now - OLED_MENU::lastProcessTime > LOCKTIME) // LOCKTIME seconds later lock the screen
+    if(now - OLED_MENU::lastProcessTime > LOCKTIME && OLED_MENU::screenLocked == 0) // LOCKTIME seconds later lock the screen
     {
+        uartConnected();
         u8g2.clearBuffer();
         OLED_MENU::screenLocked = 1;
         u8g2.drawXBM(36, 0, 64, 64, elrs64);  
@@ -202,7 +208,8 @@ void OLED_MENU::longPressCB(void)
     lastProcessTime = millis();
     if(screenLocked)  //unlock screen
     {
-        screenLocked = 0;       
+        screenLocked = 0;  
+        uartDisconnected();     
     }
     else
     {  
@@ -215,15 +222,11 @@ void OLED_MENU::pktRateLPCB(uint8_t i)
 {
     currentItem[i].value++;
 
-    if(currentItem[i].value>7)
+    if(currentItem[i].value>3)
     {
         currentItem[i].value = 0;
     }
-
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-
+    menuSetRate(currentItem[i].value);
 }
 
 void OLED_MENU::tlmLPCB(uint8_t i)
@@ -234,11 +237,7 @@ void OLED_MENU::tlmLPCB(uint8_t i)
     {
         currentItem[i].value = 0;
     }
-
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-
+    menuSetTLM(currentItem[i].value);
 }
 
 void OLED_MENU::powerLPCB(uint8_t i)
@@ -249,11 +248,7 @@ void OLED_MENU::powerLPCB(uint8_t i)
     {
         currentItem[i].value = 0;
     }
-
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-
+    menuSetPow(currentItem[i].value);
 }
 
 void OLED_MENU::rgbLPCB(uint8_t i)
@@ -264,11 +259,7 @@ void OLED_MENU::rgbLPCB(uint8_t i)
     {
         currentItem[i].value = 0;
     }
-
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-   setRGBColor(currentItem[i].value);
+    setRGBColor(currentItem[i].value);
 }
 
 void OLED_MENU::bindLPCB(uint8_t i)
@@ -346,15 +337,20 @@ const char *OLED_MENU::getPowerString(int power){
 const char *OLED_MENU::getRateString(int rate){
     switch (rate)
     {
+#if defined(Regulatory_Domain_ISM_2400)
     case 0: return "500hz";
     case 1: return "250hz";
-    case 2: return "200hz";
-    case 3: return "150hz";
-    case 4: return "100hz";
-    case 5: return "50hz";
-    case 6: return "25hz";
-    case 7: return "4hz";
-    default: return "ERROR";
+    case 2: return "150hz";
+    case 3: return "50hz";
+#endif 
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+      case 0: return "200hz";
+      case 1: return "100hz";
+      case 2: return "50hz";
+      case 3: return "25hz";
+#endif
+     default: return "50hz";
     }
 }
 

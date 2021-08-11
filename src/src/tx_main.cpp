@@ -636,6 +636,14 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+#if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
+void menuSetRate(uint32_t rate) {config.SetRate(rate);}
+void menuSetTLM(uint32_t TLM) {config.SetTlm(TLM);}
+void menuSetPow(uint32_t pow) {config.SetPower(pow);}
+void uartConnected(void) {UARTconnected();}
+void uartDisconnected(void) {UARTdisconnected();}
+#endif
+
 
 void setup()
 {
@@ -713,14 +721,14 @@ void setup()
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) 
   button.buttonTriplePress = &EnterBindingMode;
   button.buttonLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
 #if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
-  button.buttonShortPress = &shortPressCallback;
-  button.buttonLongPress = &longPressCallback;
+button.buttonShortPress = &shortPressCallback;
+button.buttonLongPress = &longPressCallback;
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -819,7 +827,10 @@ void loop()
       return;
     }
   #endif
+
+  #ifdef HAS_I2C_OLED_MENU
   OLED_MENU.ScreenLocked();
+  #endif
   HandleUpdateParameter();
   CheckConfigChangePending();
 
