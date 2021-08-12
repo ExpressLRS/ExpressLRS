@@ -21,7 +21,6 @@
 #include "string.h"
 #include "XBMStrings.h" // Contains all the express logos and animation for UI
 
-
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 
 extern void setRGBColor(uint8_t color);
@@ -29,6 +28,7 @@ extern void menuSetRate(uint32_t rate);
 extern void menuSetTLM(uint32_t TLM);
 extern void menuSetPow(uint32_t pow);
 extern void uartConnected(void);
+extern void weakupMenu(void);
 extern void uartDisconnected(void);
 void shortPressCallback(void);
 void longPressCallback(void);
@@ -136,9 +136,7 @@ void OLED_MENU::displayLockScreen()
 {
     u8g2.begin();
     u8g2.clearBuffer();
-
     u8g2.drawXBM(36, 0, 64, 64, elrs64); 
-
     u8g2.sendBuffer();
 }
 
@@ -152,6 +150,8 @@ void OLED_MENU::ScreenLocked(void)
         OLED_MENU::screenLocked = 1;
         u8g2.drawXBM(36, 0, 64, 64, elrs64);  
         u8g2.sendBuffer();
+        OLED_MENU::lastProcessTime = now;
+        Serial.println("111111111111111111111111");
     }
 }
 void OLED_MENU::menuUpdata(void)
@@ -160,7 +160,6 @@ void OLED_MENU::menuUpdata(void)
 
     u8g2.setFontMode(1);  /* activate transparent font mode */
     u8g2.setDrawColor(1); /* color 1 for the box */
-    u8g2.setFont(u8g2_font_6x12_tf);
     u8g2.setFont(u8g2_font_6x12_tf);
     u8g2.drawBox(0,0,128, 10);
     u8g2.setDrawColor(2);
@@ -178,13 +177,21 @@ void OLED_MENU::menuUpdata(void)
         u8g2.setDrawColor(2);
         u8g2.drawUTF8(currentItem[i].option[1].line,currentItem[i].option[1].row,currentItem[i].option[1].getStr(currentItem[i].value));
     }
-    
     u8g2.sendBuffer();
 }
 
-void OLED_MENU::updateScreen(void)
+void OLED_MENU::updateScreen(const char power ,const char rate, const char tlm)
 {
-    OLED_MENU::menuUpdata();
+    currentItem[0].value = OLED_MENU::currRateMap(rate);
+    currentItem[1].value = tlm;
+    currentItem[2].value = power;
+    //  Serial.println(currentItem[0].value);
+    //  Serial.println(currentItem[1].value);
+    //  Serial.println(currentItem[2].value);
+    if(OLED_MENU::screenLocked == 0)
+    {
+        OLED_MENU::menuUpdata();
+    }    
 }
 
 void OLED_MENU::shortPressCB(void)
@@ -199,8 +206,8 @@ void OLED_MENU::shortPressCB(void)
             currentIndex = 0;
             showBaseIndex =0;
         }
+        OLED_MENU::menuUpdata();
     }
-     OLED_MENU::menuUpdata();
 }
 
 void OLED_MENU::longPressCB(void)
@@ -208,14 +215,15 @@ void OLED_MENU::longPressCB(void)
     lastProcessTime = millis();
     if(screenLocked)  //unlock screen
     {
-        screenLocked = 0;  
-        uartDisconnected();     
+        screenLocked = 0;
+        uartDisconnected();   
+        weakupMenu();      
     }
     else
     {  
         currentItem[currentIndex].lpcb(currentIndex);
     }  
-     OLED_MENU::menuUpdata();
+    OLED_MENU::menuUpdata();
 }
 
 void OLED_MENU::pktRateLPCB(uint8_t i)
@@ -318,12 +326,12 @@ const char *OLED_MENU::getPowerString(int power){
     {
     case 0: return "10mW";
     case 1: return "25mW";
+    case 2: return "50mW";
     case 3: return "100mW";
     case 4: return "250mW";
     case 5: return "500mW";
     case 6: return "1000mW";
     case 7: return "2000mW";
-    case 2: return "50mW";
     default: return "Error";
     }
 }
@@ -354,6 +362,27 @@ const char *OLED_MENU::getRateString(int rate){
     }
 }
 
+
+const char OLED_MENU::currRateMap(char currRate)
+{
+    switch (currRate)
+    {
+#if defined(Regulatory_Domain_ISM_2400) 
+        case 0: return 0;
+        case 1: return 1;
+        case 3: return 2;
+        case 5: return 3;
+#endif
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+        case 2: return 0;
+        case 4: return 1;
+        case 5: return 2;
+        case 6: return 3; 
+#endif
+        default: break;
+    }
+}
 /**
  * Returns telemetry ratio string (Char array)
  *

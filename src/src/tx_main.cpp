@@ -492,7 +492,7 @@ void HandleUpdateParameter()
     #endif
 
     #if defined(HAS_I2C_OLED_MENU)
-      OLED_MENU.updateScreen();
+       OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),(expresslrs_RFrates_e)crsf.ParameterUpdateData[1],(expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
     #endif
 
     }
@@ -511,7 +511,7 @@ void HandleUpdateParameter()
     #endif
 
     #if defined(HAS_I2C_OLED_MENU)
-      OLED_MENU.updateScreen();
+       OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),(expresslrs_RFrates_e)crsf.ParameterUpdateData[1],(expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
     #endif
 
     }
@@ -529,7 +529,9 @@ void HandleUpdateParameter()
       #endif
 
       #if defined(HAS_I2C_OLED_MENU)
-        OLED_MENU.updateScreen();
+         OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
+         (expresslrs_RFrates_e)crsf.ParameterUpdateData[1],
+         (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
       #endif
     }
     break;
@@ -640,6 +642,9 @@ void ICACHE_RAM_ATTR TXdoneISR()
 void menuSetRate(uint32_t rate) {config.SetRate(rate);}
 void menuSetTLM(uint32_t TLM) {config.SetTlm(TLM);}
 void menuSetPow(uint32_t pow) {config.SetPower(pow);}
+void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
+                                 (expresslrs_RFrates_e)crsf.ParameterUpdateData[1],
+        (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));};
 void uartConnected(void) {UARTconnected();}
 void uartDisconnected(void) {UARTdisconnected();}
 #endif
@@ -809,7 +814,7 @@ button.buttonLongPress = &longPressCallback;
   #endif
 
   #if defined(HAS_I2C_OLED_MENU)
-    OLED_MENU.updateScreen();
+     OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),config.GetRate(),(expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   #endif
 }
 
