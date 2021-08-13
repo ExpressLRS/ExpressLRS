@@ -31,6 +31,7 @@ extern void uartConnected(void);
 extern void weakupMenu(void);
 extern void menuBinding(void);
 extern void uartDisconnected(void);
+extern void menuWifiUpdate(void);
 void shortPressCallback(void);
 void longPressCallback(void);
 
@@ -279,10 +280,7 @@ void OLED_MENU::bindLPCB(uint8_t i)
 
 void OLED_MENU::updateLPCB(uint8_t i)
 {
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-
+    menuWifiUpdate();
 }
 
 
@@ -361,27 +359,6 @@ const char *OLED_MENU::getRateString(int rate){
     }
 }
 
-
-const char OLED_MENU::currRateMap(char currRate)
-{
-    switch (currRate)
-    {
-#if defined(Regulatory_Domain_ISM_2400) 
-        case 0: return 0;
-        case 1: return 1;
-        case 3: return 2;
-        case 5: return 3;
-#endif
-
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-        case 2: return 0;
-        case 4: return 1;
-        case 5: return 2;
-        case 6: return 3; 
-#endif
-        default: break;
-    }
-}
 /**
  * Returns telemetry ratio string (Char array)
  *

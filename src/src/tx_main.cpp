@@ -650,6 +650,15 @@ void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower
                                  config.GetRate(),
         (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));}
 void menuBinding(void) {EnterBindingMode();}
+void menuWifiUpdate(void) 
+{ 
+    webUpdateMode = true;
+    Serial.println("Wifi Update Mode Requested!");
+    sendLuaParams();
+    sendLuaParams();
+    BeginWebUpdate();
+};
+
 void uartConnected(void) {UARTconnected();}
 void uartDisconnected(void) {UARTdisconnected();}
 #endif

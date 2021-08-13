@@ -74,7 +74,6 @@ private:
 public:
     void displayLockScreen();
     static void updateScreen(const char power ,const char rate, const char tlm);
-    static const char currRateMap(char currRate);
     static const char * getPowerString(int power);
     static const char * getRateString(int rate);
     static const char * getTLMRatioString(int ratio);
