@@ -53,6 +53,8 @@
 ### OTHER OPTIONS: ###
 
 -DAUTO_WIFI_ON_INTERVAL=30
+-DHOME_WIFI_SSID=""
+-DHOME_WIFI_PASSWORD=""
 
 #-DJUST_BEEP_ONCE
 #-DDISABLE_STARTUP_BEEP
@@ -63,6 +65,9 @@
 
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
+
+# Comment this to disable dynamic TX power management.
+#-DUSE_DYNAMIC_POWER
 
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB

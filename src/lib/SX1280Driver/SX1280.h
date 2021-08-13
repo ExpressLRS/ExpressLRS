@@ -30,10 +30,11 @@ public:
     /////////////////////////////
 
     ///////////Radio Variables////////
-    #define TXRXBuffSize 8 
-
-    volatile uint8_t TXdataBuffer[TXRXBuffSize]; // ELRS uses max of 8 bytes
+    #define TXRXBuffSize 16
+    volatile uint8_t TXdataBuffer[TXRXBuffSize];
     volatile uint8_t RXdataBuffer[TXRXBuffSize];
+
+    uint8_t PayloadLength = 8; // Dummy default value which is overwritten during setup.
 
     static uint8_t _syncWord;
 
@@ -73,7 +74,7 @@ public:
     bool Begin();
     void End();
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
-    void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ);
+    void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength);
     void ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
     void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
@@ -83,7 +84,7 @@ public:
 
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
 
-    static void TXnb(volatile uint8_t *data, uint8_t length);
+    static void TXnb();
     static void TXnbISR(); //ISR for non-blocking TX routine
 
     static void RXnb();
