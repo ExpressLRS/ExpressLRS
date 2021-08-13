@@ -657,6 +657,7 @@ void menuWifiUpdate(void)
     sendLuaParams();
     sendLuaParams();
     BeginWebUpdate();
+    OLED_MENU.WIFIUpdateScreen();
 };
 
 void uartConnected(void) {UARTconnected();}

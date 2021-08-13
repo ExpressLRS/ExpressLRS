@@ -58,6 +58,7 @@ public:
     static uint32_t lastProcessTime;
     static uint8_t currentIndex;
     static uint8_t screenLocked;
+    static uint8_t wifiupdateSta;
 private:
     static uint8_t showBaseIndex;
     static menuShow_t currentItem[];
@@ -74,6 +75,7 @@ private:
 public:
     void displayLockScreen();
     static void updateScreen(const char power ,const char rate, const char tlm);
+    static void WIFIUpdateScreen(void);
     static const char * getPowerString(int power);
     static const char * getRateString(int rate);
     static const char * getTLMRatioString(int ratio);

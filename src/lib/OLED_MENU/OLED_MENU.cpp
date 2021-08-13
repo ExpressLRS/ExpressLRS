@@ -115,13 +115,12 @@ menuShow_t OLED_MENU::currentItem[] ={
     },
 };
 
-uint8_t Index_map_RateValue[4] = {0,1,3,5};   //500Hz  250Hz  150Hz  50Hz 
 
 uint32_t OLED_MENU::lastProcessTime=0;
 uint8_t OLED_MENU::currentIndex = 0;
 uint8_t OLED_MENU::showBaseIndex = 0;
 uint8_t OLED_MENU::screenLocked = 0;
-
+ uint8_t OLED_MENU::wifiupdateSta = 0;
 
 void shortPressCallback(void)
 {
@@ -140,6 +139,18 @@ void OLED_MENU::displayLockScreen()
     u8g2.clearBuffer();
     u8g2.drawXBM(36, 0, 64, 64, elrs64); 
     u8g2.sendBuffer();
+}
+
+void OLED_MENU::WIFIUpdateScreen(void)
+{
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_HelvetiPixelOutline_tr);
+    u8g2.drawUTF8(15,20, "WIFI Update"); 
+    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.drawUTF8(14,40, "http://10.0.0.1/"); 
+    u8g2.drawUTF8(20,53, "PW: expresslrs"); 
+    u8g2.sendBuffer();
+    OLED_MENU::wifiupdateSta = 1;
 }
 
 void OLED_MENU::ScreenLocked(void)
@@ -226,7 +237,11 @@ void OLED_MENU::longPressCB(void)
     {  
         currentItem[currentIndex].lpcb(currentIndex);
     }  
-    OLED_MENU::menuUpdata();
+    if(OLED_MENU::wifiupdateSta == 0)
+    {
+         OLED_MENU::menuUpdata();
+    }
+   
 }
 
 void OLED_MENU::pktRateLPCB(uint8_t i)
