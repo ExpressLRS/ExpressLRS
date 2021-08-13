@@ -29,6 +29,7 @@ extern void menuSetTLM(uint32_t TLM);
 extern void menuSetPow(uint32_t pow);
 extern void uartConnected(void);
 extern void weakupMenu(void);
+extern void menuBinding(void);
 extern void uartDisconnected(void);
 void shortPressCallback(void);
 void longPressCallback(void);
@@ -177,15 +178,16 @@ void OLED_MENU::menuUpdata(void)
         u8g2.setDrawColor(2);
         u8g2.drawUTF8(currentItem[i].option[1].line,currentItem[i].option[1].row,currentItem[i].option[1].getStr(currentItem[i].value));
     }
+    delay(100);
     u8g2.sendBuffer();
 }
 
 void OLED_MENU::updateScreen(const char power ,const char rate, const char tlm)
 {
-    currentItem[0].value = OLED_MENU::currRateMap(rate);
-    currentItem[1].value = tlm;
-    currentItem[2].value = power;
-    //  Serial.println(currentItem[0].value);
+     currentItem[0].value = rate;
+     currentItem[1].value = tlm;
+     currentItem[2].value = power;
+     Serial.println(currentItem[0].value);
     //  Serial.println(currentItem[1].value);
     //  Serial.println(currentItem[2].value);
     if(OLED_MENU::screenLocked == 0)
@@ -217,7 +219,7 @@ void OLED_MENU::longPressCB(void)
     {
         screenLocked = 0;
         uartDisconnected();   
-        weakupMenu();      
+        weakupMenu();    
     }
     else
     {  
@@ -272,10 +274,7 @@ void OLED_MENU::rgbLPCB(uint8_t i)
 
 void OLED_MENU::bindLPCB(uint8_t i)
 {   
-    /*
-    TO DO: 需要添加对应的处理部分
-    */
-
+    menuBinding();
 }
 
 void OLED_MENU::updateLPCB(uint8_t i)
