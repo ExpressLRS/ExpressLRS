@@ -137,7 +137,11 @@ void OLED_MENU::displayLockScreen()
 {
     u8g2.begin();
     u8g2.clearBuffer();
-    u8g2.drawXBM(36, 0, 64, 64, elrs64); 
+    u8g2.drawXBM(0, 0, 64, 64, elrs64);  
+    u8g2.setFont(u8g2_font_helvB24_tf);
+    u8g2.drawUTF8(65,30, "Exp"); 
+    u8g2.setFont(u8g2_font_HelvetiPixelOutline_tr);
+    u8g2.drawUTF8(78,57,SCREEN_FR_STRING); 
     u8g2.sendBuffer();
 }
 
@@ -161,10 +165,13 @@ void OLED_MENU::ScreenLocked(void)
         uartConnected();
         u8g2.clearBuffer();
         OLED_MENU::screenLocked = 1;
-        u8g2.drawXBM(36, 0, 64, 64, elrs64);  
+        u8g2.drawXBM(0, 0, 64, 64, elrs64);  
+        u8g2.setFont(u8g2_font_helvB24_tf);
+        u8g2.drawUTF8(65,30, "Exp"); 
+        u8g2.setFont(u8g2_font_HelvetiPixelOutline_tr);
+        u8g2.drawUTF8(78,57,SCREEN_FR_STRING); 
         u8g2.sendBuffer();
         OLED_MENU::lastProcessTime = now;
-        Serial.println("111111111111111111111111");
     }
 }
 void OLED_MENU::menuUpdata(void)

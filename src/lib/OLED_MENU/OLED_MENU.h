@@ -25,7 +25,17 @@
 typedef void (*longPresscallback)(uint8_t i);
 typedef const char *(*getShowStr)(int i);
 
+#if defined(Regulatory_Domain_ISM_2400)
+#define  SCREEN_FR_STRING  "2.4G"
+#endif
 
+#if defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_915)
+#define  SCREEN_FR_STRING  "915M"
+#endif
+
+#if defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866)
+#define  SCREEN_FR_STRING  "868M"
+#endif
 typedef struct 
 {
     uint8_t line;
