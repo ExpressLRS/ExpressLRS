@@ -578,7 +578,8 @@ void resetLuaParams(){
 }
 
 void updateLUApacketCount(){
-  snprintf(luaBadGoodString,9,"%d/%d",(uint8_t)crsf.BadPktsCountResult,(uint16_t)crsf.GoodPktsCountResult);
+  snprintf(luaBadGoodString,10,"%d/%d",(uint8_t)crsf.BadPktsCountResult,(uint16_t)crsf.GoodPktsCountResult);
+  luaBadGoodString[9] = 0;
   crsf.setLuaStringValue(&luaInfo, luaBadGoodString);
   resetLuaParams();
 }

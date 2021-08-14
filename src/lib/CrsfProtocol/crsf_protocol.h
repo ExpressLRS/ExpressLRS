@@ -294,8 +294,8 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 // only 1st properties has the same type on all lua packet type.
 struct tagLuaProperties1{
     uint8_t id;
-    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
-    uint8_t parent;
+//    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
+//    uint8_t parent;
     uint8_t type;
 }PACKED;
 struct tagLuaDeviceProperties {
@@ -309,7 +309,7 @@ struct tagLuaTextSelectionProperties{
     uint8_t value;
     uint8_t min;
     uint8_t max;
-    uint8_t defaultValue;
+//    uint8_t defaultValue;
 }PACKED;
 
 struct tagLuaCommandProperties{
@@ -321,31 +321,31 @@ struct tagLuaUint8Properties{
     uint8_t value;
     uint8_t min;
     uint8_t max;
-    uint8_t defaultValue;
+//    uint8_t defaultValue;
 }PACKED;
 struct tagLuaInt8Properties{
     int8_t value;
     int8_t min;
     int8_t max;
-    int8_t defaultValue;
+//    int8_t defaultValue;
 }PACKED;
 struct tagLuaUint16Properties{
     uint16_t value;
     uint16_t min;
     uint16_t max;
-    uint16_t defaultValue;
+//    uint16_t defaultValue;
 }PACKED;
 struct tagLuaInt16Properties{
     int16_t value;
     int16_t min;
     int16_t max;
-    int16_t defaultValue;
+//    int16_t defaultValue;
 }PACKED;
 struct tagLuaFloatProperties{
     float value;
     float min;
     float max;
-    float defaultValue;
+//    float defaultValue;
 }PACKED;
 
 struct tagLuaDevice {
