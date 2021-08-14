@@ -313,7 +313,6 @@ void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
     struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
     memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
     memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));    
-    memcpy(outBuffer+5+(strlen(p1->label1)+1),luaEditableFlags,12);
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;   //received as #data in lua
     outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua

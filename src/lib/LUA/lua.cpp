@@ -94,7 +94,6 @@ void registerLUAParameter(const void *definition, luaCallback callback)
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
   lastLuaField = max(lastLuaField, p->id);
-  setLUAEditFlag(p);
   luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
 }
 
