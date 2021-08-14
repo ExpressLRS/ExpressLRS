@@ -99,7 +99,7 @@ LPF LPD_DownlinkLQ(1);
 volatile bool busyTransmitting;
 uint32_t HWtimerPauseDuration = 0;
 
-char luaBadGoodString[10] = {"aaaaa"};
+char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -613,7 +613,6 @@ void UARTconnected()
   }
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
-  //inital state variables, maybe move elsewhere?
     delay(200);
   hwTimer.resume();
 }
