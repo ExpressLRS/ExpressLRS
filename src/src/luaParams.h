@@ -9,4 +9,4 @@ extern const struct tagLuaItem_command luaBind;
 extern const struct tagLuaItem_command luaWebUpdate;
 extern const struct tagLuaItem_uint8 luaBadPkt;
 extern const struct tagLuaItem_uint16 luaGoodPkt;
-extern const struct tagLuaItem_string luaCommit;
+extern struct tagLuaItem_string luaCommit;

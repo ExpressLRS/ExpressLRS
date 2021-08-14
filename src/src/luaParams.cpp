@@ -75,7 +75,7 @@ extern "C" const struct tagLuaItem_uint16 luaGoodPkt = {
 extern "C" struct tagLuaItem_string luaCommit = {
     {8,0,0,(uint8_t)CRSF_INFO},//id,chunk,parent,type
     thisCommit,
-    " ",
+    thisCommit,
     LUA_STRING_SIZE(luaCommit),
     0
 };

@@ -11,8 +11,8 @@ static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
 #define LUA_PKTCOUNT_INTERVAL_MS 1000LU
-static bool luaWarningFLags = false;
-static bool suppressedLuaWarningFlags = true;
+static uint8_t luaWarningFLags = false;
+static uint8_t suppressedLuaWarningFlags = true;
 
 static const void *paramDefinitions[32] = {0};
 static luaCallback paramCallbacks[32] = {0};

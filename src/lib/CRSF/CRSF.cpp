@@ -358,6 +358,10 @@ void CRSF::setLuaUint16Value(const struct tagLuaItem_uint16 *luaStruct, uint16_t
     luaValues[luaStruct->luaProperties1.id] = newvalue;
 }
 
+void CRSF::setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
+    //struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+    luaStruct->label2 = newvalue;
+}
 /**
 void setLuaCommandInfo(struct tagLuaItem_command *luaStruct, const char *newvalue){
     struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;

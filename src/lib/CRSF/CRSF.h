@@ -114,6 +114,8 @@ public:
     void setLuaCommandValue(const struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
     void setLuaUint8Value(const struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
     void setLuaUint16Value(const struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
+    void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue);
+
 #endif
 private:
     Stream *_dev;

@@ -99,6 +99,8 @@ LPF LPD_DownlinkLQ(1);
 volatile bool busyTransmitting;
 uint32_t HWtimerPauseDuration = 0;
 
+char luaBadGoodString[10] = {"aaaaa"};
+
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
@@ -580,6 +582,9 @@ void resetLuaParams(){
 void updateLUApacketCount(){
   crsf.setLuaUint8Value(&luaBadPkt,(uint8_t)crsf.BadPktsCountResult);
   crsf.setLuaUint16Value(&luaGoodPkt,(uint16_t)crsf.GoodPktsCountResult);
+  snprintf(luaBadGoodString,9,"%d/%d",(uint8_t)crsf.BadPktsCountResult,(uint16_t)crsf.GoodPktsCountResult);
+  //luaBadGoodString[9] = 0;
+  crsf.setLuaStringValue(&luaCommit, luaBadGoodString);
   resetLuaParams();
 }
 

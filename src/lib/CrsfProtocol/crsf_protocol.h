@@ -412,8 +412,8 @@ struct tagLuaItem_float {
     bool editableFlag;
 } PACKED;
 struct tagLuaItem_string {
-    struct tagLuaProperties1 luaProperties1;
-    const char *label1; //param name
+    const struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
     const char *label2; //string value
     uint8_t size;
     bool editableFlag;
