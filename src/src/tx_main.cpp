@@ -52,7 +52,6 @@ button button;
 #define DEBUG_SUPPRESS
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
@@ -847,6 +846,27 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+static void UpdateConnectDisconnectStatus(const uint32_t now)
+{
+  // Number of telemetry packets which can be lost in a row before going to disconnected state
+  constexpr unsigned RX_LOSS_CNT = 5;
+  const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT);
+  if (LastTLMpacketRecvMillis && ((now - LastTLMpacketRecvMillis) < msConnectionLostTimeout))
+  {
+    connectionState = connected;
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
+    #endif // GPIO_PIN_LED_RED
+  }
+  else
+  {
+    connectionState = disconnected;
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+    #endif // GPIO_PIN_LED_RED
+  }
+}
 
 void setup()
 {
@@ -1009,6 +1029,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
+  UpdateConnectDisconnectStatus(now);
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
   #if defined(PLATFORM_ESP32)
@@ -1025,21 +1046,6 @@ void loop()
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
-
-  if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
-  {
-    connectionState = disconnected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-  }
-  else
-  {
-    connectionState = connected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-  }
 
   #ifdef PLATFORM_STM32
     crsf.handleUARTin();
