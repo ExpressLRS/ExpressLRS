@@ -42,6 +42,9 @@
 
 -DLOCK_ON_FIRST_CONNECTION
 
+# Increase the Telemetry ratio to 1:2 when disarmed
+#-DTLM_DISARMED_BOOST
+
 ### COMPATIBILITY OPTIONS: ###
 
 -DUART_INVERTED

@@ -217,6 +217,13 @@ void DynamicPower_Update()
   #endif    
 }
 
+#if defined(TLM_DISARMED_BOOST) || defined(NO_SYNC_ON_ARM)
+static bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+}
+#endif
+
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
@@ -295,17 +302,23 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   const uint8_t SwitchEncMode = 0b00;
 #endif
   uint8_t Index;
-  uint8_t TLMrate;
   if (syncSpamCounter)
   {
     Index = (config.GetRate() & 0b11);
-    TLMrate = (config.GetTlm() & 0b111);
   }
   else
   {
     Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
-    TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   }
+
+#if defined(TLM_DISARMED_BOOST)
+  // TLM ratio is dynamic based on ARM status
+  if (!IsArmed())
+    ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_1_2;
+  else
+#endif
+    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
+  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
@@ -404,7 +417,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 #if defined(NO_SYNC_ON_ARM)
   SyncInterval = 250;
-  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+  bool skipSync = IsArmed();
 #else
   SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;
@@ -447,6 +460,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
       GenerateChannelData(Radio.TXdataBuffer, &crsf);
+      #endif
+
+      #if defined(TLM_DISARMED_BOOST)
+      // If the armed status has changed in that last packet, change telemetry ratios if needed
+      static bool lastArmed = false;
+      bool isArmed = IsArmed();
+      if (lastArmed != isArmed)
+      {
+        lastArmed = isArmed;
+        syncSpamCounter = syncSpamAmount;
+      }
       #endif
     }
   }
@@ -514,14 +538,9 @@ void sendELRSstatus()
   }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
-  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-  
-  #ifdef USE_DYNAMIC_POWER
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
-  #else
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
-  #endif
+  setLuaTextSelectionValue(&luaAirRate, (uint8_t)config.GetRate());
+  setLuaTextSelectionValue(&luaTlmRate, (uint8_t)config.GetTlm());
+  setLuaTextSelectionValue(&luaPower, (uint8_t)config.GetPower());
   allLUAparamSent = 0;
 }
 
@@ -769,8 +788,8 @@ void HandleUpdateParameter()
 static void ConfigChangeCommit()
 {
   SetRFLinkRate(config.GetRate());
-  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  // TLMInterval is updated on the next SYNC packet
 
   // Write the uncommitted eeprom values
 #ifndef DEBUG_SUPPRESS
