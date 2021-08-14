@@ -6,7 +6,7 @@
 
 const char thisCommit[] = {LATEST_COMMIT, 0};
 
-extern "C" const struct tagLuaItem_textSelection luaAirRate = {
+struct tagLuaItem_textSelection luaAirRate = {
     {1,(uint8_t)CRSF_TEXT_SELECTION}, //id,chunk,parent,type
     "P.Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
@@ -18,7 +18,7 @@ extern "C" const struct tagLuaItem_textSelection luaAirRate = {
     "Hz",
     LUA_TEXTSELECTION_SIZE(luaAirRate)
 };
-extern "C" const struct tagLuaItem_textSelection luaTlmRate = {
+struct tagLuaItem_textSelection luaTlmRate = {
     {2,(uint8_t)CRSF_TEXT_SELECTION},//id,chunk,parent,type
     "T.Rate",
     "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
@@ -26,7 +26,7 @@ extern "C" const struct tagLuaItem_textSelection luaTlmRate = {
     " ",
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
 };
-extern "C" const struct tagLuaItem_textSelection luaPower = {
+struct tagLuaItem_textSelection luaPower = {
     {3,(uint8_t)CRSF_TEXT_SELECTION},//id,chunk,parent,type
     "Pwr",
     "10;25;50;100;250;500;1000;2000",
@@ -35,14 +35,14 @@ extern "C" const struct tagLuaItem_textSelection luaPower = {
     LUA_TEXTSELECTION_SIZE(luaPower)
 };
 
-extern "C" const struct tagLuaItem_command luaBind = {
+struct tagLuaItem_command luaBind = {
     {4,(uint8_t)CRSF_COMMAND},//id,chunk,parent,type
     "Bind",
     {0,200},//status,timeout
     " ",
     LUA_COMMAND_SIZE(luaBind)
 };
-extern "C" const struct tagLuaItem_command luaWebUpdate = {
+struct tagLuaItem_command luaWebUpdate = {
     {5,(uint8_t)CRSF_COMMAND},//id,chunk,parent,type
     "Update",
     {0,200},//status,timeout
@@ -50,7 +50,7 @@ extern "C" const struct tagLuaItem_command luaWebUpdate = {
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 
-extern "C" struct tagLuaItem_string luaInfo = {
+struct tagLuaItem_string luaInfo = {
     {6,(uint8_t)CRSF_INFO},//id,chunk,parent,type
     thisCommit,
     thisCommit,
