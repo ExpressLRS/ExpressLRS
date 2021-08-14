@@ -109,11 +109,6 @@ public:
 
 
     uint8_t setLuaHiddenFlag(uint8_t id, bool value);
-    void setLuaTextSelectionValue(const struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
-    void setLuaCommandValue(const struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
-    void setLuaUint8Value(const struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
-    void setLuaUint16Value(const struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
-    void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue);
 
 #endif
 private:
@@ -157,7 +152,6 @@ private:
     static void handleUARTout();
     static bool UARTwdt();
     
-    static uint32_t luaValues[32];
     static uint32_t luaHiddenFlags;
 
     void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);

@@ -30,4 +30,9 @@ void registerLUAPopulateParams(void (*populate)());
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
 void registerLUAParameter(const void *definition, luaCallback callback = 0);
 
+void setLuaTextSelectionValue(struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
+void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
+void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
+void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
+void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue);
 #endif

@@ -567,20 +567,20 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  crsf.setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
-  crsf.setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
+  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   
   #ifdef USE_DYNAMIC_POWER
-  crsf.setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
   #else
-  crsf.setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
 }
 
 void updateLUApacketCount(){
   snprintf(luaBadGoodString,10,"%d/%d",(uint8_t)crsf.BadPktsCountResult,(uint16_t)crsf.GoodPktsCountResult);
   luaBadGoodString[9] = 0;
-  crsf.setLuaStringValue(&luaInfo, luaBadGoodString);
+  setLuaStringValue(&luaInfo, luaBadGoodString);
   resetLuaParams();
 }
 
@@ -1061,7 +1061,7 @@ void EnterBindingMode()
   CRCInitializer = 0;
 
   InBindingMode = 2;
-  crsf.setLuaCommandValue(&luaBind,InBindingMode);
+  setLuaCommandValue(&luaBind,InBindingMode);
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1095,7 +1095,7 @@ void ExitBindingMode()
   CRCInitializer = (UID[4] << 8) | UID[5];
 
   InBindingMode = 0;
-  crsf.setLuaCommandValue(&luaBind,InBindingMode);
+  setLuaCommandValue(&luaBind,InBindingMode);
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 

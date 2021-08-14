@@ -94,7 +94,6 @@ bool CRSF::CRSFstate = false;
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 
-uint32_t CRSF::luaValues[32] = {0};
 uint32_t CRSF::luaHiddenFlags = 0;
 #endif // CRSF_TX_MODULE
 
@@ -336,32 +335,6 @@ uint8_t CRSF::setLuaHiddenFlag(uint8_t id, bool value){
   luaHiddenFlags ^= (-value ^ luaHiddenFlags) & (1 << ((id-1)));
   return value;
 }
-void CRSF::setLuaTextSelectionValue(const struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
-    luaValues[luaStruct->luaProperties1.id] = newvalue;
-}
-
-void CRSF::setLuaCommandValue(const struct tagLuaItem_command *luaStruct, uint8_t newvalue){
-    luaValues[luaStruct->luaProperties1.id] = newvalue;
-}
-
-void CRSF::setLuaUint8Value(const struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue){
-    luaValues[luaStruct->luaProperties1.id] = newvalue;
-}
-
-void CRSF::setLuaUint16Value(const struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
-    luaValues[luaStruct->luaProperties1.id] = newvalue;
-}
-
-void CRSF::setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
-    //struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-    luaStruct->label2 = newvalue;
-}
-/**
-void setLuaCommandInfo(struct tagLuaItem_command *luaStruct, const char *newvalue){
-    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
-    p1->label2 = newvalue;
-}
-*/
 
 void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
@@ -374,8 +347,8 @@ void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *out
     outarray[1] = 0; //chunk
     outarray[2] = 0; //parent
     outarray[3] = p1->luaProperties1.type;
-    //outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
-    outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
+    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
+    //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray){
@@ -388,8 +361,8 @@ void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray)
     outarray[1] = 0; //chunk
     outarray[2] = 0; //parent
     outarray[3] = p1->luaProperties1.type;
-    //outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
-    outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
+    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
+    //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
@@ -403,7 +376,7 @@ void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
     outarray[2] = 0; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
-    outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
+    //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
@@ -417,8 +390,8 @@ void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
     outarray[2] = 0; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
-    outarray[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
-    outarray[4+(strlen(p1->label1)+2)] = (uint8_t)luaValues[p1->luaProperties1.id];
+    //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
+    //outarray[4+(strlen(p1->label1)+2)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 
@@ -430,7 +403,7 @@ void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
     outarray[1] = 0; //chunk
     outarray[2] = 0; //parent
     outarray[3] = p1->luaProperties1.type;
-    //outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
+    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
 /** we dont use these yet for OUR LUA
 

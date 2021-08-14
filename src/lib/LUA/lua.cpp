@@ -155,4 +155,24 @@ bool luaHandleUpdateParameter()
   return true;
 }
 
+void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
+    struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
+    p1->luaProperties2.value = newvalue;
+}
+void setLuaCommandValue(struct tagLuaItem_command *luaStruct, uint8_t newvalue){
+    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
+    p1->luaProperties2.status = newvalue;
+}
+void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue){
+    struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
+    p1->luaProperties2.value = newvalue;
+}
+void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
+    struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
+    p1->luaProperties2.value = (newvalue >> 8) | (newvalue << 8);
+}
+void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
+    //struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+    luaStruct->label2 = newvalue;
+}
 #endif
