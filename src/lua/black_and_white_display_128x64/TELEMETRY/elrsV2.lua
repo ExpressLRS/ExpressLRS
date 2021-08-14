@@ -149,7 +149,7 @@ local allParamsLoaded = 0
     deviceName, offset = fieldGetString(data, 3)
     fields_count = data[offset+12]
     for i=1, fields_count do
-      fields[i] = { name=nil, editable=getBitBin(data[(offset)+(math.floor((i-1)/8))],((i-1)%8)) }
+      fields[i] = { name=nil }
     end
   end  
       
@@ -476,17 +476,17 @@ local function runDevicePage(event)
       else
         local field = getField(lineIndex)
         if field.name then
-          if field.type == 10 and field.editable > 0 then
+          if field.type == 10 then
             if edit == false then
               edit = true
               charIndex = 1
             else
               charIndex = charIndex + 1
             end
-          elseif field.type < 11 and field.editable > 0 then
+          elseif field.type < 11 then
             edit = not edit
           end
-          if edit == false and field.editable > 0 then
+          if edit == false then
             fieldTimeout = getTime() + 200 -- 2s
             fieldId, fieldChunk = field.id, 0
             fieldData = {}
