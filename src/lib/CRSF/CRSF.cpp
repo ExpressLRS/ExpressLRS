@@ -519,6 +519,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         }
     //
         case CRSF_STRING:
+        case CRSF_INFO:
         {
             getLuaStringStructToArray(luaData,chunkBuffer);
             break;

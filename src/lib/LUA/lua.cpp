@@ -36,6 +36,7 @@ static void setLUAEditFlag(const struct tagLuaProperties1 *p)
       crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
       break;
     case CRSF_STRING:
+    case CRSF_INFO:
       crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
       break;
     case CRSF_COMMAND:
@@ -63,6 +64,9 @@ static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
         break;
       case CRSF_STRING:
         retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,TYPE(tagLuaItem_string));
+        break;
+      case CRSF_INFO:
+        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_INFO,TYPE(tagLuaItem_string));
         break;
       case CRSF_COMMAND:
         retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,TYPE(tagLuaItem_command));
