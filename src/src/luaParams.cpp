@@ -55,28 +55,11 @@ extern "C" const struct tagLuaItem_command luaWebUpdate = {
     1
 };
 
-extern "C" const struct tagLuaItem_uint8 luaBadPkt = {
-    {6,0,0,(uint8_t)CRSF_UINT8},//id,chunk,parent,type
-    "Bad",
-    {0,0,254,0},//value,min,max,default
-    " ",
-    LUA_UINT8_SIZE(luaBadPkt),
-    0
-};
-extern "C" const struct tagLuaItem_uint16 luaGoodPkt = {
-    {7,0,0,(uint8_t)CRSF_UINT16},//id,chunk,parent,type
-    "Good",
-    {0,0,511,0},//value,min,max,default
-    " ",
-    LUA_UINT16_SIZE(luaGoodPkt),
-    0
-};
-
-extern "C" struct tagLuaItem_string luaCommit = {
-    {8,0,0,(uint8_t)CRSF_INFO},//id,chunk,parent,type
+extern "C" struct tagLuaItem_string luaInfo = {
+    {6,0,0,(uint8_t)CRSF_INFO},//id,chunk,parent,type
     thisCommit,
     thisCommit,
-    LUA_STRING_SIZE(luaCommit),
+    LUA_STRING_SIZE(luaInfo),
     0
 };
 

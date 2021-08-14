@@ -563,9 +563,7 @@ void registerLuaParameters() {
         sendLuaFieldCrsf(id,0);
     }
   });
-  registerLUAParameter(&luaBadPkt);
-  registerLUAParameter(&luaGoodPkt);
-  registerLUAParameter(&luaCommit);
+  registerLUAParameter(&luaInfo);
 }
 
 void resetLuaParams(){
@@ -580,11 +578,8 @@ void resetLuaParams(){
 }
 
 void updateLUApacketCount(){
-  crsf.setLuaUint8Value(&luaBadPkt,(uint8_t)crsf.BadPktsCountResult);
-  crsf.setLuaUint16Value(&luaGoodPkt,(uint16_t)crsf.GoodPktsCountResult);
   snprintf(luaBadGoodString,9,"%d/%d",(uint8_t)crsf.BadPktsCountResult,(uint16_t)crsf.GoodPktsCountResult);
-  //luaBadGoodString[9] = 0;
-  crsf.setLuaStringValue(&luaCommit, luaBadGoodString);
+  crsf.setLuaStringValue(&luaInfo, luaBadGoodString);
   resetLuaParams();
 }
 
@@ -624,13 +619,6 @@ void UARTconnected()
 
 void HandleUpdateParameter()
 {
-  if(crsf.elrsLUAmode == true){
-    crsf.setLuaHiddenFlag(luaBadPkt.luaProperties1.id,true);
-    crsf.setLuaHiddenFlag(luaGoodPkt.luaProperties1.id,true);
-  } else {
-    crsf.setLuaHiddenFlag(luaBadPkt.luaProperties1.id,false);
-    crsf.setLuaHiddenFlag(luaGoodPkt.luaProperties1.id,false);
-  }
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
