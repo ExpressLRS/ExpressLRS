@@ -1,7 +1,7 @@
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
 #include "telemetry_protocol.h"
-
+//#include "../../src/luaParams.h"
 //#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
 
 #ifdef PLATFORM_ESP32
@@ -21,7 +21,9 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
+#define CHUNK_MAX_NUMBER_OF_BYTES 16 //safe number of bytes to not get intterupted between rc packets
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
@@ -53,7 +55,7 @@ uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
 
 uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
 
-volatile uint8_t CRSF::ParameterUpdateData[2] = {0};
+volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 volatile crsf_channels_s CRSF::PackedRCdataOut;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
@@ -261,19 +263,21 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
+void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
+    char val2[len2+1];
+    memcpy(val2,elrsInfo,(len2 + 1));
 
-    uint8_t LUArespLength = len + 2;
+    uint8_t LUArespLength = len + 2 + (len2+1);
     uint8_t outBuffer[LUArespLength + 5] = {0};
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
+    outBuffer[2] = frameType;
 
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
@@ -281,6 +285,10 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
     for (uint8_t i = 0; i < len; ++i)
     {
         outBuffer[5 + i] = val[i];
+    }
+    for (uint8_t i = 0; i < (len2+1); ++i)
+    {
+        outBuffer[5 + i + len] = val2[i];
     }
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
@@ -295,6 +303,219 @@ void CRSF::sendLUAresponse(uint8_t val[], uint8_t len)
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
+}
+void CRSF::sendCRSFdevice(void * luaData, uint8_t wholePacketSize)
+{
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+    uint8_t LUArespLength;      
+    LUArespLength = 2+ wholePacketSize; //2 bytes of header, name , 12 bytes of 'nonsense', 1 byte of lua field amount
+    //create outbuffer size
+    uint8_t outBuffer[wholePacketSize + 5 + 2 + 2] = {0}; 
+    //it is byte op, we can use memcpy with index to
+    // destination memory.
+    struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
+    memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
+    memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));    
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[1] = LUArespLength + 2;   //received as #data in lua
+    outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua
+    // all below received as data in lua
+    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+    outBuffer[LUArespLength + 3] = crc;
+    
+#ifdef PLATFORM_ESP32
+    portENTER_CRITICAL(&FIFOmux);
+#endif
+    SerialOutFIFO.push(LUArespLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+#ifdef PLATFORM_ESP32
+    portEXIT_CRITICAL(&FIFOmux);
+#endif
+}
+void CRSF::getLuaTextSelectionStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->textOption,strlen(p1->textOption)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaCommandStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+
+void CRSF::getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+/** we dont use these yet for OUR LUA
+
+void CRSF::getLuaint8StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+
+void CRSF::getLuaint16StructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_int16 *p1 = (struct tagLuaItem_int16*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
+    
+}
+void CRSF::getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_float *p1 = (struct tagLuaItem_float*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);    
+}
+
+*/
+void CRSF::getLuaStringStructToArray(void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+    memcpy(outarray,&p1->luaProperties1,sizeof(p1->luaProperties1));
+    memcpy(outarray+sizeof(p1->luaProperties1),p1->label1,strlen(p1->label1)+1);
+    memcpy(outarray+sizeof(p1->luaProperties1)+(strlen(p1->label1)+1),p1->label2,strlen(p1->label2)+1);
+    
+}
+//sendCRSF param can take anytype of lua field settings
+uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, void * luaData, uint8_t wholePacketSize)
+{
+    if (!CRSF::CRSFstate)
+    {
+        return 0;
+    }
+    uint8_t LUArespLength;
+    uint8_t chunks = 0;    
+    uint8_t currentPacketSize;    
+    
+    /**
+     *calculate how many chunks needed for this field 
+     */
+    chunks = ((wholePacketSize-2)/(CHUNK_MAX_NUMBER_OF_BYTES));
+    if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
+        chunks = chunks + 1;
+    }
+
+    //calculate how much byte this packet contains
+    if((chunks - (fieldchunk+1)) > 0){
+        currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+    } else {
+        if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
+            currentPacketSize = (wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES);
+        } else {
+            currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+        }
+    }
+    LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
+                                        // chunk-ed packets below
+                                        //fieldsetup1(fieldparent,fieldtype),field name, 
+                                        //fieldsetup2(value,min,max,default),field unit
+    //create outbuffer size
+    uint8_t chunkBuffer[wholePacketSize];
+    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
+        //it is byte op, we can use memcpy with index to
+        // destination memory.
+    switch(dataType){
+        case CRSF_TEXT_SELECTION:
+        {
+            getLuaTextSelectionStructToArray(luaData, chunkBuffer);
+            break;
+        }
+        case CRSF_COMMAND:
+        {
+            getLuaCommandStructToArray(luaData, chunkBuffer);
+            break;
+        }
+        case CRSF_UINT8:
+        {
+            getLuaUint8StructToArray(luaData,chunkBuffer);
+            break;
+        }
+        case CRSF_UINT16:
+        {
+            getLuaUint16StructToArray(luaData,chunkBuffer);
+            break;
+        }
+    // we dont have to include this for now. since we dont need it yet?
+        case CRSF_INT8:
+        {
+            //getLuaint8StructToArray(luaData,chunkBuffer);
+            break;
+        }
+        case CRSF_INT16:
+        {
+            //getLuaint16StructToArray(luaData,chunkBuffer);
+            break;
+        }
+        case CRSF_FLOAT:
+        {
+            //getLuaFloatStructToArray(luaData,chunkBuffer);
+            break;
+        }
+    //
+        case CRSF_STRING:
+        {
+            getLuaStringStructToArray(luaData,chunkBuffer);
+            break;
+        }
+        
+        case CRSF_OUT_OF_RANGE:
+        default:
+        break;
+
+    }
+        memcpy(outBuffer+7,chunkBuffer+2+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),currentPacketSize);
+        outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        outBuffer[1] = LUArespLength + 2;   //received as #data in lua
+        outBuffer[2] = frame; //received as command in lua
+        // all below received as data in lua
+        outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+
+        outBuffer[5] = chunkBuffer[0];
+        outBuffer[6] = ((chunks - (fieldchunk+1))); //remaining chunk to send;
+
+        uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
+        outBuffer[LUArespLength + 3] = crc;
+    
+#ifdef PLATFORM_ESP32
+    portENTER_CRITICAL(&FIFOmux);
+#endif
+    SerialOutFIFO.push(LUArespLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+#ifdef PLATFORM_ESP32
+    portEXIT_CRITICAL(&FIFOmux);
+#endif
+    return ((chunks - (fieldchunk+1)));
 }
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
@@ -436,26 +657,12 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
-
+    
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
-    if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
-    {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER &&
-            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
-        {
-            ParameterUpdateData[0] = SerialInBuffer[5];
-            ParameterUpdateData[1] = SerialInBuffer[6];
-            RecvParameterUpdate();
-            return true;
-        }
-        Serial.println("Got Other Packet");
-    }
-    else if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
-        GoodPktsCount++;
         GetChannelDataIn();
         return true;
     }
@@ -465,6 +672,20 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         return true;
+    } else {
+        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+            SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER)
+        {
+            ParameterUpdateData[0] = packetType;
+            ParameterUpdateData[1] = SerialInBuffer[5];
+            ParameterUpdateData[2] = SerialInBuffer[6];
+            RecvParameterUpdate();
+            
+            return true;
+        }
+        Serial.println("Got Other Packet");        
+        //GoodPktsCount++;        
     }
     return false;
 }
@@ -626,7 +847,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {
+                {        
+                    GoodPktsCount++;
                     if (ProcessPacket())
                     {
                         //delayMicroseconds(50);

@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
+#include "luaParams.h"
 
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
 #define TX_CONFIG_MAGIC     (0b01 << 30)

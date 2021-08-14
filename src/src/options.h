@@ -2,4 +2,4 @@
 
 extern const unsigned char target_name[];
 extern const uint8_t target_name_size;
-extern const char *compile_options;
+extern const char PROGMEM compile_options[];
