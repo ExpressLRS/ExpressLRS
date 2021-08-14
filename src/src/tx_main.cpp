@@ -830,7 +830,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 static void UpdateConnectDisconnectStatus(const uint32_t now)
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
-  constexpr unsigned RX_LOSS_CNT = 4;
+  constexpr unsigned RX_LOSS_CNT = 5;
   const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
   const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT);
   if (LastTLMpacketRecvMillis && ((now - LastTLMpacketRecvMillis) < msConnectionLostTimeout))
