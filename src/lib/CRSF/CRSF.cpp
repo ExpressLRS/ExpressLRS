@@ -96,7 +96,6 @@ uint8_t CRSF::MspDataLength = 0;
 
 uint32_t CRSF::luaValues[32] = {0};
 uint32_t CRSF::luaHiddenFlags = 0;
-uint8_t CRSF::luaEditableFlags[12] = {0};
 #endif // CRSF_TX_MODULE
 
 
@@ -334,10 +333,6 @@ void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
 #endif
 }
 
-uint8_t CRSF::setEditableFlag(uint8_t id, bool value){
-  luaEditableFlags[(id-1)/8] ^= (-value ^ luaEditableFlags[(id-1)/8]) & (1 << ((id-1)%8));
-  return value;
-}
 uint8_t CRSF::setLuaHiddenFlag(uint8_t id, bool value){
   luaHiddenFlags ^= (-value ^ luaHiddenFlags) & (1 << ((id-1)));
   return value;

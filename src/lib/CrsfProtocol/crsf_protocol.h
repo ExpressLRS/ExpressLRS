@@ -360,7 +360,6 @@ struct tagLuaItem_textSelection {
     struct tagLuaTextSelectionProperties luaProperties2;
     const char *label2; //param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_command {
     struct tagLuaProperties1 luaProperties1;
@@ -368,7 +367,6 @@ struct tagLuaItem_command {
     struct tagLuaCommandProperties luaProperties2;
     const char *label2; //command info
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 
 struct tagLuaItem_uint8 {
@@ -377,7 +375,6 @@ struct tagLuaItem_uint8 {
     struct tagLuaUint8Properties luaProperties2;
     const char *label2;//param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_int8 {
     struct tagLuaProperties1 luaProperties1;
@@ -385,7 +382,6 @@ struct tagLuaItem_int8 {
     struct tagLuaInt8Properties luaProperties2;
     const char *label2; //param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_uint16 {
     struct tagLuaProperties1 luaProperties1;
@@ -393,7 +389,6 @@ struct tagLuaItem_uint16 {
     struct tagLuaUint16Properties luaProperties2;
     const char *label2; //param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_int16 {
     struct tagLuaProperties1 luaProperties1;
@@ -401,7 +396,6 @@ struct tagLuaItem_int16 {
     struct tagLuaInt16Properties luaProperties2;
     const char *label2; //param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_float {
     struct tagLuaProperties1 luaProperties1;
@@ -409,14 +403,12 @@ struct tagLuaItem_float {
     struct tagLuaFloatProperties luaProperties2;
     const char *label2;//param unit
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 struct tagLuaItem_string {
     const struct tagLuaProperties1 luaProperties1;
     const char* const label1; //param name
     const char *label2; //string value
     uint8_t size;
-    bool editableFlag;
 } PACKED;
 
 

@@ -108,7 +108,6 @@ public:
     static void ResetMspQueue();
 
 
-    uint8_t setEditableFlag(uint8_t id, bool value);
     uint8_t setLuaHiddenFlag(uint8_t id, bool value);
     void setLuaTextSelectionValue(const struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
     void setLuaCommandValue(const struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
@@ -159,7 +158,6 @@ private:
     static bool UARTwdt();
     
     static uint32_t luaValues[32];
-    static uint8_t luaEditableFlags[12];
     static uint32_t luaHiddenFlags;
 
     void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);

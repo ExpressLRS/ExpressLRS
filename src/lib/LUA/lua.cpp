@@ -25,30 +25,6 @@ static struct tagLuaDevice luaDevice = {
     LUA_DEVICE_SIZE(luaDevice)
 };
 
-#define EDITABLE(T) ((struct T *)p)->luaProperties1.id,((struct T *)p)->editableFlag
-static void setLUAEditFlag(const struct tagLuaProperties1 *p)
-{
-  switch(p->type) {
-    case CRSF_UINT8:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint8));
-      break;
-    case CRSF_UINT16:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_uint16));
-      break;
-    case CRSF_STRING:
-    case CRSF_INFO:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_string));
-      break;
-    case CRSF_COMMAND:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_command));
-      break;
-    case CRSF_TEXT_SELECTION:
-      crsf.setEditableFlag(EDITABLE(tagLuaItem_textSelection));
-      break;
-  }
-}
-#undef EDITABLE
-
 #define TYPE(T) (struct T *)p,((struct T *)p)->size
 static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
 {
