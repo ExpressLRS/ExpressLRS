@@ -68,9 +68,10 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+
 #if defined(HAS_OLED)
 OLED OLED;
-char commitStr[7] = {LATEST_COMMIT};
+char commitStr[7] = {LATEST_COMMIT , 0};
 #endif
 
 volatile uint8_t NonceTX;
