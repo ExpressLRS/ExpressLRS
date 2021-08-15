@@ -534,7 +534,7 @@ void registerLuaParameters() {
 #endif
       EnterBindingMode();
     } else if(arg == 6){
-        sendLuaFieldCrsf(id, arg);
+        sendLuaFieldCrsf(id, 0);
     }
     else
     {
