@@ -216,7 +216,7 @@ void DynamicPower_Update()
   #endif    
 }
 
-#if defined(TLM_DISARMED_BOOST) || defined(NO_SYNC_ON_ARM)
+#if defined(NO_SYNC_ON_ARM)
 static bool ICACHE_RAM_ATTR IsArmed()
 {
    return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
@@ -310,12 +310,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   }
 
-#if defined(TLM_DISARMED_BOOST)
-  // TLM ratio is dynamic based on ARM status
-  if (!IsArmed())
+  // TLM ratio is boosted for one sync cycle when the MspSender goes active
+  if (MspSender.IsActive())
     ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_1_2;
   else
-#endif
     ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
 
@@ -450,6 +448,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       NextPacketIsMspData = false;
       // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
       BindingSendCount++;
+      // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
+      // to add bandwidth for the reply
+      if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_1_2)
+        syncSpamCounter = 1;
     }
     else
     {
@@ -459,17 +461,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
       #else
       GenerateChannelData(Radio.TXdataBuffer, &crsf);
-      #endif
-
-      #if defined(TLM_DISARMED_BOOST)
-      // If the armed status has changed in that last packet, change telemetry ratios if needed
-      static bool lastArmed = false;
-      bool isArmed = IsArmed();
-      if (lastArmed != isArmed)
-      {
-        lastArmed = isArmed;
-        syncSpamCounter = syncSpamAmount;
-      }
       #endif
     }
   }
