@@ -10,6 +10,9 @@ SX1280Driver Radio;
 #endif
 
 #include "CRSF.h"
+#include "lua.h"
+#include "luaParams.h"
+
 #include "FHSS.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
@@ -47,17 +50,14 @@ SX1280Driver Radio;
 button button;
 #endif
 
-const uint8_t thisCommit[6] = {LATEST_COMMIT};
+#define DEBUG_SUPPRESS
 
 //// CONSTANTS ////
-#define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
-
-#define LUA_VERSION 3
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -67,9 +67,10 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+
 #if defined(HAS_OLED)
 OLED OLED;
-char commitStr[7] = "commit";
+char commitStr[7] = {LATEST_COMMIT , 0};
 #endif
 
 volatile uint8_t NonceTX;
@@ -96,16 +97,14 @@ LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
-volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
-#define OPENTX_LUA_UPDATE_INTERVAL 1000
-uint32_t LuaLastUpdated = 0;
-uint8_t luaCommitPacket[7] = {(uint8_t)0xFE, thisCommit[0], thisCommit[1], thisCommit[2], thisCommit[3], thisCommit[4], thisCommit[5]};
+
+char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
 
-bool InBindingMode = false;
+uint8_t InBindingMode = 0;
 uint8_t BindingPackage[5];
 uint8_t BindingSendCount = 0;
 void EnterBindingMode();
@@ -216,8 +215,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
-  //Serial.println("TLMpacket0");
-
+  
   if ((inCRC != calculatedCRC))
   {
 #ifndef DEBUG_SUPPRESS
@@ -239,7 +237,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   {
     connectionState = connected;
     LPD_DownlinkLQ.init(100);
+#ifndef DEBUG_SUPPRESS
     Serial.println("got downlink conn");
+#endif
   }
 
   LastTLMpacketRecvMillis = millis();
@@ -318,10 +318,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
     && (invertIQ == Radio.IQinverted))
     return;
-
+#ifndef DEBUG_SUPPRESS
   Serial.println("set rate");
+#endif
   hwTimer.updateInterval(ModParams->interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -444,7 +445,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  Radio.TXnb(Radio.TXdataBuffer, 8);
+  Radio.TXnb();
 }
 
 /*
@@ -475,24 +476,109 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-void sendLuaParams()
-{
-  uint8_t luaParams[] = {0xFF,
-                         (uint8_t)(InBindingMode | (webUpdateMode << 1)),
-                         (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate,
-                         (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval),
-                      #ifdef USE_DYNAMIC_POWER
-                         (uint8_t)(config.GetPower()),
-                      #else
-                         (uint8_t)(POWERMGNT.currPower()),
-                      #endif
-                         (uint8_t)Regulatory_Domain_Index,
-                         (uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)LUA_VERSION};
+void registerLuaParameters() {
+  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
+    if ((arg < RATE_MAX) && (arg >= 0))
+    {
+      #ifndef DEBUG_SUPPRESS
+        Serial.print("Request AirRate: ");
+        Serial.println(arg);
+      #endif
+        config.SetRate(arg);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                          OLED.getRateString((expresslrs_RFrates_e)arg), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+      #endif
+    }
+  });
+  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
+    if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+    {
+      #ifndef DEBUG_SUPPRESS
+        Serial.print("Request TLM interval: ");
+        Serial.println(arg);
+      #endif
+        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)arg), commitStr);
+      #endif
+    }
+  });
+  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
+      PowerLevels_e newPower = (PowerLevels_e)arg;
+    #ifndef DEBUG_SUPPRESS
+      Serial.print("Request Power: ");
+      Serial.println(newPower, DEC);
+    #endif
+      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+      
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+    #endif
+  });
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+    if (arg == 1)
+    {
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Binding requested from LUA");
+#endif
+      EnterBindingMode();
+    } else if(arg == 6){
+        sendLuaFieldCrsf(id, 0);
+    }
+    else
+    {
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Binding stopped  from LUA");
+#endif
+      ExitBindingMode();
+    }
+  });
+  registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
+    if (arg == 1)
+    {
+#ifdef PLATFORM_ESP32
+      webUpdateMode = true;
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Wifi Update Mode Requested!");
+#endif
+      BeginWebUpdate();
+#else
+      webUpdateMode = false;
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+#endif
+#endif
+    } else if(arg == 6){
+        sendLuaFieldCrsf(id,0);
+    }
+  });
+  registerLUAParameter(&luaInfo);
+  registerLUAParameter(&luaELRSversion);
+}
 
-  crsf.sendLUAresponse(luaParams, 10);
+void resetLuaParams(){
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
+  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+  
+  #ifdef USE_DYNAMIC_POWER
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
+  #else
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
+  #endif
+}
+
+void updateLUApacketCount(){
+  itoa(crsf.BadPktsCountResult, luaBadGoodString, 10);
+  strcat(luaBadGoodString, "/");
+  itoa(crsf.GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+  setLuaStringValue(&luaInfo, luaBadGoodString);
+  resetLuaParams();
 }
 
 void UARTdisconnected()
@@ -524,123 +610,14 @@ void UARTconnected()
   }
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
-  //inital state variables, maybe move elsewhere?
-  for (int i = 0; i < 2; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
-  {
-    crsf.sendLUAresponse(luaCommitPacket, 7);
-    delay(100);
-    sendLuaParams();
-    delay(100);
-  }
+    delay(200);
   hwTimer.resume();
-}
-
-void ICACHE_RAM_ATTR ParamUpdateReq()
-{
-  UpdateParamReq = true;
 }
 
 void HandleUpdateParameter()
 {
-  if (millis() > LuaLastUpdated + OPENTX_LUA_UPDATE_INTERVAL)
-  {
-    sendLuaParams();
-    LuaLastUpdated = millis();
-  }
-
-  if (UpdateParamReq == false)
-  {
-    return;
-  }
-
-  switch (crsf.ParameterUpdateData[0])
-  {
-  case 0: // special case for sending commit packet
-    Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket, 7);
-    break;
-
-  case 1:
-    if ((ExpressLRS_currAirRate_Modparams->index != enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1])))
-    {
-      Serial.print("Request AirRate: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetRate(enumRatetoIndex((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]));
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[1]), 
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
-    #endif
-    }
-    break;
-
-  case 2:
-    if ((crsf.ParameterUpdateData[1] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[1] >= (uint8_t)TLM_RATIO_NO_TLM))
-    {
-      Serial.print("Request TLM interval: ");
-      Serial.println(crsf.ParameterUpdateData[1]);
-      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]);
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[1]), commitStr);
-    #endif
-    }
-    break;
-
-  case 3:
-    {
-      Serial.print("Request Power: ");
-      PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[1];
-      Serial.println(newPower, DEC);
-      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
-      
-      #if defined(HAS_OLED)
-       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-      #endif
-    }
-    break;
-
-  case 4:
-    break;
-
-  case 0xFE:
-    if (crsf.ParameterUpdateData[1] == 1)
-    {
-#ifdef PLATFORM_ESP32
-      webUpdateMode = true;
-      Serial.println("Wifi Update Mode Requested!");
-      sendLuaParams();
-      sendLuaParams();
-      BeginWebUpdate();
-#else
-      webUpdateMode = false;
-      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-#endif
-      break;
-    }
-
-  case 0xFF:
-    if (crsf.ParameterUpdateData[1] == 1)
-    {
-      Serial.println("Binding requested from LUA");
-      EnterBindingMode();
-    }
-    else
-    {
-      Serial.println("Binding stopped  from LUA");
-      ExitBindingMode();
-    }
-    break;
-
-  default:
-    break;
-  }
-
-  UpdateParamReq = false;
-  if (config.IsModified())
+  bool updated = luaHandleUpdateParameter();
+  if (updated && config.IsModified())
   {
     syncSpamCounter = syncSpamAmount;
   }
@@ -653,11 +630,14 @@ static void ConfigChangeCommit()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
   // Write the uncommitted eeprom values
+#ifndef DEBUG_SUPPRESS
   Serial.println("EEPROM COMMIT");
+#endif
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
-  sendLuaParams();
+  resetLuaParams();
 }
+
 
 static void CheckConfigChangePending()
 {
@@ -705,6 +685,27 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+static void UpdateConnectDisconnectStatus(const uint32_t now)
+{
+  // Number of telemetry packets which can be lost in a row before going to disconnected state
+  constexpr unsigned RX_LOSS_CNT = 5;
+  const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT);
+  if (LastTLMpacketRecvMillis && ((now - LastTLMpacketRecvMillis) < msConnectionLostTimeout))
+  {
+    connectionState = connected;
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
+    #endif // GPIO_PIN_LED_RED
+  }
+  else
+  {
+    connectionState = disconnected;
+    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+    #endif // GPIO_PIN_LED_RED
+  }
+}
 
 void setup()
 {
@@ -715,7 +716,7 @@ void setup()
   Serial.begin(460800);
 #if defined(HAS_OLED)
   OLED.displayLogo();
-  OLED.setCommitString(thisCommit, commitStr);
+//  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
   startupLEDs();
@@ -797,10 +798,11 @@ void setup()
 
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  crsf.RecvParameterUpdate = &luaParamUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
-
+#ifndef DEBUG_SUPPRESS
   Serial.println("ExpressLRS TX Module Booted...");
+#endif
 
   eeprom.Begin(); // Init the eeprom
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -850,6 +852,8 @@ void setup()
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   
+  registerLuaParameters();
+  registerLUAPopulateParams(updateLUApacketCount);
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
@@ -866,7 +870,8 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, config.GetPower());
+  UpdateConnectDisconnectStatus(now);
+  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
   #if defined(PLATFORM_ESP32)
     if (webUpdateMode)
@@ -882,21 +887,6 @@ void loop()
 #ifdef FEATURE_OPENTX_SYNC
   // Serial.println(crsf.OpenTXsyncOffset);
   #endif
-
-  if (now > (RX_CONNECTION_LOST_TIMEOUT + LastTLMpacketRecvMillis))
-  {
-    connectionState = disconnected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-  }
-  else
-  {
-    connectionState = connected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-  }
 
   #ifdef PLATFORM_STM32
     crsf.handleUARTin();
@@ -925,6 +915,7 @@ void loop()
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
+
 
   #ifdef ENABLE_TELEMETRY
   if (TelemetryReceiver.HasFinishedData())
@@ -992,7 +983,9 @@ void OnTxPowerPacket(mspPacket_t *packet)
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
+#ifndef DEBUG_SUPPRESS
   Serial.println("TX setpower");
+#endif
 
   if (txPower < PWR_COUNT)
     POWERMGNT.setPower((PowerLevels_e)txPower);
@@ -1069,7 +1062,9 @@ void EnterBindingMode()
   UID[5] = BindingUID[5];
 
   CRCInitializer = 0;
-  InBindingMode = true;
+
+  InBindingMode = 2;
+  setLuaCommandValue(&luaBind,InBindingMode);
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1078,8 +1073,10 @@ void EnterBindingMode()
   // Start transmitting again
   hwTimer.resume();
 
+#ifndef DEBUG_SUPPRESS
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
+#endif
 }
 
 void ExitBindingMode()
@@ -1100,11 +1097,14 @@ void ExitBindingMode()
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 
-  InBindingMode = false;
+  InBindingMode = 0;
+  setLuaCommandValue(&luaBind,InBindingMode);
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
+#ifndef DEBUG_SUPPRESS
   Serial.println("Exiting binding mode");
+#endif
 }
 
 void SendUIDOverMSP()
@@ -1117,7 +1117,7 @@ void SendUIDOverMSP()
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = true;
+  InBindingMode = 2;
 }
 
 

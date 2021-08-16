@@ -150,6 +150,7 @@ typedef enum
     CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
+    CRSF_ADDRESS_ELRS_LUA = 0xEF
 } crsf_addr_e;
 
 //typedef struct crsf_addr_e asas;
@@ -289,6 +290,129 @@ typedef struct crsfPayloadLinkstatistics_s
 } crsfLinkStatistics_t;
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
+
+// only 1st properties has the same type on all lua packet type.
+struct tagLuaProperties1{
+    const uint8_t id;
+//    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
+//    uint8_t parent;
+    const uint8_t type;
+}PACKED;
+struct tagLuaDeviceProperties {
+    const uint8_t etc[12]; //12 unnecessary bytes space consist of
+                    //4 bytes serial number
+                    //4 bytes hardware ID
+                    //4 bytes software ID
+    uint8_t fieldamount; //number of field of params this device has
+}PACKED;
+struct tagLuaTextSelectionProperties{
+    uint8_t value;
+    const uint8_t min;
+    const uint8_t max;
+//    uint8_t defaultValue;
+}PACKED;
+
+struct tagLuaCommandProperties{
+    uint8_t status;
+    const uint8_t timeout;
+}PACKED;
+
+struct tagLuaUint8Properties{
+    uint8_t value;
+    const uint8_t min;
+    const uint8_t max;
+//    uint8_t defaultValue;
+}PACKED;
+struct tagLuaInt8Properties{
+    int8_t value;
+    const int8_t min;
+    const int8_t max;
+//    int8_t defaultValue;
+}PACKED;
+struct tagLuaUint16Properties{
+    uint16_t value;
+    const uint16_t min;
+    const uint16_t max;
+//    uint16_t defaultValue;
+}PACKED;
+struct tagLuaInt16Properties{
+    int16_t value;
+    const int16_t min;
+    const int16_t max;
+//    int16_t defaultValue;
+}PACKED;
+struct tagLuaFloatProperties{
+    float value;
+    const float min;
+    const float max;
+//    float defaultValue;
+}PACKED;
+
+struct tagLuaDevice {
+    const char* const label1; //device name
+    struct tagLuaDeviceProperties luaDeviceProperties;
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_textSelection {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    const char* const textOption; //ascii representative of param value
+    struct tagLuaTextSelectionProperties luaProperties2;
+    const char *label2; //param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_command {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //command name
+    struct tagLuaCommandProperties luaProperties2;
+    const char *label2; //command info
+    uint8_t size;
+} PACKED;
+
+struct tagLuaItem_uint8 {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    struct tagLuaUint8Properties luaProperties2;
+    const char* const label2;//param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_int8 {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    struct tagLuaInt8Properties luaProperties2;
+    const char* const label2; //param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_uint16 {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    struct tagLuaUint16Properties luaProperties2;
+    const char* const label2; //param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_int16 {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    struct tagLuaInt16Properties luaProperties2;
+    const char* const label2; //param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_float {
+    struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    struct tagLuaFloatProperties luaProperties2;
+    const char* const label2;//param unit
+    uint8_t size;
+} PACKED;
+struct tagLuaItem_string {
+    const struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    const char *label2; //string value
+    uint8_t size;
+} PACKED;
+
+
+
 
 // typedef struct crsfOpenTXsyncFrame_s
 // {
