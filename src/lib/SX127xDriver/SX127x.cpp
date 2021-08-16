@@ -245,12 +245,8 @@ bool SX127xDriver::DetectChip()
     {
       Serial.print(" not found! (");
       Serial.print(i + 1);
-      Serial.print(" of 3 tries) REG_VERSION == ");
-
-      char buffHex[5];
-      sprintf(buffHex, "0x%02X", version);
-      Serial.print(buffHex);
-      Serial.println();
+      Serial.print(" of 3 tries) REG_VERSION == 0x");
+      Serial.println(version, HEX);
       delay(200);
       i++;
     }
