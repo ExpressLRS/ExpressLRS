@@ -8,3 +8,4 @@ extern struct tagLuaItem_textSelection luaPower;
 extern struct tagLuaItem_command luaBind;
 extern struct tagLuaItem_command luaWebUpdate;
 extern struct tagLuaItem_string luaInfo;
+extern struct tagLuaItem_string luaELRSversion;

@@ -5,6 +5,7 @@
 #include "CRSF.h"
 
 const char thisCommit[] = {LATEST_COMMIT, 0};
+const char thisVersion[] = {LATEST_VERSION, 0};
 
 struct tagLuaItem_textSelection luaAirRate = {
     {1,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
@@ -56,5 +57,10 @@ struct tagLuaItem_string luaInfo = {
     thisCommit,
     LUA_STRING_SIZE(luaInfo)
 };
-
+struct tagLuaItem_string luaELRSversion = {
+    {7,(uint8_t)CRSF_INFO},//id,type
+    thisVersion,
+    NULL,
+    LUA_STRING_SIZE(luaELRSversion)
+};
 #endif
