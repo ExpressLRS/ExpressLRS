@@ -72,7 +72,7 @@
 
 #elif defined(TARGET_EXPRESSLRS_PCB_RX_V3)
 #define GPIO_PIN_NSS 15
-#if TARGET_NAMIMNORC_ESP_RX
+#if defined(TARGET_NAMIMNORC_ESP_RX) || defined(TARGET_FEATHER_HUZZAH_WITH_WING_RX)
     #define GPIO_PIN_DIO0 5
     #define GPIO_PIN_DIO1 4
 #else
@@ -85,8 +85,15 @@
 #define GPIO_PIN_RST 2
 #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define GPIO_PIN_LED 16
-#define GPIO_PIN_BUTTON 0
+
+#if TARGET_FEATHER_HUZZAH_WITH_WING_RX
+    #define GPIO_PIN_LED 0
+    //#define GPIO_PIN_BUTTON -1
+#elif
+    #define GPIO_PIN_LED 16
+    #define GPIO_PIN_BUTTON 0
+#endif
+
 #define timerOffset -1
 
 #elif defined(TARGET_R9M_RX)
