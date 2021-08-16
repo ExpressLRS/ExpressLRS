@@ -86,10 +86,10 @@
 #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
 
-#if TARGET_FEATHER_HUZZAH_WITH_WING_RX
+#if defined(TARGET_FEATHER_HUZZAH_WITH_WING_RX)
     #define GPIO_PIN_LED 0
     //#define GPIO_PIN_BUTTON -1
-#elif
+#else
     #define GPIO_PIN_LED 16
     #define GPIO_PIN_BUTTON 0
 #endif
