@@ -10,8 +10,9 @@ SX1280Driver Radio;
 #endif
 
 #include "CRSF.h"
-
+#include "lua.h"
 #include "luaParams.h"
+
 #include "FHSS.h"
 // #include "debug.h"
 #include "POWERMGNT.h"
@@ -58,10 +59,6 @@ button button;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
-#define LUA_PKTCOUNT_INTERVAL_MS 1000LU
-
-volatile uint8_t allLUAparamSent = 0;  
-
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
@@ -70,9 +67,10 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+
 #if defined(HAS_OLED)
 OLED OLED;
-char commitStr[7] = {LATEST_COMMIT};
+char commitStr[7] = {LATEST_COMMIT , 0};
 #endif
 
 volatile uint8_t NonceTX;
@@ -94,17 +92,14 @@ uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
-uint32_t LUAfieldReported = 0;
 
 LQCALC<10> LQCalc;
 LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
-volatile bool UpdateParamReq = false;
 uint32_t HWtimerPauseDuration = 0;
-//LUA VARIABLES//
-uint8_t luaWarningFLags = 0x00;
-uint8_t suppressedLuaWarningFlags = 0xFF;
+
+char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
 bool WaitEepromCommit = false;
@@ -486,31 +481,91 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-void suppressCurrentLuaWarning(void){ //0 to suppress
-  suppressedLuaWarningFlags = ~luaWarningFLags;
+void registerLuaParameters() {
+  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
+    if ((arg < RATE_MAX) && (arg >= 0))
+    {
+      #ifndef DEBUG_SUPPRESS
+        Serial.print("Request AirRate: ");
+        Serial.println(arg);
+      #endif
+        config.SetRate(arg);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                          OLED.getRateString((expresslrs_RFrates_e)arg), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
+      #endif
+    }
+  });
+  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
+    if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+    {
+      #ifndef DEBUG_SUPPRESS
+        Serial.print("Request TLM interval: ");
+        Serial.println(arg);
+      #endif
+        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+      #if defined(HAS_OLED)
+        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
+                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)arg), commitStr);
+      #endif
+    }
+  });
+  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
+      PowerLevels_e newPower = (PowerLevels_e)arg;
+    #ifndef DEBUG_SUPPRESS
+      Serial.print("Request Power: ");
+      Serial.println(newPower, DEC);
+    #endif
+      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+      
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+    #endif
+  });
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+    if (arg == 1)
+    {
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Binding requested from LUA");
+#endif
+      EnterBindingMode();
+    } else if(arg == 6){
+        sendLuaFieldCrsf(id, 0);
+    }
+    else
+    {
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Binding stopped  from LUA");
+#endif
+      ExitBindingMode();
+    }
+  });
+  registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
+    if (arg == 1)
+    {
+#ifdef PLATFORM_ESP32
+      webUpdateMode = true;
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Wifi Update Mode Requested!");
+#endif
+      BeginWebUpdate();
+#else
+      webUpdateMode = false;
+#ifndef DEBUG_SUPPRESS
+      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+#endif
+#endif
+    } else if(arg == 6){
+        sendLuaFieldCrsf(id,0);
+    }
+  });
+  registerLUAParameter(&luaInfo);
+  registerLUAParameter(&luaELRSversion);
 }
-uint8_t getLuaWarning(void){ //1 if alarm
-return luaWarningFLags & suppressedLuaWarningFlags;
-}
-
-void sendELRSstatus()
-{
-  uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)(getLuaWarning())};
-
-  switch(getLuaWarning()){
-    case 0x01:
-      {
-        crsf.sendELRSparam(luaParams,4, 0x2E,"beta",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
-        break;
-      }
-    default:
-      crsf.sendELRSparam(luaParams,4, 0x2E," ",4); //*elrsinfo is the info that we want to pass when there is getluawarning()
-      break;
-  }
-  }
 
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
@@ -521,69 +576,14 @@ void resetLuaParams(){
   #else
   setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
   #endif
-  allLUAparamSent = 0;
 }
-
 
 void updateLUApacketCount(){
-  setLuaUint8Value(&luaBadPkt,(uint8_t)crsf.BadPktsCountResult);
-  setLuaUint16Value(&luaGoodPkt,(uint16_t)crsf.GoodPktsCountResult);
+  itoa(crsf.BadPktsCountResult, luaBadGoodString, 10);
+  strcat(luaBadGoodString, "/");
+  itoa(crsf.GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+  setLuaStringValue(&luaInfo, luaBadGoodString);
   resetLuaParams();
-}
-
-void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
-  uint8_t sentChunk = 0;
-  if(!allLUAparamSent){
-    switch(idx){
-      case 2:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaTlmRate,luaTlmRate.size);
-        break;
-      }
-      case 3:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaPower,luaPower.size);
-        break;
-      }
-      case 4:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaBind,luaBind.size);
-        break;
-      }
-      case 5:
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,&luaWebUpdate,luaWebUpdate.size);
-        /**if(sentChunk == 0){
-          allLUAparamSent = 1;
-          }*/
-        break;
-      }
-      case 6: //commit
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT8,&luaBadPkt,luaBadPkt.size);
-        break;
-      }
-      case 7:
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT16,&luaGoodPkt,luaGoodPkt.size);
-        break;
-      }
-      case 8:
-      { 
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,&luaCommit,luaCommit.size);
-        if(sentChunk == 0){
-          allLUAparamSent = 1;
-        }
-        break;
-      }
-
-      default: //ID 1
-      {
-        sentChunk = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,&luaAirRate,luaAirRate.size);
-        break;
-      }
-    }
-  }
 }
 
 void UARTdisconnected()
@@ -615,151 +615,14 @@ void UARTconnected()
   }
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
-  //inital state variables, maybe move elsewhere?
     delay(200);
   hwTimer.resume();
 }
 
-void ICACHE_RAM_ATTR ParamUpdateReq()
-{
-  UpdateParamReq = true;
-}
-
 void HandleUpdateParameter()
 {
-  if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
-      LUAfieldReported = millis();
-      updateLUApacketCount();
-      sendELRSstatus();
-  }
-
-  if (UpdateParamReq == false)
-  {
-    return;
-  }
-
-  switch(crsf.ParameterUpdateData[0]){
-  case CRSF_FRAMETYPE_PARAMETER_WRITE:
-  allLUAparamSent = 0;
-    switch (crsf.ParameterUpdateData[1])
-    {
-    case 0: // special case for sending commit packet
-    {
-#ifndef DEBUG_SUPPRESS
-      Serial.println("send all lua params");
-#endif
-      sendELRSstatus();
-      break;
-    }
-    case 1:
-      if ((crsf.ParameterUpdateData[2] < RATE_MAX) && (crsf.ParameterUpdateData[2] >= 0))
-    {
-      #ifndef DEBUG_SUPPRESS
-        Serial.print("Request AirRate: ");
-        Serial.println(crsf.ParameterUpdateData[2]);
-      #endif
-        config.SetRate(crsf.ParameterUpdateData[2]);
-      #if defined(HAS_OLED)
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)crsf.ParameterUpdateData[2]), 
-                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
-      #endif
-      }
-      break;
-  case 2:
-    if ((crsf.ParameterUpdateData[2] <= (uint8_t)TLM_RATIO_1_2) && (crsf.ParameterUpdateData[2] >= (uint8_t)TLM_RATIO_NO_TLM))
-    {
-    #ifndef DEBUG_SUPPRESS
-      Serial.print("Request TLM interval: ");
-      Serial.println(crsf.ParameterUpdateData[2]);
-    #endif
-      config.SetTlm((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]);
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)crsf.ParameterUpdateData[2]), commitStr);
-    #endif
-    }
-    break;
-
-  case 3:
-    {
-      #ifndef DEBUG_SUPPRESS
-      Serial.print("Request Power: ");
-      #endif
-      PowerLevels_e newPower = (PowerLevels_e)crsf.ParameterUpdateData[2];
-      Serial.println(newPower, DEC);
-      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
-      
-      #if defined(HAS_OLED)
-       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)crsf.ParameterUpdateData[1]),
-                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
-                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-      #endif
-    }
-    break;
-
-    case 4:
-      if (crsf.ParameterUpdateData[2] == 1)
-      {
-#ifndef DEBUG_SUPPRESS
-        Serial.println("Binding requested from LUA");
-#endif
-        EnterBindingMode();
-      } else if(crsf.ParameterUpdateData[2] == 6){
-          sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
-      }
-      else
-      {
-#ifndef DEBUG_SUPPRESS
-        Serial.println("Binding stopped  from LUA");
-#endif
-        ExitBindingMode();
-      }
-      break;
-      
-    case 5:
-      if (crsf.ParameterUpdateData[2] == 1)
-      {
-#ifdef PLATFORM_ESP32
-        webUpdateMode = true;
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Wifi Update Mode Requested!");
-  #endif
-        BeginWebUpdate();
-  #else
-        webUpdateMode = false;
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-  #endif
-#endif
-      } else if(crsf.ParameterUpdateData[2] == 6){
-          sendLuaFieldCrsf(crsf.ParameterUpdateData[1],0);
-      }
-      break;
-    case 0x2E:
-      suppressCurrentLuaWarning();
-
-      break;
-    default:
-    break;
-    }
-  break;
-
-  case CRSF_FRAMETYPE_DEVICE_PING:
-  {
-    allLUAparamSent = 0;
-    updateLUApacketCount();
-    crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
-    break;
-  }
-  case CRSF_FRAMETYPE_PARAMETER_READ: //param info
-  sendLuaFieldCrsf(crsf.ParameterUpdateData[1],crsf.ParameterUpdateData[2]);
-    break;
-}
-
-  UpdateParamReq = false;
-  if (config.IsModified())
+  bool updated = luaHandleUpdateParameter();
+  if (updated && config.IsModified())
   {
     syncSpamCounter = syncSpamAmount;
   }
@@ -940,7 +803,7 @@ void setup()
 
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
-  crsf.RecvParameterUpdate = &ParamUpdateReq;
+  crsf.RecvParameterUpdate = &luaParamUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
 #ifndef DEBUG_SUPPRESS
   Serial.println("ExpressLRS TX Module Booted...");
@@ -993,7 +856,9 @@ void setup()
   SetRFLinkRate(config.GetRate());
   ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-  resetLuaParams();
+  
+  registerLuaParameters();
+  registerLUAPopulateParams(updateLUApacketCount);
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
