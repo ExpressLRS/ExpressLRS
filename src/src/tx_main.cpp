@@ -887,7 +887,7 @@ void loop()
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
   #if defined(PLATFORM_ESP32)
-  //if webupdate was requested before or START_UP_CHECK_MS has been elapsed but uart is not detected
+  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
   //start webupdate, there might be wrong configuration flashed.
 
     if(startUpCheck == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && webUpdateMode == false){
