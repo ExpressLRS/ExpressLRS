@@ -75,8 +75,9 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 
 volatile uint8_t NonceTX;
 
+#ifdef PLATFORM_ESP32
 bool webUpdateMode = false;
-
+#endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
 
@@ -544,25 +545,23 @@ void registerLuaParameters() {
       ExitBindingMode();
     }
   });
+#ifdef PLATFORM_ESP32
   registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {
-#ifdef PLATFORM_ESP32
       webUpdateMode = true;
 #ifndef DEBUG_SUPPRESS
       Serial.println("Wifi Update Mode Requested!");
 #endif
       BeginWebUpdate();
-#else
-      webUpdateMode = false;
 #ifndef DEBUG_SUPPRESS
       Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-#endif
 #endif
     } else if(arg == 6){
         sendLuaFieldCrsf(id,0);
     }
   });
+#endif
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
 }

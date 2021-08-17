@@ -293,7 +293,7 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
 // only 1st properties has the same type on all lua packet type.
 struct tagLuaProperties1{
-    const uint8_t id;
+    uint8_t id;
 //    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
 //    uint8_t parent;
     const uint8_t type;
