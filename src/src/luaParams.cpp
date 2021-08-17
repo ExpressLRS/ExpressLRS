@@ -7,7 +7,7 @@
 const char thisCommit[] = {LATEST_COMMIT, 0};
 const char thisVersion[] = {LATEST_VERSION, 0};
 const char emptySpace[1] = {0};
-#ifdef PLATFORM_STM32
+#ifdef PLATFORM_ESP32
 typedef enum
 {
     LUA_AIR_RATE = 1,
@@ -81,7 +81,7 @@ struct tagLuaItem_string luaELRSversion = {
 };
 
 
-#ifdef PLATFORM_STM32
+#ifdef PLATFORM_ESP32
 struct tagLuaItem_command luaWebUpdate = {
     {(uint8_t)LUA_WEB_UPDATE,(uint8_t)CRSF_COMMAND},//id,type
     "Update",

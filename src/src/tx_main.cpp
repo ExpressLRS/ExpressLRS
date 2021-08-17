@@ -546,7 +546,6 @@ void registerLuaParameters() {
     }
   });
 #ifdef PLATFORM_ESP32
-
   registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg == 1)
     {

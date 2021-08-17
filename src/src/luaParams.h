@@ -9,6 +9,6 @@ extern struct tagLuaItem_command luaBind;
 extern struct tagLuaItem_string luaInfo;
 extern struct tagLuaItem_string luaELRSversion;
 
-#ifdef PLATFORM_STM32
+#ifdef PLATFORM_ESP32
 extern struct tagLuaItem_command luaWebUpdate;
 #endif
