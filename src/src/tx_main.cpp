@@ -891,7 +891,7 @@ void loop()
   //start webupdate, there might be wrong configuration flashed.
 
     if(startUpCheck == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && webUpdateMode == false){
-    #ifNdef DEBUG_SUPPRESS
+    #ifndef DEBUG_SUPPRESS
       Serial.println("startup Check Failled")
     #endif
       webUpdateMode = true;
