@@ -50,9 +50,7 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     HWtimerInterval = newTimerInterval;
     if (running)
     {
-        ITimer0.disableTimer();
-        ITimer0.detachInterrupt();
-        ITimer0.attachInterruptInterval(HWtimerInterval >> 1, callback);
+        ITimer0.setInterval(HWtimerInterval >> 1, callback);
     }
 }
 
@@ -88,16 +86,12 @@ void ICACHE_RAM_ATTR hwTimer::callback()
 
     if (isTick)
     {
-        ITimer0.disableTimer();
-        ITimer0.detachInterrupt();
-        ITimer0.attachInterruptInterval((HWtimerInterval >> 1) + FreqOffset, callback);
+        ITimer0.setInterval((HWtimerInterval >> 1) + FreqOffset, callback);
         callbackTick();
     }
     else
     {
-        ITimer0.disableTimer();
-        ITimer0.detachInterrupt();
-        ITimer0.attachInterruptInterval((HWtimerInterval >> 1) + PhaseShift + FreqOffset, callback);
+        ITimer0.setInterval((HWtimerInterval >> 1) + PhaseShift + FreqOffset, callback);
         PhaseShift = 0;
         callbackTock();
     }
