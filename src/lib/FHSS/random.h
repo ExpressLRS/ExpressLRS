@@ -1,15 +1,17 @@
 #pragma once
 
+#include <stdint.h>
+
 // the max value returned by rng
 #define RNG_MAX 0x7FFF
 
-long rng(void);
+uint32_t rng(void);
 
-void rngSeed(long newSeed);
+void rngSeed(uint32_t newSeed);
 // 0..255 returned
-long rng8Bit(void);
+uint8_t rng8Bit(void);
 // 0..31 returned
-long rng5Bit(void);
+uint8_t rng5Bit(void);
 
 // returns 0 <= x < n where n <= 256
-unsigned int rngN(unsigned int upper);
+uint32_t rngN(uint32_t upper);

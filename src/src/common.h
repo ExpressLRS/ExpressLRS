@@ -139,6 +139,8 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
 #endif // UNIT_TEST
 
+uint32_t uidMacSeedGet(void);
+
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6

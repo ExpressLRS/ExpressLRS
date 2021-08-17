@@ -164,3 +164,10 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
     default: return 1;
     }
 }
+
+uint32_t uidMacSeedGet(void)
+{
+    const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
+                             ((uint32_t)UID[4] << 8) + UID[5];
+    return macSeed;
+}
