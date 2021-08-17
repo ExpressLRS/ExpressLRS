@@ -619,10 +619,12 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
     delay(200);
-    
+
+#if defined(PLATFORM_ESP32)
   if(!startUpCheck){
     startUpCheck = true;
   }
+#endif
   hwTimer.resume();
 }
 
