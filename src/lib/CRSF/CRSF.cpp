@@ -41,6 +41,8 @@ void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv paramet
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
+bool CRSF::hasEverConnected = false;
+
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
 volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
 
@@ -684,6 +686,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         LPF_OPENTX_SYNC_MARGIN.init(0);
         LPF_OPENTX_SYNC_OFFSET.init(0);
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
+        hasEverConnected = true;
         connected();
     }
     

@@ -66,6 +66,8 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
 
+    static bool hasEverConnected;
+
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc
 

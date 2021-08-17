@@ -75,9 +75,6 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
-#ifdef PLATFORM_ESP32
-bool startUpCheck = false;
-#endif
 
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
@@ -619,11 +616,6 @@ void UARTconnected()
   #endif
     delay(200);
 
-#if defined(PLATFORM_ESP32)
-  if(!startUpCheck){
-    startUpCheck = true;
-  }
-#endif
   hwTimer.resume();
 }
 
@@ -886,23 +878,23 @@ void loop()
   UpdateConnectDisconnectStatus(now);
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
-  #if defined(PLATFORM_ESP32)
+#ifdef PLATFORM_ESP32
   //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
   //start webupdate, there might be wrong configuration flashed.
 
-    if(startUpCheck == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && webUpdateMode == false){
-    #ifndef DEBUG_SUPPRESS
-      Serial.println("startup Check Failled")
-    #endif
-      webUpdateMode = true;
-        BeginWebUpdate();
-    }
-    if (webUpdateMode)
-    {
-      HandleWebUpdate();
-      return;
-    }
-  #endif
+  if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000)){
+#ifndef DEBUG_SUPPRESS
+  Serial.println("startup Check Failled")
+#endif
+    webUpdateMode = true;
+    BeginWebUpdate();
+  }
+  if (webUpdateMode)
+  {
+    HandleWebUpdate();
+    return;
+  }
+#endif
   HandleUpdateParameter();
   CheckConfigChangePending();
 
