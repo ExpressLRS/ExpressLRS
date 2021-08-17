@@ -17,6 +17,8 @@
         #define STM32_USE_FLASH 1
         #include <stm32_eeprom.h>
     #endif
+#elif defined(PLATFORM_ATMELSAM)
+    #include <FlashAsEEPROM.h>
 #else
     #include <EEPROM.h>
 #endif
@@ -35,6 +37,8 @@ ELRS_EEPROM::Begin()
         /* Initialize EEPROM */
         EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
     #endif // STM32_USE_FLASH
+#elif defined(PLATFORM_ATMELSAM)
+    // do nothing
 #else /* !PLATFORM_STM32 */
     EEPROM.begin(RESERVED_EEPROM_SIZE);
 #endif /* PLATFORM_STM32 */

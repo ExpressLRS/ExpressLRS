@@ -35,7 +35,11 @@ public:
 
     #endif
 
+#if defined(PLATFORM_ATMELSAM)
+    static Uart Port;
+#else
     static HardwareSerial Port;
+#endif
 
     static volatile uint16_t ChannelDataIn[16];
     static volatile uint16_t ChannelDataOut[16];

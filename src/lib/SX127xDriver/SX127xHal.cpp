@@ -70,6 +70,10 @@ void SX127xHal::init()
   SPI.begin();                         // SPI.setFrequency(10000000);
 #endif
 
+#ifdef PLATFORM_ATMELSAM
+  SPI.begin();
+#endif
+
   pinMode(GPIO_PIN_NSS, OUTPUT);
   pinMode(GPIO_PIN_RST, OUTPUT);
   pinMode(GPIO_PIN_DIO0, INPUT);
@@ -145,7 +149,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterFIFO(volatile uint8_t *data, uint8_
   }
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-#ifdef PLATFORM_STM32
+#if defined(PLATFORM_STM32) || defined(PLATFORM_ATMELSAM)
   SPI.transfer(buf, numBytes + 1);
 #else
   SPI.writeBytes(buf, numBytes + 1);
@@ -175,7 +179,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, u
   memcpy(buf + 1,  data, numBytes);
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-#ifdef PLATFORM_STM32
+#if defined(PLATFORM_STM32) || defined(PLATFORM_ATMELSAM)
   SPI.transfer(buf, numBytes + 1);
 #else
   SPI.writeBytes(buf, numBytes + 1);
@@ -191,7 +195,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
   buf[1] = data;
 
   digitalWrite(GPIO_PIN_NSS, LOW);
-#ifdef PLATFORM_STM32
+#if defined(PLATFORM_STM32) || defined(PLATFORM_ATMELSAM)
   SPI.transfer(buf, 2);
 #else
   SPI.writeBytes(buf, 2);

@@ -74,6 +74,8 @@ Telemetry telemetry;
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
+#elif defined(PLATFORM_ATMELSAM)
+    #define CRSF_TX_SERIAL Serial1
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
@@ -88,6 +90,8 @@ CRSF crsf(CRSF_TX_SERIAL);
     HardwareSerial CrsfRxSerial(USART3);
 #elif defined(TARGET_RX_FM30_MINI)
     #define CRSF_RX_SERIAL CRSF_TX_SERIAL
+#elif defined(PLATFORM_ATMELSAM)
+    #define CRSF_RX_SERIAL Serial1
 #else
     #define CRSF_RX_SERIAL Serial
 #endif
@@ -875,8 +879,13 @@ static void setupSerial()
     Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
 #endif
 
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) 
     Serial.begin(CRSF_RX_BAUDRATE);
+#endif
+
+#if defined(PLATFORM_ATMELSAM)
+    Serial.begin(CRSF_OPENTX_SLOW_BAUDRATE);
+    Serial1.begin(CRSF_RX_BAUDRATE);
 #endif
 
 }
