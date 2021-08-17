@@ -406,7 +406,7 @@ void HandleWebUpdate()
   if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < millis()) {
     changeTime = millis();
     changeMode = WIFI_AP;
-    Serial.printf("Connection failed %d %ld\n", status, changeTime);
+    Serial.printf("Connection failed %d\n", status);
   }
   if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && (changeTime+500) < millis()) {
     switch(changeMode) {
