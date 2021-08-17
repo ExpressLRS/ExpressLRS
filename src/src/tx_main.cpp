@@ -76,7 +76,6 @@ volatile uint8_t NonceTX;
 
 bool webUpdateMode = false;
 #ifdef PLATFORM_ESP32
-#define START_UP_CHECK_MS 15000LU
 bool startUpCheck = false;
 #endif
 
@@ -891,12 +890,10 @@ void loop()
   //if webupdate was requested before or START_UP_CHECK_MS has been elapsed but uart is not detected
   //start webupdate, there might be wrong configuration flashed.
 
-    if(startUpCheck == false && now > START_UP_CHECK_MS && webUpdateMode == false){
-      Serial.println("NO SPORTTTTTTTTTTTTTTTTTTTTT");
-      Serial.println(now);
-      Serial.println("NO SPORTTTTTTTTTTTTTTTTTTTTT");
-      Serial.println(startUpCheck);
-      Serial.println("NO SPORTTTTTTTTTTTTTTTTTTTTT");
+    if(startUpCheck == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && webUpdateMode == false){
+    #ifNdef DEBUG_SUPPRESS
+      Serial.println("startup Check Failled")
+    #endif
       webUpdateMode = true;
         BeginWebUpdate();
     }
