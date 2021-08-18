@@ -135,6 +135,13 @@ local allParamsLoaded = 0
     offset = offset + 1
     return result, offset
   end
+
+  local function getBitBin(data, bitPosition)
+    if data ~= nil then
+      return bit32.band(bit32.rshift(data,bitPosition),1)
+    end
+      return 0
+    end
   
   local function parseDeviceInfoMessage(data)
     local offset
@@ -144,8 +151,8 @@ local allParamsLoaded = 0
     for i=1, fields_count do
       fields[i] = { name=nil }
     end
-  end
-  
+  end  
+      
   local function fieldGetValue(data, offset, size)
     local result = 0
     for i=0, size-1 do
@@ -177,7 +184,7 @@ local allParamsLoaded = 0
   end
   
   local function fieldIntSave(index, value, size)
-    local frame = { deviceId, 0xEA, index }
+    local frame = { deviceId, 0xEF, index }
     for i=size-1, 0, -1 do
       frame[#frame + 1] = (bit32.rshift(value, 8*i) % 256)
     end
@@ -260,7 +267,7 @@ local allParamsLoaded = 0
   end
   
   local function fieldFloatDisplay(field, y, attr)
-    lcd.drawText(89, y, formatFloat(field.value, field.prec), LEFT + attr)
+    lcd.drawText(65, y, formatFloat(field.value, field.prec), LEFT + attr)
     lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
   end
   
@@ -283,11 +290,11 @@ local allParamsLoaded = 0
   end
   
   local function fieldTextSelectionSave(field)
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEA, field.id, field.value })
+    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.value })
   end
   
   local function fieldTextSelectionDisplay(field, y, attr)
-    lcd.drawText(89, y, field.values[field.value+1], attr)
+    lcd.drawText(65, y, field.values[field.value+1], attr)
     lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
   end
   
@@ -300,7 +307,7 @@ local allParamsLoaded = 0
   end
   
   local function fieldStringSave(field)
-    local frame = { deviceId, 0xEA, field.id }
+    local frame = { deviceId, 0xEF, field.id }
     for i=1, string.len(field.value) do
       frame[#frame + 1] = string.byte(field.value, i)
     end
@@ -310,10 +317,10 @@ local allParamsLoaded = 0
   
   local function fieldStringDisplay(field, y, attr)
     if edit == true and attr then
-      lcd.drawText(89, y, field.value, FIXEDWIDTH)
+      lcd.drawText(65, y, field.value, FIXEDWIDTH)
       lcd.drawText(83+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
     else
-      lcd.drawText(89, y, field.value, attr)
+      lcd.drawText(65, y, field.value, attr)
     end
   end
   
@@ -329,7 +336,7 @@ local allParamsLoaded = 0
   local function fieldCommandSave(field)
     if field.status == 0 then
       field.status = 1
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEA, field.id, field.status })
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
       fieldPopup = field
       fieldTimeout = getTime() + field.timeout
     end
@@ -338,7 +345,7 @@ local allParamsLoaded = 0
   local function fieldCommandDisplay(field, y, attr)
     lcd.drawText(0, y, field.name, attr)
     if field.info ~= "" then
-      lcd.drawText(89, y, "[" .. field.info .. "]")
+      lcd.drawText(65, y, "[" .. field.info .. "]")
     end
   end
   
@@ -413,7 +420,7 @@ local allParamsLoaded = 0
       return
     end
     badPkt = data[3]
-    goodPkt = (data[4]*255) + data[5]
+    goodPkt = (data[4]*256) + data[5]
     elrsFlags = data[6]
     elrsFlagsInfo,offset = fieldGetString(data,7)
   end
@@ -424,15 +431,15 @@ local function refreshNext()
       local time = getTime()
       if time > devicesRefreshTimeout and fields_count < 1  then
         devicesRefreshTimeout = time + 100 -- 1s
-        crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+        crossfireTelemetryPush(0x28, { 0x00, 0xEF })
       elseif fieldPopup then
         if time > fieldTimeout then -- write lua field
-          crossfireTelemetryPush(0x2D, { deviceId, 0xEA, fieldPopup.id, 6 })
+          crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
           fieldTimeout = time + fieldPopup.timeout
         end
       elseif time > fieldTimeout and not edit then --reload lua field
         if allParamsLoaded < 1 then
-          crossfireTelemetryPush(0x2C, { deviceId, 0xEA, fieldId, fieldChunk })
+          crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
           fieldTimeout = time + 500 -- 2s
         end
       end
@@ -465,7 +472,7 @@ local function runDevicePage(event)
     elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
       if elrsFlags > 0 then
         elrsFlags = 0
-        crossfireTelemetryPush(0x2D, { deviceId, 0xEA, 0x2E, 0x00 })
+        crossfireTelemetryPush(0x2D, { deviceId, 0xEF, 0x2E, 0x00 })
       else
         local field = getField(lineIndex)
         if field.name then
@@ -543,9 +550,9 @@ local function runDevicePage(event)
       result = popupWarning(fieldPopup.info, event)
     end
     if result == "OK" then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEA, fieldPopup.id, 4 })
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
     elseif result == "CANCEL" then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEA, fieldPopup.id, 5 })
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
     end
     return 0
   end

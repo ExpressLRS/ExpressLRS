@@ -54,6 +54,7 @@ public:
     static void (*RecvParameterUpdate)();
 
     static volatile uint8_t ParameterUpdateData[3];
+    static volatile bool elrsLUAmode;
 
     /////Variables/////
 
@@ -75,8 +76,8 @@ public:
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     void sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2);
-    uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, void * luaData, uint8_t wholePacketSize);
-    void sendCRSFdevice(void * luaData, uint8_t wholePacketSize);
+    uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize);
+    void sendCRSFdevice(const void * luaData, uint8_t wholePacketSize);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
@@ -105,6 +106,10 @@ public:
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
+
+
+    uint8_t setLuaHiddenFlag(uint8_t id, bool value);
+
 #endif
 private:
     Stream *_dev;
@@ -146,13 +151,13 @@ private:
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
-#endif
+    
+    static uint32_t luaHiddenFlags;
 
-    static void flush_port_input(void);
-    void getLuaTextSelectionStructToArray(void * luaStruct, uint8_t *outarray);
-    void getLuaCommandStructToArray(void * luaStruct, uint8_t *outarray);
-    void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
-    void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
+    void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);
+    void getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray);
+    void getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray);
+    void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
       /** we dont need these yet for OUR LUA
      void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaint8StructToArray(void * luaStruct, uint8_t *outarray);
@@ -160,7 +165,12 @@ private:
      void getLuaint16StructToArray(void * luaStruct, uint8_t *outarray);
      void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
 */ 
-    void getLuaStringStructToArray(void * luaStruct, uint8_t *outarray);
+    void getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray);
+
+#endif
+
+    static void flush_port_input(void);
+
 
 };
 

@@ -37,9 +37,6 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
-//const expresslrs_mod_settings_s * ExpressLRS_nextAirRate;
-expresslrs_mod_settings_s *ExpressLRS_currAirRate;
-expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index)
 {

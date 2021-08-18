@@ -104,9 +104,48 @@ def get_git_sha():
             sha = "000000"
     return ",".join(["%s" % ord(x) for x in sha[:6]])
 
+def get_git_version():
+    # Don't try to pull the git revision when doing tests, as
+    # `pio remote test` doesn't copy the entire repository, just the files
+    if env['PIOPLATFORM'] == "native":
+        return "001122334455"
+
+    try:
+        import git
+    except ImportError:
+        sys.stdout.write("Installing GitPython")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
+        try:
+            import git
+        except ImportError:
+            env.Execute("$PYTHONEXE -m pip install GitPython")
+            try:
+                import git
+            except ImportError:
+                git = None
+
+    sha = None
+    if git:
+        try:
+            git_repo = git.Repo(
+                os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
+                search_parent_directories=False)
+            try:
+                ver = git_repo.git.describe("--tags", "--exact-match")
+            except git.exc.GitCommandError:
+                try:
+                    ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
+                except git.exc.GitCommandError:
+                    ver = "unknown"
+            hash = git_repo.git.rev_parse("--short", "HEAD")
+        except git.InvalidGitRepositoryError:
+            pass
+    return ",".join(["%s" % ord(char) for char in ver])
+
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
+build_flags.append("-DLATEST_VERSION=" + get_git_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", env['PIOENV'].upper()))
 condense_flags()
 
