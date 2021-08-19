@@ -611,10 +611,18 @@ void registerLuaParameters() {
   });
 #endif
 
-  registerLUAParameter(&luaVtxBand);
-  registerLUAParameter(&luaVtxChannel);
-  registerLUAParameter(&luaVtxPwr);
-  registerLUAParameter(&luaVtxPit);
+  registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
+      //config.SetVtxBand();
+  });
+  registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
+      //config.SetVtxChannel();
+  });
+  registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
+      //config.SetVtxPwr();
+  });
+  registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
+      //config.SetVtxPit();
+  });
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
