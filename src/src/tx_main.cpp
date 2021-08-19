@@ -1148,6 +1148,10 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 void VtxConfigToMSPOut()
 {
+
+  if (!config.GetVtxBand())
+    return;
+
   uint8_t vtxIdx = (config.GetVtxBand() - 1) * 8 + config.GetVtxChannel();
 
 // Serial.println(config.GetVtxBand());
