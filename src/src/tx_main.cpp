@@ -610,6 +610,12 @@ void registerLuaParameters() {
     }
   });
 #endif
+
+  registerLUAParameter(&luaVtxBand);
+  registerLUAParameter(&luaVtxChannel);
+  registerLUAParameter(&luaVtxPwr);
+  registerLUAParameter(&luaVtxPit);
+
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
 }

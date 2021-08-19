@@ -90,4 +90,44 @@ struct tagLuaItem_command luaWebUpdate = {
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 #endif
+
+//----------------------------VTX ADMINISTRATOR------------------
+
+struct tagLuaItem_textSelection luaVtxBand = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Band",
+    "Off;A;B;E;F;R;L",
+    {0,0,6},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxBand)
+};
+
+struct tagLuaItem_uint8 luaVtxChannel = {
+    {0,(uint8_t)CRSF_UINT8},//id,type
+    "Channel",
+    {0,0,7},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
+};
+
+struct tagLuaItem_textSelection luaVtxPwr = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "VTX Pwr",
+    "10;25;50;100;250;500;1000;2000",
+    {0,0,7},//value,min,max
+    "mW",
+    LUA_TEXTSELECTION_SIZE(luaVtxPwr)
+};
+
+struct tagLuaItem_textSelection luaVtxPit = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Pitmode",
+    "on;off",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxPit)
+};
+
+//----------------------------VTX ADMINISTRATOR------------------
+
 #endif
