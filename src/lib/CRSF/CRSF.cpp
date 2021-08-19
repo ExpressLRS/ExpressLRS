@@ -1050,7 +1050,7 @@ bool CRSF::UARTwdt()
             USART1->CR1 |= USART_CR1_UE;
             #endif
             #if defined(TARGET_TX_FM30_MINI)
-            LL_GPIO_SetPinPull(GPIOA, 2, LL_GPIO_PULL_DOWN); // default is PULLUP
+            LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
             USART2->CR1 &= ~USART_CR1_UE;
             USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
             USART2->CR1 |= USART_CR1_UE;
