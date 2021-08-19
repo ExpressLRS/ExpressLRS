@@ -623,6 +623,10 @@ void registerLuaParameters() {
   registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
       //config.SetVtxPit();
   });
+  registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
+      sendLuaFieldCrsf(id,0);
+      //VtxConfigToMSPOut(); 
+  });
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);

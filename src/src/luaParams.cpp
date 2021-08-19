@@ -102,30 +102,39 @@ struct tagLuaItem_textSelection luaVtxBand = {
     LUA_TEXTSELECTION_SIZE(luaVtxBand)
 };
 
-struct tagLuaItem_uint8 luaVtxChannel = {
-    {0,(uint8_t)CRSF_UINT8},//id,type
+struct tagLuaItem_textSelection luaVtxChannel = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Channel",
+    "1;2;3;4;5;6;7;8",
     {0,0,7},//value,min,max
     emptySpace,
-    LUA_UINT8_SIZE(luaVtxChannel)
+    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
 };
 
 struct tagLuaItem_textSelection luaVtxPwr = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "VTX Pwr",
-    "10;25;50;100;250;500;1000;2000",
-    {0,0,7},//value,min,max
-    "mW",
+    "Pwr Lvl",
+    "-;1;2;3;4;5;6;7;8",
+    {0,0,8},//value,min,max
+    emptySpace,
     LUA_TEXTSELECTION_SIZE(luaVtxPwr)
 };
 
 struct tagLuaItem_textSelection luaVtxPit = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Pitmode",
-    "on;off",
+    "Off;On",
     {0,0,1},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaVtxPit)
+};
+
+struct tagLuaItem_command luaVtxSend = {
+    {0,(uint8_t)CRSF_COMMAND},//id,type
+    "Send VTx",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaVtxSend)
 };
 
 //----------------------------VTX ADMINISTRATOR------------------

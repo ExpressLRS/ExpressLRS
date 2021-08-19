@@ -21,4 +21,5 @@ extern struct tagLuaItem_textSelection luaVtxBand;
 extern struct tagLuaItem_uint8 luaVtxChannel;
 extern struct tagLuaItem_textSelection luaVtxPwr;
 extern struct tagLuaItem_textSelection luaVtxPit;
+extern struct tagLuaItem_command luaVtxSend;
 //----------------------------VTX ADMINISTRATOR------------------
