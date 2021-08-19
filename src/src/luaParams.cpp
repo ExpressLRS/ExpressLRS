@@ -107,7 +107,7 @@ struct tagLuaItem_uint8 luaVtxChannel = {
     "Channel",
     {0,0,7},//value,min,max
     emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
+    LUA_UINT8_SIZE(luaVtxChannel)
 };
 
 struct tagLuaItem_textSelection luaVtxPwr = {
