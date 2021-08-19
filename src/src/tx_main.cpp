@@ -1148,19 +1148,13 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 void VtxConfigToMSPOut()
 {
-
   if (!config.GetVtxBand())
     return;
 
   uint8_t vtxIdx = (config.GetVtxBand() - 1) * 8 + config.GetVtxChannel();
 
-// Serial.println(config.GetVtxBand());
-// Serial.println(config.GetVtxChannel());
-// Serial.println(vtxIdx);
-// Serial.println(config.GetVtxPower());
-// Serial.println(config.GetVtxPitmode());
-
   mspPacket_t packet;
+  packet.reset();
   packet.function = MSP_SET_VTX_CONFIG;
   packet.addByte(vtxIdx);
   packet.addByte(0);
