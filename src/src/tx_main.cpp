@@ -111,6 +111,8 @@ uint8_t BindingSendCount = 0;
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
+void VtxConfigToMSPOut();
+uint8_t VtxConfigReadyToSend = false;
 
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
@@ -243,6 +245,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   {
     connectionState = connected;
     LPD_DownlinkLQ.init(100);
+    VtxConfigReadyToSend = true;
 #ifndef DEBUG_SUPPRESS
     Serial.println("got downlink conn");
 #endif
@@ -612,20 +615,20 @@ void registerLuaParameters() {
 #endif
 
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
-      //config.SetVtxBand();
+      config.SetVtxBand(arg);
   });
   registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
-      //config.SetVtxChannel();
+      config.SetVtxChannel(arg);
   });
   registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
-      //config.SetVtxPwr();
+      config.SetVtxPower(arg);
   });
   registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
-      //config.SetVtxPit();
+      config.SetVtxPitmode(arg);
   });
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
       sendLuaFieldCrsf(id,0);
-      //VtxConfigToMSPOut(); 
+      VtxConfigReadyToSend = true;
   });
 
   registerLUAParameter(&luaInfo);
@@ -640,6 +643,11 @@ void resetLuaParams(){
   //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
+  
+  setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
+  setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
+  setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
+  setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
 }
 
 void updateLUApacketCount(){
@@ -1002,6 +1010,12 @@ void loop()
       msp.markPacketReceived();
     }
   }
+  
+  if (VtxConfigReadyToSend)
+  {
+    VtxConfigReadyToSend = false;
+    VtxConfigToMSPOut();
+  }
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
@@ -1130,6 +1144,26 @@ void ProcessMSPPacket(mspPacket_t *packet)
   {
     crsf.AddMspMessage(packet);
   }
+}
+
+void VtxConfigToMSPOut()
+{
+  uint8_t vtxIdx = (config.GetVtxBand() - 1) * 8 + config.GetVtxChannel();
+
+// Serial.println(config.GetVtxBand());
+// Serial.println(config.GetVtxChannel());
+// Serial.println(vtxIdx);
+// Serial.println(config.GetVtxPower());
+// Serial.println(config.GetVtxPitmode());
+
+  mspPacket_t packet;
+  packet.function = MSP_SET_VTX_CONFIG;
+  packet.addByte(vtxIdx);
+  packet.addByte(0);
+  packet.addByte(config.GetVtxPower());
+  packet.addByte(config.GetVtxPitmode());
+
+  crsf.AddMspMessage(&packet);
 }
 
 void EnterBindingMode()

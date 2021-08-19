@@ -87,6 +87,46 @@ TxConfig::SetModelMatch(uint8_t modelId, bool modelMatch)
 }
 
 void
+TxConfig::SetVtxBand(uint8_t vtxBand)
+{
+    if (m_config.vtxBand != vtxBand)
+    {
+        m_config.vtxBand = vtxBand;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxChannel(uint8_t vtxChannel)
+{
+    if (m_config.vtxChannel != vtxChannel)
+    {
+        m_config.vtxChannel = vtxChannel;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxPower(uint8_t vtxPower)
+{
+    if (m_config.vtxPower != vtxPower)
+    {
+        m_config.vtxPower = vtxPower;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxPitmode(uint8_t vtxPitmode)
+{
+    if (m_config.vtxPitmode != vtxPitmode)
+    {
+        m_config.vtxPitmode = vtxPitmode;
+        m_modified = true;
+    }
+}
+
+void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
@@ -100,6 +140,10 @@ TxConfig::SetDefaults()
         SetSwitchMode(i, 1);
         SetModelMatch(i, false);
     }
+    SetVtxBand(0);
+    SetVtxChannel(0);
+    SetVtxPower(0);
+    SetVtxPitmode(0);
     Commit();
 }
 

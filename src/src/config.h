@@ -24,6 +24,11 @@ typedef struct {
     char            ssid[33];
     char            password[33];
     model_config_t  model_config[64];
+    uint8_t         vtxBand;
+    uint8_t         vtxChannel;
+    uint8_t         vtxPower;
+    uint8_t         vtxPitmode;
+;
 } tx_config_t;
 
 class TxConfig
@@ -41,6 +46,10 @@ public:
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
+    uint8_t  GetVtxBand() const { return m_config.vtxBand; }
+    uint8_t  GetVtxChannel() const { return m_config.vtxChannel; }
+    uint8_t  GetVtxPower() const { return m_config.vtxPower; }
+    uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
 
     // Setters
     void SetRate(uint8_t modelId, uint8_t rate);
@@ -52,6 +61,10 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
+    void SetVtxBand(uint8_t vtxBand);
+    void SetVtxChannel(uint8_t vtxChannel);
+    void SetVtxPower(uint8_t vtxPower);
+    void SetVtxPitmode(uint8_t vtxPitmode);
 
 private:
     tx_config_t m_config;
