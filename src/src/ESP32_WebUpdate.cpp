@@ -245,9 +245,6 @@ static void startWifi() {
   WiFi.mode(WIFI_OFF);
   WiFi.setTxPower(WIFI_POWER_13dBm);
   WiFi.setHostname(myHostname);
-  WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(ssid, password);
-  WiFi.scanNetworks(true);
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);

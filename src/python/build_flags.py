@@ -124,7 +124,7 @@ def get_git_version():
             except ImportError:
                 git = None
 
-    sha = None
+    ver = "unknown"
     if git:
         try:
             git_repo = git.Repo(
