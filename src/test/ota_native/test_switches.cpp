@@ -249,100 +249,6 @@ void test_decodingHybrid8_all()
         test_decodingHybrid8(7, val);
 }
 
-// ------------------------------------------------
-// Test the 10bit encoding/decoding
-
-/* Check the 10bit encoding of a packet for OTA tx
-*/
-void test_encoding10bit()
-{
-    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t expected;
-    uint8_t TXdataBuffer[8];
-
-    // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
-
-    // 8 switches
-    for(int i = 4; i < 12; i++) {
-        crsf.ChannelDataIn[i] =  i % 2 * 1800;
-    }
-
-    // encode it
-    GenerateChannelData10bit(TXdataBuffer, &crsf, false);
-
-    // check it looks right
-    // 1st byte is CRC & packet type
-    uint8_t header = RC_DATA_PACKET;
-    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
-
-    // bytes 1 through 5 are 10 bit packed analog channels
-    for(int i = 0; i < 4; i++) {
-        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
-    }
-
-    // byte 5 is bits 1 and 2 of each analog channel
-    expected = 0;
-    for(int i = 0; i < 4; i++) {
-        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
-    }
-    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
-
-    // byte 6 is the switch encoding
-    TEST_ASSERT_EQUAL(TXdataBuffer[6], 0x55);
-
-    for(int i = 4; i < 12; i++) {
-        TEST_ASSERT_EQUAL(i%2, (TXdataBuffer[6] >> (7 - (i - 4)) ) & 1);
-    }
-}
-
-/* Check the decoding of a packet after rx
-*/
-void test_decoding10bit()
-{
-    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t TXdataBuffer[8];
-    // uint8_t expected;
-
-    // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
-
-    // 8 switches
-    for(int i = 4; i < 12; i++) {
-        crsf.ChannelDataIn[i] =  i % 2 * 1800;
-    }
-
-    // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &crsf, false);
-
-    // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData10bit(TXdataBuffer, &crsf);
-
-    // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
-
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch4); // Switch 0
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch5); // Switch 1
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch6); // Switch 2
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch7); // Switch 3
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch8); // Switch 4
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch9); // Switch 5
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(0), crsf.PackedRCdataOut.ch10); // Switch 6
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(1), crsf.PackedRCdataOut.ch11); // Switch 7
-}
-
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -353,9 +259,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_encodingHybrid8_3);
     RUN_TEST(test_encodingHybrid8_7);
     RUN_TEST(test_decodingHybrid8_all);
-
-    RUN_TEST(test_encoding10bit);
-    RUN_TEST(test_decoding10bit);
 
     UNITY_END();
 

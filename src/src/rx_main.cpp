@@ -731,8 +731,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          TLMrateIn = (Radio.RXdataBuffer[3] & 0b00111000) >> 3;
          switch((Radio.RXdataBuffer[3] & 0b00000110) >> 1) {
              case 0b00:
-                UnpackChannelData = UnpackChannelData10bit;
-                modeSupportsTelemetry = false;
                 break;
              case 0b01:
                 UnpackChannelData = UnpackChannelDataHybridSwitch8;

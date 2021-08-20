@@ -320,8 +320,8 @@ void SetSwitchMode(uint32_t switchMode)
 {
   switch(switchMode) {
     case 0b00:
-      GenerateChannelData = GenerateChannelData10bit;
-      crsf.setNextSwitchFirstIndex(0);
+      GenerateChannelData = GenerateChannelDataHybridSwitch8;
+      crsf.setNextSwitchFirstIndex(1);
       break;
     case 0b01:
       GenerateChannelData = GenerateChannelDataHybridSwitch8;
@@ -549,13 +549,14 @@ void registerLuaParameters() {
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
   });
-  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
-    Serial.print("Request Switch Mode: ");
-    uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
-    Serial.println(newSwitchMode, DEC);
-    config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
-    SetSwitchMode(newSwitchMode);
-  });
+  // Commented out for now until we add more switch options
+  // registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
+  //   Serial.print("Request Switch Mode: ");
+  //   uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
+  //   Serial.println(newSwitchMode, DEC);
+  //   config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
+  //   SetSwitchMode(newSwitchMode);
+  // });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
     Serial.print("Request Model Match: ");
     bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
@@ -617,7 +618,8 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate(crsf.getModelID()));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm(crsf.getModelID()));
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
+  // Commented out for now until we add more switch options
+  //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 }
