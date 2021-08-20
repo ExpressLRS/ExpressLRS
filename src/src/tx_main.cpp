@@ -844,6 +844,10 @@ void setup()
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
 #endif
+#if defined(TARGET_TX_FM30_MINI)
+    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
+    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+#endif
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
   button.buttonTriplePress = &EnterBindingMode;

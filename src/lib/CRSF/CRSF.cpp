@@ -120,20 +120,29 @@ void CRSF::Begin()
 #elif defined(PLATFORM_STM32)
     Serial.println("Start STM32 R9M TX CRSF UART");
 
+    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
+    #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
     USART1->CR3 |= USART_CR3_HDSEL;
-    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
     USART1->CR1 |= USART_CR1_UE;
+#endif
+#if defined(TARGET_TX_FM30_MINI)
+    LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
+    USART2->CR1 &= ~USART_CR1_UE;
+    USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+    USART2->CR1 |= USART_CR1_UE;
 #endif
     Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
@@ -983,6 +992,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     #endif
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
+#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    CRSF::Port.enableHalfDuplexRx();
 #endif
 }
 
@@ -1001,6 +1012,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #endif
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
+#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    // writing to the port switches the mode
 #endif
 }
 
@@ -1043,8 +1056,14 @@ bool CRSF::UARTwdt()
             #if defined(TARGET_TX_GHOST)
             USART1->CR1 &= ~USART_CR1_UE;
             USART1->CR3 |= USART_CR3_HDSEL;
-            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inv
+            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
             USART1->CR1 |= USART_CR1_UE;
+            #endif
+            #if defined(TARGET_TX_FM30_MINI)
+            LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
+            USART2->CR1 &= ~USART_CR1_UE;
+            USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+            USART2->CR1 |= USART_CR1_UE;
             #endif
 #endif
             UARTcurrentBaud = UARTrequestedBaud;

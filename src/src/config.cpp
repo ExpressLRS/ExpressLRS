@@ -9,7 +9,7 @@ TxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != TX_CONFIG_VERSION)
+    if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -21,7 +21,7 @@ TxConfig::Load()
 
 void
 TxConfig::Commit()
-{    
+{
     if (!m_modified)
     {
         // No changes
@@ -90,7 +90,7 @@ void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
-    m_config.version = TX_CONFIG_VERSION;
+    m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     SetSSID("");
     SetPassword("");
     for (int i=0 ; i<64 ; i++) {
@@ -135,7 +135,7 @@ RxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != RX_CONFIG_VERSION)
+    if (m_config.version != (uint32_t)(RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -147,7 +147,7 @@ RxConfig::Load()
 
 void
 RxConfig::Commit()
-{    
+{
     if (!m_modified)
     {
         // No changes
@@ -205,7 +205,7 @@ RxConfig::SetModelId(uint8_t modelId)
 void
 RxConfig::SetDefaults()
 {
-    m_config.version = RX_CONFIG_VERSION;
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     SetIsBound(false);
     SetPowerOnCounter(0);
     SetModelId(0xFF);
