@@ -578,7 +578,7 @@ void LostConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR TentativeConnection()
+void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     PFDloop.reset();
     connectionStatePrev = connectionState;
@@ -589,20 +589,20 @@ void ICACHE_RAM_ATTR TentativeConnection()
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
-    RFmodeLastCycled = millis(); // give another 3 sec for lock to occur
+    RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
 #if WS2812_LED_IS_USED
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
     WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = millis();
+    LEDWS2812LastUpdate = now;
 #endif
 
     // The caller MUST call hwTimer.resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
 }
 
-void GotConnection()
+void GotConnection(unsigned long now)
 {
     if (connectionState == connected)
     {
@@ -617,7 +617,7 @@ void GotConnection()
     connectionState = connected; //we got a packet, therefore no lost connection
     disableWebServer = true;
     RXtimerState = tim_tentative;
-    GotConnectionMillis = millis();
+    GotConnectionMillis = now;
 
     Serial.println("got conn");
 
@@ -625,7 +625,7 @@ void GotConnection()
     uint8_t LEDcolor[3] = {0};
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
     WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = millis();
+    LEDWS2812LastUpdate = now;
 #endif
 
 #ifdef GPIO_PIN_LED_GREEN
@@ -675,8 +675,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     bool telemetryConfirmValue;
     bool currentMspConfirmValue;
     bool doStartTimer = false;
+    unsigned long now = millis();
 
-    LastValidPacket = millis();
+    LastValidPacket = now;
 
     getRFlinkInfo();
 
@@ -744,7 +745,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
          if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == (UID[5] ^ config.GetModelId()))
          {
-             LastSyncPacket = millis();
+             LastSyncPacket = now;
 #if defined(PRINT_RX_SCOREBOARD)
              Serial.write('s');
 #endif
@@ -771,7 +772,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  //Serial.print(NonceRX, DEC); Serial.write('x'); Serial.println(Radio.RXdataBuffer[2], DEC);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
-                 TentativeConnection();
+                 TentativeConnection(now);
                  doStartTimer = true;
              }
          }
@@ -803,7 +804,7 @@ void beginWebsever()
 #endif
 }
 
-void sampleButton()
+void sampleButton(unsigned long now)
 {
 #ifdef GPIO_PIN_BUTTON
     bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
@@ -818,14 +819,14 @@ void sampleButton()
         buttonDown = false;
     }
 
-    if ((millis() > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
+    if ((now > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
     { // button held down for WEB_UPDATE_PRESS_INTERVAL
         if (!webUpdateMode)
         {
             beginWebsever();
         }
     }
-    if ((millis() > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
+    if ((now > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
 #ifdef PLATFORM_ESP8266
         ESP.restart();
@@ -971,16 +972,16 @@ static void setupBindingFromConfig()
 }
 
 #if defined(PLATFORM_ESP8266)
-static void WebUpdateLoop()
+static void WebUpdateLoop(unsigned long now)
 {
     HandleWebUpdate();
-    if (millis() - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
+    if (now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
         #endif
         LED = !LED;
-        LEDLastUpdate = millis();
+        LEDLastUpdate = now;
     }
 }
 #endif
@@ -1021,7 +1022,7 @@ static void setupRadio()
         while (1)
         {
             HandleUARTin();
-            WebUpdateLoop();
+            WebUpdateLoop(millis());
         }
     }
 #else // target does not have wifi
@@ -1102,18 +1103,18 @@ static void updateTelemetryBurst()
 /* If not connected will rotate through the RF modes looking for sync
  * and blink LED
  */
-static void cycleRfMode()
+static void cycleRfMode(unsigned long now)
 {
     if (connectionState == connected || InBindingMode || webUpdateMode)
         return;
 
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
-    if (LockRFmode == false && (millis() - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
+    if (LockRFmode == false && (now - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
     {
-        RFmodeLastCycled = millis();
-        LastSyncPacket = millis();           // reset this variable
+        RFmodeLastCycled = now;
+        LastSyncPacket = now;           // reset this variable
         SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
-        SendLinkStatstoFCintervalLastSent = millis();
+        SendLinkStatstoFCintervalLastSent = now;
         LQCalc.reset();
         Serial.println(ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
@@ -1128,7 +1129,7 @@ static void cycleRfMode()
     } // if time to switch RF mode
 
     // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (millis() - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
+    if (now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
     {
         #ifdef GPIO_PIN_LED
             digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
@@ -1136,7 +1137,7 @@ static void cycleRfMode()
             digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
         #endif
         LED = !LED;
-        LEDLastUpdate = millis();
+        LEDLastUpdate = now;
     } // if cycle LED
 }
 
@@ -1187,6 +1188,7 @@ void setup()
 
 void loop()
 {
+    unsigned long now = millis();
     HandleUARTin();
     if (hwTimer.running == false)
     {
@@ -1194,54 +1196,54 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && !InBindingMode && millis() > (AUTO_WIFI_ON_INTERVAL*1000))
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
 
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && InBindingMode && millis() > 60000)
+    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && InBindingMode && now > 60000)
     {
         beginWebsever();
     }
 
     if (webUpdateMode)
     {
-        WebUpdateLoop();
+        WebUpdateLoop(now);
         return;
     }
     #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         LostConnection();
-        LastSyncPacket = millis();           // reset this variable to stop rf mode switching and add extra time
-        RFmodeLastCycled = millis();         // reset this variable to stop rf mode switching and add extra time
+        LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
+        RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
         Serial.println("Air rate change req via sync");
         crsf.sendLinkStatisticsToFC();
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
-    if (connectionState == tentative && (millis() - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))
+    if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))
     {
         LostConnection();
         Serial.println("Bad sync, aborting");
-        RFmodeLastCycled = millis();
-        LastSyncPacket = millis();
+        RFmodeLastCycled = now;
+        LastSyncPacket = now;
     }
 
-    cycleRfMode();
+    cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
-    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(millis() - localLastValidPacket))) // check if we lost conn.
+    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
     {
         LostConnection();
     }
 
     if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (Offset < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
     {
-        GotConnection();
+        GotConnection(now);
     }
 
-    if (millis() > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
+    if (now > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
     {
         if (connectionState == disconnected)
         {
@@ -1250,17 +1252,17 @@ void loop()
         if (connectionState != disconnected)
         {
             crsf.sendLinkStatisticsToFC();
-            SendLinkStatstoFCintervalLastSent = millis();
+            SendLinkStatstoFCintervalLastSent = now;
         }
     }
 
-    if (millis() > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
+    if (now > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
     {
-        sampleButton();
-        buttonLastSampled = millis();
+        sampleButton(now);
+        buttonLastSampled = now;
     }
 
-    if ((RXtimerState == tim_tentative) && ((millis() - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
+    if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
     {
         RXtimerState = tim_locked;
         #ifndef DEBUG_SUPPRESS
@@ -1269,7 +1271,7 @@ void loop()
     }
 
 #if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (millis() - LEDWS2812LastUpdate > 25))
+    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
     {
         uint8_t LEDcolor[3] = {0};
         if (LEDfade == 30 || LEDfade == 0)
@@ -1280,7 +1282,7 @@ void loop()
         LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
         LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
         WS281BsetLED(LEDcolor);
-        LEDWS2812LastUpdate = millis();
+        LEDWS2812LastUpdate = now;
     }
 #endif
 
@@ -1306,7 +1308,7 @@ void loop()
     // Update the LED while in binding mode
     if (InBindingMode)
     {
-        if (millis() > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
+        if (now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
         {
             if (LEDPulseCounter == 0)
             {
@@ -1323,11 +1325,11 @@ void loop()
 
             if (LEDPulseCounter < 4)
             {
-                LEDLastUpdate = millis() + LED_INTERVAL_BIND_SHORT;
+                LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
             }
             else
             {
-                LEDLastUpdate = millis() + LED_INTERVAL_BIND_LONG;
+                LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
                 LEDPulseCounter = 0;
             }
 
