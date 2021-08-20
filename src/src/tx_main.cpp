@@ -1149,7 +1149,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 void VtxConfigToMSPOut()
 {
-  if (config.GetVtxBand() == 6) // 6 = off in the lua Band field
+  // 6 = off in the lua Band field
+  // Do not send while armed.  Replace CRSF_to_BIT with IsArmed() after PR #786 is merged
+  if (config.GetVtxBand() == 6 || CRSF_to_BIT(crsf.ChannelDataIn[AUX1]))
     return;
 
   uint8_t vtxIdx = config.GetVtxBand() * 8 + config.GetVtxChannel();
