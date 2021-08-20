@@ -214,7 +214,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
   uint8_t TLMheader = Radio.RXdataBuffer[1];
-  
+
   if ((inCRC != calculatedCRC))
   {
 #ifndef DEBUG_SUPPRESS
@@ -501,7 +501,7 @@ void registerLuaParameters() {
         config.SetRate(crsf.getModelID(), arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)arg), 
+                          OLED.getRateString((expresslrs_RFrates_e)arg),
                           OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
       #endif
     }
@@ -516,7 +516,7 @@ void registerLuaParameters() {
         config.SetTlm(crsf.getModelID(), (expresslrs_tlm_ratio_e)arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                           OLED.getTLMRatioString((expresslrs_tlm_ratio_e)arg), commitStr);
       #endif
     }
@@ -530,7 +530,7 @@ void registerLuaParameters() {
       config.SetPower(crsf.getModelID(), newPower < MaxPower ? newPower : MaxPower);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate), 
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
   });
@@ -601,7 +601,7 @@ void registerLuaParameters() {
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-  
+
   #ifdef USE_DYNAMIC_POWER
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
   #else
@@ -846,8 +846,7 @@ void setup()
   // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
 #endif // PLATFORM_ESP32
 
-  long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-  FHSSrandomiseFHSSsequence(macSeed);
+  FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
