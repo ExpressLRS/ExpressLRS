@@ -50,6 +50,9 @@ static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
       case CRSF_TEXT_SELECTION:
         retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,TYPE(tagLuaItem_textSelection));
         break;
+      case CRSF_FOLDER:
+        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_FOLDER,TYPE(tagLuaItem_folder));
+        break;
     }
     if(retval == 0 && idx == lastLuaField){
       allLUAparamSent = 1;

@@ -92,6 +92,11 @@ struct tagLuaItem_command luaWebUpdate = {
 #endif
 
 //----------------------------VTX ADMINISTRATOR------------------
+extern struct tagLuaItem_folder luaVtxFolder = {
+    {0,(uint8_t)CRSF_FOLDER},//id,type
+    "VTX ADMINISTRATOR",
+    LUA_FOLDER_SIZE(luaVtxFolder)
+};
 
 struct tagLuaItem_textSelection luaVtxBand = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type

@@ -17,6 +17,7 @@ extern struct tagLuaItem_string luaELRSversion;
 extern struct tagLuaItem_command luaWebUpdate;
 #endif
 //----------------------------VTX ADMINISTRATOR------------------
+extern struct tagLuaItem_folder luaVtxFolder;
 extern struct tagLuaItem_textSelection luaVtxBand;
 extern struct tagLuaItem_textSelection luaVtxChannel;
 extern struct tagLuaItem_textSelection luaVtxPwr;

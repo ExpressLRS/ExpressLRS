@@ -417,6 +417,15 @@ void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
+void CRSF::getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
+    struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+    memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
+    outarray[0] = p1->luaProperties1.id;
+    outarray[1] = 0; //chunk
+    outarray[2] = 0; //parent
+    outarray[3] = p1->luaProperties1.type;
+    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
+}
 /** we dont use these yet for OUR LUA
 
 void CRSF::getLuaint8StructToArray(void * luaStruct, uint8_t *outarray){
@@ -528,7 +537,11 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
             getLuaStringStructToArray(luaData,chunkBuffer);
             break;
         }
-        
+        case CRSF_FOLDER:
+        {
+            getLuaFolderStructToArray(luaData,chunkBuffer);
+            break;
+        }
         case CRSF_OUT_OF_RANGE:
         default:
         break;
