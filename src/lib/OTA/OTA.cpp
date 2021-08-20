@@ -10,7 +10,6 @@
 
 #if TARGET_TX or defined UNIT_TEST
 
-#if defined HYBRID_SWITCHES_8 or defined UNIT_TEST
 /**
  * Hybrid switches packet encoding for sending over the air
  *
@@ -25,11 +24,7 @@
  * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
  */
-#ifdef ENABLE_TELEMETRY
 void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus)
-#else
-void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, CRSF *crsf)
-#endif
 {
   Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
@@ -52,9 +47,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   uint8_t value = crsf->currentSwitches[nextSwitchIndex];
 
   Buffer[6] =
-#ifdef ENABLE_TELEMETRY
       TelemetryStatus << 7 |
-#endif
       // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
       crsf->currentSwitches[0] << 6 |
       // tell the receiver which switch index this is
@@ -65,10 +58,8 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
   // update the sent value
   crsf->setSentSwitch(nextSwitchIndex, value);
 }
-#endif // HYBRID_SWITCHES_8
 
-#if !defined HYBRID_SWITCHES_8 or defined UNIT_TEST
-void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf)
+void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus)
 {
   Buffer[0] = RC_DATA_PACKET & 0b11;
   Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
@@ -88,7 +79,6 @@ void ICACHE_RAM_ATTR GenerateChannelData10bit(volatile uint8_t* Buffer, CRSF *cr
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[10]) << 1;
   Buffer[6] |= CRSF_to_BIT(crsf->ChannelDataIn[11]) << 0;
 }
-#endif // !HYBRID_SWITCHES_8
 
 #endif
 

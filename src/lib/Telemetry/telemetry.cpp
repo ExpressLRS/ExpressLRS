@@ -28,6 +28,14 @@ bool Telemetry::ShouldCallEnterBind()
     return enterBind;
 }
 
+bool Telemetry::ShouldCallUpdateModelMatch()
+{
+    bool updateModelMatch = callUpdateModelMatch;
+    callUpdateModelMatch = false;
+    return updateModelMatch;
+}
+
+
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, MSP_RESP);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
@@ -187,6 +195,12 @@ void Telemetry::AppendTelemetryPackage()
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 'b' && CRSFinBuffer[4] == 'd')
     {
         callEnterBind = true;
+        return;
+    }
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_COMMAND && CRSFinBuffer[3] == 'm' && CRSFinBuffer[4] == 'm')
+    {
+        callUpdateModelMatch = true;
+        modelMatchId = CRSFinBuffer[5];
         return;
     }
     for (int8_t i = 0; i < payloadTypesCount; i++)

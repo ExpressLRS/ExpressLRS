@@ -55,6 +55,24 @@
 				</fieldset>
 			</div>
 
+			<div align="left">
+				<fieldset>
+					If you set the 'Model Match' below to a number other than zero, you can specify the 'Receiver' number in OpenTX/EdgeTX
+					model setup page and turn on the 'Model Match' in the ELRS LUA script for that model. 'Model Match' is between 0 and 63 inclusive.
+					<br><br>
+					<legend>
+						<h2>Model Match:</h2>
+					</legend>
+					<form action='/modelmatch' id='modelmatch' method='POST'>
+						<div class="group">
+							<input id='modelid' type='text' name='modelid'>
+							<input type='submit' value='Set Model Match'>
+						</div>
+					</form>
+					<br><br>
+				</fieldset>
+			</div>
+
 			<div align="left" id="apmode" style="display:none;">
 				<fieldset>
 					Here you can join a network and it will be saved as your &quot;home&quot; network.

@@ -98,9 +98,9 @@ jobs:
             ;;
         esac
         # All the features
-        PLATFORMIO_BUILD_FLAGS="$REG -DHYBRID_SWITCHES_8 -DENABLE_TELEMETRY -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+        PLATFORMIO_BUILD_FLAGS="$REG -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
         # Minimal/default features
-        PLATFORMIO_BUILD_FLAGS="$REG !-DHYBRID_SWITCHES_8 !-DENABLE_TELEMETRY !-DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+        PLATFORMIO_BUILD_FLAGS="$REG !-DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
         mv .pio/build ~/artifacts/AU_915
 
     - name: Store Artifacts

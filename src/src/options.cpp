@@ -12,9 +12,6 @@ const char PROGMEM compile_options[] = {
 #endif
 
 #ifdef TARGET_TX
-    #ifdef HYBRID_SWITCHES_8
-        "-DHYBRID_SWITCHES_8 "
-    #endif
     #ifdef UNLOCK_HIGHER_POWER
         "-DUNLOCK_HIGHER_POWER "
     #endif
@@ -39,9 +36,6 @@ const char PROGMEM compile_options[] = {
     #ifdef MY_STARTUP_MELODY
         "-DMY_STARTUP_MELODY=\"" STR(MY_STARTUP_MELODY) "\" "
     #endif
-    #ifdef ENABLE_TELEMETRY
-        "-DENABLE_TELEMETRY "
-    #endif
     #ifdef USE_DYNAMIC_POWER
         "-DUSE_DYNAMIC_POWER "
     #endif
@@ -65,6 +59,9 @@ const char PROGMEM compile_options[] = {
     #endif
     #ifdef USE_DIVERSITY
         "-DUSE_DIVERSITY "
+    #endif
+    #ifdef MODEL_MATCH_ID
+        "-DMODEL_MATCH_ID=" STR(MODEL_MATCH_ID) " "
     #endif
 #endif
 };

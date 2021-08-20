@@ -181,6 +181,7 @@ bool InBindingMode = false;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
+void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
 
 static uint8_t minLqForChaos()
@@ -707,8 +708,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else if (MspReceiver.HasFinishedData())
         {
-            crsf.sendMSPFrameToFC(MspData);
-            MspReceiver.Unlock();
+            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+            {
+                UpdateModelMatch(MspData[9]);
+            }
+            else
+            {
+                crsf.sendMSPFrameToFC(MspData);
+                MspReceiver.Unlock();
+            }
         }
         break;
 
@@ -735,7 +743,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
          }
 
-         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == (UID[5] ^ config.GetModelId()))
          {
              LastSyncPacket = millis();
 #if defined(PRINT_RX_SCOREBOARD)
@@ -991,6 +999,10 @@ static void HandleUARTin()
         if (telemetry.ShouldCallEnterBind())
         {
             EnterBindingMode();
+        }
+        if (telemetry.ShouldCallUpdateModelMatch())
+        {
+            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
     }
 }
@@ -1471,4 +1483,16 @@ void OnELRSBindMSP(uint8_t* packet)
 
     disableWebServer = true;
     ExitBindingMode();
+}
+
+void UpdateModelMatch(uint8_t model)
+{
+    config.SetModelId(model);
+    config.Commit();
+    delay(100);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#elif defined(PLATFORM_ESP8266)
+    ESP.restart();
+#endif
 }
