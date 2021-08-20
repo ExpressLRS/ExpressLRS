@@ -229,11 +229,6 @@ void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
     sentSwitches[index] = value;
 }
 
-uint8_t ICACHE_RAM_ATTR CRSF::getModelID()
-{
-    return modelId;
-}
-
 #if CRSF_TX_MODULE
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
