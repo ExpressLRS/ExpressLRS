@@ -19,8 +19,13 @@ def on_upload(source, target, env):
                 else:
                     offset = int(offset, 10)
                 app_start = offset
+            if "BOOTLOADER=" in flag:
+                bootloader_file = flag.split("=")[1]
+                print(bootloader_file)
+			
 
     firmware_path = str(source[0])
+    bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
     bin_path = os.path.dirname(firmware_path)
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
     if not os.path.exists(elrs_bin_target):
@@ -31,8 +36,14 @@ def on_upload(source, target, env):
     cmd = ["curl", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",
            "-F", "data=@%s" % (elrs_bin_target,)]
+		   
+    cmd_bootloader = ["curl", "--max-time", "60",
+           "--retry", "2", "--retry-delay", "1",
+           "-F", "data=@%s" % (bootloader_target,)]
+		   
     if isstm:
         cmd += ["-F", "flash_address=0x%X" % (app_start,)]
+        cmd_bootloader += ["-F", "flash_address=0x0000"]
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is not None:
@@ -42,6 +53,11 @@ def on_upload(source, target, env):
         addr = "http://%s/%s" % (addr, ['update', 'upload'][isstm])
         print(" ** UPLOADING TO: %s" % addr)
         try:
+            print("** Flashing Bootloader...")
+            print(cmd_bootloader,cmd)
+            subprocess.check_call(cmd_bootloader + [addr])
+            print("** Bootloader Flashed!")
+            print()
             subprocess.check_call(cmd + [addr])
             print()
             print("** UPLOAD SUCCESS. Flashing in progress.")

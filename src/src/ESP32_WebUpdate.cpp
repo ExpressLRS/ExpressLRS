@@ -245,9 +245,6 @@ static void startWifi() {
   WiFi.mode(WIFI_OFF);
   WiFi.setTxPower(WIFI_POWER_13dBm);
   WiFi.setHostname(myHostname);
-  WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(ssid, password);
-  WiFi.scanNetworks(true);
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
@@ -403,7 +400,12 @@ void HandleWebUpdate()
         }
         laststatus = status;
   }
-  if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && changeTime > (millis() - 500)) {
+  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < millis()) {
+    changeTime = millis();
+    changeMode = WIFI_AP;
+    Serial.printf("Connection failed %d\n", status);
+  }
+  if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && (changeTime+500) < millis()) {
     switch(changeMode) {
       case WIFI_AP:
         Serial.println("Changing to AP mode");
@@ -418,6 +420,7 @@ void HandleWebUpdate()
         Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
         WiFi.mode(WIFI_STA);
         wifiMode = WIFI_STA;
+        changeTime = millis();
         WiFi.begin(config.GetSSID(), config.GetPassword());
       default:
         break;

@@ -245,12 +245,8 @@ bool SX127xDriver::DetectChip()
     {
       Serial.print(" not found! (");
       Serial.print(i + 1);
-      Serial.print(" of 3 tries) REG_VERSION == ");
-
-      char buffHex[5];
-      sprintf(buffHex, "0x%02X", version);
-      Serial.print(buffHex);
-      Serial.println();
+      Serial.print(" of 3 tries) REG_VERSION == 0x");
+      Serial.println(version, HEX);
       delay(200);
       i++;
     }
@@ -473,10 +469,10 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
 // {
-//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
+//     int NUM_READS = RSSI_FLOOR_NUM_READS * FHSSNumEntriess();
 //     float returnval = 0;
 
-//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
+//     for (uint32_t freq = 0; freq < FHSSNumEntriess(); freq++)
 //     {
 //         FHSSsetCurrIndex(freq);
 //         Radio.SetMode(SX127X_CAD);

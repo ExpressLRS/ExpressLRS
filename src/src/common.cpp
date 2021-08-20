@@ -12,10 +12,10 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {3, RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 4, 10, 8}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_200HZ, -112, 4380, 3000, 2500, 2000, 4000},
-    {1, RATE_100HZ, -117, 8770, 3500, 2500, 2000, 4000},
-    {2, RATE_50HZ, -120, 17540, 4000, 2500, 2000, 4000},
-    {3, RATE_25HZ, -123, 17540, 6000, 4000, 2000, 4000}};
+    {0, RATE_200HZ, -112, 4380, 3000, 2500, 600, 5000},
+    {1, RATE_100HZ, -117, 8770, 3500, 2500, 600, 5000},
+    {2, RATE_50HZ, -120, 17540, 4000, 2500, 600, 5000},
+    {3, RATE_25HZ, -123, 17540, 6000, 4000, 0, 5000}};
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
@@ -30,10 +30,10 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 4, 12, 8}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_500HZ, -105, 1665, 2500, 2500, 2000, 4000},
-    {1, RATE_250HZ, -108, 3300, 3000, 2500, 2000, 4000},
-    {2, RATE_150HZ, -112, 5871, 3500, 2500, 2000, 4000},
-    {3, RATE_50HZ, -117, 18443, 4000, 2500, 2000, 4000}};
+    {0, RATE_500HZ, -105, 1665, 2500, 2500, 0, 5000},
+    {1, RATE_250HZ, -108, 3300, 3000, 2500, 0, 5000},
+    {2, RATE_150HZ, -112, 5871, 3500, 2500, 0, 5000},
+    {3, RATE_50HZ, -117, 18443, 4000, 2500, 0, 5000}};
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
@@ -163,4 +163,11 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
     case RATE_4HZ: return 4;
     default: return 1;
     }
+}
+
+uint32_t uidMacSeedGet(void)
+{
+    const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
+                             ((uint32_t)UID[4] << 8) + UID[5];
+    return macSeed;
 }

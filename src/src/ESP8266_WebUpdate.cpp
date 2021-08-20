@@ -134,10 +134,11 @@ static void WebUpdateSendMode()
 {
   String s;
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"STA\"");
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"AP\"");
   }
+  s += String(",\"ssid\":\"") + config.GetSSID() + "\",\"modelid\":" + String(config.GetModelId()) + "}";
   server.send(200, "application/json", s);
 }
 
@@ -214,6 +215,20 @@ static void WebUpdateForget(void)
   sendResponse(msg, WIFI_AP);
 }
 
+static void WebUpdateModelId(void)
+{
+  long modelid = server.arg("modelid").toInt();
+  if (modelid < 0 || modelid > 63) modelid = 0;
+  Serial.printf("Setting model match id %d\n", (uint8_t)modelid);
+  config.SetModelId((uint8_t)modelid);
+  config.Commit();
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", "Model Match updated, rebooting receiver");
+  server.client().stop();
+  delay(100);
+  ESP.restart();
+}
+
 static void WebUpdateHandleNotFound()
 {
   if (captivePortal())
@@ -246,9 +261,6 @@ static void startWifi() {
   WiFi.setOutputPower(13);
   WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   WiFi.setHostname(myHostname);
-  WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(ssid, password);
-  WiFi.scanNetworks(true);
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
@@ -287,6 +299,7 @@ void BeginWebUpdate(void)
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
+  server.on("/model", WebUpdateModelId);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
@@ -409,7 +422,12 @@ void HandleWebUpdate(void)
         }
         laststatus = status;
   }
-  if (changeMode != wifiMode && changeMode != WIFI_OFF && changeTime > (millis() - 500)) {
+  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < millis()) {
+    changeTime = millis();
+    changeMode = WIFI_AP;
+    Serial.printf("Connection failed %d\n", status);
+  }
+  if (changeMode != wifiMode && changeMode != WIFI_OFF && (changeTime+500) < millis()) {
     switch(changeMode) {
       case WIFI_AP:
         Serial.println("Changing to AP mode");
@@ -424,6 +442,7 @@ void HandleWebUpdate(void)
         Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
         WiFi.mode(WIFI_STA);
         wifiMode = WIFI_STA;
+        changeTime = millis();
         WiFi.begin(config.GetSSID(), config.GetPassword());
       default:
         break;

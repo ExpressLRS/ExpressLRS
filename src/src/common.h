@@ -139,6 +139,8 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
 #endif // UNIT_TEST
 
+uint32_t uidMacSeedGet(void);
+
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6
@@ -147,6 +149,10 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX6 9
 #define AUX7 10
 #define AUX8 11
+#define AUX9 12
+#define AUX10 13
+#define AUX11 14
+#define AUX12 15
 
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/

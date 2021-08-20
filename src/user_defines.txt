@@ -24,12 +24,6 @@
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
 
-
-### SWITCHES: ###
-
-#-DHYBRID_SWITCHES_8
-
-
 ### PERFORMANCE OPTIONS: ###
 
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
@@ -53,15 +47,12 @@
 ### OTHER OPTIONS: ###
 
 -DAUTO_WIFI_ON_INTERVAL=30
--DHOME_WIFI_SSID=""
--DHOME_WIFI_PASSWORD=""
+#-DHOME_WIFI_SSID=""
+#-DHOME_WIFI_PASSWORD=""
 
 #-DJUST_BEEP_ONCE
 #-DDISABLE_STARTUP_BEEP
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
-
-# Comment this to disable advanced telemetry.
-#-DENABLE_TELEMETRY
 
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
@@ -69,5 +60,12 @@
 # Comment this to disable dynamic TX power management.
 #-DUSE_DYNAMIC_POWER
 
+# The aux channel used to indicate power should be boosted to max. Value <1500 = Dynamic Power, >1500=Max configured power.
+# It is recommended to set this to be between AUX9--AUX12 for not wasting any packet over the air.
+#-DDYNAMIC_POWER_BOOST=AUX12
+
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
+
+# The model number defined in OpenTX, if you want to use model matching.
+#-DMODEL_MATCH_ID=0

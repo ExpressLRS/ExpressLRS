@@ -9,12 +9,13 @@
 #include <FS.h>
 #include "stm32Updater.h"
 #include "stk500.h"
+//#include "esp_sleep.h"
 
 // reference for spiffs upload https://taillieu.info/index.php/internet-of-things/esp8266/335-esp8266-uploading-files-to-the-server
 
 //#define INVERTED_SERIAL                                  // Comment this out for non-inverted serial
 #define USE_WIFI_MANAGER                                 // Comment this out to host an access point rather than use the WiFiManager
-
+#define AUTO_SLEEP 120                                     // auto sleep in s
 const char *ssid = "ExpressLRS Tx";                        // The name of the Wi-Fi network that will be created
 const char *password = "expresslrs";                       // The password required to connect to it, leave blank for an open network
 
@@ -155,7 +156,7 @@ curl --include \
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
 <input type='file' accept='.bin,.elrs' name='firmware' id='stm_fw'>
-<input type='text' value='0x0000' name='flash_address' size='6' id='stm_addr' class="hide">
+<input type='text' value='0x4000' name='flash_address' size='6' id='stm_addr' class="hide">
 <input type='submit' value='Upload and Flash STM32' id='stm_submit' disabled='disabled'>
 </form>
 <div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
@@ -549,4 +550,10 @@ void loop()
   server.handleClient();
   webSocket.loop();
   mdns.update();
+
+  #ifndef USE_WIFI_MANAGER
+  if(!wifi_softap_get_station_num() && millis() > (AUTO_SLEEP*1000)){
+    ESP.deepSleep(0);
+  }
+  #endif
 }
