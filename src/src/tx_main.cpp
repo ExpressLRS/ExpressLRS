@@ -38,7 +38,6 @@ SX1280Driver Radio;
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
-
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
 #endif
@@ -651,6 +650,7 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
     delay(200);
+
   hwTimer.resume();
 }
 
@@ -926,14 +926,23 @@ void loop()
   UpdateConnectDisconnectStatus(now);
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
-  #if defined(PLATFORM_ESP32)
-    if (webUpdateMode)
-    {
-      HandleWebUpdate();
-      return;
-    }
-  #endif
+#ifdef PLATFORM_ESP32
+  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
+  //start webupdate, there might be wrong configuration flashed.
 
+  if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000)){
+#ifndef DEBUG_SUPPRESS
+  Serial.println("startup Check Failled")
+#endif
+    webUpdateMode = true;
+    BeginWebUpdate();
+  }
+  if (webUpdateMode)
+  {
+    HandleWebUpdate();
+    return;
+  }
+#endif
   HandleUpdateParameter();
   CheckConfigChangePending();
 
