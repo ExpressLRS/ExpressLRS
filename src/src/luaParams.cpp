@@ -80,7 +80,6 @@ struct tagLuaItem_string luaELRSversion = {
     LUA_STRING_SIZE(luaELRSversion)
 };
 
-
 #ifdef PLATFORM_ESP32
 struct tagLuaItem_command luaWebUpdate = {
     {0,(uint8_t)CRSF_COMMAND},//id,type

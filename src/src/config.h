@@ -7,7 +7,7 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   3
+#define TX_CONFIG_VERSION   4
 #define RX_CONFIG_VERSION   3
 #define UID_LEN             6
 
@@ -23,12 +23,11 @@ typedef struct {
     uint32_t        version;
     char            ssid[33];
     char            password[33];
-    model_config_t  model_config[64];
     uint8_t         vtxBand;
     uint8_t         vtxChannel;
     uint8_t         vtxPower;
     uint8_t         vtxPitmode;
-;
+    model_config_t  model_config[64];
 } tx_config_t;
 
 class TxConfig

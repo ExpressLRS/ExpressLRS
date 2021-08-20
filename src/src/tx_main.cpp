@@ -614,8 +614,6 @@ void registerLuaParameters() {
   });
 #endif
 
-  registerLUAParameter(&luaInfo);
-  registerLUAParameter(&luaELRSversion);
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
@@ -634,6 +632,8 @@ void registerLuaParameters() {
       VtxConfigReadyToSend = true;
   });
 
+  registerLUAParameter(&luaInfo);
+  registerLUAParameter(&luaELRSversion);
 }
 
 void resetLuaParams(){
