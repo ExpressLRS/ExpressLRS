@@ -143,7 +143,7 @@ void DynamicPower_Update()
   #ifdef DYNAMIC_POWER_BOOST
     // if a user selected to disable dynamic power (ch16)
     if(CRSF_to_BIT(crsf.ChannelDataIn[DYNAMIC_POWER_BOOST])) {
-      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower(crsf.getModelID()));
       // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
       return;
     }

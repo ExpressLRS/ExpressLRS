@@ -92,7 +92,7 @@ public:
     void ICACHE_RAM_ATTR setNextSwitchFirstIndex(int firstSwitchIndex);
     void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
-    uint8_t ICACHE_RAM_ATTR getModelID();
+    uint8_t getModelID() const { return modelId; }
 
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
