@@ -320,8 +320,8 @@ void SetSwitchMode(uint32_t switchMode)
 {
   switch(switchMode) {
     case 0b00:
-      GenerateChannelData = GenerateChannelData10bit;
-      crsf.setNextSwitchFirstIndex(0);
+      GenerateChannelData = GenerateChannelDataHybridSwitch8;
+      crsf.setNextSwitchFirstIndex(1);
       break;
     case 0b01:
       GenerateChannelData = GenerateChannelDataHybridSwitch8;
