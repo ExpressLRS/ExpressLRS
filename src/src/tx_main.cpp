@@ -618,7 +618,8 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate(crsf.getModelID()));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm(crsf.getModelID()));
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
+  // Commented out for now until we add more switch options
+  //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 }
