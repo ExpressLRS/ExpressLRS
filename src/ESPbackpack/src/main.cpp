@@ -155,7 +155,7 @@ curl --include \
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
 <input type='file' accept='.bin,.elrs' name='firmware' id='stm_fw'>
-<input type='text' value='0x0000' name='flash_address' size='6' id='stm_addr' class="hide">
+<input type='text' value='0x4000' name='flash_address' size='6' id='stm_addr' class="hide">
 <input type='submit' value='Upload and Flash STM32' id='stm_submit' disabled='disabled'>
 </form>
 <div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
