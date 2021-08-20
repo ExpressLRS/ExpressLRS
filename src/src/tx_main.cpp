@@ -205,6 +205,13 @@ void DynamicPower_Update()
   #endif  // USE_DYNAMIC_POWER
 }
 
+#if defined(NO_SYNC_ON_ARM)
+static bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+}
+#endif
+
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
   uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
@@ -277,17 +284,21 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   const uint8_t SwitchEncMode = config.GetSwitchMode(crsf.getModelID()) & 0b11;
   uint8_t Index;
-  uint8_t TLMrate;
   if (syncSpamCounter)
   {
     Index = (config.GetRate(crsf.getModelID()) & 0b11);
-    TLMrate = (config.GetTlm(crsf.getModelID()) & 0b111);
   }
   else
   {
     Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
-    TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
   }
+
+  // TLM ratio is boosted for one sync cycle when the MspSender goes active
+  if (MspSender.IsActive())
+    ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_1_2;
+  else
+    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm(crsf.getModelID());
+  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
@@ -411,7 +422,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 #if defined(NO_SYNC_ON_ARM)
   SyncInterval = 250;
-  bool skipSync = (bool)CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+  bool skipSync = IsArmed();
 #else
   SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;
@@ -445,6 +456,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       NextPacketIsMspData = false;
       // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
       BindingSendCount++;
+      // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
+      // to add bandwidth for the reply
+      if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_1_2)
+        syncSpamCounter = 1;
     }
     else
     {
@@ -599,14 +614,9 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->index));
-  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-
-  #ifdef USE_DYNAMIC_POWER
+  setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate(crsf.getModelID()));
+  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm(crsf.getModelID()));
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
-  #else
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(POWERMGNT.currPower()));//value
-  #endif
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
@@ -657,9 +667,9 @@ void UARTconnected()
 static void ChangeRadioParams()
 {
   SetRFLinkRate(config.GetRate(crsf.getModelID()));
-  ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm(crsf.getModelID());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower(crsf.getModelID()));
   SetSwitchMode(config.GetSwitchMode(crsf.getModelID()));
+  // TLM interval is set on the next SYNC packet
 }
 
 void HandleUpdateParameter()
