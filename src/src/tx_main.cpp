@@ -549,13 +549,14 @@ void registerLuaParameters() {
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
   });
-  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
-    Serial.print("Request Switch Mode: ");
-    uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
-    Serial.println(newSwitchMode, DEC);
-    config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
-    SetSwitchMode(newSwitchMode);
-  });
+  // Commented out for now until we add more switch options
+  // registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
+  //   Serial.print("Request Switch Mode: ");
+  //   uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
+  //   Serial.println(newSwitchMode, DEC);
+  //   config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
+  //   SetSwitchMode(newSwitchMode);
+  // });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
     Serial.print("Request Model Match: ");
     bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
