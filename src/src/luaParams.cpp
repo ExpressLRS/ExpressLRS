@@ -23,7 +23,7 @@ struct tagLuaItem_textSelection luaAirRate = {
 struct tagLuaItem_textSelection luaTlmRate = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "T.Rate",
-    "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
+    "Off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
     {0,0,7},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
@@ -100,7 +100,7 @@ extern struct tagLuaItem_folder luaVtxFolder = {
 struct tagLuaItem_textSelection luaVtxBand = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Band",
-    "Off;A;B;E;F;R;L",
+    "A;B;E;F;R;L;Off",
     {0,0,6},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaVtxBand)

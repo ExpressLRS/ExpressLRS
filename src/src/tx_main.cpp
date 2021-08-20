@@ -1149,10 +1149,10 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 void VtxConfigToMSPOut()
 {
-  if (!config.GetVtxBand())
+  if (config.GetVtxBand() == 6) // 6 = off in the lua Band field
     return;
 
-  uint8_t vtxIdx = (config.GetVtxBand() - 1) * 8 + config.GetVtxChannel();
+  uint8_t vtxIdx = config.GetVtxBand() * 8 + config.GetVtxChannel();
 
   mspPacket_t packet;
   packet.reset();
