@@ -181,6 +181,7 @@ bool InBindingMode = false;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
+void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
 
 static uint8_t minLqForChaos()
@@ -191,11 +192,12 @@ static uint8_t minLqForChaos()
     // The amount of time we coexist on the same channel is
     // 100 divided by the total number of packets in a FHSS loop (rounded up)
     // and there would be 4x packets received each time it passes by so
-    // FHSShopInterval * ceil(100 / FHSShopInterval * NR_FHSS_ENTRIES) or
-    // FHSShopInterval * trunc((100 + (FHSShopInterval * NR_FHSS_ENTRIES) - 1) / (FHSShopInterval * NR_FHSS_ENTRIES))
+    // FHSShopInterval * ceil(100 / FHSShopInterval * numfhss) or
+    // FHSShopInterval * trunc((100 + (FHSShopInterval * numfhss) - 1) / (FHSShopInterval * numfhss))
     // With a interval of 4 this works out to: 2.4=4, FCC915=4, AU915=8, EU868=8, EU/AU433=36
-    uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-    return interval * ((interval * NR_FHSS_ENTRIES + 99) / (interval * NR_FHSS_ENTRIES));
+    const uint32_t numfhss = FHSSNumEntriess();
+    const uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    return interval * ((interval * numfhss + 99) / (interval * numfhss));
 }
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
@@ -238,7 +240,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * NR_FHSS_ENTRIES * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
+    cycleInterval = ((uint32_t)11U * FHSSNumEntriess() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -707,8 +709,15 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         }
         else if (MspReceiver.HasFinishedData())
         {
-            crsf.sendMSPFrameToFC(MspData);
-            MspReceiver.Unlock();
+            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+            {
+                UpdateModelMatch(MspData[9]);
+            }
+            else
+            {
+                crsf.sendMSPFrameToFC(MspData);
+                MspReceiver.Unlock();
+            }
         }
         break;
 
@@ -735,7 +744,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 break;
          }
 
-         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == UID[5])
+         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == (UID[5] ^ config.GetModelId()))
          {
              LastSyncPacket = millis();
 #if defined(PRINT_RX_SCOREBOARD)
@@ -992,6 +1001,10 @@ static void HandleUARTin()
         {
             EnterBindingMode();
         }
+        if (telemetry.ShouldCallUpdateModelMatch())
+        {
+            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
     }
 }
 
@@ -1155,8 +1168,7 @@ void setup()
     ws2812Blink();
     setupBindingFromConfig();
 
-    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-    FHSSrandomiseFHSSsequence(macSeed);
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     setupRadio();
 
@@ -1466,9 +1478,20 @@ void OnELRSBindMSP(uint8_t* packet)
     // Write the values to eeprom
     config.Commit();
 
-    long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-    FHSSrandomiseFHSSsequence(macSeed);
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     disableWebServer = true;
     ExitBindingMode();
+}
+
+void UpdateModelMatch(uint8_t model)
+{
+    config.SetModelId(model);
+    config.Commit();
+    delay(100);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#elif defined(PLATFORM_ESP8266)
+    ESP.restart();
+#endif
 }

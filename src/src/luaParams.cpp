@@ -36,7 +36,29 @@ struct tagLuaItem_textSelection luaPower = {
     "mW",
     LUA_TEXTSELECTION_SIZE(luaPower)
 };
-
+struct tagLuaItem_textSelection luaSwitch = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Switch",
+    "1-Bit;Hybrid",
+    {0,0,1},//value,min,max,default
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaSwitch)
+};
+struct tagLuaItem_textSelection luaModelMatch = {
+    {5,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Model Match",
+    "Off;On",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaModelMatch)
+};
+struct tagLuaItem_uint8 luaSetRXModel = {
+    {6,(uint8_t)CRSF_UINT8},//id,type
+    "Set RX Model",
+    {0,0,63},//value,min,max
+    emptySpace,
+    LUA_UINT8_SIZE(luaSetRXModel)
+};
 struct tagLuaItem_command luaBind = {
     {0,(uint8_t)CRSF_COMMAND},//id,type
     "Bind",
@@ -44,7 +66,6 @@ struct tagLuaItem_command luaBind = {
     emptySpace,
     LUA_COMMAND_SIZE(luaBind)
 };
-
 struct tagLuaItem_string luaInfo = {
     {0,(uint8_t)CRSF_INFO},//id,type
     thisCommit,

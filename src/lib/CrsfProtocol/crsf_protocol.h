@@ -120,6 +120,14 @@ typedef enum
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
 } crsf_frame_type_e;
 
+typedef enum {
+    SUBCOMMAND_CRSF = 0x10
+} crsf_command_e;
+
+typedef enum {
+    COMMAND_MODEL_SELECT_ID = 0x05
+} crsf_subcommand_e;
+
 enum {
     CRSF_FRAME_TX_MSP_FRAME_SIZE = 58,
     CRSF_FRAME_RX_MSP_FRAME_SIZE = 8,

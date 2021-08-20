@@ -23,20 +23,32 @@ HardwareSerial CRSF::Port = HardwareSerial();
  * Successive calls should increment the next index until wrap
  * around from 7 to either 0 or 1 depending on mode.
  */
-void test_round_robin(void)
+void test_round_robin_index0(void)
 {
+    crsf.setNextSwitchFirstIndex(0);
     uint8_t expectedIndex = crsf.nextSwitchIndex;
-
+    
     for(uint8_t i = 0; i < 10; i++) {
         uint8_t nsi = crsf.getNextSwitchIndex();
         TEST_ASSERT_EQUAL(expectedIndex, nsi);
         expectedIndex++;
         if (expectedIndex == 8) {
-            #ifdef HYBRID_SWITCHES_8
-            expectedIndex = 1;
-            #else
             expectedIndex = 0;
-            #endif
+        }
+    }
+}
+
+void test_round_robin_index1(void)
+{
+    crsf.setNextSwitchFirstIndex(1);
+    uint8_t expectedIndex = crsf.nextSwitchIndex;
+    
+    for(uint8_t i = 0; i < 10; i++) {
+        uint8_t nsi = crsf.getNextSwitchIndex();
+        TEST_ASSERT_EQUAL(expectedIndex, nsi);
+        expectedIndex++;
+        if (expectedIndex == 8) {
+            expectedIndex = 1;
         }
     }
 }
@@ -261,7 +273,7 @@ void test_encoding10bit()
     }
 
     // encode it
-    GenerateChannelData10bit(TXdataBuffer, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, &crsf, false);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -310,7 +322,7 @@ void test_decoding10bit()
     }
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelData10bit(TXdataBuffer, &crsf);
+    GenerateChannelData10bit(TXdataBuffer, &crsf, false);
 
     // run the decoder, results in crsf->PackedRCdataOut
     UnpackChannelData10bit(TXdataBuffer, &crsf);
@@ -334,7 +346,8 @@ void test_decoding10bit()
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_round_robin);
+    RUN_TEST(test_round_robin_index0);
+    RUN_TEST(test_round_robin_index1);
     RUN_TEST(test_priority);
 
     RUN_TEST(test_encodingHybrid8_3);
