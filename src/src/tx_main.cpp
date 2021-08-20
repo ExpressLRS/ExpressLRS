@@ -112,6 +112,7 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void VtxConfigToMSPOut();
+void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
 
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -1144,6 +1145,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
     crsf.AddMspMessage(packet);
+
+    eepromWriteToMSPOut();
   }
 }
 
@@ -1163,6 +1166,21 @@ void VtxConfigToMSPOut()
   packet.addByte(0);
   packet.addByte(config.GetVtxPower());
   packet.addByte(config.GetVtxPitmode());
+
+  crsf.AddMspMessage(&packet);
+
+  eepromWriteToMSPOut();
+}
+
+void eepromWriteToMSPOut()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.function = MSP_EEPROM_WRITE;
+  packet.addByte(0);
+  packet.addByte(0);
+  packet.addByte(0);
+  packet.addByte(0);
 
   crsf.AddMspMessage(&packet);
 }
