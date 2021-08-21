@@ -629,9 +629,6 @@ void registerLuaParameters() {
         Serial.println("Wifi Update Mode Requested!");
   #endif
         BeginWebUpdate();
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-  #endif
       } else if(arg == 6){ //status poll
           sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
