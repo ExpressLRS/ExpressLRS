@@ -69,14 +69,14 @@ struct tagLuaItem_command luaBind = {
 };
 struct tagLuaItem_string luaInfo = {
     {0,(uint8_t)CRSF_INFO},//id,type
-    thisCommit,
+    "Bad/Good",
     thisCommit,
     LUA_STRING_SIZE(luaInfo)
 };
 struct tagLuaItem_string luaELRSversion = {
     {0,(uint8_t)CRSF_INFO},//id,type
     thisVersion,
-    emptySpace,
+    thisCommit,
     LUA_STRING_SIZE(luaELRSversion)
 };
 
