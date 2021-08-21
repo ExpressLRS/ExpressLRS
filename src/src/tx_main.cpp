@@ -579,42 +579,7 @@ void registerLuaParameters() {
     msp.addByte(rxModel);
     crsf.AddMspMessage(&msp);
   });
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg == 1)
-    {
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Binding requested from LUA");
-#endif
-      EnterBindingMode();
-    } else if(arg == 6){
-        sendLuaFieldCrsf(id, 0);
-    }
-    else
-    {
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Binding stopped  from LUA");
-#endif
-      ExitBindingMode();
-    }
-  });
-#ifdef PLATFORM_ESP32
-  registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-    if (arg == 1)
-    {
-      webUpdateMode = true;
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Wifi Update Mode Requested!");
-#endif
-      BeginWebUpdate();
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-#endif
-    } else if(arg == 6){
-        sendLuaFieldCrsf(id,0);
-    }
-  });
-#endif
-
+  
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
@@ -632,6 +597,42 @@ void registerLuaParameters() {
       sendLuaFieldCrsf(id,0);
       VtxConfigReadyToSend = true;
   },luaVtxFolder.luaProperties1.id);
+
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+      if (arg == 1)
+      {
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Binding requested from LUA");
+  #endif
+        EnterBindingMode();
+      } else if(arg == 6){
+          sendLuaFieldCrsf(id, 0);
+      }
+      else
+      {
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Binding stopped  from LUA");
+  #endif
+        ExitBindingMode();
+      }
+    });
+  #ifdef PLATFORM_ESP32
+    registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
+      if (arg == 1)
+      {
+        webUpdateMode = true;
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Wifi Update Mode Requested!");
+  #endif
+        BeginWebUpdate();
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Wifi Update Mode Requested but not supported on this platform!");
+  #endif
+      } else if(arg == 6){
+          sendLuaFieldCrsf(id,0);
+      }
+    });
+  #endif
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
