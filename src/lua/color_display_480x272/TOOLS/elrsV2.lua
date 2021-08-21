@@ -409,16 +409,16 @@ local function parseParameterInfoMessage(data)
         initLineIndex()
       end
       if fieldId == fields_count then
-          allParamsLoaded = 1
-          fieldId = 1 + (fieldId % #fields)
+        allParamsLoaded = 1
+        fieldId = 1 + (fieldId % #fields)
       else
-
-          fieldId = 1 + (fieldId % #fields)
+        fieldId = 1 + (fieldId % #fields)
       end
     end
     fieldData = {}
   end
 end
+
 local function parseElrsInfoMessage(data)
   if data[2] ~= deviceId then
     fieldData = {}
@@ -430,6 +430,7 @@ local function parseElrsInfoMessage(data)
   elrsFlags = data[6]
   elrsFlagsInfo,offset = fieldGetString(data,7)
 end
+
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
   if command == nil then
@@ -470,7 +471,7 @@ local function runDevicePage(event)
       functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
-      folderAccess = 0    
+      folderAccess = 0
       allParamsLoaded = 0
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
@@ -515,7 +516,7 @@ local function runDevicePage(event)
   if elrsFlags > 0 then
     lcd.clear()
     lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
-    lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)  
+    lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)
     lcd.drawText(20,50,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
     lcd.drawText(20,100,"ok",BLINK + INVERS)
   else
@@ -553,13 +554,6 @@ local function runDevicePage(event)
 end
 
 local function runPopupPage(event)
-  if event == EVT_VIRTUAL_EXIT then             -- exit script
-    fieldTimeout = getTime() + 200 -- 2s
-    fieldChunk = 0
-    fieldData = {}
-    allParamsLoaded = 0
-  return 0
-  end
   local result
   if fieldPopup.status == 3 then
     result = popupConfirmation("Confirmation", fieldPopup.info, event)

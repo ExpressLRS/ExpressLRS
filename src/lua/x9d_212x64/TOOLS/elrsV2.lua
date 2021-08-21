@@ -410,7 +410,7 @@ local function parseParameterInfoMessage(data)
         fieldId = 1 + (fieldId % #fields)
       else
         fieldId = 1 + (fieldId % #fields)
-      end      
+      end
     end
     fieldData = {}
   end
@@ -468,7 +468,7 @@ local function runDevicePage(event)
       functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
-      folderAccess = 0    
+      folderAccess = 0
       allParamsLoaded = 0
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
@@ -510,7 +510,6 @@ local function runDevicePage(event)
       selectField(-1)
     end
   end
-
   if elrsFlags > 0 then
     lcd.clear()
     lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
@@ -524,7 +523,7 @@ local function runDevicePage(event)
     else
       lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
     end
-  for y = 1, 7 do
+    for y = 1, 7 do
       local field = getField(pageOffset+y)
       if not field then
         break
