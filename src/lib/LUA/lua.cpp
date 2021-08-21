@@ -1,8 +1,11 @@
 #ifdef TARGET_TX
 
 #include "lua.h"
-
 #include "CRSF.h"
+
+#define QUOTE(arg) #arg
+#define STR(macro) QUOTE(macro)
+const char txDeviceName[] = STR(TX_DEVICE_NAME);
 
 extern CRSF crsf;
 
@@ -20,7 +23,7 @@ static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 
 static struct tagLuaDevice luaDevice = {
-    "ELRS",
+    txDeviceName,
     {{0},0},
     LUA_DEVICE_SIZE(luaDevice)
 };
