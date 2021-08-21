@@ -33,16 +33,19 @@ local elrsFlagsInfo = "no"
 local fields_count = 0
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
+local folderAccess = 0
 
 local function getField(line)
   local counter = 1
   for i = 1, #fields do
     local field = fields[i]
     if not field.hidden then
-      if counter < line then
-        counter = counter + 1
-      else
-        return field
+      if folderAccess == field.parent then
+        if counter < line then
+          counter = counter + 1
+        else
+          return field
+        end
       end
     end
   end
@@ -52,7 +55,7 @@ local function initLineIndex()
   lineIndex = 0
   for i = 1, #fields do
     local field = getField(i)
-    if field and field.type ~= 11 and field.type ~= 12 and field.name ~= nil then
+    if field and field.type ~= 12 and field.name ~= nil then
       lineIndex = i
       break
     end
@@ -106,7 +109,7 @@ local function selectField(step)
       pageOffset = 0
     end
     field = getField(newLineIndex)
-  until newLineIndex == lineIndex or (field and field.type ~= 11 and field.name)
+  until newLineIndex == lineIndex or (field and field.name)
   lineIndex = newLineIndex
   if lineIndex > 11 + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
     pageOffset = lineIndex - 11 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
@@ -326,6 +329,10 @@ local function fieldStringDisplay(field, y, attr)
   end
 end
 
+local function fieldFolderOpen(field)
+  folderAccess = field.id
+end
+
 local function fieldCommandLoad(field, data, offset)
   field.status = data[offset]
   field.timeout = data[offset+1]
@@ -363,7 +370,7 @@ local functions = {
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  nil,
+  { load=nil, save=fieldFolderOpen, display=nil },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
 }
@@ -397,11 +404,11 @@ local function parseParameterInfoMessage(data)
       end
       field.name = indent .. name
     end
-    if functions[field.type+1] then
+    if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, i)
     end
     if not fieldPopup then
-      if lineIndex == 0 and field.hidden ~= true and field.type and field.type ~= 11 and field.type ~= 12 then
+      if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent and field.type and field.type ~= 12 then
         initLineIndex()
       end
       if fieldId == fields_count then
@@ -466,8 +473,8 @@ local function runDevicePage(event)
       functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
-          allParamsLoaded = 0
-      
+      folderAccess = 0    
+      allParamsLoaded = 0
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -532,8 +539,8 @@ local function runDevicePage(event)
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
         if field.type == 11 then
           lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
-          lcd.drawText(1, y*22+10, field.name, MENU_TITLE_COLOR)
-        elseif functions[field.type+1] then
+          lcd.drawText(1, y*22+10, field.name, attr)
+        elseif functions[field.type+1].display then
           lcd.drawText(1, y*22+10, field.name)
           functions[field.type+1].display(field, y*22+10, attr)
         end
