@@ -27,9 +27,9 @@ local SX127x_RATES = {
     rates = { 25, 50, 100, 200 },
 }
 local SX128x_RATES = {
-    list = {'25Hz(-120dbm)', '50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
-    values = {0x06, 0x05, 0x03, 0x01, 0x00},
-    rates = { 25, 50, 150, 250, 500 },
+    list = {'50Hz(-117dbm)', '150Hz(-112dbm)', '250Hz(-108dbm)', '500Hz(-105dbm)'},
+    values = {0x05, 0x03, 0x01, 0x00},
+    rates = { 50, 150, 250, 500 },
 }
 local tx_lua_version = {
     selected = 1,
