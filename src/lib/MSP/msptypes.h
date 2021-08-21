@@ -3,8 +3,9 @@
 #define MSP_ELRS_FUNC       0x4578 // ['E','x']
 
 #define MSP_SET_RX_CONFIG   45
-#define MSP_VTX_CONFIG      88 //out message         Get vtx settings - betaflight
-#define MSP_SET_VTX_CONFIG  89 //in message          Set vtx settings - betaflight
+#define MSP_VTX_CONFIG      88   //out message         Get vtx settings - betaflight
+#define MSP_SET_VTX_CONFIG  89   //in message          Set vtx settings - betaflight
+#define MSP_EEPROM_WRITE    250  //in message          no param
 
 // ELRS specific opcodes
 #define MSP_ELRS_RF_MODE    0x06

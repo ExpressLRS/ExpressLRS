@@ -530,8 +530,11 @@ local function runDevicePage(event)
         lcd.drawText(1, y*22+10, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        lcd.drawText(1, y*22+10, field.name)
-        if functions[field.type+1] then
+        if field.type == 11 then
+          lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
+          lcd.drawText(1, y*22+10, field.name, MENU_TITLE_COLOR)
+        elseif functions[field.type+1] then
+          lcd.drawText(1, y*22+10, field.name)
           functions[field.type+1].display(field, y*22+10, attr)
         end
       end

@@ -16,3 +16,11 @@ extern struct tagLuaItem_string luaELRSversion;
 #ifdef PLATFORM_ESP32
 extern struct tagLuaItem_command luaWebUpdate;
 #endif
+//----------------------------VTX ADMINISTRATOR------------------
+extern struct tagLuaItem_folder luaVtxFolder;
+extern struct tagLuaItem_textSelection luaVtxBand;
+extern struct tagLuaItem_textSelection luaVtxChannel;
+extern struct tagLuaItem_textSelection luaVtxPwr;
+extern struct tagLuaItem_textSelection luaVtxPit;
+extern struct tagLuaItem_command luaVtxSend;
+//----------------------------VTX ADMINISTRATOR------------------

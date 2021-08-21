@@ -418,6 +418,11 @@ struct tagLuaItem_string {
     const char *label2; //string value
     uint8_t size;
 } PACKED;
+struct tagLuaItem_folder {
+    const struct tagLuaProperties1 luaProperties1;
+    const char* const label1; //param name
+    uint8_t size;
+} PACKED;
 
 
 

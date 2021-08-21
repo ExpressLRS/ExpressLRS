@@ -23,7 +23,7 @@ struct tagLuaItem_textSelection luaAirRate = {
 struct tagLuaItem_textSelection luaTlmRate = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "T.Rate",
-    "off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
+    "Off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
     {0,0,7},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
@@ -80,7 +80,6 @@ struct tagLuaItem_string luaELRSversion = {
     LUA_STRING_SIZE(luaELRSversion)
 };
 
-
 #ifdef PLATFORM_ESP32
 struct tagLuaItem_command luaWebUpdate = {
     {0,(uint8_t)CRSF_COMMAND},//id,type
@@ -90,4 +89,58 @@ struct tagLuaItem_command luaWebUpdate = {
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 #endif
+
+//----------------------------VTX ADMINISTRATOR------------------
+struct tagLuaItem_folder luaVtxFolder = {
+    {0,(uint8_t)CRSF_FOLDER},//id,type
+    "VTX ADMINISTRATOR",
+    LUA_FOLDER_SIZE(luaVtxFolder)
+};
+
+struct tagLuaItem_textSelection luaVtxBand = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Band",
+    "A;B;E;F;R;L;Off",
+    {0,0,6},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxBand)
+};
+
+struct tagLuaItem_textSelection luaVtxChannel = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Channel",
+    "1;2;3;4;5;6;7;8",
+    {0,0,7},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
+};
+
+struct tagLuaItem_textSelection luaVtxPwr = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Pwr Lvl",
+    "-;1;2;3;4;5;6;7;8",
+    {0,0,8},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxPwr)
+};
+
+struct tagLuaItem_textSelection luaVtxPit = {
+    {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Pitmode",
+    "Off;On",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaVtxPit)
+};
+
+struct tagLuaItem_command luaVtxSend = {
+    {0,(uint8_t)CRSF_COMMAND},//id,type
+    "Send VTx",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaVtxSend)
+};
+
+//----------------------------VTX ADMINISTRATOR------------------
+
 #endif
