@@ -535,12 +535,16 @@ local function runDevicePage(event)
         lcd.drawText(0, 1+8*y, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 then
+        if field.type == 11 or field.type == 13 then
           lcd.drawFilledRectangle(0, 1+8*y, LCD_W, 8, GREY_DEFAULT)
           lcd.drawText(0, 1+8*y, field.name,attr)
-        elseif functions[field.type+1].display then
-          lcd.drawText(0, 1+8*y, field.name)
-          functions[field.type+1].display(field, 1+8*y, attr)
+        end
+        if functions[field.type+1].display then
+          if field.type ~= 11 and field.type ~= 13 then  
+            lcd.drawText(0, 1+8*y, field.name)
+          end
+            functions[field.type+1].display(field, 1+8*y, attr)
+        end
       end
     end
   end
