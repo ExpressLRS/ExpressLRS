@@ -709,6 +709,7 @@ void HandleUpdateParameter()
     ChangeRadioParams();
     UpdateModelReq = false;
   }
+    crsf.setLuaHiddenFlag(luaInfo.luaProperties1.id,crsf.elrsLUAmode);
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
