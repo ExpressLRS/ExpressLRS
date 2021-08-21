@@ -550,6 +550,15 @@ local function runDevicePage(event)
 end
 
 local function runPopupPage(event)
+  if event == EVT_VIRTUAL_EXIT then             -- exit script
+    fieldTimeout = getTime() + 200 -- 2s
+    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+    fieldChunk = 0
+    fieldData = {}
+    allParamsLoaded = 0
+    fieldPopup = nil
+  return 0
+  end
   local result
   if fieldPopup.status == 3 then
     result = popupConfirmation(fieldPopup.info, event)
