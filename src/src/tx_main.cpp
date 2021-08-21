@@ -618,20 +618,20 @@ void registerLuaParameters() {
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
       config.SetVtxChannel(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
       config.SetVtxPower(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
       config.SetVtxPitmode(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
       sendLuaFieldCrsf(id,0);
       VtxConfigReadyToSend = true;
-  });
+  },luaVtxFolder.luaProperties1.id);
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);

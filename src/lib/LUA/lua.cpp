@@ -91,11 +91,12 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
   UpdateParamReq = true;
 }
 
-void registerLUAParameter(void *definition, luaCallback callback)
+void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;
   lastLuaField++;
   p->id = lastLuaField;
+  p->parent = parent;
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
   luaDevice.luaDeviceProperties.fieldamount = lastLuaField;

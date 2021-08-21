@@ -30,7 +30,7 @@ extern bool luaHandleUpdateParameter();
 void registerLUAPopulateParams(void (*populate)());
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
-void registerLUAParameter(void *definition, luaCallback callback = 0);
+void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);
 
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *textSelectionStruct, uint8_t newvalue);
 void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t newvalue);
