@@ -20,7 +20,6 @@ extern struct tagLuaItem_command luaWebUpdate;
 extern struct tagLuaItem_folder luaPowerFolder;
 extern struct tagLuaItem_textSelection luaPower;
 extern struct tagLuaItem_textSelection luaDynamicPower;
-extern struct tagLuaItem_textSelection luaBoostChannel;
 //----------------------------POWER------------------
 
 //----------------------------VTX ADMINISTRATOR------------------

@@ -144,7 +144,7 @@ void DynamicPower_Update()
   uint8_t boostChannel = config.GetBoostChannel();
   if (boostChannel > 0) {
     // if a user selected to disable dynamic power (ch16)
-    if(CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1])) {
+    if(CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0) {
       POWERMGNT.setPower((PowerLevels_e)config.GetPower());
       // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
       return;
@@ -556,10 +556,8 @@ void registerLuaParameters() {
     #endif
   });
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
-      config.SetDynamicPower(arg);
-  });
-  registerLUAParameter(&luaBoostChannel, [](uint8_t id, uint8_t arg){
-      config.SetBoostChannel(arg);
+      config.SetDynamicPower(arg > 0);
+      config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
   });
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
@@ -631,8 +629,9 @@ void resetLuaParams(){
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
-  setLuaTextSelectionValue(&luaDynamicPower,(uint8_t)(config.GetDynamicPower()));
-  setLuaTextSelectionValue(&luaBoostChannel,(uint8_t)(config.GetBoostChannel()));
+
+  uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
+  setLuaTextSelectionValue(&luaDynamicPower,dynamic);
   
   setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
