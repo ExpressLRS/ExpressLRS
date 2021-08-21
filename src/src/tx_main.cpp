@@ -124,7 +124,6 @@ void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
-#ifdef USE_DYNAMIC_POWER
 #define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
@@ -133,22 +132,24 @@ static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
-#endif
 
 // Assume this function is called inside loop(). Heavy functions goes here.
 void DynamicPower_Update()
 {
-  #ifdef USE_DYNAMIC_POWER
+  if (!config.GetDynamicPower()) {
+    return;
+  }
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
-  #ifdef DYNAMIC_POWER_BOOST
+  uint8_t boostChannel = config.GetBoostChannel();
+  if (boostChannel > 0) {
     // if a user selected to disable dynamic power (ch16)
-    if(CRSF_to_BIT(crsf.ChannelDataIn[DYNAMIC_POWER_BOOST])) {
+    if(CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1])) {
       POWERMGNT.setPower((PowerLevels_e)config.GetPower());
       // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
       return;
     }
-  #endif  // DYNAMIC_POWER_BOOST
+  }
 
   // if telemetry is not arrived, quick return.
   if (!dynamic_power_updated)
@@ -202,8 +203,6 @@ void DynamicPower_Update()
 
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
-
-  #endif  // USE_DYNAMIC_POWER
 }
 
 #if defined(NO_SYNC_ON_ARM)
@@ -264,9 +263,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
-            #ifdef USE_DYNAMIC_POWER
             dynamic_power_updated = true;
-            #endif
             break;
 
         case ELRS_TELEMETRY_TYPE_DATA:
@@ -524,16 +521,6 @@ void registerLuaParameters() {
       #endif
     }
   });
-  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
-      PowerLevels_e newPower = (PowerLevels_e)arg;
-      DBGLN("Request Power: %d", newPower);
-      config.SetPower(newPower < MaxPower ? newPower : MaxPower);
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-    #endif
-  });
   // Commented out for now until we add more switch options
   // registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
   //   uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
@@ -557,7 +544,23 @@ void registerLuaParameters() {
     msp.addByte(rxModel);
     crsf.AddMspMessage(&msp);
   });
-  
+  registerLUAParameter(&luaPowerFolder);
+  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
+    PowerLevels_e newPower = (PowerLevels_e)arg;
+    DBGLN("Request Power: %d", newPower);
+    config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+    #if defined(HAS_OLED)
+      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
+    #endif
+  });
+  registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
+      config.SetDynamicPower(arg);
+  });
+  registerLUAParameter(&luaBoostChannel, [](uint8_t id, uint8_t arg){
+      config.SetBoostChannel(arg);
+  });
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
@@ -622,11 +625,14 @@ void registerLuaParameters() {
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate());
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm());
-  setLuaTextSelectionValue(&luaPower,(uint8_t)config.GetPower());
   // Commented out for now until we add more switch options
-  //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
+  //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
+
+  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
+  setLuaTextSelectionValue(&luaDynamicPower,(uint8_t)(config.GetDynamicPower()));
+  setLuaTextSelectionValue(&luaBoostChannel,(uint8_t)(config.GetBoostChannel()));
   
   setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());

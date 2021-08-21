@@ -68,6 +68,26 @@ TxConfig::SetPower(uint8_t power)
 }
 
 void
+TxConfig::SetDynamicPower(bool dynamicPower)
+{
+    if (GetDynamicPower() != dynamicPower)
+    {
+        m_model->dynamicPower = dynamicPower;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetBoostChannel(uint8_t boostChannel)
+{
+    if (GetBoostChannel() != boostChannel)
+    {
+        m_model->boostChannel = boostChannel;
+        m_modified = true;
+    }
+}
+
+void
 TxConfig::SetSwitchMode(uint8_t switchMode)
 {
     if (GetSwitchMode() != switchMode)
