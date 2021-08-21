@@ -88,6 +88,14 @@ struct tagLuaItem_command luaWebUpdate = {
     "Proceed WiFi Update Mode?",
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
+
+struct tagLuaItem_command luaBLEJoystick = {
+    {0,0,(uint8_t)CRSF_COMMAND},//id,type
+    "BLE Joystick",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaBLEJoystick)
+};
 #endif
 
 //----------------------------VTX ADMINISTRATOR------------------
