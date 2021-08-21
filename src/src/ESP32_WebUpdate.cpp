@@ -311,7 +311,7 @@ void BeginWebUpdate()
               server.send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
             } else {
               server.sendHeader("Connection", "close");
-              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering of the module\"}");
+              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering off the module\"}");
               server.client().stop();
               delay(100);
               ESP.restart();
