@@ -572,7 +572,7 @@ local function runPopupPage(event)
   local result
   if fieldPopup.status == 3 then
     runningCommand = 1
-    result = popupConfirmation("proceed??", fieldPopup.info, event)
+    result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.info, event)
   else
     if fieldPopup.status == 2 then
       runningCommand = 1

@@ -618,7 +618,7 @@ void registerLuaParameters() {
     });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg == 1) //start command
+      if (arg < 4) //start command
       {
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
       } else if (arg == 4) //confirm run
