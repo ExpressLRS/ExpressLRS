@@ -553,6 +553,13 @@ local function runDevicePage(event)
 end
 
 local function runPopupPage(event)
+  if event == EVT_VIRTUAL_EXIT then             -- exit script
+    fieldTimeout = getTime() + 200 -- 2s
+    fieldChunk = 0
+    fieldData = {}
+    allParamsLoaded = 0
+  return 0
+  end
   local result
   if fieldPopup.status == 3 then
     result = popupConfirmation("Confirmation", fieldPopup.info, event)
