@@ -357,7 +357,7 @@ void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *out
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -371,7 +371,7 @@ void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray)
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -385,7 +385,7 @@ void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -399,7 +399,7 @@ void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
@@ -413,7 +413,7 @@ void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
     memcpy(outarray+4+(strlen(p1->label1)+1),p1->label2,strlen(p1->label2)+1);
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
@@ -422,7 +422,7 @@ void CRSF::getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
     memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
