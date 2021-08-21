@@ -618,8 +618,12 @@ void registerLuaParameters() {
     });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg == 1)
+      if (arg == 1) //start command
       {
+        setLuaCommandValue(&luaWebUpdate,3); //request confirm
+      } else if (arg == 4) //confirm run
+      {
+        setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
   #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested!");
@@ -628,8 +632,10 @@ void registerLuaParameters() {
   #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested but not supported on this platform!");
   #endif
-      } else if(arg == 6){
+      } else if(arg == 6){ //status poll
           sendLuaFieldCrsf(id,0);
+      } else { //5 or anything else is cancel
+        setLuaCommandValue(&luaWebUpdate,0);
       }
     });
   #endif
@@ -651,6 +657,7 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  setLuaCommandValue(&luaWebUpdate,0);
 }
 
 void updateLUApacketCount(){

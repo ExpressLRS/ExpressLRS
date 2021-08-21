@@ -34,6 +34,7 @@ local fields_count = 0
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
+local runningCommand = 0
 
 local function getField(line)
   local counter = 1
@@ -340,7 +341,7 @@ local function fieldCommandLoad(field, data, offset)
 end
 
 local function fieldCommandSave(field)
-  if field.status == 0 then
+  if field.status < 4 then
     field.status = 1
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
     fieldPopup = field
@@ -435,11 +436,6 @@ local function refreshNext()
     if time > devicesRefreshTimeout and fields_count < 1  then
       devicesRefreshTimeout = time + 100 -- 1s
       crossfireTelemetryPush(0x28, { 0x00, 0xEF })
-    elseif fieldPopup then
-      if time > fieldTimeout then -- write lua field
-        crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
-        fieldTimeout = time + fieldPopup.timeout
-      end
     elseif time > fieldTimeout and not edit then --reload lua field
       if allParamsLoaded < 1 then
         crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
@@ -557,18 +553,39 @@ local function runPopupPage(event)
     fieldData = {}
     allParamsLoaded = 0
     fieldPopup = nil
+    runningCommand = 0
   return 0
+  end
+  if getTime() > fieldTimeout then
+    fieldId = fieldPopup.id
+    crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldPopup.id, fieldChunk })
+    fieldTimeout = getTime() + fieldPopup.timeout
+  end
+  if command == 0x2B then
+    parseParameterInfoMessage(data)
+    fieldTimeout = 0
   end
   local result
   if fieldPopup.status == 3 then
-    result = popupConfirmation(fieldPopup.info, event)
+    runningCommand = 1
+    result = popupConfirmation("proceed??", fieldPopup.info, event)
   else
+    if fieldPopup.status == 2 then
+      runningCommand = 1
+    end
+    if fieldPopup.status == 0 and runningCommand == 1 then
+      fieldPopup = nil
+      runningCommand = 0
+      return 0
+    end
     result = popupWarning(fieldPopup.info, event)
   end
   if result == "OK" then
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
   elseif result == "CANCEL" then
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+    runningCommand = 0
+    fieldPopup = nil
   end
   return 0
 end
@@ -589,6 +606,7 @@ local function run(event)
   if fieldPopup ~= nil then
     result = runPopupPage(event)
   else
+    runningCommand = 0
     result = runDevicePage(event)
   end
 
