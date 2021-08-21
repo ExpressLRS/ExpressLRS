@@ -208,12 +208,10 @@ void DynamicPower_Update()
   #endif  // USE_DYNAMIC_POWER
 }
 
-#if defined(NO_SYNC_ON_ARM)
 static bool ICACHE_RAM_ATTR IsArmed()
 {
    return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 }
-#endif
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
@@ -396,6 +394,7 @@ void ICACHE_RAM_ATTR HandleTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+  uint32_t now = millis();
   uint8_t *data;
   uint8_t maxLength;
   uint8_t packageIndex;
@@ -422,25 +421,23 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  uint32_t SyncInterval;
-
-#if defined(NO_SYNC_ON_ARM)
-  SyncInterval = 250;
-  bool skipSync = IsArmed();
-#else
-  SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  
   bool skipSync = false;
-#endif
+  if ((connectionState == connected) && (LQCalc.getLQ() > 75) && (now < (LastTLMpacketRecvMillis + ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected)))
+  {
+    skipSync = true;
+  }
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
   bool NonceFHSSresultWindow = (NonceFHSSresult == 1 || NonceFHSSresult == 2) ? true : false; // restrict to the middle nonce ticks (not before or after freq chance)
-  bool WithinSyncSpamResidualWindow = (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
+  bool WithinSyncSpamResidualWindow = (now - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
 
   if ((syncSpamCounter || WithinSyncSpamResidualWindow) && NonceFHSSresultWindow)
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  else if ((!skipSync) && ((now > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
   {
     GenerateSyncPacketData();
   }
@@ -1153,8 +1150,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 void VtxConfigToMSPOut()
 {
   // 6 = off in the lua Band field
-  // Do not send while armed.  Replace CRSF_to_BIT with IsArmed() after PR #786 is merged
-  if (config.GetVtxBand() == 6 || CRSF_to_BIT(crsf.ChannelDataIn[AUX1]))
+  if (config.GetVtxBand() == 6 || IsArmed())
     return;
 
   uint8_t vtxIdx = config.GetVtxBand() * 8 + config.GetVtxChannel();

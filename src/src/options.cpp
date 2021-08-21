@@ -15,9 +15,6 @@ const char PROGMEM compile_options[] = {
     #ifdef UNLOCK_HIGHER_POWER
         "-DUNLOCK_HIGHER_POWER "
     #endif
-    #ifdef NO_SYNC_ON_ARM
-        "-DNO_SYNC_ON_ARM "
-    #endif
     #ifdef FEATURE_OPENTX_SYNC
         "-DFEATURE_OPENTX_SYNC "
     #endif

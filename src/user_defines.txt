@@ -29,8 +29,6 @@
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
 #-DUNLOCK_HIGHER_POWER
 
-#-DNO_SYNC_ON_ARM
-
 -DFEATURE_OPENTX_SYNC
 #-DFEATURE_OPENTX_SYNC_AUTOTUNE
 
