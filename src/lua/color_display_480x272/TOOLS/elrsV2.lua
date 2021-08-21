@@ -353,9 +353,6 @@ end
 
 local function fieldCommandDisplay(field, y, attr)
   lcd.drawText(1, y, field.name, attr)
-  if field.info ~= "" then
-    lcd.drawText(140, y, "[" .. field.info .. "]")
-  end
 end
 
 local functions = {
@@ -537,15 +534,17 @@ local function runDevicePage(event)
         lcd.drawText(1, y*22+10, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 or field.type == 13 then
+        if field.type == 11 then
           lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
           lcd.drawText(1, y*22+10, field.name, attr)
+        elseif field.type == 13 then
+          lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
+          lcd.drawText(1, y*22+10, field.name, attr)
+        else
+          lcd.drawText(1, y*22+10, field.name)
         end
         if functions[field.type+1].display then
-          if field.type ~= 11 and field.type ~= 13 then  
-            lcd.drawText(1, y*22+10, field.name)
-          end
-            functions[field.type+1].display(field, y*22+10, attr)
+          functions[field.type+1].display(field, y*22+10, attr)
         end
       end
     end

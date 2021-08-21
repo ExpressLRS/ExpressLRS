@@ -1213,6 +1213,7 @@ void EnterBindingMode()
 
   InBindingMode = 2;
   setLuaCommandValue(&luaBind,InBindingMode);
+  //setLuaCommandInfo(&luaBind,"in Binding Mode");
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1247,6 +1248,7 @@ void ExitBindingMode()
 
   InBindingMode = 0;
   setLuaCommandValue(&luaBind,InBindingMode);
+  //setLuaCommandInfo(&luaBind,"DONE");
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate(crsf.getModelID())); //return to original rate
 

@@ -37,4 +37,5 @@ void setLuaCommandValue(struct tagLuaItem_command *textSelectionStruct, uint8_t 
 void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue);
 void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue);
 void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue);
+void setLuaCommandInfo(struct tagLuaItem_command *luaStruct,const char *newvalue);
 #endif

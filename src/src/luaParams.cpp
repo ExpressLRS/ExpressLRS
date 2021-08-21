@@ -64,7 +64,7 @@ struct tagLuaItem_command luaBind = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "Bind",
     {0,200},//status,timeout
-    emptySpace,
+    "binding...",
     LUA_COMMAND_SIZE(luaBind)
 };
 struct tagLuaItem_string luaInfo = {
@@ -85,7 +85,7 @@ struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "WiFi Update",
     {0,200},//status,timeout
-    emptySpace,
+    "wifi Update is running...",
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 #endif

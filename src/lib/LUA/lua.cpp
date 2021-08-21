@@ -178,4 +178,7 @@ void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
 void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
     luaStruct->label2 = newvalue;
 }
+void setLuaCommandInfo(struct tagLuaItem_command *luaStruct,const char *newvalue){
+    luaStruct->label2 = newvalue;
+}
 #endif
