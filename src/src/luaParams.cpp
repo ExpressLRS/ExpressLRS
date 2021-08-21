@@ -83,7 +83,7 @@ struct tagLuaItem_string luaELRSversion = {
 #ifdef PLATFORM_ESP32
 struct tagLuaItem_command luaWebUpdate = {
     {0,(uint8_t)CRSF_COMMAND},//id,type
-    "Update",
+    "WiFi Update",
     {0,200},//status,timeout
     emptySpace,
     LUA_COMMAND_SIZE(luaWebUpdate)
