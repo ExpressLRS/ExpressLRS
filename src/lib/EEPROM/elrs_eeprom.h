@@ -17,14 +17,14 @@ public:
     template <typename T> void Get(uint32_t addr, T &value)
     {
         uint8_t* p = (uint8_t*)(void*)&value;
-        uint8_t  i = sizeof(value);
+        size_t   i = sizeof(value);
         while(i--)  *p++ = ReadByte(addr++);
     };
 
     template <typename T> const void Put(uint32_t addr, const T &value)
     {
         const uint8_t* p = (const uint8_t*)(const void*)&value;
-        uint8_t        i = sizeof(value);
+        size_t         i = sizeof(value);
         while(i--)  WriteByte(addr++, *p++);
     };
 };

@@ -124,14 +124,24 @@ void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
 
+//////////// DYNAMIC TX OUTPUT POWER ////////////
+
+#if !defined(DYNPOWER_THRESH_UP)
+  #define DYNPOWER_THRESH_UP              15
+#endif
+#if !defined(DYNPOWER_THRESH_DN)
+  #define DYNPOWER_THRESH_DN              30
+#endif
 #define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
-#define DYNAMIC_POWER_MOVING_AVG_K 8 // Number of previous values for calculating moving average. Best with power of 2.
+#define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
+
+//////////// DYNAMIC TX OUTPUT POWER ////////////
 
 // Assume this function is called inside loop(). Heavy functions goes here.
 void DynamicPower_Update()
@@ -188,8 +198,8 @@ void DynamicPower_Update()
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
   int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
 
-  int32_t rssi_inc_threshold = expected_RXsensitivity + 15;
-  int32_t rssi_dec_threshold = expected_RXsensitivity + 30;
+  int32_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_THRESH_UP;
+  int32_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_THRESH_DN;
 
   // increase power only up to the set power from the LUA script
   if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
