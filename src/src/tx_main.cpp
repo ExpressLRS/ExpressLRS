@@ -972,10 +972,9 @@ void loop()
 #ifdef PLATFORM_ESP32
   //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
   //start webupdate, there might be wrong configuration flashed.
-
-  if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000)){
+  if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && !webUpdateMode){
 #ifndef DEBUG_SUPPRESS
-  Serial.println("startup Check Failled")
+  Serial.println("No CRSF ever detected, starting WiFi")
 #endif
     webUpdateMode = true;
     BeginWebUpdate();
