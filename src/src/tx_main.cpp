@@ -654,9 +654,6 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
-#ifdef PLATFORM_ESP32
-  setLuaCommandValue(&luaWebUpdate,0);
-#endif
 }
 
 void updateLUApacketCount(){
