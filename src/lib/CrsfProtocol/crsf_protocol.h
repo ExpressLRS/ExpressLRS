@@ -474,11 +474,16 @@ static inline uint16_t ICACHE_RAM_ATTR N_to_CRSF(uint16_t val, uint16_t max)
    return val * (CRSF_CHANNEL_VALUE_2000-CRSF_CHANNEL_VALUE_1000) / max + CRSF_CHANNEL_VALUE_1000;
 }
 
-// Convert CRSF (172-1811) to 0-(cnt-1)
+// Convert CRSF to 0-(cnt-1), constrained between 1000us and 2000us
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
 {
     // The span is increased by one to prevent the max val from returning cnt
     return (val - CRSF_CHANNEL_VALUE_MIN) * cnt / (CRSF_CHANNEL_VALUE_SPAN + 1);
+    if (val <= CRSF_CHANNEL_VALUE_1000)
+        return 0;
+    if (val >= CRSF_CHANNEL_VALUE_2000)
+        return cnt - 1;
+    return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000 + 1);
 }
 
 // 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle

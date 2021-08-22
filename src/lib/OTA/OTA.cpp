@@ -15,11 +15,8 @@
  *
  * Analog channels are reduced to 10 bits to allow for switch encoding
  * Switch[0] is sent on every packet.
- * A 3 bit switch index and 2 bit value is used to send the remaining switches
+ * A 3 bit switch index and 3-4 bit value is used to send the remaining switches
  * in a round-robin fashion.
- * If any of the round-robin switches have changed
- * we take the lowest indexed one and send that, hence lower indexed switches have
- * higher priority in the event that several are changed at once.
  *
  * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
  * Outputs: Radio.TXdataBuffer, side-effects the sentSwitch value
@@ -36,27 +33,42 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridSwitch8(volatile uint8_t* Buffer, 
                            ((crsf->ChannelDataIn[2] & 0b110) << 1) |
                            ((crsf->ChannelDataIn[3] & 0b110) >> 1);
 
-  // find the next switch to send
-  uint8_t nextSwitchIndex = crsf->getNextSwitchIndex();
   // Actually send switchIndex - 1 in the packet, to shift down 1-7 (0b111) to 0-6 (0b110)
   // If the two high bits are 0b11, the receiver knows it is the last switch and can use
   // that bit to store data
-  uint8_t bitclearedSwitchIndex = nextSwitchIndex - 1;
-  // currentSwitches[] is 0-15 for index 6, 0-2 for index 0-5
-  // Rely on currentSwitches to *only* have values in that rang
-  uint8_t value = crsf->currentSwitches[nextSwitchIndex];
+  static uint8_t bitclearedSwitchIndex = 0;
+  uint8_t value;
+  // AUX8 is High Resolution 16-pos (4-bit)
+  if (bitclearedSwitchIndex == 6)
+    value = CRSF_to_N(crsf->ChannelDataIn[6 + 1 + 4], 16);
+  else
+  {
+    // AUX2-7 are Low Resolution, "7pos" 6+center (3-bit)
+    // The output is mapped evenly across 6 output values (0-5)
+    // with a special value 7 indicating the middle so it works
+    // with switches with a middle position as well as 6-position
+    const uint16_t CHANNEL_BIN_COUNT = 6;
+    const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
+    uint16_t ch = crsf->ChannelDataIn[bitclearedSwitchIndex + 1 + 4];
+    // If channel is within 1/4 a BIN of being in the middle use special value 7
+    if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
+        || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
+        value = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+    else
+        value = 7;
+  } // If not 16-pos
 
   Buffer[6] =
       TelemetryStatus << 7 |
       // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
-      crsf->currentSwitches[0] << 6 |
+      CRSF_to_BIT(crsf->ChannelDataIn[4]) << 6 |
       // tell the receiver which switch index this is
       bitclearedSwitchIndex << 3 |
       // include the switch value
       value;
 
   // update the sent value
-  crsf->setSentSwitch(nextSwitchIndex, value);
+  bitclearedSwitchIndex = (bitclearedSwitchIndex + 1) % 7;
 }
 #endif
 

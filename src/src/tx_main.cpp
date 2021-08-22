@@ -323,21 +323,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 void SetSwitchMode(uint32_t switchMode)
 {
   switch(switchMode) {
-    case 0b00:
-      GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
-      break;
-    case 0b01:
-      GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
-      break;
-    case 0b10:
-      // Future switch-mode expansion
-    case 0b11:
-      // Future switch-mode expansion
+    case 0b00: // 1-bit
+    case 0b01: // Hybrid8
     default:
       GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
       break;
   }
 }
