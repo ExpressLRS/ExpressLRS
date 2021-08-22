@@ -618,19 +618,24 @@ void registerLuaParameters() {
     });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg > 0 && arg < 4) //start command
+      if (arg > 0 && arg < 4) //start command, 1 = start
+                              //2 = running
+                              //3 = request confirmation
       {
         setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
-      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) //confirm run
+      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
       {
+        //confirm run on ELRSv2.lua or start command from CRSF configurator,
+        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
+        //unintentional button press. 
         setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
   #ifndef DEBUG_SUPPRESS
         Serial.println("Wifi Update Mode Requested!");
   #endif
         BeginWebUpdate();
-      } else if(arg == 6){ //status poll
+      } else if(arg == 6){ //6 = status poll
           sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
         setLuaCommandValue(&luaWebUpdate,0);

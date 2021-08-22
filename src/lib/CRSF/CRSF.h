@@ -170,12 +170,12 @@ private:
     void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
     void getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray);
     void getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray);
-      /** we dont need these yet for OUR LUA
-     void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaint8StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaint16StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
+      /** we dont need these yet for OUR LUA, and it is not defined yet
+     void getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaint8StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaint16StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaFloatStructToArray(const void * luaStruct, uint8_t *outarray);
 */ 
 
 #endif

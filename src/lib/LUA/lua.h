@@ -13,13 +13,6 @@
 #define LUA_STRING_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+strlen(X.label2)+1)
 #define LUA_FOLDER_SIZE(X) (uint8_t)(4+strlen(X.label1)+1)
 
-/**we dont use this yet for OUR LUA
-#define LUA_INT8_SIZE(X) 4+strlen(X.label1)+1+sizeof(tagLuaInt8Properties)+strlen(X.label2)+1
-#define LUA_UINT16_SIZE(X) 4+strlen(X.label1)+1+sizeof(tagLuaUint16Properties)+strlen(X.label2)+1
-#define LUA_INT16_SIZE(X) 4+strlen(X.label1)+1+sizeof(tagLuaInt16Properties)+strlen(X.label2)+1
-#define LUA_FLOAT_SIZE(X) 4+strlen(X.label1)+1+sizeof(tagLuaFloatProperties)+strlen(X.label2)+1
-*/
-
 extern void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk);
 
 extern void suppressCurrentLuaWarning(void);
