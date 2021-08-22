@@ -100,7 +100,7 @@ struct tagLuaItem_folder luaVtxFolder = {
 struct tagLuaItem_textSelection luaVtxBand = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Band",
-    "A;B;E;F;R;L;Off",
+    "Off;A;B;E;F;R;L",
     {0,0,6},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaVtxBand)
