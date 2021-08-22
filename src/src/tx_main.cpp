@@ -599,7 +599,7 @@ void registerLuaParameters() {
   },luaVtxFolder.luaProperties1.id);
 
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-      if (arg == 1)
+      if (arg > 0 && arg < 4)
       {
   #ifndef DEBUG_SUPPRESS
         Serial.println("Binding requested from LUA");
@@ -618,7 +618,7 @@ void registerLuaParameters() {
     });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg < 4) //start command
+      if (arg > 0 && arg < 4) //start command
       {
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
       } else if (arg == 4) //confirm run
