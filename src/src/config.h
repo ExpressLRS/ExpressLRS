@@ -37,11 +37,11 @@ public:
     void Commit();
 
     // Getters
-    uint8_t GetRate(uint8_t modelId) const { return m_config.model_config[modelId].rate; }
-    uint8_t GetTlm(uint8_t modelId) const { return m_config.model_config[modelId].tlm; }
-    uint8_t GetPower(uint8_t modelId) const { return m_config.model_config[modelId].power; }
-    uint8_t GetSwitchMode(uint8_t modelId) const { return m_config.model_config[modelId].switchMode; }
-    bool GetModelMatch(uint8_t modelId) const { return m_config.model_config[modelId].modelMatch; }
+    uint8_t GetRate() const { return m_model->rate; }
+    uint8_t GetTlm() const { return m_model->tlm; }
+    uint8_t GetPower() const { return m_model->power; }
+    uint8_t GetSwitchMode() const { return m_model->switchMode; }
+    bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -51,11 +51,11 @@ public:
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
 
     // Setters
-    void SetRate(uint8_t modelId, uint8_t rate);
-    void SetTlm(uint8_t modelId, uint8_t tlm);
-    void SetPower(uint8_t modelId, uint8_t power);
-    void SetSwitchMode(uint8_t modelId, uint8_t switchMode);
-    void SetModelMatch(uint8_t modelId, bool modelMatch);
+    void SetRate(uint8_t rate);
+    void SetTlm(uint8_t tlm);
+    void SetPower(uint8_t power);
+    void SetSwitchMode(uint8_t switchMode);
+    void SetModelMatch(bool modelMatch);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
@@ -64,11 +64,14 @@ public:
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
+    // ModelId used for subsequent per-model config access
+    void SetModelId(uint8_t modelId) { m_model = &m_config.model_config[modelId]; }
 
 private:
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
+    model_config_t *m_model;
 };
 
 ///////////////////////////////////////////////////

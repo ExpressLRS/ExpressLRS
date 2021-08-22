@@ -37,51 +37,51 @@ TxConfig::Commit()
 
 // Setters
 void
-TxConfig::SetRate(uint8_t modelId, uint8_t rate)
+TxConfig::SetRate(uint8_t rate)
 {
-    if (m_config.model_config[modelId].rate != rate)
+    if (GetRate() != rate)
     {
-        m_config.model_config[modelId].rate = rate;
+        m_model->rate = rate;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetTlm(uint8_t modelId, uint8_t tlm)
+TxConfig::SetTlm(uint8_t tlm)
 {
-    if (m_config.model_config[modelId].tlm != tlm)
+    if (GetTlm() != tlm)
     {
-        m_config.model_config[modelId].tlm = tlm;
+        m_model->tlm = tlm;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetPower(uint8_t modelId, uint8_t power)
+TxConfig::SetPower(uint8_t power)
 {
-    if (m_config.model_config[modelId].power != power)
+    if (GetPower() != power)
     {
-        m_config.model_config[modelId].power = power;
+        m_model->power = power;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetSwitchMode(uint8_t modelId, uint8_t switchMode)
+TxConfig::SetSwitchMode(uint8_t switchMode)
 {
-    if (m_config.model_config[modelId].switchMode != switchMode)
+    if (GetSwitchMode() != switchMode)
     {
-        m_config.model_config[modelId].switchMode = switchMode;
+        m_model->switchMode = switchMode;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetModelMatch(uint8_t modelId, bool modelMatch)
+TxConfig::SetModelMatch(bool modelMatch)
 {
-    if (m_config.model_config[modelId].modelMatch != modelMatch)
+    if (GetModelMatch() != modelMatch)
     {
-        m_config.model_config[modelId].modelMatch = modelMatch;
+        m_model->modelMatch = modelMatch;
         m_modified = true;
     }
 }
@@ -134,17 +134,20 @@ TxConfig::SetDefaults()
     SetSSID("");
     SetPassword("");
     for (int i=0 ; i<64 ; i++) {
-        SetRate(i, modParams->index);
-        SetTlm(i, modParams->TLMinterval);
-        SetPower(i, DefaultPowerEnum);
-        SetSwitchMode(i, 1);
-        SetModelMatch(i, false);
+        SetModelId(i);
+        SetRate(modParams->index);
+        SetTlm(modParams->TLMinterval);
+        SetPower(DefaultPowerEnum);
+        SetSwitchMode(1);
+        SetModelMatch(false);
     }
     SetVtxBand(0);
     SetVtxChannel(0);
     SetVtxPower(0);
     SetVtxPitmode(0);
     Commit();
+
+    SetModelId(0);
 }
 
 void
