@@ -24,11 +24,11 @@ extern CRSF crsf;
 #define enableX true
 #define enableY true
 #define enableZ false
-#define enableRZ false
+#define enableRZ true
 #define enableRX true
 #define enableRY true
 #define enableSlider1 true
-#define enableSlider2 true
+#define enableSlider2 false
 #define enableRudder true
 #define enableThrottle true
 #define enableAccelerator false
@@ -45,14 +45,6 @@ void BluetoothJoystickBegin()
     bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
 
-void BluetoothJoystickSendReport()
-{
-    if (bleGamepad.isConnected())
-    {
-        bleGamepad.sendReport();
-    }
-}
-
 void BluetoothJoystickUpdateValues()
 {
     if (bleGamepad.isConnected())
@@ -65,16 +57,16 @@ void BluetoothJoystickUpdateValues()
         }
 
         bleGamepad.setX(data[0]);
-        bleGamepad.setY(data[1]);
-        bleGamepad.setRX(data[2]);
-        bleGamepad.setRY(data[3]);
-        bleGamepad.setRudder(data[4]);
-        bleGamepad.setThrottle(data[5]);
-        bleGamepad.setSlider1(data[6]);
-        bleGamepad.setSlider2(data[7]);
+        bleGamepad.setY(-data[1]); //seems to make the default direction correct for me. 
+        bleGamepad.setThrottle(data[2]);
+        bleGamepad.setRudder(data[3]);
+        bleGamepad.setRX(data[4]);
+        bleGamepad.setRY(data[5]);
+        bleGamepad.setRZ(data[6]);
+        bleGamepad.setSlider1(data[7]);
+
+        bleGamepad.sendReport();
     }
 }
 
-#else
-inline void BluetoothJoystickSendReport() {}
 #endif

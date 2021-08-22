@@ -389,11 +389,6 @@ void ICACHE_RAM_ATTR HandleTLM()
   }
 }
 
-void ICACHE_RAM_ATTR SendRCdataToBLE()
-{
-  BLEjoystickRefresh = true;
-}
-
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   uint8_t *data;
@@ -641,10 +636,12 @@ void registerLuaParameters() {
   #ifndef DEBUG_SUPPRESS
         Serial.println("BLE Joystick Mode Requested!");
   #endif
-        hwTimer.callbackTock = &SendRCdataToBLE;
+        hwTimer.stop();
         crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
-        hwTimer.updateInterval(8000);
-        crsf.setSyncParams(8000); // 125hz
+        hwTimer.updateInterval(5000);
+        crsf.setSyncParams(5000); // 100hz
+        delay(1000);
+        crsf.disableOpentxSync();
   #if defined(Regulatory_Domain_ISM_2400)
         Radio.SetMode(SX1280_MODE_SLEEP);
   #else
@@ -990,17 +987,6 @@ void setup()
 
 void loop()
 {
-
-  if (BLEjoystickActive && BLEjoystickRefresh)
-  {
-    HandleUpdateParameter();
-    #ifdef FEATURE_OPENTX_SYNC
-    crsf.JustSentRFpacket(); // we want to send data now - this allows opentx packet syncing
-    #endif
-    BluetoothJoystickSendReport();
-    BLEjoystickRefresh = false;
-    return;
-  }
 
   uint32_t now = millis();
   static bool mspTransferActive = false;
