@@ -25,18 +25,6 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t nonce
 // Current ChannelData generator function being used by TX
 PackChannelData_t PackChannelData;
 
-// Convert CRSF to 0-(cnt-1), constrained between 1000us and 2000us
-static uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
-{
-    // The span is increased by one to prevent the max val from returning cnt
-    if (val <= CRSF_CHANNEL_VALUE_1000)
-        return 0;
-    if (val >= CRSF_CHANNEL_VALUE_2000)
-        return cnt - 1;
-    return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000 + 1);
-}
-
-
 static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {
     Buffer[0] = RC_DATA_PACKET & 0b11;
@@ -66,7 +54,6 @@ static uint8_t Hybrid8NextSwitchIndex;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx) { Hybrid8NextSwitchIndex = idx; }
 #endif
-
 void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus, uint8_t nonce, uint8_t tlmDenom)
 {
     PackChannelDataHybridCommon(Buffer, crsf);
@@ -172,28 +159,6 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(volatile uint8_t* Buffer, CRS
 
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t UnpackChannelData;
-
-// Convert 0-max to the CRSF values for 1000-2000
-static uint16_t ICACHE_RAM_ATTR N_to_CRSF(uint16_t val, uint16_t max)
-{
-    return val * (CRSF_CHANNEL_VALUE_2000-CRSF_CHANNEL_VALUE_1000) / max + CRSF_CHANNEL_VALUE_1000;
-}
-
-// 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle
-// The calculation is a bit non-linear all the way to the endpoints due to where
-// Ardupilot defines its modes
-static uint16_t ICACHE_RAM_ATTR SWITCH3b_to_CRSF(uint16_t val)
-{
-    switch (val)
-    {
-    case 0: return CRSF_CHANNEL_VALUE_1000;
-    case 5: return CRSF_CHANNEL_VALUE_2000;
-    case 6: // fallthrough
-    case 7: return CRSF_CHANNEL_VALUE_MID;
-    default: // (val - 1) * 240 + 630; aka 150us spacing, starting at 1275
-        return val * 240 + 391;
-    }
-}
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {

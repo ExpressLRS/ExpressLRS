@@ -18,77 +18,44 @@
 CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
 HardwareSerial CRSF::Port = HardwareSerial();
 
-/* Check that the round robin works
- * First call should return 0 for seq switches or 1 for hybrid
- * Successive calls should increment the next index until wrap
- * around from 7 to either 0 or 1 depending on mode.
- */
-void test_round_robin_index0(void)
+void test_crsfToBit()
 {
-    crsf.setNextSwitchFirstIndex(0);
-    uint8_t expectedIndex = crsf.nextSwitchIndex;
-    
-    for(uint8_t i = 0; i < 10; i++) {
-        uint8_t nsi = crsf.getNextSwitchIndex();
-        TEST_ASSERT_EQUAL(expectedIndex, nsi);
-        expectedIndex++;
-        if (expectedIndex == 8) {
-            expectedIndex = 0;
-        }
-    }
+    TEST_ASSERT_EQUAL(0, CRSF_to_BIT(CRSF_CHANNEL_VALUE_1000));
+    TEST_ASSERT_EQUAL(1, CRSF_to_BIT(CRSF_CHANNEL_VALUE_2000));
 }
 
-void test_round_robin_index1(void)
+void test_bitToCrsf()
 {
-    crsf.setNextSwitchFirstIndex(1);
-    uint8_t expectedIndex = crsf.nextSwitchIndex;
-    
-    for(uint8_t i = 0; i < 10; i++) {
-        uint8_t nsi = crsf.getNextSwitchIndex();
-        TEST_ASSERT_EQUAL(expectedIndex, nsi);
-        expectedIndex++;
-        if (expectedIndex == 8) {
-            expectedIndex = 1;
-        }
-    }
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, BIT_to_CRSF(0));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, BIT_to_CRSF(1));
 }
 
-/* Check that a changed switch gets priority
-*/
-void test_priority(void)
+void test_crsfToN()
 {
-    uint8_t nsi;
+    TEST_ASSERT_EQUAL(0, CRSF_to_N(CRSF_CHANNEL_VALUE_MIN, 64));
+    TEST_ASSERT_EQUAL(0, CRSF_to_N(CRSF_CHANNEL_VALUE_1000, 64));
+    TEST_ASSERT_EQUAL(0b100000, CRSF_to_N(CRSF_CHANNEL_VALUE_MID, 64));
+    TEST_ASSERT_EQUAL(0b111111, CRSF_to_N(CRSF_CHANNEL_VALUE_2000, 64));
+    TEST_ASSERT_EQUAL(0b111111, CRSF_to_N(CRSF_CHANNEL_VALUE_MAX, 64));
 
-    crsf.nextSwitchIndex = 0; // this would be the next switch if nothing changed
+    TEST_ASSERT_EQUAL(0, CRSF_to_N(CRSF_CHANNEL_VALUE_MIN, 128));
+    TEST_ASSERT_EQUAL(0, CRSF_to_N(CRSF_CHANNEL_VALUE_1000, 128));
+    TEST_ASSERT_EQUAL(0b1000000, CRSF_to_N(CRSF_CHANNEL_VALUE_MID, 128));
+    TEST_ASSERT_EQUAL(0b1111111, CRSF_to_N(CRSF_CHANNEL_VALUE_2000, 128));
+    TEST_ASSERT_EQUAL(0b1111111, CRSF_to_N(CRSF_CHANNEL_VALUE_MAX, 128));
+}
 
-    // set all switches and sent values to be equal
-    for(uint8_t i = 0; i < N_SWITCHES; i++) {
-        crsf.sentSwitches[i] = 0;
-        crsf.currentSwitches[i] = 0;
-    }
+void test_nToCrsf()
+{
+    // 6-bit
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, N_to_CRSF(0, 63));
+    TEST_ASSERT_EQUAL(1004, N_to_CRSF(0b100000, 63));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, N_to_CRSF(0b111111, 63));
 
-    // set two switches' current value to be different
-    crsf.currentSwitches[4] = 1;
-    crsf.currentSwitches[6] = 1;
-
-    // we expect to get the lowest changed switch
-    nsi = crsf.getNextSwitchIndex();
-    TEST_ASSERT_EQUAL(4, nsi);
-
-    // The sending code would then change the sent value to match:
-    crsf.sentSwitches[4] = 1;
-
-    // so now we expect to get 6 (the other changed switch we set above)
-    nsi = crsf.getNextSwitchIndex();
-    TEST_ASSERT_EQUAL(6, nsi);
-
-    // The sending code would then change the sent value to match:
-    crsf.sentSwitches[6] = 1;
-
-    // Now all sent values should match the current values, and we expect
-    // to get the last returned value +1
-    nsi = crsf.getNextSwitchIndex();
-    TEST_ASSERT_EQUAL(7, nsi);
+    // 7-bit
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, N_to_CRSF(0, 127));
+    TEST_ASSERT_EQUAL(997, N_to_CRSF(0b1000000, 127));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, N_to_CRSF(0b1111111, 127));
 }
 
 // ------------------------------------------------
@@ -98,6 +65,7 @@ void test_priority(void)
 */
 void test_encodingHybrid8(bool highResChannel)
 {
+    constexpr uint8_t N_SWITCHES = 8;
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t expected;
     uint8_t TXdataBuffer[8];
@@ -111,18 +79,20 @@ void test_encodingHybrid8(bool highResChannel)
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
-        crsf.currentSwitches[i] =  i % 3;
-        crsf.sentSwitches[i] = i % 3; // make all the sent values match
+        constexpr int CHANNELS[] =
+            { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
+        crsf.ChannelDataIn[4+i] = CHANNELS[i % 3];
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
     if (highResChannel)
-        crsf.nextSwitchIndex = 7;
+        OtaSetHybrid8NextSwitchIndex(7-1);
     else
-        crsf.nextSwitchIndex = 3;
+        OtaSetHybrid8NextSwitchIndex(3-1);
 
     // encode it
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
+    OtaSetSwitchMode(smHybrid);
+    PackChannelData(TXdataBuffer, &crsf, false, 0, 0);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -143,7 +113,7 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
 
     // byte 6 is the switch encoding
-    TEST_ASSERT_EQUAL(crsf.currentSwitches[0], (TXdataBuffer[6] & 0b0100000)>>6);
+    TEST_ASSERT_EQUAL(CRSF_to_BIT(crsf.ChannelDataIn[4+0]), (TXdataBuffer[6] & 0b0100000)>>6);
     // top bit is undefined
     // expect switch 0 in bit 6
     // index-1 in 3-5
@@ -151,12 +121,12 @@ void test_encodingHybrid8(bool highResChannel)
     if (highResChannel)
     {
         TEST_ASSERT_EQUAL(7, ((TXdataBuffer[6] & 0b110000)>>3) + 1);
-        TEST_ASSERT_EQUAL(crsf.currentSwitches[7], TXdataBuffer[6] & 0b1111);
+        TEST_ASSERT_EQUAL(CRSF_to_N(crsf.ChannelDataIn[4+7], 16), TXdataBuffer[6] & 0b1111);
     }
     else
     {
         TEST_ASSERT_EQUAL(3, ((TXdataBuffer[6] & 0b111000)>>3) + 1);
-        TEST_ASSERT_EQUAL(crsf.currentSwitches[3], TXdataBuffer[6] & 0b0111);
+        TEST_ASSERT_EQUAL(CRSF_to_N(crsf.ChannelDataIn[4+3], 6), TXdataBuffer[6] & 0b0111);
     }
 }
 
@@ -174,6 +144,7 @@ void test_encodingHybrid8_7()
 */
 void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 {
+    constexpr uint8_t N_SWITCHES = 8;
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t TXdataBuffer[8];
     // uint8_t expected;
@@ -187,25 +158,29 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
-        crsf.currentSwitches[i] =  i % 3;
-        crsf.sentSwitches[i] = i % 3; // make all the sent values match
+        constexpr int CHANNELS[] =
+            { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
+        crsf.ChannelDataIn[4+i] = CHANNELS[i % 3];
     }
-    crsf.currentSwitches[forceSwitch] = switchval;
-    crsf.sentSwitches[forceSwitch] = switchval;
+    if (forceSwitch == 0)
+        crsf.ChannelDataIn[4+forceSwitch] = BIT_to_CRSF(switchval);
+    else if (forceSwitch == 7)
+        crsf.ChannelDataIn[4+forceSwitch] = N_to_CRSF(switchval, 15);
+    else
+        crsf.ChannelDataIn[4+forceSwitch] = SWITCH3b_to_CRSF(switchval);
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
-    // nextSwitchIndex=0 is invalid, since the previous getNextSwitchIndex()
-    // would have skipped it
     if (forceSwitch == 0)
-        crsf.nextSwitchIndex = 1;
+        OtaSetHybrid8NextSwitchIndex(0);
     else
-        crsf.nextSwitchIndex = forceSwitch;
+        OtaSetHybrid8NextSwitchIndex(forceSwitch-1);
 
     // use the encoding method to pack it into TXdataBuffer
-    GenerateChannelDataHybridSwitch8(TXdataBuffer, &crsf, false);
+    OtaSetSwitchMode(smHybrid);
+    PackChannelData(TXdataBuffer, &crsf, false, 0, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelDataHybridSwitch8(TXdataBuffer, &crsf);
+    UnpackChannelData(TXdataBuffer, &crsf, 0, 0);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
@@ -213,9 +188,9 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
 
-    TEST_ASSERT_EQUAL(BIT_to_CRSF(crsf.currentSwitches[0]), crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[4+0], crsf.PackedRCdataOut.ch4); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
-        TEST_ASSERT_EQUAL(N_to_CRSF(crsf.currentSwitches[forceSwitch], 15), crsf.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(crsf.ChannelDataIn[4+forceSwitch], crsf.PackedRCdataOut.ch11); // We forced switch 1 to be sent as the sequential field
     else if (forceSwitch != 0)
     {
         uint16_t ch;
@@ -230,7 +205,7 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         default:
             TEST_FAIL_MESSAGE("forceSwitch not handled");
         }
-        TEST_ASSERT_EQUAL(SWITCH3b_to_CRSF(crsf.currentSwitches[forceSwitch]), crsf.PackedRCdataOut.ch7); // We forced switch 3 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(crsf.ChannelDataIn[4+forceSwitch], ch);
     }
 }
 
@@ -242,23 +217,217 @@ void test_decodingHybrid8_all()
     // Switch X in 6-pos mode (includes 3-pos low/high)
     for (uint8_t val=0; val<6; ++val)
         test_decodingHybrid8(3, val);
-    // Switch X in 3-pos mode center
-    test_decodingHybrid8(3, 7);
-    // Switch 7 is 16 pos
-    for (uint8_t val=0; val<16; ++val)
-        test_decodingHybrid8(7, val);
+    // // Switch X in 3-pos mode center
+    // test_decodingHybrid8(3, 7);
+    // // Switch 7 is 16 pos
+    // for (uint8_t val=0; val<16; ++val)
+    //     test_decodingHybrid8(7, val);
+}
+
+/* Check the HybridWide encoding of a packet for OTA tx
+*/
+void test_encodingHybridWide(bool highRes, uint8_t nonce)
+{
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
+    uint8_t expected;
+    uint8_t TXdataBuffer[8];
+
+    // Define the input data
+    // 4 channels of analog data
+    crsf.ChannelDataIn[0] = 0x0123;
+    crsf.ChannelDataIn[1] = 0x4567;
+    crsf.ChannelDataIn[2] = 0x89AB;
+    crsf.ChannelDataIn[3] = 0xCDEF;
+
+    // 8 switches
+    constexpr int N_SWITCHES = 8;
+    for(int i = 0; i < N_SWITCHES; i++) {
+        constexpr int CHANNELS[] =
+            { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
+        crsf.ChannelDataIn[4+i] = CHANNELS[i % 3];
+    }
+
+    // Uplink data
+    crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
+
+    // encode it
+    uint8_t tlmDenom = (highRes) ? 64 : 4;
+    OtaSetSwitchMode(smHybridWide);
+    PackChannelData(TXdataBuffer, &crsf, nonce % 2, nonce, tlmDenom);
+
+    // check it looks right
+    // 1st byte is CRC & packet type
+    uint8_t header = RC_DATA_PACKET;
+    TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
+
+    // bytes 1 through 5 are 10 bit packed analog channels
+    for(int i = 0; i < 4; i++) {
+        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
+        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
+    }
+
+    // byte 5 is bits 1 and 2 of each analog channel
+    expected = 0;
+    for(int i = 0; i < 4; i++) {
+        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
+    }
+    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
+
+    // byte 6 is the switches encoded
+    uint8_t switches = TXdataBuffer[6];
+    uint8_t switchIdx = nonce % 8;
+
+    // High bit should be AUX1
+    TEST_ASSERT_EQUAL(CRSF_to_BIT(crsf.ChannelDataIn[4]), switches >> 7);
+    // If low res or slot 7, the bit 6 should be the telemetryack bit
+    if (!highRes || switchIdx == 7)
+        TEST_ASSERT_EQUAL(nonce % 2, (switches >> 6) & 1);
+
+    // If slot 7, the uplink_TX_Power should be in the low 6 bits
+    if (switchIdx == 7)
+        TEST_ASSERT_EQUAL(crsf.LinkStatistics.uplink_TX_Power, switches & 0b111111);
+    else
+    {
+        uint16_t ch = crsf.ChannelDataIn[5+switchIdx];
+        if (highRes)
+            TEST_ASSERT_EQUAL(CRSF_to_N(ch, 128), switches & 0b1111111); // 7-bit
+        else
+            TEST_ASSERT_EQUAL(CRSF_to_N(ch, 64), switches & 0b111111); // 6-bit
+    }
+}
+
+void test_encodingHybridWide_high()
+{
+    constexpr int N_SWITCHES = 8;
+    for (int i=0; i<N_SWITCHES; ++i)
+        test_encodingHybridWide(true, i);
+}
+
+void test_encodingHybridWide_low()
+{
+    constexpr int N_SWITCHES = 8;
+    for (int i=0; i<N_SWITCHES; ++i)
+        test_encodingHybridWide(false, i);
+}
+
+/* Check the decoding of a packet after rx in HybridWide mode
+*/
+void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, uint16_t forceVal)
+{
+    uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
+    uint8_t TXdataBuffer[8];
+    // uint8_t expected;
+
+    // Define the input data
+    // 4 channels of analog data
+    crsf.ChannelDataIn[0] = 0x0123;
+    crsf.ChannelDataIn[1] = 0x4567;
+    crsf.ChannelDataIn[2] = 0x89AB;
+    crsf.ChannelDataIn[3] = 0xCDEF;
+
+    // 8 switches
+    constexpr int N_SWITCHES = 8;
+    for(int i = 0; i < N_SWITCHES; i++) {
+        constexpr int CHANNELS[] =
+            { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
+        if (i == forceSwitch)
+            crsf.ChannelDataIn[4+i] = forceVal;
+        else
+            crsf.ChannelDataIn[4+i] = CHANNELS[i % 3];
+    }
+
+    // Uplink data
+    crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
+
+    // encode it
+    uint8_t tlmDenom = (highRes) ? 64 : 4;
+    OtaSetSwitchMode(smHybridWide);
+    PackChannelData(TXdataBuffer, &crsf, nonce % 2, nonce, tlmDenom);
+
+    // Clear the LinkStatistics to receive it from the encoding
+    crsf.LinkStatistics.uplink_TX_Power = 0;
+
+    // run the decoder, results in crsf->PackedRCdataOut
+    bool telemResult = UnpackChannelData(TXdataBuffer, &crsf, nonce, tlmDenom);
+
+    // compare the unpacked results with the input data
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[1] & 0b11111111110, crsf.PackedRCdataOut.ch1); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[2] & 0b11111111110, crsf.PackedRCdataOut.ch2); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[3] & 0b11111111110, crsf.PackedRCdataOut.ch3); // analog channels are truncated to 10 bits
+
+    // Switch 0 is sent on every packet
+    TEST_ASSERT_EQUAL(crsf.ChannelDataIn[4], crsf.PackedRCdataOut.ch4);
+
+    uint8_t switchIdx = nonce % 8;
+    // Validate the telemResult was unpacked properly
+    if (!highRes || switchIdx == 7)
+        TEST_ASSERT_EQUAL(telemResult, nonce % 2);
+
+    if (switchIdx == 7)
+    {
+        TEST_ASSERT_EQUAL(crsf.LinkStatistics.uplink_TX_Power, 3);
+    }
+    else
+    {
+        uint16_t ch;
+        switch (switchIdx)
+        {
+        case 0: ch = crsf.PackedRCdataOut.ch5; break;
+        case 1: ch = crsf.PackedRCdataOut.ch6; break;
+        case 2: ch = crsf.PackedRCdataOut.ch7; break;
+        case 3: ch = crsf.PackedRCdataOut.ch8; break;
+        case 4: ch = crsf.PackedRCdataOut.ch9; break;
+        case 5: ch = crsf.PackedRCdataOut.ch10; break;
+        case 6: ch = crsf.PackedRCdataOut.ch11; break;
+        default:
+            TEST_FAIL_MESSAGE("switchIdx not handled");
+        }
+        if (highRes)
+            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(crsf.ChannelDataIn[5+switchIdx], 128), 127), ch);
+        else
+            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(crsf.ChannelDataIn[5+switchIdx], 64), 63), ch);
+    }
+}
+
+void test_decodingHybridWide_AUX1()
+{
+    // Switch 0 is 2 pos, also tests the uplink_TX_Power
+    test_decodingHybridWide(true, 7, 0, CRSF_CHANNEL_VALUE_1000);
+    test_decodingHybridWide(true, 7, 0, CRSF_CHANNEL_VALUE_2000);
+}
+
+void test_decodingHybridWide_AUXX_high()
+{
+    constexpr int N_SWITCHES = 8;
+    for (int i=0; i<N_SWITCHES; ++i)
+        test_decodingHybridWide(true, i, 0, CRSF_CHANNEL_VALUE_1000);
+}
+
+void test_decodingHybridWide_AUXX_low()
+{
+    constexpr int N_SWITCHES = 8;
+    for (int i=0; i<N_SWITCHES; ++i)
+        test_decodingHybridWide(false, i, 0, CRSF_CHANNEL_VALUE_1000);
 }
 
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_round_robin_index0);
-    RUN_TEST(test_round_robin_index1);
-    RUN_TEST(test_priority);
+    RUN_TEST(test_crsfToBit);
+    RUN_TEST(test_bitToCrsf);
+    RUN_TEST(test_crsfToN);
+    RUN_TEST(test_nToCrsf);
 
     RUN_TEST(test_encodingHybrid8_3);
     RUN_TEST(test_encodingHybrid8_7);
     RUN_TEST(test_decodingHybrid8_all);
+
+    RUN_TEST(test_encodingHybridWide_high);
+    RUN_TEST(test_encodingHybridWide_low);
+    RUN_TEST(test_decodingHybridWide_AUX1);
+    RUN_TEST(test_decodingHybridWide_AUXX_high);
+    RUN_TEST(test_decodingHybridWide_AUXX_low);
 
     UNITY_END();
 

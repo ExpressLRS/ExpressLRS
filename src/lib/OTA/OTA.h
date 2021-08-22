@@ -1,6 +1,7 @@
 #ifndef H_OTA
 #define H_OTA
 
+#include <functional>
 #include "CRSF.h"
 
 // expresslrs packet header types
