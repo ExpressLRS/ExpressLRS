@@ -540,7 +540,9 @@ void registerLuaParameters() {
     if (connectionState == disconnected)
     {
       Serial.print("Request Switch Mode: ");
-      uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
+      // +1 to the mode because 1-bit was mode 0 and has been removed
+      // The modes should be updated for 1.1RC so mode 0 can be smHybrid
+      uint32_t newSwitchMode = (crsf.ParameterUpdateData[2] + 1) & 0b11;
       Serial.println(newSwitchMode, DEC);
       config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
@@ -626,7 +628,7 @@ void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate(crsf.getModelID()));
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm(crsf.getModelID()));
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower(crsf.getModelID())));
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())));
+  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode(crsf.getModelID())) - 1); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)(config.GetModelMatch(crsf.getModelID())));
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
   

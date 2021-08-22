@@ -14,7 +14,7 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-enum OtaSwitchMode_e { smHybrid, smHybridWide };
+enum OtaSwitchMode_e { sm1Bit, smHybrid, smHybridWide };
 void OtaSetSwitchMode(OtaSwitchMode_e mode);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 

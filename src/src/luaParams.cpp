@@ -38,7 +38,7 @@ struct tagLuaItem_textSelection luaPower = {
 };
 struct tagLuaItem_textSelection luaSwitch = {
     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Switch",
+    "Switch Mode",
     "Hybrid;Wide",
     {0,0,1},//value,min,max
     emptySpace,

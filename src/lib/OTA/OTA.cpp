@@ -303,6 +303,7 @@ void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
 {
     switch(switchMode)
     {
+    case sm1Bit:
     case smHybrid:
     default:
         #if defined(TARGET_TX) || defined(UNIT_TEST)

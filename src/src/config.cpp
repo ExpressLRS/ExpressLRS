@@ -1,6 +1,7 @@
 #include "config.h"
 #include "common.h"
 #include "POWERMGNT.h"
+#include "OTA.h"
 
 void
 TxConfig::Load()
@@ -137,7 +138,7 @@ TxConfig::SetDefaults()
         SetRate(i, modParams->index);
         SetTlm(i, modParams->TLMinterval);
         SetPower(i, DefaultPowerEnum);
-        SetSwitchMode(i, 1);
+        SetSwitchMode(i, (uint8_t)smHybrid);
         SetModelMatch(i, false);
     }
     SetVtxBand(0);
