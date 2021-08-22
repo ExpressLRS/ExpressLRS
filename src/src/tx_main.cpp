@@ -975,7 +975,7 @@ void loop()
 
   if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000)){
 #ifndef DEBUG_SUPPRESS
-  Serial.println("startup Check Failled")
+  Serial.println("No CRSF ever detected, starting WiFi")
 #endif
     webUpdateMode = true;
     BeginWebUpdate();
