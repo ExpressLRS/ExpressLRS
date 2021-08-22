@@ -339,6 +339,7 @@ local function fieldCommandLoad(field, data, offset)
   field.timeout = data[offset+1]
   field.info, offset = fieldGetString(data, offset+2)
   if field.status == 0 then
+    field.previousInfo = field.info
     fieldPopup = nil
   end
 end
@@ -409,11 +410,13 @@ local function parseParameterInfoMessage(data)
       if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent and field.type and field.type ~= 12 then
         initLineIndex()
       end
-      if fieldId == fields_count then
-        allParamsLoaded = 1
-        fieldId = 1 + (fieldId % #fields)
-      else
-        fieldId = 1 + (fieldId % #fields)
+      if fieldPopup == nil then
+        if fieldId == fields_count then
+          allParamsLoaded = 1
+          fieldId = 1 + (fieldId % #fields)
+        else
+          fieldId = 1 + (fieldId % #fields)
+        end
       end
     end
     fieldData = {}
@@ -572,7 +575,7 @@ local function runPopupPage(event)
   local result
   if fieldPopup.status == 3 then
     runningCommand = 1
-    result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.info, event)
+    result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.previousInfo, event)
   else
     if fieldPopup.status == 2 then
       runningCommand = 1
@@ -585,6 +588,8 @@ local function runPopupPage(event)
     result = popupWarning(fieldPopup.info, event)
   end
   if result == "OK" then
+    fieldPopup.status = 2
+    result = popupWarning("OK IS PRESSED", event)
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
   elseif result == "CANCEL" then
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })

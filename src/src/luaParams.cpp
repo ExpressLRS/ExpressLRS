@@ -85,7 +85,7 @@ struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "WiFi Update",
     {0,200},//status,timeout
-    "Reboot to cancel",
+    "Proceed WiFi Update Mode?",
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 #endif

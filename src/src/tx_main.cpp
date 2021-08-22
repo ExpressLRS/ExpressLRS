@@ -620,8 +620,9 @@ void registerLuaParameters() {
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
       if (arg > 0 && arg < 4) //start command
       {
+        setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
-      } else if (arg == 4) //confirm run
+      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) //confirm run
       {
         setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
