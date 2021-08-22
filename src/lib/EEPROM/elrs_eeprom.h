@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <cstddef>
 
 #define RESERVED_EEPROM_SIZE 1024
 
