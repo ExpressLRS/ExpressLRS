@@ -69,3 +69,14 @@
 
 # The model number defined in OpenTX, if you want to use model matching.
 #-DMODEL_MATCH_ID=0
+
+### Debugging options ###
+
+# Turn on debug messages, if disabled then all debugging options are disabled
+#-DDEBUG_ENABLE
+
+# Print a letter for each packet received or missed (RX debugging)
+#-DDEBUG_RX_SCOREBOARD
+
+# don't send RC msgs over UART
+#-DDEBUG_CRSF_NO_OUTPUT

@@ -9,6 +9,7 @@
 #include <StreamString.h>
 
 #include "ESP32_WebContent.h"
+#include "logging.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -88,7 +89,7 @@ static bool captivePortal()
 {
     if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local"))
     {
-        Serial.println("Request redirected to captive portal");
+        DBGLN("Request redirected to captive portal");
         server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
         server.send(302, "text/plain", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
         server.client().stop();             // Stop is needed because we sent no content length
@@ -151,12 +152,12 @@ static void WebUpdateSendNetworks()
 {
   int numNetworks = WiFi.scanComplete();
   if (numNetworks >= 0) {
-    Serial.printf("Found %d networks\n", numNetworks);
+    DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
     for(int i=0 ; i<numNetworks ; i++) {
       String w = WiFi.SSID(i);
-      Serial.printf("found %s\n", w.c_str());
+      DBGLN("found %s", w.c_str());
       if (vs.find(w)==vs.end() && w.length()>0) {
         if (!vs.empty()) s += ",";
         s += "\"" + w + "\"";
@@ -180,14 +181,14 @@ static void sendResponse(const String &msg, WiFiMode_t mode) {
 
 static void WebUpdateAccessPoint(void)
 {
-  Serial.println("Starting Access Point");
+  DBGLN("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
   sendResponse(msg, WIFI_AP);
 }
 
 static void WebUpdateConnect(void)
 {
-  Serial.println("Connecting to home network");
+  DBGLN("Connecting to home network");
   String msg = String("Connected to network '") + config.GetSSID() + "', connect to http://elrs_tx.local from a browser on that network";
   sendResponse(msg, WIFI_STA);
 }
@@ -197,7 +198,7 @@ static void WebUpdateSetHome(void)
   String ssid = server.arg("network");
   String password = server.arg("password");
 
-  Serial.printf("Setting home network %s\n", ssid.c_str());
+  DBGLN("Setting home network %s", ssid.c_str());
   config.SetSSID(ssid.c_str());
   config.SetPassword(password.c_str());
   config.Commit();
@@ -206,7 +207,7 @@ static void WebUpdateSetHome(void)
 
 static void WebUpdateForget(void)
 {
-  Serial.println("Forget home network");
+  DBGLN("Forget home network");
   config.SetSSID("");
   config.SetPassword("");
   config.Commit();
@@ -250,7 +251,7 @@ static void startWifi() {
     config.SetPassword(home_wifi_password);
   }
   if (config.GetSSID()[0]==0) {
-    Serial.println("Changing to AP mode");
+    DBGLN("Changing to AP mode");
     changeTime = millis();
     changeMode = WIFI_AP;
     wifiMode = WIFI_AP;
@@ -259,7 +260,7 @@ static void startWifi() {
     WiFi.softAP(ssid, password);
     WiFi.scanNetworks(true);
   } else {
-    Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
+    DBGLN("Connecting to home network '%s'", config.GetSSID());
     changeTime = millis();
     changeMode = WIFI_STA;
     wifiMode = WIFI_STA;
@@ -271,13 +272,12 @@ static void startWifi() {
 
 void BeginWebUpdate()
 {
+    DBGLN("Stopping Radio");
     hwTimer.stop();
     Radio.End();
     crsf.End();
 
-    Serial.println("Begin Webupdater");
-    Serial.println("Stopping Radio");
-
+    DBGLN("Begin Webupdater");
     startWifi();
 
     server.on("/", WebUpdateHandleRoot);
@@ -324,7 +324,7 @@ void BeginWebUpdate()
       HTTPUpload& upload = server.upload();
       if (upload.status == UPLOAD_FILE_START) {
         Serial.setDebugOutput(true);
-        Serial.printf("Update: %s\n", upload.filename.c_str());
+        DBGLN("Update: %s", upload.filename.c_str());
         if (!Update.begin()) { //start with max available size
           Update.printError(Serial);
         }
@@ -352,18 +352,18 @@ void BeginWebUpdate()
       } else if (upload.status == UPLOAD_FILE_END) {
         if (target_seen) {
           if (Update.end(true)) { //true to set the size to the current progress
-            Serial.printf("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power\n", upload.totalSize);
+            DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", upload.totalSize);
           } else {
             Update.printError(Serial);
           }
         } else {
           Update.abort();
-          Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
+          DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
         }
         Serial.setDebugOutput(false);
       } else if(upload.status == UPLOAD_FILE_ABORTED){
         Update.abort();
-        Serial.println("Update was aborted");
+        DBGLN("Update was aborted");
       } });
 
     dnsServer.start(DNS_PORT, "*", apIP);
@@ -371,7 +371,7 @@ void BeginWebUpdate()
 
     if (!MDNS.begin(myHostname))
     {
-      Serial.println("Error starting mDNS");
+      DBGLN("Error starting mDNS");
       return;
     }
 
@@ -393,7 +393,7 @@ void HandleWebUpdate()
 {
   wl_status_t status = WiFi.status();
   if (status != laststatus && wifiMode == WIFI_STA) {
-        Serial.printf("WiFi status %d\n", status);
+        DBGLN("WiFi status %d", status);
         switch(status) {
           case WL_NO_SSID_AVAIL:
           case WL_CONNECT_FAILED:
@@ -412,12 +412,12 @@ void HandleWebUpdate()
   if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < millis()) {
     changeTime = millis();
     changeMode = WIFI_AP;
-    Serial.printf("Connection failed %d\n", status);
+    DBGLN("Connection failed %d", status);
   }
   if (changeMode != wifiMode && changeMode != WIFI_MODE_NULL && (changeTime+500) < millis()) {
     switch(changeMode) {
       case WIFI_AP:
-        Serial.println("Changing to AP mode");
+        DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
         WiFi.mode(wifiMode);
@@ -426,7 +426,7 @@ void HandleWebUpdate()
         WiFi.scanNetworks(true);
         break;
       case WIFI_STA:
-        Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
+        DBGLN("Connecting to home network '%s'", config.GetSSID());
         WiFi.mode(WIFI_STA);
         wifiMode = WIFI_STA;
         changeTime = millis();

@@ -14,7 +14,7 @@ SX1280Driver Radio;
 #include "luaParams.h"
 
 #include "FHSS.h"
-// #include "debug.h"
+#include "logging.h"
 #include "POWERMGNT.h"
 #include "LED.h"
 #include "msp.h"
@@ -46,8 +46,6 @@ SX1280Driver Radio;
 #include "button.h"
 button button;
 #endif
-
-#define DEBUG_SUPPRESS
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -194,11 +192,11 @@ void DynamicPower_Update()
 
   // increase power only up to the set power from the LUA script
   if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
-    // Serial.print("Power increase");
+    DBGLN("Power increase");
     POWERMGNT.incPower();
   }
   if (avg_rssi > rssi_dec_threshold) {
-    // Serial.print("Power decrease");
+    DBGLN("Power decrease");
     POWERMGNT.decPower();
   }
 
@@ -227,18 +225,13 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
   if ((inCRC != calculatedCRC))
   {
-#ifndef DEBUG_SUPPRESS
-    Serial.println("TLM crc error");
-#endif
+    DBGLN("TLM crc error");
     return;
   }
 
   if (type != TLM_PACKET)
   {
-#ifndef DEBUG_SUPPRESS
-    Serial.println("TLM type error");
-    Serial.println(type);
-#endif
+    DBGLN("TLM type error %d", type);
     return;
   }
 
@@ -247,9 +240,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     connectionState = connected;
     LPD_DownlinkLQ.init(100);
     VtxConfigReadyToSend = true;
-#ifndef DEBUG_SUPPRESS
-    Serial.println("got downlink conn");
-#endif
+    DBGLN("got downlink conn");
   }
 
   LastTLMpacketRecvMillis = millis();
@@ -351,9 +342,8 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
     && (invertIQ == Radio.IQinverted))
     return;
-#ifndef DEBUG_SUPPRESS
-  Serial.println("set rate");
-#endif
+
+  DBGLN("set rate");
   hwTimer.updateInterval(ModParams->interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
@@ -513,11 +503,8 @@ void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      #ifndef DEBUG_SUPPRESS
-        Serial.print("Request AirRate: ");
-        Serial.println(arg);
-      #endif
-        config.SetRate(arg);
+      DBGLN("Request AirRate: %d", arg);
+      config.SetRate(arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)arg),
@@ -528,11 +515,8 @@ void registerLuaParameters() {
   registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      #ifndef DEBUG_SUPPRESS
-        Serial.print("Request TLM interval: ");
-        Serial.println(arg);
-      #endif
-        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+      DBGLN("Request TLM interval: %d", arg);
+      config.SetTlm((expresslrs_tlm_ratio_e)arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
@@ -542,10 +526,7 @@ void registerLuaParameters() {
   });
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
       PowerLevels_e newPower = (PowerLevels_e)arg;
-    #ifndef DEBUG_SUPPRESS
-      Serial.print("Request Power: ");
-      Serial.println(newPower, DEC);
-    #endif
+      DBGLN("Request Power: %d", newPower);
       config.SetPower(newPower < MaxPower ? newPower : MaxPower);
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
@@ -555,22 +536,19 @@ void registerLuaParameters() {
   });
   // Commented out for now until we add more switch options
   // registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
-  //   Serial.print("Request Switch Mode: ");
   //   uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
-  //   Serial.println(newSwitchMode, DEC);
+  //   DBGLN("Request Switch Mode: %d", newSwitchMode);
   //   config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
   //   SetSwitchMode(newSwitchMode);
   // });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
-    Serial.print("Request Model Match: ");
     bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
-    Serial.println(newModelMatch, DEC);
+    DBGLN("Request Model Match: %d", newModelMatch);
     config.SetModelMatch(newModelMatch);
   });
   registerLUAParameter(&luaSetRXModel, [](uint8_t id, uint8_t arg){
-    Serial.print("Request Set RX Model: ");
     uint8_t rxModel = crsf.ParameterUpdateData[2];
-    Serial.println(rxModel, DEC);
+    DBGLN("Request Set RX Model: %d", rxModel);
     mspPacket_t msp;
     msp.reset();
     msp.makeCommand();
@@ -601,18 +579,14 @@ void registerLuaParameters() {
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
       if (arg > 0 && arg < 4)
       {
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Binding requested from LUA");
-  #endif
+        DBGLN("Binding requested from LUA");
         EnterBindingMode();
       } else if(arg == 6){
           sendLuaFieldCrsf(id, 0);
       }
       else
       {
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Binding stopped  from LUA");
-  #endif
+        DBGLN("Binding stopped  from LUA");
         ExitBindingMode();
       }
     });
@@ -631,9 +605,7 @@ void registerLuaParameters() {
         //unintentional button press. 
         setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("Wifi Update Mode Requested!");
-  #endif
+        DBGLN("Wifi Update Mode Requested!");
         BeginWebUpdate();
       } else if(arg == 6){ //6 = status poll
           sendLuaFieldCrsf(id,0);
@@ -739,9 +711,7 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
 
   // Write the uncommitted eeprom values
-#ifndef DEBUG_SUPPRESS
-  Serial.println("EEPROM COMMIT");
-#endif
+  DBGLN("EEPROM COMMIT");
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
   resetLuaParams();
@@ -913,9 +883,7 @@ void setup()
   crsf.RecvParameterUpdate = &luaParamUpdateReq;
   crsf.RecvModelUpdate = &ModelUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
-#ifndef DEBUG_SUPPRESS
-  Serial.println("ExpressLRS TX Module Booted...");
-#endif
+  DBGLN("ExpressLRS TX Module Booted...");
 
   eeprom.Begin(); // Init the eeprom
   config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -986,9 +954,7 @@ void loop()
   //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
   //start webupdate, there might be wrong configuration flashed.
   if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL*1000) && !webUpdateMode){
-#ifndef DEBUG_SUPPRESS
-  Serial.println("No CRSF ever detected, starting WiFi")
-#endif
+    DBGLN("No CRSF ever detected, starting WiFi");
     webUpdateMode = true;
     BeginWebUpdate();
   }
@@ -1001,8 +967,8 @@ void loop()
   HandleUpdateParameter();
   CheckConfigChangePending();
 
-#ifdef FEATURE_OPENTX_SYNC
-  // Serial.println(crsf.OpenTXsyncOffset);
+  #ifdef FEATURE_OPENTX_SYNC
+    // DBGLN(crsf.OpenTXsyncOffset);
   #endif
 
   #ifdef PLATFORM_STM32
@@ -1104,9 +1070,7 @@ void OnTxPowerPacket(mspPacket_t *packet)
   // Parse the TX power
   uint8_t txPower = packet->readByte();
   CHECK_PACKET_PARSING();
-#ifndef DEBUG_SUPPRESS
-  Serial.println("TX setpower");
-#endif
+  DBGLN("TX setpower");
 
   if (txPower < PWR_COUNT)
     POWERMGNT.setPower((PowerLevels_e)txPower);
@@ -1232,10 +1196,7 @@ void EnterBindingMode()
   // Start transmitting again
   hwTimer.resume();
 
-#ifndef DEBUG_SUPPRESS
-  Serial.print("Entered binding mode at freq = ");
-  Serial.println(Radio.currFreq);
-#endif
+  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 }
 
 void ExitBindingMode()
@@ -1262,9 +1223,7 @@ void ExitBindingMode()
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
-#ifndef DEBUG_SUPPRESS
-  Serial.println("Exiting binding mode");
-#endif
+  DBGLN("Exiting binding mode");
 }
 
 void SendUIDOverMSP()

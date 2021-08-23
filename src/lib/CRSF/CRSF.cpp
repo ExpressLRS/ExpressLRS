@@ -1,7 +1,7 @@
 #include "CRSF.h"
 #include "../../lib/FIFO/FIFO.h"
 #include "telemetry_protocol.h"
-//#define DEBUG_CRSF_NO_OUTPUT // debug, don't send RC msgs over UART
+#include "logging.h"
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
@@ -106,7 +106,7 @@ uint32_t CRSF::luaHiddenFlags = 0;
 
 void CRSF::Begin()
 {
-    Serial.println("About to start CRSF task...");
+    DBGLN("About to start CRSF task...");
 
 #if CRSF_TX_MODULE
     UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
@@ -118,7 +118,7 @@ void CRSF::Begin()
 
 
 #elif defined(PLATFORM_STM32)
-    Serial.println("Start STM32 R9M TX CRSF UART");
+    DBGLN("Start STM32 R9M TX CRSF UART");
 
     CRSF::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
     CRSF::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -144,7 +144,7 @@ void CRSF::Begin()
     USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
     USART2->CR1 |= USART_CR1_UE;
 #endif
-    Serial.println("STM32 CRSF UART LISTEN TASK STARTED");
+    DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
 #endif
 
@@ -175,7 +175,7 @@ void CRSF::End()
         }
     }
     //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
-    Serial.println("CRSF UART END");
+    DBGLN("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
 
@@ -548,7 +548,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
     if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
     {
-        Serial.print("too large");
+        ERRLN("too large");
         return;
     }
 
@@ -608,9 +608,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
         CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
     }
 #endif
-    //Serial.print(CRSF::OpenTXsyncOffset);
-    // Serial.print(",");
-    // Serial.println(CRSF::OpenTXsyncOffsetSafeMargin / 10);
+    //DBGLN("%d, %d", CRSF::OpenTXsyncOffset, CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
 
 
@@ -674,7 +672,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (CRSFstate == false)
     {
         CRSFstate = true;
-        Serial.println("CRSF UART Connected");
+        DBGLN("CRSF UART Connected");
 
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
         SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
@@ -722,7 +720,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             RecvParameterUpdate();
             return true;
         }
-        Serial.println("Got Other Packet");        
+        DBGLN("Got Other Packet");        
         //GoodPktsCount++;        
     }
     return false;
@@ -895,7 +893,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 }
                 else
                 {
-                    Serial.println("UART CRC failure");
+                    DBGLN("UART CRC failure");
                     // cleanup input buffer
                     flush_port_input();
                     BadPktsCount++;
@@ -1010,11 +1008,11 @@ bool CRSF::UARTwdt()
     {
         if (BadPktsCount >= GoodPktsCount)
         {
-            Serial.print("Too many bad UART RX packets! ");
+            DBGLN("Too many bad UART RX packets!");
 
             if (CRSFstate == true)
             {
-                Serial.println("CRSF UART Disconnected");
+                DBGLN("CRSF UART Disconnected");
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
                 SyncWaitPeriodCounter = now; // set to begin wait for auto sync offset calculation
                 CRSF::OpenTXsyncOffsetSafeMargin = 1000;
@@ -1028,9 +1026,7 @@ bool CRSF::UARTwdt()
             uint32_t UARTrequestedBaud = (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE) ?
                 CRSF_OPENTX_SLOW_BAUDRATE : CRSF_OPENTX_FAST_BAUDRATE;
 
-            Serial.print("UART WDT: Switch to: ");
-            Serial.print(UARTrequestedBaud);
-            Serial.println(" baud");
+            DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
             SerialOutFIFO.flush();
 #ifdef PLATFORM_ESP32
@@ -1058,10 +1054,7 @@ bool CRSF::UARTwdt()
 
             retval = true;
         }
-        Serial.print("UART STATS Bad:Good = ");
-        Serial.print(BadPktsCount);
-        Serial.print(":");
-        Serial.println(GoodPktsCount);
+        DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
         GoodPktsCountResult = GoodPktsCount;
@@ -1076,7 +1069,7 @@ bool CRSF::UARTwdt()
 //RTOS task to read and write CRSF packets to the serial port
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
-    Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
+    DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);

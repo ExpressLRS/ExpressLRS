@@ -1,4 +1,5 @@
 #include "FHSS.h"
+#include "logging.h"
 #include <string.h>
 
 uint8_t volatile FHSSptr;
@@ -275,29 +276,27 @@ Approach:
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
 #ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
+    INFOLN("Setting 915MHz AU Mode");
 #elif defined Regulatory_Domain_FCC_915
-    Serial.println("Setting 915MHz Mode");
+    INFOLN("Setting 915MHz FCC Mode");
 #elif defined Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
+    INFOLN("Setting 868MHz EU Mode");
 #elif defined Regulatory_Domain_IN_866
-    Serial.println("Setting 866MHz Mode");
+    INFOLN("Setting 866MHz IN Mode");
 #elif defined Regulatory_Domain_AU_433
-    Serial.println("Setting 433MHz EU Mode");
+    INFOLN("Setting 433MHz AU Mode");
 #elif defined Regulatory_Domain_EU_433
-    Serial.println("Setting 433MHz EU Mode");
+    INFOLN("Setting 433MHz EU Mode");
 #elif defined Regulatory_Domain_ISM_2400
-    Serial.println("Setting 2400MHz Mode");
+    INFOLN("Setting 2400MHz Mode");
 #else
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-    Serial.print("Number of FHSS frequencies = ");
-    Serial.println(NR_FHSS_ENTRIES);
+    DBGLN("Number of FHSS frequencies = %d", NR_FHSS_ENTRIES);
 
     sync_channel = NR_FHSS_ENTRIES / 2;
-    Serial.print("Sync channel = ");
-    Serial.println(sync_channel);
+    DBGLN("Sync channel = %d", sync_channel);
 
     rngSeed(seed);
 
@@ -343,7 +342,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
                 if (index == NR_FHSS_ENTRIES)
                 {
                     // This should never happen
-                    Serial.print("FAILED to find the available entry!\n");
+                    ERRLN("Failed to find the available entry!");
                     // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
                     // Use the sync channel
                     index = sync_channel;
@@ -364,18 +363,14 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
         FHSSsequence[i] = prev; // assign the value to the sequence array
 
-        Serial.print(prev);
+        DBG("%d ", prev);
         if ((i + 1) % 10 == 0)
         {
-            Serial.println();
-        }
-        else
-        {
-            Serial.print(" ");
+            DBGCR;
         }
     } // for each element in FHSSsequence
 
-    Serial.println();
+    DBGCR;
 }
 
 uint32_t FHSSNumEntriess(void)
