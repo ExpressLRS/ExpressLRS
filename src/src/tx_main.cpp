@@ -25,7 +25,6 @@ SX1280Driver Radio;
 #include "config.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
-#include "LowPassFilter.h"
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
@@ -93,7 +92,6 @@ volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
 LQCALC<10> LQCalc;
-LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
 volatile bool UpdateModelReq = false;
@@ -244,7 +242,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   if (connectionState != connected)
   {
     connectionState = connected;
-    LPD_DownlinkLQ.init(100);
     VtxConfigReadyToSend = true;
 #ifndef DEBUG_SUPPRESS
     Serial.println("got downlink conn");
@@ -268,7 +265,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
