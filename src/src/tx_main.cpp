@@ -696,6 +696,8 @@ void UARTconnected()
 
 static void ChangeRadioParams()
 {
+  config.SetModelId(crsf.getModelID());
+  
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   SetSwitchMode(config.GetSwitchMode());
@@ -719,7 +721,6 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
   UpdateModelReq = true;
-  config.SetModelId(crsf.getModelID());
 }
 
 static void ConfigChangeCommit()
