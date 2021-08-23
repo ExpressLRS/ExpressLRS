@@ -148,6 +148,7 @@ local function getBitBin(data, bitPosition)
 
 local function parseDeviceInfoMessage(data)
   local offset
+  allParamsLoaded = 0
   deviceId = data[2]
   deviceName, offset = fieldGetString(data, 3)
   fields_count = data[offset+12]
