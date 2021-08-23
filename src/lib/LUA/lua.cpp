@@ -162,7 +162,9 @@ bool luaHandleUpdateParameter()
   UpdateParamReq = false;
   return true;
 }
-
+void sendLuaDevicePacket(void){
+  crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+}
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     luaStruct->luaProperties2.value = newvalue;
 }
