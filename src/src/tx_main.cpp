@@ -82,13 +82,12 @@ bool NextPacketIsMspData = false;  // if true the next packet will contain the m
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAResidualTimeMS 1500 // we spam some more after rate change to help link get up to speed
+#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
 volatile uint8_t syncSpamCounter = 0;
 uint32_t rfModeLastChangedMS = 0;
-////////////////////////////////////////////////
-
 uint32_t SyncPacketLastSent = 0;
+////////////////////////////////////////////////
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
@@ -422,27 +421,33 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  uint32_t SyncInterval;
-
+  uint32_t now = millis();
+  static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
-  SyncInterval = 250;
+  uint32_t SyncInterval = 250;
   bool skipSync = IsArmed();
 #else
-  SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  bool skipSync = false;
+  uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  // Skip sync if the connection seems healthy:
+  //   State is connected (has not missed >5 telem packets in a row)
+  //   LQ is >75 we know the remote Nonce is good so sync isn't needed if connected
+  bool skipSync = (connectionState == connected) && (crsf.LinkStatistics.uplink_Link_quality > 75);
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  bool NonceFHSSresultWindow = (NonceFHSSresult == 1 || NonceFHSSresult == 2) ? true : false; // restrict to the middle nonce ticks (not before or after freq chance)
-  bool WithinSyncSpamResidualWindow = (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
+  bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
 
-  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && NonceFHSSresultWindow)
+  // Sync spam only happens on slot 1 and 2 and can't be disabled
+  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
+  // But only on the sync FHSS channel and with a timed delay between them
+  else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
   {
     GenerateSyncPacketData();
+    syncSlot = (syncSlot + 1) % (ExpressLRS_currAirRate_Modparams->FHSShopInterval * 2);
   }
   else
   {
