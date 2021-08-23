@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 template <uint8_t PIN, bool IDLELOW>
 class Button
 {
