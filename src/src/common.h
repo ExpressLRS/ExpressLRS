@@ -34,11 +34,9 @@ typedef enum
 
 typedef enum
 {
-    bad_sync_retry = 4,
-    bad_sync = 3,
-    connected = 2,
-    tentative = 1,
-    disconnected = 0
+    connected,
+    tentative,
+    disconnected
 } connectionState_e;
 
 typedef enum
