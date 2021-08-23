@@ -44,7 +44,7 @@ SX1280Driver Radio;
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
-button button;
+Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #endif
 
 #define DEBUG_SUPPRESS
@@ -858,10 +858,6 @@ void setup()
     #endif
   #endif // GPIO_PIN_BUZZER
 
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-  button.init(GPIO_PIN_BUTTON, !GPIO_BUTTON_INVERTED); // r9 tx appears to be active high
-#endif
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
   digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
@@ -880,8 +876,8 @@ void setup()
 #endif
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-  button.buttonTriplePress = &EnterBindingMode;
-  button.buttonLongPress = &POWERMGNT.handleCyclePower;
+  button.OnShortPress = []() { if (button.getCount() == 3) EnterBindingMode(); };
+  button.OnLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
 #ifdef PLATFORM_ESP32
@@ -997,7 +993,7 @@ void loop()
   #endif // PLATFORM_STM32
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-    button.handle();
+    button.update();
   #endif
 
   if (Serial.available())
