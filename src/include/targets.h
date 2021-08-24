@@ -492,8 +492,8 @@ Designed by NamimnoRC
 #define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
 #define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
 
-#elif defined(TARGET_RX_FM30_MINI)
-#define GPIO_PIN_NSS            PA15 // or PB3?
+#elif defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
+#define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_BUSY           PE9
 #define GPIO_PIN_DIO1           PE8
 #define GPIO_PIN_MOSI           PB5
@@ -501,16 +501,20 @@ Designed by NamimnoRC
 #define GPIO_PIN_SCK            PB3
 #define GPIO_PIN_RST            PB2
 #define GPIO_PIN_TX_ENABLE      PD8 // CTX on SE2431L
-#define GPIO_PIN_ANTENNA_SELECT PA8 // Low for left, high for right
-#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2
-#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 NOTE: Not the "OUT" pinheader pad
 #define GPIO_PIN_LED_RED        PB6
 #define GPIO_PIN_LED_GREEN      PB7
 #define GPIO_PIN_DEBUG_RX       PA10 // UART1
 #define GPIO_PIN_DEBUG_TX       PA9  // UART1
-#define timerOffset             0
 #define GPIO_LED_RED_INVERTED   1
 #define GPIO_LED_GREEN_INVERTED 1
+#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 NOTE: Not the "OUT" pinheader pad
+    #if defined(TARGET_RX_FM30_MINI)
+        #define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2
+        #define GPIO_PIN_ANTENNA_SELECT PA8 // Low for left, high for right
+    #elif defined(TARGET_TX_FM30_MINI)
+        #define GPIO_PIN_RCSIGNAL_RX    PA2 // UART2 (half duplex)
+        #define GPIO_PIN_ANT_CTRL_2     PA8 // Low for left, high for right
+    #endif
 // Unused pins
 #define GPIO_PIN_UART1TX_INVERT PF6
 

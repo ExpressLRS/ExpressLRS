@@ -99,7 +99,7 @@ typedef struct expresslrs_mod_settings_s
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
-
+    uint8_t PayloadLength;            // Number of OTA bytes to be sent.
 } expresslrs_mod_settings_t;
 
 #endif
@@ -118,7 +118,7 @@ typedef struct expresslrs_mod_settings_s
     expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
-
+    uint8_t PayloadLength;            // Number of OTA bytes to be sent.
 } expresslrs_mod_settings_t;
 
 #endif
@@ -139,6 +139,8 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 
 #endif // UNIT_TEST
 
+uint32_t uidMacSeedGet(void);
+
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6
@@ -147,6 +149,10 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #define AUX6 9
 #define AUX7 10
 #define AUX8 11
+#define AUX9 12
+#define AUX10 13
+#define AUX11 14
+#define AUX12 15
 
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/

@@ -71,7 +71,7 @@ void SX127xDriver::ConfigLoraDefaults()
 
   instance->ClearIRQFlags();
 
-  hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, TXbuffLen);
+  hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, instance->PayloadLength);
   SetSyncWord(currSyncWord);
   hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
@@ -245,12 +245,8 @@ bool SX127xDriver::DetectChip()
     {
       Serial.print(" not found! (");
       Serial.print(i + 1);
-      Serial.print(" of 3 tries) REG_VERSION == ");
-
-      char buffHex[5];
-      sprintf(buffHex, "0x%02X", version);
-      Serial.print(buffHex);
-      Serial.println();
+      Serial.print(" of 3 tries) REG_VERSION == 0x");
+      Serial.println(version, HEX);
       delay(200);
       i++;
     }
@@ -280,7 +276,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 {
   // if (instance->currOpmode == SX127x_OPMODE_TX)
   // {
@@ -295,7 +291,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
   //instance->HeadRoom = instance->TXstartMicros - instance->TXdoneMicros;
 
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegisterFIFO(data, length);
+  hal.writeRegisterFIFO(instance->TXdataBuffer, instance->PayloadLength);
 
   instance->SetMode(SX127x_OPMODE_TX);
 }
@@ -305,7 +301,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t volatile *data, uint8_t length)
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
   instance->ClearIRQFlags();
-  hal.readRegisterFIFO(instance->RXdataBuffer, instance->RXbuffLen);
+  hal.readRegisterFIFO(instance->RXdataBuffer, instance->PayloadLength);
   instance->LastPacketRSSI = instance->GetLastPacketRSSI();
   instance->LastPacketSNR = instance->GetLastPacketSNR();
   RXdoneCallback();
@@ -334,13 +330,14 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength);
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength)
 {
+  instance->PayloadLength = PayloadLength;
   IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
@@ -472,10 +469,10 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
 // {
-//     int NUM_READS = RSSI_FLOOR_NUM_READS * NR_FHSS_ENTRIES;
+//     int NUM_READS = RSSI_FLOOR_NUM_READS * FHSSNumEntriess();
 //     float returnval = 0;
 
-//     for (uint32_t freq = 0; freq < NR_FHSS_ENTRIES; freq++)
+//     for (uint32_t freq = 0; freq < FHSSNumEntriess(); freq++)
 //     {
 //         FHSSsetCurrIndex(freq);
 //         Radio.SetMode(SX127X_CAD);

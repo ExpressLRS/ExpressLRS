@@ -33,6 +33,20 @@ class SerialHelper:
         if timeout is None or timeout <= 0.:
             timeout = self.timeout
         buf = self.buf
+        def has_delimiter():
+            for d in self.delimiters:
+                if d in buf:
+                    return True
+
+        start = time.time()
+        while not has_delimiter() and ((time.time() - start) < timeout):
+            i = max(0, min(2048, self.serial.in_waiting))
+            data = self.serial.read(i)
+            if not data:
+                continue
+
+            buf.extend(data)
+
         for delimiter in self.delimiters:
             i = buf.find(delimiter)
             if i >= 0:
@@ -41,21 +55,7 @@ class SerialHelper:
                 self.buf = buf[offset:]
                 return self.__convert_to_str(r)
 
-        start = time.time()
-        while ((time.time() - start) < timeout):
-            i = max(0, min(2048, self.serial.in_waiting))
-            data = self.serial.read(i)
-            if not data:
-                continue
-            for delimiter in self.delimiters:
-                i = bytearray(buf + data).find(delimiter)
-                if i >= 0:
-                    offset = i+len(delimiter)
-                    r = buf + data[:offset]
-                    self.buf = bytearray(data[offset:])
-                    return self.__convert_to_str(r)
-            # No match
-            buf.extend(data)
+        # No match
 
         # Timeout, reset buffer and return empty string
         #print("TIMEOUT! Got:\n>>>>>>\n{}\n<<<<<<\n".format(buf))

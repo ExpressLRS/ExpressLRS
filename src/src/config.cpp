@@ -9,7 +9,7 @@ TxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != TX_CONFIG_VERSION)
+    if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -21,7 +21,7 @@ TxConfig::Load()
 
 void
 TxConfig::Commit()
-{    
+{
     if (!m_modified)
     {
         // No changes
@@ -37,31 +37,91 @@ TxConfig::Commit()
 
 // Setters
 void
-TxConfig::SetRate(uint32_t rate)
+TxConfig::SetRate(uint8_t rate)
 {
-    if (m_config.rate != rate)
+    if (GetRate() != rate)
     {
-        m_config.rate = rate;
+        m_model->rate = rate;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetTlm(uint32_t tlm)
+TxConfig::SetTlm(uint8_t tlm)
 {
-    if (m_config.tlm != tlm)
+    if (GetTlm() != tlm)
     {
-        m_config.tlm = tlm;
+        m_model->tlm = tlm;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetPower(uint32_t power)
+TxConfig::SetPower(uint8_t power)
 {
-    if (m_config.power != power)
+    if (GetPower() != power)
     {
-        m_config.power = power;
+        m_model->power = power;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetSwitchMode(uint8_t switchMode)
+{
+    if (GetSwitchMode() != switchMode)
+    {
+        m_model->switchMode = switchMode;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetModelMatch(bool modelMatch)
+{
+    if (GetModelMatch() != modelMatch)
+    {
+        m_model->modelMatch = modelMatch;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxBand(uint8_t vtxBand)
+{
+    if (m_config.vtxBand != vtxBand)
+    {
+        m_config.vtxBand = vtxBand;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxChannel(uint8_t vtxChannel)
+{
+    if (m_config.vtxChannel != vtxChannel)
+    {
+        m_config.vtxChannel = vtxChannel;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxPower(uint8_t vtxPower)
+{
+    if (m_config.vtxPower != vtxPower)
+    {
+        m_config.vtxPower = vtxPower;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetVtxPitmode(uint8_t vtxPitmode)
+{
+    if (m_config.vtxPitmode != vtxPitmode)
+    {
+        m_config.vtxPitmode = vtxPitmode;
         m_modified = true;
     }
 }
@@ -70,11 +130,24 @@ void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
-    m_config.version = TX_CONFIG_VERSION;
-    SetRate(modParams->index);
-    SetTlm(modParams->TLMinterval);
-    SetPower(DefaultPowerEnum);
+    m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
+    SetSSID("");
+    SetPassword("");
+    for (int i=0 ; i<64 ; i++) {
+        SetModelId(i);
+        SetRate(modParams->index);
+        SetTlm(modParams->TLMinterval);
+        SetPower(DefaultPowerEnum);
+        SetSwitchMode(1);
+        SetModelMatch(false);
+    }
+    SetVtxBand(0);
+    SetVtxChannel(0);
+    SetVtxPower(0);
+    SetVtxPitmode(0);
     Commit();
+
+    SetModelId(0);
 }
 
 void
@@ -86,6 +159,20 @@ TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
+void
+TxConfig::SetSSID(const char *ssid)
+{
+    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
+    m_modified = true;
+}
+
+void
+TxConfig::SetPassword(const char *password)
+{
+    strncpy(m_config.password, password, sizeof(m_config.password)-1);
+    m_modified = true;
+}
+
 /////////////////////////////////////////////////////
 
 void
@@ -95,7 +182,7 @@ RxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     // Check if version number matches
-    if (m_config.version != RX_CONFIG_VERSION)
+    if (m_config.version != (uint32_t)(RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         Serial.println("EEPROM version mismatch! Resetting to defaults...");
@@ -107,7 +194,7 @@ RxConfig::Load()
 
 void
 RxConfig::Commit()
-{    
+{
     if (!m_modified)
     {
         // No changes
@@ -153,11 +240,24 @@ RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 }
 
 void
+RxConfig::SetModelId(uint8_t modelId)
+{
+    if (m_config.modelId != modelId)
+    {
+        m_config.modelId = modelId;
+        m_modified = true;
+    }
+}
+
+void
 RxConfig::SetDefaults()
 {
-    m_config.version = RX_CONFIG_VERSION;
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     SetIsBound(false);
     SetPowerOnCounter(0);
+    SetModelId(0xFF);
+    SetSSID("");
+    SetPassword("");
     Commit();
 }
 
@@ -168,4 +268,18 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     {
         m_eeprom = eeprom;
     }
+}
+
+void
+RxConfig::SetSSID(const char *ssid)
+{
+    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
+    m_modified = true;
+}
+
+void
+RxConfig::SetPassword(const char *password)
+{
+    strncpy(m_config.password, password, sizeof(m_config.password)-1);
+    m_modified = true;
 }

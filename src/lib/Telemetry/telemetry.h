@@ -42,11 +42,11 @@ public:
     void ResetState();
     bool ShouldCallBootloader();
     bool ShouldCallEnterBind();
-    #ifdef ENABLE_TELEMETRY
+    bool ShouldCallUpdateModelMatch();
+    uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
-    #endif
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     void AppendTelemetryPackage();
@@ -58,4 +58,6 @@ private:
     uint8_t receivedPackages;
     bool callBootloader;
     bool callEnterBind;
+    bool callUpdateModelMatch;
+    uint8_t modelMatchId;
 };

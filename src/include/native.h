@@ -40,6 +40,7 @@ public:
     void flush() {}
     void end() {}
     void begin(int baud) {}
+    void enableHalfDuplexRx() {}
 
     // Print methods
     size_t write(uint8_t c) {return 1;}
