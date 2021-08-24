@@ -1,7 +1,5 @@
-#ifndef TARGET_NATIVE
 #include "targets.h"
-#include "HardwareSerial.h"
-#endif
+#include <cstdarg>
 #include "logging.h"
 
 #ifdef LOG_USE_PROGMEM

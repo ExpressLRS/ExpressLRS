@@ -660,7 +660,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         {
             DBG("%02x,", Radio.RXdataBuffer[i]);
         }
-        DBGLN();
+        DBGCR;
         #if defined(DEBUG_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
