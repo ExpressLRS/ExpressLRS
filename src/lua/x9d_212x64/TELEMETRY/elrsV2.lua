@@ -534,6 +534,7 @@ local function runDevicePage(event)
         elseif functions[field.type+1] then
           lcd.drawText(0, 1+8*y, field.name)
           functions[field.type+1].display(field, 1+8*y, attr)
+        end
       end
     end
   end
