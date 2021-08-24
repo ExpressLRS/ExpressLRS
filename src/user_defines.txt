@@ -72,11 +72,14 @@
 
 ### Debugging options ###
 
-# Turn on debug messages, if disabled then all debugging options are disabled
+# Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
 #-DDEBUG_ENABLE
 
 # Print a letter for each packet received or missed (RX debugging)
 #-DDEBUG_RX_SCOREBOARD
 
-# don't send RC msgs over UART
+# Don't send RC msgs over UART
 #-DDEBUG_CRSF_NO_OUTPUT
+
+# These debugging options send extra information to BetaFlight in the LinkStatistics packet
+#-DBF_DEBUG_LINK_STATS

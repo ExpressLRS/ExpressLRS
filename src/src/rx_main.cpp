@@ -173,6 +173,15 @@ uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
+#if defined(BF_DEBUG_LINK_STATS)
+// Debug vars
+uint8_t debug1 = 0;
+uint8_t debug2 = 0;
+uint8_t debug3 = 0;
+int8_t debug4 = 0;
+///////////////////////////////////////
+#endif
+
 bool InBindingMode = false;
 
 void reset_into_bootloader(void);
@@ -219,12 +228,22 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
     crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
+    #if !defined(BF_DEBUG_LINK_STATS)
+    crsf.LinkStatistics.downlink_RSSI = 0;
+    crsf.LinkStatistics.downlink_Link_quality = 0;
+    crsf.LinkStatistics.downlink_SNR = 0;
+    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
+    #else
+    crsf.LinkStatistics.downlink_RSSI = debug1;
+    crsf.LinkStatistics.downlink_Link_quality = debug2;
+    crsf.LinkStatistics.downlink_SNR = debug3;
+    crsf.LinkStatistics.uplink_RSSI_2 = debug4;
+    #endif
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
