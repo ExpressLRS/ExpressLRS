@@ -1098,7 +1098,8 @@ static void cycleRfMode(unsigned long now)
         SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
         SendLinkStatstoFCintervalLastSent = now;
         LQCalc.reset();
-        DBGLN("Rate %dHz", 1000000U / ExpressLRS_currAirRate_Modparams->interval);
+        // Display the current air rate to the user as an indicator something is happening
+        INFOLN(ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
         crsf.sendLinkStatisticsToFC();
