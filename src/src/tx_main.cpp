@@ -579,59 +579,69 @@ void registerLuaParameters() {
     msp.addByte(rxModel);
     crsf.AddMspMessage(&msp);
   });
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg == 1)
-    {
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Binding requested from LUA");
-#endif
-      EnterBindingMode();
-    } else if(arg == 6){
-        sendLuaFieldCrsf(id, 0);
-    }
-    else
-    {
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Binding stopped  from LUA");
-#endif
-      ExitBindingMode();
-    }
-  });
-#ifdef PLATFORM_ESP32
-  registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-    if (arg == 1)
-    {
-      webUpdateMode = true;
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Wifi Update Mode Requested!");
-#endif
-      BeginWebUpdate();
-#ifndef DEBUG_SUPPRESS
-      Serial.println("Wifi Update Mode Requested but not supported on this platform!");
-#endif
-    } else if(arg == 6){
-        sendLuaFieldCrsf(id,0);
-    }
-  });
-#endif
-
+  
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
       config.SetVtxChannel(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
       config.SetVtxPower(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
       config.SetVtxPitmode(arg);
-  });
+  },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
       sendLuaFieldCrsf(id,0);
       VtxConfigReadyToSend = true;
-  });
+  },luaVtxFolder.luaProperties1.id);
+
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+      if (arg > 0 && arg < 4)
+      {
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Binding requested from LUA");
+  #endif
+        EnterBindingMode();
+      } else if(arg == 6){
+          sendLuaFieldCrsf(id, 0);
+      }
+      else
+      {
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Binding stopped  from LUA");
+  #endif
+        ExitBindingMode();
+      }
+    });
+  #ifdef PLATFORM_ESP32
+    registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
+      if (arg > 0 && arg < 4) //start command, 1 = start
+                              //2 = running
+                              //3 = request confirmation
+      {
+        setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
+        setLuaCommandValue(&luaWebUpdate,3); //request confirm
+      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      {
+        //confirm run on ELRSv2.lua or start command from CRSF configurator,
+        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
+        //unintentional button press. 
+        setLuaCommandValue(&luaWebUpdate,2); //running status
+        webUpdateMode = true;
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("Wifi Update Mode Requested!");
+  #endif
+        BeginWebUpdate();
+      } else if(arg == 6){ //6 = status poll
+          sendLuaFieldCrsf(id,0);
+      } else { //5 or anything else is cancel
+        setLuaCommandValue(&luaWebUpdate,0);
+      }
+    });
+  #endif
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
@@ -711,6 +721,7 @@ void HandleUpdateParameter()
     ChangeRadioParams();
     UpdateModelReq = false;
   }
+    crsf.setLuaHiddenFlag(luaInfo.luaProperties1.id,crsf.elrsLUAmode);
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
@@ -1153,12 +1164,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 void VtxConfigToMSPOut()
 {
-  // 6 = off in the lua Band field
+  // 0 = off in the lua Band field
   // Do not send while armed.  Replace CRSF_to_BIT with IsArmed() after PR #786 is merged
-  if (config.GetVtxBand() == 6 || CRSF_to_BIT(crsf.ChannelDataIn[AUX1]))
+  if (!config.GetVtxBand() || CRSF_to_BIT(crsf.ChannelDataIn[AUX1]))
     return;
 
-  uint8_t vtxIdx = config.GetVtxBand() * 8 + config.GetVtxChannel();
+  uint8_t vtxIdx = (config.GetVtxBand()-1) * 8 + config.GetVtxChannel();
 
   mspPacket_t packet;
   packet.reset();
@@ -1212,6 +1223,7 @@ void EnterBindingMode()
 
   InBindingMode = 2;
   setLuaCommandValue(&luaBind,InBindingMode);
+  //setLuaCommandInfo(&luaBind,"in Binding Mode");
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1246,6 +1258,7 @@ void ExitBindingMode()
 
   InBindingMode = 0;
   setLuaCommandValue(&luaBind,InBindingMode);
+  //setLuaCommandInfo(&luaBind,"DONE");
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 

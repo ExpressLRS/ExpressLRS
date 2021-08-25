@@ -357,7 +357,7 @@ void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *out
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -371,7 +371,7 @@ void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray)
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -385,7 +385,7 @@ void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
@@ -399,7 +399,7 @@ void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
     
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
@@ -413,7 +413,7 @@ void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
     memcpy(outarray+4+(strlen(p1->label1)+1),p1->label2,strlen(p1->label2)+1);
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
@@ -422,38 +422,10 @@ void CRSF::getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
     memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
     outarray[0] = p1->luaProperties1.id;
     outarray[1] = 0; //chunk
-    outarray[2] = 0; //parent
+    outarray[2] = p1->luaProperties1.parent; //parent
     outarray[3] = p1->luaProperties1.type;
     outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
-/** we dont use these yet for OUR LUA
-
-void CRSF::getLuaint8StructToArray(void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_int8 *p1 = (struct tagLuaItem_int8*)luaStruct;
-    memcpy(outarray,&p1->luaProperties1,4);
-    memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
-    memcpy(outarray+4+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-    memcpy(outarray+4+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
-    
-}
-
-void CRSF::getLuaint16StructToArray(void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_int16 *p1 = (struct tagLuaItem_int16*)luaStruct;
-    memcpy(outarray,&p1->luaProperties1,4);
-    memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
-    memcpy(outarray+4+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-    memcpy(outarray+4+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);
-    
-}
-void CRSF::getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_float *p1 = (struct tagLuaItem_float*)luaStruct;
-    memcpy(outarray,&p1->luaProperties1,4);
-    memcpy(outarray+4,p1->label1,strlen(p1->label1)+1);
-    memcpy(outarray+4+(strlen(p1->label1)+1),&p1->luaProperties2,sizeof(p1->luaProperties2));
-    memcpy(outarray+4+(strlen(p1->label1)+1)+sizeof(p1->luaProperties2),p1->label2,strlen(p1->label2)+1);    
-}
-*/
-
 
 //sendCRSF param can take anytype of lua field settings
 uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize)
