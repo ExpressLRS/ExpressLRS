@@ -73,7 +73,9 @@
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
-#-DDEBUG_ENABLE
+#-DDEBUG_LOG
+# Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
+#-DDEBUG_LOG_VERBOSE
 
 # Print a letter for each packet received or missed (RX debugging)
 #-DDEBUG_RX_SCOREBOARD
@@ -82,4 +84,4 @@
 #-DDEBUG_CRSF_NO_OUTPUT
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
-#-DBF_DEBUG_LINK_STATS
+#-DDEBUG_BF_LINK_STATS
