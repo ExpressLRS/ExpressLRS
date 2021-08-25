@@ -133,7 +133,7 @@ bool luaHandleUpdateParameter()
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for sending commit packet
-        DBGLN("send all lua params");
+        DBGVLN("send all lua params");
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();

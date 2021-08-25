@@ -968,7 +968,7 @@ void loop()
   CheckConfigChangePending();
 
   #ifdef FEATURE_OPENTX_SYNC
-    // DBGLN(crsf.OpenTXsyncOffset);
+    // DBGVLN(crsf.OpenTXsyncOffset);
   #endif
 
   #ifdef PLATFORM_STM32

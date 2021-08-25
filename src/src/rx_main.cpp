@@ -233,16 +233,16 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
-    #if !defined(BF_DEBUG_LINK_STATS)
-    crsf.LinkStatistics.downlink_RSSI = 0;
-    crsf.LinkStatistics.downlink_Link_quality = 0;
-    crsf.LinkStatistics.downlink_SNR = 0;
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
-    #else
+    #if defined(DEBUG_BF_LINK_STATS)
     crsf.LinkStatistics.downlink_RSSI = debug1;
     crsf.LinkStatistics.downlink_Link_quality = debug2;
     crsf.LinkStatistics.downlink_SNR = debug3;
     crsf.LinkStatistics.uplink_RSSI_2 = debug4;
+    #else
+    crsf.LinkStatistics.downlink_RSSI = 0;
+    crsf.LinkStatistics.downlink_Link_quality = 0;
+    crsf.LinkStatistics.downlink_SNR = 0;
+    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     #endif
 }
 
@@ -349,7 +349,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
-    //DBGLN(FreqCorrection);
+    //DBGVLN(FreqCorrection);
     if (!value)
     {
         if (FreqCorrection < FreqCorrectionMax)
@@ -360,7 +360,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         {
             FreqCorrection = FreqCorrectionMax;
             FreqCorrection = 0; //reset because something went wrong
-            DBGLN("Max pos reasontable freq offset correction limit reached!");
+            DBGLN("Max +FreqCorrection reached!");
         }
     }
     else
@@ -373,7 +373,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         {
             FreqCorrection = FreqCorrectionMin;
             FreqCorrection = 0; //reset because something went wrong
-            DBGLN("Max neg reasontable freq offset correction limit reached!");
+            DBGLN("Max -FreqCorrection reached!");
         }
     }
 }
@@ -416,7 +416,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         prevRawOffset = RawOffset;
     }
 
-    DBGLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
+    DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -526,7 +526,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
     if (!LQCalc.currentIsSet() && !lastPacketWasTelemetry)
-        DBG(lastPacketCrcError ? '.' : '_');
+        DBGW(lastPacketCrcError ? '.' : '_');
     lastPacketCrcError = false;
     lastPacketWasTelemetry = tlmSent;
     #endif
@@ -655,12 +655,12 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     if (inCRC != calculatedCRC)
     {
-        DBG("CRC error on RF packet: ");
+        DBGV("CRC error: ");
         for (int i = 0; i < 8; i++)
         {
-            DBG("%02x,", Radio.RXdataBuffer[i]);
+            DBGV("%x,", Radio.RXdataBuffer[i]);
         }
-        DBGCR;
+        DBGVCR;
         #if defined(DEBUG_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
@@ -745,7 +745,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
          {
              LastSyncPacket = now;
 #if defined(DEBUG_RX_SCOREBOARD)
-             DBG('s');
+             DBGW('s');
 #endif
 
              if (ExpressLRS_currAirRate_Modparams->TLMinterval != (expresslrs_tlm_ratio_e)TLMrateIn)
@@ -764,7 +764,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 || NonceRX != Radio.RXdataBuffer[2]
                 || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
              {
-                 //DBGLN("%dx%d", NonceRX, Radio.RXdataBuffer[2]);
+                 //DBGVLN("%dx%d", NonceRX, Radio.RXdataBuffer[2]);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection(now);
@@ -784,7 +784,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 #if defined(DEBUG_RX_SCOREBOARD)
-    if (type != SYNC_PACKET) DBG('R');
+    if (type != SYNC_PACKET) DBGW('R');
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately
@@ -840,7 +840,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
 #if defined(DEBUG_RX_SCOREBOARD)
-    DBG('T');
+    DBGW('T');
 #endif
 }
 
@@ -1098,7 +1098,7 @@ static void cycleRfMode(unsigned long now)
         SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
         SendLinkStatstoFCintervalLastSent = now;
         LQCalc.reset();
-        DBGLN("interval %d", ExpressLRS_currAirRate_Modparams->interval);
+        DBGLN("Rate %dHz", 1000000U / ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
         crsf.sendLinkStatisticsToFC();
@@ -1234,7 +1234,7 @@ void loop()
     if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
     {
         RXtimerState = tim_locked;
-        DBGLN("Timer Considered Locked");
+        DBGLN("Timer locked");
     }
 
 #if WS2812_LED_IS_USED
