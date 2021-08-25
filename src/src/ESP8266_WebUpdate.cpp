@@ -286,7 +286,7 @@ void BeginWebUpdate(void)
   DBGLN("Stopping Radio");
   Radio.End();
 
-  DBGLN("Begin Webupdater");
+  INFOLN("Begin Webupdater");
   startWifi();
 
   server.on("/", WebUpdateHandleRoot);

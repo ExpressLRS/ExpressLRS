@@ -277,7 +277,7 @@ void BeginWebUpdate()
     Radio.End();
     crsf.End();
 
-    DBGLN("Begin Webupdater");
+    INFOLN("Begin Webupdater");
     startWifi();
 
     server.on("/", WebUpdateHandleRoot);

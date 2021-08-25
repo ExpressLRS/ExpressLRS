@@ -20,7 +20,10 @@
 
 extern void debugPrintf(const char* fmt, ...);
 
-#define INFOLN(msg) LOGGING_UART.println(msg)
+#define INFOLN(msg, ...) { \
+  debugPrintf(msg, ##__VA_ARGS__); \
+  LOGGING_UART.println(); \
+}
 #define ERRLN(msg) LOGGING_UART.println("ERROR: " msg)
 
 #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE)
