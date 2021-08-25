@@ -441,8 +441,7 @@ local function refreshNext()
   if command == nil then
     local time = getTime()
     if time > devicesRefreshTimeout and fields_count < 1  then
-      devicesRefreshTimeout = time + 150 -- 1s
-      fieldTimeout = time + 500 -- 2s
+      devicesRefreshTimeout = time + 100 -- 1s
       crossfireTelemetryPush(0x28, { 0x00, 0xEF })
     elseif time > fieldTimeout and not edit then
       if allParamsLoaded < 1 then
