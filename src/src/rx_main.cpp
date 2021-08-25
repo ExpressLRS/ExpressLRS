@@ -1099,7 +1099,7 @@ static void cycleRfMode(unsigned long now)
         SendLinkStatstoFCintervalLastSent = now;
         LQCalc.reset();
         // Display the current air rate to the user as an indicator something is happening
-        INFOLN(ExpressLRS_currAirRate_Modparams->interval);
+        INFOLN("%d", ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
         getRFlinkInfo();
         crsf.sendLinkStatisticsToFC();
