@@ -57,13 +57,6 @@
 #Comment this to disable diversity function
 #-DUSE_DIVERSITY
 
-# Comment this to disable dynamic TX power management.
-#-DUSE_DYNAMIC_POWER
-
-# The aux channel used to indicate power should be boosted to max. Value <1500 = Dynamic Power, >1500=Max configured power.
-# It is recommended to set this to be between AUX9--AUX12 for not wasting any packet over the air.
-#-DDYNAMIC_POWER_BOOST=AUX12
-
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
 

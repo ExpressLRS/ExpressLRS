@@ -28,14 +28,30 @@ struct tagLuaItem_textSelection luaTlmRate = {
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
 };
+//----------------------------POWER------------------
+struct tagLuaItem_folder luaPowerFolder = {
+    {0,0,(uint8_t)CRSF_FOLDER},//id,type
+    "TX Power",
+    LUA_FOLDER_SIZE(luaPowerFolder)
+};
 struct tagLuaItem_textSelection luaPower = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Pwr",
+    "Max Power",
     "10;25;50;100;250;500;1000;2000",
     {0,0,7},//value,min,max
     "mW",
     LUA_TEXTSELECTION_SIZE(luaPower)
 };
+struct tagLuaItem_textSelection luaDynamicPower = {
+    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Dynamic",
+    "Off;On;AUX9;AUX10;AUX11;AUX12",
+    {0,0,5},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaDynamicPower)
+};
+//----------------------------POWER------------------
+
 // Commented out for now until we add more switch options
 // struct tagLuaItem_textSelection luaSwitch = {
 //     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
