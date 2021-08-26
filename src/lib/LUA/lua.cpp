@@ -2,6 +2,7 @@
 
 #include "lua.h"
 #include "CRSF.h"
+#include "logging.h"
 
 const char txDeviceName[] = TX_DEVICE_NAME;
 
@@ -132,9 +133,7 @@ bool luaHandleUpdateParameter()
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for sending commit packet
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("send all lua params");
-  #endif
+        DBGVLN("send all lua params");
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();

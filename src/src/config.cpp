@@ -1,6 +1,7 @@
 #include "config.h"
 #include "common.h"
 #include "POWERMGNT.h"
+#include "logging.h"
 
 void
 TxConfig::Load()
@@ -12,7 +13,7 @@ TxConfig::Load()
     if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
-        Serial.println("EEPROM version mismatch! Resetting to defaults...");
+        DBGLN("EEPROM version mismatch! Resetting to defaults...");
         SetDefaults();
     }
 
@@ -185,7 +186,7 @@ RxConfig::Load()
     if (m_config.version != (uint32_t)(RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
-        Serial.println("EEPROM version mismatch! Resetting to defaults...");
+        DBGLN("EEPROM version mismatch! Resetting to defaults...");
         SetDefaults();
     }
 

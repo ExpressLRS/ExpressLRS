@@ -1,4 +1,5 @@
 #include "SX127x.h"
+#include "logging.h"
 
 SX127xHal hal;
 
@@ -38,7 +39,7 @@ SX127xDriver::SX127xDriver()
 
 bool SX127xDriver::Begin()
 {
-  Serial.println("SX127x Driver Begin");
+  DBGLN("SX127x Driver Begin");
   hal.TXdoneCallback = &TXnbISR;
   hal.RXdoneCallback = &RXnbISR;
   hal.init();
@@ -63,7 +64,7 @@ void SX127xDriver::End()
 
 void SX127xDriver::ConfigLoraDefaults()
 {
-  Serial.println("Setting ExpressLRS LoRa reg defaults");
+  DBGLN("Setting ExpressLRS LoRa reg defaults");
 
   hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP);
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
@@ -150,10 +151,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
   }
 
   if(syncWord != _syncWord){
-    Serial.print("Using syncword: ");
-    Serial.print(_syncWord);
-    Serial.print(" instead of: ");
-    Serial.println(syncWord);
+    DBGLN("Using syncword: %d instead of: %d", _syncWord, syncWord);
   }
 
   hal.writeRegister(SX127X_REG_SYNC_WORD, _syncWord);
@@ -236,17 +234,14 @@ bool SX127xDriver::DetectChip()
   while ((i < 3) && !flagFound)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION);
-    Serial.println(version, HEX);
+    DBG("%x", version);
     if (version == 0x12)
     {
       flagFound = true;
     }
     else
     {
-      Serial.print(" not found! (");
-      Serial.print(i + 1);
-      Serial.print(" of 3 tries) REG_VERSION == 0x");
-      Serial.println(version, HEX);
+      DBGLN(" not found! (%d of 3 tries) REG_VERSION == 0x%x", i+1, version);
       delay(200);
       i++;
     }
@@ -254,12 +249,12 @@ bool SX127xDriver::DetectChip()
 
   if (!flagFound)
   {
-    Serial.println(" not found!");
+    DBGLN(" not found!");
     return false;
   }
   else
   {
-    Serial.println(" found! (match by REG_VERSION == 0x12)");
+    DBGLN(" found! (match by REG_VERSION == 0x12)");
   }
   hal.setRegValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, 2, 0);
   return true;
@@ -280,7 +275,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 {
   // if (instance->currOpmode == SX127x_OPMODE_TX)
   // {
-  //   Serial.println("abort TX");
+  //   DBGLN("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
   instance->ClearIRQFlags();
@@ -311,7 +306,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   // if (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)
   // {
-  //   Serial.println("abort RX");
+  //   DBGLN("abort RX");
   //   return; // we were already TXing so abort
   // }
   instance->ClearIRQFlags();

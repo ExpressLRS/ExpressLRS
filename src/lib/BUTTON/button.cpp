@@ -1,4 +1,5 @@
 #include "button.h"
+#include "logging.h"
 
 void inline button::nullCallback(void) {}
 void (*button::buttonShortPress)() = &nullCallback; // callbacks
@@ -53,7 +54,7 @@ void button::sampleButton()
         { //button release
             if (buttonIsDown and (!buttonIsDownLong))
             {
-                Serial.println("button short pressed");
+                DBGLN("button short pressed");
                 buttonShortPress();
                 buttonLastPressedShort = now;
                 shortPressTime++;
@@ -68,7 +69,7 @@ void button::sampleButton()
         { //button release
             if (buttonIsDown and (!buttonIsDownLong))
             {
-                Serial.println("button short pressed");
+                DBGLN("button short pressed");
                 buttonShortPress();
                 buttonLastPressedShort = now;
                 shortPressTime++;
@@ -112,7 +113,7 @@ void button::sampleButton()
     {
         if (buttonIsDown)
         {
-            Serial.println("button pressed long");
+            DBGLN("button pressed long");
             buttonLastPressedLong = now;
             buttonIsDownLong = true;
             buttonLongPress();
@@ -121,7 +122,7 @@ void button::sampleButton()
 
     if (shortPressTime == 3)
     {
-        Serial.println("button triple pressed");
+        DBGLN("button triple pressed");
         buttonTriplePress();
         shortPressTime = 0;    
     }
