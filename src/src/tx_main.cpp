@@ -567,11 +567,11 @@ void registerLuaParameters() {
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
-  });
+  }, luaPowerFolder.luaProperties1.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-  });
+  }, luaPowerFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
