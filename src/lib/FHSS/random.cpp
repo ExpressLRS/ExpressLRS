@@ -5,7 +5,7 @@ static uint32_t seed = 0;
 // returns values between 0 and 0x7FFF
 // NB rngN depends on this output range, so if we change the
 // behaviour rngN will need updating
-uint32_t rng(void)
+uint16_t rng(void)
 {
     const uint32_t m = 2147483648;
     const uint32_t a = 214013;
@@ -19,14 +19,10 @@ void rngSeed(const uint32_t newSeed)
     seed = newSeed;
 }
 
-// returns 0 <= x < max where max <= 256
-// (actual upper limit is higher, but there is one and I haven't
-//  thought carefully about what it is)
-uint32_t rngN(const uint32_t max)
+// returns 0 <= x < max where max < 256
+uint8_t rngN(const uint8_t max)
 {
-    const uint32_t x = rng();
-    const uint32_t result = (x * max) / RNG_MAX;
-    return result;
+    return rng() % max;
 }
 
 // 0..255 returned
@@ -39,14 +35,4 @@ uint8_t rng8Bit(void)
 uint8_t rng5Bit(void)
 {
     return rng() & 0x1F;
-}
-
-uint8_t rng0to2(void)
-{
-    uint8_t randomNumber = rng() & 0b11;
-
-    while (randomNumber == 3) {
-        randomNumber = rng() & 0b11;
-    }
-    return randomNumber;
 }

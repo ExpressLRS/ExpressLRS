@@ -2,7 +2,7 @@
 #include <string.h>
 
 uint8_t volatile FHSSptr;
-uint8_t FHSSsequence[NR_SEQUENCE_ENTRIES];
+uint8_t FHSSsequence[MAX_NR_SEQUENCE_ENTRIES];
 int32_t FreqCorrection;
 uint_fast8_t sync_channel;
 
@@ -243,6 +243,8 @@ const uint32_t FHSSfreqs[] = {
 constexpr uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(uint32_t));
 constexpr uint32_t SYNC_INTERVAL = NR_FHSS_ENTRIES;
 
+uint8_t numberOfSequenceEntries;
+
 /**
 Requirements:
 1. 0 every n hops
@@ -279,65 +281,58 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 #error No regulatory domain defined, please define one in common.h
 #endif
 
+    numberOfSequenceEntries = (MAX_NR_SEQUENCE_ENTRIES/NR_FHSS_ENTRIES)*NR_FHSS_ENTRIES;
     Serial.print("Number of FHSS frequencies = ");
-    Serial.println(NR_FHSS_ENTRIES);
+    Serial.println(numberOfSequenceEntries);
 
     sync_channel = NR_FHSS_ENTRIES / 2;
     Serial.print("Sync channel = ");
     Serial.println(sync_channel);
 
+    // reset the pointer (otherwise the tests fail)
+    FHSSptr = 0;
     rngSeed(seed);
 
-    unsigned int sequencePosition = 0;
-
-    uint8_t randomisedEntries[NR_FHSS_ENTRIES];
-    // initialize array, in sequence with the exception of the sync channel
-    randomisedEntries[0] = sync_channel; // set the first entry to the sync channel
-    randomisedEntries[sync_channel] = 0; // set the sync channel entry to 0
-
-    // assign the other entries for randomization
-    for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
+    // initialize the sequence array
+    for (uint8_t i = 0; i < numberOfSequenceEntries; i++)
     {
-        if(i != sync_channel) {
-            randomisedEntries[i] = i; // assign the value to the sequence array
+        if (i % NR_FHSS_ENTRIES == 0) {
+            FHSSsequence[i] = sync_channel;
+        } else if (i % NR_FHSS_ENTRIES == sync_channel) {
+            FHSSsequence[i] = 0;
+        } else {
+            FHSSsequence[i] = i % NR_FHSS_ENTRIES;
         }
     }
 
-    while (sequencePosition < NR_SEQUENCE_ENTRIES) {
+    for (uint8_t i=0; i < numberOfSequenceEntries; i++) {
 
-        // randomise the next batch of entries by swapping, but skip the first entry (sync channel)
-        for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
-        {
-            int rand = rngN(NR_FHSS_ENTRIES-1)+1; // random number between 1 and NR_FHSS_ENTRIES
-            uint8_t temp = randomisedEntries[i];
-            randomisedEntries[i] = randomisedEntries[rand]; // assign the value to the sequence array
-            randomisedEntries[rand] = temp;
+        if (i % NR_FHSS_ENTRIES != 0) { // if it's not the sync channel
+            uint8_t offset = (i / NR_FHSS_ENTRIES)*NR_FHSS_ENTRIES; // offset to start of current block
+            uint8_t rand = rngN(NR_FHSS_ENTRIES-1)+1; // random number between 1 and NR_FHSS_ENTRIES
+
+            // switch this entry and another random entry in the same block
+            uint8_t temp = FHSSsequence[i];
+            FHSSsequence[i] = FHSSsequence[offset+rand]; // assign the value to the sequence array
+            FHSSsequence[offset+rand] = temp;
         }
 
-        // set FHSS Sequence by copying the randomised array entries over
-        for (unsigned int i = 0; i < NR_FHSS_ENTRIES && sequencePosition+i < NR_SEQUENCE_ENTRIES; i++)
+        // output FHSS sequence
+        Serial.print(FHSSsequence[i]);
+        if (i % 10 == 9)
         {
-            FHSSsequence[sequencePosition+i] = randomisedEntries[i]; // assign the value to the sequence array
-
-            // output FHSS sequence
-            Serial.print(FHSSsequence[sequencePosition+i]);
-            if ((sequencePosition+i + 1) % 10 == 0)
-            {
-                Serial.println();
-            }
-            else
-            {
-                Serial.print(" ");
-            }
-
+            Serial.println();
         }
-        sequencePosition += NR_FHSS_ENTRIES;
+        else
+        {
+            Serial.print(" ");
+        }
     }
 
     Serial.println();
 }
 
-uint32_t FHSSNumEntriess(void)
+uint32_t FHSSNumEntries(void)
 {
     return NR_FHSS_ENTRIES;
 }
