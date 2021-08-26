@@ -14,6 +14,7 @@ extern struct tagLuaItem_string luaELRSversion;
 
 #ifdef PLATFORM_ESP32
 extern struct tagLuaItem_command luaWebUpdate;
+extern struct tagLuaItem_command luaBLEJoystick;
 #endif
 
 //----------------------------POWER------------------

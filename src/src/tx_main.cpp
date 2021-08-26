@@ -41,6 +41,9 @@ SX1280Driver Radio;
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
 #endif
+#include "ESP32_BLE_HID.h"
+bool BLEjoystickActive = false;
+volatile bool BLEjoystickRefresh = false;
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -624,6 +627,44 @@ void registerLuaParameters() {
         setLuaCommandValue(&luaWebUpdate,0);
       }
     });
+  
+    registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
+      if (arg > 0 && arg < 4) //start command, 1 = start
+                              //2 = running
+                              //3 = request confirmation
+      {
+        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to cancel");
+        setLuaCommandValue(&luaBLEJoystick,3); //request confirm
+      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      {
+        //confirm run on ELRSv2.lua or start command from CRSF configurator,
+        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
+        //unintentional button press. 
+        setLuaCommandValue(&luaBLEJoystick,2); //running status
+        BLEjoystickActive = true;
+  #ifndef DEBUG_SUPPRESS
+        Serial.println("BLE Joystick Mode Requested!");
+  #endif
+        hwTimer.stop();
+        crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
+        hwTimer.updateInterval(5000);
+        crsf.setSyncParams(5000); // 100hz
+        delay(1000);
+        crsf.disableOpentxSync();
+  #if defined(Regulatory_Domain_ISM_2400)
+        Radio.SetMode(SX1280_MODE_SLEEP);
+  #else
+        Radio.SetMode(SX127x_OPMODE_SLEEP);
+  #endif
+        Radio.End();
+        BluetoothJoystickBegin();
+      } else if(arg == 6){ //6 = status poll
+        sendLuaFieldCrsf(id,0);
+      } else { //5 or anything else is cancel
+        setLuaCommandValue(&luaBLEJoystick,0);
+      }
+    });
+
   #endif
 
   registerLUAParameter(&luaInfo);
@@ -959,6 +1000,7 @@ void setup()
 
 void loop()
 {
+
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
