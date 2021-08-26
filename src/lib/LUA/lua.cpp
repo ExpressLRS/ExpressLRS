@@ -1,8 +1,10 @@
 #ifdef TARGET_TX
 
 #include "lua.h"
-
 #include "CRSF.h"
+#include "logging.h"
+
+const char txDeviceName[] = TX_DEVICE_NAME;
 
 extern CRSF crsf;
 
@@ -20,7 +22,7 @@ static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 
 static struct tagLuaDevice luaDevice = {
-    "ELRS",
+    txDeviceName,
     {{0},0},
     LUA_DEVICE_SIZE(luaDevice)
 };
@@ -91,11 +93,12 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
   UpdateParamReq = true;
 }
 
-void registerLUAParameter(void *definition, luaCallback callback)
+void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;
   lastLuaField++;
   p->id = lastLuaField;
+  p->parent = parent;
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
   luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
@@ -130,9 +133,7 @@ bool luaHandleUpdateParameter()
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for sending commit packet
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("send all lua params");
-  #endif
+        DBGVLN("send all lua params");
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
@@ -158,7 +159,9 @@ bool luaHandleUpdateParameter()
   UpdateParamReq = false;
   return true;
 }
-
+void sendLuaDevicePacket(void){
+  crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+}
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     luaStruct->luaProperties2.value = newvalue;
 }
@@ -172,6 +175,9 @@ void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
     luaStruct->luaProperties2.value = (newvalue >> 8) | (newvalue << 8);
 }
 void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
+    luaStruct->label2 = newvalue;
+}
+void setLuaCommandInfo(struct tagLuaItem_command *luaStruct,const char *newvalue){
     luaStruct->label2 = newvalue;
 }
 #endif

@@ -48,6 +48,7 @@ public:
 
     static void (*RecvModelUpdate)();
     static void (*RecvParameterUpdate)();
+    static void (*RCdataCallback)();
 
     static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
@@ -86,6 +87,8 @@ public:
     static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
+    static void disableOpentxSync();
+    static void enableOpentxSync();
 
     /////////////////////////////////////////////////////////////
 
@@ -103,7 +106,7 @@ public:
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
-
+    static volatile uint32_t OpenTXsyncLastSent;
 
     uint8_t setLuaHiddenFlag(uint8_t id, bool value);
 
@@ -120,11 +123,11 @@ private:
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
-    static volatile uint32_t OpenTXsyncLastSent;
     static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
     static uint32_t OpenTXsyncOffsetSafeMargin;
+    static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
     static uint32_t SyncWaitPeriodCounter;
@@ -157,12 +160,12 @@ private:
     void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
     void getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray);
     void getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray);
-      /** we dont need these yet for OUR LUA
-     void getLuaUint8StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaint8StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaUint16StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaint16StructToArray(void * luaStruct, uint8_t *outarray);
-     void getLuaFloatStructToArray(void * luaStruct, uint8_t *outarray);
+      /** we dont need these yet for OUR LUA, and it is not defined yet
+     void getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaint8StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaint16StructToArray(const void * luaStruct, uint8_t *outarray);
+     void getLuaFloatStructToArray(const void * luaStruct, uint8_t *outarray);
 */ 
 
 #endif

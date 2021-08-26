@@ -9,6 +9,7 @@
 #include <set>
 #include <StreamString.h>
 
+#include "logging.h"
 #include "options.h"
 #include "ESP8266_WebContent.h"
 
@@ -88,7 +89,7 @@ static bool captivePortal()
 {
   if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local"))
   {
-    Serial.println("Request redirected to captive portal");
+    DBGLN("Request redirected to captive portal");
     server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
     server.send(302, "text/plain", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
     server.client().stop();             // Stop is needed because we sent no content length
@@ -152,12 +153,12 @@ static void WebUpdateSendNetworks()
 {
   int numNetworks = WiFi.scanComplete();
   if (numNetworks >= 0) {
-    Serial.printf("Found %d networks\n", numNetworks);
+    DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
     for(int i=0 ; i<numNetworks ; i++) {
       String w = WiFi.SSID(i);
-      Serial.printf("found %s\n", w.c_str());
+      DBGLN("found %s", w.c_str());
       if (vs.find(w)==vs.end() && w.length()>0) {
         if (!vs.empty()) s += ",";
         s += "\"" + w + "\"";
@@ -181,14 +182,14 @@ static void sendResponse(const String &msg, WiFiMode_t mode) {
 
 static void WebUpdateAccessPoint(void)
 {
-  Serial.println("Starting Access Point");
+  DBGLN("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
   sendResponse(msg, WIFI_AP);
 }
 
 static void WebUpdateConnect(void)
 {
-  Serial.println("Connecting to home network");
+  DBGLN("Connecting to home network");
   String msg = String("Connected to network '") + config.GetSSID() + "', connect to http://elrs_rx.local from a browser on that network";
   sendResponse(msg, WIFI_STA);
 }
@@ -198,7 +199,7 @@ static void WebUpdateSetHome(void)
   String ssid = server.arg("network");
   String password = server.arg("password");
 
-  Serial.printf("Setting home network %s\n", ssid.c_str());
+  DBGLN("Setting home network %s", ssid.c_str());
   config.SetSSID(ssid.c_str());
   config.SetPassword(password.c_str());
   config.Commit();
@@ -207,7 +208,7 @@ static void WebUpdateSetHome(void)
 
 static void WebUpdateForget(void)
 {
-  Serial.println("Forget home network");
+  DBGLN("Forget home network");
   config.SetSSID("");
   config.SetPassword("");
   config.Commit();
@@ -219,7 +220,7 @@ static void WebUpdateModelId(void)
 {
   long modelid = server.arg("modelid").toInt();
   if (modelid < 0 || modelid > 63) modelid = 0;
-  Serial.printf("Setting model match id %d\n", (uint8_t)modelid);
+  DBGLN("Setting model match id %d", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
   config.Commit();
   server.sendHeader("Connection", "close");
@@ -282,10 +283,10 @@ void BeginWebUpdate(void)
   Radio.RXdoneCallback = NULL;
   Radio.TXdoneCallback = NULL;
 
-  Serial.println("Begin Webupdater");
-  Serial.println("Stopping Radio");
+  DBGLN("Stopping Radio");
   Radio.End();
 
+  INFOLN("Begin Webupdater");
   startWifi();
 
   server.on("/", WebUpdateHandleRoot);
@@ -320,7 +321,7 @@ void BeginWebUpdate(void)
               server.send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
             } else {
               server.sendHeader("Connection", "close");
-              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering of the module\"}");
+              server.send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete, please wait 10 seconds before powering off the module\"}");
               server.client().stop();
               delay(100);
               ESP.restart();
@@ -332,9 +333,9 @@ void BeginWebUpdate(void)
     []() {
       HTTPUpload& upload = server.upload();
       if(upload.status == UPLOAD_FILE_START){
-          Serial.setDebugOutput(true);
+        Serial.setDebugOutput(true);
         WiFiUDP::stopAll();
-        Serial.printf("Update: %s\n", upload.filename.c_str());
+        DBGLN("Update: %s", upload.filename.c_str());
         uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
           Update.printError(Serial);
@@ -363,29 +364,29 @@ void BeginWebUpdate(void)
       } else if(upload.status == UPLOAD_FILE_END){
         if (target_seen) {
           if(Update.end(true)){ //true to set the size to the current progress
-            Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+            DBGLN("Update Success: %u\nRebooting...", upload.totalSize);
           } else {
             Update.printError(Serial);
           }
         } else {
-          Serial.printf("Wrong firmware uploaded, not %s, update aborted\n", &target_name[4]);
+          DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
         }
         Serial.setDebugOutput(false);
       } else if(upload.status == UPLOAD_FILE_ABORTED){
-        Serial.println("Update was aborted");
+        DBGLN("Update was aborted");
       }
       delay(0);
     });
 
   server.begin();
-  Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
+  DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 
   dnsServer.start(DNS_PORT, "*", apIP);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   if (!MDNS.begin(myHostname))
   {
-    Serial.println("Error starting mDNS");
+    DBGLN("Error starting mDNS");
     return;
   }
   
@@ -399,14 +400,14 @@ void BeginWebUpdate(void)
   MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
 
   server.begin();
-  Serial.printf("HTTPUpdateServer ready! Open http://%s.local in your browser\n", myHostname);
+  DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 }
 
 void HandleWebUpdate(void)
 {
   wl_status_t status = WiFi.status();
   if (status != laststatus && wifiMode == WIFI_STA) {
-        Serial.printf("WiFi status %d\n", status);
+        DBGLN("WiFi status %d", status);
         switch(status) {
           case WL_NO_SSID_AVAIL:
           case WL_CONNECT_FAILED:
@@ -425,12 +426,12 @@ void HandleWebUpdate(void)
   if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < millis()) {
     changeTime = millis();
     changeMode = WIFI_AP;
-    Serial.printf("Connection failed %d\n", status);
+    DBGLN("Connection failed %d", status);
   }
   if (changeMode != wifiMode && changeMode != WIFI_OFF && (changeTime+500) < millis()) {
     switch(changeMode) {
       case WIFI_AP:
-        Serial.println("Changing to AP mode");
+        DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
         WiFi.mode(wifiMode);
@@ -439,7 +440,7 @@ void HandleWebUpdate(void)
         WiFi.scanNetworks(true);
         break;
       case WIFI_STA:
-        Serial.printf("Connecting to home network '%s'\n", config.GetSSID());
+        DBGLN("Connecting to home network '%s'", config.GetSSID());
         WiFi.mode(WIFI_STA);
         wifiMode = WIFI_STA;
         changeTime = millis();
