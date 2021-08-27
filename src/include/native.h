@@ -71,7 +71,6 @@ inline void delay(int32_t time) {
     usleep(time);
 }
 
-
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
 
