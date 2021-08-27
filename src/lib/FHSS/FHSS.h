@@ -31,21 +31,19 @@
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
 
-#define MAX_NR_SEQUENCE_ENTRIES 256
-
 extern volatile uint8_t FHSSptr;
 extern int32_t FreqCorrection;
-extern uint8_t FHSSsequence[MAX_NR_SEQUENCE_ENTRIES];
+extern uint8_t FHSSsequence[];
 extern const uint32_t FHSSfreqs[];
 extern uint_fast8_t sync_channel;
-extern uint8_t numberOfSequenceEntries;
+extern const uint8_t FHSS_SEQUENCE_CNT;
 
 void FHSSrandomiseFHSSsequence(uint32_t seed);
 uint32_t FHSSNumEntries(void);
 
 static inline void FHSSsetCurrIndex(const uint8_t value)
 {   // set the current index of the FHSS pointer
-    FHSSptr = value % numberOfSequenceEntries;
+    FHSSptr = value % FHSS_SEQUENCE_CNT;
 }
 
 static inline uint8_t FHSSgetCurrIndex()
@@ -63,12 +61,12 @@ static inline uint32_t GetInitialFreq()
 static inline uint32_t FHSSgetNextFreq()
 {
     uint32_t freq = FHSSfreqs[FHSSsequence[FHSSptr]] - FreqCorrection;
-    FHSSptr = (FHSSptr + 1) % numberOfSequenceEntries;
+    FHSSptr = (FHSSptr + 1) % FHSS_SEQUENCE_CNT;
     return freq;
 }
 
 // get the number of entries in the sequence
 static inline uint8_t FHSSgetNumberOfEntries()
 {
-    return numberOfSequenceEntries;
+    return FHSS_SEQUENCE_CNT;
 }

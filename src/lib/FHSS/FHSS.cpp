@@ -1,12 +1,6 @@
 #include "FHSS.h"
 #include <string.h>
 
-uint8_t volatile FHSSptr;
-uint8_t FHSSsequence[MAX_NR_SEQUENCE_ENTRIES];
-int32_t FreqCorrection;
-uint_fast8_t sync_channel;
-
-
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433
 const uint32_t FHSSfreqs[] = {
@@ -238,12 +232,18 @@ const uint32_t FHSSfreqs[] = {
 #error No regulatory domain defined, please define one in user_defines.txt
 #endif
 
-
-// The number of FHSS frequencies in the table
-constexpr uint32_t NR_FHSS_ENTRIES = (sizeof(FHSSfreqs) / sizeof(uint32_t));
-constexpr uint32_t SYNC_INTERVAL = NR_FHSS_ENTRIES;
-
-uint8_t numberOfSequenceEntries;
+// Number of FHSS frequencies in the table
+constexpr uint32_t FHSS_FREQ_CNT = (sizeof(FHSSfreqs) / sizeof(uint32_t));
+// Number of hops in the FHSSsequence list before circling back around, even multiple of the number of frequencies
+constexpr uint8_t  FHSS_SEQUENCE_CNT = (256 / FHSS_FREQ_CNT) * FHSS_FREQ_CNT;
+// Actual sequence of hops as indexes into the frequency list
+uint8_t FHSSsequence[FHSS_SEQUENCE_CNT];
+// Which entry in the sequence we currently are on
+uint8_t volatile FHSSptr;
+// Channel for sync packets and initial connection establishment
+uint_fast8_t sync_channel;
+// Offset from the predefined frequency determined by AFC on Team900 (register units)
+int32_t FreqCorrection;
 
 /**
 Requirements:
@@ -281,11 +281,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-    numberOfSequenceEntries = (MAX_NR_SEQUENCE_ENTRIES/NR_FHSS_ENTRIES)*NR_FHSS_ENTRIES;
     Serial.print("Number of FHSS frequencies = ");
-    Serial.println(numberOfSequenceEntries);
+    Serial.println(FHSS_SEQUENCE_CNT);
 
-    sync_channel = NR_FHSS_ENTRIES / 2;
+    sync_channel = FHSS_FREQ_CNT / 2;
     Serial.print("Sync channel = ");
     Serial.println(sync_channel);
 
@@ -294,22 +293,22 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint8_t i = 0; i < numberOfSequenceEntries; i++)
+    for (uint8_t i = 0; i < FHSS_SEQUENCE_CNT; i++)
     {
-        if (i % NR_FHSS_ENTRIES == 0) {
+        if (i % FHSS_FREQ_CNT == 0) {
             FHSSsequence[i] = sync_channel;
-        } else if (i % NR_FHSS_ENTRIES == sync_channel) {
+        } else if (i % FHSS_FREQ_CNT == sync_channel) {
             FHSSsequence[i] = 0;
         } else {
-            FHSSsequence[i] = i % NR_FHSS_ENTRIES;
+            FHSSsequence[i] = i % FHSS_FREQ_CNT;
         }
     }
 
-    for (uint8_t i=0; i < numberOfSequenceEntries; i++) {
+    for (uint8_t i=0; i < FHSS_SEQUENCE_CNT; i++) {
 
-        if (i % NR_FHSS_ENTRIES != 0) { // if it's not the sync channel
-            uint8_t offset = (i / NR_FHSS_ENTRIES)*NR_FHSS_ENTRIES; // offset to start of current block
-            uint8_t rand = rngN(NR_FHSS_ENTRIES-1)+1; // random number between 1 and NR_FHSS_ENTRIES
+        if (i % FHSS_FREQ_CNT != 0) { // if it's not the sync channel
+            uint8_t offset = (i / FHSS_FREQ_CNT)*FHSS_FREQ_CNT; // offset to start of current block
+            uint8_t rand = rngN(FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
             uint8_t temp = FHSSsequence[i];
@@ -334,5 +333,5 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
 uint32_t FHSSNumEntries(void)
 {
-    return NR_FHSS_ENTRIES;
+    return FHSS_FREQ_CNT;
 }
