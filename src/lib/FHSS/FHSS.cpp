@@ -281,12 +281,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-    Serial.print("Number of FHSS frequencies = ");
-    Serial.println(FHSS_SEQUENCE_CNT);
+    DBGLN("Number of FHSS frequencies = %d", FHSS_SEQUENCE_CNT);
 
     sync_channel = FHSS_FREQ_CNT / 2;
-    Serial.print("Sync channel = ");
-    Serial.println(sync_channel);
+    DBGLN("Sync channel = %d", sync_channel);
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
@@ -317,14 +315,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         }
 
         // output FHSS sequence
-        Serial.print(FHSSsequence[i]);
+        DBG("%d ",FHSSsequence[i]);
         if (i % 10 == 9)
         {
-            Serial.println();
-        }
-        else
-        {
-            Serial.print(" ");
+            DBGCR;
         }
     }
 
