@@ -344,7 +344,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
-#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI)
+#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
     switch (Power)
     {
     case PWR_10mW:

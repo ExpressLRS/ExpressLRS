@@ -36,9 +36,6 @@ const char PROGMEM compile_options[] = {
     #ifdef MY_STARTUP_MELODY
         "-DMY_STARTUP_MELODY=\"" STR(MY_STARTUP_MELODY) "\" "
     #endif
-    #ifdef USE_DYNAMIC_POWER
-        "-DUSE_DYNAMIC_POWER "
-    #endif
     #ifdef WS2812_IS_GRB
         "-DWS2812_IS_GRB "
     #endif

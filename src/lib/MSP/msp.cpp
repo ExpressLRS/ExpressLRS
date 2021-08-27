@@ -1,5 +1,7 @@
 #include "msp.h"
 
+#include "logging.h"
+
 /* ==========================================
 MSP V2 Message Structure:
 Offset: Usage:         In CRC:  Comment:
@@ -113,10 +115,7 @@ MSP::processReceivedByte(uint8_t c)
                 m_inputState = MSP_COMMAND_RECEIVED;
             }
             else {
-                Serial.print("CRC failure on MSP packet - Got ");
-                Serial.print(c);
-                Serial.print(" Expected ");
-                Serial.println(m_crc);
+                DBGLN("CRC failure on MSP packet - Got %d expected %d", c, m_crc);
                 m_inputState = MSP_IDLE;
             }
             break;
