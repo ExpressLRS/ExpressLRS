@@ -1,4 +1,5 @@
 #include "FHSS.h"
+#include "logging.h"
 #include <string.h>
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
@@ -264,19 +265,19 @@ Approach:
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
 #ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
+    INFOLN("Setting 915MHz AU Mode");
 #elif defined Regulatory_Domain_FCC_915
-    Serial.println("Setting 915MHz Mode");
+    INFOLN("Setting 915MHz FCC Mode");
 #elif defined Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
+    INFOLN("Setting 868MHz EU Mode");
 #elif defined Regulatory_Domain_IN_866
-    Serial.println("Setting 866MHz Mode");
+    INFOLN("Setting 866MHz IN Mode");
 #elif defined Regulatory_Domain_AU_433
-    Serial.println("Setting 433MHz EU Mode");
+    INFOLN("Setting 433MHz AU Mode");
 #elif defined Regulatory_Domain_EU_433
-    Serial.println("Setting 433MHz EU Mode");
+    INFOLN("Setting 433MHz EU Mode");
 #elif defined Regulatory_Domain_ISM_2400
-    Serial.println("Setting 2400MHz Mode");
+    INFOLN("Setting 2400MHz Mode");
 #else
 #error No regulatory domain defined, please define one in common.h
 #endif
@@ -322,7 +323,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         }
     }
 
-    Serial.println();
+    DBGCR;
 }
 
 uint32_t FHSSNumEntries(void)

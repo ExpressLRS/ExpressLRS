@@ -13,6 +13,7 @@
 typedef uint8_t byte;
 
 #define HEX 16
+#define DEC 10
 
 class Stream
 {

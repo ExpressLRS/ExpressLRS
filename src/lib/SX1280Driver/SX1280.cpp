@@ -1,6 +1,7 @@
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include "SX1280.h"
+#include "logging.h"
 
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
@@ -52,11 +53,10 @@ bool SX1280Driver::Begin()
     hal.RXdoneCallback = &SX1280Driver::RXnbISR;
 
     hal.reset();
-    Serial.println("SX1280 Begin");
+    DBGLN("SX1280 Begin");
     delay(100);
-    Serial.print("Read Vers: ");
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
-    Serial.println(firmwareRev);
+    DBGLN("Read Vers: %d", firmwareRev);
     if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
@@ -92,8 +92,7 @@ void SX1280Driver::SetOutputPower(int8_t power)
     else if (13 < power) power = 13;
     uint8_t buf[2] = {(uint8_t)(power + 18), (uint8_t)SX1280_RADIO_RAMP_04_US};
     hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf));
-    Serial.print("SetPower: ");
-    Serial.println(buf[0]);
+    DBGLN("SetPower: %d", buf[0]);
     return;
 }
 
@@ -290,8 +289,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
 
 #ifdef DEBUG_SX1280_OTA_TIMING
-    Serial.print("TOA: ");
-    Serial.println(endTX - beginTX);
+    DBGLN("TOA: %d", endTX - beginTX);
 #endif
     //instance->GetStatus();
     instance->TXdoneCallback();
@@ -303,7 +301,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 {
     if (instance->currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
-        //Serial.println("Timeout!");
+        //DBGLN("Timeout!");
         instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
         instance->SetMode(SX1280_MODE_FS);
         TXnbISR();
@@ -345,21 +343,8 @@ uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr()
 void ICACHE_RAM_ATTR SX1280Driver::GetStatus()
 {
     uint8_t status = 0;
-
-    uint8_t stat1;
-    uint8_t stat2;
-    bool busy;
-
     hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1);
-    stat1 = (0b11100000 & status) >> 5;
-    stat2 = (0b00011100 & status) >> 2;
-    busy = 0b00000001 & status;
-    Serial.print("Status: ");
-    Serial.print(stat1, HEX);
-    Serial.print(", ");
-    Serial.print(stat2, HEX);
-    Serial.print(", ");
-    Serial.println(busy, HEX);
+    DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
 }
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
@@ -368,9 +353,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
 
     hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, regEFI, sizeof(regEFI));
 
-    Serial.println(regEFI[0]);
-    Serial.println(regEFI[1]);
-    Serial.println(regEFI[2]);
+    DBGLN("%d %d %d", regEFI[0], regEFI[1], regEFI[2]);
 
     //bool result = (val & 0b00001000) >> 3;
     //return result; // returns true if pos freq error, neg if false
