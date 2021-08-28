@@ -536,13 +536,13 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
     return crc;
 }
 
+#if !defined(UNIT_TEST)
 static inline uint16_t htobe16(uint16_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;
 #else
-    // __builtin_bswap16(val);
-    return (val >> 8) | ((val & 0xff) << 8);
+    return __builtin_bswap16(val);
 #endif
 }
 
@@ -551,10 +551,7 @@ static inline uint32_t htobe32(uint32_t val)
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;
 #else
-    //__builtin_bswap32(val);
-    return (val >> 24) |
-        ((val & 0x00ff0000) >> 8) |
-        ((val & 0x0000ff00) << 8) |
-        ((val & 0x000000ff) << 24);
+    return __builtin_bswap32(val);
 #endif
 }
+#endif
