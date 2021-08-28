@@ -514,10 +514,10 @@ void registerLuaParameters() {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       DBGLN("Request AirRate: %d", arg);
-      config.SetRate(arg);
+      config.SetRate(RATE_MAX - 1 - arg);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)arg),
+                          OLED.getRateString((expresslrs_RFrates_e)RATE_MAX - arg),
                           OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
       #endif
     }
@@ -672,14 +672,14 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate());
-  setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm());
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - config.GetRate());
+  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   // Commented out for now until we add more switch options
   //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
   setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 
-  setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
+  setLuaTextSelectionValue(&luaPower, config.GetPower());
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);
