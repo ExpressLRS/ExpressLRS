@@ -248,7 +248,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
         return;
     }
 
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LinkStatisticsFrameLength + 2;
@@ -280,7 +280,7 @@ void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const ch
     memcpy(val2,elrsInfo,(len2 + 1));
 
     uint8_t LUArespLength = len + 2 + (len2+1);
-    uint8_t outBuffer[LUArespLength + 5] = {0};
+    uint8_t outBuffer[LUArespLength + 5];
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
@@ -320,7 +320,7 @@ void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
     uint8_t LUArespLength;      
     LUArespLength = 2+ wholePacketSize; //2 bytes of header, name , 12 bytes of 'nonsense', 1 byte of lua field amount
     //create outbuffer size
-    uint8_t outBuffer[wholePacketSize + 5 + 2 + 2] = {0}; 
+    uint8_t outBuffer[wholePacketSize + 5 + 2 + 2]; 
     //it is byte op, we can use memcpy with index to
     // destination memory.
     struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
@@ -463,8 +463,8 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
                                         //fieldsetup1(fieldparent,fieldtype),field name, 
                                         //fieldsetup2(value,min,max,default),field unit
     //create outbuffer size
-    uint8_t chunkBuffer[wholePacketSize] = {0};
-    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
+    uint8_t chunkBuffer[wholePacketSize];
+    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2]; 
         //it is byte op, we can use memcpy with index to
         // destination memory.
     switch(dataType){
@@ -640,7 +640,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
-        uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
+        uint8_t outBuffer[OpenTXsyncFrameLength + 4];
 
         outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
         outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 13?
@@ -778,7 +778,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     }
 
     const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[totalBufferLen] = {0};
+    uint8_t outBuffer[totalBufferLen];
 
     // CRSF extended frame header
     outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
@@ -1120,7 +1120,7 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = LinkStatisticsFrameLength + 2;
@@ -1140,7 +1140,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-    uint8_t outBuffer[RCframeLength + 4] = {0};
+    uint8_t outBuffer[RCframeLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = RCframeLength + 2;
