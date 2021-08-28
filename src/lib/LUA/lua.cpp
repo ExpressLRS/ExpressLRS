@@ -8,7 +8,7 @@ const char txDeviceName[] = TX_DEVICE_NAME;
 
 extern CRSF crsf;
 
-static uint8_t allLUAparamSent = 0;  
+static uint8_t allLUAparamSent = 0;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
@@ -166,7 +166,7 @@ void sendLuaDevicePacket(void)
   // Packet starts with device name
   memcpy(buffer, txDeviceName, sizeof(txDeviceName));
   // Followed by the device
-  device->serialNo = 0x53524C45; // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+  device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
   device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
   device->softwareVer = 0; // unused currently by ys, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
   device->fieldCnt = lastLuaField;

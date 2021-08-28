@@ -456,7 +456,7 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 
 // Scale down a 10-bit value to a full range crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
-{ 
+{
     return fmap(val, 0, 1024, 172, 1811);
 }
 
@@ -541,7 +541,8 @@ static inline uint16_t htobe16(uint16_t val)
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;
 #else
-    return __builtin_bswap16(val);
+    // __builtin_bswap16(val);
+    return (val >> 8) | ((val & 0xff) << 8);
 #endif
 }
 
@@ -550,6 +551,10 @@ static inline uint32_t htobe32(uint32_t val)
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;
 #else
-    return __builtin_bswap32(val);
+    //__builtin_bswap32(val);
+    return (val >> 24) |
+        ((val & 0x00ff0000) >> 8) |
+        ((val & 0x0000ff00) << 8) |
+        ((val & 0x000000ff) << 24);
 #endif
 }
