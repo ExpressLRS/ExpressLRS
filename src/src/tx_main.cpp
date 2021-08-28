@@ -554,11 +554,11 @@ void registerLuaParameters() {
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
                         OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
     #endif
-  });
+  }, luaPowerFolder.luaProperties1.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-  });
+  }, luaPowerFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
@@ -1164,9 +1164,19 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
-    crsf.AddMspMessage(packet);
+    if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
+    {
+      config.SetVtxBand(packet->payload[0] / 8 + 1);
+      config.SetVtxChannel(packet->payload[0] % 8);
+    } else
+    {
+      return; // Packets containing frequency in MHz are not yet supported.
+    }
 
-    eepromWriteToMSPOut();
+    VtxConfigReadyToSend = true;
+
+    resetLuaParams();
+    sendLuaDevicePacket();
   }
 }
 

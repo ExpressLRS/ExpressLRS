@@ -160,6 +160,8 @@ TxConfig::SetDefaults()
         SetRate(modParams->index);
         SetTlm(modParams->TLMinterval);
         SetPower(DefaultPowerEnum);
+        SetDynamicPower(0);
+        SetBoostChannel(0);
         SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
     }
