@@ -4,6 +4,7 @@
 
 #include "targets.h"
 #include <BleGamepad.h>
+#include "logging.h"
 
 #include "CRSF.h"
 extern CRSF crsf;
@@ -28,8 +29,8 @@ BleGamepad bleGamepad("ExpressLRS Joystick", "ELRS", 100);
 
 void BluetoothJoystickBegin()
 {
+    DBGLN("Starting BLE Joystick!");
     bleGamepad.setAutoReport(false);
-    Serial.println("Starting BLE Joystick!");
     bleGamepad.setControllerType(CONTROLLER_TYPE_GAMEPAD);
     bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
