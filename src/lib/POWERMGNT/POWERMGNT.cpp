@@ -47,7 +47,7 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
     case PWR_500mW: return 4;
     case PWR_1000mW: return 5;
     case PWR_2000mW: return 6;
-    case PWR_50mW:
+    case PWR_50mW: return 8;
     default:
         return 0;
     }
