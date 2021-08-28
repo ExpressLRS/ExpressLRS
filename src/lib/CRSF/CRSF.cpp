@@ -191,7 +191,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
         return;
     }
 
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LinkStatisticsFrameLength + 2;
@@ -362,8 +362,8 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
                                         //fieldsetup1(fieldparent,fieldtype),field name, 
                                         //fieldsetup2(value,min,max,default),field unit
     //create outbuffer size
-    uint8_t chunkBuffer[wholePacketSize] = {0};
-    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2] = {0}; 
+    uint8_t chunkBuffer[wholePacketSize];
+    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2]; 
         //it is byte op, we can use memcpy with index to
         // destination memory.
     switch(dataType){
@@ -658,7 +658,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     }
 
     const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[totalBufferLen] = {0};
+    uint8_t outBuffer[totalBufferLen];
 
     // CRSF extended frame header
     outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
@@ -1000,7 +1000,7 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4] = {0};
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = LinkStatisticsFrameLength + 2;
@@ -1020,7 +1020,7 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-    uint8_t outBuffer[RCframeLength + 4] = {0};
+    uint8_t outBuffer[RCframeLength + 4];
 
     outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     outBuffer[1] = RCframeLength + 2;
