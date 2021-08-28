@@ -282,7 +282,7 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     uint8_t buf[6 + len];
     // Header info
     buf[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buf[1] = len + 4; // Type + SRC + DST + CRC
+    buf[1] = len + 4; // Type + DST + SRC + CRC
     buf[2] = type;
     buf[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     buf[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
@@ -596,43 +596,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
-        uint8_t outBuffer[OpenTXsyncFrameLength + 4] = {0};
+        struct otxSyncData {
+            uint8_t extendedType; // CRSF_FRAMETYPE_OPENTX_SYNC
+            uint32_t rate; // Big-Endian
+            uint32_t offset; // Big-Endian
+        } PACKED;
+        
+        uint8_t buffer[sizeof(otxSyncData)];
+        struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
 
-        outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0xEA
-        outBuffer[1] = OpenTXsyncFrameLength + 2;      // equals 13?
-        outBuffer[2] = CRSF_FRAMETYPE_RADIO_ID;        // 0x3A
+        sync->extendedType = CRSF_FRAMETYPE_OPENTX_SYNC;
+        sync->rate = htobe32(packetRate);
+        sync->offset = htobe32(offset);
 
-        outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER; //0XEA
-        outBuffer[4] = 0x00;                           //??? not sure doesn't seem to matter
-        outBuffer[5] = CRSF_FRAMETYPE_OPENTX_SYNC;     //0X10
+        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer));
 
-        outBuffer[6] = (packetRate & 0xFF000000) >> 24;
-        outBuffer[7] = (packetRate & 0x00FF0000) >> 16;
-        outBuffer[8] = (packetRate & 0x0000FF00) >> 8;
-        outBuffer[9] = (packetRate & 0x000000FF) >> 0;
-
-        outBuffer[10] = (offset & 0xFF000000) >> 24;
-        outBuffer[11] = (offset & 0x00FF0000) >> 16;
-        outBuffer[12] = (offset & 0x0000FF00) >> 8;
-        outBuffer[13] = (offset & 0x000000FF) >> 0;
-
-        uint8_t crc = crsf_crc.calc(&outBuffer[2], OpenTXsyncFrameLength + 1);
-
-        outBuffer[OpenTXsyncFrameLength + 3] = crc;
-
-#ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux);
-#endif
-        SerialOutFIFO.push(OpenTXsyncFrameLength + 4); // length
-        SerialOutFIFO.pushBytes(outBuffer, OpenTXsyncFrameLength + 4);
-#ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux);
-#endif
         OpenTXsyncLastSent = now;
     }
 }
-
-
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {

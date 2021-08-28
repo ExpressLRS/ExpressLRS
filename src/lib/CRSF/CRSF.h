@@ -84,7 +84,7 @@ public:
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize);
-    void packetQueueExtended(uint8_t type, void *data, uint8_t len);
+    static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
