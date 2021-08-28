@@ -74,12 +74,17 @@ bool getLuaWarning(void){ //1 if alarm
 
 void sendELRSstatus()
 {
-  uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)(getLuaWarning())};
+  uint8_t buffer[sizeof(tagLuaElrsParams) + 0];
+  struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
-  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " ", 4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+  params->pktsBad = crsf.BadPktsCountResult;
+  params->pktsGood = htobe16(crsf.GoodPktsCountResult);
+  params->flags = getLuaWarning();
+  // to support sending a params.msg, buffer should be extended by the strlen of the message
+  // and copied into params->msg (with trailing null)
+  params->msg[0] = '\0';
+
+  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()

@@ -270,48 +270,6 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2)
-{
-    if (!CRSF::CRSFstate)
-    {
-        return;
-    }
-    char val2[len2+1];
-    memcpy(val2,elrsInfo,(len2 + 1));
-
-    uint8_t LUArespLength = len + 2 + (len2+1);
-    uint8_t outBuffer[LUArespLength + 5] = {0};
-
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LUArespLength + 2;
-    outBuffer[2] = frameType;
-
-    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-
-    for (uint8_t i = 0; i < len; ++i)
-    {
-        outBuffer[5 + i] = val[i];
-    }
-    for (uint8_t i = 0; i < (len2+1); ++i)
-    {
-        outBuffer[5 + i + len] = val2[i];
-    }
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
-
-    outBuffer[LUArespLength + 3] = crc;
-
-#ifdef PLATFORM_ESP32
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-    SerialOutFIFO.push(LUArespLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
-#ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
-}
-
 /**
  * Build a an extended type packet and queue it in the SerialOutFIFO
  * This is just a regular packet with 2 extra bytes with the sub src and target

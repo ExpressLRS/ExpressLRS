@@ -418,8 +418,12 @@ struct tagLuaItem_folder {
     uint8_t size;
 } PACKED;
 
-
-
+struct tagLuaElrsParams {
+    uint8_t pktsBad;
+    uint16_t pktsGood; // Big-Endian
+    uint8_t flags;
+    char msg[1]; // null-terminated string
+} PACKED;
 
 // typedef struct crsfOpenTXsyncFrame_s
 // {
@@ -530,4 +534,22 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
         crc = crc ^ *data++;
     }
     return crc;
+}
+
+static inline uint16_t htobe16(uint16_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap16(val);
+#endif
+}
+
+static inline uint32_t htobe32(uint32_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap32(val);
+#endif
 }
