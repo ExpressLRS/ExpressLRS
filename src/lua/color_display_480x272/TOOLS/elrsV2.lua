@@ -1,3 +1,4 @@
+-- TNS|ExpressLRS V2|TNE
 ---- #########################################################################
 ---- #                                                                       #
 ---- # Copyright (C) OpenTX                                                  #
@@ -35,6 +36,8 @@ local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
+
+local COL2 = 140 -- X position of second column
 
 local function getField(line)
   local counter = 1
@@ -209,9 +212,9 @@ local function fieldSignedSave(field, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
-  -- lcd.drawNumber(140, y, field.value, LEFT + attr)    -- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawNumber(COL2, y, field.value, LEFT + attr)    -- NOTE: original code getLastPos not available in Horus
   -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) -- NOTE: original code getLastPos not available in Horus
-  lcd.drawText(140, y, field.value .. field.unit, attr)  -- NOTE: Concenated fields instead of get lastPos
+  lcd.drawText(COL2, y, field.value .. field.unit, attr)  -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- UINT8
@@ -272,7 +275,7 @@ local function formatFloat(num, decimals)
 end
 
 local function fieldFloatDisplay(field, y, attr)
-  lcd.drawText(140, y, formatFloat(field.value, field.prec) .. field.unit, attr)
+  lcd.drawText(COL2, y, formatFloat(field.value, field.prec) .. field.unit, attr)
 end
 
 local function fieldFloatSave(field)
@@ -298,9 +301,9 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  -- lcd.drawText(140, y, field.values[field.value+1], attr)			-- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawText(COL2, y, field.values[field.value+1], attr)			-- NOTE: original code getLastPos not available in Horus
   -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) 				-- NOTE: original code getLastPos not available in Horus
-  lcd.drawText(140, y, field.values[field.value+1] .. field.unit, attr) -- NOTE: Concenated fields instead of get lastPos
+  lcd.drawText(COL2, y, field.values[field.value+1] .. field.unit, attr) -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- STRING
@@ -322,12 +325,12 @@ end
 
 local function fieldStringDisplay(field, y, attr)
   if edit == true and attr then
-    -- lcd.drawText(140, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
+    -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
     -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
-	lcd.drawText(140, y, field.value, attr)
-    lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), attr)
+	lcd.drawText(COL2, y, field.value, attr)
+    lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), attr)
   else
-    lcd.drawText(140, y, field.value, attr)
+    lcd.drawText(COL2, y, field.value, attr)
   end
 end
 
@@ -355,7 +358,8 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-  lcd.drawText(1, y, field.name, attr)
+  lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
+  lcd.drawText(10, y, "[" .. field.name .. "]", attr)
 end
 
 local functions = {
@@ -459,6 +463,14 @@ local function refreshNext()
   end
 end
 
+local function lcd_title()
+  lcd.clear()
+  lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
+  local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  lcd.drawText(1, 5, title, MENU_TITLE_COLOR)
+  lcd.drawText(LCD_W, 5, tostring(badPkt) .. "/" .. tostring(goodPkt), MENU_TITLE_COLOR + RIGHT)
+end
+
 -- Main
 local function runDevicePage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
@@ -513,20 +525,12 @@ local function runDevicePage(event)
       selectField(-1)
     end
   end
+
+  lcd_title()
   if elrsFlags > 0 then
-    lcd.clear()
-    lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
-    lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)
     lcd.drawText(20,50,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
     lcd.drawText(20,100,"ok",BLINK + INVERS)
   else
-    lcd.clear()
-    lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
-    if allParamsLoaded < 1 then
-      lcd.drawText(1, 5,"loading: "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)
-    else
-      lcd.drawText(1, 5,deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), MENU_TITLE_COLOR)
-    end
     for y = 1, 11 do
       local field = getField(pageOffset+y)
       if not field then
@@ -535,13 +539,10 @@ local function runDevicePage(event)
         lcd.drawText(1, y*22+10, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 then
+        if field.type == 11 then -- Folder name
           lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
-          lcd.drawText(1, y*22+10, field.name, attr)
-        elseif field.type == 13 then
-          lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
-          lcd.drawText(1, y*22+10, field.name, attr)
-        else
+          lcd.drawText(1, y*22+10, "> " .. field.name, attr)
+        elseif field.type ~= 13 then -- if not Command
           lcd.drawText(1, y*22+10, field.name)
         end
         if functions[field.type+1].display then
