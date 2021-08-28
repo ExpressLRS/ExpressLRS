@@ -85,7 +85,7 @@ void sendELRSstatus()
                          (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
                          (uint8_t)(getLuaWarning())};
 
-  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " ", 4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " "); //*elrsinfo is the info that we want to pass when there is getluawarning()
 }
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()

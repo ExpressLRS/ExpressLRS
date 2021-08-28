@@ -270,16 +270,13 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
-void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2)
+void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo)
 {
     if (!CRSF::CRSFstate)
     {
         return;
     }
-    char val2[len2+1];
-    memcpy(val2,elrsInfo,(len2 + 1));
-
-    uint8_t LUArespLength = len + 2 + (len2+1);
+    uint8_t LUArespLength = len + 2 + strlen(elrsInfo) + 1;
     uint8_t outBuffer[LUArespLength + 5];
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -289,14 +286,8 @@ void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const ch
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-    for (uint8_t i = 0; i < len; ++i)
-    {
-        outBuffer[5 + i] = val[i];
-    }
-    for (uint8_t i = 0; i < (len2+1); ++i)
-    {
-        outBuffer[5 + i + len] = val2[i];
-    }
+    memcpy(outBuffer+5, val, len);
+    strcpy((char *)outBuffer+5+len, elrsInfo);
 
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
 
