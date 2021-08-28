@@ -72,7 +72,7 @@
 
 #elif defined(TARGET_EXPRESSLRS_PCB_RX_V3)
 #define GPIO_PIN_NSS 15
-#if TARGET_NAMIMNORC_ESP_RX
+#if defined(TARGET_NAMIMNORC_ESP_RX) || defined(TARGET_RX_HUZZAH_RFM95W)
     #define GPIO_PIN_DIO0 5
     #define GPIO_PIN_DIO1 4
 #else
@@ -85,8 +85,19 @@
 #define GPIO_PIN_RST 2
 #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
 #define GPIO_PIN_RCSIGNAL_TX -1
-#define GPIO_PIN_LED 16
-#define GPIO_PIN_BUTTON 0
+
+#if defined(TARGET_RX_HUZZAH_RFM95W)
+    #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
+    #define GPIO_PIN_RCSIGNAL_TX -1
+    #define GPIO_PIN_LED 0
+    //#define GPIO_PIN_BUTTON -1
+#else
+    #define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
+    #define GPIO_PIN_RCSIGNAL_TX -1
+    #define GPIO_PIN_LED 16
+    #define GPIO_PIN_BUTTON 0
+#endif
+
 #define timerOffset -1
 
 #elif defined(TARGET_R9M_RX)
@@ -356,6 +367,7 @@ High = Ant2
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED 15
+#define GPIO_PIN_FAN_EN 17
 
 #elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
 #define GPIO_PIN_NSS         PA4
