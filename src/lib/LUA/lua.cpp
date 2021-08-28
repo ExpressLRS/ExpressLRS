@@ -21,12 +21,6 @@ static luaCallback paramCallbacks[32] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 
-static struct tagLuaDevice luaDevice = {
-    txDeviceName,
-    {{0},0},
-    LUA_DEVICE_SIZE(luaDevice)
-};
-
 #define TYPE(T) (struct T *)p,((struct T *)p)->size
 static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
 {
@@ -101,7 +95,6 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   p->parent = parent;
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
-  luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
 }
 
 void registerLUAPopulateParams(void (*populate)())
@@ -148,7 +141,7 @@ bool luaHandleUpdateParameter()
     case CRSF_FRAMETYPE_DEVICE_PING:
         allLUAparamSent = 0;
         populateHandler();
-        crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+        sendLuaDevicePacket();
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
@@ -159,9 +152,23 @@ bool luaHandleUpdateParameter()
   UpdateParamReq = false;
   return true;
 }
-void sendLuaDevicePacket(void){
-  crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+
+void sendLuaDevicePacket(void)
+{
+  uint8_t buffer[sizeof(txDeviceName) + sizeof(struct tagLuaDeviceProperties)];
+  struct tagLuaDeviceProperties * const device = (struct tagLuaDeviceProperties * const)&buffer[sizeof(txDeviceName)];
+
+  // Packet starts with device name
+  memcpy(buffer, txDeviceName, sizeof(txDeviceName));
+  // Followed by the device
+  device->serialNo = 0x53524C45; // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+  device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+  device->softwareVer = 0; // unused currently by ys, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+  device->fieldCnt = lastLuaField;
+
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
 }
+
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     luaStruct->luaProperties2.value = newvalue;
 }

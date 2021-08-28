@@ -311,35 +311,33 @@ void CRSF::sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const ch
     portEXIT_CRITICAL(&FIFOmux);
 #endif
 }
-void CRSF::sendCRSFdevice(const void * luaData, uint8_t wholePacketSize)
+
+/**
+ * Build a an extended type packet and queue it in the SerialOutFIFO
+ * This is just a regular packet with 2 extra bytes with the sub src and target
+ **/
+void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 {
     if (!CRSF::CRSFstate)
-    {
         return;
-    }
-    uint8_t LUArespLength;      
-    LUArespLength = 2+ wholePacketSize; //2 bytes of header, name , 12 bytes of 'nonsense', 1 byte of lua field amount
-    //create outbuffer size
-    uint8_t outBuffer[wholePacketSize + 5 + 2 + 2] = {0}; 
-    //it is byte op, we can use memcpy with index to
-    // destination memory.
-    struct tagLuaDevice *p1 = (struct tagLuaDevice*)luaData;
-    memcpy(outBuffer+5,p1->label1,strlen(p1->label1)+1);
-    memcpy(outBuffer+5+(strlen(p1->label1)+1),&p1->luaDeviceProperties,sizeof(p1->luaDeviceProperties));
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LUArespLength + 2;   //received as #data in lua
-    outBuffer[2] = CRSF_FRAMETYPE_DEVICE_INFO; //received as command in lua
-    // all below received as data in lua
-    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
-    outBuffer[LUArespLength + 3] = crc;
-    
+
+    uint8_t buf[6 + len];
+    // Header info
+    buf[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buf[1] = len + 4; // Type + SRC + DST + CRC
+    buf[2] = type;
+    buf[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buf[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    // Payload
+    memcpy(&buf[5], data, len);
+    // CRC - Starts at type, ends before CRC
+    buf[5+len] = crsf_crc.calc(&buf[2], len + 3);
+
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(LUArespLength + 4);
-    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
+    SerialOutFIFO.push(sizeof(buf));
+    SerialOutFIFO.pushBytes(buf, sizeof(buf));
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif

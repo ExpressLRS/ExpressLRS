@@ -307,11 +307,10 @@ struct tagLuaProperties1{
     const uint8_t type;
 }PACKED;
 struct tagLuaDeviceProperties {
-    const uint8_t etc[12]; //12 unnecessary bytes space consist of
-                    //4 bytes serial number
-                    //4 bytes hardware ID
-                    //4 bytes software ID
-    uint8_t fieldamount; //number of field of params this device has
+    uint32_t serialNo;
+    uint32_t hardwareVer;
+    uint32_t softwareVer;
+    uint8_t fieldCnt; //number of field of params this device has
 }PACKED;
 struct tagLuaTextSelectionProperties{
     uint8_t value;
@@ -356,11 +355,6 @@ struct tagLuaFloatProperties{
 //    float defaultValue;
 }PACKED;
 
-struct tagLuaDevice {
-    const char* const label1; //device name
-    struct tagLuaDeviceProperties luaDeviceProperties;
-    uint8_t size;
-} PACKED;
 struct tagLuaItem_textSelection {
     struct tagLuaProperties1 luaProperties1;
     const char* const label1; //param name
