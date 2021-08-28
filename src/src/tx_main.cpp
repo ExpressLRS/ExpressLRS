@@ -427,8 +427,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   // Skip sync if the connection seems healthy:
   //   State is connected (has not missed >5 telem packets in a row)
+  //   Our current telemetry ratio matches the configured ration
   //   LQ is >75 we know the remote Nonce is good so sync isn't needed if connected
-  bool skipSync = (connectionState == connected) && (crsf.LinkStatistics.uplink_Link_quality > 75);
+  bool skipSync = (connectionState == connected) &&
+    (ExpressLRS_currAirRate_Modparams->TLMinterval == config.GetTlm()) &&
+    (crsf.LinkStatistics.uplink_Link_quality > 75);
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
@@ -618,7 +621,7 @@ void registerLuaParameters() {
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press. 
+        //unintentional button press.
         setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
@@ -629,7 +632,7 @@ void registerLuaParameters() {
         setLuaCommandValue(&luaWebUpdate,0);
       }
     });
-  
+
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg > 0 && arg < 4) //start command, 1 = start
                               //2 = running
@@ -641,7 +644,7 @@ void registerLuaParameters() {
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press. 
+        //unintentional button press.
         setLuaCommandValue(&luaBLEJoystick,2); //running status
         BLEjoystickActive = true;
   #ifndef DEBUG_SUPPRESS
@@ -685,7 +688,7 @@ void resetLuaParams(){
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);
-  
+
   setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
@@ -737,7 +740,7 @@ void UARTconnected()
 static void ChangeRadioParams()
 {
   config.SetModelId(crsf.getModelID());
-  
+
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   SetSwitchMode(config.GetSwitchMode());
@@ -1049,7 +1052,7 @@ void loop()
       msp.markPacketReceived();
     }
   }
-  
+
   if (VtxConfigReadyToSend)
   {
     VtxConfigReadyToSend = false;
