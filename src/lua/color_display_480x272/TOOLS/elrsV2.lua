@@ -467,8 +467,8 @@ local function lcd_title()
   lcd.clear()
   lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
-  lcd.drawText(1, 5, title, MENU_TITLE_COLOR)
-  lcd.drawText(LCD_W, 5, tostring(badPkt) .. "/" .. tostring(goodPkt), MENU_TITLE_COLOR + RIGHT)
+  lcd.drawText(1, 5, title)
+  lcd.drawText(LCD_W, 5, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
 end
 
 -- Main
