@@ -606,13 +606,7 @@ void registerLuaParameters() {
     });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg > 0 && arg < 4) //start command, 1 = start
-                              //2 = running
-                              //3 = request confirmation
-      {
-        setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
-        setLuaCommandValue(&luaWebUpdate,3); //request confirm
-      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
@@ -621,6 +615,12 @@ void registerLuaParameters() {
         webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
         BeginWebUpdate();
+      } else if (arg > 0 && arg < 4) //start command, 1 = start
+                              //2 = running
+                              //3 = request confirmation
+      {
+        setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
+        setLuaCommandValue(&luaWebUpdate,3); //request confirm
       } else if(arg == 6){ //6 = status poll
           sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
@@ -629,13 +629,7 @@ void registerLuaParameters() {
     });
   
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
-      if (arg > 0 && arg < 4) //start command, 1 = start
-                              //2 = running
-                              //3 = request confirmation
-      {
-        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to cancel");
-        setLuaCommandValue(&luaBLEJoystick,3); //request confirm
-      } else if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
@@ -658,6 +652,12 @@ void registerLuaParameters() {
   #endif
         Radio.End();
         BluetoothJoystickBegin();
+      } else if (arg > 0 && arg < 4) //start command, 1 = start
+                              //2 = running
+                              //3 = request confirmation
+      {
+        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to cancel");
+        setLuaCommandValue(&luaBLEJoystick,3); //request confirm
       } else if(arg == 6){ //6 = status poll
         sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
