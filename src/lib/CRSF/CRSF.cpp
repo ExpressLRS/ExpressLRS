@@ -722,7 +722,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
     while (CRSF::Port.available())
     {
-        char const inChar = CRSF::Port.read();
+        unsigned char const inChar = CRSF::Port.read();
 
         if (CRSFframeActive == false)
         {
