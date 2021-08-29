@@ -45,19 +45,16 @@ void test_fhss_same(void)
 {
     FHSSrandomiseFHSSsequence(0x01020304L);
 
-    const uint32_t numFhss = FHSSNumEntries();
-    uint32_t initFreq = GetInitialFreq();
+    const uint32_t numFhss = FHSSgetNumberOfEntries();
 
     uint32_t fhss[numFhss];
-    fhss[0] = initFreq;
 
-    for (unsigned int i = 1; i < FHSSgetNumberOfEntries(); i++) {
+    for (unsigned int i = 0; i < FHSSgetNumberOfEntries(); i++) {
         uint32_t freq = FHSSgetNextFreq();
         fhss[i] = freq;
     }
 
     FHSSrandomiseFHSSsequence(0x01020304L);
-    initFreq = GetInitialFreq();
 
     for (unsigned int i = 0; i < FHSSgetNumberOfEntries(); i++) {
         uint32_t freq = FHSSgetNextFreq();

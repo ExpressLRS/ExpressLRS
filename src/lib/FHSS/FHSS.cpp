@@ -254,13 +254,10 @@ Requirements:
 4. Pseudorandom
 
 Approach:
-  Initialise an array of channels are available
+  Fill the sequence array with the sync channel every FHSS_FREQ_CNT
+  Iterate through the array, and for each block, swap each entry in it with
+  another random entry, excluding the sync channel.
 
-  While there are spaces left in the FHSSsequence array
-    randomise the array of channels by iterating through and swapping each
-    entry with another random entry. Skip the first entry, leaving it as
-    the sync channel index (0).
-    copy the array the the FHSS sequence, advance FHSS sequence offset
 */
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
@@ -311,7 +308,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
             // switch this entry and another random entry in the same block
             uint8_t temp = FHSSsequence[i];
-            FHSSsequence[i] = FHSSsequence[offset+rand]; // assign the value to the sequence array
+            FHSSsequence[i] = FHSSsequence[offset+rand];
             FHSSsequence[offset+rand] = temp;
         }
 

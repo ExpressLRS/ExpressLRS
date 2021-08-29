@@ -38,7 +38,9 @@ extern const uint32_t FHSSfreqs[];
 extern uint_fast8_t sync_channel;
 extern const uint8_t FHSS_SEQUENCE_CNT;
 
+// create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
+// The number of frequencies for this regulatory domain
 uint32_t FHSSNumEntries(void);
 
 static inline void FHSSsetCurrIndex(const uint8_t value)
@@ -65,7 +67,7 @@ static inline uint32_t FHSSgetNextFreq()
     return freq;
 }
 
-// get the number of entries in the sequence
+// get the number of entries in the FHSS sequence
 static inline uint8_t FHSSgetNumberOfEntries()
 {
     return FHSS_SEQUENCE_CNT;
