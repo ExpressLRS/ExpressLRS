@@ -324,6 +324,7 @@ local function fieldStringSave(field)
 end
 
 local function fieldStringDisplay(field, y, attr)
+  lcd.drawText(1, y, field.name)
   if edit == true and attr then
     -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
     -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
@@ -336,6 +337,11 @@ end
 
 local function fieldFolderOpen(field)
   folderAccess = field.id
+end
+
+local function fieldFolderDisplay(field,y ,attr)
+  lcd.drawFilledRectangle(0, y, LCD_W, 22, TITLE_BGCOLOR)
+  lcd.drawText(1, y, "> " .. field.name, attr)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -374,7 +380,7 @@ local functions = {
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=nil },
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
 }
@@ -539,10 +545,7 @@ local function runDevicePage(event)
         lcd.drawText(1, y*22+10, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 then -- Folder name
-          lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
-          lcd.drawText(1, y*22+10, "> " .. field.name, attr)
-        elseif field.type ~= 13 then -- if not Command
+        if field.type < 11 then
           lcd.drawText(1, y*22+10, field.name)
         end
         if functions[field.type+1].display then

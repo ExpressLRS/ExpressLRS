@@ -323,6 +323,7 @@ local function fieldStringSave(field)
 end
 
 local function fieldStringDisplay(field, y, attr)
+  lcd.drawText(0, y, field.name)
   if edit == true and attr then
     lcd.drawText(COL2, y, field.value, FIXEDWIDTH)
     lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
@@ -333,6 +334,10 @@ end
 
 local function fieldFolderOpen(field)
   folderAccess = field.id
+end
+
+local function fieldFolderDisplay(field,y ,attr)
+  lcd.drawText(0, y, "> " .. field.name, attr + BOLD)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -536,9 +541,7 @@ local function runDevicePage(event)
         lcd.drawText(0, 1+8*y, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 then -- Folder name
-          lcd.drawText(0, 1+8*y, "> " .. field.name, attr + BOLD)
-        elseif field.type ~= 13 then -- if not Command
+        if field.type < 11 then
           lcd.drawText(0, 1+8*y, field.name)
         end
         if functions[field.type+1].display then
