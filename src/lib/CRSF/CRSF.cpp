@@ -250,88 +250,58 @@ uint8_t CRSF::setLuaHiddenFlag(uint8_t id, bool value){
 
 void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
-    char *next = stpcpy((char *)outarray+4,p1->label1) + 1;
+    char *next = stpcpy((char *)outarray,p1->label1) + 1;
     next = stpcpy(next,p1->textOption) + 1;
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
     
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
-    char *next = stpcpy((char *)outarray+4,p1->label1) + 1;
+    char *next = stpcpy((char *)outarray,p1->label1) + 1;
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
     
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
-    char *next = stpcpy((char *)outarray+4,p1->label1) + 1;
+    char *next = stpcpy((char *)outarray,p1->label1) + 1;
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
     
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
-    char *next = stpcpy((char *)outarray+4,p1->label1) + 1;
+    char *next = stpcpy((char *)outarray,p1->label1) + 1;
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
     
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
     //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
     //outarray[4+(strlen(p1->label1)+2)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
 void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-    char *next = stpcpy((char *)outarray+4,p1->label1) + 1;
+    char *next = stpcpy((char *)outarray,p1->label1) + 1;
     stpcpy(next,p1->label2);
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
 }
 void CRSF::getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
     struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-    stpcpy((char *)outarray+4,p1->label1);
-    outarray[0] = p1->luaProperties1.id;
-    outarray[1] = 0; //chunk
-    outarray[2] = p1->luaProperties1.parent; //parent
-    outarray[3] = p1->luaProperties1.type;
-    outarray[3] += ((luaHiddenFlags >>((p1->luaProperties1.id)-1)) & 1)*128;
+    stpcpy((char *)outarray,p1->label1);
 }
 
 //sendCRSF param can take anytype of lua field settings
@@ -433,11 +403,16 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
 
-    outBuffer[5] = chunkBuffer[0];
+    outBuffer[5] = ((struct tagLuaProperties1 *)luaData)->id;
     outBuffer[6] = ((chunks - (fieldchunk+1))); //remaining chunk to send;
-
-    memcpy(outBuffer+7,chunkBuffer+2+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES)),currentPacketSize);
-
+    if (fieldchunk == 0) {
+        outBuffer[7] = ((struct tagLuaProperties1 *)luaData)->parent;
+        outBuffer[8] = ((struct tagLuaProperties1 *)luaData)->type;
+        outBuffer[8] += ((luaHiddenFlags >>((((struct tagLuaProperties1 *)luaData)->id)-1)) & 1)*128;
+        memcpy(outBuffer+9,chunkBuffer,currentPacketSize-2);
+    } else {
+        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES))-2,currentPacketSize);
+    }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
     outBuffer[LUArespLength + 3] = crc;
     
