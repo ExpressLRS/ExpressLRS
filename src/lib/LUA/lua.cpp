@@ -92,8 +92,32 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
   UpdateParamReq = true;
 }
 
+uint8_t agentLiteFolder[4+32+2] = "HooJ";
+struct tagLuaItem_folder luaAgentLite = {
+    {0,0,(uint8_t)CRSF_FOLDER},//id,type
+    (const char *)agentLiteFolder,
+    0
+};
+
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
+  if (definition == NULL)
+  {
+    paramDefinitions[0] = &luaAgentLite;
+    paramCallbacks[0] = 0;
+    uint8_t *pos = agentLiteFolder + 4;
+    for (int i=1;i<=lastLuaField;i++)
+    {
+      struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)paramDefinitions[i];
+      if (p->parent == 0) {
+        *pos++ = i;
+      }
+    }
+    *pos++ = 0xFF;
+    *pos++ = 0;
+    luaAgentLite.size = 4 + strlen(luaAgentLite.label1) + 1;
+    return;
+  }
   struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;
   lastLuaField++;
   p->id = lastLuaField;

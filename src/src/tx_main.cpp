@@ -669,6 +669,7 @@ void registerLuaParameters() {
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
+  registerLUAParameter(NULL);
 }
 
 void resetLuaParams(){
