@@ -543,19 +543,19 @@ void registerLuaParameters() {
   // });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
     bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
+#ifndef DEBUG_SUPPRESS
     DBGLN("Request Model Match: %d", newModelMatch);
+#endif
     config.SetModelMatch(newModelMatch);
-  });
-  registerLUAParameter(&luaSetRXModel, [](uint8_t id, uint8_t arg){
-    uint8_t rxModel = crsf.ParameterUpdateData[2];
-    DBGLN("Request Set RX Model: %d", rxModel);
-    mspPacket_t msp;
-    msp.reset();
-    msp.makeCommand();
-    msp.function = MSP_SET_RX_CONFIG;
-    msp.addByte(MSP_ELRS_MODEL_ID);
-    msp.addByte(rxModel);
-    crsf.AddMspMessage(&msp);
+    if (connectionState == connected) {
+      mspPacket_t msp;
+      msp.reset();
+      msp.makeCommand();
+      msp.function = MSP_SET_RX_CONFIG;
+      msp.addByte(MSP_ELRS_MODEL_ID);
+      msp.addByte(newModelMatch ? crsf.getModelID() : 0);
+      crsf.AddMspMessage(&msp);
+    }
   });
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
@@ -671,13 +671,13 @@ void registerLuaParameters() {
   registerLUAParameter(&luaELRSversion);
 }
 
+static char modelNumStr[10];
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate());
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm());
   // Commented out for now until we add more switch options
   //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
-  setLuaUint8Value(&luaSetRXModel,(uint8_t)0);
 
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
 
