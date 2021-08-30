@@ -654,7 +654,6 @@ void registerLuaParameters() {
   registerLUAParameter(NULL);
 }
 
-static char modelNumStr[10];
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - config.GetRate());
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
