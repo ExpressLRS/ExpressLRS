@@ -678,6 +678,7 @@ void setup()
 #endif
 
 #if defined(HAS_I2C_OLED_MENU)
+  OLED_MENU.Init();
   OLED_MENU.displayLockScreen();
 #endif
 
@@ -829,7 +830,7 @@ button.buttonLongPress = &longPressCallback;
   #endif
 
   #if defined(HAS_I2C_OLED_MENU)
-   Serial.println(config.GetRate());
+    //Serial.println(config.GetRate());
      OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
      config.GetRate(),
      (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));

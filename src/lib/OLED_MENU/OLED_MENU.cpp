@@ -36,6 +36,7 @@ void shortPressCallback(void);
 void longPressCallback(void);
 
 #define LOCKTIME 8000
+
 volatile bool MenuUpdateReq = false;
 
 const char *OLED_MENU::getOptionString(int index)
@@ -117,10 +118,10 @@ menuShow_t OLED_MENU::currentItem[] ={
 
 
 uint32_t OLED_MENU::lastProcessTime=0;
-uint8_t OLED_MENU::currentIndex = 0;
-uint8_t OLED_MENU::showBaseIndex = 0;
-uint8_t OLED_MENU::screenLocked = 0;
- uint8_t OLED_MENU::wifiupdateSta = 0;
+uint8_t  OLED_MENU::currentIndex = 0;
+uint8_t  OLED_MENU::showBaseIndex = 0;
+uint8_t  OLED_MENU::screenLocked = 0;
+uint8_t  OLED_MENU::wifiupdateSta = 0;
 
 void shortPressCallback(void)
 {
@@ -133,15 +134,18 @@ void longPressCallback(void)
     OLED_MENU::longPressCB();
 }
 
-void OLED_MENU::displayLockScreen()
+void OLED_MENU::Init(void)
 {
     u8g2.begin();
+}
+
+void OLED_MENU::displayLockScreen()
+{ 
     u8g2.clearBuffer();
     u8g2.drawXBM(0, 0, 64, 64, elrs64);  
-    u8g2.setFont(u8g2_font_helvB24_tf);
-    u8g2.drawUTF8(65,30, "Exp"); 
     u8g2.setFont(u8g2_font_HelvetiPixelOutline_tr);
-    u8g2.drawUTF8(78,57,SCREEN_FR_STRING); 
+    u8g2.drawUTF8(76,30, "ELRS"); 
+    u8g2.drawUTF8(78,50,SCREEN_FR_STRING); 
     u8g2.sendBuffer();
 }
 
@@ -162,22 +166,15 @@ void OLED_MENU::ScreenLocked(void)
     uint32_t now = millis();
     if(now - OLED_MENU::lastProcessTime > LOCKTIME && OLED_MENU::screenLocked == 0) // LOCKTIME seconds later lock the screen
     {
-        uartConnected();
-        u8g2.clearBuffer();
+        displayLockScreen();
         OLED_MENU::screenLocked = 1;
-        u8g2.drawXBM(0, 0, 64, 64, elrs64);  
-        u8g2.setFont(u8g2_font_helvB24_tf);
-        u8g2.drawUTF8(65,30, "Exp"); 
-        u8g2.setFont(u8g2_font_HelvetiPixelOutline_tr);
-        u8g2.drawUTF8(78,57,SCREEN_FR_STRING); 
-        u8g2.sendBuffer();
         OLED_MENU::lastProcessTime = now;
+        uartConnected();
     }
 }
 void OLED_MENU::menuUpdata(void)
 {
     u8g2.clearBuffer();
-
     u8g2.setFontMode(1);  /* activate transparent font mode */
     u8g2.setDrawColor(1); /* color 1 for the box */
     u8g2.setFont(u8g2_font_6x12_tf);
@@ -206,9 +203,6 @@ void OLED_MENU::updateScreen(const char power ,const char rate, const char tlm)
      currentItem[0].value = rate;
      currentItem[1].value = tlm;
      currentItem[2].value = power;
-     Serial.println(currentItem[0].value);
-    //  Serial.println(currentItem[1].value);
-    //  Serial.println(currentItem[2].value);
     if(OLED_MENU::screenLocked == 0)
     {
         OLED_MENU::menuUpdata();

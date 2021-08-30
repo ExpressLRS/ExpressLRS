@@ -84,6 +84,7 @@ private:
 
 public:
     void displayLockScreen();
+    static void Init(void);
     static void updateScreen(const char power ,const char rate, const char tlm);
     static void WIFIUpdateScreen(void);
     static const char * getPowerString(int power);
