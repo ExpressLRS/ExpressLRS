@@ -76,6 +76,7 @@ void POWERMGNT::init()
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
     powerLedInit();
+    fanInit();
     setDefaultPower();
 }
 
@@ -442,6 +443,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #endif
     CurrentPower = Power;
     powerLedUpdate();
+    fanAction();
     return Power;
 }
 
@@ -470,11 +472,40 @@ void POWERMGNT::powerLedUpdate()
 #endif
 }
 
+void POWERMGNT::fanAction()
+{
+#if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
+    switch (CurrentPower)
+    {
+    case PWR_250mW:
+        digitalWrite(GPIO_PIN_FAN, HIGH);
+        break;
+    case PWR_500mW:
+        digitalWrite(GPIO_PIN_FAN, HIGH);
+        break;
+    case PWR_10mW:
+    case PWR_25mW:
+    case PWR_50mW:
+    case PWR_100mW:
+    default:
+        digitalWrite(GPIO_PIN_FAN, LOW);
+        break;
+    }
+#endif
+}
+
 void POWERMGNT::powerLedInit()
 {
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
     pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
+#endif
+}
+
+void POWERMGNT::fanInit()
+{
+#if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
+pinMode(GPIO_PIN_FAN, OUTPUT);
 #endif
 }
 
