@@ -620,9 +620,7 @@ void registerLuaParameters() {
         //unintentional button press.
         setLuaCommandValue(&luaBLEJoystick,2); //running status
         BLEjoystickActive = true;
-  #ifndef DEBUG_SUPPRESS
-        Serial.println("BLE Joystick Mode Requested!");
-  #endif
+        DBGLN("BLE Joystick Mode Requested!");
         hwTimer.stop();
         crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
         hwTimer.updateInterval(5000);
