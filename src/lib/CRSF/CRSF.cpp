@@ -52,13 +52,6 @@ volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 
 volatile inBuffer_U CRSF::inBuffer;
 
-// current and sent switch values, used for prioritising sequential switch transmission
-uint8_t CRSF::currentSwitches[N_SWITCHES] = {0};
-uint8_t CRSF::sentSwitches[N_SWITCHES] = {0};
-
-uint8_t CRSF::nextSwitchFirstIndex = 0;
-uint8_t CRSF::nextSwitchIndex = 0; // for round-robin sequential switches
-
 uint8_t CRSF::modelId = 0;
 
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
@@ -188,56 +181,6 @@ void CRSF::flush_port_input(void)
     {
         CRSF::Port.read();
     }
-}
-
-/**
- * Determine which switch to send next.
- * If any switch has changed since last sent, we send the lowest index changed switch
- * and set nextSwitchIndex to that value + 1.
- * If no switches have changed then we send nextSwitchIndex and increment the value.
- * For pure sequential switches, all 8 switches are part of the round-robin sequence.
- * For hybrid switches, switch 0 is sent with every packet and the rest of the switches
- * are in the round-robin.
- */
-uint8_t ICACHE_RAM_ATTR CRSF::getNextSwitchIndex()
-{
-    int firstSwitch = nextSwitchFirstIndex;
-
-    // look for a changed switch
-    int i;
-    for (i = firstSwitch; i < N_SWITCHES; i++)
-    {
-        if (currentSwitches[i] != sentSwitches[i])
-            break;
-    }
-    // if we didn't find a changed switch, we get here with i==N_SWITCHES
-    if (i == N_SWITCHES)
-    {
-        i = nextSwitchIndex;
-    }
-
-    // keep track of which switch to send next if there are no changed switches
-    // during the next call.
-    nextSwitchIndex = (i + 1) % 8;
-    if (nextSwitchIndex == 0)
-    {
-        nextSwitchIndex = nextSwitchFirstIndex;
-    }
-
-    return i;
-}
-
-void ICACHE_RAM_ATTR CRSF::setNextSwitchFirstIndex(int firstSwitchIndex)
-{
-    nextSwitchFirstIndex = firstSwitchIndex;
-}
-
-/**
- * Record the value of a switch that was sent to the rx
- */
-void ICACHE_RAM_ATTR CRSF::setSentSwitch(uint8_t index, uint8_t value)
-{
-    sentSwitches[index] = value;
 }
 
 #if CRSF_TX_MODULE
@@ -1106,35 +1049,6 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 #endif // CRSF_TX_MODULE
 
 
-/**
- * Convert the rc data corresponding to switches to 3 bit values.
- * The output is mapped evenly across 6 output values (0-5)
- * With a special value 7 indicating the middle so it works
- * with switches with a middle position as well as 6-position
- */
-void ICACHE_RAM_ATTR CRSF::updateSwitchValues()
-{
-    // AUX1 is arm switch, one bit
-    currentSwitches[0] = CRSF_to_BIT(ChannelDataIn[4]);
-
-    // AUX2-(N-1) are Low Resolution, "7pos" (6+center)
-    const uint16_t CHANNEL_BIN_COUNT = 6;
-    const uint16_t CHANNEL_BIN_SIZE = CRSF_CHANNEL_VALUE_SPAN / CHANNEL_BIN_COUNT;
-    for (int i = 1; i < N_SWITCHES-1; i++)
-    {
-        uint16_t ch = ChannelDataIn[i + 4];
-        // If channel is within 1/4 a BIN of being in the middle use special value 7
-        if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
-            || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
-            currentSwitches[i] = CRSF_to_N(ch, CHANNEL_BIN_COUNT) & 0b111;
-        else
-            currentSwitches[i] = 7;
-    } // for N_SWITCHES
-
-    // AUXx is High Resolution 16-pos (4-bit)
-    currentSwitches[N_SWITCHES-1] = CRSF_to_N(ChannelDataIn[N_SWITCHES-1 + 4], 16) & 0b1111;
-}
-
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
@@ -1154,6 +1068,4 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-
-    updateSwitchValues();
 }
