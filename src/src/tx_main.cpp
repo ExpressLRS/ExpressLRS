@@ -425,13 +425,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   bool skipSync = IsArmed();
 #else
   uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  // Skip sync if the connection seems healthy:
-  //   State is connected (has not missed >5 telem packets in a row)
-  //   Our current telemetry ratio matches the configured ration
-  //   LQ is >75 we know the remote Nonce is good so sync isn't needed if connected
-  bool skipSync = (connectionState == connected) &&
-    (ExpressLRS_currAirRate_Modparams->TLMinterval == config.GetTlm()) &&
-    (crsf.LinkStatistics.uplink_Link_quality > 75);
+  bool skipSync = false;
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
