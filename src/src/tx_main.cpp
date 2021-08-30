@@ -619,7 +619,7 @@ void registerLuaParameters() {
                               //2 = running
                               //3 = request confirmation
       {
-        setLuaCommandInfo(&luaWebUpdate,"REBOOT to cancel");
+        setLuaCommandInfo(&luaWebUpdate,"REBOOT to stop WiFi");
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
       } else if(arg == 6){ //6 = status poll
           sendLuaFieldCrsf(id,0);
@@ -656,7 +656,7 @@ void registerLuaParameters() {
                               //2 = running
                               //3 = request confirmation
       {
-        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to cancel");
+        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to stop BT");
         setLuaCommandValue(&luaBLEJoystick,3); //request confirm
       } else if(arg == 6){ //6 = status poll
         sendLuaFieldCrsf(id,0);
