@@ -56,9 +56,7 @@ public:
         {
             if (!_isLongPress)
             {
-                #if defined(DEBUG_UART)
-                DEBUG_UART.println("Button short");
-                #endif
+                DBGLN("Button short");
                 ++_pressCount;
                 if (OnShortPress)
                     OnShortPress();
@@ -75,9 +73,7 @@ public:
         {
             if (now - _lastFallingEdge > MS_LONG)
             {
-                #if defined(DEBUG_UART)
-                DEBUG_UART.println("Button long");
-                #endif
+                DBGLN("Button long");
                 _isLongPress = true;
                 if (OnLongPress)
                     OnLongPress();
