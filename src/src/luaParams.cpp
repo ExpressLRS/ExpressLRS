@@ -52,15 +52,14 @@ struct tagLuaItem_textSelection luaDynamicPower = {
 };
 //----------------------------POWER------------------
 
-// Commented out for now until we add more switch options
-// struct tagLuaItem_textSelection luaSwitch = {
-//     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-//     "Switch",
-//     "Hybrid",
-//     {0,1,1},//value,min,max
-//     emptySpace,
-//     LUA_TEXTSELECTION_SIZE(luaSwitch)
-// };
+struct tagLuaItem_textSelection luaSwitch = {
+    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Switch Mode",
+    "Hybrid;Wide",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaSwitch)
+};
 struct tagLuaItem_textSelection luaModelMatch = {
     {5,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Model Match",

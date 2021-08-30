@@ -71,8 +71,6 @@ OLED OLED;
 char commitStr[7] = {LATEST_COMMIT , 0};
 #endif
 
-static void ICACHE_RAM_ATTR (*GenerateChannelData)(volatile uint8_t* Buffer, CRSF *crsf, bool TelemetryStatus) = GenerateChannelDataHybridSwitch8;
-
 volatile uint8_t NonceTX;
 
 #ifdef PLATFORM_ESP32
@@ -269,7 +267,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
+            //crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower()); // TX power is updated when sent
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
@@ -319,28 +317,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   SyncPacketLastSent = millis();
   if (syncSpamCounter)
     --syncSpamCounter;
-}
-
-void SetSwitchMode(uint32_t switchMode)
-{
-  switch(switchMode) {
-    case 0b00:
-      GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
-      break;
-    case 0b01:
-      GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
-      break;
-    case 0b10:
-      // Future switch-mode expansion
-    case 0b11:
-      // Future switch-mode expansion
-    default:
-      GenerateChannelData = GenerateChannelDataHybridSwitch8;
-      crsf.setNextSwitchFirstIndex(1);
-      break;
-  }
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -469,13 +445,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      GenerateChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm());
+      PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
+        NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
     }
   }
 
+  // artificially inject the low bits of the nonce on data packets, this will be overwritten with the CRC after it's calculated
+  if (Radio.TXdataBuffer[0] != SYNC_PACKET && OtaSwitchModeCurrent == smHybridWide)
+    Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
+
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
+  Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
   Radio.TXnb();
@@ -534,13 +515,19 @@ void registerLuaParameters() {
       #endif
     }
   });
-  // Commented out for now until we add more switch options
-  // registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
-  //   uint32_t newSwitchMode = crsf.ParameterUpdateData[2] & 0b11;
-  //   DBGLN("Request Switch Mode: %d", newSwitchMode);
-  //   config.SetSwitchMode(crsf.getModelID(), newSwitchMode);
-  //   SetSwitchMode(newSwitchMode);
-  // });
+  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
+    // Only allow changing switch mode when disconnected since we need to guarantee
+    // the pack and unpack functions are matched
+    if (connectionState == disconnected)
+    {
+      DBGLN("Request Switch Mode: %d", arg);
+      // +1 to the mode because 1-bit was mode 0 and has been removed
+      // The modes should be updated for 1.1RC so mode 0 can be smHybrid
+      uint32_t newSwitchMode = (crsf.ParameterUpdateData[2] + 1) & 0b11;
+      config.SetSwitchMode(newSwitchMode);
+      OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
+    }
+  });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
     bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
 #ifndef DEBUG_SUPPRESS
@@ -675,8 +662,7 @@ static char modelNumStr[10];
 void resetLuaParams(){
   setLuaTextSelectionValue(&luaAirRate,(uint8_t)config.GetRate());
   setLuaTextSelectionValue(&luaTlmRate,(uint8_t)config.GetTlm());
-  // Commented out for now until we add more switch options
-  //setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode()));
+  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
 
   setLuaTextSelectionValue(&luaPower,(uint8_t)(config.GetPower()));
@@ -738,7 +724,7 @@ static void ChangeRadioParams()
   
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-  SetSwitchMode(config.GetSwitchMode());
+  OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
   // TLM interval is set on the next SYNC packet
 }
 
@@ -1054,6 +1040,7 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
+    crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }

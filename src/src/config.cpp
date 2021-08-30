@@ -1,6 +1,7 @@
 #include "config.h"
 #include "common.h"
 #include "POWERMGNT.h"
+#include "OTA.h"
 #include "logging.h"
 
 void
@@ -161,7 +162,7 @@ TxConfig::SetDefaults()
         SetPower(DefaultPowerEnum);
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode(1);
+        SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
     }
     SetVtxBand(0);
