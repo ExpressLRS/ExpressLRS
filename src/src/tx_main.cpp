@@ -139,6 +139,11 @@ static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
 
+static bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+}
+
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 // Assume this function is called inside loop(). Heavy functions goes here.
@@ -149,14 +154,14 @@ void DynamicPower_Update()
   }
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
+  // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  if (boostChannel > 0) {
-    // if a user selected to disable dynamic power (ch16)
-    if(CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0) {
-      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-      // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
-      return;
-    }
+  if ((connectionState == disconnected && IsArmed()) ||
+    (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
+  {
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
+    return;
   }
 
   // if telemetry is not arrived, quick return.
@@ -212,13 +217,6 @@ void DynamicPower_Update()
   dynamic_power_rssi_sum = 0;
   dynamic_power_rssi_n = 0;
 }
-
-#if defined(NO_SYNC_ON_ARM)
-static bool ICACHE_RAM_ATTR IsArmed()
-{
-   return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
-}
-#endif
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
@@ -1178,8 +1176,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
 void VtxConfigToMSPOut()
 {
   // 0 = off in the lua Band field
-  // Do not send while armed.  Replace CRSF_to_BIT with IsArmed() after PR #786 is merged
-  if (!config.GetVtxBand() || CRSF_to_BIT(crsf.ChannelDataIn[AUX1]))
+  // Do not send while armed
+  if (!config.GetVtxBand() || IsArmed())
     return;
 
   uint8_t vtxIdx = (config.GetVtxBand()-1) * 8 + config.GetVtxChannel();
