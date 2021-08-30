@@ -25,7 +25,6 @@ SX1280Driver Radio;
 #include "config.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
-#include "LowPassFilter.h"
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
@@ -81,19 +80,17 @@ bool NextPacketIsMspData = false;  // if true the next packet will contain the m
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAResidualTimeMS 1500 // we spam some more after rate change to help link get up to speed
+#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
 volatile uint8_t syncSpamCounter = 0;
 uint32_t rfModeLastChangedMS = 0;
-////////////////////////////////////////////////
-
 uint32_t SyncPacketLastSent = 0;
+////////////////////////////////////////////////
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
 LQCALC<10> LQCalc;
-LPF LPD_DownlinkLQ(1);
 
 volatile bool busyTransmitting;
 volatile bool UpdateModelReq = false;
@@ -248,7 +245,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   if (connectionState != connected)
   {
     connectionState = connected;
-    LPD_DownlinkLQ.init(100);
     VtxConfigReadyToSend = true;
     DBGLN("got downlink conn");
   }
@@ -270,7 +266,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             //crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower()); // TX power is updated when sent
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LPD_DownlinkLQ.update(LQCalc.getLQ()) + 1; // +1 fixes rounding issues with filter and makes it consistent with RX LQ Calculation
+            crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
             crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
@@ -398,27 +394,30 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  uint32_t SyncInterval;
-
+  uint32_t now = millis();
+  static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
-  SyncInterval = 250;
+  uint32_t SyncInterval = 250;
   bool skipSync = IsArmed();
 #else
-  SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = false;
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  bool NonceFHSSresultWindow = (NonceFHSSresult == 1 || NonceFHSSresult == 2) ? true : false; // restrict to the middle nonce ticks (not before or after freq chance)
-  bool WithinSyncSpamResidualWindow = (millis() - rfModeLastChangedMS < syncSpamAResidualTimeMS) ? true : false;
+  bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
 
-  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && NonceFHSSresultWindow)
+  // Sync spam only happens on slot 1 and 2 and can't be disabled
+  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     GenerateSyncPacketData();
   }
-  else if ((!skipSync) && ((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()) && NonceFHSSresultWindow)) // don't sync just after we changed freqs (helps with hwTimer.init() being in sync from the get go)
+  // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
+  // But only on the sync FHSS channel and with a timed delay between them
+  else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
   {
     GenerateSyncPacketData();
+    syncSlot = (syncSlot + 1) % (ExpressLRS_currAirRate_Modparams->FHSShopInterval * 2);
   }
   else
   {
@@ -603,7 +602,7 @@ void registerLuaParameters() {
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press. 
+        //unintentional button press.
         setLuaCommandValue(&luaWebUpdate,2); //running status
         webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
@@ -614,7 +613,7 @@ void registerLuaParameters() {
         setLuaCommandValue(&luaWebUpdate,0);
       }
     });
-  
+
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg > 0 && arg < 4) //start command, 1 = start
                               //2 = running
@@ -626,7 +625,7 @@ void registerLuaParameters() {
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press. 
+        //unintentional button press.
         setLuaCommandValue(&luaBLEJoystick,2); //running status
         BLEjoystickActive = true;
   #ifndef DEBUG_SUPPRESS
@@ -669,7 +668,7 @@ void resetLuaParams(){
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);
-  
+
   setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
@@ -721,7 +720,7 @@ void UARTconnected()
 static void ChangeRadioParams()
 {
   config.SetModelId(crsf.getModelID());
-  
+
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
@@ -1029,7 +1028,7 @@ void loop()
       msp.markPacketReceived();
     }
   }
-  
+
   if (VtxConfigReadyToSend)
   {
     VtxConfigReadyToSend = false;
