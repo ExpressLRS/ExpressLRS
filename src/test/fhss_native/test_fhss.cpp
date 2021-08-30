@@ -7,11 +7,12 @@ void test_fhss_assignment(void)
 {
     FHSSrandomiseFHSSsequence(0x01020304L);
 
-    const uint32_t numFhss = FHSSNumEntriess();
+    const uint32_t numFhss = FHSSNumEntries();
     uint32_t initFreq = GetInitialFreq();
 
     for (unsigned int i = 0; i < 256; i++) {
         uint32_t freq = FHSSgetNextFreq();
+
         if ((i % numFhss) == 0) {
             TEST_ASSERT_EQUAL(initFreq, freq);
         } else {
@@ -24,11 +25,12 @@ void test_fhss_unique(void)
 {
     FHSSrandomiseFHSSsequence(0x01020304L);
 
-    const uint32_t numFhss = FHSSNumEntriess();
+    const uint32_t numFhss = FHSSNumEntries();
     std::set<uint32_t> freqs;
 
     for (unsigned int i = 0; i < 256; i++) {
         uint32_t freq = FHSSgetNextFreq();
+
         if ((i % numFhss) == 0) {
             freqs.clear();
             freqs.insert(freq);
@@ -39,11 +41,33 @@ void test_fhss_unique(void)
     }
 }
 
+void test_fhss_same(void)
+{
+    FHSSrandomiseFHSSsequence(0x01020304L);
+
+    const uint32_t numFhss = FHSSgetNumberOfEntries();
+
+    uint32_t fhss[numFhss];
+
+    for (unsigned int i = 0; i < FHSSgetNumberOfEntries(); i++) {
+        uint32_t freq = FHSSgetNextFreq();
+        fhss[i] = freq;
+    }
+
+    FHSSrandomiseFHSSsequence(0x01020304L);
+
+    for (unsigned int i = 0; i < FHSSgetNumberOfEntries(); i++) {
+        uint32_t freq = FHSSgetNextFreq();
+        TEST_ASSERT_EQUAL(fhss[i],freq);
+    }
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_fhss_assignment);
     RUN_TEST(test_fhss_unique);
+    RUN_TEST(test_fhss_same);
     UNITY_END();
 
     return 0;

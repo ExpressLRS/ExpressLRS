@@ -464,10 +464,10 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIRQFlags()
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
 // {
-//     int NUM_READS = RSSI_FLOOR_NUM_READS * FHSSNumEntriess();
+//     int NUM_READS = RSSI_FLOOR_NUM_READS * FHSSNumEntries();
 //     float returnval = 0;
 
-//     for (uint32_t freq = 0; freq < FHSSNumEntriess(); freq++)
+//     for (uint32_t freq = 0; freq < FHSSNumEntries(); freq++)
 //     {
 //         FHSSsetCurrIndex(freq);
 //         Radio.SetMode(SX127X_CAD);
