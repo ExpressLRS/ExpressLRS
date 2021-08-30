@@ -1,6 +1,7 @@
 #include "config.h"
 #include "common.h"
 #include "POWERMGNT.h"
+#include "logging.h"
 
 void
 TxConfig::Load()
@@ -12,7 +13,7 @@ TxConfig::Load()
     if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
-        Serial.println("EEPROM version mismatch! Resetting to defaults...");
+        DBGLN("EEPROM version mismatch! Resetting to defaults...");
         SetDefaults();
     }
 
@@ -37,51 +38,71 @@ TxConfig::Commit()
 
 // Setters
 void
-TxConfig::SetRate(uint8_t modelId, uint8_t rate)
+TxConfig::SetRate(uint8_t rate)
 {
-    if (m_config.model_config[modelId].rate != rate)
+    if (GetRate() != rate)
     {
-        m_config.model_config[modelId].rate = rate;
+        m_model->rate = rate;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetTlm(uint8_t modelId, uint8_t tlm)
+TxConfig::SetTlm(uint8_t tlm)
 {
-    if (m_config.model_config[modelId].tlm != tlm)
+    if (GetTlm() != tlm)
     {
-        m_config.model_config[modelId].tlm = tlm;
+        m_model->tlm = tlm;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetPower(uint8_t modelId, uint8_t power)
+TxConfig::SetPower(uint8_t power)
 {
-    if (m_config.model_config[modelId].power != power)
+    if (GetPower() != power)
     {
-        m_config.model_config[modelId].power = power;
+        m_model->power = power;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetSwitchMode(uint8_t modelId, uint8_t switchMode)
+TxConfig::SetDynamicPower(bool dynamicPower)
 {
-    if (m_config.model_config[modelId].switchMode != switchMode)
+    if (GetDynamicPower() != dynamicPower)
     {
-        m_config.model_config[modelId].switchMode = switchMode;
+        m_model->dynamicPower = dynamicPower;
         m_modified = true;
     }
 }
 
 void
-TxConfig::SetModelMatch(uint8_t modelId, bool modelMatch)
+TxConfig::SetBoostChannel(uint8_t boostChannel)
 {
-    if (m_config.model_config[modelId].modelMatch != modelMatch)
+    if (GetBoostChannel() != boostChannel)
     {
-        m_config.model_config[modelId].modelMatch = modelMatch;
+        m_model->boostChannel = boostChannel;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetSwitchMode(uint8_t switchMode)
+{
+    if (GetSwitchMode() != switchMode)
+    {
+        m_model->switchMode = switchMode;
+        m_modified = true;
+    }
+}
+
+void
+TxConfig::SetModelMatch(bool modelMatch)
+{
+    if (GetModelMatch() != modelMatch)
+    {
+        m_model->modelMatch = modelMatch;
         m_modified = true;
     }
 }
@@ -134,17 +155,22 @@ TxConfig::SetDefaults()
     SetSSID("");
     SetPassword("");
     for (int i=0 ; i<64 ; i++) {
-        SetRate(i, modParams->index);
-        SetTlm(i, modParams->TLMinterval);
-        SetPower(i, DefaultPowerEnum);
-        SetSwitchMode(i, 1);
-        SetModelMatch(i, false);
+        SetModelId(i);
+        SetRate(modParams->index);
+        SetTlm(modParams->TLMinterval);
+        SetPower(DefaultPowerEnum);
+        SetDynamicPower(0);
+        SetBoostChannel(0);
+        SetSwitchMode(1);
+        SetModelMatch(false);
     }
     SetVtxBand(0);
     SetVtxChannel(0);
     SetVtxPower(0);
     SetVtxPitmode(0);
     Commit();
+
+    SetModelId(0);
 }
 
 void
@@ -182,7 +208,7 @@ RxConfig::Load()
     if (m_config.version != (uint32_t)(RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
-        Serial.println("EEPROM version mismatch! Resetting to defaults...");
+        DBGLN("EEPROM version mismatch! Resetting to defaults...");
         SetDefaults();
     }
 

@@ -305,6 +305,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
             Radio.SetOutputPower(-2);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-4);
+        #elif TARGET_QK_JR_TX
+            Radio.SetOutputPower(0);
         #else
             Radio.SetOutputPower(-1);
         #endif
@@ -344,7 +346,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(3);
         break;
     }
-#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI)
+#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
     switch (Power)
     {
     case PWR_10mW:

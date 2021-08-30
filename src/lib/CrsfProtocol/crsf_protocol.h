@@ -303,7 +303,7 @@ typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 struct tagLuaProperties1{
     uint8_t id;
 //    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
-//    uint8_t parent;
+    uint8_t parent;
     const uint8_t type;
 }PACKED;
 struct tagLuaDeviceProperties {
