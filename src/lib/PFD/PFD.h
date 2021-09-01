@@ -36,6 +36,11 @@ public:
         result = (gotExtEvent && gotIntEvent) ? (int32_t)(extEventTime - intEventTime) : 0;
     }
 
+    inline bool resultValid()
+    {
+        return gotExtEvent && gotIntEvent;
+    }
+    
     inline int32_t getResult()
     {
         return result;

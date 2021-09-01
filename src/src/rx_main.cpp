@@ -101,8 +101,8 @@ uint8_t MspData[ELRS_MSP_BUFFER];
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// Filters ////////////////
-LPF LPF_Offset(2);
-LPF LPF_OffsetDx(4);
+LPF LPF_Offset(2); // Lenght is 4 elements
+LPF LPF_OffsetDx(4); // Lenght is 16 elements
 
 // LPF LPF_UplinkRSSI(5);
 LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
@@ -119,10 +119,11 @@ int32_t RawOffset;
 int32_t prevRawOffset;
 int32_t Offset;
 int32_t OffsetDx;
-int32_t prevOffset;
+int32_t shiftPhaseBy;
+uint8_t PhaseLockCounter;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
-const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good' - should be calculated from the sync interval (*4?) and at least one additional sync should have been received to confirm RXnonce and FHSSindex
 
 // LED Blinking state
 static bool LED = false;
@@ -248,7 +249,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
     bool invertIQ = UID[5] & 0x01;
 
-    hwTimer.updateInterval(ModParams->interval);
+    if (ExpressLRS_currAirRate_Modparams->index != index) // this function is also called to go back to the initial frequency when connection is lost - the timers freuqency offset does not need to be reset in that case
+    {
+        hwTimer.resetFreqOffset(); // do it here as the frequeny offset is in absolute numbers (us) and we are changing the interval. Best would be to calculate a value based on the actual rate difference between the old and new airrate
+    }
+
+    hwTimer.updateInterval(ModParams->interval); // put this in the above condition too?
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
@@ -372,41 +378,79 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    if (connectionState != disconnected)
+    if (connectionState != disconnected && PFDloop.resultValid())
     {
+        // don't let individual missed packets screw up our PhaseLock. Frequency Offset should be relatively constant for a given TX / RX combination (except temperature drift)
+        // the phase on the other hand is volatile and needs to be corrected especially after reconnect
+        // this function should take care of RXtimerState internally IMO
+        // the main loop should only make changes to connectionState (no pakets received for xy ms / binding / set to connected after tentative for xy ms or number of received syncs, etc)
+        
+        // RXtimerState = tim_disconnected: whenever a sync packet information does not line up with what we expect (means we have a major timer missmatch - phase mostly)
+        // RXtimerState = tim_tentative: whenever Offset var (phase) is in a good range
+        // RXtimerState = tim_locked: whenever OffsetDx (changes of timing) var is in a good range
+        
+        // concept
+        // 1st: Rough and quick phase adjustment during connection (re)establishing
+        // 2nd: compensate for frequency missmatch by looking at "long term" change of OffsetDx 
+        // NOTE: phase corrections will mess up the frequency corrections
+        // Solution: substract the phase shift done from the value we put into OffsetDx LPF update, so the Phase Shift would become invisible to OffsetDx
+        
         PFDloop.calcResult();
-        PFDloop.reset();
-        RawOffset = PFDloop.getResult();
-        Offset = LPF_Offset.update(RawOffset);
-        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
+        
+        RawOffset = PFDloop.getResult(); // absolute Offset (uSec) from last iteration
+        Offset = LPF_Offset.update(RawOffset);  // absolute Offset (uSec) LPFed (4 samples) --> compensate with phase shift
+        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset); // change in Offset per period (delta uSec) LPFed (16 samples) --> compensate with frequency adjustment
 
-        if (RXtimerState == tim_locked && LQCalc.currentIsSet())
+        if (RXtimerState != tim_disconnected && LQCalc.currentIsSet()) // only update timer frequency if we have an at least entative timer lock (LQCalc.currentIsSet() could even be removed here because we now test if both events (int+ext) have been registered as precondition before we get here)
         {
-            if (NonceRX % 8 == 0) //limit rate of freq offset adjustment slightly
+            if (PhaseLockCounter % 8 == 0) //limit rate of freq offset adjustment down to every 8th phase lock iteration
             {
-                if (Offset > 0)
+                if (OffsetDx > 0)
                 {
                     hwTimer.incFreqOffset();
                 }
-                else if (Offset < 0)
+                else if (OffsetDx < 0)
                 {
                     hwTimer.decFreqOffset();
                 }
             }
         }
 
-        if (connectionState != connected)
+        if (RXtimerState == tim_disconnected) //was: if (connectionState != connected)
         {
-            hwTimer.phaseShift(RawOffset >> 1);
+            shiftPhaseBy = RawOffset >> 1; // divided by 2; use RawOffset during first moments of (re)establishing connection because it's quicker than LPF'ed Offset variable
+        }
+        else if (PhaseLockCounter % 2 == 0) // limit rate of phase shifting down to every 2rd phase lock iteration (length of Offset LPF is 4)
+        {
+            shiftPhaseBy = Offset >> 2; // divided by 4, this matches the width of the Offset LPF and so we cannot overshoot the phaseShift
         }
         else
         {
-            hwTimer.phaseShift(Offset >> 2);
+            shiftPhaseBy = 0;
         }
 
-        prevOffset = Offset;
-        prevRawOffset = RawOffset;
+        hwTimer.phaseShift(shiftPhaseBy);
+        prevRawOffset = RawOffset - shiftPhaseBy; // compensate for phase adjustments to eliminate impact on frequency correction (only use of this var is for OffsetDx, which is used for frequency correction)
     }
+
+    if (abs(Offset) > 500 || abs(RawOffset) > 600) // if filtered or unfiltered Offset is exceeding this limit we are already in a bad place. by changing RXtimerState to disconnected the phase will be adjusted very quick (500Hz -> dt=2000us --> 500us filtered should be fine; 250us is the slack added in code currently)
+    {
+        RXtimerState = tim_disconnected;
+        DBGLN("Timer disconnected");
+    }
+    else if (abs(OffsetDx) <= 7 && PhaseLockCounter % 16 == 0) // filtered Offset is within the limit -> did we fill up the OffsetDx LPF and are we happy with the stability of the offset already?
+    {
+        RXtimerState = tim_locked;
+        DBGLN("Timer locked");
+    }
+    else // Offset if fine but we are not happy with the stability of the value 
+    {
+        RXtimerState = tim_tentative;
+        DBGLN("Timer tentative");
+    }
+
+    PFDloop.reset(); //  // clear recorded event-times and get ready for next measurement; do this at the end of the function without any precondition
+    PhaseLockCounter++;
 
     DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
 }
@@ -532,20 +576,20 @@ void LostConnection()
     connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
-    hwTimer.resetFreqOffset();
+    //hwTimer.resetFreqOffset(); // done in SetRFLinkRate() when necessary
     FreqCorrection = 0;
     #if !defined(Regulatory_Domain_ISM_2400)
     Radio.SetPPMoffsetReg(0);
     #endif
-    Offset = 0;
-    OffsetDx = 0;
-    RawOffset = 0;
-    prevOffset = 0;
+    //Offset = 0; //value is calculated in UpdatePhaseLock() why manipulate it?
+    //OffsetDx = 0; //value is calculated in UpdatePhaseLock() why manipulate it?
+    //RawOffset = 0; //value is calculated in UpdatePhaseLock() why manipulate it?
     GotConnectionMillis = 0;
     uplinkLQ = 0;
     LQCalc.reset();
-    LPF_Offset.init(0);
-    LPF_OffsetDx.init(0);
+    LPF_Offset.init(0); // necessary? (but does not hurt much)
+    LPF_OffsetDx.init(0); // necessary? but does not hurt much)
+    PhaseLockCounter = 0;
     alreadyTLMresp = false;
     alreadyFHSS = false;
     LED = false; // Make first LED cycle turn it on
@@ -553,7 +597,7 @@ void LostConnection()
     if (!InBindingMode)
     {
         while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
-        hwTimer.stop();
+        hwTimer.stop(); //stop timer to stop fhss and incrementing NonceRX
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
@@ -571,17 +615,17 @@ void LostConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
+void ICACHE_RAM_ATTR TentativeConnection(unsigned long now) // called when a sync packet is received while we are in disconnected state and whenever incoming sync data for Nonce and FHSS does not match our expectations
 {
-    PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
     FreqCorrection = 0;
-    Offset = 0;
-    prevOffset = 0;
     LPF_Offset.init(0);
+    LPF_OffsetDx.init(0);
+    PhaseLockCounter = 0;
+    PFDloop.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
 #if WS2812_LED_IS_USED
@@ -609,7 +653,7 @@ void GotConnection(unsigned long now)
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
     disableWebServer = true;
-    RXtimerState = tim_tentative;
+    //RXtimerState = tim_tentative; // dont touch RXtimerState anywhere but in UpdatePhaseLock()
     GotConnectionMillis = now;
 
     DBGLN("got conn");
@@ -749,8 +793,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  //DBGVLN("%dx%d", NonceRX, Radio.RXdataBuffer[2]);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
+                 if (connectionState == disconnected) { doStartTimer = true; } // timer is not running only in disconnected state - trying to mess with timing only when absolutely necessary
                  TentativeConnection(now);
-                 doStartTimer = true;
              }
          }
          break;
@@ -769,7 +813,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     if (type != SYNC_PACKET) DBGW('R');
 #endif
     if (doStartTimer)
-        hwTimer.resume(); // will throw an interrupt immediately
+        hwTimer.resume(); // will throw an interrupt immediately - there is no check if the timer was already running in the resume() function
 }
 
 void beginWebsever()
@@ -1069,7 +1113,7 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode(unsigned long now)
 {
-    if (connectionState == connected || InBindingMode || webUpdateMode)
+    if (connectionState != disconnected || InBindingMode || webUpdateMode) // also never cycle from a tentative connection state
         return;
 
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
@@ -1190,7 +1234,7 @@ void loop()
         LostConnection();
     }
 
-    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (Offset < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
+    if ((connectionState == tentative) && RXtimerState == tim_locked) //TEST if this is enough --> if we get here we already received a sync packet with correct crc and were able to find the correct timing for our phaselock - is this enough?
     {
         GotConnection(now);
     }
@@ -1212,12 +1256,6 @@ void loop()
     {
         sampleButton(now);
         buttonLastSampled = now;
-    }
-
-    if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
-    {
-        RXtimerState = tim_locked;
-        DBGLN("Timer locked");
     }
 
 #if WS2812_LED_IS_USED
