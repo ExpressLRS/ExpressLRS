@@ -265,7 +265,6 @@ void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray)
     char *next = stpcpy((char *)outarray,p1->label1) + 1;
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
-    *next++=0; // default value
     stpcpy(next,p1->label2);
     
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
