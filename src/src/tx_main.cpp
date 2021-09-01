@@ -716,7 +716,6 @@ void UARTconnected()
 static void ChangeRadioParams()
 {
   ModelUpdatePending = false;
-  config.SetModelId(crsf.getModelID());
 
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -736,6 +735,11 @@ void HandleUpdateParameter()
 
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
+  // There's a near 100% chance we started up transmitting at Model 0's
+  // rate before we got the set modelid command from the handset, so do
+  // the normal way of switching rates with syncspam first
+  config.SetModelId(crsf.getModelID());
+  syncSpamCounter = syncSpamAmount;
   ModelUpdatePending = true;
 }
 
