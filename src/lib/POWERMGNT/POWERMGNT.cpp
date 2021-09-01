@@ -75,7 +75,9 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
     powerLedInit();
+#endif
     setDefaultPower();
 }
 
@@ -441,13 +443,15 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
     powerLedUpdate();
+#endif
     return Power;
 }
 
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 void POWERMGNT::powerLedUpdate()
 {
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
     switch (CurrentPower)
     {
     case PWR_250mW:
@@ -467,18 +471,14 @@ void POWERMGNT::powerLedUpdate()
         digitalWrite(GPIO_PIN_LED_GREEN, LOW);
         break;
     }
-#endif
 }
 
 void POWERMGNT::powerLedInit()
 {
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
     pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
-#endif
 }
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 void POWERMGNT::handleCyclePower()
 {
     switch (CurrentPower)
