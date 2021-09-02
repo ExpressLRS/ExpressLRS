@@ -316,15 +316,16 @@ const char * OLED_MENU::getRgbString(int rgb)
 {
     switch (rgb)
     {
-    case 0: return "OFF";
-    case 1: return "Cyan";
-    case 3: return "Blue";
-    case 4: return "Green";
-    case 5: return "White";
-    case 6: return "Violet";
+    case 0: return "White";
+    case 1: return "Blue";
+    case 2: return "Cyan";
+    case 3: return "Aqua";
+    case 4: return "Red";
+    case 5: return "Green";
+    case 6: return "Pink";
     case 7: return "Yellow";
-    case 2: return "Magenta";
-    default: return "Error";
+    case 8: return "Purple";
+    default : return "Purple";
     }
 }
 

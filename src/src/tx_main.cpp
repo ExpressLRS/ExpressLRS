@@ -655,7 +655,6 @@ void menuWifiUpdate(void)
     webUpdateMode = true;
     Serial.println("Wifi Update Mode Requested!");
     sendLuaParams();
-    sendLuaParams();
     BeginWebUpdate();
     OLED_MENU.WIFIUpdateScreen();
 };
