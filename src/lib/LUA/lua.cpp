@@ -8,7 +8,7 @@ const char txDeviceName[] = TX_DEVICE_NAME;
 
 extern CRSF crsf;
 
-static uint8_t allLUAparamSent = 0;  
+static uint8_t allLUAparamSent = 0;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
@@ -20,12 +20,6 @@ static const void *paramDefinitions[32] = {0};
 static luaCallback paramCallbacks[32] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
-
-static struct tagLuaDevice luaDevice = {
-    txDeviceName,
-    {{0},0},
-    LUA_DEVICE_SIZE(luaDevice)
-};
 
 #define TYPE(T) (struct T *)p,((struct T *)p)->size
 static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
@@ -80,12 +74,17 @@ bool getLuaWarning(void){ //1 if alarm
 
 void sendELRSstatus()
 {
-  uint8_t luaParams[] = {(uint8_t)crsf.BadPktsCountResult,
-                         (uint8_t)((crsf.GoodPktsCountResult & 0xFF00) >> 8),
-                         (uint8_t)(crsf.GoodPktsCountResult & 0xFF),
-                         (uint8_t)(getLuaWarning())};
+  uint8_t buffer[sizeof(tagLuaElrsParams) + 0];
+  struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
-  crsf.sendELRSparam(luaParams,4, 0x2E, getLuaWarning() ? "beta" : " ", 4); //*elrsinfo is the info that we want to pass when there is getluawarning()
+  params->pktsBad = crsf.BadPktsCountResult;
+  params->pktsGood = htobe16(crsf.GoodPktsCountResult);
+  params->flags = getLuaWarning();
+  // to support sending a params.msg, buffer should be extended by the strlen of the message
+  // and copied into params->msg (with trailing null)
+  params->msg[0] = '\0';
+
+  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()
@@ -93,15 +92,38 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
   UpdateParamReq = true;
 }
 
+uint8_t agentLiteFolder[4+32+2] = "HooJ";
+struct tagLuaItem_folder luaAgentLite = {
+    {0,0,(uint8_t)CRSF_FOLDER},//id,type
+    (const char *)agentLiteFolder,
+    0
+};
+
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
+  if (definition == NULL)
+  {
+    paramDefinitions[0] = &luaAgentLite;
+    paramCallbacks[0] = 0;
+    uint8_t *pos = agentLiteFolder + 4;
+    for (int i=1;i<=lastLuaField;i++)
+    {
+      struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)paramDefinitions[i];
+      if (p->parent == 0) {
+        *pos++ = i;
+      }
+    }
+    *pos++ = 0xFF;
+    *pos++ = 0;
+    luaAgentLite.size = 4 + strlen(luaAgentLite.label1) + 1;
+    return;
+  }
   struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
   paramDefinitions[p->id] = definition;
   paramCallbacks[p->id] = callback;
-  luaDevice.luaDeviceProperties.fieldamount = lastLuaField;
 }
 
 void registerLUAPopulateParams(void (*populate)())
@@ -148,7 +170,7 @@ bool luaHandleUpdateParameter()
     case CRSF_FRAMETYPE_DEVICE_PING:
         allLUAparamSent = 0;
         populateHandler();
-        crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+        sendLuaDevicePacket();
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
@@ -159,9 +181,23 @@ bool luaHandleUpdateParameter()
   UpdateParamReq = false;
   return true;
 }
-void sendLuaDevicePacket(void){
-  crsf.sendCRSFdevice(&luaDevice,luaDevice.size);
+
+void sendLuaDevicePacket(void)
+{
+  uint8_t buffer[sizeof(txDeviceName) + sizeof(struct tagLuaDeviceProperties)];
+  struct tagLuaDeviceProperties * const device = (struct tagLuaDeviceProperties * const)&buffer[sizeof(txDeviceName)];
+
+  // Packet starts with device name
+  memcpy(buffer, txDeviceName, sizeof(txDeviceName));
+  // Followed by the device
+  device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+  device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+  device->softwareVer = 0; // unused currently by ys, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+  device->fieldCnt = lastLuaField;
+
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
 }
+
 void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
     luaStruct->luaProperties2.value = newvalue;
 }

@@ -80,3 +80,24 @@ inline void delayMicroseconds(int delay) { }
 #define srandom srand
 #endif
 
+#if defined( __APPLE__) // Byte ordering on OS X
+
+#include <libkern/OSByteOrder.h>
+#define htobe32(x) OSSwapHostToBigInt32(x)
+
+#elif defined(_WIN32) // Byte ordering on Windows
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+#include <winsock2.h>
+#define htobe32(x) htonl(x)
+
+#elif BYTE_ORDER == BIG_ENDIAN
+#define htobe32(x) (x)
+
+#endif
+
+#else // Let htobe32 be the default function
+
+#include <endian.h>
+
+#endif

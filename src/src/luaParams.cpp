@@ -10,11 +10,11 @@ const char emptySpace[1] = {0};
 
 struct tagLuaItem_textSelection luaAirRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
-    "P.Rate",
+    "Packet Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
-    "200(-112dbm);100(-117dbm);50(-120dbm);25(-123dbm)",
+    "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
-    "500(-105dbm);250(-108dbm);150(-112dbm);50(-117dbm)",
+    "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
 #endif
     {0,0,3},//value,min,max
     "Hz",
@@ -22,8 +22,8 @@ struct tagLuaItem_textSelection luaAirRate = {
 };
 struct tagLuaItem_textSelection luaTlmRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "T.Rate",
-    "Off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
+    "Telem Ratio",
+    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
     {0,0,7},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
@@ -109,7 +109,7 @@ struct tagLuaItem_command luaBLEJoystick = {
 //----------------------------VTX ADMINISTRATOR------------------
 struct tagLuaItem_folder luaVtxFolder = {
     {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    "VTX ADMINISTRATOR",
+    "VTX Administrator",
     LUA_FOLDER_SIZE(luaVtxFolder)
 };
 
