@@ -40,15 +40,6 @@ public:
     static volatile uint16_t ChannelDataIn[16];
     static volatile uint16_t ChannelDataOut[16];
 
-    // current and sent switch values
-    #define N_SWITCHES 8
-
-    static uint8_t currentSwitches[N_SWITCHES];
-    static uint8_t sentSwitches[N_SWITCHES];
-    // index of the first switch to send in round-robin
-    static uint8_t nextSwitchFirstIndex;
-    // which switch should be sent in the next rc packet
-    static uint8_t nextSwitchIndex;
     // The model ID as received from the Transmitter
     static uint8_t modelId;
 
@@ -83,15 +74,10 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    void sendELRSparam(uint8_t val[], uint8_t len, uint8_t frameType, const char *elrsInfo, uint8_t len2);
     uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize);
-    void sendCRSFdevice(const void * luaData, uint8_t wholePacketSize);
+    static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
-
-    uint8_t ICACHE_RAM_ATTR getNextSwitchIndex();
-    void ICACHE_RAM_ATTR setNextSwitchFirstIndex(int firstSwitchIndex);
-    void ICACHE_RAM_ATTR setSentSwitch(uint8_t index, uint8_t value);
 
     uint8_t getModelID() const { return modelId; }
 

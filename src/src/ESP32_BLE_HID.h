@@ -4,6 +4,7 @@
 
 #include "targets.h"
 #include <BleGamepad.h>
+#include "logging.h"
 
 #include "CRSF.h"
 extern CRSF crsf;
@@ -28,8 +29,8 @@ BleGamepad bleGamepad("ExpressLRS Joystick", "ELRS", 100);
 
 void BluetoothJoystickBegin()
 {
+    DBGLN("Starting BLE Joystick!");
     bleGamepad.setAutoReport(false);
-    Serial.println("Starting BLE Joystick!");
     bleGamepad.setControllerType(CONTROLLER_TYPE_GAMEPAD);
     bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
@@ -38,9 +39,9 @@ void BluetoothJoystickUpdateValues()
 {
     if (bleGamepad.isConnected())
     {
-        int16_t data[sizeof(crsf.ChannelDataIn)] = {0};
+        int16_t data[8];
 
-        for (uint8_t i = 0; i < 9; i++)
+        for (uint8_t i = 0; i < 8; i++)
         {
             data[i] = map(crsf.ChannelDataIn[i], CRSF_CHANNEL_VALUE_MIN - 1, CRSF_CHANNEL_VALUE_MAX + 1, -32768, 32768);
         }

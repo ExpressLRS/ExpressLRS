@@ -10,11 +10,11 @@ const char emptySpace[1] = {0};
 
 struct tagLuaItem_textSelection luaAirRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
-    "P.Rate",
+    "Packet Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
-    "200(-112dbm);100(-117dbm);50(-120dbm);25(-123dbm)",
+    "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
-    "500(-105dbm);250(-108dbm);150(-112dbm);50(-117dbm)",
+    "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
 #endif
     {0,0,3},//value,min,max
     "Hz",
@@ -22,8 +22,8 @@ struct tagLuaItem_textSelection luaAirRate = {
 };
 struct tagLuaItem_textSelection luaTlmRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "T.Rate",
-    "Off;1/128;1/64;1/32;1/16;1/8;1/4;1/2",
+    "Telem Ratio",
+    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
     {0,0,7},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaTlmRate)
@@ -52,15 +52,14 @@ struct tagLuaItem_textSelection luaDynamicPower = {
 };
 //----------------------------POWER------------------
 
-// Commented out for now until we add more switch options
-// struct tagLuaItem_textSelection luaSwitch = {
-//     {0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-//     "Switch",
-//     "Hybrid",
-//     {0,1,1},//value,min,max
-//     emptySpace,
-//     LUA_TEXTSELECTION_SIZE(luaSwitch)
-// };
+struct tagLuaItem_textSelection luaSwitch = {
+    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    "Switch Mode",
+    "Hybrid;Wide",
+    {0,0,1},//value,min,max
+    emptySpace,
+    LUA_TEXTSELECTION_SIZE(luaSwitch)
+};
 struct tagLuaItem_textSelection luaModelMatch = {
     {5,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
     "Model Match",
@@ -68,13 +67,6 @@ struct tagLuaItem_textSelection luaModelMatch = {
     {0,0,1},//value,min,max
     emptySpace,
     LUA_TEXTSELECTION_SIZE(luaModelMatch)
-};
-struct tagLuaItem_uint8 luaSetRXModel = {
-    {6,0,(uint8_t)CRSF_UINT8},//id,type
-    "Set RX Model",
-    {0,0,63},//value,min,max
-    emptySpace,
-    LUA_UINT8_SIZE(luaSetRXModel)
 };
 struct tagLuaItem_command luaBind = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
@@ -117,7 +109,7 @@ struct tagLuaItem_command luaBLEJoystick = {
 //----------------------------VTX ADMINISTRATOR------------------
 struct tagLuaItem_folder luaVtxFolder = {
     {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    "VTX ADMINISTRATOR",
+    "VTX Administrator",
     LUA_FOLDER_SIZE(luaVtxFolder)
 };
 

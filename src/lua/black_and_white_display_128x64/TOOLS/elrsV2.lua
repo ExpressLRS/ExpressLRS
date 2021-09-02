@@ -1,3 +1,4 @@
+-- TNS|ExpressLRS|TNE
 ---- #########################################################################
 ---- #                                                                       #
 ---- # Copyright (C) OpenTX                                                  #
@@ -35,6 +36,8 @@ local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
+
+local COL2 = 70 -- X position of second column
 
 local function getField(line)
   local counter = 1
@@ -209,7 +212,7 @@ local function fieldSignedSave(field, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
-  lcd.drawNumber(89, y, field.value, LEFT + attr)
+  lcd.drawNumber(COL2, y, field.value, LEFT + attr)
   lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
 end
 
@@ -271,7 +274,7 @@ local function formatFloat(num, decimals)
 end
 
 local function fieldFloatDisplay(field, y, attr)
-  lcd.drawText(65, y, formatFloat(field.value, field.prec), LEFT + attr)
+  lcd.drawText(COL2, y, formatFloat(field.value, field.prec), LEFT + attr)
   lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
 end
 
@@ -298,7 +301,7 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(65, y, field.values[field.value+1], attr)
+  lcd.drawText(COL2, y, field.values[field.value+1], attr)
   lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
 end
 
@@ -320,16 +323,21 @@ local function fieldStringSave(field)
 end
 
 local function fieldStringDisplay(field, y, attr)
+  lcd.drawText(0, y, field.name)
   if edit == true and attr then
-    lcd.drawText(65, y, field.value, FIXEDWIDTH)
-    lcd.drawText(83+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
+    lcd.drawText(COL2, y, field.value, FIXEDWIDTH)
+    lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
   else
-    lcd.drawText(65, y, field.value, attr)
+    lcd.drawText(COL2, y, field.value, attr)
   end
 end
 
 local function fieldFolderOpen(field)
   folderAccess = field.id
+end
+
+local function fieldFolderDisplay(field,y ,attr)
+  lcd.drawText(0, y, "> " .. field.name, attr + BOLD)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -352,7 +360,7 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-  lcd.drawText(0, y, field.name, attr)
+  lcd.drawText(10, y, "[" .. field.name .. "]", attr)
 end
 
 local functions = {
@@ -367,7 +375,7 @@ local functions = {
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=nil },
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
 }
@@ -456,6 +464,14 @@ local function refreshNext()
   end
 end
 
+local function lcd_title()
+  lcd.clear()
+  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT)
+  local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  lcd.drawText(1, 0, title, INVERS)
+  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), INVERS + RIGHT)
+end
+
 -- Main
 local function runDevicePage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
@@ -510,19 +526,13 @@ local function runDevicePage(event)
       selectField(-1)
     end
   end
+
+  lcd_title()
   if elrsFlags > 0 then
-    lcd.clear()
-    lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
     --lcd.drawText(20,10,"WARNING :", DBLSIZE + BLINK)
     lcd.drawText(20,15,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
     lcd.drawText(20,40,"ok",BLINK + INVERS)
   else
-    lcd.clear()
-    if allParamsLoaded < 1 then
-      lcd.drawScreenTitle("loading: "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
-    else
-      lcd.drawScreenTitle(deviceName.." : "..tostring(badPkt).."/"..tostring(goodPkt), 0, 0)
-    end
     for y = 1, 7 do
       local field = getField(pageOffset+y)
       if not field then
@@ -531,13 +541,7 @@ local function runDevicePage(event)
         lcd.drawText(0, 1+8*y, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type == 11 then
-          lcd.drawFilledRectangle(0, 1+8*y, LCD_W, 8, GREY_DEFAULT)
-          lcd.drawText(0, 1+8*y, field.name,attr)
-        elseif field.type == 13 then
-          lcd.drawFilledRectangle(0, 1+8*y, LCD_W, 8, GREY_DEFAULT)
-          lcd.drawText(0, 1+8*y, field.name,attr)
-        else
+        if field.type < 11 then
           lcd.drawText(0, 1+8*y, field.name)
         end
         if functions[field.type+1].display then
