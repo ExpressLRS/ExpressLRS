@@ -647,13 +647,33 @@ void menuSetRate(uint32_t rate) {config.SetRate(rate);}
 void menuSetTLM(uint32_t TLM) {config.SetTlm(TLM);}
 void menuSetPow(uint32_t pow) {config.SetPower(pow);}
 void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
-                                 config.GetRate(),
-        (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));}
-void menuBinding(void) {EnterBindingMode();}
+                       config.GetRate(),
+                       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));}
+void menuBinding(void) 
+{
+    while (busyTransmitting);
+    // Queue up sending the Master UID as MSP packets
+    SendUIDOverMSP();
+    // Set UID to special binding values
+    UID[0] = BindingUID[0];
+    UID[1] = BindingUID[1];
+    UID[2] = BindingUID[2];
+    UID[3] = BindingUID[3];
+    UID[4] = BindingUID[4];
+    UID[5] = BindingUID[5];
+    CRCInitializer = 0;
+    //InBindingMode = true;
+    // Start attempting to bind
+    // Lock the RF rate and freq while binding
+    SetRFLinkRate(RATE_DEFAULT);
+    Radio.SetFrequencyReg(GetInitialFreq());
+    startupLEDs();
+}
 void menuWifiUpdate(void) 
 { 
     webUpdateMode = true;
     Serial.println("Wifi Update Mode Requested!");
+    sendLuaParams();
     sendLuaParams();
     BeginWebUpdate();
     OLED_MENU.WIFIUpdateScreen();
@@ -833,6 +853,7 @@ button.buttonLongPress = &longPressCallback;
      OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
      config.GetRate(),
      (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+     hwTimer.stop();
   #endif
 }
 
