@@ -197,7 +197,7 @@ static uint8_t minLqForChaos()
     // FHSShopInterval * ceil(100 / FHSShopInterval * numfhss) or
     // FHSShopInterval * trunc((100 + (FHSShopInterval * numfhss) - 1) / (FHSShopInterval * numfhss))
     // With a interval of 4 this works out to: 2.4=4, FCC915=4, AU915=8, EU868=8, EU/AU433=36
-    const uint32_t numfhss = FHSSNumEntries();
+    const uint32_t numfhss = FHSSgetChannelCount();
     const uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
     return interval * ((interval * numfhss + 99) / (interval * numfhss));
 }
@@ -252,7 +252,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * FHSSNumEntries() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
+    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -746,7 +746,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                 || NonceRX != Radio.RXdataBuffer[2]
                 || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
              {
-                 //DBGVLN("%dx%d", NonceRX, Radio.RXdataBuffer[2]);
+                 //DBGLN("\r\n%ux%ux%u", NonceRX, Radio.RXdataBuffer[2], Radio.RXdataBuffer[1]);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
                  TentativeConnection(now);
@@ -1169,7 +1169,7 @@ void loop()
         LostConnection();
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
-        DBGLN("Air rate change req via sync");
+        DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         crsf.sendLinkStatisticsToFC();
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }

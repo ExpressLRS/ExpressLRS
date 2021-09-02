@@ -35,6 +35,7 @@ typedef struct {
 class TxConfig
 {
 public:
+    TxConfig() { SetModelId(0); }
     void Load();
     void Commit();
 

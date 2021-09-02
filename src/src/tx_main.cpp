@@ -93,13 +93,11 @@ uint32_t TLMpacketReported = 0;
 LQCALC<10> LQCalc;
 
 volatile bool busyTransmitting;
-volatile bool UpdateModelReq = false;
-uint32_t HWtimerPauseDuration = 0;
+static volatile bool ModelUpdatePending;
 
 char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
-bool WaitEepromCommit = false;
 
 uint8_t InBindingMode = 0;
 uint8_t BindingPackage[5];
@@ -708,14 +706,14 @@ void UARTconnected()
   }
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
-    delay(200);
 
+  rfModeLastChangedMS = millis(); // force syncspam on first packets
   hwTimer.resume();
 }
 
 static void ChangeRadioParams()
 {
-  config.SetModelId(crsf.getModelID());
+  ModelUpdatePending = false;
 
   SetRFLinkRate(config.GetRate());
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -725,12 +723,7 @@ static void ChangeRadioParams()
 
 void HandleUpdateParameter()
 {
-  if (UpdateModelReq == true)
-  {
-    ChangeRadioParams();
-    UpdateModelReq = false;
-  }
-    crsf.setLuaHiddenFlag(luaInfo.luaProperties1.id,crsf.elrsLUAmode);
+  crsf.setLuaHiddenFlag(luaInfo.luaProperties1.id, crsf.elrsLUAmode);
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
@@ -740,7 +733,12 @@ void HandleUpdateParameter()
 
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
-  UpdateModelReq = true;
+  // There's a near 100% chance we started up transmitting at Model 0's
+  // rate before we got the set modelid command from the handset, so do
+  // the normal way of switching rates with syncspam first
+  config.SetModelId(crsf.getModelID());
+  syncSpamCounter = syncSpamAmount;
+  ModelUpdatePending = true;
 }
 
 static void ConfigChangeCommit()
@@ -748,7 +746,6 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
 
   // Write the uncommitted eeprom values
-  DBGLN("EEPROM COMMIT");
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
   resetLuaParams();
@@ -757,7 +754,7 @@ static void ConfigChangeCommit()
 
 static void CheckConfigChangePending()
 {
-  if (config.IsModified())
+  if (config.IsModified() || ModelUpdatePending)
   {
     // Keep transmitting sync packets until the spam counter runs out
     if (syncSpamCounter > 0)

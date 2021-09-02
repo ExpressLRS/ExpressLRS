@@ -141,9 +141,9 @@ void CRSF::Begin()
 #endif
     DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
+    flush_port_input();
 #endif
 
-    flush_port_input();
 #endif // CRSF_TX_MODULE
 
     //The master module requires that the serial communication is bidirectional
@@ -949,7 +949,6 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
-    vTaskDelay(500);
     flush_port_input();
     (void)pvParameters;
     for (;;)

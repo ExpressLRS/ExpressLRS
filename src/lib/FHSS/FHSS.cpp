@@ -279,10 +279,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 #error No regulatory domain defined, please define one in common.h
 #endif
 
-    DBGLN("Number of FHSS frequencies = %d", FHSS_SEQUENCE_CNT);
+    DBGLN("Number of FHSS frequencies = %u", FHSS_FREQ_CNT);
 
     sync_channel = FHSS_FREQ_CNT / 2;
-    DBGLN("Sync channel = %d", sync_channel);
+    DBGLN("Sync channel = %u", sync_channel);
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
@@ -300,10 +300,12 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         }
     }
 
-    for (uint8_t i=0; i < FHSS_SEQUENCE_CNT; i++) {
-
-        if (i % FHSS_FREQ_CNT != 0) { // if it's not the sync channel
-            uint8_t offset = (i / FHSS_FREQ_CNT)*FHSS_FREQ_CNT; // offset to start of current block
+    for (uint8_t i=0; i < FHSS_SEQUENCE_CNT; i++)
+    {
+        // if it's not the sync channel
+        if (i % FHSS_FREQ_CNT != 0)
+        {
+            uint8_t offset = (i / FHSS_FREQ_CNT) * FHSS_FREQ_CNT; // offset to start of current block
             uint8_t rand = rngN(FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
@@ -311,19 +313,19 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
             FHSSsequence[i] = FHSSsequence[offset+rand];
             FHSSsequence[offset+rand] = temp;
         }
-
-        // output FHSS sequence
-        DBG("%d ",FHSSsequence[i]);
-        if (i % 10 == 9)
-        {
-            DBGCR;
-        }
     }
 
+    // output FHSS sequence
+    for (uint8_t i=0; i < FHSS_SEQUENCE_CNT; i++)
+    {
+        DBG("%u ",FHSSsequence[i]);
+        if (i % 10 == 9)
+            DBGCR;
+    }
     DBGCR;
 }
 
-uint32_t FHSSNumEntries(void)
+uint32_t FHSSgetChannelCount(void)
 {
     return FHSS_FREQ_CNT;
 }
