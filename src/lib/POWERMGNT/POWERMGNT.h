@@ -14,7 +14,7 @@
     defined(TARGET_R9M_TX)        || \
     defined(TARGET_TX_ES915TX)    || \
     defined(TARGET_ES900TX)
-#if defined(UNLOCK_HIGHER_POWER) || defined(HAS_BUILT_IN_FAN)
+#if defined(UNLOCK_HIGHER_POWER)
 #define MaxPower PWR_1000mW
 #else
 #define MaxPower PWR_250mW
