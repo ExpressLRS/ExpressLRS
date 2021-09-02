@@ -1054,6 +1054,9 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
+    ExpressLRS_currAirRate_Modparams = get_elrs_airRateConfig(RATE_DEFAULT); // Initialize var: caused crash on ESP in SetRFLinkRate() where currAirRate is compared
+    ExpressLRS_currAirRate_RFperfParams = get_elrs_RFperfParams(RATE_DEFAULT); // Initialize var: caused crash on ESP in SetRFLinkRate() where currAirRate is compared
+
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
 }
