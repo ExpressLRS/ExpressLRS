@@ -2,6 +2,7 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
+#include "helpers.h"
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
@@ -86,7 +87,8 @@ uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
-uint32_t CRSF::UARTcurrentBaud;
+uint32_t CRSF::UARTcurrentBaud = TxToHandsetBauds[0];
+uint8_t CRSF::UARTcurrentBaudCounter = 0;
 bool CRSF::CRSFstate = false;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
@@ -104,7 +106,6 @@ void CRSF::Begin()
     DBGLN("About to start CRSF task...");
 
 #if CRSF_TX_MODULE
-    UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #ifdef PLATFORM_ESP32
@@ -125,7 +126,7 @@ void CRSF::Begin()
     CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
+    CRSF::Port.begin(UARTcurrentBaud);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -898,8 +899,8 @@ bool CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            uint32_t UARTrequestedBaud = (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE) ?
-                CRSF_OPENTX_SLOW_BAUDRATE : CRSF_OPENTX_FAST_BAUDRATE;
+            UARTcurrentBaudCounter++;
+            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudCounter % ARRAY_SIZE(TxToHandsetBauds)];
 
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
@@ -932,6 +933,12 @@ bool CRSF::UARTwdt()
         DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
+        if (retval)
+        {
+            // Speed up the cycling
+            UARTwdtLastChecked -= 3 * (UARTwdtInterval >> 2);
+        }
+
         GoodPktsCountResult = GoodPktsCount;
         BadPktsCountResult = BadPktsCount;
         BadPktsCount = 0;
@@ -945,7 +952,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
+    CRSF::Port.begin(UARTcurrentBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();

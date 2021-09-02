@@ -137,6 +137,7 @@ private:
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
     static uint32_t UARTcurrentBaud;
+    static uint8_t UARTcurrentBaudCounter;
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;

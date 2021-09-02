@@ -25,8 +25,6 @@
 
 #define CRSF_CRC_POLY 0xd5
 #define CRSF_RX_BAUDRATE 420000
-#define CRSF_OPENTX_FAST_BAUDRATE 400000
-#define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
 #define CRSF_NUM_CHANNELS 16
 #define CRSF_CHANNEL_VALUE_MIN  172
 #define CRSF_CHANNEL_VALUE_1000 191
@@ -68,6 +66,8 @@
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
+
+static const unsigned int TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
 
 /* CRC8 implementation with polynom = x​7​+ x​6​+ x​4​+ x​2​+ x​0 ​(0xD5) */
 static const unsigned char crc8tab[256] = {
