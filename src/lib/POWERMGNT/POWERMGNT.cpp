@@ -22,7 +22,7 @@ PowerLevels_e POWERMGNT::incPower()
 
 PowerLevels_e POWERMGNT::decPower()
 {
-    if (CurrentPower > 0)
+    if (CurrentPower > MinPower)
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
