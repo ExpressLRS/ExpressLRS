@@ -625,7 +625,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now) // called when a syn
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     PhaseLockCounter = 0;
-    PFDloop.reset();
+    //PFDloop.reset(); // TEST the above resets should be enough
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
 #if WS2812_LED_IS_USED
