@@ -249,9 +249,13 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
     bool invertIQ = UID[5] & 0x01;
 
-    if (ExpressLRS_currAirRate_Modparams->index != index) // this function is also called to go back to the initial frequency when connection is lost - the timers freuqency offset does not need to be reset in that case
+    // this function is also called to go back to the initial frequency when connection is lost
+    // the timers freuqency offset does not need to be reset in that case
+    if (ExpressLRS_currAirRate_Modparams->index != index)
     {
-        hwTimer.resetFreqOffset(); // do it here as the frequeny offset is in absolute numbers (us) and we are changing the interval. Best would be to calculate a value based on the actual rate difference between the old and new airrate
+        // frequeny offset is in absolute numbers (us) and we are changing the interval.
+        // best would be to calculate a value based on the actual rate difference between the old and new airrate
+        hwTimer.resetFreqOffset();
     }
 
     hwTimer.updateInterval(ModParams->interval); // put this in the above condition too?
@@ -376,34 +380,36 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     }
 }
 
+/*
+Phase Lock concept
+1st Priority: Rough and quick phase adjustment during connection (re)establishing
+2nd Priority: compensate for frequency missmatch by looking at "long term" change of OffsetDx 
+
+RXtimerState = tim_disconnected: whenever a sync packet information does not line up with what
+                we expect (means we have a major timer missmatch - phase mostly)
+RXtimerState = tim_tentative: whenever Offset var (phase) is in a good range
+RXtimerState = tim_locked: whenever OffsetDx (changes of timing) var is in a good range
+
+Frequency Offset should be relatively constant for a given TX / RX combination (except temperature drift).
+/**/
+
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
     if (connectionState != disconnected && PFDloop.resultValid())
     {
-        // don't let individual missed packets screw up our PhaseLock. Frequency Offset should be relatively constant for a given TX / RX combination (except temperature drift)
-        // the phase on the other hand is volatile and needs to be corrected especially after reconnect
-        // this function should take care of RXtimerState internally IMO
-        // the main loop should only make changes to connectionState (no pakets received for xy ms / binding / set to connected after tentative for xy ms or number of received syncs, etc)
-        
-        // RXtimerState = tim_disconnected: whenever a sync packet information does not line up with what we expect (means we have a major timer missmatch - phase mostly)
-        // RXtimerState = tim_tentative: whenever Offset var (phase) is in a good range
-        // RXtimerState = tim_locked: whenever OffsetDx (changes of timing) var is in a good range
-        
-        // concept
-        // 1st: Rough and quick phase adjustment during connection (re)establishing
-        // 2nd: compensate for frequency missmatch by looking at "long term" change of OffsetDx 
-        // NOTE: phase corrections will mess up the frequency corrections
-        // Solution: substract the phase shift done from the value we put into OffsetDx LPF update, so the Phase Shift would become invisible to OffsetDx
-        
-        PFDloop.calcResult();
-        
-        RawOffset = PFDloop.getResult(); // absolute Offset (uSec) from last iteration
-        Offset = LPF_Offset.update(RawOffset);  // absolute Offset (uSec) LPFed (4 samples) --> compensate with phase shift
-        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset); // change in Offset per period (delta uSec) LPFed (16 samples) --> compensate with frequency adjustment
+        // absolute Offset (uSec) from last iteration
+        RawOffset = PFDloop.getResult();
+        // absolute Offset (uSec) LPFed (4 samples) --> compensate with phase shift
+        Offset = LPF_Offset.update(RawOffset);
+        // change in Offset per period (delta uSec) LPFed (16 samples)
+        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
 
-        if (RXtimerState != tim_disconnected && LQCalc.currentIsSet()) // only update timer frequency if we have an at least entative timer lock (LQCalc.currentIsSet() could even be removed here because we now test if both events (int+ext) have been registered as precondition before we get here)
+        // only update timer frequency if we have an at least tentative timer lock
+        //if (RXtimerState != tim_disconnected && LQCalc.currentIsSet()) // replaced by resultValid
+        if (RXtimerState != tim_disconnected)
         {
-            if (PhaseLockCounter % 8 == 0) //limit rate of freq offset adjustment down to every 8th phase lock iteration
+            //limit rate of freq offset adjustment to every 8th phase lock iteration
+            if (PhaseLockCounter % 8 == 0)
             {
                 if (OffsetDx > 0)
                 {
@@ -416,13 +422,16 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             }
         }
 
-        if (RXtimerState == tim_disconnected) //was: if (connectionState != connected)
+        if (RXtimerState == tim_disconnected)
         {
-            shiftPhaseBy = RawOffset >> 1; // divided by 2; use RawOffset during first moments of (re)establishing connection because it's quicker than LPF'ed Offset variable
+            // half raw offset for quick adjustment
+            shiftPhaseBy = RawOffset >> 1; 
         }
-        else if (PhaseLockCounter % 2 == 0) // limit rate of phase shifting down to every 2rd phase lock iteration (length of Offset LPF is 4)
+        // limit rate of phase shifting to every 2nd phase lock iteration
+        else if (PhaseLockCounter % 2 == 0)
         {
-            shiftPhaseBy = Offset >> 2; // divided by 4, this matches the width of the Offset LPF and so we cannot overshoot the phaseShift
+            // quarter LPF'ed offset; fits the width of the LPF (4) so no overshoot is possible
+            shiftPhaseBy = Offset >> 2; 
         }
         else
         {
@@ -430,32 +439,40 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         }
 
         hwTimer.phaseShift(shiftPhaseBy);
-        prevRawOffset = RawOffset - shiftPhaseBy; // compensate for phase adjustments to eliminate impact on frequency correction (only use of this var is for OffsetDx, which is used for frequency correction)
+        // compensate for phase adjustments to eliminate impact on frequency correction
+        prevRawOffset = RawOffset - shiftPhaseBy;
     }
 
-    if (abs(Offset) > 500 || abs(RawOffset) > 600) // if filtered or unfiltered Offset is exceeding this limit we are already in a bad place. by changing RXtimerState to disconnected the phase will be adjusted very quick (500Hz -> dt=2000us --> 500us filtered should be fine; 250us is the slack added in code currently)
+    // if filtered or unfiltered Offset is exceeding this limit we are already in a bad place
+    // by changing RXtimerState to disconnected the phase will be adjusted very quick
+    // 500Hz -> dt=2000us: 500us filtered should be fine; 200us is the hard coded slack
+    if (abs(Offset) > 500 || abs(RawOffset) > 600)
     {
         RXtimerState = tim_disconnected;
         DBGLN("Timer disconnected");
     }
-    else if (abs(OffsetDx) <= 7 && PhaseLockCounter % 16 == 0) // filtered Offset is within the limit -> did we fill up the OffsetDx LPF and are we happy with the stability of the offset already?
+    // now check if OffsetDx LPF is filled and how stable the Offset value is
+    else if (abs(OffsetDx) <= 7 && PhaseLockCounter % 16 == 0)
     {
-        RXtimerState = tim_locked;
+        RXtimerState = tim_locked; // precondition for connectionState=connected
         DBGLN("Timer locked");
     }
-    else // Offset if fine but we are not happy with the stability of the value 
+    // Offset if fine but we are not happy with the stability of the value
+    else 
     {
         RXtimerState = tim_tentative;
         DBGLN("Timer tentative");
     }
 
-    PFDloop.reset(); //  // clear recorded event-times and get ready for next measurement; do this at the end of the function without any precondition
+    // get ready for next measurement; do this at the end of the function without any precondition
+    PFDloop.reset();
     PhaseLockCounter++;
 
     DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
 }
 
-void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
+// this is 180 out of phase with the other callback, occurs mid of two packet receptions
+void ICACHE_RAM_ATTR HWtimerCallbackTick() 
 {
     updatePhaseLock();
     NonceRX++;
@@ -615,7 +632,9 @@ void LostConnection()
 #endif
 }
 
-void ICACHE_RAM_ATTR TentativeConnection(unsigned long now) // called when a sync packet is received while we are in disconnected state and whenever incoming sync data for Nonce and FHSS does not match our expectations
+// called when a sync packet is received while we are in disconnected state and 
+// whenever incoming sync data for Nonce and FHSS doesn't match the expected values
+void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     connectionStatePrev = connectionState;
     connectionState = tentative;
@@ -653,7 +672,6 @@ void GotConnection(unsigned long now)
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
     disableWebServer = true;
-    //RXtimerState = tim_tentative; // dont touch RXtimerState anywhere but in UpdatePhaseLock()
     GotConnectionMillis = now;
 
     DBGLN("got conn");
@@ -793,7 +811,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
                  //DBGVLN("%dx%d", NonceRX, Radio.RXdataBuffer[2]);
                  FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
                  NonceRX = Radio.RXdataBuffer[2];
-                 if (connectionState == disconnected) { doStartTimer = true; } // timer is not running only in disconnected state - trying to mess with timing only when absolutely necessary
+                 // only in disconnected state the timer is not running
+                 if (connectionState == disconnected) { doStartTimer = true; }
                  TentativeConnection(now);
              }
          }
@@ -1054,8 +1073,9 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    ExpressLRS_currAirRate_Modparams = get_elrs_airRateConfig(RATE_DEFAULT); // Initialize var: caused crash on ESP in SetRFLinkRate() where currAirRate is compared
-    ExpressLRS_currAirRate_RFperfParams = get_elrs_RFperfParams(RATE_DEFAULT); // Initialize var: caused crash on ESP in SetRFLinkRate() where currAirRate is compared
+    // Initialize vars: caused crash on ESP in SetRFLinkRate() where currAirRate is compared
+    ExpressLRS_currAirRate_Modparams = get_elrs_airRateConfig(RATE_DEFAULT); 
+    ExpressLRS_currAirRate_RFperfParams = get_elrs_RFperfParams(RATE_DEFAULT);
 
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
@@ -1221,6 +1241,7 @@ void loop()
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
+    // TODO: timeout should be calculated to make sure at least three syncs will be sent in that timeframe in case we miss exactly these packets (low LQ)
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))
     {
         LostConnection();
@@ -1232,12 +1253,16 @@ void loop()
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
-    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
+    // check if we lost connection
+    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket))) 
     {
         LostConnection();
     }
 
-    if ((connectionState == tentative) && RXtimerState == tim_locked) //TEST if this is enough --> if we get here we already received a sync packet with correct crc and were able to find the correct timing for our phaselock - is this enough?
+    // TEST if this is enough --> if we get here we already received a sync packet with correct crc 
+    // and were able to find the correct timing for our phaselock
+    // TODO: add 3rd condition: count two sync packets with correct data received in a row to double check our signal lock?
+    if ((connectionState == tentative) && RXtimerState == tim_locked)
     {
         GotConnection(now);
     }
