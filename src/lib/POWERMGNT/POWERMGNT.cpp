@@ -134,8 +134,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     int8_t rfpower = -18;
     switch (Power)
     {
-    case PWR_10mW:
-        // Tx can not do less than 25 mW
     case PWR_25mW:
         rfpower = -18;
         Power = PWR_25mW;
@@ -276,10 +274,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_10mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-17);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            // Tx can not do less than 25 mW
-            Power = PWR_25mW;
-            Radio.SetOutputPower(-18);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-18);
         #else
