@@ -14,14 +14,14 @@
     defined(TARGET_R9M_TX)        || \
     defined(TARGET_TX_ES915TX)    || \
     defined(TARGET_ES900TX)
-#if defined(UNLOCK_HIGHER_POWER) || defined(TARGET_NAMIMNORC_TX)
+#if defined(UNLOCK_HIGHER_POWER)
 #define MaxPower PWR_1000mW
 #else
 #define MaxPower PWR_250mW
 #endif
 #define DefaultPowerEnum PWR_50mW
 
-#elif defined(TARGET_R9M_LITE_PRO_TX)
+#elif defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX)
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_50mW
 
