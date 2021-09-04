@@ -375,7 +375,7 @@ local functions = {
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=nil },
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
 }
