@@ -22,7 +22,7 @@
 #define DefaultPowerEnum PWR_50mW
 #define MinPower PWR_10mW
 
-#elif defined(TARGET_R9M_LITE_PRO_TX) || defined(TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX)
+#elif defined(TARGET_R9M_LITE_PRO_TX)
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_50mW
 #define MinPower PWR_10mW
