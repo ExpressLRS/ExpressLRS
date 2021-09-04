@@ -136,8 +136,8 @@ private:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
-    static uint32_t UARTcurrentBaud;
-    static uint8_t UARTcurrentBaudCounter;
+    static uint32_t TxToHandsetBauds[5];
+    static uint8_t UARTcurrentBaudIdx;
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;

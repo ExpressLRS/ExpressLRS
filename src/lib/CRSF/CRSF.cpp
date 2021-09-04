@@ -87,8 +87,8 @@ uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
-uint32_t CRSF::UARTcurrentBaud = TxToHandsetBauds[0];
-uint8_t CRSF::UARTcurrentBaudCounter = 0;
+uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
+uint8_t CRSF::UARTcurrentBaudIdx = 0;
 bool CRSF::CRSFstate = false;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
@@ -126,7 +126,7 @@ void CRSF::Begin()
     CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.begin(UARTcurrentBaud);
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -510,7 +510,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate;
-        if (CRSF::UARTcurrentBaud == 115200 && CRSF::RequestedRCpacketInterval == 2000)
+        if (CRSF::TxToHandsetBauds[UARTcurrentBaudIdx] == 115200 && CRSF::RequestedRCpacketInterval == 2000)
         {
             packetRate = 40000; //constrain to 250hz max
         }
@@ -899,8 +899,8 @@ bool CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            UARTcurrentBaudCounter++;
-            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudCounter % ARRAY_SIZE(TxToHandsetBauds)];
+            UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
+            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
 
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
@@ -923,7 +923,6 @@ bool CRSF::UARTwdt()
             USART2->CR1 |= USART_CR1_UE;
             #endif
 #endif
-            UARTcurrentBaud = UARTrequestedBaud;
             duplex_set_RX();
             // cleanup input buffer
             flush_port_input();
@@ -952,7 +951,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    CRSF::Port.begin(UARTcurrentBaud, SERIAL_8N1,
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
