@@ -604,7 +604,7 @@ void registerLuaParameters() {
         setLuaCommandInfo(&luaWebUpdate,"REBOOT to stop WiFi");
         setLuaCommandValue(&luaWebUpdate,3); //request confirm
       } else if(arg == 6){ //6 = status poll
-          sendLuaFieldCrsf(id,0);
+        sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
         setLuaCommandValue(&luaWebUpdate,0);
       }
@@ -641,7 +641,7 @@ void registerLuaParameters() {
       } else if(arg == 6){ //6 = status poll
         sendLuaFieldCrsf(id,0);
       } else { //5 or anything else is cancel
-        setLuaCommandValue(&luaBLEJoystick,0);
+        setLuaCommandValue(&luaBLEJoystick, 0);
       }
     });
 
@@ -832,7 +832,7 @@ void setup()
 //  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
-  startupLEDs();
+    startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -981,14 +981,16 @@ void loop()
   UpdateConnectDisconnectStatus(now);
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
-#if defined(PLATFORM_ESP32) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
-    DBGLN("No CRSF ever detected, starting WiFi");
-    webUpdateMode = true;
-    BeginWebUpdate();
-  }
+#if defined(PLATFORM_ESP32)
+  #if defined(AUTO_WIFI_ON_INTERVAL)
+    //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
+    //start webupdate, there might be wrong configuration flashed.
+    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
+      DBGLN("No CRSF ever detected, starting WiFi");
+      webUpdateMode = true;
+      BeginWebUpdate();
+    }
+  #endif
   if (webUpdateMode)
   {
     HandleWebUpdate();
