@@ -71,8 +71,9 @@ public:
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
-    // ModelId used for subsequent per-model config access
-    void SetModelId(uint8_t modelId) { m_model = &m_config.model_config[modelId]; }
+
+    // State setters
+    bool SetModelId(uint8_t modelId);
 
 private:
     tx_config_t m_config;

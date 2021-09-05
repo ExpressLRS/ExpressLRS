@@ -197,6 +197,23 @@ TxConfig::SetPassword(const char *password)
     m_modified = true;
 }
 
+/**
+ * Sets ModelId used for subsequent per-model config gets
+ * Returns: true if the model has changed
+ **/
+bool
+TxConfig::SetModelId(uint8_t modelId)
+{
+    model_config_t *newModel = &m_config.model_config[modelId];
+    if (newModel != m_model)
+    {
+        m_model = newModel;
+        return true;
+    }
+
+    return false;
+}
+
 /////////////////////////////////////////////////////
 
 void

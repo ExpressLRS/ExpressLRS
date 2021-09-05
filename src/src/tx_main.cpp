@@ -734,11 +734,13 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
   // There's a near 100% chance we started up transmitting at Model 0's
-  // rate before we got the set modelid command from the handset, so do
-  // the normal way of switching rates with syncspam first
-  config.SetModelId(crsf.getModelID());
-  syncSpamCounter = syncSpamAmount;
-  ModelUpdatePending = true;
+  // rate before we got the set modelid command from the handset, so do the
+  // normal way of switching rates with syncspam first (but only if changing)
+  if (config.SetModelId(crsf.getModelID()))
+  {
+    syncSpamCounter = syncSpamAmount;
+    ModelUpdatePending = true;
+  }
 }
 
 static void ConfigChangeCommit()
