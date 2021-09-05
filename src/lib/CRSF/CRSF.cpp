@@ -21,9 +21,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
-#define CHUNK_MAX_NUMBER_OF_BYTES 16 //safe number of bytes to not get intterupted between rc packets
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
-
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
@@ -70,9 +68,6 @@ volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
 
-#define MAX_BYTES_SENT_IN_UART_OUT 32
-uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
-
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
 #define AutoSyncWaitPeriod 2000
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
@@ -87,8 +82,12 @@ uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
+
+uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
+uint8_t CRSF::maxPacketBytes[5] = {20, 36, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN};
 uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
+
 bool CRSF::CRSFstate = false;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
@@ -315,22 +314,24 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t chunks = 0;    
     uint8_t currentPacketSize;    
     
+    uint16_t chunkMax = maxPacketBytes[UARTcurrentBaudIdx]-8;
+
     /**
      *calculate how many chunks needed for this field 
      */
-    chunks = ((wholePacketSize-2)/(CHUNK_MAX_NUMBER_OF_BYTES));
-    if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
+    chunks = ((wholePacketSize-2)/(chunkMax));
+    if((wholePacketSize-2) % (chunkMax)){
         chunks = chunks + 1;
     }
 
     //calculate how much byte this packet contains
     if((chunks - (fieldchunk+1)) > 0){
-        currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+        currentPacketSize = chunkMax;
     } else {
-        if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
-            currentPacketSize = (wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES);
+        if((wholePacketSize-2) % (chunkMax)){
+            currentPacketSize = (wholePacketSize-2) % (chunkMax);
         } else {
-            currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+            currentPacketSize = chunkMax;
         }
     }
     LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
@@ -411,7 +412,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         outBuffer[8] += ((luaHiddenFlags >>((((struct tagLuaProperties1 *)luaData)->id)-1)) & 1)*128;
         memcpy(outBuffer+9,chunkBuffer,currentPacketSize-2);
     } else {
-        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES))-2,currentPacketSize);
+        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*chunkMax))-2,currentPacketSize);
     }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
     outBuffer[LUArespLength + 3] = crc;
@@ -806,8 +807,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         }
 
         // if the package is long we need to split it up so it fits in the sending interval
-        if (packageLength > MAX_BYTES_SENT_IN_UART_OUT) {
-            writeLength = MAX_BYTES_SENT_IN_UART_OUT;
+        if (packageLength > maxPacketBytes[UARTcurrentBaudIdx]) {
+            writeLength = maxPacketBytes[UARTcurrentBaudIdx];
         } else {
             writeLength = packageLength;
         }
