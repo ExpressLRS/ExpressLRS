@@ -64,6 +64,7 @@ public:
     void SetSwitchMode(uint8_t switchMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults();
+    void UpgradeEepromV1ToV4();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
