@@ -136,7 +136,7 @@ private:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
-    static uint8_t maxPacketBytes[5];
+    static uint8_t maxPacketBytes;
     static uint32_t TxToHandsetBauds[5];
     static uint8_t UARTcurrentBaudIdx;
     static bool CRSFstate;
@@ -152,6 +152,7 @@ private:
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
+    static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     
     static uint32_t luaHiddenFlags;
 

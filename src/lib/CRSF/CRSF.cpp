@@ -85,7 +85,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 // This table assumes 115k baud max packet rate is 150hz, all others at 500hz
-uint8_t CRSF::maxPacketBytes[5] = {34, 36, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN};
+uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -315,7 +315,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t chunks = 0;    
     uint8_t currentPacketSize;    
     
-    uint16_t chunkMax = maxPacketBytes[UARTcurrentBaudIdx]-6;
+    uint16_t chunkMax = maxPacketBytes-6;
 
     /**
      *calculate how many chunks needed for this field 
@@ -460,6 +460,7 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
     LPF_OPENTX_SYNC_OFFSET.init(0);
     LPF_OPENTX_SYNC_MARGIN.init(0);
 #endif
+    adjustMaxPacketSize();
 }
 
 uint32_t ICACHE_RAM_ATTR CRSF::GetRCdataLastRecv()
@@ -808,8 +809,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         }
 
         // if the package is long we need to split it up so it fits in the sending interval
-        if (packageLength > maxPacketBytes[UARTcurrentBaudIdx]) {
-            writeLength = maxPacketBytes[UARTcurrentBaudIdx];
+        if (packageLength > maxPacketBytes) {
+            writeLength = maxPacketBytes;
         } else {
             writeLength = packageLength;
         }
@@ -878,6 +879,15 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 #endif
 }
 
+void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
+{
+    uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
+    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.95 (fow slop)
+    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 95 / 100;
+    maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
+    DBGLN("Adjusted max packet size %u", maxPacketBytes);
+}
+
 bool CRSF::UARTwdt()
 {
     uint32_t now = millis();
@@ -903,8 +913,9 @@ bool CRSF::UARTwdt()
 
             UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
             uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
-
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
+
+            adjustMaxPacketSize();
 
             SerialOutFIFO.flush();
 #ifdef PLATFORM_ESP32
