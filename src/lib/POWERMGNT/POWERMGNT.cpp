@@ -22,7 +22,7 @@ PowerLevels_e POWERMGNT::incPower()
 
 PowerLevels_e POWERMGNT::decPower()
 {
-    if (CurrentPower > 0)
+    if (CurrentPower > MinPower)
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
@@ -94,6 +94,11 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = (PowerLevels_e)MaxPower;
     }
 
+    if (Power < MinPower)
+    {
+        Power = (PowerLevels_e)MinPower;
+    }
+
 #ifdef GPIO_PIN_FAN_EN
     digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
 #endif
@@ -134,8 +139,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     int8_t rfpower = -18;
     switch (Power)
     {
-    case PWR_10mW:
-        // Tx can not do less than 25 mW
     case PWR_25mW:
         rfpower = -18;
         Power = PWR_25mW;
