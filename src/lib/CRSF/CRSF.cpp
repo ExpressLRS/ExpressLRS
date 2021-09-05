@@ -314,7 +314,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t chunks = 0;    
     uint8_t currentPacketSize;    
     
-    uint16_t chunkMax = maxPacketBytes[UARTcurrentBaudIdx]-4;
+    uint16_t chunkMax = maxPacketBytes[UARTcurrentBaudIdx]-6;
 
     /**
      *calculate how many chunks needed for this field 
