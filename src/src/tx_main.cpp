@@ -543,7 +543,16 @@ void registerLuaParameters() {
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
     DBGLN("Request Power: %d", newPower);
-    config.SetPower(newPower < MaxPower ? newPower : MaxPower);
+    
+    if (newPower > MaxPower)
+    {
+        newPower = MaxPower;
+    } else if (newPower < MinPower)
+    {
+        newPower = MinPower;
+    }
+    config.SetPower(newPower);
+
     #if defined(HAS_OLED)
       OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
                         OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
