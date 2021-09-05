@@ -798,13 +798,17 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
-static void UpdateConnectDisconnectStatus(const uint32_t now)
+static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
   const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT);
-  if (LastTLMpacketRecvMillis && ((now - LastTLMpacketRecvMillis) < msConnectionLostTimeout))
+  // +2 to account for any rounding down and partial millis()
+  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  // Capture the last before now so it will always be <= now
+  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  const uint32_t now = millis();
+  if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
     connectionState = connected;
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
@@ -978,7 +982,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  UpdateConnectDisconnectStatus(now);
+  UpdateConnectDisconnectStatus();
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
 #ifdef PLATFORM_ESP32
