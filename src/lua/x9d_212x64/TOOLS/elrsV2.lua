@@ -37,7 +37,7 @@ local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
 
-local COL2 = 140 -- X position of second column
+local COL2 = 120 -- X position of second column
 
 local function getField(line)
   local counter = 1
