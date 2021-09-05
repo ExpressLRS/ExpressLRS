@@ -84,7 +84,8 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
-uint8_t CRSF::maxPacketBytes[5] = {20, 36, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN};
+// This table assumes 115k baud max packet rate is 150hz, all others at 500hz
+uint8_t CRSF::maxPacketBytes[5] = {34, 36, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN, CRSF_MAX_PACKET_LEN};
 uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
