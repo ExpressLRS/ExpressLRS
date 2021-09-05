@@ -259,11 +259,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            //crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower()); // TX power is updated when sent
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
-            crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
+            // -- rf_mode is updated when we change rates
+            // -- downlink_Link_quality is updated before the LQ period is incremented
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
             dynamic_power_updated = true;
@@ -327,6 +327,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
+  crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;
@@ -380,6 +381,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       if (WaitRXresponse == true)
       {
         WaitRXresponse = false;
+        crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
         LQCalc.inc();
         return;
       }
