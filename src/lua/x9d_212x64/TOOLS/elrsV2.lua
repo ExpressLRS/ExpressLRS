@@ -466,10 +466,11 @@ end
 
 local function lcd_title()
   lcd.clear()
-  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT)
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+  -- A bit weird but drawFilledRectangle won't overwrite the good/bad text, but fills its background
+  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT+FILL_WHITE)
   lcd.drawText(1, 0, title, INVERS)
-  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), INVERS + RIGHT)
 end
 
 -- Main
