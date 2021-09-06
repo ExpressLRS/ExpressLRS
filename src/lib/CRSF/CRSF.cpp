@@ -169,7 +169,7 @@ void CRSF::End()
             break;
         }
     }
-    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
+    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
@@ -256,7 +256,7 @@ void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *out
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
-    
+
     //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
@@ -266,7 +266,7 @@ void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray)
     memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
     next+=sizeof(p1->luaProperties2);
     stpcpy(next,p1->label2);
-    
+
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
@@ -277,7 +277,7 @@ void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
-    
+
     //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
 
@@ -288,7 +288,7 @@ void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
     next+=sizeof(p1->luaProperties2);
     *next++=0; // default value
     stpcpy(next,p1->label2);
-    
+
     //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
     //outarray[4+(strlen(p1->label1)+2)] = (uint8_t)luaValues[p1->luaProperties1.id];
 }
@@ -311,11 +311,11 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         return 0;
     }
     uint8_t LUArespLength;
-    uint8_t chunks = 0;    
-    uint8_t currentPacketSize;    
-    
+    uint8_t chunks = 0;
+    uint8_t currentPacketSize;
+
     /**
-     *calculate how many chunks needed for this field 
+     *calculate how many chunks needed for this field
      */
     chunks = ((wholePacketSize-2)/(CHUNK_MAX_NUMBER_OF_BYTES));
     if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
@@ -334,11 +334,11 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     }
     LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
                                         // chunk-ed packets below
-                                        //fieldsetup1(fieldparent,fieldtype),field name, 
+                                        //fieldsetup1(fieldparent,fieldtype),field name,
                                         //fieldsetup2(value,min,max,default),field unit
     //create outbuffer size
     uint8_t chunkBuffer[wholePacketSize];
-    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2]; 
+    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2];
         //it is byte op, we can use memcpy with index to
         // destination memory.
     switch(dataType){
@@ -414,7 +414,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
     outBuffer[LUArespLength + 3] = crc;
-    
+
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
@@ -525,7 +525,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
         } PACKED;
-        
+
         uint8_t buffer[sizeof(otxSyncData)];
         struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
 
@@ -554,7 +554,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         hasEverConnected = true;
         connected();
     }
-    
+
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -563,23 +563,21 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         GetChannelDataIn();
         return true;
     }
-    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
+    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE || packetType == CRSF_FRAMETYPE_KISS_REQ)
     {
         volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         return true;
-    } else {
+    }
+    else {
         const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
             (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
         {
-            if(SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA){
-                elrsLUAmode = true;
-            } else {
-                elrsLUAmode = false;
-            }
-            if (packetType == CRSF_FRAMETYPE_COMMAND && 
+            elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
+
+            if (packetType == CRSF_FRAMETYPE_COMMAND &&
                 SerialInBuffer[5] == SUBCOMMAND_CRSF &&
                 SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
                     modelId = SerialInBuffer[7];
@@ -592,8 +590,8 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             RecvParameterUpdate();
             return true;
         }
-        DBGLN("Got Other Packet");        
-        //GoodPktsCount++;        
+        DBGLN("Got Other Packet");
+        //GoodPktsCount++;
     }
     return false;
 }
@@ -755,7 +753,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {        
+                {
                     GoodPktsCount++;
                     if (ProcessPacket())
                     {

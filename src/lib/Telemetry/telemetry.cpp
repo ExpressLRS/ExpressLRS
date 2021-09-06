@@ -36,7 +36,7 @@ bool Telemetry::ShouldCallUpdateModelMatch()
 }
 
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, MSP_RESP);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
@@ -205,7 +205,8 @@ void Telemetry::AppendTelemetryPackage()
     }
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
-        if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
+        // last entry is always reserved and used for every other telemetry response
+        if ((i+1 == payloadTypesCount || CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type) && !payloadTypes[i].locked)
         {
             if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
             {
