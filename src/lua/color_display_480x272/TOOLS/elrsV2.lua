@@ -37,7 +37,7 @@ local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
 
-local COL2 = 140 -- X position of second column
+local COL2 = 240 -- X position of second column
 
 local function getField(line)
   local counter = 1
@@ -340,8 +340,7 @@ local function fieldFolderOpen(field)
 end
 
 local function fieldFolderDisplay(field,y ,attr)
-  lcd.drawFilledRectangle(0, y, LCD_W, 22, TITLE_BGCOLOR)
-  lcd.drawText(1, y, "> " .. field.name, attr)
+  lcd.drawText(1, y, "> " .. field.name, attr + BOLD)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -364,8 +363,7 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-  lcd.drawFilledRectangle(0, y*22+10, LCD_W, 22, TITLE_BGCOLOR)
-  lcd.drawText(10, y, "[" .. field.name .. "]", attr)
+  lcd.drawText(10, y, "[" .. field.name .. "]", attr + BOLD)
 end
 
 local functions = {
@@ -473,8 +471,8 @@ local function lcd_title()
   lcd.clear()
   lcd.drawFilledRectangle(0, 0, LCD_W, 30, TITLE_BGCOLOR)
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
-  lcd.drawText(1, 5, title)
-  lcd.drawText(LCD_W, 5, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+  lcd.drawText(1, 5, title, MENU_TITLE_COLOR)
+  lcd.drawText(LCD_W, 5, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + MENU_TITLE_COLOR)
 end
 
 -- Main
