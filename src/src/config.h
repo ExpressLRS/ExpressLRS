@@ -84,10 +84,6 @@ private:
 
 ///////////////////////////////////////////////////
 
-#ifndef MODEL_MATCH_ID
-#define MODEL_MATCH_ID 0
-#endif
-
 typedef struct {
     uint32_t    version;
     bool        isBound;
@@ -114,7 +110,7 @@ public:
     }
     const uint8_t* GetUID() const { return m_config.uid; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
-    uint8_t  GetModelId() const { return m_config.modelId == 0xFF ? MODEL_MATCH_ID : m_config.modelId; }
+    uint8_t  GetModelId() const { return m_config.modelId; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }

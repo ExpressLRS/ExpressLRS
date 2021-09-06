@@ -302,8 +302,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
-  if (!InBindingMode && config.GetModelMatch()) {
-    Radio.TXdataBuffer[6] ^= crsf.getModelID();
+  // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
+  if (!InBindingMode && config.GetModelMatch())
+  {
+    Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
 
   SyncPacketLastSent = millis();
@@ -535,7 +537,7 @@ void registerLuaParameters() {
       msp.makeCommand();
       msp.function = MSP_SET_RX_CONFIG;
       msp.addByte(MSP_ELRS_MODEL_ID);
-      msp.addByte(newModelMatch ? crsf.getModelID() : 0);
+      msp.addByte(newModelMatch ? crsf.getModelID() : 0xff);
       crsf.AddMspMessage(&msp);
     }
   });
