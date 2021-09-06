@@ -206,9 +206,9 @@ void Telemetry::AppendTelemetryPackage()
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
         // last entry is always reserved and used for every other telemetry response
-        if ((i+1 == payloadTypesCount || CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type) && !payloadTypes[i].locked)
+        if (i+1 == payloadTypesCount || CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type)
         {
-            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
+            if (!payloadTypes[i].locked && CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
             {
                 memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
                 payloadTypes[i].updated = true;
