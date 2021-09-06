@@ -43,8 +43,9 @@
 -DUART_INVERTED
 
 # Invert the TX pin in the receiver code to allow an inverted RX pin on the
-# FC to be used (usually labeled SBUS input or RX1I). Inverted CRSF output.
-# RX pin (telemetry) is unaffected. ESP8266/8285 targets only
+# FC to be used (usually labeled SBUS input or RXI). Inverted CRSF output.
+# RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will 
+# not work, only via_Wifi. ESP8266/8285 targets only
 #-DRCVR_INVERT_TX
 
 # Use the SBUS **pin** on R9MM receiver hardware, which is inverted.
