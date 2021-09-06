@@ -153,14 +153,14 @@ void test_function_bootloader_called(void)
     TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
 }
 
-void test_function_ignore_invalid_type(void)
+void test_function_store_unkown_type(void)
 {
     telemetry.ResetState();
     uint8_t bootloaderSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendData(bootloaderSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
-    TEST_ASSERT_EQUAL(0, telemetry.UpdatedPayloadCount());
+    TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
 }
 
 void test_function_uart_in(void)
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_do_not_replace_old_locked);
     RUN_TEST(test_function_add_type);
     RUN_TEST(test_function_recover_from_junk);
-    RUN_TEST(test_function_ignore_invalid_type);
+    RUN_TEST(test_function_store_unkown_type);
     UNITY_END();
 
     return 0;
