@@ -2,6 +2,7 @@
 #include "../../lib/FIFO/FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
+#include "helpers.h"
 
 #ifdef PLATFORM_ESP32
 HardwareSerial SerialPort(1);
@@ -20,9 +21,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
 #endif
 
-#define CHUNK_MAX_NUMBER_OF_BYTES 16 //safe number of bytes to not get intterupted between rc packets
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
-
 
 ///Out FIFO to buffer messages///
 FIFO SerialOutFIFO;
@@ -69,9 +68,6 @@ volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
 
-#define MAX_BYTES_SENT_IN_UART_OUT 32
-uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
-
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
 #define AutoSyncWaitPeriod 2000
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
@@ -86,7 +82,13 @@ uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
 uint32_t CRSF::GoodPktsCount = 0;
 uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
-uint32_t CRSF::UARTcurrentBaud;
+
+uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
+// This table assumes 115k baud max packet rate is 150hz, all others at 500hz
+uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
+uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
+uint8_t CRSF::UARTcurrentBaudIdx = 0;
+
 bool CRSF::CRSFstate = false;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
@@ -104,7 +106,6 @@ void CRSF::Begin()
     DBGLN("About to start CRSF task...");
 
 #if CRSF_TX_MODULE
-    UARTcurrentBaud = CRSF_OPENTX_FAST_BAUDRATE;
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #ifdef PLATFORM_ESP32
@@ -125,7 +126,7 @@ void CRSF::Begin()
     CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -314,22 +315,24 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t chunks = 0;    
     uint8_t currentPacketSize;    
     
+    uint16_t chunkMax = maxPacketBytes-6;
+
     /**
      *calculate how many chunks needed for this field 
      */
-    chunks = ((wholePacketSize-2)/(CHUNK_MAX_NUMBER_OF_BYTES));
-    if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
+    chunks = ((wholePacketSize-2)/(chunkMax));
+    if((wholePacketSize-2) % (chunkMax)){
         chunks = chunks + 1;
     }
 
     //calculate how much byte this packet contains
     if((chunks - (fieldchunk+1)) > 0){
-        currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+        currentPacketSize = chunkMax;
     } else {
-        if((wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES)){
-            currentPacketSize = (wholePacketSize-2) % (CHUNK_MAX_NUMBER_OF_BYTES);
+        if((wholePacketSize-2) % (chunkMax)){
+            currentPacketSize = (wholePacketSize-2) % (chunkMax);
         } else {
-            currentPacketSize = CHUNK_MAX_NUMBER_OF_BYTES;
+            currentPacketSize = chunkMax;
         }
     }
     LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
@@ -410,7 +413,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
         outBuffer[8] += ((luaHiddenFlags >>((((struct tagLuaProperties1 *)luaData)->id)-1)) & 1)*128;
         memcpy(outBuffer+9,chunkBuffer,currentPacketSize-2);
     } else {
-        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*CHUNK_MAX_NUMBER_OF_BYTES))-2,currentPacketSize);
+        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*chunkMax))-2,currentPacketSize);
     }
     uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
     outBuffer[LUArespLength + 3] = crc;
@@ -457,6 +460,7 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
     LPF_OPENTX_SYNC_OFFSET.init(0);
     LPF_OPENTX_SYNC_MARGIN.init(0);
 #endif
+    adjustMaxPacketSize();
 }
 
 uint32_t ICACHE_RAM_ATTR CRSF::GetRCdataLastRecv()
@@ -509,7 +513,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
         uint32_t packetRate;
-        if (CRSF::UARTcurrentBaud == 115200 && CRSF::RequestedRCpacketInterval == 2000)
+        if (CRSF::TxToHandsetBauds[UARTcurrentBaudIdx] == 115200 && CRSF::RequestedRCpacketInterval == 2000)
         {
             packetRate = 40000; //constrain to 250hz max
         }
@@ -805,8 +809,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         }
 
         // if the package is long we need to split it up so it fits in the sending interval
-        if (packageLength > MAX_BYTES_SENT_IN_UART_OUT) {
-            writeLength = MAX_BYTES_SENT_IN_UART_OUT;
+        if (packageLength > maxPacketBytes) {
+            writeLength = maxPacketBytes;
         } else {
             writeLength = packageLength;
         }
@@ -875,6 +879,15 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 #endif
 }
 
+void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
+{
+    uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
+    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.95 (fow slop)
+    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 95 / 100;
+    maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
+    DBGLN("Adjusted max packet size %u", maxPacketBytes);
+}
+
 bool CRSF::UARTwdt()
 {
     uint32_t now = millis();
@@ -898,10 +911,11 @@ bool CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            uint32_t UARTrequestedBaud = (UARTcurrentBaud == CRSF_OPENTX_FAST_BAUDRATE) ?
-                CRSF_OPENTX_SLOW_BAUDRATE : CRSF_OPENTX_FAST_BAUDRATE;
-
+            UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
+            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
+
+            adjustMaxPacketSize();
 
             SerialOutFIFO.flush();
 #ifdef PLATFORM_ESP32
@@ -922,7 +936,6 @@ bool CRSF::UARTwdt()
             USART2->CR1 |= USART_CR1_UE;
             #endif
 #endif
-            UARTcurrentBaud = UARTrequestedBaud;
             duplex_set_RX();
             // cleanup input buffer
             flush_port_input();
@@ -932,6 +945,12 @@ bool CRSF::UARTwdt()
         DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
+        if (retval)
+        {
+            // Speed up the cycling
+            UARTwdtLastChecked -= 3 * (UARTwdtInterval >> 2);
+        }
+
         GoodPktsCountResult = GoodPktsCount;
         BadPktsCountResult = BadPktsCount;
         BadPktsCount = 0;
@@ -945,7 +964,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
