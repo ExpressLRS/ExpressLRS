@@ -315,7 +315,7 @@ uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_val
     uint8_t chunks = 0;    
     uint8_t currentPacketSize;    
     
-    uint16_t chunkMax = maxPacketBytes-6;
+    uint16_t chunkMax = maxPacketBytes-8;
 
     /**
      *calculate how many chunks needed for this field 
@@ -882,8 +882,8 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
-    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.95 (fow slop)
-    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 95 / 100;
+    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.85 (leeway)
+    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 85 / 100;
     maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
     DBGLN("Adjusted max packet size %u", maxPacketBytes);
 }
