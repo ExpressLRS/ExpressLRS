@@ -22,6 +22,17 @@
 #define DefaultPowerEnum PWR_50mW
 #define MinPower PWR_10mW
 
+#elif defined(TARGET_NAMIMNORC_TX)
+#if TARGET_MODULE_2400
+#define MaxPower PWR_1000mW
+#define DefaultPowerEnum PWR_50mW
+#define MinPower PWR_25mW
+#else
+#define MaxPower PWR_2000mW
+#define DefaultPowerEnum PWR_50mW
+#define MinPower PWR_10mW
+#endif
+
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define MaxPower PWR_1000mW
 #define DefaultPowerEnum PWR_50mW
