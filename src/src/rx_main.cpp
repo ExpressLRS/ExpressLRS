@@ -787,8 +787,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     LastValidPacket = now;
 
-    getRFlinkInfo();
-
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
@@ -807,7 +805,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         break;
     }
 
-    LQCalc.add(); // Received a packet, that's the definition of LQ
+    // Store the LQ/RSSI/Antenna
+    getRFlinkInfo();
+    // Received a packet, that's the definition of LQ
+    LQCalc.add();
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
