@@ -23,9 +23,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#include "ESP8266_hwTimer.h"
-extern hwTimer hwTimer;
-
 #include "config.h"
 extern RxConfig config;
 
@@ -278,11 +275,6 @@ static void startWifi() {
 
 void BeginWebUpdate(void)
 {
-  hwTimer.stop();
-
-  Radio.RXdoneCallback = NULL;
-  Radio.TXdoneCallback = NULL;
-
   DBGLN("Stopping Radio");
   Radio.End();
 

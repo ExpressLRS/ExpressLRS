@@ -21,9 +21,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#include "ESP32_hwTimer.h"
-extern hwTimer hwTimer;
-
 #include "CRSF.h"
 extern CRSF crsf;
 
@@ -273,7 +270,6 @@ static void startWifi() {
 void BeginWebUpdate()
 {
     DBGLN("Stopping Radio");
-    hwTimer.stop();
     Radio.End();
     crsf.End();
 

@@ -772,10 +772,16 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-void beginWebsever()
+static void beginWebsever()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
+
+    // Set transmit power to minimum
+    POWERMGNT P;
+    P.init();
+    P.setPower(MinPower);
+
     BeginWebUpdate();
     webUpdateMode = true;
 #endif

@@ -485,6 +485,19 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
+static void beginWebsever()
+{
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    hwTimer.stop();
+
+    // Set transmit power to minimum
+    POWERMGNT.setPower(MinPower);
+
+    BeginWebUpdate();
+    webUpdateMode = true;
+#endif
+}
+
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
@@ -603,9 +616,8 @@ void registerLuaParameters() {
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
         setLuaCommandValue(&luaWebUpdate,2); //running status
-        webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
-        BeginWebUpdate();
+        beginWebsever();
       } else if (arg > 0 && arg < 4) //start command, 1 = start
                               //2 = running
                               //3 = request confirmation
@@ -996,8 +1008,7 @@ void loop()
     //start webupdate, there might be wrong configuration flashed.
     if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
       DBGLN("No CRSF ever detected, starting WiFi");
-      webUpdateMode = true;
-      BeginWebUpdate();
+      beginWebsever();
     }
   #endif
   if (webUpdateMode)
