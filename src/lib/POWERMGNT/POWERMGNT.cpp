@@ -22,7 +22,7 @@ PowerLevels_e POWERMGNT::incPower()
 
 PowerLevels_e POWERMGNT::decPower()
 {
-    if (CurrentPower > 0)
+    if (CurrentPower > MinPower)
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
@@ -134,8 +134,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     int8_t rfpower = -18;
     switch (Power)
     {
-    case PWR_10mW:
-        // Tx can not do less than 25 mW
     case PWR_25mW:
         rfpower = -18;
         Power = PWR_25mW;
@@ -276,6 +274,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_10mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-17);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            // Tx can not do less than 25 mW
+            Power = PWR_25mW;
+            Radio.SetOutputPower(-18);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-18);
         #else
@@ -285,6 +287,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_25mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-13);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-18);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-15);
         #else
@@ -294,6 +298,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_100mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-6);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-12);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-8);
         #else
@@ -303,6 +309,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_250mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-2);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-7);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-4);
         #elif TARGET_QK_JR_TX
@@ -311,11 +319,23 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
             Radio.SetOutputPower(-1);
         #endif
         break;
+    case PWR_500mW:
+        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-4);
+        #endif
+        break;
+    case PWR_1000mW:
+        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(2);
+        #endif
+        break;
     case PWR_50mW:
     default:
         Power = PWR_50mW;
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-9);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-15);
         #elif TARGET_HGLRC_Hermes_2400_TX
             Radio.SetOutputPower(-11);
         #else

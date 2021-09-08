@@ -37,7 +37,7 @@ local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
 
-local COL2 = 140 -- X position of second column
+local COL2 = 120 -- X position of second column
 
 local function getField(line)
   local counter = 1
@@ -375,7 +375,7 @@ local functions = {
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=nil },
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
 }
@@ -466,10 +466,11 @@ end
 
 local function lcd_title()
   lcd.clear()
-  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT)
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+  -- A bit weird but drawFilledRectangle won't overwrite the good/bad text, but fills its background
+  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT+FILL_WHITE)
   lcd.drawText(1, 0, title, INVERS)
-  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), INVERS + RIGHT)
 end
 
 -- Main

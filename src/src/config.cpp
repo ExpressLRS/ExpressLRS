@@ -13,9 +13,17 @@ TxConfig::Load()
     // Check if version number matches
     if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
-        // If not, revert to defaults for this version
-        DBGLN("EEPROM version mismatch! Resetting to defaults...");
-        SetDefaults();
+        // If the previous config schema is known, attempt an upgrade
+        if (m_config.version == 1)
+        {
+            UpgradeEepromV1ToV4();
+        }
+        else
+        {
+            // If not, revert to defaults for this version
+            DBGLN("EEPROM version mismatch! Resetting to defaults...");
+            SetDefaults();
+        }
     }
 
     m_modified = false;
@@ -165,6 +173,51 @@ TxConfig::SetDefaults()
         SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
     }
+    SetVtxBand(0);
+    SetVtxChannel(0);
+    SetVtxPower(0);
+    SetVtxPitmode(0);
+    Commit();
+
+    SetModelId(0);
+}
+
+void
+TxConfig::UpgradeEepromV1ToV4()
+{
+    DBGLN("EEPROM version 1 is out of date... upgrading to version 4");
+    
+    // Define a config struct based on the v1 EEPROM schema
+    struct Version1Config {
+        uint32_t    version;
+        uint32_t    rate;
+        uint32_t    tlm;
+        uint32_t    power;
+    };
+
+    Version1Config v1Config;
+
+    // Populate the v1 struct from eeprom
+    m_eeprom->Get(0, v1Config);
+    
+    // Set new config to old values, or defaults if they are new variables
+    m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
+
+    SetSSID("");
+    SetPassword("");
+
+    for (int i = 0; i < 64; ++i)
+    {
+        SetModelId(i);
+        SetRate(v1Config.rate);
+        SetTlm(v1Config.tlm);
+        SetPower(v1Config.power);
+        SetDynamicPower(0);
+        SetBoostChannel(0);
+        SetSwitchMode((uint8_t)smHybrid);
+        SetModelMatch(false);
+    }
+
     SetVtxBand(0);
     SetVtxChannel(0);
     SetVtxPower(0);
