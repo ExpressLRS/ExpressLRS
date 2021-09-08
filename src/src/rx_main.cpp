@@ -771,9 +771,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void beginWebsever()
 {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
 
     // Set transmit power to minimum
@@ -782,8 +782,8 @@ static void beginWebsever()
     P.setPower(MinPower);
 
     BeginWebUpdate();
-#endif
 }
+#endif
 
 void sampleButton(unsigned long now)
 {
@@ -1073,7 +1073,11 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode(unsigned long now)
 {
-    if (connectionState == connected || InBindingMode || IsWebUpdateMode)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    if (IsWebUpdateMode)
+        return;
+ #endif
+    if (connectionState == connected || InBindingMode)
         return;
 
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
@@ -1346,8 +1350,8 @@ void EnterBindingMode()
         DBGLN("Cannot enter binding mode!");
         return;
     }
-    if (IsWebUpdateMode) {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    if (IsWebUpdateMode) {
         wifiOff();
         IsWebUpdateMode = false;
         Radio.RXdoneCallback = &RXdoneISR;
@@ -1355,8 +1359,8 @@ void EnterBindingMode()
         Radio.Begin();
         crsf.Begin();
         hwTimer.resume();
-#endif
     }
+#endif
 
     // Set UID to special binding values
     UID[0] = BindingUID[0];
