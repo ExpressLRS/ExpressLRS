@@ -862,6 +862,9 @@ static void setupSerial()
 
 #if defined(PLATFORM_ESP8266)
     Serial.begin(CRSF_RX_BAUDRATE);
+    #if defined(RCVR_INVERT_TX)
+    USC0(UART0) |= BIT(UCTXI);
+    #endif
 #endif
 
 }
