@@ -703,15 +703,9 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
-    // If ModelId is not set (0xff): the XOR will be the same as if nothing was XORed
-    // If ModelId is set: only require the first 18 bits to match for a connection,
-    //     but only send data to the FC if the Id matches
-    uint8_t modelId = config.GetModelId();
-    uint8_t modelXor = (~modelId) & MODELMATCH_MASK;
-    bool modelMatched = Radio.RXdataBuffer[6] == (UID[5] ^ modelXor);
-    DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], UID[5], modelMatched);
-    if (!(modelMatched ||
-        (modelId != 0xff && ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) == (UID[5] & ~MODELMATCH_MASK)))))
+    // Only require the first 18 bits of the UID to match to establish a connection
+    // but the last 6 bits must modelmatch before sending any data to the FC            
+    if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
         return false;
 
     LastSyncPacket = now;
@@ -731,6 +725,11 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
         ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
         telemBurstValid = false;
     }
+
+    // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
+    uint8_t modelXor = (~config.GetModelId()) & MODELMATCH_MASK;
+    bool modelMatched = Radio.RXdataBuffer[6] == (UID[5] ^ modelXor);
+    DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], UID[5], modelMatched);
 
     if (connectionState == disconnected
         || NonceRX != Radio.RXdataBuffer[2]
@@ -815,7 +814,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 #if defined(DEBUG_RX_SCOREBOARD)
-    if (type != SYNC_PACKET) DBGW('R');
+    if (type != SYNC_PACKET) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately
