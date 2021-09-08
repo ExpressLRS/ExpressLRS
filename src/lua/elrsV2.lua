@@ -653,7 +653,7 @@ local function setOSvar()
       barColor = TITLE_BGCOLOR
       titleAdditionAttr = WHITE
     else
-      barColor = GREY_DEFAULT+FILL_WHITE
+      barColor = GREY_DEFAULT
       titleAdditionAttr = INVERS
     end
   else
@@ -661,7 +661,7 @@ local function setOSvar()
         barColor = TITLE_BGCOLOR
         titleAdditionAttr = MENU_TITLE_COLOR
       else
-        barColor = GREY_DEFAULT+FILL_WHITE
+        barColor = GREY_DEFAULT
         titleAdditionAttr = INVERS
     end
   end
