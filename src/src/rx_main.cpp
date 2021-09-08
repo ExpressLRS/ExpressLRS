@@ -802,10 +802,12 @@ void sampleButton(unsigned long now)
 
     if ((now > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
     { // button held down for WEB_UPDATE_PRESS_INTERVAL
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         if (!IsWebUpdateMode)
         {
             beginWebsever();
         }
+#endif
     }
     if ((now > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
