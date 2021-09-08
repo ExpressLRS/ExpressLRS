@@ -1236,7 +1236,8 @@ void loop()
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
-    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
+    if ((connectionState == disconnectPending) ||
+        ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket)))) // check if we lost conn.
     {
         LostConnection();
     }
@@ -1479,11 +1480,8 @@ void UpdateModelMatch(uint8_t model)
     if (config.IsModified())
     {
         config.Commit();
-        delay(100);
-    #if defined(PLATFORM_STM32)
-        HAL_NVIC_SystemReset();
-    #elif defined(PLATFORM_ESP8266)
-        ESP.restart();
-    #endif
+        // This will be called from ProcessRFPacket(), schedule a disconnect
+        // in the main loop once the ISR has exited
+        connectionState = disconnectPending;
     }
 }

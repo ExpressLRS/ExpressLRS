@@ -36,7 +36,8 @@ typedef enum
 {
     connected,
     tentative,
-    disconnected
+    disconnected,
+    disconnectPending // used on modelmatch change to drop the connection
 } connectionState_e;
 
 typedef enum
