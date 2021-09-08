@@ -482,15 +482,15 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void beginWebsever()
 {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
     // Set transmit power to minimum
     POWERMGNT.setPower(MinPower);
     BeginWebUpdate();
-#endif
 }
+#endif
 
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
