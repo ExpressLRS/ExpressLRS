@@ -72,9 +72,6 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 
 volatile uint8_t NonceTX;
 
-#ifdef PLATFORM_ESP32
-bool webUpdateMode = false;
-#endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
 
@@ -489,12 +486,9 @@ static void beginWebsever()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     hwTimer.stop();
-
     // Set transmit power to minimum
     POWERMGNT.setPower(MinPower);
-
     BeginWebUpdate();
-    webUpdateMode = true;
 #endif
 }
 
@@ -1006,12 +1000,12 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
+    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !IsWebUpdateMode){
       DBGLN("No CRSF ever detected, starting WiFi");
       beginWebsever();
     }
   #endif
-  if (webUpdateMode)
+  if (IsWebUpdateMode)
   {
     HandleWebUpdate();
     return;

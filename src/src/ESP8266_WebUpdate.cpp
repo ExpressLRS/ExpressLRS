@@ -56,6 +56,8 @@ static ESP8266WebServer server(80);
 
 static MDNSResponder::hMDNSService service;
 
+bool IsWebUpdateMode = false;
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -275,6 +277,8 @@ static void startWifi() {
 
 void BeginWebUpdate(void)
 {
+  IsWebUpdateMode = true;
+
   DBGLN("Stopping Radio");
   Radio.End();
 
