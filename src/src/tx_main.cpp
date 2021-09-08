@@ -640,11 +640,7 @@ void registerLuaParameters() {
         crsf.setSyncParams(5000); // 100hz
         delay(1000);
         crsf.disableOpentxSync();
-  #if defined(Regulatory_Domain_ISM_2400)
-        Radio.SetMode(SX1280_MODE_SLEEP);
-  #else
-        Radio.SetMode(SX127x_OPMODE_SLEEP);
-  #endif
+        POWERMGNT.setPower(MinPower);
         Radio.End();
         BluetoothJoystickBegin();
       } else if (arg > 0 && arg < 4) //start command, 1 = start
