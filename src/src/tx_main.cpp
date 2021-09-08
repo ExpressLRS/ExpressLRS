@@ -259,11 +259,11 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3]);
             crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            //crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower()); // TX power is updated when sent
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
-            crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+            // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
+            // -- rf_mode is updated when we change rates
+            // -- downlink_Link_quality is updated before the LQ period is incremented
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
             dynamic_power_updated = true;
@@ -327,6 +327,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
+  crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
 
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;
@@ -380,6 +381,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       if (WaitRXresponse == true)
       {
         WaitRXresponse = false;
+        crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
         LQCalc.inc();
         return;
       }
@@ -807,13 +809,17 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
-static void UpdateConnectDisconnectStatus(const uint32_t now)
+static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
   const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT);
-  if (LastTLMpacketRecvMillis && ((now - LastTLMpacketRecvMillis) < msConnectionLostTimeout))
+  // +2 to account for any rounding down and partial millis()
+  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  // Capture the last before now so it will always be <= now
+  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  const uint32_t now = millis();
+  if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
     connectionState = connected;
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
@@ -987,7 +993,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  UpdateConnectDisconnectStatus(now);
+  UpdateConnectDisconnectStatus();
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
 #if defined(PLATFORM_ESP32)
