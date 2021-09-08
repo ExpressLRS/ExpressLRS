@@ -14,7 +14,7 @@ TxConfig::Load()
     if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
         // If the previous config schema is known, attempt an upgrade
-        if (m_config.version = 1)
+        if (m_config.version == 1)
         {
             UpgradeEepromV1ToV4();
         }
