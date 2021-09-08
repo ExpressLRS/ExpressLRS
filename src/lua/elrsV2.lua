@@ -623,10 +623,8 @@ local function runPopupPage(event)
     end
     return 0
   end
-  
--- Init
-local function init()
-  lineIndex, edit = 0, false
+
+local function setLCDvar()
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 11
@@ -634,22 +632,46 @@ local function init()
     textYoffset = 10
     barHeight = 32
     textSize = 22
-    barColor = TITLE_BGCOLOR
-    titleAdditionAttr = WHITE
-  else
-    if LCD_W == 212 then
-        COL2 = 110
     else
-        COL2 = 70
+    if LCD_W == 212 then
+      COL2 = 110
+    else
+      COL2 = 70
     end  
-  maxLineIndex = 7
-  textXoffset = 0
-  textYoffset = 1
-  barHeight = 10
-  textSize = 8
-  barColor = GREY_DEFAULT+FILL_WHITE
-  titleAdditionAttr = INVERS
+    maxLineIndex = 7
+    textXoffset = 0
+    textYoffset = 1
+    barHeight = 10
+    textSize = 8
   end
+end
+
+local function setOSvar()
+  local ver, radio, maj, minor, rev, osname = getVersion()
+  if osname == "EdgeTX" then
+    if LCD_W == 480 then
+      barColor = TITLE_BGCOLOR
+      titleAdditionAttr = WHITE
+    else
+      barColor = GREY_DEFAULT+FILL_WHITE
+      titleAdditionAttr = INVERS
+    end
+  else
+    if LCD_W == 480 then
+        barColor = TITLE_BGCOLOR
+        titleAdditionAttr = MENU_TITLE_COLOR
+      else
+        barColor = GREY_DEFAULT+FILL_WHITE
+        titleAdditionAttr = INVERS
+    end
+  end
+end
+
+-- Init
+local function init()
+  lineIndex, edit = 0, false
+  setLCDvar()
+  setOSvar()
 end
 
 -- Main
