@@ -467,12 +467,7 @@ local function refreshNext()
     elseif time > fieldTimeout and not edit then
       if allParamsLoaded < 1 then
         crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
-        fieldTimeout = time + 500 -- 2s
-      end
-    elseif fieldPopup then
-      if time > fieldTimeout then
-        crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
-        fieldTimeout = time + fieldPopup.timeout
+        fieldTimeout = time + 300 -- 2s
       end
     end
   elseif command == 0x29 then
@@ -516,6 +511,7 @@ local function runDevicePage(event)
       functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
+      fieldId, fieldChunk = 1, 0
       folderAccess = 0
       allParamsLoaded = 0
     end
@@ -543,6 +539,7 @@ local function runDevicePage(event)
           functions[field.type+1].save(field)
           if field.type ~= 11 then
           allParamsLoaded = 0
+          fieldId = 1
           end
         end
       end
