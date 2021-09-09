@@ -563,7 +563,7 @@ local function runDevicePage(event)
   if elrsFlags > 0 then
     lcd_warn()
     else
-    for y = 1, maxLineIndex do
+    for y = 1, maxLineIndex+1 do
       local field = getField(pageOffset+y)
       if not field then
         break
@@ -633,12 +633,13 @@ local function runPopupPage(event)
 local function setLCDvar()
   if LCD_W == 480 then
     COL2 = 240
-    maxLineIndex = 11
+    maxLineIndex = 10
     textXoffset = 1
     textYoffset = 10
     barHeight = 32
     textSize = 22
     progressBarOffset = 0
+    outlineSpace = (barHeight-textSize)/2
     progressBarHeight = barHeight
     else
     if LCD_W == 212 then
@@ -646,15 +647,15 @@ local function setLCDvar()
     else
       COL2 = 70
     end  
-    maxLineIndex = 7
+    maxLineIndex = 6
     textXoffset = 0
     textYoffset = 2
     barHeight = 10
     textSize = 8
-    progressBarOffset = outlineSpace
+    progressBarOffset = 0
+    outlineSpace = (barHeight-textSize)/2
     progressBarHeight = barHeight-outlineSpace
   end
-  outlineSpace = (barHeight-textSize)/2
 end
 
 local function setOSvar()
