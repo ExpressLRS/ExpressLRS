@@ -11,6 +11,7 @@ volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
 volatile uint32_t hwTimer::PauseDuration = 0;
+bool hwTimer::running = false;
 bool hwTimer::alreadyInit = false;
 
 #if defined(TIM1)
@@ -42,6 +43,7 @@ void hwTimer::init()
 
 void hwTimer::stop()
 {
+    running = false;
     MyTim->pause();
     MyTim->setCount(0);
 }
@@ -63,6 +65,7 @@ void hwTimer::pause(uint32_t duration)
 void hwTimer::resume()
 {
     isTick = false;
+    running = true;
     #if defined(TARGET_TX)
     MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
     #else
@@ -75,7 +78,6 @@ void hwTimer::resume()
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    // timer should not be running when updateInterval() is called
     hwTimer::HWtimerInterval = newTimerInterval;
 }
 
