@@ -539,7 +539,9 @@ local function runDevicePage(event)
           fieldId, fieldChunk = field.id, 0
           fieldData = {}
           functions[field.type+1].save(field)
+          if field.type ~= 11 then
           allParamsLoaded = 0
+          end
         end
       end
     end
