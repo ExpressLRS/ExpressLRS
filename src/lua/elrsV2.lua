@@ -347,6 +347,7 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
+  initLineIndex()
   folderAccess = field.id
 end
 
