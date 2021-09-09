@@ -348,6 +348,7 @@ end
 
 local function fieldFolderOpen(field)
   initLineIndex()
+  pageOffset = 0
   folderAccess = field.id
 end
 
