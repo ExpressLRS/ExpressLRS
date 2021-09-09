@@ -45,6 +45,7 @@ local barHeight = 10
 local textSize = 8
 local titleAdditionAttr = 0
 local barColor = GREY
+progressBarColor = 0
 
 local function getField(line)
   local counter = 1
@@ -480,18 +481,19 @@ local function refreshNext()
 end
 
 local function lcd_title()
-    lcd.clear()
-    -- keep the title this way to keep the script from error when module is not set correctly
-    local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
-    if allParamsLoaded ~= 1 and fields_count > 0 then
-      lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, barColor)
-      lcd.drawGauge(0,0,COL2,barHeight,fieldId,fields_count)
-    else
-      lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, barColor)
-      lcd.drawText(textXoffset, (barHeight-textSize)/2, title, titleAdditionAttr)
-    end
-    lcd.drawText(LCD_W, (barHeight-textSize)/2, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + titleAdditionAttr)
+  local outlineSpace =  (barHeight-textSize)/2  
+  local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  lcd.clear()
+  -- keep the title this way to keep the script from error when module is not set correctly
+  if allParamsLoaded ~= 1 and fields_count > 0 then
+    lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, barColor)
+    lcd.drawGauge(0,outlineSpace,COL2,barHeight-outlineSpace,fieldId,fields_count,progressBarColor)
+  else
+    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, barColor)
+    lcd.drawText(textXoffset, outlineSpace, title, titleAdditionAttr)
   end
+  lcd.drawText(LCD_W, outlineSpace, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + titleAdditionAttr)
+end
   
 
 local function lcd_warn()
@@ -640,7 +642,7 @@ local function setLCDvar()
     end  
     maxLineIndex = 7
     textXoffset = 0
-    textYoffset = 1
+    textYoffset = 2
     barHeight = 10
     textSize = 8
   end
@@ -652,17 +654,21 @@ local function setOSvar()
     if LCD_W == 480 then
       barColor = TITLE_BGCOLOR
       titleAdditionAttr = WHITE
+      progressBarColor = GREEN
     else
       barColor = GREY_DEFAULT
       titleAdditionAttr = INVERS
+      progressBarColor = 0
     end
   else
     if LCD_W == 480 then
         barColor = TITLE_BGCOLOR
         titleAdditionAttr = MENU_TITLE_COLOR
+        progressBarColor = WARNING_COLOR
       else
         barColor = GREY_DEFAULT
         titleAdditionAttr = INVERS
+        progressBarColor = 0
     end
   end
 end
