@@ -45,7 +45,10 @@ local barHeight = 10
 local textSize = 8
 local titleAdditionAttr = 0
 local barColor = GREY
-progressBarColor = 0
+local progressBarColor = 0
+local outlineSpace = 1
+local progressBarOffset = 0
+local progressBarHeight = barHeight
 
 local function getField(line)
   local counter = 1
@@ -481,13 +484,12 @@ local function refreshNext()
 end
 
 local function lcd_title()
-  local outlineSpace =  (barHeight-textSize)/2  
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
   lcd.clear()
   -- keep the title this way to keep the script from error when module is not set correctly
   if allParamsLoaded ~= 1 and fields_count > 0 then
     lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, barColor)
-    lcd.drawGauge(0,outlineSpace,COL2,barHeight-outlineSpace,fieldId,fields_count,progressBarColor)
+    lcd.drawGauge(0,progressBarOffset,COL2,progressBarHeight,fieldId,fields_count,progressBarColor)
   else
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, barColor)
     lcd.drawText(textXoffset, outlineSpace, title, titleAdditionAttr)
@@ -634,6 +636,8 @@ local function setLCDvar()
     textYoffset = 10
     barHeight = 32
     textSize = 22
+    progressBarOffset = 0
+    progressBarHeight = barHeight
     else
     if LCD_W == 212 then
       COL2 = 110
@@ -645,7 +649,10 @@ local function setLCDvar()
     textYoffset = 2
     barHeight = 10
     textSize = 8
+    progressBarOffset = outlineSpace
+    progressBarHeight = barHeight-outlineSpace
   end
+  outlineSpace = (barHeight-textSize)/2
 end
 
 local function setOSvar()
