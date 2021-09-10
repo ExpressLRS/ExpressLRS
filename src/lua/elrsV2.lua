@@ -508,7 +508,6 @@ local function runDevicePage(event)
       fieldTimeout = getTime() + 200 -- 2s
       fieldId, fieldChunk = field.id, 0
       fieldData = {}
-      functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
       fieldId, fieldChunk = 1, 0
