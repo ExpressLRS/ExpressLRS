@@ -169,6 +169,7 @@ local function parseDeviceInfoMessage(data)
   for i=1, fields_count do
     fields[i] = { name=nil }
   end
+  fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
 end
 
 local function fieldGetValue(data, offset, size)
@@ -350,6 +351,7 @@ local function fieldFolderOpen(field)
   initLineIndex()
   pageOffset = 0
   folderAccess = field.id
+  fields[fields_count+1].parent = folderAccess
 end
 
 local function fieldFolderDisplay(field,y ,attr)
@@ -379,21 +381,29 @@ local function fieldCommandDisplay(field, y, attr)
   lcd.drawText(10, y, "[" .. field.name .. "]", attr + BOLD)
 end
 
+local function UIbackExec(field)
+  fieldId, fieldChunk = 1, 0
+  folderAccess = 0
+  allParamsLoaded = 0
+  fields[fields_count+1].parent = 255
+end
+
 local functions = {
-  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay },
-  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay },
-  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay },
-  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay },
-  nil,
-  nil,
-  nil,
-  nil,
-  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
+  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay }, --1
+  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay }, --2
+  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay }, --3
+  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay }, --4
+  nil, --5
+  nil, --6
+  nil, --7
+  nil, --8
+  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9
+  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13
+  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14
+  { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15
 }
 
 local function parseParameterInfoMessage(data)
@@ -435,9 +445,9 @@ local function parseParameterInfoMessage(data)
       if fieldPopup == nil then
         if fieldId == fields_count then
           allParamsLoaded = 1
-          fieldId = 1 + (fieldId % #fields)
+          fieldId = 1
         else
-          fieldId = 1 + (fieldId % #fields)
+          fieldId = 1 + (fieldId % (#fields-1))
         end
       end
     end
@@ -513,6 +523,7 @@ local function runDevicePage(event)
       fieldId, fieldChunk = 1, 0
       folderAccess = 0
       allParamsLoaded = 0
+      fields[fields_count+1].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -544,10 +555,10 @@ local function runDevicePage(event)
       end
     end
   elseif edit then
-    if event == EVT_VIRTUAL_INC or event == EVT_VIRTUAL_INC_REPT or event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_NEXT_REPT then
+  if event == EVT_VIRTUAL_DEC or event == EVT_VIRTUAL_DEC_REPT or event == EVT_VIRTUAL_PREV or event == EVT_VIRTUAL_PREV_REPT then
+    incrField(-1)
+  elseif event == EVT_VIRTUAL_INC or event == EVT_VIRTUAL_INC_REPT or event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_NEXT_REPT then
       incrField(1)
-    elseif event == EVT_VIRTUAL_DEC or event == EVT_VIRTUAL_DEC_REPT or event == EVT_VIRTUAL_PREV or event == EVT_VIRTUAL_PREV_REPT then
-      incrField(-1)
     end
   else
     if event == EVT_VIRTUAL_NEXT then
