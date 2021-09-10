@@ -650,7 +650,7 @@ local function setLCDvar()
     progressBarOffset = 0
     outlineSpace = (barHeight-textSize)/2
     progressBarHeight = barHeight
-    else
+  else
     if LCD_W == 212 then
       COL2 = 110
     else
@@ -667,36 +667,23 @@ local function setLCDvar()
   end
 end
 
-local function setOSvar()
-  local ver, radio, maj, minor, rev, osname = getVersion()
-  if osname == "EdgeTX" then
+local function setColorVar()
     if LCD_W == 480 then
-      barColor = TITLE_BGCOLOR
-      titleAdditionAttr = WHITE
-      progressBarColor = GREEN
+      barColor = (TITLE_BGCOLOR or TITLE_BGCOLOR)
+      titleAdditionAttr = (WHITE or MENU_TITLE_COLOR)
+      progressBarColor = (GREEN or WARNING_COLOR)
     else
       barColor = GREY_DEFAULT
       titleAdditionAttr = INVERS
       progressBarColor = 0
     end
-  else
-    if LCD_W == 480 then
-        barColor = TITLE_BGCOLOR
-        titleAdditionAttr = MENU_TITLE_COLOR
-        progressBarColor = WARNING_COLOR
-      else
-        barColor = GREY_DEFAULT
-        titleAdditionAttr = INVERS
-        progressBarColor = 0
-    end
   end
-end
 
 -- Init
 local function init()
   lineIndex, edit = 0, false
   setLCDvar()
-  setOSvar()
+  setColorVar()
 end
 
 -- Main
