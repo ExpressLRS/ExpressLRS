@@ -555,10 +555,10 @@ local function runDevicePage(event)
       end
     end
   elseif edit then
-  if event == EVT_VIRTUAL_DEC or event == EVT_VIRTUAL_DEC_REPT or event == EVT_VIRTUAL_PREV or event == EVT_VIRTUAL_PREV_REPT then
-    incrField(-1)
-  elseif event == EVT_VIRTUAL_INC or event == EVT_VIRTUAL_INC_REPT or event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_NEXT_REPT then
+    if event == EVT_VIRTUAL_NEXT then
       incrField(1)
+    elseif event == EVT_VIRTUAL_PREV then
+      incrField(-1)
     end
   else
     if event == EVT_VIRTUAL_NEXT then
