@@ -123,7 +123,7 @@ uint8_t baseMac[6];
   #define DYNPOWER_THRESH_UP              15
 #endif
 #if !defined(DYNPOWER_THRESH_DN)
-  #define DYNPOWER_THRESH_DN              30
+  #define DYNPOWER_THRESH_DN              21
 #endif
 #define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
