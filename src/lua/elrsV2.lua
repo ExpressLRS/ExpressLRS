@@ -391,9 +391,7 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function UIbackExec(field)
-  fieldId, fieldChunk = 1, 0
   folderAccess = 0
-  allParamsLoaded = 0
   fields[fields_count+1].parent = 255
 end
 
@@ -560,9 +558,11 @@ local function runDevicePage(event)
       fieldData = {}
       allParamsLoaded = 0
     else
-      fieldId, fieldChunk = 1, 0
+      if folderAccess == 0 then -- only do reload if we're in the root folder
+        fieldId, fieldChunk = 1, 0
+        allParamsLoaded = 0
+      end
       folderAccess = 0
-      allParamsLoaded = 0
       fields[fields_count+1].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
@@ -589,6 +589,7 @@ local function runDevicePage(event)
           fieldData = {}
           functions[field.type+1].save(field)
           if field.type < 11 then
+            fieldTimeout = 0 -- go fast
             allParamsLoaded = 0
             fieldId = 1
           end
