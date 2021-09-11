@@ -19,8 +19,8 @@ SX127xHal::SX127xHal()
 void SX127xHal::end()
 {
   RXenable(); // make sure the TX amp pin is disabled
-  SPI.end();
   detachInterrupt(GPIO_PIN_DIO0);
+  SPI.end();
 }
 
 void SX127xHal::init()
