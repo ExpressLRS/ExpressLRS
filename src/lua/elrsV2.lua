@@ -37,7 +37,18 @@ local allParamsLoaded = 0
 local folderAccess = 0
 local runningCommand = 0
 
-local COL2 = 70 -- X position of second column
+local COL2 = 70
+local maxLineIndex = 7
+local textXoffset = 0
+local textYoffset = 1
+local barHeight = 10
+local textSize = 8
+local titleAdditionAttr = 0
+local barColor = GREY
+local progressBarColor = 0
+local outlineSpace = 1
+local progressBarOffset = 0
+local progressBarHeight = barHeight
 
 local function getField(line)
   local counter = 1
@@ -115,8 +126,8 @@ local function selectField(step)
     field = getField(newLineIndex)
   until newLineIndex == lineIndex or (field and field.name)
   lineIndex = newLineIndex
-  if lineIndex > 7 + pageOffset then
-    pageOffset = lineIndex - 7
+  if lineIndex > maxLineIndex + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
+    pageOffset = lineIndex - maxLineIndex 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
   elseif lineIndex <= pageOffset then
     pageOffset = lineIndex - 1
   end
@@ -158,6 +169,7 @@ local function parseDeviceInfoMessage(data)
   for i=1, fields_count do
     fields[i] = { name=nil }
   end
+  fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
 end
 
 local function fieldGetValue(data, offset, size)
@@ -212,8 +224,9 @@ local function fieldSignedSave(field, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
-  lcd.drawNumber(COL2, y, field.value, LEFT + attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  -- lcd.drawNumber(COL2, y, field.value, LEFT + attr)    -- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) -- NOTE: original code getLastPos not available in Horus
+  lcd.drawText(COL2, y, field.value .. field.unit, attr)  -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- UINT8
@@ -274,8 +287,7 @@ local function formatFloat(num, decimals)
 end
 
 local function fieldFloatDisplay(field, y, attr)
-  lcd.drawText(COL2, y, formatFloat(field.value, field.prec), LEFT + attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  lcd.drawText(COL2, y, formatFloat(field.value, field.prec) .. field.unit, attr)
 end
 
 local function fieldFloatSave(field)
@@ -301,8 +313,9 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(COL2, y, field.values[field.value+1], attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  -- lcd.drawText(COL2, y, field.values[field.value+1], attr)			-- NOTE: original code getLastPos not available in Horus
+  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) 				-- NOTE: original code getLastPos not available in Horus
+  lcd.drawText(COL2, y, field.values[field.value+1] .. field.unit, attr) -- NOTE: Concenated fields instead of get lastPos
 end
 
 -- STRING
@@ -323,21 +336,26 @@ local function fieldStringSave(field)
 end
 
 local function fieldStringDisplay(field, y, attr)
-  lcd.drawText(0, y, field.name)
+  lcd.drawText(textXoffset, y, field.name)
   if edit == true and attr then
-    lcd.drawText(COL2, y, field.value, FIXEDWIDTH)
-    lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)
+    -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
+    -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
+	lcd.drawText(COL2, y, field.value, attr)
+    lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), attr)
   else
     lcd.drawText(COL2, y, field.value, attr)
   end
 end
 
 local function fieldFolderOpen(field)
+  initLineIndex()
+  pageOffset = 0
   folderAccess = field.id
+  fields[fields_count+1].parent = folderAccess
 end
 
 local function fieldFolderDisplay(field,y ,attr)
-  lcd.drawText(0, y, "> " .. field.name, attr + BOLD)
+  lcd.drawText(textXoffset, y, "> " .. field.name, attr + BOLD)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -360,24 +378,32 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-  lcd.drawText(10, y, "[" .. field.name .. "]", attr)
+  lcd.drawText(10, y, "[" .. field.name .. "]", attr + BOLD)
+end
+
+local function UIbackExec(field)
+  fieldId, fieldChunk = 1, 0
+  folderAccess = 0
+  allParamsLoaded = 0
+  fields[fields_count+1].parent = 255
 end
 
 local functions = {
-  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay },
-  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay },
-  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay },
-  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay },
-  nil,
-  nil,
-  nil,
-  nil,
-  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay },
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay },
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay },
-  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay },
+  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay }, --1
+  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay }, --2
+  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay }, --3
+  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay }, --4
+  nil, --5
+  nil, --6
+  nil, --7
+  nil, --8
+  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9
+  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13
+  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14
+  { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15
 }
 
 local function parseParameterInfoMessage(data)
@@ -419,9 +445,9 @@ local function parseParameterInfoMessage(data)
       if fieldPopup == nil then
         if fieldId == fields_count then
           allParamsLoaded = 1
-          fieldId = 1 + (fieldId % #fields)
+          fieldId = 1
         else
-          fieldId = 1 + (fieldId % #fields)
+          fieldId = 1 + (fieldId % (#fields-1))
         end
       end
     end
@@ -448,10 +474,10 @@ local function refreshNext()
     if time > devicesRefreshTimeout and fields_count < 1  then
       devicesRefreshTimeout = time + 100 -- 1s
       crossfireTelemetryPush(0x28, { 0x00, 0xEF })
-    elseif time > fieldTimeout and not edit then --reload lua field
+    elseif time > fieldTimeout and not edit then
       if allParamsLoaded < 1 then
         crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
-        fieldTimeout = time + 500 -- 2s
+        fieldTimeout = time + 300 -- 2s
       end
     end
   elseif command == 0x29 then
@@ -465,13 +491,24 @@ local function refreshNext()
 end
 
 local function lcd_title()
-  lcd.clear()
-  lcd.drawFilledRectangle(0, 0, LCD_W, 8, GREY_DEFAULT)
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
-  lcd.drawText(1, 0, title, INVERS)
-  lcd.drawText(LCD_W, 0, tostring(badPkt) .. "/" .. tostring(goodPkt), INVERS + RIGHT)
+  lcd.clear()
+  -- keep the title this way to keep the script from error when module is not set correctly
+  if allParamsLoaded ~= 1 and fields_count > 0 then
+    lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, barColor)
+    lcd.drawGauge(0,progressBarOffset,COL2,progressBarHeight,fieldId,fields_count,progressBarColor)
+  else
+    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, barColor)
+    lcd.drawText(textXoffset, outlineSpace, title, titleAdditionAttr)
+  end
+  lcd.drawText(LCD_W, outlineSpace, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + titleAdditionAttr)
 end
+  
 
+local function lcd_warn()
+  lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
+  lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
+end
 -- Main
 local function runDevicePage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
@@ -481,11 +518,12 @@ local function runDevicePage(event)
       fieldTimeout = getTime() + 200 -- 2s
       fieldId, fieldChunk = field.id, 0
       fieldData = {}
-      functions[field.type+1].save(field)
       allParamsLoaded = 0
     else
+      fieldId, fieldChunk = 1, 0
       folderAccess = 0
       allParamsLoaded = 0
+      fields[fields_count+1].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -509,14 +547,17 @@ local function runDevicePage(event)
           fieldId, fieldChunk = field.id, 0
           fieldData = {}
           functions[field.type+1].save(field)
+          if field.type < 11 then
           allParamsLoaded = 0
+          fieldId = 1
+          end
         end
       end
     end
   elseif edit then
-    if event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_NEXT_REPT then
+    if event == EVT_VIRTUAL_NEXT then
       incrField(1)
-    elseif event == EVT_VIRTUAL_PREV or event == EVT_VIRTUAL_PREV_REPT then
+    elseif event == EVT_VIRTUAL_PREV then
       incrField(-1)
     end
   else
@@ -529,23 +570,21 @@ local function runDevicePage(event)
 
   lcd_title()
   if elrsFlags > 0 then
-    --lcd.drawText(20,10,"WARNING :", DBLSIZE + BLINK)
-    lcd.drawText(20,15,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
-    lcd.drawText(20,40,"ok",BLINK + INVERS)
-  else
-    for y = 1, 7 do
+    lcd_warn()
+    else
+    for y = 1, maxLineIndex+1 do
       local field = getField(pageOffset+y)
       if not field then
         break
       elseif field.name == nil then
-        lcd.drawText(0, 1+8*y, "...")
+        lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
         if field.type < 11 then
-          lcd.drawText(0, 1+8*y, field.name)
+          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name)
         end
         if functions[field.type+1].display then
-          functions[field.type+1].display(field, 1+8*y, attr)
+          functions[field.type+1].display(field, y*textSize+textYoffset, attr)
         end
       end
     end
@@ -554,55 +593,97 @@ local function runDevicePage(event)
 end
 
 local function runPopupPage(event)
-  if event == EVT_VIRTUAL_EXIT then             -- exit script
-    fieldTimeout = getTime() + 200 -- 2s
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
-    fieldChunk = 0
-    fieldData = {}
-    allParamsLoaded = 0
-    fieldPopup = nil
-    runningCommand = 0
-  return 0
-  end
-  if getTime() > fieldTimeout then
-    fieldId = fieldPopup.id
-    crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldPopup.id, fieldChunk })
-    fieldTimeout = getTime() + fieldPopup.timeout
-  end
-  if command == 0x2B then
-    parseParameterInfoMessage(data)
-    fieldTimeout = 0
-  end
-  local result
-  if fieldPopup.status == 3 then
-    runningCommand = 1
-    result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.previousInfo, event)
-  else
-    if fieldPopup.status == 2 then
-      runningCommand = 1
-    end
-    if fieldPopup.status == 0 and runningCommand == 1 then
+    if event == EVT_VIRTUAL_EXIT then             -- exit script
+      fieldTimeout = getTime() + 200 -- 2s
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+      fieldChunk = 0
+      fieldData = {}
+      allParamsLoaded = 0
       fieldPopup = nil
       runningCommand = 0
-      return 0
+    return 0
     end
-    result = popupWarning(fieldPopup.info, event)
+    if getTime() > fieldTimeout then
+      fieldId = fieldPopup.id
+      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldPopup.id, fieldChunk })
+      fieldTimeout = getTime() + fieldPopup.timeout
+    end
+    if command == 0x2B then
+      parseParameterInfoMessage(data)
+      fieldTimeout = 0
+    end
+    local result
+    if fieldPopup.status == 3 then
+      runningCommand = 1
+      result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.previousInfo, event)
+    else
+      if fieldPopup.status == 2 then
+        runningCommand = 1
+      end
+      if fieldPopup.status == 0 and runningCommand == 1 then
+        fieldPopup = nil
+        runningCommand = 0
+        return 0
+      end
+      result = popupWarning(fieldPopup.info, event)
+    end
+    if result == "OK" then
+      fieldPopup.status = 2
+      result = popupWarning("OK IS PRESSED", event)
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
+    elseif result == "CANCEL" then
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+      runningCommand = 0
+      fieldPopup = nil
+    end
+    return 0
   end
-  if result == "OK" then
-    fieldPopup.status = 2
-    result = popupWarning("OK IS PRESSED", event)
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
-  elseif result == "CANCEL" then
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
-    runningCommand = 0
-    fieldPopup = nil
+
+local function setLCDvar()
+  if LCD_W == 480 then
+    COL2 = 240
+    maxLineIndex = 10
+    textXoffset = 1
+    textYoffset = 10
+    barHeight = 32
+    textSize = 22
+    progressBarOffset = 0
+    outlineSpace = (barHeight-textSize)/2
+    progressBarHeight = barHeight
+  else
+    if LCD_W == 212 then
+      COL2 = 110
+    else
+      COL2 = 70
+    end  
+    maxLineIndex = 6
+    textXoffset = 0
+    textYoffset = 2
+    barHeight = 10
+    textSize = 8
+    progressBarOffset = 0
+    outlineSpace = (barHeight-textSize)/2
+    progressBarHeight = barHeight-outlineSpace
   end
-  return 0
 end
+
+local function setColorVar()
+    if LCD_W == 480 then
+      barColor = (TITLE_BGCOLOR or TITLE_BGCOLOR)
+      titleAdditionAttr = (WHITE or MENU_TITLE_COLOR)
+      progressBarColor = (GREEN or WARNING_COLOR)
+    else
+      barColor = GREY_DEFAULT
+      titleAdditionAttr = INVERS
+      progressBarColor = 0
+    end
+  end
 
 -- Init
 local function init()
   lineIndex, edit = 0, false
+  setLCDvar()
+  setColorVar()
 end
 
 -- Main

@@ -21,9 +21,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#include "ESP32_hwTimer.h"
-extern hwTimer hwTimer;
-
 #include "CRSF.h"
 extern CRSF crsf;
 
@@ -58,6 +55,8 @@ static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static WebServer server(80);
+
+bool IsWebUpdateMode = false;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -272,8 +271,9 @@ static void startWifi() {
 
 void BeginWebUpdate()
 {
+    IsWebUpdateMode = true;
+
     DBGLN("Stopping Radio");
-    hwTimer.stop();
     Radio.End();
     crsf.End();
 
