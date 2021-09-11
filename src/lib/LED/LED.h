@@ -89,31 +89,38 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
 void startupLEDs()
 {
 #if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
-    // do startup blinkies for fun
-    constexpr uint32_t colors[8] =
-    {
-        0xFFFFFF,     // white
-        0xFF00FF,     // magenta
-        0x8000FF,     // violet
-        0x0000FF,     // blue
-        0x00FF00,     // green
-        0xFFFF00,     // yellow
-        0xFF8000,     // orange
-        0xFF0000      // red
-    };
-    constexpr uint8_t N_COLORS = sizeof(colors)/sizeof(colors[0]);
-
     WS281Binit();
-    for (uint8_t i = 0; i < N_COLORS; i++)
+
+    #ifdef PLATFORM_ESP32
+    // Only do the blinkies if it was NOT a software reboot
+    if (esp_reset_reason() != ESP_RST_SW)
+    #endif
     {
-        WS281BsetLED(colors[i]);
-        delay(1000/N_COLORS);
+        // do startup blinkies for fun
+        constexpr uint32_t colors[8] =
+        {
+            0xFFFFFF,     // white
+            0xFF00FF,     // magenta
+            0x8000FF,     // violet
+            0x0000FF,     // blue
+            0x00FF00,     // green
+            0xFFFF00,     // yellow
+            0xFF8000,     // orange
+            0xFF0000      // red
+        };
+        constexpr uint8_t N_COLORS = sizeof(colors)/sizeof(colors[0]);
+
+        for (uint8_t i = 0; i < N_COLORS; i++)
+        {
+            WS281BsetLED(colors[i]);
+            delay(1000/N_COLORS);
+        }
+        for (uint8_t i = 0; i < N_COLORS; i++)
+        {
+            WS281BsetLED(colors[N_COLORS-i-1]);
+            delay(1000/N_COLORS);
+        }
+        WS281BsetLED((uint32_t)0);
     }
-    for (uint8_t i = 0; i < N_COLORS; i++)
-    {
-        WS281BsetLED(colors[N_COLORS-i-1]);
-        delay(1000/N_COLORS);
-    }
-    WS281BsetLED((uint32_t)0);
 #endif
 }

@@ -180,6 +180,10 @@ typedef enum
     CRSF_OUT_OF_RANGE = 127,
 } crsf_value_type_e;
 
+// These flags are or'ed with the field type above to hide the field from the normal LUA view
+#define CRSF_FIELD_HIDDEN 0x80          // marked as hidden in all LUA responses
+#define CRSF_FIELD_ELRS_HIDDEN 0x40     // marked as hidden when talking to ELRS specific LUA
+
 /**
  * Define the shape of a standard header
  */
@@ -364,6 +368,7 @@ struct tagLuaItem_command {
     struct tagLuaProperties1 luaProperties1;
     const char* const label1; //command name
     struct tagLuaCommandProperties luaProperties2;
+    const char *defaultInfo; //default command info message
     const char *label2; //command info
     uint8_t size;
 } PACKED;
