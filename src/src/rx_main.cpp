@@ -136,7 +136,6 @@ bool buttonDown = false;     //is the button current pressed down?
 uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
 
-bool webUpdateMode = false;
 bool disableWebServer = false;
 ///////////////////////////////////////////////
 
@@ -821,14 +820,19 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-void beginWebsever()
-{
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+static void beginWebsever()
+{
     hwTimer.stop();
+
+    // Set transmit power to minimum
+    POWERMGNT P;
+    P.init();
+    P.setPower(MinPower);
+
     BeginWebUpdate();
-    webUpdateMode = true;
-#endif
 }
+#endif
 
 void sampleButton(unsigned long now)
 {
@@ -847,10 +851,12 @@ void sampleButton(unsigned long now)
 
     if ((now > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
     { // button held down for WEB_UPDATE_PRESS_INTERVAL
-        if (!webUpdateMode)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        if (!IsWebUpdateMode)
         {
             beginWebsever();
         }
+#endif
     }
     if ((now > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
     {
@@ -1123,7 +1129,11 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode(unsigned long now)
 {
-    if (connectionState == connected || InBindingMode || webUpdateMode)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    if (IsWebUpdateMode)
+        return;
+ #endif
+    if (connectionState == connected || InBindingMode)
         return;
 
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
@@ -1202,17 +1212,17 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
+    if (!disableWebServer && (connectionState == disconnected) && !IsWebUpdateMode && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
 
-    if (!disableWebServer && (connectionState == disconnected) && !webUpdateMode && InBindingMode && now > 60000)
+    if (!disableWebServer && (connectionState == disconnected) && !IsWebUpdateMode && InBindingMode && now > 60000)
     {
         beginWebsever();
     }
 
-    if (webUpdateMode)
+    if (IsWebUpdateMode)
     {
         WebUpdateLoop(now);
         return;
@@ -1397,17 +1407,17 @@ void EnterBindingMode()
         DBGLN("Cannot enter binding mode!");
         return;
     }
-    if (webUpdateMode) {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    if (IsWebUpdateMode) {
         wifiOff();
-        webUpdateMode = false;
+        IsWebUpdateMode = false;
         Radio.RXdoneCallback = &RXdoneISR;
         Radio.TXdoneCallback = &TXdoneISR;
         Radio.Begin();
         crsf.Begin();
         hwTimer.resume();
-#endif
     }
+#endif
 
     // Set UID to special binding values
     UID[0] = BindingUID[0];

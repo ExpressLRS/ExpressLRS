@@ -3,4 +3,6 @@
 
 void BeginWebUpdate(void);
 void HandleWebUpdate(void);
+
+extern bool IsWebUpdateMode;
 #endif

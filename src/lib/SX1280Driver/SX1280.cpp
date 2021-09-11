@@ -41,6 +41,7 @@ SX1280Driver::SX1280Driver()
 
 void SX1280Driver::End()
 {
+    instance->SetMode(SX1280_MODE_SLEEP);
     hal.end();
     instance->TXdoneCallback = &nullCallback; // remove callbacks
     instance->RXdoneCallback = &nullCallback;

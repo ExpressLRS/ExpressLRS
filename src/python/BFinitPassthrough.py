@@ -124,7 +124,7 @@ def reset_to_bootloader(args):
         dbg_print("  * Using half duplex (GHST)")
     else:
         BootloaderInitSeq = bootloader.get_init_seq('CRSF', args.type)
-        dbg_print("  * Using full duplex (CFSF)")
+        dbg_print("  * Using full duplex (CRSF)")
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip()
