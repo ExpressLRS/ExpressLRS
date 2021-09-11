@@ -57,6 +57,7 @@ bool SX127xDriver::Begin()
 
 void SX127xDriver::End()
 {
+  instance->SetMode(SX127x_OPMODE_SLEEP);
   hal.end();
   instance->TXdoneCallback = &nullCallback; // remove callbacks
   instance->RXdoneCallback = &nullCallback;

@@ -72,9 +72,6 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 
 volatile uint8_t NonceTX;
 
-#ifdef PLATFORM_ESP32
-bool webUpdateMode = false;
-#endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
 
@@ -487,6 +484,16 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+static void beginWebsever()
+{
+    hwTimer.stop();
+    // Set transmit power to minimum
+    POWERMGNT.setPower(MinPower);
+    BeginWebUpdate();
+}
+#endif
+
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
@@ -605,9 +612,8 @@ void registerLuaParameters() {
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
         setLuaCommandValue(&luaWebUpdate,2); //running status
-        webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
-        BeginWebUpdate();
+        beginWebsever();
       } else if (arg > 0 && arg < 4) //start command, 1 = start
                               //2 = running
                               //3 = request confirmation
@@ -636,11 +642,7 @@ void registerLuaParameters() {
         crsf.setSyncParams(5000); // 100hz
         delay(1000);
         crsf.disableOpentxSync();
-  #if defined(Regulatory_Domain_ISM_2400)
-        Radio.SetMode(SX1280_MODE_SLEEP);
-  #else
-        Radio.SetMode(SX127x_OPMODE_SLEEP);
-  #endif
+        POWERMGNT.setPower(MinPower);
         Radio.End();
         BluetoothJoystickBegin();
       } else if (arg > 0 && arg < 4) //start command, 1 = start
@@ -1000,13 +1002,12 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
+    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !IsWebUpdateMode){
       DBGLN("No CRSF ever detected, starting WiFi");
-      webUpdateMode = true;
-      BeginWebUpdate();
+      beginWebsever();
     }
   #endif
-  if (webUpdateMode)
+  if (IsWebUpdateMode)
   {
     HandleWebUpdate();
     return;
