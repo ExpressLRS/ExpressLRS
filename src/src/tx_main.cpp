@@ -656,7 +656,7 @@ void registerLuaParameters() {
       }
       else if (arg > 0 && arg < 4) //start command, 1 = start, 2 = running, 3 = request confirmation
       {
-        sendLuaCommandResponse(&luaBLEJoystick, 3, "Start BLE Joystck?");
+        sendLuaCommandResponse(&luaBLEJoystick, 3, "Start BLE Joystick?");
       }
       else if (arg == 5)
       {
