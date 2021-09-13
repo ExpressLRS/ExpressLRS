@@ -1245,9 +1245,9 @@ void EnterBindingMode()
       return;
   }
 
-  // wait for any TX to complete then disable the TX timer
-  while (busyTransmitting);
+  // Disable the TX timer and wait for any TX to complete
   hwTimer.stop();
+  while (busyTransmitting);
 
   // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();
