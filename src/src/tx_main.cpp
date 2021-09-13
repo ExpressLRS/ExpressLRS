@@ -631,7 +631,7 @@ void registerLuaParameters() {
       }
       else
       {
-        sendLuaCommandResponse(&luaWebUpdate, IsWebUpdateMode ? 2 : 0, IsWebUpdateMode ? "Wifi Running..." : "WiFi Cancelled");
+        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
       }
     });
 
@@ -667,7 +667,7 @@ void registerLuaParameters() {
       }
       else
       {
-        sendLuaCommandResponse(&luaBLEJoystick, BLEjoystickActive ? 2 : 0, BLEjoystickActive ? "Joystick Running..." : "Joystick Cancelled");
+        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
       }
     });
 
