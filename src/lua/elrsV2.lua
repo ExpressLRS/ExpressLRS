@@ -35,7 +35,9 @@ local fields_count = 0
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
-local runningCommand = 0
+local statusComplete = 0
+local commandRunningIndicator = 1
+local expectedChunks = -1
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -360,7 +362,7 @@ end
 
 local function fieldCommandLoad(field, data, offset)
   field.status = data[offset]
-  field.timeout = data[offset+1]
+  field.timeout = data[offset+1] / 10 -- make it into otx units :-(
   field.info, offset = fieldGetString(data, offset+2)
   if field.status == 0 then
     field.previousInfo = field.info
@@ -373,6 +375,8 @@ local function fieldCommandSave(field)
     field.status = 1
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
     fieldPopup = field
+    fieldPopup.lastStatus = 0
+    commandRunningIndicator = 1
     fieldTimeout = getTime() + field.timeout
   end
 end
@@ -382,9 +386,7 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function UIbackExec(field)
-  fieldId, fieldChunk = 1, 0
   folderAccess = 0
-  allParamsLoaded = 0
   fields[fields_count+1].parent = 255
 end
 
@@ -412,23 +414,43 @@ local function parseParameterInfoMessage(data)
     fieldChunk = 0
     return
   end
+  if #fieldData == 0 then
+    expectedChunks = -1
+  end
   local field = fields[fieldId]
   local chunks = data[4]
+  if chunks ~= expectedChunks and expectedChunks ~= -1 then
+    return -- we will ignore this and subsequent chunks till we send a new command
+  end
+  expectedChunks = chunks - 1
   for i=5, #data do
     fieldData[#fieldData + 1] = data[i]
   end
   if chunks > 0 then
     fieldChunk = fieldChunk + 1
+    statusComplete = 0
   else
     fieldChunk = 0
+    if #fieldData < 4 then -- short packet, invalid
+      fieldData = {}
+      return -- no data extraction
+    end
     field.id = fieldId
-    field.parent = fieldData[1]
-    field.type = fieldData[2] % 128
-    field.hidden = (bit32.rshift(fieldData[2], 7) == 1)
+    local parent = fieldData[1]
+    local type = fieldData[2] % 128
+    local hidden = (bit32.rshift(fieldData[2], 7) == 1)
+    if field.name ~= nil then -- already seen this field before, so we can validate this packet is correct
+      if field.parent ~= parent or field.type ~= type or field.hidden ~= hidden then
+        fieldData = {}
+        return -- no data extraction
+      end
+    end
+    field.parent = parent
+    field.type = type
+    field.hidden = hidden
     local name, i = fieldGetString(fieldData, 3)
     if name ~= "" then
       local indent = ""
-      local parent = field.parent
       while parent ~= 0 do
         indent = indent .. " "
         parent = fields[parent].parent
@@ -450,7 +472,11 @@ local function parseParameterInfoMessage(data)
           fieldId = 1 + (fieldId % (#fields-1))
         end
       end
+      fieldTimeout = getTime() + 200
+    else
+      fieldTimeout = getTime() + fieldPopup.timeout
     end
+    statusComplete = 1
     fieldData = {}
   end
 end
@@ -469,24 +495,31 @@ end
 
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
-  if command == nil then
-    local time = getTime()
-    if time > devicesRefreshTimeout and fields_count < 1  then
-      devicesRefreshTimeout = time + 100 -- 1s
-      crossfireTelemetryPush(0x28, { 0x00, 0xEF })
-    elseif time > fieldTimeout and not edit then
-      if allParamsLoaded < 1 then
-        crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
-        fieldTimeout = time + 300 -- 2s
-      end
-    end
-  elseif command == 0x29 then
+  if command == 0x29 then
     parseDeviceInfoMessage(data)
   elseif command == 0x2B then
     parseParameterInfoMessage(data)
-    fieldTimeout = 0
+    if allParamsLoaded < 1 or statusComplete == 0 then
+      fieldTimeout = 0 -- go fast until we have complete status record
+    end
   elseif command == 0x2E then
     parseElrsInfoMessage(data)
+  end
+
+  local time = getTime()
+  if fieldPopup then
+    if time > fieldTimeout and fieldPopup.status ~= 3 then
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
+      fieldTimeout = time + fieldPopup.timeout
+    end
+  elseif time > devicesRefreshTimeout and fields_count < 1  then
+    devicesRefreshTimeout = time + 100 -- 1s
+    crossfireTelemetryPush(0x28, { 0x00, 0xEF })
+  elseif time > fieldTimeout and not edit then
+    if allParamsLoaded < 1 or statusComplete == 0 then
+      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
+      fieldTimeout = time + 300 -- 3s
+    end
   end
 end
 
@@ -509,20 +542,26 @@ local function lcd_warn()
   lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
   lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
 end
+
 -- Main
 local function runDevicePage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
-    if edit == true then
+    if edit == true then -- reload the field
       edit = false
       local field = getField(lineIndex)
       fieldTimeout = getTime() + 200 -- 2s
       fieldId, fieldChunk = field.id, 0
       fieldData = {}
-      allParamsLoaded = 0
+      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
     else
-      fieldId, fieldChunk = 1, 0
+      if folderAccess == 0 then -- only do reload if we're in the root folder
+        allParamsLoaded = 0
+        fieldTimeout = getTime() + 200 -- 2s
+        fieldId, fieldChunk = 1, 0
+        fieldData = {}
+        crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
+      end
       folderAccess = 0
-      allParamsLoaded = 0
       fields[fields_count+1].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
@@ -548,8 +587,10 @@ local function runDevicePage(event)
           fieldData = {}
           functions[field.type+1].save(field)
           if field.type < 11 then
-          allParamsLoaded = 0
-          fieldId = 1
+            -- we need a short time because if the packet rate changes we need time for the module to react
+            fieldTimeout = getTime() + 20
+            allParamsLoaded = 0
+            fieldId = 1
           end
         end
       end
@@ -571,7 +612,7 @@ local function runDevicePage(event)
   lcd_title()
   if elrsFlags > 0 then
     lcd_warn()
-    else
+  else
     for y = 1, maxLineIndex+1 do
       local field = getField(pageOffset+y)
       if not field then
@@ -592,53 +633,46 @@ local function runDevicePage(event)
   return 0
 end
 
+
 local function runPopupPage(event)
-    if event == EVT_VIRTUAL_EXIT then             -- exit script
-      fieldTimeout = getTime() + 200 -- 2s
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+  if event == EVT_VIRTUAL_EXIT then             -- exit script
+    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+    fieldTimeout = getTime() + 200 -- 2s
+  end
+
+  local result
+  if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
+      result = popupConfirmation(fieldPopup.info, "Stopped!", event)
+      fieldPopup.lastStatus = status
       fieldChunk = 0
       fieldData = {}
       allParamsLoaded = 0
       fieldPopup = nil
-      runningCommand = 0
-    return 0
-    end
-    if getTime() > fieldTimeout then
-      fieldId = fieldPopup.id
-      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldPopup.id, fieldChunk })
-      fieldTimeout = getTime() + fieldPopup.timeout
-    end
-    if command == 0x2B then
-      parseParameterInfoMessage(data)
-      fieldTimeout = 0
-    end
-    local result
-    if fieldPopup.status == 3 then
-      runningCommand = 1
-      result = popupConfirmation("PRESS [OK] to confirm", fieldPopup.previousInfo, event)
-    else
-      if fieldPopup.status == 2 then
-        runningCommand = 1
-      end
-      if fieldPopup.status == 0 and runningCommand == 1 then
-        fieldPopup = nil
-        runningCommand = 0
-        return 0
-      end
-      result = popupWarning(fieldPopup.info, event)
-    end
+  elseif fieldPopup.status == 3 then -- confirmation required
+    result = popupConfirmation(fieldPopup.info, "PRESS [OK] to confirm", event)
+    fieldPopup.lastStatus = status
     if result == "OK" then
-      fieldPopup.status = 2
-      result = popupWarning("OK IS PRESSED", event)
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
+      fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
+      fieldPopup.status = 4
     elseif result == "CANCEL" then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
-      runningCommand = 0
       fieldPopup = nil
     end
-    return 0
+  elseif fieldPopup.status == 2 then -- running
+    if statusComplete then
+      commandRunningIndicator = (commandRunningIndicator % 4) + 1
+    end
+    result = popupConfirmation(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
+    fieldPopup.lastStatus = status
+    if result == "CANCEL" then
+      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+      fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
+      fieldPopup = nil
+    end
   end
-
+  return 0
+end
+  
 local function setLCDvar()
   if LCD_W == 480 then
     COL2 = 240
@@ -697,7 +731,6 @@ local function run(event)
   if fieldPopup ~= nil then
     result = runPopupPage(event)
   else
-    runningCommand = 0
     result = runDevicePage(event)
   end
 

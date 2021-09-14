@@ -8,7 +8,6 @@ const char txDeviceName[] = TX_DEVICE_NAME;
 
 extern CRSF crsf;
 
-static uint8_t allLUAparamSent = 0;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
@@ -20,48 +19,155 @@ static const void *paramDefinitions[32] = {0};
 static luaCallback paramCallbacks[32] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
+static uint8_t nextStatusChunk = 0;
 
-#define TYPE(T) (struct T *)p,((struct T *)p)->size
-static uint8_t iterateLUAparams(uint8_t idx, uint8_t chunk)
-{
-  uint8_t retval = 0;
-  struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)paramDefinitions[idx];
-  if (p != 0) {
-    switch(p->type) {
-      case CRSF_UINT8:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT8,TYPE(tagLuaItem_uint8));
-        break;
-      case CRSF_UINT16:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_UINT16,TYPE(tagLuaItem_uint16));
-        break;
-      case CRSF_STRING:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_STRING,TYPE(tagLuaItem_string));
-        break;
-      case CRSF_INFO:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_INFO,TYPE(tagLuaItem_string));
-        break;
-      case CRSF_COMMAND:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_COMMAND,TYPE(tagLuaItem_command));
-        break;
-      case CRSF_TEXT_SELECTION:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_TEXT_SELECTION,TYPE(tagLuaItem_textSelection));
-        break;
-      case CRSF_FOLDER:
-        retval = crsf.sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,chunk,CRSF_FOLDER,TYPE(tagLuaItem_folder));
-        break;
-    }
-    if(retval == 0 && idx == lastLuaField){
-      allLUAparamSent = 1;
-    }
-  }
-  return retval;
+
+static uint8_t getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->label1) + 1;
+  next = stpcpy(next,p1->textOption) + 1;
+  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
+  next+=sizeof(p1->luaProperties2);
+  *next++=0; // default value
+  stpcpy(next,p1->label2);
+  return p1->size;
 }
-#undef TYPE
 
-void sendLuaFieldCrsf(uint8_t idx, uint8_t chunk){
-  if(!allLUAparamSent){
-    iterateLUAparams(idx,chunk);
+static uint8_t getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->label1) + 1;
+  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
+  next+=sizeof(p1->luaProperties2);
+  stpcpy(next,p1->label2);
+  return p1->size;
+}
+
+static uint8_t getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->label1) + 1;
+  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
+  next+=sizeof(p1->luaProperties2);
+  *next++=0; // default value
+  stpcpy(next,p1->label2);
+  return p1->size;
+}
+
+static uint8_t getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->label1) + 1;
+  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
+  next+=sizeof(p1->luaProperties2);
+  *next++=0; // default value
+  stpcpy(next,p1->label2);
+  return p1->size;
+}
+
+static uint8_t getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->label1) + 1;
+  stpcpy(next,p1->label2);
+  return p1->size;
+}
+
+static uint8_t getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
+  struct tagLuaItem_folder *p1 = (struct tagLuaItem_folder*)luaStruct;
+  stpcpy((char *)outarray,p1->label1);
+  return p1->size;
+}
+
+static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct tagLuaProperties1 *luaData)
+{
+  uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
+  
+  uint8_t chunkBuffer[256];
+
+  chunkBuffer[0] = luaData->parent;
+  chunkBuffer[1] = dataType;
+  // Set the hidden flag
+  chunkBuffer[1] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
+  if (crsf.elrsLUAmode) {
+    chunkBuffer[1] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
+
+  uint8_t dataSize;
+  switch(dataType) {
+    case CRSF_TEXT_SELECTION:
+      dataSize = getLuaTextSelectionStructToArray(luaData, chunkBuffer+2);
+      break;
+    case CRSF_COMMAND:
+      dataSize = getLuaCommandStructToArray(luaData, chunkBuffer+2);
+      break;
+    case CRSF_UINT8:
+      dataSize = getLuaUint8StructToArray(luaData,chunkBuffer+2);
+      break;
+    case CRSF_UINT16:
+      dataSize = getLuaUint16StructToArray(luaData,chunkBuffer+2);
+      break;
+    case CRSF_STRING:
+    case CRSF_INFO:
+      dataSize = getLuaStringStructToArray(luaData,chunkBuffer+2);
+      break;
+    case CRSF_FOLDER:
+      dataSize = getLuaFolderStructToArray(luaData,chunkBuffer+2);
+      break;
+    case CRSF_INT8:
+    case CRSF_INT16:
+    case CRSF_FLOAT:
+    case CRSF_OUT_OF_RANGE:
+    default:
+      return 0;
+  }
+
+  // maximum number of chunked bytes that can be sent in one response
+  // subtract the LUA overhead (8 bytes) bytes from the max packet size we can send
+  uint16_t chunkMax = CRSF::GetMaxPacketBytes() - 8;
+
+  // the adjusted size is 2 bytes less because the first 2 bytes of the LUA response are sent on every chunk
+  uint8_t adjustedSize = dataSize - 2;
+
+  // how many chunks to send this field
+  uint8_t chunks = adjustedSize / chunkMax;
+  uint8_t remainder = adjustedSize % chunkMax;
+  if(remainder != 0) {
+    chunks++;
+  }
+
+  // calculate this chunk size & packet size
+  uint8_t chunkSize;    
+  if (fieldChunk == chunks-1 && remainder != 0) {
+    chunkSize = remainder;
+  } else {
+    chunkSize = chunkMax;
+  }
+  
+  uint8_t packetSize = chunkSize + 2;
+  uint8_t outBuffer[packetSize]; 
+
+  outBuffer[0] = luaData->id;             // LUA data[3]
+  outBuffer[1] = chunks - (fieldChunk+1); // remaining chunks to send;
+  memcpy(outBuffer+2, chunkBuffer + (fieldChunk*chunkMax), chunkSize);
+
+  CRSF::packetQueueExtended(frameType, outBuffer, packetSize);
+
+  return chunks - (fieldChunk+1);
+}
+
+static void pushResponseChunk(struct tagLuaItem_command *cmd) {
+  DBGVLN("sending response for id=%d chunk=%d status=%d", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
+  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct tagLuaProperties1 *)cmd) == 0) {
+    nextStatusChunk = 0;
+  } else {
+    nextStatusChunk++;
+  }
+}
+
+void sendLuaCommandResponse(struct tagLuaItem_command *cmd, uint8_t status, const char *message) {
+  DBGVLN("Set Status=%d", status);
+  cmd->luaProperties2.status = status;
+  cmd->label2 = message;
+  cmd->size = LUA_COMMAND_SIZE((*cmd));
+  nextStatusChunk = 0;
+  pushResponseChunk(cmd);
 }
 
 void suppressCurrentLuaWarning(void){ //0 to suppress
@@ -138,7 +244,6 @@ bool luaHandleUpdateParameter()
 
   if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
       LUAfieldReported = millis();
-      allLUAparamSent = 0;
       populateHandler();
       sendELRSstatus();
   }
@@ -151,7 +256,6 @@ bool luaHandleUpdateParameter()
   switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-      allLUAparamSent = 0;
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for sending commit packet
@@ -160,22 +264,38 @@ bool luaHandleUpdateParameter()
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
       } else {
+        DBGVLN("Write lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         uint8_t param = crsf.ParameterUpdateData[1];
         if (param < 32 && paramCallbacks[param] != 0) {
-          paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
+          if (crsf.ParameterUpdateData[2] == 6 && nextStatusChunk != 0) {
+            pushResponseChunk((struct tagLuaItem_command *)paramDefinitions[param]);
+          } else {
+            paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
+          }
         }
       }
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        allLUAparamSent = 0;
         populateHandler();
         sendLuaDevicePacket();
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
-      sendLuaFieldCrsf(crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+      {
+        DBGVLN("Read lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        struct tagLuaItem_command *field = (struct tagLuaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
+        if (field != 0 && (field->luaProperties1.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
+          field->luaProperties2.status = 0;
+          field->label2 = field->defaultInfo;
+          field->size = LUA_COMMAND_SIZE((*field));
+        }
+        sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct tagLuaProperties1 *)field);
+      }
       break;
+
+    default:
+      DBGLN("Unknown LUA %x", crsf.ParameterUpdateData[0]);
   }
 
   UpdateParamReq = false;

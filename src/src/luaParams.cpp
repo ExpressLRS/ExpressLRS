@@ -72,11 +72,12 @@ struct tagLuaItem_command luaBind = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "Bind",
     {0,200},//status,timeout
-    "binding...",
+    "Enter Bind Mode?",
+    0,
     LUA_COMMAND_SIZE(luaBind)
 };
 struct tagLuaItem_string luaInfo = {
-    {0,0,(uint8_t)CRSF_INFO},//id,type
+    {0,0,(uint8_t)CRSF_INFO|CRSF_FIELD_ELRS_HIDDEN},//id,type
     "Bad/Good",
     thisCommit,
     LUA_STRING_SIZE(luaInfo)
@@ -93,7 +94,8 @@ struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "WiFi Update",
     {0,200},//status,timeout
-    "Proceed WiFi Update Mode?",
+    "Enter WiFi Update Mode?",
+    0,
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 
@@ -101,7 +103,8 @@ struct tagLuaItem_command luaBLEJoystick = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "BLE Joystick",
     {0,200},//status,timeout
-    "Enable BLE Joystick?",
+    "Start BLE Joystick?",
+    0,
     LUA_COMMAND_SIZE(luaBLEJoystick)
 };
 #endif
@@ -154,6 +157,7 @@ struct tagLuaItem_command luaVtxSend = {
     "Send VTx",
     {0,200},//status,timeout
     emptySpace,
+    0,
     LUA_COMMAND_SIZE(luaVtxSend)
 };
 
