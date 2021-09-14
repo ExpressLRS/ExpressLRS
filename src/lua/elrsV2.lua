@@ -210,7 +210,6 @@ local function fieldIntSave(index, value, size)
     frame[#frame + 1] = (bit32.rshift(value, 8*i) % 256)
   end
   crossfireTelemetryPush(0x2D, frame)
-  expectedChunks = -1
 end
 
 local function fieldUnsignedSave(field, size)
@@ -313,7 +312,6 @@ end
 
 local function fieldTextSelectionSave(field)
   crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.value })
-  expectedChunks = -1
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
@@ -337,7 +335,6 @@ local function fieldStringSave(field)
   end
   frame[#frame + 1] = 0
   crossfireTelemetryPush(0x2D, frame)
-  expectedChunks = -1
 end
 
 local function fieldStringDisplay(field, y, attr)
@@ -377,7 +374,6 @@ local function fieldCommandSave(field)
   if field.status < 4 then
     field.status = 1
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
-    expectedChunks = -1
     fieldPopup = field
     fieldPopup.lastStatus = 0
     statusComplete = 0
@@ -418,6 +414,9 @@ local function parseParameterInfoMessage(data)
     fieldData = {}
     fieldChunk = 0
     return
+  end
+  if #fieldData == 0 then
+    expectedChunks = -1
   end
   local field = fields[fieldId]
   local chunks = data[4]
@@ -510,19 +509,16 @@ local function refreshNext()
   if fieldPopup then
     if time > fieldTimeout and fieldPopup.status ~= 3 then
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
-      expectedChunks = -1
       statusComplete = 0
       fieldTimeout = time + fieldPopup.timeout
     end
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEF })
-    expectedChunks = -1
   elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 then
       crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
-      expectedChunks = -1
-      fieldTimeout = time + 300 -- 2s
+      fieldTimeout = time + 300 -- 3s
     end
   end
 end
@@ -569,7 +565,6 @@ local function runDevicePage(event)
     if elrsFlags > 0 then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, 0x2E, 0x00 })
-      expectedChunks = -1
     else
       local field = getField(lineIndex)
       if field.name then
@@ -589,7 +584,8 @@ local function runDevicePage(event)
           fieldData = {}
           functions[field.type+1].save(field)
           if field.type < 11 then
-            fieldTimeout = 0 -- go fast
+            -- we need a short time because if the packet rate changes we need time for the module to react
+            fieldTimeout = getTime() + 50
             allParamsLoaded = 0
             fieldId = 1
           end
@@ -613,7 +609,7 @@ local function runDevicePage(event)
   lcd_title()
   if elrsFlags > 0 then
     lcd_warn()
-    else
+  else
     for y = 1, maxLineIndex+1 do
       local field = getField(pageOffset+y)
       if not field then
@@ -637,9 +633,8 @@ end
 
 local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
-    fieldTimeout = getTime() + 200 -- 2s
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
-    expectedChunks = -1
+    fieldTimeout = getTime() + 200 -- 2s
     statusComplete = 0
   end
 
@@ -656,9 +651,8 @@ local function runPopupPage(event)
     fieldPopup.lastStatus = status
     if result == "OK" then
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
-      expectedChunks = -1
+      fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
       fieldPopup.status = 4
-      fieldTimeout = 0
     elseif result == "CANCEL" then
       fieldPopup = nil
     end
@@ -672,8 +666,7 @@ local function runPopupPage(event)
     statusComplete = 0
     if result == "CANCEL" then
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
-      expectedChunks = -1
-      fieldTimeout = 0
+      fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
       statusComplete = 0
       fieldPopup = nil
     end
