@@ -313,8 +313,20 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     --syncSpamCounter;
 }
 
+uint8_t adjustPacketRateForBaud(uint8_t rate)
+{
+  #if defined(Regulatory_Domain_ISM_2400)
+    // Packet rate limited to 250Hz if we are on 115k baud
+    if (crsf.GetCurrentBaudRate() == 115200 && rate == 0) {
+      rate = 1;
+    }
+  #endif
+  return rate;
+}
+
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
+  index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
@@ -504,7 +516,9 @@ void registerLuaParameters() {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       DBGLN("Request AirRate: %d", arg);
-      config.SetRate(RATE_MAX - 1 - arg);
+      uint8_t rate = RATE_MAX - 1 - arg;
+      rate = adjustPacketRateForBaud(rate);
+      config.SetRate(rate);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)RATE_MAX - arg),
@@ -681,7 +695,8 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - config.GetRate());
+  uint8_t rate = adjustPacketRateForBaud(RATE_MAX - 1 - config.GetRate());
+  setLuaTextSelectionValue(&luaAirRate, rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());

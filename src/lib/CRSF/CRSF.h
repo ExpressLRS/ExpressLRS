@@ -106,6 +106,7 @@ public:
     static void ResetMspQueue();
     static volatile uint32_t OpenTXsyncLastSent;
     static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
+    static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
 #endif
 private:
     Stream *_dev;
