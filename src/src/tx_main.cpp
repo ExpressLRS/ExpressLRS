@@ -641,7 +641,6 @@ void registerLuaParameters() {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
         BLEjoystickActive = true;
         DBGLN("BLE Joystick Mode Requested!");
         hwTimer.stop();
@@ -653,6 +652,7 @@ void registerLuaParameters() {
         POWERMGNT.setPower(MinPower);
         Radio.End();
         BluetoothJoystickBegin();
+        sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
       }
       else if (arg > 0 && arg < 4) //start command, 1 = start, 2 = running, 3 = request confirmation
       {
