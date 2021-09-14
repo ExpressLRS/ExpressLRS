@@ -122,6 +122,7 @@ int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
+static bool connectionHasModelMatch;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 
 // LED Blinking state
@@ -575,6 +576,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     PFDloop.reset();
     connectionStatePrev = connectionState;
     connectionState = tentative;
+    connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
     FreqCorrection = 0;
@@ -633,6 +635,117 @@ void GotConnection(unsigned long now)
 #endif
 }
 
+static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
+{
+    // Must be fully connected to process RC packets, prevents processing RC
+    // during sync, where packets can be received before connection
+    if (connectionState != connected)
+        return;
+
+    bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
+        NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+    TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+
+    // No channels packets to the FC if no model match
+    if (connectionHasModelMatch)
+        crsf.sendRCFrameToFC();
+}
+
+/**
+ * Process the assembled MSP packet in MspData[]
+ **/
+static void ICACHE_RAM_ATTR MspReceiveComplete()
+{
+    if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+    {
+        UpdateModelMatch(MspData[9]);
+    }
+    else
+    {
+        // No MSP data to the FC if no model match
+        if (connectionHasModelMatch)
+            crsf.sendMSPFrameToFC(MspData);
+    }
+
+    MspReceiver.Unlock();
+}
+
+static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
+{
+    // Must be fully connected to process MSP, prevents processing MSP
+    // during sync, where packets can be received before connection
+    if (connectionState != connected)
+        return;
+
+    bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
+    MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
+    if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
+    {
+        NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+    }
+
+    if (Radio.RXdataBuffer[1] == 1 && MspData[0] == MSP_ELRS_BIND)
+    {
+        OnELRSBindMSP(MspData);
+        MspReceiver.ResetState();
+    }
+    else if (MspReceiver.HasFinishedData())
+    {
+        MspReceiveComplete();
+    }
+}
+
+static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
+{
+    // Verify the first two of three bytes of the binding ID, which should always match
+    if (Radio.RXdataBuffer[4] != UID[3] || Radio.RXdataBuffer[5] != UID[4])
+        return false;
+
+    // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
+    // Only require the first 18 bits of the UID to match to establish a connection
+    // but the last 6 bits must modelmatch before sending any data to the FC            
+    if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
+        return false;
+
+    LastSyncPacket = now;
+#if defined(DEBUG_RX_SCOREBOARD)
+    DBGW('s');
+#endif
+
+    // Will change the packet air rate in loop() if this changes
+    ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
+    // Update switch mode encoding immediately
+    OtaSetSwitchMode((OtaSwitchMode_e)((Radio.RXdataBuffer[3] & 0b00000110) >> 1));
+    // Update TLM ratio
+    expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] & 0b00111000) >> 3);
+    if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLMrateIn)
+    {
+        DBGLN("New TLMrate: %d", TLMrateIn);
+        ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
+        telemBurstValid = false;
+    }
+
+    // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
+    uint8_t modelXor = (~config.GetModelId()) & MODELMATCH_MASK;
+    bool modelMatched = Radio.RXdataBuffer[6] == (UID[5] ^ modelXor);
+    DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], UID[5], modelMatched);
+
+    if (connectionState == disconnected
+        || NonceRX != Radio.RXdataBuffer[2]
+        || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
+    {
+        //DBGLN("\r\n%ux%ux%u", NonceRX, Radio.RXdataBuffer[2], Radio.RXdataBuffer[1]);
+        FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
+        NonceRX = Radio.RXdataBuffer[2];
+        TentativeConnection(now);
+        // connectionHasModelMatch must come after TentativeConnection, which resets it
+        connectionHasModelMatch = modelMatched;
+        return true;
+    }
+
+    return false;
+}
+
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
@@ -668,104 +781,40 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
-    bool telemetryConfirmValue;
-    bool currentMspConfirmValue;
     bool doStartTimer = false;
     unsigned long now = millis();
 
     LastValidPacket = now;
 
-    getRFlinkInfo();
-
     switch (type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        if (connectionState != disconnected)
-        {
-            telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
-                NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
-            TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-            crsf.sendRCFrameToFC();
-        }
+        ProcessRfPacket_RC();
         break;
-
     case MSP_DATA_PACKET:
-        currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
-        MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
-        if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
-        {
-            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-        }
-
-        if (Radio.RXdataBuffer[1] == 1 && MspData[0] == MSP_ELRS_BIND)
-        {
-            OnELRSBindMSP(MspData);
-            MspReceiver.ResetState();
-        }
-        else if (MspReceiver.HasFinishedData())
-        {
-            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
-            {
-                UpdateModelMatch(MspData[9]);
-            }
-            else
-            {
-                crsf.sendMSPFrameToFC(MspData);
-                MspReceiver.Unlock();
-            }
-        }
+        ProcessRfPacket_MSP();
         break;
-
     case TLM_PACKET: //telemetry packet from master
-
         // not implimented yet
         break;
-
     case SYNC_PACKET: //sync packet from master
-         if (Radio.RXdataBuffer[4] == UID[3] && Radio.RXdataBuffer[5] == UID[4] && Radio.RXdataBuffer[6] == (UID[5] ^ config.GetModelId()))
-         {
-             LastSyncPacket = now;
-#if defined(DEBUG_RX_SCOREBOARD)
-             DBGW('s');
-#endif
-             // Will change the packet air rate in loop() if this changes
-             ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] & 0b11000000) >> 6;
-             // Update switch mode encoding immediately
-             OtaSetSwitchMode((OtaSwitchMode_e)((Radio.RXdataBuffer[3] & 0b00000110) >> 1));
-             // Update TLM ratio
-             expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] & 0b00111000) >> 3);
-             if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLMrateIn)
-             {
-                 DBGLN("New TLMrate: %d", TLMrateIn);
-                 ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
-                 telemBurstValid = false;
-             }
-
-             if (connectionState == disconnected
-                || NonceRX != Radio.RXdataBuffer[2]
-                || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
-             {
-                 //DBGLN("\r\n%ux%ux%u", NonceRX, Radio.RXdataBuffer[2], Radio.RXdataBuffer[1]);
-                 FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-                 NonceRX = Radio.RXdataBuffer[2];
-                 TentativeConnection(now);
-                 doStartTimer = true;
-             }
-         }
-         break;
-
+        doStartTimer = ProcessRfPacket_SYNC(now);
+        break;
     default: // code to be executed if n doesn't match any cases
         break;
     }
 
-    LQCalc.add(); // Received a packet, that's the definition of LQ
+    // Store the LQ/RSSI/Antenna
+    getRFlinkInfo();
+    // Received a packet, that's the definition of LQ
+    LQCalc.add();
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
 
     doneProcessing = micros();
 #if defined(DEBUG_RX_SCOREBOARD)
-    if (type != SYNC_PACKET) DBGW('R');
+    if (type != SYNC_PACKET) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately
@@ -880,6 +929,8 @@ static void setupConfigAndPocCheck()
     eeprom.Begin();
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
+
+    DBGLN("ModelId=%u", config.GetModelId());
 
 #ifndef MY_UID
     // Increment the power on counter in eeprom
@@ -1198,7 +1249,8 @@ void loop()
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
-    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
+    if ((connectionState == disconnectPending) ||
+        ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket)))) // check if we lost conn.
     {
         LostConnection();
     }
@@ -1214,7 +1266,7 @@ void loop()
         {
             getRFlinkInfo();
         }
-        if (connectionState != disconnected)
+        if (connectionState != disconnected && connectionHasModelMatch)
         {
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = now;
@@ -1435,12 +1487,14 @@ void OnELRSBindMSP(uint8_t* packet)
 
 void UpdateModelMatch(uint8_t model)
 {
+    DBGLN("Set ModelId=%u", model);
+
     config.SetModelId(model);
-    config.Commit();
-    delay(100);
-#if defined(PLATFORM_STM32)
-    HAL_NVIC_SystemReset();
-#elif defined(PLATFORM_ESP8266)
-    ESP.restart();
-#endif
+    if (config.IsModified())
+    {
+        config.Commit();
+        // This will be called from ProcessRFPacket(), schedule a disconnect
+        // in the main loop once the ISR has exited
+        connectionState = disconnectPending;
+    }
 }

@@ -302,8 +302,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
-  if (!InBindingMode && config.GetModelMatch()) {
-    Radio.TXdataBuffer[6] ^= crsf.getModelID();
+  // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
+  if (!InBindingMode && config.GetModelMatch())
+  {
+    Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
 
   SyncPacketLastSent = millis();
@@ -547,7 +549,7 @@ void registerLuaParameters() {
       msp.makeCommand();
       msp.function = MSP_SET_RX_CONFIG;
       msp.addByte(MSP_ELRS_MODEL_ID);
-      msp.addByte(newModelMatch ? crsf.getModelID() : 0);
+      msp.addByte(newModelMatch ? crsf.getModelID() : 0xff);
       crsf.AddMspMessage(&msp);
     }
   });
@@ -759,11 +761,13 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
   // There's a near 100% chance we started up transmitting at Model 0's
-  // rate before we got the set modelid command from the handset, so do
-  // the normal way of switching rates with syncspam first
-  config.SetModelId(crsf.getModelID());
-  syncSpamCounter = syncSpamAmount;
-  ModelUpdatePending = true;
+  // rate before we got the set modelid command from the handset, so do the
+  // normal way of switching rates with syncspam first (but only if changing)
+  if (config.SetModelId(crsf.getModelID()))
+  {
+    syncSpamCounter = syncSpamAmount;
+    ModelUpdatePending = true;
+  }
 }
 
 static void ConfigChangeCommit()

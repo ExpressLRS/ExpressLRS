@@ -14,6 +14,9 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
+// Mask used to XOR the ModelId into the SYNC packet for ModelMatch
+#define MODELMATCH_MASK 0x3f
+
 enum OtaSwitchMode_e { sm1Bit, smHybrid, smHybridWide };
 void OtaSetSwitchMode(OtaSwitchMode_e mode);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
