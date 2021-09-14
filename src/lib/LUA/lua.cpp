@@ -153,7 +153,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 }
 
 static void pushResponseChunk(struct tagLuaItem_command *cmd) {
-  DBGVLN("sending response for id=%d chunk=%d status=%d", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
+  DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
   if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct tagLuaProperties1 *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
@@ -162,7 +162,7 @@ static void pushResponseChunk(struct tagLuaItem_command *cmd) {
 }
 
 void sendLuaCommandResponse(struct tagLuaItem_command *cmd, uint8_t status, const char *message) {
-  DBGVLN("Set Status=%d", status);
+  DBGVLN("Set Status=%u", status);
   cmd->luaProperties2.status = status;
   cmd->label2 = message;
   cmd->size = LUA_COMMAND_SIZE((*cmd));
@@ -264,7 +264,7 @@ bool luaHandleUpdateParameter()
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
       } else {
-        DBGVLN("Write lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        DBGVLN("Write lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         uint8_t param = crsf.ParameterUpdateData[1];
         if (param < 32 && paramCallbacks[param] != 0) {
           if (crsf.ParameterUpdateData[2] == 6 && nextStatusChunk != 0) {
@@ -283,11 +283,11 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
       {
-        DBGVLN("Read lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         struct tagLuaItem_command *field = (struct tagLuaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
         if (field != 0 && (field->luaProperties1.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
           field->luaProperties2.status = 0;
-          field->label2 = field->defaultInfo;
+          field->label2 = "";
           field->size = LUA_COMMAND_SIZE((*field));
         }
         sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct tagLuaProperties1 *)field);

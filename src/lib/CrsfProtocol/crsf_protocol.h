@@ -368,7 +368,6 @@ struct tagLuaItem_command {
     struct tagLuaProperties1 luaProperties1;
     const char* const label1; //command name
     struct tagLuaCommandProperties luaProperties2;
-    const char *defaultInfo; //default command info message
     const char *label2; //command info
     uint8_t size;
 } PACKED;

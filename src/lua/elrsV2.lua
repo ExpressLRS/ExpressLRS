@@ -362,7 +362,7 @@ end
 
 local function fieldCommandLoad(field, data, offset)
   field.status = data[offset]
-  field.timeout = data[offset+1] / 10 -- make it into otx units :-(
+  field.timeout = data[offset+1]
   field.info, offset = fieldGetString(data, offset+2)
   if field.status == 0 then
     field.previousInfo = field.info
