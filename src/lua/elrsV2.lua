@@ -376,7 +376,6 @@ local function fieldCommandSave(field)
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
     fieldPopup = field
     fieldPopup.lastStatus = 0
-    statusComplete = 0
     commandRunningIndicator = 1
     fieldTimeout = getTime() + field.timeout
   end
@@ -429,6 +428,7 @@ local function parseParameterInfoMessage(data)
   end
   if chunks > 0 then
     fieldChunk = fieldChunk + 1
+    statusComplete = 0
   else
     fieldChunk = 0
     if #fieldData < 4 then -- short packet, invalid
@@ -472,10 +472,11 @@ local function parseParameterInfoMessage(data)
           fieldId = 1 + (fieldId % (#fields-1))
         end
       end
+      fieldTimeout = getTime() + 200
     else
-      statusComplete = 1
       fieldTimeout = getTime() + fieldPopup.timeout
     end
+    statusComplete = 1
     fieldData = {}
   end
 end
@@ -498,7 +499,7 @@ local function refreshNext()
     parseDeviceInfoMessage(data)
   elseif command == 0x2B then
     parseParameterInfoMessage(data)
-    if statusComplete == 0 then
+    if allParamsLoaded < 1 or statusComplete == 0 then
       fieldTimeout = 0 -- go fast until we have complete status record
     end
   elseif command == 0x2E then
@@ -509,14 +510,13 @@ local function refreshNext()
   if fieldPopup then
     if time > fieldTimeout and fieldPopup.status ~= 3 then
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
-      statusComplete = 0
       fieldTimeout = time + fieldPopup.timeout
     end
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEF })
   elseif time > fieldTimeout and not edit then
-    if allParamsLoaded < 1 then
+    if allParamsLoaded < 1 or statusComplete == 0 then
       crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
       fieldTimeout = time + 300 -- 3s
     end
@@ -546,17 +546,20 @@ end
 -- Main
 local function runDevicePage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
-    if edit == true then
+    if edit == true then -- reload the field
       edit = false
       local field = getField(lineIndex)
       fieldTimeout = getTime() + 200 -- 2s
       fieldId, fieldChunk = field.id, 0
       fieldData = {}
-      allParamsLoaded = 0
+      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
     else
       if folderAccess == 0 then -- only do reload if we're in the root folder
-        fieldId, fieldChunk = 1, 0
         allParamsLoaded = 0
+        fieldTimeout = getTime() + 200 -- 2s
+        fieldId, fieldChunk = 1, 0
+        fieldData = {}
+        crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
       end
       folderAccess = 0
       fields[fields_count+1].parent = 255
@@ -585,7 +588,7 @@ local function runDevicePage(event)
           functions[field.type+1].save(field)
           if field.type < 11 then
             -- we need a short time because if the packet rate changes we need time for the module to react
-            fieldTimeout = getTime() + 50
+            fieldTimeout = getTime() + 20
             allParamsLoaded = 0
             fieldId = 1
           end
@@ -635,7 +638,6 @@ local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
     crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
     fieldTimeout = getTime() + 200 -- 2s
-    statusComplete = 0
   end
 
   local result
@@ -656,18 +658,15 @@ local function runPopupPage(event)
     elseif result == "CANCEL" then
       fieldPopup = nil
     end
-    statusComplete = 0
   elseif fieldPopup.status == 2 then -- running
     if statusComplete then
       commandRunningIndicator = (commandRunningIndicator % 4) + 1
     end
     result = popupConfirmation(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
     fieldPopup.lastStatus = status
-    statusComplete = 0
     if result == "CANCEL" then
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
       fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
-      statusComplete = 0
       fieldPopup = nil
     end
   end
