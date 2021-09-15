@@ -31,9 +31,93 @@ void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RG
 }
 #endif
 
+#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+static unsigned long blinkyUpdateTime;
+static enum {
+    STARTUP = 0,
+    NORMAL = 1
+} state;
+static uint8_t hue = 0, saturation = 200, lightness = 255;
+static uint8_t hueStepValue = 1;
+static uint8_t lightnessStep = 10;
+
+static RgbColor HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
+{
+    uint8_t region, remainder, p, q, t;
+
+    if (saturation == 0)
+    {
+        return RgbColor(lightness, lightness, lightness);
+    }
+
+    region = hue / 43;
+    remainder = (hue - (region * 43)) * 6; 
+
+    p = (lightness * (255 - saturation)) >> 8;
+    q = (lightness * (255 - ((saturation * remainder) >> 8))) >> 8;
+    t = (lightness * (255 - ((saturation * (255 - remainder)) >> 8))) >> 8;
+
+    switch (region)
+    {
+        case 0:
+            return RgbColor(lightness, t, p);
+        case 1:
+            return RgbColor(q, lightness, p);
+        case 2:
+            return RgbColor(p, lightness, t);
+        case 3:
+            return RgbColor(p, q, lightness);
+        case 4:
+            return RgbColor(t, p, lightness);
+        default:
+            return RgbColor(lightness, p, q);
+    }
+}
+
+static void blinkyUpdate() {
+    unsigned long now = millis();
+    if (blinkyUpdateTime > now)
+    {
+        return;
+    }
+
+    RgbColor rgb = HsvToRgb(hue, saturation, lightness);
+    WS281BsetLED(rgb.R, rgb.G, rgb.B);
+    DBGVLN("LED hue %u", hue);
+    if ((int)hue + hueStepValue > 255) {
+        if ((int)lightness - lightnessStep < 0) {
+            state = NORMAL;
+            return;
+        }
+        lightness -= lightnessStep;
+    } else {
+        hue += hueStepValue;
+    }
+    blinkyUpdateTime = now + 3000/(256/hueStepValue);
+}
+
+void startupLEDs()
+{
+    WS281Binit();
+    state = STARTUP;
+    #ifdef PLATFORM_ESP32
+    // Only do the blinkies if it was NOT a software reboot
+    if (esp_reset_reason() == ESP_RST_SW) {
+        state = NORMAL;
+    }
+    #endif
+    blinkyUpdateTime = 0;
+    hue = 0;
+    lightness = 255;
+}
+
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
-#if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || defined(WS2812_LED_IS_USED)
+    if (state == STARTUP)
+    {
+        blinkyUpdate();
+        return;
+    }
     constexpr uint32_t rate_colors[RATE_MAX] =
     {
         0x0000FF,     // 500/200 hz  blue
@@ -83,44 +167,13 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
             (color & 0xFF) * dim / 255
         );
     }
-#endif
 }
-
+#else
 void startupLEDs()
 {
-#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
-    WS281Binit();
-
-    #ifdef PLATFORM_ESP32
-    // Only do the blinkies if it was NOT a software reboot
-    if (esp_reset_reason() != ESP_RST_SW)
-    #endif
-    {
-        // do startup blinkies for fun
-        constexpr uint32_t colors[8] =
-        {
-            0xFFFFFF,     // white
-            0xFF00FF,     // magenta
-            0x8000FF,     // violet
-            0x0000FF,     // blue
-            0x00FF00,     // green
-            0xFFFF00,     // yellow
-            0xFF8000,     // orange
-            0xFF0000      // red
-        };
-        constexpr uint8_t N_COLORS = sizeof(colors)/sizeof(colors[0]);
-
-        for (uint8_t i = 0; i < N_COLORS; i++)
-        {
-            WS281BsetLED(colors[i]);
-            delay(1000/N_COLORS);
-        }
-        for (uint8_t i = 0; i < N_COLORS; i++)
-        {
-            WS281BsetLED(colors[N_COLORS-i-1]);
-            delay(1000/N_COLORS);
-        }
-        WS281BsetLED((uint32_t)0);
-    }
-#endif
 }
+
+void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
+{
+}
+#endif
