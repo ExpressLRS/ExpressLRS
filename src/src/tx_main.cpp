@@ -317,8 +317,14 @@ uint8_t adjustPacketRateForBaud(uint8_t rate)
 {
   #if defined(Regulatory_Domain_ISM_2400)
     // Packet rate limited to 250Hz if we are on 115k baud
-    if (crsf.GetCurrentBaudRate() == 115200 && rate == 0) {
-      rate = 1;
+    if (crsf.GetCurrentBaudRate() == 115200) {
+      while(rate < RATE_MAX) {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
+        if (ModParams->enum_rate >= RATE_250HZ) {
+          break;
+        }
+        rate++;
+      }
     }
   #endif
   return rate;
