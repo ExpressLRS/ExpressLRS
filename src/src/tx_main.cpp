@@ -701,8 +701,8 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  uint8_t rate = adjustPacketRateForBaud(RATE_MAX - 1 - config.GetRate());
-  setLuaTextSelectionValue(&luaAirRate, rate);
+  uint8_t rate = adjustPacketRateForBaud(config.GetRate());
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
