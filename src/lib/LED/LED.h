@@ -104,7 +104,7 @@ void startupLEDs()
     #endif
     blinkyColor.h = 0;
     blinkyColor.s = 255;
-    blinkyColor.v = 12;
+    blinkyColor.v = 128;
 
     LEDupdateCounterMillis = 0;
     LEDupdateInterval = 0;
