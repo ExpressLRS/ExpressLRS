@@ -41,13 +41,13 @@ static uint8_t hue = 0, saturation = 200, lightness = 255;
 static uint8_t hueStepValue = 1;
 static uint8_t lightnessStep = 10;
 
-static RgbColor HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
+static uint32_t HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
 {
     uint8_t region, remainder, p, q, t;
 
     if (saturation == 0)
     {
-        return RgbColor(lightness, lightness, lightness);
+        return lightness << 16 | lightness << 8 | lightness;
     }
 
     region = hue / 43;
@@ -60,17 +60,17 @@ static RgbColor HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
     switch (region)
     {
         case 0:
-            return RgbColor(lightness, t, p);
+            return lightness << 16 | t << 8 | p;
         case 1:
-            return RgbColor(q, lightness, p);
+            return q << 16 | lightness << 8 | p;
         case 2:
-            return RgbColor(p, lightness, t);
+            return p << 16 | lightness << 8 | t;
         case 3:
-            return RgbColor(p, q, lightness);
+            return p << 16 | q << 8 | lightness;
         case 4:
-            return RgbColor(t, p, lightness);
+            return t << 16 | p << 8 | lightness;
         default:
-            return RgbColor(lightness, p, q);
+            return lightness << 16 | p << 8 | q;
     }
 }
 
@@ -81,8 +81,8 @@ static void blinkyUpdate() {
         return;
     }
 
-    RgbColor rgb = HsvToRgb(hue, saturation, lightness);
-    WS281BsetLED(rgb.R, rgb.G, rgb.B);
+    uint32_t rgb = HsvToRgb(hue, saturation, lightness);
+    WS281BsetLED(rgb);
     DBGVLN("LED hue %u", hue);
     if ((int)hue + hueStepValue > 255) {
         if ((int)lightness - lightnessStep < 0) {
