@@ -110,6 +110,68 @@ void startupLEDs()
     LEDupdateInterval = 0;
 }
 
+static void brightnessFadeLED(uint8_t hue, uint8_t start, uint8_t end)
+{
+    static uint8_t lightness = 0;
+    static int8_t dir = 1;
+
+    if (lightness <= start)
+    {
+        lightness = start;
+        dir = 1;
+    }
+    else if (lightness >= end)
+    {
+        lightness = end;
+        dir = -1;
+    }
+
+    lightness += dir;
+
+    blinkyColor.h = hue;
+    blinkyColor.v = lightness;
+    WS281BsetLED(HsvToRgb());
+}
+
+static void hueFadeLED(uint8_t lightness, uint8_t start, uint8_t end)
+{
+    static uint8_t hue = 142;
+    static int8_t dir = 1;
+
+    if (start < end)
+    {
+        if (hue <= start)
+        {
+            hue = start;
+            dir = 1;
+        }
+        else if (hue >= end)
+        {
+            hue = end;
+            dir = -1;
+        }
+    }
+    else
+    {
+        if (hue >= start)
+        {
+            hue = start;
+            dir = -1;
+        }
+        else if (hue <= end)
+        {
+            hue = end;
+            dir = 1;
+        }
+    }
+
+    hue += dir;
+
+    blinkyColor.h = hue;
+    blinkyColor.v = lightness;
+    WS281BsetLED(HsvToRgb());
+}
+
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
     if (blinkyState == STARTUP)
@@ -124,38 +186,36 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
     constexpr uint8_t rate_hue[RATE_MAX] =
     {
         170,     // 500/200 hz  blue
-        85,     // 250/100 hz  green
-        21,     // 150/50 hz   orange
-        0      // 50/25 hz    red
+        85,      // 250/100 hz  green
+        21,      // 150/50 hz   orange
+        0        // 50/25 hz    red
     };
 
     static connectionState_e lastState = disconnected;
-    static uint8_t lastRate = 0xFF;
-    static uint32_t lastPower = 0xFFFFFFFF;
 
-    if ((connectionState == disconnected) && (now - LEDupdateCounterMillis > LEDupdateInterval))
-    {
-        static uint8_t lightness = 0;
-        static int8_t dir = 1;
-
-        if (lightness == 64)
+    if (now - LEDupdateCounterMillis > LEDupdateInterval) {
+        if (connectionState == disconnected)
         {
-            dir = -1;
+            brightnessFadeLED(rate_hue[rate], 0, 64);
+            LEDupdateInterval = NORMAL_UPDATE_INTERVAL;
         }
-        else if (lightness == 0)
+        else if (connectionState == wifiUpdate)
         {
-            dir = 1;
+            hueFadeLED(128, 85-15, 85+15); // Green cross-fade
+            LEDupdateInterval = 10;
         }
-
-        lightness += dir;
+        else if (connectionState == bleJoystick)
+        {
+            hueFadeLED(128, 170-15, 170+15); // Blue cross-fade
+            LEDupdateInterval = 10;
+        }
         lastState = connectionState;
-
-        blinkyColor.h = rate_hue[rate];
-        blinkyColor.v = lightness;
-        WS281BsetLED(HsvToRgb());
-
         LEDupdateCounterMillis = now;
     }
+
+    // 'connected' state LED updates, change color if rate and/or tx power change
+    static uint8_t lastRate = 0xFF;
+    static uint32_t lastPower = 0xFFFFFFFF;
     if (((connectionState != disconnected) && (lastState == disconnected)) || lastRate != rate || lastPower != power)
     {
         lastState = connectionState;
@@ -167,6 +227,7 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
         }
         blinkyColor.v = fmap(power, 0, PWR_COUNT-1, 10, 128);
         WS281BsetLED(HsvToRgb());
+        LEDupdateInterval = 1000;
     }
 }
 #else

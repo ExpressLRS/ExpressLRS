@@ -37,7 +37,9 @@ typedef enum
     connected,
     tentative,
     disconnected,
-    disconnectPending // used on modelmatch change to drop the connection
+    disconnectPending, // used on modelmatch change to drop the connection
+    wifiUpdate,
+    bleJoystick
 } connectionState_e;
 
 typedef enum
