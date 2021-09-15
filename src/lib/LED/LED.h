@@ -23,23 +23,17 @@ void WS281BsetLED(uint32_t color)
     strip.ClearTo(RgbColor(HtmlColor(color)));
     strip.Show();
 }
-
-void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RGB data
-{
-    strip.ClearTo(RgbColor(r, g, b));
-    strip.Show();
-}
 #endif
 
 #if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
-static unsigned long blinkyUpdateTime;
 static enum {
     STARTUP = 0,
     NORMAL = 1
 } state;
-static uint8_t hue = 0, saturation = 200, lightness = 255;
+static unsigned long blinkyUpdateTime;
+static uint8_t hue = 0, saturation = 255, lightness = 128;
 static uint8_t hueStepValue = 1;
-static uint8_t lightnessStep = 10;
+static uint8_t lightnessStep = 5;
 
 static uint32_t HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
 {
@@ -108,7 +102,7 @@ void startupLEDs()
     #endif
     blinkyUpdateTime = 0;
     hue = 0;
-    lightness = 255;
+    lightness = 128;
 }
 
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
@@ -118,54 +112,47 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
         blinkyUpdate();
         return;
     }
-    constexpr uint32_t rate_colors[RATE_MAX] =
+
+    constexpr uint8_t rate_hue[RATE_MAX] =
     {
-        0x0000FF,     // 500/200 hz  blue
-        0x00FF00,     // 250/100 hz  green
-        0xFF8000,     // 150/50 hz   orange
-        0xFF0000      // 50/25 hz    red
+        170,     // 500/200 hz  blue
+        85,     // 250/100 hz  green
+        21,     // 150/50 hz   orange
+        0      // 50/25 hz    red
     };
-    constexpr uint32_t LEDupdateInterval = 100;
-    static uint8_t LEDfade = 0;
-    static int8_t LEDfadeAmount = 2;
-    static uint32_t LEDupdateCounterMillis;
+    constexpr uint32_t LEDupdateInterval = 50;
+    static uint32_t nextUpdateTime = 0;
 
     static connectionState_e lastState = disconnected;
-    static uint32_t lastColor = 0xFFFFFFFF;
+    static uint8_t lastRate = 0xFF;
     static uint32_t lastPower = 0xFFFFFFFF;
 
-    uint32_t color = rate_colors[rate];
-    if ((connectionState == disconnected) && (now - LEDupdateCounterMillis > LEDupdateInterval))
+    if ((connectionState == disconnected) && (now > nextUpdateTime))
     {
-        if (LEDfade == 30)
+        static uint8_t lightness = 0;
+        static int8_t dir = 1;
+
+        if (lightness == 64)
         {
-            LEDfadeAmount = -2;
+            dir = -1;
         }
-        else if (LEDfade == 0)
+        else if (lightness == 0)
         {
-            LEDfadeAmount = 2;
+            dir = 1;
         }
 
-        LEDfade += LEDfadeAmount;
-        LEDupdateCounterMillis = now;
+        lightness += dir;
+        nextUpdateTime = now + LEDupdateInterval;
         lastState = connectionState;
-        WS281BsetLED(
-            (color >> 16) * LEDfade / 255,
-            ((color >> 8) & 0xFF) * LEDfade / 255,
-            (color & 0xFF) * LEDfade / 255
-        );
+        WS281BsetLED(HsvToRgb(rate_hue[rate], 255, lightness));
     }
-    if (((connectionState != disconnected) && (lastState == disconnected)) || lastColor != color || lastPower != power)
+    if (((connectionState != disconnected) && (lastState == disconnected)) || lastRate != rate || lastPower != power)
     {
         lastState = connectionState;
-        lastColor = color;
+        lastRate = rate;
         lastPower = power;
-        int dim = fmap(power, 0, PWR_COUNT-1, 10, 255);
-        WS281BsetLED(
-            (color >> 16) * dim / 255,
-            ((color >> 8) & 0xFF) * dim / 255,
-            (color & 0xFF) * dim / 255
-        );
+        uint8_t lightness = fmap(power, 0, PWR_COUNT-1, 10, 128);
+        WS281BsetLED(HsvToRgb(rate_hue[rate], 255, lightness));
     }
 }
 #else
