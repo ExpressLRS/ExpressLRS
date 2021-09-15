@@ -68,8 +68,7 @@ static uint32_t HsvToRgb(uint8_t hue, uint8_t saturation, uint8_t lightness)
     }
 }
 
-static void blinkyUpdate() {
-    unsigned long now = millis();
+static void blinkyUpdate(unsigned long now) {
     if (blinkyUpdateTime > now)
     {
         return;
@@ -109,7 +108,7 @@ void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, u
 {
     if (state == STARTUP)
     {
-        blinkyUpdate();
+        blinkyUpdate(now);
         return;
     }
 
