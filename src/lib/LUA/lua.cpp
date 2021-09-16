@@ -120,36 +120,26 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 
   // maximum number of chunked bytes that can be sent in one response
   // subtract the LUA overhead (8 bytes) bytes from the max packet size we can send
-  uint16_t chunkMax = CRSF::GetMaxPacketBytes() - 8;
+  uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 8;
 
   // the adjusted size is 2 bytes less because the first 2 bytes of the LUA response are sent on every chunk
   uint8_t adjustedSize = dataSize - 2;
 
-  // how many chunks to send this field
-  uint8_t chunks = adjustedSize / chunkMax;
-  uint8_t remainder = adjustedSize % chunkMax;
-  if(remainder != 0) {
-    chunks++;
-  }
-
-  // calculate this chunk size & packet size
-  uint8_t chunkSize;    
-  if (fieldChunk == chunks-1 && remainder != 0) {
-    chunkSize = remainder;
-  } else {
-    chunkSize = chunkMax;
-  }
+  // how many chunks needed to send this field (rounded up)
+  uint8_t chunkCnt = (adjustedSize + chunkMax - 1) / chunkMax;
+  // Data left to send is adjustedSize - chunks sent already
+  uint8_t chunkSize = min((uint8_t)(adjustedSize - (fieldChunk*chunkMax)), chunkMax);
   
   uint8_t packetSize = chunkSize + 2;
   uint8_t outBuffer[packetSize]; 
 
   outBuffer[0] = luaData->id;             // LUA data[3]
-  outBuffer[1] = chunks - (fieldChunk+1); // remaining chunks to send;
+  outBuffer[1] = chunkCnt - (fieldChunk+1); // remaining chunks to send;
   memcpy(outBuffer+2, chunkBuffer + (fieldChunk*chunkMax), chunkSize);
 
   CRSF::packetQueueExtended(frameType, outBuffer, packetSize);
 
-  return chunks - (fieldChunk+1);
+  return chunkCnt - (fieldChunk+1);
 }
 
 static void pushResponseChunk(struct tagLuaItem_command *cmd) {
