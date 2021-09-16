@@ -211,7 +211,7 @@ constexpr uint8_t LEDSEQ_NO_CROSSFIRE[] = {  10, 90 }; // 100ms on, 900ms off (o
 
 void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
 {
-    if (blinkyState == STARTUP && connectionState <= disconnectPending)
+    if (blinkyState == STARTUP && connectionState < FAILURE_STATES)
     {
         if (now - LEDupdateCounterMillis > LEDupdateInterval) {
             LEDupdateInterval = blinkyUpdate(now);

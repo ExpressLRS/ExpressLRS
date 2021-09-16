@@ -38,10 +38,14 @@ typedef enum
     tentative,
     disconnected,
     disconnectPending, // used on modelmatch change to drop the connection
+    MODE_STATES,
+    // States below here are special mode states
     wifiUpdate,
     bleJoystick,
-    radioFailed,
-    noCrossfire
+    noCrossfire,
+    // Failure states go below here to display immediately
+    FAILURE_STATES,
+    radioFailed
 } connectionState_e;
 
 typedef enum

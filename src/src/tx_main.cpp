@@ -1039,7 +1039,7 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  if (connectionState <= disconnectPending)
+  if (connectionState < MODE_STATES)
   {
     UpdateConnectDisconnectStatus();
   }
@@ -1058,7 +1058,7 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsfSeen == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState <= disconnectPending){
+    if(crsfSeen == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < MODE_STATES){
       DBGLN("No CRSF ever detected, starting WiFi");
       beginWebsever();
     }
