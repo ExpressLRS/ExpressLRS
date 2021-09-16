@@ -43,14 +43,9 @@ local COL2 = 70
 local maxLineIndex = 7
 local textXoffset = 0
 local textYoffset = 1
-local barHeight = 10
 local textSize = 8
-local titleAdditionAttr = 0
-local barColor = GREY
-local progressBarColor = 0
-local outlineSpace = 1
-local progressBarOffset = 0
-local progressBarHeight = barHeight
+local lcdIsColor
+local lcdFieldAttr
 
 local function getField(line)
   local counter = 1
@@ -338,11 +333,10 @@ local function fieldStringSave(field)
 end
 
 local function fieldStringDisplay(field, y, attr)
-  lcd.drawText(textXoffset, y, field.name)
   if edit == true and attr then
     -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
     -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
-	lcd.drawText(COL2, y, field.value, attr)
+    lcd.drawText(COL2, y, field.value, attr)
     lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), attr)
   else
     lcd.drawText(COL2, y, field.value, attr)
@@ -391,21 +385,21 @@ local function UIbackExec(field)
 end
 
 local functions = {
-  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay }, --1
-  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay }, --2
-  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay }, --3
-  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay }, --4
-  nil, --5
-  nil, --6
-  nil, --7
-  nil, --8
-  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11
-  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12
-  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13
-  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14
-  { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15
+  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay }, --1 UINT8(0)
+  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay }, --2 INT8(1)
+  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay }, --3 UINT16(2)
+  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay }, --4  INT16(3)
+  nil,
+  nil,
+  nil,
+  nil,
+  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9 FLOAT(8)
+  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10 SELECT(9)
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11 STRING(10)
+  { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13 INFO(12)
+  { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14 COMMAND(13)
+  { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
 }
 
 local function parseParameterInfoMessage(data)
@@ -525,16 +519,43 @@ end
 
 local function lcd_title()
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
-  lcd.clear()
-  -- keep the title this way to keep the script from error when module is not set correctly
-  if allParamsLoaded ~= 1 and fields_count > 0 then
-    lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, barColor)
-    lcd.drawGauge(0,progressBarOffset,COL2,progressBarHeight,fieldId,fields_count,progressBarColor)
+  if lcdIsColor then
+    -- Color screen
+    local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
+    local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
+    local barHeight = 30
+
+    lcd.setColor(CUSTOM_COLOR, EGREEN)
+    lcd.clear(CUSTOM_COLOR)
+    -- Field display area (white w/ 2px green border)
+    lcd.setColor(CUSTOM_COLOR, WHITE)
+    lcd.drawFilledRectangle(2, barHeight, LCD_W - 4, LCD_H - barHeight - 2, CUSTOM_COLOR)
+    -- title bar
+    lcd.setColor(CUSTOM_COLOR, BLACK)
+    lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
+    lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+    -- progress bar
+    local barW = (COL2-4)*fieldId/fields_count
+    lcd.setColor(CUSTOM_COLOR, WHITE)
+    lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EBLUE)
+    lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+    -- leave EBLUE as the custom color for text
   else
-    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, barColor)
-    lcd.drawText(textXoffset, outlineSpace, title, titleAdditionAttr)
+    -- B&W screen
+    local barHeight = 9
+
+    lcd.clear()
+    lcd.drawText(LCD_W, 1, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+    -- keep the title this way to keep the script from error when module is not set correctly
+    if allParamsLoaded ~= 1 and fields_count > 0 then
+      lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
+      lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
+    else
+      lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
+      lcd.drawText(textXoffset, 1, title, INVERS)
+    end
   end
-  lcd.drawText(LCD_W, outlineSpace, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + titleAdditionAttr)
 end
   
 
@@ -562,7 +583,9 @@ local function runDevicePage(event)
         crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
       end
       folderAccess = 0
-      fields[fields_count+1].parent = 255
+      if fields_count > 0 then
+        fields[fields_count+1].parent = 255
+      end
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -620,9 +643,9 @@ local function runDevicePage(event)
       elseif field.name == nil then
         lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
       else
-        local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or 0
-        if field.type < 11 then
-          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name)
+        local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or lcdFieldAttr
+        if field.type ~= 11 and field.type ~= 13 then -- if not folder or command
+          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, lcdFieldAttr)
         end
         if functions[field.type+1].display then
           functions[field.type+1].display(field, y*textSize+textYoffset, attr)
@@ -632,7 +655,6 @@ local function runDevicePage(event)
   end
   return 0
 end
-
 
 local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
@@ -674,16 +696,14 @@ local function runPopupPage(event)
 end
   
 local function setLCDvar()
+  lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
-    textXoffset = 1
+    textXoffset = 3
     textYoffset = 10
-    barHeight = 32
     textSize = 22
-    progressBarOffset = 0
-    outlineSpace = (barHeight-textSize)/2
-    progressBarHeight = barHeight
+    lcdFieldAttr = CUSTOM_COLOR
   else
     if LCD_W == 212 then
       COL2 = 110
@@ -693,31 +713,28 @@ local function setLCDvar()
     maxLineIndex = 6
     textXoffset = 0
     textYoffset = 2
-    barHeight = 10
     textSize = 8
-    progressBarOffset = 0
-    outlineSpace = (barHeight-textSize)/2
-    progressBarHeight = barHeight-outlineSpace
+    lcdFieldAttr = 0
   end
 end
 
-local function setColorVar()
-    if LCD_W == 480 then
-      barColor = (TITLE_BGCOLOR or TITLE_BGCOLOR)
-      titleAdditionAttr = (WHITE or MENU_TITLE_COLOR)
-      progressBarColor = (GREEN or WARNING_COLOR)
-    else
-      barColor = GREY_DEFAULT
-      titleAdditionAttr = INVERS
-      progressBarColor = 0
-    end
-  end
+local function setMock()
+  -- Setup fields to display if running in Simulator
+  local _, rv = getVersion()
+  if string.sub(rv, -5) ~= "-simu" then return end
+  local mock = loadScript("elrsmock.lua")
+  if mock == nil then return end
+  fields, badPkt, goodPkt = mock(), 0, 500
+  fields_count = #fields - 1
+  fieldId = #fields - 3
+  initLineIndex()
+end
 
 -- Init
 local function init()
   lineIndex, edit = 0, false
   setLCDvar()
-  setColorVar()
+  setMock()
 end
 
 -- Main
