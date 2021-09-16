@@ -832,6 +832,7 @@ static void beginWebsever()
     P.init();
     P.setPower(MinPower);
 
+    connectionState = wifiUpdate;
     BeginWebUpdate();
 }
 #endif
@@ -854,7 +855,7 @@ void sampleButton(unsigned long now)
     if ((now > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
     { // button held down for WEB_UPDATE_PRESS_INTERVAL
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        if (!IsWebUpdateMode)
+        if (connectionState != wifiUpdate)
         {
             beginWebsever();
         }
@@ -1131,11 +1132,7 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode(unsigned long now)
 {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    if (IsWebUpdateMode)
-        return;
- #endif
-    if (connectionState == connected || InBindingMode)
+    if (connectionState == connected || connectionState == wifiUpdate || InBindingMode)
         return;
 
     // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
@@ -1214,17 +1211,17 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!disableWebServer && (connectionState == disconnected) && !IsWebUpdateMode && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
+    if (!disableWebServer && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
 
-    if (!disableWebServer && (connectionState == disconnected) && !IsWebUpdateMode && InBindingMode && now > 60000)
+    if (!disableWebServer && (connectionState == disconnected) && InBindingMode && now > 60000)
     {
         beginWebsever();
     }
 
-    if (IsWebUpdateMode)
+    if (connectionState == wifiUpdate)
     {
         WebUpdateLoop(now);
         return;
@@ -1410,9 +1407,8 @@ void EnterBindingMode()
         return;
     }
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    if (IsWebUpdateMode) {
+    if (connectionState == wifiUpdate) {
         wifiOff();
-        IsWebUpdateMode = false;
         Radio.RXdoneCallback = &RXdoneISR;
         Radio.TXdoneCallback = &TXdoneISR;
         Radio.Begin();
