@@ -982,9 +982,11 @@ void setup()
   if (!init_success)
   {
     #ifdef PLATFORM_ESP32
+    connectionState = radioFailed;
     BeginWebUpdate();
     while (1)
     {
+      updateLEDs(millis(), radioFailed, 0, 0);
       HandleWebUpdate();
       delay(1);
     }
