@@ -79,36 +79,40 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
   
-  uint8_t chunkBuffer[256];
-
-  chunkBuffer[0] = luaData->parent;
-  chunkBuffer[1] = dataType;
+  // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
+  // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
+  // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
+  uint8_t chunkBuffer[256+4];
+  // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
+  chunkBuffer[2] = luaData->parent;
+  chunkBuffer[3] = dataType;
   // Set the hidden flag
-  chunkBuffer[1] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
+  chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
   if (crsf.elrsLUAmode) {
-    chunkBuffer[1] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
+    chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
 
+  uint8_t *chunkStart = &chunkBuffer[4];
   uint8_t dataSize;
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
-      dataSize = getLuaTextSelectionStructToArray(luaData, chunkBuffer+2);
+      dataSize = getLuaTextSelectionStructToArray(luaData, chunkStart);
       break;
     case CRSF_COMMAND:
-      dataSize = getLuaCommandStructToArray(luaData, chunkBuffer+2);
+      dataSize = getLuaCommandStructToArray(luaData, chunkStart);
       break;
     case CRSF_UINT8:
-      dataSize = getLuaUint8StructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaUint8StructToArray(luaData, chunkStart);
       break;
     case CRSF_UINT16:
-      dataSize = getLuaUint16StructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaUint16StructToArray(luaData, chunkStart);
       break;
     case CRSF_STRING:
     case CRSF_INFO:
-      dataSize = getLuaStringStructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      dataSize = getLuaFolderStructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaFolderStructToArray(luaData, chunkStart);
       break;
     case CRSF_INT8:
     case CRSF_INT16:
@@ -118,26 +122,20 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       return 0;
   }
 
-  // maximum number of chunked bytes that can be sent in one response
-  // subtract the LUA overhead (8 bytes) bytes from the max packet size we can send
-  uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 8;
-
-  // the adjusted size is 2 bytes less because the first 2 bytes of the LUA response are sent on every chunk
-  uint8_t adjustedSize = dataSize - 2;
-
-  // how many chunks needed to send this field (rounded up)
-  uint8_t chunkCnt = (adjustedSize + chunkMax - 1) / chunkMax;
+  // Maximum number of chunked bytes that can be sent in one response
+  // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
+  // 2 bytes Lua chunk header: FieldId, ChunksRemain
+  uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 6 - 2;
+  // How many chunks needed to send this field (rounded up)
+  uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
-  uint8_t chunkSize = min((uint8_t)(adjustedSize - (fieldChunk*chunkMax)), chunkMax);
-  
-  uint8_t packetSize = chunkSize + 2;
-  uint8_t outBuffer[packetSize]; 
+  uint8_t chunkSize = min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
 
-  outBuffer[0] = luaData->id;             // LUA data[3]
-  outBuffer[1] = chunkCnt - (fieldChunk+1); // remaining chunks to send;
-  memcpy(outBuffer+2, chunkBuffer + (fieldChunk*chunkMax), chunkSize);
-
-  CRSF::packetQueueExtended(frameType, outBuffer, packetSize);
+  // Move chunkStart back 2 bytes to add (FieldId + ChunksRemain) to each packet
+  chunkStart = &chunkBuffer[fieldChunk * chunkMax];
+  chunkStart[0] = luaData->id;                 // FieldId
+  chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
+  CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
 
   return chunkCnt - (fieldChunk+1);
 }

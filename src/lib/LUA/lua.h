@@ -6,12 +6,12 @@
 #include "crsf_protocol.h"
 
 #define LUA_DEVICE_SIZE(X) (uint8_t)(sizeof(tagLuaDeviceProperties)+strlen(X.label1)+1)
-#define LUA_TEXTSELECTION_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+strlen(X.textOption)+1+sizeof(tagLuaTextSelectionProperties)+1+strlen(X.label2)+1)
-#define LUA_COMMAND_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+sizeof(tagLuaCommandProperties)+strlen(X.label2)+1)
-#define LUA_UINT8_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+sizeof(tagLuaUint8Properties)+1+strlen(X.label2)+1)
-#define LUA_UINT16_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+sizeof(tagLuaUint16Properties)+2+strlen(X.label2)+1)
-#define LUA_STRING_SIZE(X) (uint8_t)(4+strlen(X.label1)+1+strlen(X.label2)+1)
-#define LUA_FOLDER_SIZE(X) (uint8_t)(4+strlen(X.label1)+1)
+#define LUA_TEXTSELECTION_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+strlen(X.textOption)+1+sizeof(tagLuaTextSelectionProperties)+1+strlen(X.label2)+1)
+#define LUA_COMMAND_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+sizeof(tagLuaCommandProperties)+strlen(X.label2)+1)
+#define LUA_UINT8_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+sizeof(tagLuaUint8Properties)+1+strlen(X.label2)+1)
+#define LUA_UINT16_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+sizeof(tagLuaUint16Properties)+2+strlen(X.label2)+1)
+#define LUA_STRING_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+strlen(X.label2)+1)
+#define LUA_FOLDER_SIZE(X) (uint8_t)(2+strlen(X.label1)+1)
 
 extern void sendLuaCommandResponse(struct tagLuaItem_command *cmd, uint8_t status, const char *message);
 
