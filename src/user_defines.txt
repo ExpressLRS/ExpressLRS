@@ -70,9 +70,6 @@
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
 
-# The model number defined in OpenTX, if you want to use model matching.
-#-DMODEL_MATCH_ID=0
-
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled

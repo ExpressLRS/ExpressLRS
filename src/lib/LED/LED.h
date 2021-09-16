@@ -23,97 +23,158 @@ void WS281BsetLED(uint32_t color)
     strip.ClearTo(RgbColor(HtmlColor(color)));
     strip.Show();
 }
+#endif
 
-void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RGB data
+#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+static enum {
+    STARTUP = 0,
+    NORMAL = 1
+} blinkyState;
+static struct blinkColor_t {
+  uint8_t h, s, v;
+} blinkyColor;
+
+static uint32_t LEDupdateCounterMillis;
+static uint32_t LEDupdateInterval;
+#define NORMAL_UPDATE_INTERVAL 50
+
+static uint32_t HsvToRgb()
 {
-    strip.ClearTo(RgbColor(r, g, b));
-    strip.Show();
+    uint8_t region, remainder, p, q, t;
+
+    if (blinkyColor.s == 0)
+    {
+        return blinkyColor.v << 16 | blinkyColor.v << 8 | blinkyColor.v;
+    }
+
+    region = blinkyColor.h / 43;
+    remainder = (blinkyColor.h - (region * 43)) * 6; 
+
+    p = (blinkyColor.v * (255 - blinkyColor.s)) >> 8;
+    q = (blinkyColor.v * (255 - ((blinkyColor.s * remainder) >> 8))) >> 8;
+    t = (blinkyColor.v * (255 - ((blinkyColor.s * (255 - remainder)) >> 8))) >> 8;
+
+    switch (region)
+    {
+        case 0:
+            return blinkyColor.v << 16 | t << 8 | p;
+        case 1:
+            return q << 16 | blinkyColor.v << 8 | p;
+        case 2:
+            return p << 16 | blinkyColor.v << 8 | t;
+        case 3:
+            return p << 16 | q << 8 | blinkyColor.v;
+        case 4:
+            return t << 16 | p << 8 | blinkyColor.v;
+        default:
+            return blinkyColor.v << 16 | p << 8 | q;
+    }
 }
-#endif
 
-void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
-{
-#if (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)) || defined(WS2812_LED_IS_USED)
-    constexpr uint32_t rate_colors[RATE_MAX] =
-    {
-        0x0000FF,     // 500/200 hz  blue
-        0x00FF00,     // 250/100 hz  green
-        0xFF8000,     // 150/50 hz   orange
-        0xFF0000      // 50/25 hz    red
-    };
-    constexpr uint32_t LEDupdateInterval = 100;
-    static uint8_t LEDfade = 0;
-    static int8_t LEDfadeAmount = 2;
-    static uint32_t LEDupdateCounterMillis;
+static int blinkyUpdate(unsigned long now) {
+    static constexpr uint8_t hueStepValue = 1;
+    static constexpr uint8_t lightnessStep = 5;
 
-    static connectionState_e lastState = disconnected;
-    static uint32_t lastColor = 0xFFFFFFFF;
-    static uint32_t lastPower = 0xFFFFFFFF;
+    uint32_t rgb = HsvToRgb();
+    WS281BsetLED(rgb);
+    DBGVLN("LED hue %u", blinkyColor.h);
 
-    uint32_t color = rate_colors[rate];
-    if ((connectionState == disconnected) && (now - LEDupdateCounterMillis > LEDupdateInterval))
-    {
-        if (LEDfade == 30)
-        {
-            LEDfadeAmount = -2;
+    if ((int)blinkyColor.h + hueStepValue > 255) {
+        if ((int)blinkyColor.v - lightnessStep < 0) {
+            blinkyState = NORMAL;
+            return NORMAL_UPDATE_INTERVAL;
         }
-        else if (LEDfade == 0)
-        {
-            LEDfadeAmount = 2;
-        }
-
-        LEDfade += LEDfadeAmount;
-        LEDupdateCounterMillis = now;
-        lastState = connectionState;
-        WS281BsetLED(
-            (color >> 16) * LEDfade / 255,
-            ((color >> 8) & 0xFF) * LEDfade / 255,
-            (color & 0xFF) * LEDfade / 255
-        );
+        blinkyColor.v -= lightnessStep;
+    } else {
+        blinkyColor.h += hueStepValue;
     }
-    if (((connectionState != disconnected) && (lastState == disconnected)) || lastColor != color || lastPower != power)
-    {
-        lastState = connectionState;
-        lastColor = color;
-        lastPower = power;
-        int dim = fmap(power, 0, PWR_COUNT-1, 10, 255);
-        WS281BsetLED(
-            (color >> 16) * dim / 255,
-            ((color >> 8) & 0xFF) * dim / 255,
-            (color & 0xFF) * dim / 255
-        );
-    }
-#endif
+    return 3000/(256/hueStepValue);
 }
 
 void startupLEDs()
 {
-#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
-    // do startup blinkies for fun
-    constexpr uint32_t colors[8] =
-    {
-        0xFFFFFF,     // white
-        0xFF00FF,     // magenta
-        0x8000FF,     // violet
-        0x0000FF,     // blue
-        0x00FF00,     // green
-        0xFFFF00,     // yellow
-        0xFF8000,     // orange
-        0xFF0000      // red
-    };
-    constexpr uint8_t N_COLORS = sizeof(colors)/sizeof(colors[0]);
-
     WS281Binit();
-    for (uint8_t i = 0; i < N_COLORS; i++)
-    {
-        WS281BsetLED(colors[i]);
-        delay(1000/N_COLORS);
+    blinkyState = STARTUP;
+    #ifdef PLATFORM_ESP32
+    // Only do the blinkies if it was NOT a software reboot
+    if (esp_reset_reason() == ESP_RST_SW) {
+        blinkyState = NORMAL;
+        LEDupdateInterval = NORMAL_UPDATE_INTERVAL;
     }
-    for (uint8_t i = 0; i < N_COLORS; i++)
-    {
-        WS281BsetLED(colors[N_COLORS-i-1]);
-        delay(1000/N_COLORS);
-    }
-    WS281BsetLED((uint32_t)0);
-#endif
+    #endif
+    blinkyColor.h = 0;
+    blinkyColor.s = 255;
+    blinkyColor.v = 128;
+
+    LEDupdateCounterMillis = 0;
+    LEDupdateInterval = 0;
 }
+
+void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
+{
+    if (blinkyState == STARTUP)
+    {
+        if (now - LEDupdateCounterMillis > LEDupdateInterval) {
+            LEDupdateInterval = blinkyUpdate(now);
+            LEDupdateCounterMillis = now;
+        }
+        return;
+    }
+
+    constexpr uint8_t rate_hue[RATE_MAX] =
+    {
+        170,     // 500/200 hz  blue
+        85,     // 250/100 hz  green
+        21,     // 150/50 hz   orange
+        0      // 50/25 hz    red
+    };
+
+    static connectionState_e lastState = disconnected;
+    static uint8_t lastRate = 0xFF;
+    static uint32_t lastPower = 0xFFFFFFFF;
+
+    if ((connectionState == disconnected) && (now - LEDupdateCounterMillis > LEDupdateInterval))
+    {
+        static uint8_t lightness = 0;
+        static int8_t dir = 1;
+
+        if (lightness == 64)
+        {
+            dir = -1;
+        }
+        else if (lightness == 0)
+        {
+            dir = 1;
+        }
+
+        lightness += dir;
+        lastState = connectionState;
+
+        blinkyColor.h = rate_hue[rate];
+        blinkyColor.v = lightness;
+        WS281BsetLED(HsvToRgb());
+
+        LEDupdateCounterMillis = now;
+    }
+    if (((connectionState != disconnected) && (lastState == disconnected)) || lastRate != rate || lastPower != power)
+    {
+        lastState = connectionState;
+        lastPower = power;
+        if (rate != lastRate)
+        {
+            blinkyColor.h = rate_hue[rate];
+            lastRate = rate;
+        }
+        blinkyColor.v = fmap(power, 0, PWR_COUNT-1, 10, 128);
+        WS281BsetLED(HsvToRgb());
+    }
+}
+#else
+void startupLEDs()
+{
+}
+
+void updateLEDs(uint32_t now, connectionState_e connectionState, uint8_t rate, uint32_t power)
+{
+}
+#endif

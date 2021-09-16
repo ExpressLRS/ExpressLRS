@@ -78,6 +78,7 @@ void hwTimer::resume()
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
+    // timer should not be running when updateInterval() is called
     hwTimer::HWtimerInterval = newTimerInterval;
 }
 

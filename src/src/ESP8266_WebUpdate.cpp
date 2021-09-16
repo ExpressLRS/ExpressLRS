@@ -23,9 +23,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-#include "ESP8266_hwTimer.h"
-extern hwTimer hwTimer;
-
 #include "config.h"
 extern RxConfig config;
 
@@ -58,6 +55,8 @@ static DNSServer dnsServer;
 static ESP8266WebServer server(80);
 
 static MDNSResponder::hMDNSService service;
+
+bool IsWebUpdateMode = false;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -278,10 +277,7 @@ static void startWifi() {
 
 void BeginWebUpdate(void)
 {
-  hwTimer.stop();
-
-  Radio.RXdoneCallback = NULL;
-  Radio.TXdoneCallback = NULL;
+  IsWebUpdateMode = true;
 
   DBGLN("Stopping Radio");
   Radio.End();

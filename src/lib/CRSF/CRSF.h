@@ -74,7 +74,6 @@ public:
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize);
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
@@ -106,9 +105,8 @@ public:
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
     static volatile uint32_t OpenTXsyncLastSent;
-
-    uint8_t setLuaHiddenFlag(uint8_t id, bool value);
-
+    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
+    static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
 #endif
 private:
     Stream *_dev;
@@ -154,22 +152,6 @@ private:
     static bool UARTwdt();
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     
-    static uint32_t luaHiddenFlags;
-
-    void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);
-    void getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray);
-    void getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray);
-    void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
-    void getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray);
-    void getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray);
-      /** we dont need these yet for OUR LUA, and it is not defined yet
-     void getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray);
-     void getLuaint8StructToArray(const void * luaStruct, uint8_t *outarray);
-     void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
-     void getLuaint16StructToArray(const void * luaStruct, uint8_t *outarray);
-     void getLuaFloatStructToArray(const void * luaStruct, uint8_t *outarray);
-*/ 
-
 #endif
 
     static void flush_port_input(void);

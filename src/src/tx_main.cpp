@@ -73,7 +73,7 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 volatile uint8_t NonceTX;
 
 #ifdef PLATFORM_ESP32
-bool webUpdateMode = false;
+unsigned long rebootTime = 0;
 #endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
@@ -99,7 +99,7 @@ char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
 
-uint8_t InBindingMode = 0;
+bool InBindingMode = false;
 uint8_t BindingPackage[5];
 uint8_t BindingSendCount = 0;
 void EnterBindingMode();
@@ -302,8 +302,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
-  if (!InBindingMode && config.GetModelMatch()) {
-    Radio.TXdataBuffer[6] ^= crsf.getModelID();
+  // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
+  if (!InBindingMode && config.GetModelMatch())
+  {
+    Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
 
   SyncPacketLastSent = millis();
@@ -311,8 +313,26 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     --syncSpamCounter;
 }
 
+uint8_t adjustPacketRateForBaud(uint8_t rate)
+{
+  #if defined(Regulatory_Domain_ISM_2400)
+    // Packet rate limited to 250Hz if we are on 115k baud
+    if (crsf.GetCurrentBaudRate() == 115200) {
+      while(rate < RATE_MAX) {
+        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
+        if (ModParams->enum_rate >= RATE_250HZ) {
+          break;
+        }
+        rate++;
+      }
+    }
+  #endif
+  return rate;
+}
+
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
+  index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
@@ -487,12 +507,24 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+static void beginWebsever()
+{
+    hwTimer.stop();
+    // Set transmit power to minimum
+    POWERMGNT.setPower(MinPower);
+    BeginWebUpdate();
+}
+#endif
+
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       DBGLN("Request AirRate: %d", arg);
-      config.SetRate(RATE_MAX - 1 - arg);
+      uint8_t rate = RATE_MAX - 1 - arg;
+      rate = adjustPacketRateForBaud(rate);
+      config.SetRate(rate);
       #if defined(HAS_OLED)
         OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                           OLED.getRateString((expresslrs_RFrates_e)RATE_MAX - arg),
@@ -537,7 +569,7 @@ void registerLuaParameters() {
       msp.makeCommand();
       msp.function = MSP_SET_RX_CONFIG;
       msp.addByte(MSP_ELRS_MODEL_ID);
-      msp.addByte(newModelMatch ? crsf.getModelID() : 0);
+      msp.addByte(newModelMatch ? crsf.getModelID() : 0xff);
       crsf.AddMspMessage(&msp);
     }
   });
@@ -579,80 +611,85 @@ void registerLuaParameters() {
       config.SetVtxPitmode(arg);
   },luaVtxFolder.luaProperties1.id);
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
-      sendLuaFieldCrsf(id,0);
+    if (arg < 5) {
       VtxConfigReadyToSend = true;
+      sendLuaCommandResponse(&luaVtxSend, 2, "Sending...");
+    } else {
+      sendLuaCommandResponse(&luaVtxSend, 0, "Config Sent");
+    }
   },luaVtxFolder.luaProperties1.id);
 
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-      if (arg > 0 && arg < 4)
-      {
-        DBGLN("Binding requested from LUA");
-        EnterBindingMode();
-      } else if(arg == 6){
-          sendLuaFieldCrsf(id, 0);
-      }
-      else
-      {
-        DBGLN("Binding stopped  from LUA");
-        ExitBindingMode();
-      }
-    });
+    if (arg < 5) {
+      DBGLN("Binding requested from LUA");
+      EnterBindingMode();
+      sendLuaCommandResponse(&luaBind, 2, "Binding...");
+    } else {
+      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, "Binding Sent");
+    }
+  });
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      DBGVLN("arg %d", arg);
+      if (arg == 4) // 4 = request confirmed, start
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        setLuaCommandValue(&luaWebUpdate,2); //running status
-        webUpdateMode = true;
         DBGLN("Wifi Update Mode Requested!");
-        BeginWebUpdate();
-      } else if (arg > 0 && arg < 4) //start command, 1 = start
-                              //2 = running
-                              //3 = request confirmation
+        sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
+        beginWebsever();
+      }
+      else if (arg > 0 && arg < 4)
       {
-        setLuaCommandInfo(&luaWebUpdate,"REBOOT to stop WiFi");
-        setLuaCommandValue(&luaWebUpdate,3); //request confirm
-      } else if(arg == 6){ //6 = status poll
-        sendLuaFieldCrsf(id,0);
-      } else { //5 or anything else is cancel
-        setLuaCommandValue(&luaWebUpdate,0);
+        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update Mode?");
+      }
+      else if (arg == 5)
+      {
+        sendLuaCommandResponse(&luaWebUpdate, 0, "WiFi Cancelled");
+        if (IsWebUpdateMode) {
+          rebootTime = millis() + 400;
+        }
+      }
+      else
+      {
+        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
       }
     });
 
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
-      if (arg == 4 || ( (arg > 0 && arg < 4) && (!crsf.elrsLUAmode))) // 4 = request confirmed
+      if (arg == 4) // 4 = request confirmed, start
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        setLuaCommandValue(&luaBLEJoystick,2); //running status
         BLEjoystickActive = true;
         DBGLN("BLE Joystick Mode Requested!");
         hwTimer.stop();
         crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
         hwTimer.updateInterval(5000);
-        crsf.setSyncParams(5000); // 100hz
-        delay(1000);
+        crsf.setSyncParams(5000); // 200hz
+        delay(100);
         crsf.disableOpentxSync();
-  #if defined(Regulatory_Domain_ISM_2400)
-        Radio.SetMode(SX1280_MODE_SLEEP);
-  #else
-        Radio.SetMode(SX127x_OPMODE_SLEEP);
-  #endif
+        POWERMGNT.setPower(MinPower);
         Radio.End();
         BluetoothJoystickBegin();
-      } else if (arg > 0 && arg < 4) //start command, 1 = start
-                              //2 = running
-                              //3 = request confirmation
+        sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
+      }
+      else if (arg > 0 && arg < 4) //start command, 1 = start, 2 = running, 3 = request confirmation
       {
-        setLuaCommandInfo(&luaBLEJoystick,"REBOOT to stop BT");
-        setLuaCommandValue(&luaBLEJoystick,3); //request confirm
-      } else if(arg == 6){ //6 = status poll
-        sendLuaFieldCrsf(id,0);
-      } else { //5 or anything else is cancel
-        setLuaCommandValue(&luaBLEJoystick, 0);
+        sendLuaCommandResponse(&luaBLEJoystick, 3, "Start BLE Joystick?");
+      }
+      else if (arg == 5)
+      {
+        sendLuaCommandResponse(&luaBLEJoystick, 0, "Joystick Cancelled");
+        if (BLEjoystickActive) {
+          rebootTime = millis() + 400;
+        }
+      }
+      else
+      {
+        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
       }
     });
 
@@ -664,7 +701,8 @@ void registerLuaParameters() {
 }
 
 void resetLuaParams(){
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - config.GetRate());
+  uint8_t rate = adjustPacketRateForBaud(config.GetRate());
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
@@ -734,7 +772,6 @@ static void ChangeRadioParams()
 
 void HandleUpdateParameter()
 {
-  crsf.setLuaHiddenFlag(luaInfo.luaProperties1.id, crsf.elrsLUAmode);
   bool updated = luaHandleUpdateParameter();
   if (updated && config.IsModified())
   {
@@ -745,11 +782,13 @@ void HandleUpdateParameter()
 void ICACHE_RAM_ATTR ModelUpdateReq()
 {
   // There's a near 100% chance we started up transmitting at Model 0's
-  // rate before we got the set modelid command from the handset, so do
-  // the normal way of switching rates with syncspam first
-  config.SetModelId(crsf.getModelID());
-  syncSpamCounter = syncSpamAmount;
-  ModelUpdatePending = true;
+  // rate before we got the set modelid command from the handset, so do the
+  // normal way of switching rates with syncspam first (but only if changing)
+  if (config.SetModelId(crsf.getModelID()))
+  {
+    syncSpamCounter = syncSpamAmount;
+    ModelUpdatePending = true;
+  }
 }
 
 static void ConfigChangeCommit()
@@ -847,7 +886,7 @@ void setup()
 //  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
-    startupLEDs();
+  startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -989,32 +1028,35 @@ void setup()
 
 void loop()
 {
-
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
   UpdateConnectDisconnectStatus();
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
+  HandleUpdateParameter();
+  CheckConfigChangePending();
+
 #if defined(PLATFORM_ESP32)
+  // If the reboot time is set and the current time is past the reboot time then reboot.
+  if (rebootTime != 0 && now > rebootTime) {
+    ESP.restart();
+  }
+
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !webUpdateMode){
+    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !IsWebUpdateMode){
       DBGLN("No CRSF ever detected, starting WiFi");
-      webUpdateMode = true;
-      BeginWebUpdate();
+      beginWebsever();
     }
   #endif
-  if (webUpdateMode)
+  if (IsWebUpdateMode)
   {
     HandleWebUpdate();
     return;
   }
 #endif
-
-  HandleUpdateParameter();
-  CheckConfigChangePending();
 
   #ifdef FEATURE_OPENTX_SYNC
     // DBGVLN(crsf.OpenTXsyncOffset);
@@ -1245,9 +1287,7 @@ void EnterBindingMode()
 
   CRCInitializer = 0;
 
-  InBindingMode = 2;
-  setLuaCommandValue(&luaBind,InBindingMode);
-  //setLuaCommandInfo(&luaBind,"in Binding Mode");
+  InBindingMode = true;
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -1277,9 +1317,8 @@ void ExitBindingMode()
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 
-  InBindingMode = 0;
-  setLuaCommandValue(&luaBind,InBindingMode);
-  //setLuaCommandInfo(&luaBind,"DONE");
+  InBindingMode = false;
+
   MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
@@ -1296,7 +1335,7 @@ void SendUIDOverMSP()
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = 2;
+  InBindingMode = true;
 }
 
 

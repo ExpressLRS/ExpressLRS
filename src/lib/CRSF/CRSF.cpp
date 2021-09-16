@@ -96,8 +96,6 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
-
-uint32_t CRSF::luaHiddenFlags = 0;
 #endif // CRSF_TX_MODULE
 
 
@@ -242,191 +240,6 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
-}
-
-uint8_t CRSF::setLuaHiddenFlag(uint8_t id, bool value){
-  luaHiddenFlags ^= (-value ^ luaHiddenFlags) & (1 << ((id-1)));
-  return value;
-}
-
-void CRSF::getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
-    char *next = stpcpy((char *)outarray,p1->label1) + 1;
-    next = stpcpy(next,p1->textOption) + 1;
-    memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-    next+=sizeof(p1->luaProperties2);
-    *next++=0; // default value
-    stpcpy(next,p1->label2);
-    
-    //outarray[4+(strlen(p1->label1)+1)+(strlen(p1->textOption)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
-}
-
-void CRSF::getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_command *p1 = (struct tagLuaItem_command*)luaStruct;
-    char *next = stpcpy((char *)outarray,p1->label1) + 1;
-    memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-    next+=sizeof(p1->luaProperties2);
-    stpcpy(next,p1->label2);
-    
-    //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
-}
-
-void CRSF::getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
-    char *next = stpcpy((char *)outarray,p1->label1) + 1;
-    memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-    next+=sizeof(p1->luaProperties2);
-    *next++=0; // default value
-    stpcpy(next,p1->label2);
-    
-    //outarray[4+(strlen(p1->label1)+1)] = (uint8_t)luaValues[p1->luaProperties1.id];
-}
-
-void CRSF::getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
-    char *next = stpcpy((char *)outarray,p1->label1) + 1;
-    memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-    next+=sizeof(p1->luaProperties2);
-    *next++=0; // default value
-    stpcpy(next,p1->label2);
-    
-    //[4+(strlen(p1->label1)+1)] = (uint8_t)(luaValues[p1->luaProperties1.id] >> 8);
-    //outarray[4+(strlen(p1->label1)+2)] = (uint8_t)luaValues[p1->luaProperties1.id];
-}
-
-void CRSF::getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-    char *next = stpcpy((char *)outarray,p1->label1) + 1;
-    stpcpy(next,p1->label2);
-}
-void CRSF::getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
-    struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-    stpcpy((char *)outarray,p1->label1);
-}
-
-//sendCRSF param can take anytype of lua field settings
-uint8_t CRSF::sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize)
-{
-    if (!CRSF::CRSFstate)
-    {
-        return 0;
-    }
-    uint8_t LUArespLength;
-    uint8_t chunks = 0;    
-    uint8_t currentPacketSize;    
-    
-    uint16_t chunkMax = maxPacketBytes-8;
-
-    /**
-     *calculate how many chunks needed for this field 
-     */
-    chunks = ((wholePacketSize-2)/(chunkMax));
-    if((wholePacketSize-2) % (chunkMax)){
-        chunks = chunks + 1;
-    }
-
-    //calculate how much byte this packet contains
-    if((chunks - (fieldchunk+1)) > 0){
-        currentPacketSize = chunkMax;
-    } else {
-        if((wholePacketSize-2) % (chunkMax)){
-            currentPacketSize = (wholePacketSize-2) % (chunkMax);
-        } else {
-            currentPacketSize = chunkMax;
-        }
-    }
-    LUArespLength = 2+2+ currentPacketSize; //2 bytes of header, fieldsetup1(fieldid, fieldchunk),
-                                        // chunk-ed packets below
-                                        //fieldsetup1(fieldparent,fieldtype),field name, 
-                                        //fieldsetup2(value,min,max,default),field unit
-    //create outbuffer size
-    uint8_t chunkBuffer[wholePacketSize];
-    uint8_t outBuffer[currentPacketSize + 5 + 2 + 2]; 
-        //it is byte op, we can use memcpy with index to
-        // destination memory.
-    switch(dataType){
-        case CRSF_TEXT_SELECTION:
-        {
-            getLuaTextSelectionStructToArray(luaData, chunkBuffer);
-            break;
-        }
-        case CRSF_COMMAND:
-        {
-            getLuaCommandStructToArray(luaData, chunkBuffer);
-            break;
-        }
-        case CRSF_UINT8:
-        {
-            getLuaUint8StructToArray(luaData,chunkBuffer);
-            break;
-        }
-        case CRSF_UINT16:
-        {
-            getLuaUint16StructToArray(luaData,chunkBuffer);
-            break;
-        }
-    // we dont have to include this for now. since we dont need it yet?
-        case CRSF_INT8:
-        {
-            //getLuaint8StructToArray(luaData,chunkBuffer);
-            break;
-        }
-        case CRSF_INT16:
-        {
-            //getLuaint16StructToArray(luaData,chunkBuffer);
-            break;
-        }
-        case CRSF_FLOAT:
-        {
-            //getLuaFloatStructToArray(luaData,chunkBuffer);
-            break;
-        }
-    //
-        case CRSF_STRING:
-        case CRSF_INFO:
-        {
-            getLuaStringStructToArray(luaData,chunkBuffer);
-            break;
-        }
-        case CRSF_FOLDER:
-        {
-            getLuaFolderStructToArray(luaData,chunkBuffer);
-            break;
-        }
-        case CRSF_OUT_OF_RANGE:
-        default:
-        break;
-
-    }
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LUArespLength + 2;   //received as #data in lua
-    outBuffer[2] = frame; //received as command in lua
-    // all below received as data in lua
-    outBuffer[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-
-    outBuffer[5] = ((struct tagLuaProperties1 *)luaData)->id;
-    outBuffer[6] = ((chunks - (fieldchunk+1))); //remaining chunk to send;
-    if (fieldchunk == 0) {
-        outBuffer[7] = ((struct tagLuaProperties1 *)luaData)->parent;
-        outBuffer[8] = ((struct tagLuaProperties1 *)luaData)->type;
-        outBuffer[8] += ((luaHiddenFlags >>((((struct tagLuaProperties1 *)luaData)->id)-1)) & 1)*128;
-        memcpy(outBuffer+9,chunkBuffer,currentPacketSize-2);
-    } else {
-        memcpy(outBuffer+7,chunkBuffer+((fieldchunk*chunkMax))-2,currentPacketSize);
-    }
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LUArespLength + 1);
-    outBuffer[LUArespLength + 3] = crc;
-    
-#ifdef PLATFORM_ESP32
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-    SerialOutFIFO.push(LUArespLength + 4);
-    SerialOutFIFO.pushBytes(outBuffer, LUArespLength + 4);
-#ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
-    return ((chunks - (fieldchunk+1)));
 }
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
@@ -882,9 +695,11 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
-    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.85 (leeway)
-    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 85 / 100;
+    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
+    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
     maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
+    // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
+    maxPacketBytes = maxPacketBytes < 10 ? 10 : maxPacketBytes;
     DBGLN("Adjusted max packet size %u", maxPacketBytes);
 }
 
@@ -964,6 +779,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
+    CRSF::duplex_set_TX();
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);

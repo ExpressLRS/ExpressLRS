@@ -57,8 +57,5 @@ const char PROGMEM compile_options[] = {
     #ifdef USE_DIVERSITY
         "-DUSE_DIVERSITY "
     #endif
-    #ifdef MODEL_MATCH_ID
-        "-DMODEL_MATCH_ID=" STR(MODEL_MATCH_ID) " "
-    #endif
 #endif
 };

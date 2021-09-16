@@ -36,8 +36,9 @@ SX1280Hal::SX1280Hal()
 
 void SX1280Hal::end()
 {
-    SPI.end();
+    RXenable(); // make sure the TX amp pin is disabled
     detachInterrupt(GPIO_PIN_DIO1);
+    SPI.end();
 }
 
 void SX1280Hal::init()
