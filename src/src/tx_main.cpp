@@ -758,6 +758,7 @@ void UARTconnected()
 
   rfModeLastChangedMS = millis(); // force syncspam on first packets
   hwTimer.resume();
+  SetRFLinkRate(config.GetRate());
 }
 
 static void ChangeRadioParams()
