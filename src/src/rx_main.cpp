@@ -309,7 +309,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
         NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
-        telemetryBurstCount = 0;
+        // Start the count at 1 because the next will be DATA and doing +1 before checking
+        // against Max below is for some reason 10 bytes more code
+        telemetryBurstCount = 1;
     }
     else
     {

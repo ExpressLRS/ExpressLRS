@@ -79,36 +79,40 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
   
-  uint8_t chunkBuffer[256];
-
-  chunkBuffer[0] = luaData->parent;
-  chunkBuffer[1] = dataType;
+  // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
+  // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
+  // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
+  uint8_t chunkBuffer[256+4];
+  // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
+  chunkBuffer[2] = luaData->parent;
+  chunkBuffer[3] = dataType;
   // Set the hidden flag
-  chunkBuffer[1] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
+  chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
   if (crsf.elrsLUAmode) {
-    chunkBuffer[1] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
+    chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
 
+  uint8_t *chunkStart = &chunkBuffer[4];
   uint8_t dataSize;
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
-      dataSize = getLuaTextSelectionStructToArray(luaData, chunkBuffer+2);
+      dataSize = getLuaTextSelectionStructToArray(luaData, chunkStart);
       break;
     case CRSF_COMMAND:
-      dataSize = getLuaCommandStructToArray(luaData, chunkBuffer+2);
+      dataSize = getLuaCommandStructToArray(luaData, chunkStart);
       break;
     case CRSF_UINT8:
-      dataSize = getLuaUint8StructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaUint8StructToArray(luaData, chunkStart);
       break;
     case CRSF_UINT16:
-      dataSize = getLuaUint16StructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaUint16StructToArray(luaData, chunkStart);
       break;
     case CRSF_STRING:
     case CRSF_INFO:
-      dataSize = getLuaStringStructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      dataSize = getLuaFolderStructToArray(luaData,chunkBuffer+2);
+      dataSize = getLuaFolderStructToArray(luaData, chunkStart);
       break;
     case CRSF_INT8:
     case CRSF_INT16:
@@ -118,42 +122,26 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       return 0;
   }
 
-  // maximum number of chunked bytes that can be sent in one response
-  // subtract the LUA overhead (8 bytes) bytes from the max packet size we can send
-  uint16_t chunkMax = CRSF::GetMaxPacketBytes() - 8;
+  // Maximum number of chunked bytes that can be sent in one response
+  // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
+  // 2 bytes Lua chunk header: FieldId, ChunksRemain
+  uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 6 - 2;
+  // How many chunks needed to send this field (rounded up)
+  uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
+  // Data left to send is adjustedSize - chunks sent already
+  uint8_t chunkSize = min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
 
-  // the adjusted size is 2 bytes less because the first 2 bytes of the LUA response are sent on every chunk
-  uint8_t adjustedSize = dataSize - 2;
+  // Move chunkStart back 2 bytes to add (FieldId + ChunksRemain) to each packet
+  chunkStart = &chunkBuffer[fieldChunk * chunkMax];
+  chunkStart[0] = luaData->id;                 // FieldId
+  chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
+  CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
 
-  // how many chunks to send this field
-  uint8_t chunks = adjustedSize / chunkMax;
-  uint8_t remainder = adjustedSize % chunkMax;
-  if(remainder != 0) {
-    chunks++;
-  }
-
-  // calculate this chunk size & packet size
-  uint8_t chunkSize;    
-  if (fieldChunk == chunks-1 && remainder != 0) {
-    chunkSize = remainder;
-  } else {
-    chunkSize = chunkMax;
-  }
-  
-  uint8_t packetSize = chunkSize + 2;
-  uint8_t outBuffer[packetSize]; 
-
-  outBuffer[0] = luaData->id;             // LUA data[3]
-  outBuffer[1] = chunks - (fieldChunk+1); // remaining chunks to send;
-  memcpy(outBuffer+2, chunkBuffer + (fieldChunk*chunkMax), chunkSize);
-
-  CRSF::packetQueueExtended(frameType, outBuffer, packetSize);
-
-  return chunks - (fieldChunk+1);
+  return chunkCnt - (fieldChunk+1);
 }
 
 static void pushResponseChunk(struct tagLuaItem_command *cmd) {
-  DBGVLN("sending response for id=%d chunk=%d status=%d", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
+  DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
   if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct tagLuaProperties1 *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
@@ -162,7 +150,7 @@ static void pushResponseChunk(struct tagLuaItem_command *cmd) {
 }
 
 void sendLuaCommandResponse(struct tagLuaItem_command *cmd, uint8_t status, const char *message) {
-  DBGVLN("Set Status=%d", status);
+  DBGVLN("Set Status=%u", status);
   cmd->luaProperties2.status = status;
   cmd->label2 = message;
   cmd->size = LUA_COMMAND_SIZE((*cmd));
@@ -264,7 +252,7 @@ bool luaHandleUpdateParameter()
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
       } else {
-        DBGVLN("Write lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        DBGVLN("Write lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         uint8_t param = crsf.ParameterUpdateData[1];
         if (param < 32 && paramCallbacks[param] != 0) {
           if (crsf.ParameterUpdateData[2] == 6 && nextStatusChunk != 0) {
@@ -283,11 +271,11 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
       {
-        DBGVLN("Read lua param %d %d", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         struct tagLuaItem_command *field = (struct tagLuaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
         if (field != 0 && (field->luaProperties1.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
           field->luaProperties2.status = 0;
-          field->label2 = field->defaultInfo;
+          field->label2 = "";
           field->size = LUA_COMMAND_SIZE((*field));
         }
         sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct tagLuaProperties1 *)field);

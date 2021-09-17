@@ -625,7 +625,7 @@ void registerLuaParameters() {
       EnterBindingMode();
       sendLuaCommandResponse(&luaBind, 2, "Binding...");
     } else {
-      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, "Binding Sent");
+      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
     }
   });
   #ifdef PLATFORM_ESP32
@@ -758,6 +758,7 @@ void UARTconnected()
 
   rfModeLastChangedMS = millis(); // force syncspam on first packets
   hwTimer.resume();
+  SetRFLinkRate(config.GetRate());
 }
 
 static void ChangeRadioParams()
