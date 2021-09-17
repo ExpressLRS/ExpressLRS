@@ -525,22 +525,26 @@ local function lcd_title()
     local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
     local barHeight = 30
 
-    lcd.setColor(CUSTOM_COLOR, EGREEN)
-    lcd.clear(CUSTOM_COLOR)
+    lcd.clear() -- to WHITE
     -- Field display area (white w/ 2px green border)
-    lcd.setColor(CUSTOM_COLOR, WHITE)
-    lcd.drawFilledRectangle(2, barHeight, LCD_W - 4, LCD_H - barHeight - 2, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREEN)
+    lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
+    lcd.drawRectangle(1, 0, LCD_W - 2, LCD_H - 1, CUSTOM_COLOR)
     -- title bar
+    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
     lcd.setColor(CUSTOM_COLOR, BLACK)
     lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
     lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
     -- progress bar
-    local barW = (COL2-4)*fieldId/fields_count
-    lcd.setColor(CUSTOM_COLOR, WHITE)
-    lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
-    lcd.setColor(CUSTOM_COLOR, EBLUE)
-    lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+    if allParamsLoaded ~= 1 and fields_count > 0 then
+      local barW = (COL2-4)*fieldId/fields_count
+      lcd.setColor(CUSTOM_COLOR, WHITE)
+      lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
+      lcd.setColor(CUSTOM_COLOR, EBLUE)
+      lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+    end
     -- leave EBLUE as the custom color for text
+    lcd.setColor(CUSTOM_COLOR, EBLUE)
   else
     -- B&W screen
     local barHeight = 9
@@ -564,8 +568,9 @@ local function lcd_warn()
   lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
 end
 
--- Main
-local function runDevicePage(event)
+local function handleDevicePageEvent(event)
+  if fields_count == 0 then return end
+
   if event == EVT_VIRTUAL_EXIT then             -- exit script
     if edit == true then -- reload the field
       edit = false
@@ -583,9 +588,7 @@ local function runDevicePage(event)
         crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
       end
       folderAccess = 0
-      if fields_count > 0 then
-        fields[fields_count+1].parent = 255
-      end
+      fields[fields_count+1].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -631,6 +634,11 @@ local function runDevicePage(event)
       selectField(-1)
     end
   end
+end
+
+-- Main
+local function runDevicePage(event)
+  handleDevicePageEvent(event)
 
   lcd_title()
   if elrsFlags > 0 then
@@ -644,7 +652,7 @@ local function runDevicePage(event)
         lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
       else
         local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + INVERS) or lcdFieldAttr
-        if field.type ~= 11 and field.type ~= 13 then -- if not folder or command
+        if field.type < 11 or field.type == 12 then -- if not folder, command, or back
           lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, lcdFieldAttr)
         end
         if functions[field.type+1].display then
@@ -722,9 +730,9 @@ local function setMock()
   -- Setup fields to display if running in Simulator
   local _, rv = getVersion()
   if string.sub(rv, -5) ~= "-simu" then return end
-  local mock = loadScript("elrsmock.lua")
+  local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, badPkt, goodPkt = mock(), 0, 500
+  fields, goodPkt = mock(), 500
   fields_count = #fields - 1
   fieldId = #fields - 3
   initLineIndex()
