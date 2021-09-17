@@ -39,9 +39,8 @@ SX1280Driver Radio;
 #endif
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
-#endif
 #include "ESP32_BLE_HID.h"
-volatile bool BLEjoystickRefresh = false;
+#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -64,7 +63,7 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-bool crsfSeen = false;
+static bool webserverPreventAutoStart = false;
 
 #if defined(HAS_OLED)
 OLED OLED;
@@ -761,7 +760,7 @@ void UARTconnected()
 
   rfModeLastChangedMS = millis(); // force syncspam on first packets
   hwTimer.resume();
-  crsfSeen = true;
+  webserverPreventAutoStart = true;
   SetRFLinkRate(config.GetRate());
 }
 
@@ -1058,7 +1057,7 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsfSeen == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
+    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
       DBGLN("No CRSF ever detected, starting WiFi");
       beginWebsever();
     }

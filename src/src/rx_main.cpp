@@ -136,7 +136,7 @@ bool buttonDown = false;     //is the button current pressed down?
 uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
 
-bool disableWebServer = false;
+static bool webserverPreventAutoStart = false;
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
@@ -611,7 +611,7 @@ void GotConnection(unsigned long now)
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
-    disableWebServer = true;
+    webserverPreventAutoStart = true;
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
 
@@ -1211,12 +1211,12 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!disableWebServer && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
+    if (!webserverPreventAutoStart && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();
     }
 
-    if (!disableWebServer && (connectionState == disconnected) && InBindingMode && now > 60000)
+    if (!webserverPreventAutoStart && (connectionState == disconnected) && InBindingMode && now > 60000)
     {
         beginWebsever();
     }
@@ -1479,7 +1479,7 @@ void OnELRSBindMSP(uint8_t* packet)
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
-    disableWebServer = true;
+    webserverPreventAutoStart = true;
     ExitBindingMode();
 }
 

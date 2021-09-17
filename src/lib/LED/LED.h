@@ -199,7 +199,7 @@ static uint16_t flashLED(uint8_t onLightness, uint8_t offLightness, uint8_t hue,
     blinkyColor.v = counter % 2 == 0 ? onLightness : offLightness;
     blinkyColor.h = hue;
     WS281BsetLED(HsvToRgb());
-    if (counter == durationCounts)
+    if (counter >= durationCounts)
     {
         counter = 0;
     }
