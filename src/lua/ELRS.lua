@@ -21,6 +21,8 @@ local force_use_lua = false;
 local bindmode = false;
 local wifiupdatemode = false;
 
+local ver, radio, maj, minor, rev, osname = getVersion()
+
 local SX127x_RATES = {
     list = {'25Hz(-123dbm)', '50Hz(-120dbm)', '100Hz(-117dbm)', '200Hz(-112dbm)'},
     values = {0x06, 0x05, 0x04, 0x02},
@@ -270,6 +272,9 @@ local function refreshLCD()
         lcd.drawText(lOffset, (radio_data.yOffset*5), "[force use]", INVERS + BLINK)
     else
         lcd.drawText(lOffset, (radio_data.yOffset*5), "Connecting...", INVERS + BLINK)
+        if (osname == "EdgeTX") then
+            lcd.drawText(lOffset, (radio_data.yOffset*6), "EdgeTX users: Make sure your max baud rate is less or equal to 400k", INVERS + BLINK)
+        end
     end
 end
 
