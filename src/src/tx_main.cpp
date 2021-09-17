@@ -756,9 +756,8 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
-  rfModeLastChangedMS = millis(); // force syncspam on first packets
-  hwTimer.resume();
   SetRFLinkRate(config.GetRate());
+  hwTimer.resume();
 }
 
 static void ChangeRadioParams()
