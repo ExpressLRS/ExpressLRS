@@ -1058,7 +1058,7 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsfSeen == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < MODE_STATES){
+    if(crsfSeen == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
       DBGLN("No CRSF ever detected, starting WiFi");
       beginWebsever();
     }
