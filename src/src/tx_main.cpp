@@ -759,10 +759,10 @@ void UARTconnected()
   #endif
 
   rfModeLastChangedMS = millis(); // force syncspam on first packets
-  hwTimer.resume();
   webserverPreventAutoStart = true;
   SetRFLinkRate(config.GetRate());
   connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
+  hwTimer.resume();
 }
 
 static void ChangeRadioParams()
