@@ -762,6 +762,7 @@ void UARTconnected()
   hwTimer.resume();
   webserverPreventAutoStart = true;
   SetRFLinkRate(config.GetRate());
+  connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
 }
 
 static void ChangeRadioParams()
