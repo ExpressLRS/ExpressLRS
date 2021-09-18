@@ -45,8 +45,6 @@ local textXoffset = 0
 local textYoffset = 1
 local textSize = 8
 local lcdIsColor
-local lcdFieldAttr, lcdSelFieldAttr
-local lcdSavedColors
 
 local function getField(line)
   local counter = 1
@@ -526,9 +524,7 @@ local function lcd_title()
     local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
     local barHeight = 30
 
-    -- clear(WHITE) doesn't on OpenTX 2.3.14
-    lcd.setColor(CUSTOM_COLOR, WHITE)
-    lcd.clear(CUSTOM_COLOR)
+    lcd.clear()
     -- Field display area (white w/ 2px green border)
     lcd.setColor(CUSTOM_COLOR, EGREEN)
     lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
@@ -541,17 +537,11 @@ local function lcd_title()
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
       local barW = (COL2-4)*fieldId/fields_count
-      lcd.setColor(CUSTOM_COLOR, WHITE)
-      lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
       lcd.setColor(CUSTOM_COLOR, EBLUE)
       lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+      lcd.setColor(CUSTOM_COLOR, WHITE)
+      lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
     end
-    lcd.setColor(TEXT_INVERTED_BGCOLOR, EBLUE)
-    lcd.setColor(TEXT_INVERTED_COLOR, WHITE)
-    lcd.setColor(TEXT_BGCOLOR, WHITE)
-    lcd.setColor(TEXT_COLOR, BLACK)
-    -- leave EBLUE as the custom color for text
-    lcd.setColor(CUSTOM_COLOR, EBLUE)
   else
     -- B&W screen
     local barHeight = 9
@@ -573,16 +563,6 @@ end
 local function lcd_warn()
   lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
   lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
-end
-
-local function lcdResetColors()
-  -- Restore the color theme because we changed them in lcd_title
-  if lcdSavedColors then
-    lcd.setColor(TEXT_COLOR, lcdSavedColors[1])
-    lcd.setColor(TEXT_BGCOLOR, lcdSavedColors[2])
-    lcd.setColor(TEXT_INVERTED_COLOR, lcdSavedColors[3])
-    lcd.setColor(TEXT_INVERTED_BGCOLOR, lcdSavedColors[4])
-  end
 end
 
 local function handleDevicePageEvent(event)
@@ -669,10 +649,10 @@ local function runDevicePage(event)
         lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
       else
         local attr = lineIndex == (pageOffset+y)
-          and ((edit == true and BLINK or 0) + lcdSelFieldAttr + INVERS)
-          or lcdFieldAttr
+          and ((edit == true and BLINK or 0) + INVERS)
+          or 0
         if field.type < 11 or field.type == 12 then -- if not folder, command, or back
-          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, lcdFieldAttr)
+          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
         end
         if functions[field.type+1].display then
           functions[field.type+1].display(field, y*textSize+textYoffset, attr)
@@ -680,8 +660,6 @@ local function runDevicePage(event)
       end
     end
   end
-
-  lcdResetColors()
   return 0
 end
 
@@ -732,14 +710,6 @@ local function setLCDvar()
     textXoffset = 3
     textYoffset = 10
     textSize = 22
-    lcdFieldAttr = CUSTOM_COLOR
-    lcdSelFieldAttr = BOLD
-    lcdSavedColors = {
-      lcd.getColor(TEXT_COLOR),
-      lcd.getColor(TEXT_BGCOLOR),
-      lcd.getColor(TEXT_INVERTED_COLOR),
-      lcd.getColor(TEXT_INVERTED_BGCOLOR)
-    }
   else
     if LCD_W == 212 then
       COL2 = 110
@@ -750,8 +720,6 @@ local function setLCDvar()
     textXoffset = 0
     textYoffset = 3
     textSize = 8
-    lcdSelFieldAttr = 0
-    lcdFieldAttr = 0
   end
 end
 
