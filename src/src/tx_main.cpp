@@ -36,10 +36,9 @@ SX1280Driver Radio;
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
-#ifdef PLATFORM_ESP32
-#include "ESP32_WebUpdate.h"
+
+#include "WebUpdate.h"
 #include "ESP32_BLE_HID.h"
-#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"

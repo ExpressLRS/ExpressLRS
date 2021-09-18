@@ -12,9 +12,7 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#ifdef PLATFORM_ESP8266
-#include "ESP8266_WebUpdate.h"
-#endif
+#include "WebUpdate.h"
 
 #include "crc.h"
 #include "CRSF.h"
@@ -67,6 +65,10 @@ GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
+
+#ifdef PLATFORM_ESP8266
+unsigned long rebootTime = 0;
+#endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
@@ -1078,14 +1080,6 @@ static void setupRadio()
     RFmodeCycleMultiplier = 1;
 }
 
-static void wifiOff()
-{
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
-}
-
 static void ws2812Blink()
 {
  #if WS2812_LED_IS_USED // do startup blinkies for fun
@@ -1198,7 +1192,9 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     wifiOff();
+#endif
     ws2812Blink();
     setupBindingFromConfig();
 
@@ -1229,6 +1225,11 @@ void loop()
     }
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
+        ESP.restart();
+    }
+
     if (!webserverPreventAutoStart && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
     {
         beginWebsever();

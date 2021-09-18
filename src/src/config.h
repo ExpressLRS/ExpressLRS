@@ -95,6 +95,10 @@ private:
 };
 #endif
 
+extern TxConfig config;
+
+#endif
+
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
@@ -144,4 +148,7 @@ private:
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
 };
+
+extern RxConfig config;
+
 #endif

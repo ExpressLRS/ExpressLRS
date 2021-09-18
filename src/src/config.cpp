@@ -361,6 +361,7 @@ TxConfig::SetModelId(uint8_t modelId)
 
     return false;
 }
+#endif
 
 #endif
 
@@ -477,4 +478,5 @@ RxConfig::SetPassword(const char *password)
     m_modified = true;
 }
 
+#endif
 #endif
