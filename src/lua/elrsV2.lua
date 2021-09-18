@@ -45,7 +45,7 @@ local textXoffset = 0
 local textYoffset = 1
 local textSize = 8
 local lcdIsColor
-local lcdFieldAttr
+local lcdFieldAttr, lcdSelFieldAttr
 local lcdSavedColors
 
 local function getField(line)
@@ -668,7 +668,9 @@ local function runDevicePage(event)
       elseif field.name == nil then
         lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
       else
-        local attr = lineIndex == (pageOffset+y) and ((edit == true and BLINK or 0) + BOLD + INVERS) or lcdFieldAttr
+        local attr = lineIndex == (pageOffset+y)
+          and ((edit == true and BLINK or 0) + lcdSelFieldAttr + INVERS)
+          or lcdFieldAttr
         if field.type < 11 or field.type == 12 then -- if not folder, command, or back
           lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, lcdFieldAttr)
         end
@@ -731,6 +733,7 @@ local function setLCDvar()
     textYoffset = 10
     textSize = 22
     lcdFieldAttr = CUSTOM_COLOR
+    lcdSelFieldAttr = BOLD
     lcdSavedColors = {
       lcd.getColor(TEXT_COLOR),
       lcd.getColor(TEXT_BGCOLOR),
@@ -745,8 +748,9 @@ local function setLCDvar()
     end  
     maxLineIndex = 6
     textXoffset = 0
-    textYoffset = 2
+    textYoffset = 3
     textSize = 8
+    lcdSelFieldAttr = 0
     lcdFieldAttr = 0
   end
 end
