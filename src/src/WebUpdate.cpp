@@ -453,11 +453,16 @@ void BeginWebUpdate(void)
   
   String instance = String(myHostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  MDNS.setInstanceName(instance);
-
-  MDNS.addService("http", "tcp", 80);
+  #ifdef PLATFORM_ESP8266
+    MDNS.setInstanceName(myHostname);
+    MDNS.addService(instance.c_str(), "http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  #else
+    MDNS.setInstanceName(instance);
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #endif
   MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-  MDNS.addServiceTxt("http", "tcp", "type", "rx");
   MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
   MDNS.addServiceTxt("http", "tcp", "version", VERSION);
   MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
@@ -470,21 +475,21 @@ void HandleWebUpdate(void)
   wl_status_t status = WiFi.status();
   unsigned long now = millis();
   if (status != laststatus && wifiMode == WIFI_STA) {
-        DBGLN("WiFi status %d", status);
-        switch(status) {
-          case WL_NO_SSID_AVAIL:
-          case WL_CONNECT_FAILED:
-          case WL_CONNECTION_LOST:
-            changeTime = now;
-            changeMode = WIFI_AP;
-            break;
-          case WL_DISCONNECTED: // try reconnection
-            changeTime = now;
-            break;
-          default:
-            break;
-        }
-        laststatus = status;
+    DBGLN("WiFi status %d", status);
+    switch(status) {
+      case WL_NO_SSID_AVAIL:
+      case WL_CONNECT_FAILED:
+      case WL_CONNECTION_LOST:
+        changeTime = now;
+        changeMode = WIFI_AP;
+        break;
+      case WL_DISCONNECTED: // try reconnection
+        changeTime = now;
+        break;
+      default:
+        break;
+    }
+    laststatus = status;
   }
   if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < now) {
     changeTime = now;
