@@ -531,11 +531,12 @@ void beginWebServer()
     BeginWebUpdate();
 }
 
-void handleWebUpdateServer(unsigned long now)
+bool handleWebUpdateServer(unsigned long now)
 {
   if (connectionState == wifiUpdate)
   {
     HandleWebUpdate();
+    return true;
   }
   else
   {
@@ -556,6 +557,7 @@ void handleWebUpdateServer(unsigned long now)
     }
     #endif
   }
+  return false;
 }
 
 #endif

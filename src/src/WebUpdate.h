@@ -5,6 +5,6 @@ extern bool webserverPreventAutoStart;
 extern void wifiOff();
 
 extern void beginWebServer();
-extern void handleWebUpdateServer(unsigned long now);
+extern bool handleWebUpdateServer(unsigned long now); // returns true if in wifi mode
 
 #endif

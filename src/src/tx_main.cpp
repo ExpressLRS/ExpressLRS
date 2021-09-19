@@ -1036,13 +1036,15 @@ void loop()
   HandleUpdateParameter();
   CheckConfigChangePending();
 
-#if defined(PLATFORM_ESP32)
-  // If the reboot time is set and the current time is past the reboot time then reboot.
-  if (rebootTime != 0 && now > rebootTime) {
-    ESP.restart();
-  }
-  handleWebUpdateServer(now);
-#endif
+  #if defined(PLATFORM_ESP32)
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
+      ESP.restart();
+    }
+    if (handleWebUpdateServer(now)) {
+      return;
+    }
+  #endif
 
   #ifdef FEATURE_OPENTX_SYNC
     // DBGVLN(crsf.OpenTXsyncOffset);

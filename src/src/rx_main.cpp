@@ -988,11 +988,35 @@ static void setupBindingFromConfig()
 #endif
 }
 
-#if defined(PLATFORM_ESP8266)
-static void WebUpdateLoop(unsigned long now)
+void updateLEDs(uint32_t now)
 {
-    handleWebUpdateServer(now);
-    if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
+#if WS2812_LED_IS_USED
+    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 30 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDWS2812LastUpdate = now;
+    }
+#endif
+    // Always blink the LED at a steady rate when not connected, independent of the cycle status
+    if (connectionState == disconnected && now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
+    {
+        #ifdef GPIO_PIN_LED
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        #elif GPIO_PIN_LED_GREEN
+            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
+        #endif
+        LED = !LED;
+        LEDLastUpdate = now;
+    }
+    else if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
@@ -1000,8 +1024,46 @@ static void WebUpdateLoop(unsigned long now)
         LED = !LED;
         LEDLastUpdate = now;
     }
+    else if (InBindingMode && now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
+    {
+        if (LEDPulseCounter == 0)
+        {
+            LED = true;
+        }
+        else if (LEDPulseCounter == 4)
+        {
+            LED = false;
+        }
+        else
+        {
+            LED = !LED;
+        }
+
+        if (LEDPulseCounter < 4)
+        {
+            LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
+        }
+        else
+        {
+            LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
+            LEDPulseCounter = 0;
+        }
+
+        #ifdef GPIO_PIN_LED
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        #endif
+
+        LEDPulseCounter++;
+    }
+    else if (connectionState == radioFailed && now > LEDLastUpdate)
+    {
+        #ifdef GPIO_PIN_LED
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        LED = !LED;
+        #endif
+        LEDLastUpdate = now + LED_INTERVAL_ERROR;
+    }
 }
-#endif
 
 static void HandleUARTin()
 {
@@ -1032,29 +1094,28 @@ static void setupRadio()
 #endif
     bool init_success = Radio.Begin();
     POWERMGNT.init();
-#ifdef PLATFORM_ESP8266
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
+#ifdef PLATFORM_ESP8266
         beginWebServer();
         while (1)
         {
             HandleUARTin();
-            WebUpdateLoop(millis());
+            unsigned long now = millis();
+            handleWebUpdateServer(now);
+            updateLEDs(now);
         }
-    }
 #else // target does not have wifi
-    while (!init_success)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        LED = !LED;
-        #endif
-        delay(LED_INTERVAL_ERROR);
-        DBGLN("Failed to detect RF chipset!!!");
-        HandleUARTin();
-    }
+        connectionState = radioFailed;
+        while (1)
+        {
+            HandleUARTin();
+            unsigned long now = millis();
+            updateLEDs(now);
+        }
 #endif
+    }
 
     // Set transmit power to maximum
     POWERMGNT.setPower(MaxPower);
@@ -1136,18 +1197,6 @@ static void cycleRfMode(unsigned long now)
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
     } // if time to switch RF mode
-
-    // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
-    {
-        #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    } // if cycle LED
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -1210,12 +1259,16 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
+    updateLEDs(now);
+
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-    WebUpdateLoop(now);
+    if (handleWebUpdateServer(now)) {
+        return;
+    }
     #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
@@ -1274,22 +1327,6 @@ void loop()
         DBGLN("Timer locked");
     }
 
-#if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
-    {
-        uint8_t LEDcolor[3] = {0};
-        if (LEDfade == 30 || LEDfade == 0)
-        {
-            LEDfadeDir = !LEDfadeDir;
-        }
-
-        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-        WS281BsetLED(LEDcolor);
-        LEDWS2812LastUpdate = now;
-    }
-#endif
-
     // If the eeprom is indicating that we're not bound
     // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
@@ -1309,42 +1346,6 @@ void loop()
         EnterBindingMode();
     }
 #endif
-    // Update the LED while in binding mode
-    if (InBindingMode)
-    {
-        if (now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
-        {
-            if (LEDPulseCounter == 0)
-            {
-                LED = true;
-            }
-            else if (LEDPulseCounter == 4)
-            {
-                LED = false;
-            }
-            else
-            {
-                LED = !LED;
-            }
-
-            if (LEDPulseCounter < 4)
-            {
-                LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
-            }
-            else
-            {
-                LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
-                LEDPulseCounter = 0;
-            }
-
-
-            #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-            #endif
-
-            LEDPulseCounter++;
-        }
-    }
 
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
