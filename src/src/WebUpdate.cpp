@@ -16,14 +16,13 @@
 
 #include <ESPAsyncWebServer.h>
 
-#if defined(PLATFORM_ESP32)
-#elif defined(PLATFORM_ESP8266)
-#endif
-
-#include "WebContent.h"
-
+#include "common.h"
+#include "POWERMGNT.h"
+#include "hwTimer.h"
 #include "logging.h"
 #include "options.h"
+
+#include "WebContent.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -42,7 +41,6 @@ extern TxConfig config;
 extern RxConfig config;
 #endif
 extern unsigned long rebootTime;
-
 
 #define QUOTE(arg) #arg
 #define STR(macro) QUOTE(macro)
@@ -67,6 +65,9 @@ STR(HOME_WIFI_PASSWORD)
 #endif
 ;
 
+bool webserverPreventAutoStart = false;
+extern bool InBindingMode;
+
 static wl_status_t laststatus;
 static volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
@@ -79,7 +80,6 @@ static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
 
-bool IsWebUpdateMode = false;
 static bool target_seen = false;
 static uint8_t target_pos = 0;
 static bool force_update = false;
@@ -367,8 +367,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 
 static void setupWebServer()
 {
-  IsWebUpdateMode = true;
-
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
@@ -522,6 +520,42 @@ void HandleWebUpdate(void)
   #if defined(PLATFORM_ESP8266)
     MDNS.update();
   #endif
+}
+
+void beginWebServer()
+{
+    hwTimer::stop();
+    // Set transmit power to minimum
+    POWERMGNT::setPower(MinPower);
+    connectionState = wifiUpdate;
+    BeginWebUpdate();
+}
+
+void handleWebUpdateServer(unsigned long now)
+{
+  if (connectionState == wifiUpdate)
+  {
+    HandleWebUpdate();
+  }
+  else
+  {
+    #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
+    //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
+    //start webupdate, there might be wrong configuration flashed.
+    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
+      DBGLN("No CRSF ever detected, starting WiFi");
+      beginWebServer();
+    }
+    #elif defined(TARGET_RX)
+    if (!webserverPreventAutoStart && (connectionState == disconnected))
+    {
+      if ((!InBindingMode && now > (AUTO_WIFI_ON_INTERVAL * 1000)) || (InBindingMode && now > 60000))
+      {
+          beginWebServer();
+      }
+    }
+    #endif
+  }
 }
 
 #endif

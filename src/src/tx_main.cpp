@@ -61,8 +61,6 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-static bool webserverPreventAutoStart = false;
-
 #if defined(HAS_OLED)
 OLED OLED;
 char commitStr[7] = {LATEST_COMMIT , 0};
@@ -505,17 +503,6 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-static void beginWebsever()
-{
-    hwTimer.stop();
-    // Set transmit power to minimum
-    POWERMGNT.setPower(MinPower);
-    connectionState = wifiUpdate;
-    BeginWebUpdate();
-}
-#endif
-
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
@@ -637,7 +624,7 @@ void registerLuaParameters() {
         //unintentional button press.
         DBGLN("Wifi Update Mode Requested!");
         sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
-        beginWebsever();
+        beginWebServer();
       }
       else if (arg > 0 && arg < 4)
       {
@@ -984,12 +971,12 @@ void setup()
   if (!init_success)
   {
     #ifdef PLATFORM_ESP32
-    connectionState = radioFailed;
-    BeginWebUpdate();
+    beginWebServer();
     while (1)
     {
-      updateLEDs(millis(), radioFailed, 0, 0);
-      HandleWebUpdate();
+      unsigned long now = millis();
+      updateLEDs(now, radioFailed, 0, 0);
+      handleWebUpdateServer(now);
       delay(1);
     }
     #endif
@@ -1052,20 +1039,7 @@ void loop()
   if (rebootTime != 0 && now > rebootTime) {
     ESP.restart();
   }
-
-  #if defined(AUTO_WIFI_ON_INTERVAL)
-    //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-    //start webupdate, there might be wrong configuration flashed.
-    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
-      DBGLN("No CRSF ever detected, starting WiFi");
-      beginWebsever();
-    }
-  #endif
-  if (connectionState == wifiUpdate)
-  {
-    HandleWebUpdate();
-    return;
-  }
+  handleWebUpdateServer(now);
 #endif
 
   #ifdef FEATURE_OPENTX_SYNC

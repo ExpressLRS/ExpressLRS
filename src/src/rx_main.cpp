@@ -60,6 +60,7 @@ uint32_t LEDWS2812LastUpdate;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
+POWERMGNT POWERMGNT;
 PFD PFDloop;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
@@ -138,7 +139,6 @@ bool buttonDown = false;     //is the button current pressed down?
 uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
 
-static bool webserverPreventAutoStart = false;
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
@@ -825,21 +825,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-static void beginWebsever()
-{
-    hwTimer.stop();
-
-    // Set transmit power to minimum
-    POWERMGNT P;
-    P.init();
-    P.setPower(MinPower);
-
-    connectionState = wifiUpdate;
-    BeginWebUpdate();
-}
-#endif
-
 void sampleButton(unsigned long now)
 {
 #ifdef GPIO_PIN_BUTTON
@@ -860,7 +845,7 @@ void sampleButton(unsigned long now)
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         if (connectionState != wifiUpdate)
         {
-            beginWebsever();
+            beginWebServer();
         }
 #endif
     }
@@ -1004,8 +989,8 @@ static void setupBindingFromConfig()
 #if defined(PLATFORM_ESP8266)
 static void WebUpdateLoop(unsigned long now)
 {
-    HandleWebUpdate();
-    if (now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
+    handleWebUpdateServer(now);
+    if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
@@ -1044,11 +1029,12 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
+    POWERMGNT.init();
 #ifdef PLATFORM_ESP8266
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
-        beginWebsever();
+        beginWebServer();
         while (1)
         {
             HandleUARTin();
@@ -1069,9 +1055,7 @@ static void setupRadio()
 #endif
 
     // Set transmit power to maximum
-    POWERMGNT P;
-    P.init();
-    P.setPower(MaxPower);
+    POWERMGNT.setPower(MaxPower);
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
@@ -1229,22 +1213,7 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-
-    if (!webserverPreventAutoStart && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
-    {
-        beginWebsever();
-    }
-
-    if (!webserverPreventAutoStart && (connectionState == disconnected) && InBindingMode && now > 60000)
-    {
-        beginWebsever();
-    }
-
-    if (connectionState == wifiUpdate)
-    {
-        WebUpdateLoop(now);
-        return;
-    }
+    WebUpdateLoop(now);
     #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
