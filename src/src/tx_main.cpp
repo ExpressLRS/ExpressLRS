@@ -39,10 +39,8 @@ SX1280Driver Radio;
 #endif
 #ifdef PLATFORM_ESP32
 #include "ESP32_WebUpdate.h"
-#endif
 #include "ESP32_BLE_HID.h"
-bool BLEjoystickActive = false;
-volatile bool BLEjoystickRefresh = false;
+#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -64,6 +62,8 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+
+static bool webserverPreventAutoStart = false;
 
 #if defined(HAS_OLED)
 OLED OLED;
@@ -513,6 +513,7 @@ static void beginWebsever()
     hwTimer.stop();
     // Set transmit power to minimum
     POWERMGNT.setPower(MinPower);
+    connectionState = wifiUpdate;
     BeginWebUpdate();
 }
 #endif
@@ -647,7 +648,7 @@ void registerLuaParameters() {
       else if (arg == 5)
       {
         sendLuaCommandResponse(&luaWebUpdate, 0, "WiFi Cancelled");
-        if (IsWebUpdateMode) {
+        if (connectionState == wifiUpdate) {
           rebootTime = millis() + 400;
         }
       }
@@ -663,7 +664,7 @@ void registerLuaParameters() {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        BLEjoystickActive = true;
+        connectionState = bleJoystick;
         DBGLN("BLE Joystick Mode Requested!");
         hwTimer.stop();
         crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
@@ -683,7 +684,7 @@ void registerLuaParameters() {
       else if (arg == 5)
       {
         sendLuaCommandResponse(&luaBLEJoystick, 0, "Joystick Cancelled");
-        if (BLEjoystickActive) {
+        if (connectionState == bleJoystick) {
           rebootTime = millis() + 400;
         }
       }
@@ -740,6 +741,7 @@ void UARTdisconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
   hwTimer.stop();
+  connectionState = noCrossfire;
 }
 
 void UARTconnected()
@@ -756,7 +758,10 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
+  rfModeLastChangedMS = millis(); // force syncspam on first packets
+  webserverPreventAutoStart = true;
   SetRFLinkRate(config.GetRate());
+  connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
   hwTimer.resume();
 }
 
@@ -981,9 +986,11 @@ void setup()
   if (!init_success)
   {
     #ifdef PLATFORM_ESP32
+    connectionState = radioFailed;
     BeginWebUpdate();
     while (1)
     {
+      updateLEDs(millis(), radioFailed, 0, 0);
       HandleWebUpdate();
       delay(1);
     }
@@ -1018,6 +1025,7 @@ void setup()
 
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+  connectionState = noCrossfire;
   crsf.Begin();
   #if defined(HAS_OLED)
     OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
@@ -1031,7 +1039,11 @@ void loop()
   uint32_t now = millis();
   static bool mspTransferActive = false;
 
-  UpdateConnectDisconnectStatus();
+  if (connectionState < MODE_STATES)
+  {
+    UpdateConnectDisconnectStatus();
+  }
+
   updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
 
   HandleUpdateParameter();
@@ -1046,12 +1058,12 @@ void loop()
   #if defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(crsf.hasEverConnected == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && !IsWebUpdateMode){
+    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
       DBGLN("No CRSF ever detected, starting WiFi");
       beginWebsever();
     }
   #endif
-  if (IsWebUpdateMode)
+  if (connectionState == wifiUpdate)
   {
     HandleWebUpdate();
     return;
