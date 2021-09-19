@@ -613,9 +613,11 @@ void GotConnection(unsigned long now)
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
-    webserverPreventAutoStart = true;
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    webserverPreventAutoStart = true;
+    #endif
 
     DBGLN("got conn");
 
@@ -1467,7 +1469,9 @@ void OnELRSBindMSP(uint8_t* packet)
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     webserverPreventAutoStart = true;
+    #endif
     ExitBindingMode();
 }
 

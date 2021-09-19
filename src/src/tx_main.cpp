@@ -743,8 +743,10 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
-  rfModeLastChangedMS = millis(); // force syncspam on first packets
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP266)
   webserverPreventAutoStart = true;
+  #endif
+  rfModeLastChangedMS = millis(); // force syncspam on first packets
   SetRFLinkRate(config.GetRate());
   connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
   hwTimer.resume();
