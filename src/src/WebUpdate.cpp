@@ -65,10 +65,11 @@ STR(HOME_WIFI_PASSWORD)
 #endif
 ;
 
+static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
 
-static wl_status_t laststatus;
+static wl_status_t laststatus = WL_IDLE_STATUS;
 static volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
@@ -151,8 +152,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   { // If captive portal redirect instead of displaying the page.
     return;
   }
-  if (request->hasArg("force"))
-    force_update = true;
+  force_update = request->hasArg("force");
   AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
@@ -369,12 +369,29 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 void wifiOff()
 {
 #ifdef PLATFORM_ESP8266
+  wifiStarted = false;
   WiFi.mode(WIFI_OFF);
   WiFi.forceSleepBegin();
 #endif /* PLATFORM_ESP8266 */
 }
 
-static void startWifi() {
+static void startWiFi(unsigned long now)
+{
+  if (wifiStarted) {
+    return;
+  }
+  hwTimer::stop();
+  // Set transmit power to minimum
+  POWERMGNT::setPower(MinPower);
+  if (connectionState < FAILURE_STATES) {
+    connectionState = wifiUpdate;
+  }
+
+  DBGLN("Stopping Radio");
+  Radio.End();
+
+  INFOLN("Begin Webupdater");
+
   WiFi.persistent(false);
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
@@ -390,13 +407,14 @@ static void startWifi() {
     config.SetPassword(home_wifi_password);
   }
   if (config.GetSSID()[0]==0) {
-    changeTime = millis();
+    changeTime = now;
     changeMode = WIFI_AP;
   } else {
-    changeTime = millis();
+    changeTime = now;
     changeMode = WIFI_STA;
   }
   laststatus = WL_DISCONNECTED;
+  wifiStarted = true;
 }
 
 static void startServices()
@@ -464,10 +482,9 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 }
 
-void HandleWebUpdate()
+static void HandleWebUpdate(unsigned long now)
 {
   wl_status_t status = WiFi.status();
-  unsigned long now = millis();
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
     switch(status) {
@@ -497,6 +514,7 @@ void HandleWebUpdate()
         WiFi.disconnect();
         wifiMode = WIFI_AP;
         WiFi.mode(wifiMode);
+        changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
         WiFi.softAP(ssid, password);
         WiFi.scanNetworks(true);
@@ -504,8 +522,8 @@ void HandleWebUpdate()
         break;
       case WIFI_STA:
         DBGLN("Connecting to home network '%s'", config.GetSSID());
-        WiFi.mode(WIFI_STA);
         wifiMode = WIFI_STA;
+        WiFi.mode(wifiMode);
         changeTime = now;
         WiFi.begin(config.GetSSID(), config.GetPassword());
         startServices();
@@ -517,31 +535,23 @@ void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
-  dnsServer.processNextRequest();
-  #if defined(PLATFORM_ESP8266)
-    MDNS.update();
-  #endif
-}
-
-void beginWebServer()
-{
-  hwTimer::stop();
-  // Set transmit power to minimum
-  POWERMGNT::setPower(MinPower);
-  connectionState = wifiUpdate;
-
-  DBGLN("Stopping Radio");
-  Radio.End();
-
-  INFOLN("Begin Webupdater");
-  startWifi();
+  if (servicesStarted)
+  {
+    dnsServer.processNextRequest();
+    #if defined(PLATFORM_ESP8266)
+      MDNS.update();
+    #endif
+  }
 }
 
 bool handleWebUpdateServer(unsigned long now)
 {
-  if (connectionState == wifiUpdate)
+  if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
-    HandleWebUpdate();
+    if (!wifiStarted) {
+      startWiFi(now);
+    }
+    HandleWebUpdate(now);
     return true;
   }
   else
@@ -549,16 +559,18 @@ bool handleWebUpdateServer(unsigned long now)
     #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
     //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
     //start webupdate, there might be wrong configuration flashed.
-    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
+    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate && !wifiStarted){
       DBGLN("No CRSF ever detected, starting WiFi");
-      beginWebServer();
+      startWiFi(now);
+      return true;
     }
     #elif defined(TARGET_RX)
-    if (!webserverPreventAutoStart && (connectionState == disconnected))
+    if (!webserverPreventAutoStart && (connectionState == disconnected) && !wifiStarted)
     {
       if ((!InBindingMode && now > (AUTO_WIFI_ON_INTERVAL * 1000)) || (InBindingMode && now > 60000))
       {
-          beginWebServer();
+        startWiFi(now);
+        return true;
       }
     }
     #endif

@@ -624,7 +624,7 @@ void registerLuaParameters() {
         //unintentional button press.
         DBGLN("Wifi Update Mode Requested!");
         sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
-        beginWebServer();
+        connectionState = wifiUpdate;
       }
       else if (arg > 0 && arg < 4)
       {
@@ -878,6 +878,10 @@ void setup()
 //  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    wifiOff();
+#endif
+
   startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -972,8 +976,8 @@ void setup()
   bool init_success = Radio.Begin();
   if (!init_success)
   {
+    connectionState = radioFailed;
     #ifdef PLATFORM_ESP32
-    beginWebServer();
     while (1)
     {
       unsigned long now = millis();

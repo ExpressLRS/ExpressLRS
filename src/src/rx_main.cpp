@@ -847,7 +847,7 @@ void sampleButton(unsigned long now)
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         if (connectionState != wifiUpdate)
         {
-            beginWebServer();
+            connectionState = wifiUpdate;
         }
 #endif
     }
@@ -1097,24 +1097,16 @@ static void setupRadio()
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
-#ifdef PLATFORM_ESP8266
-        beginWebServer();
-        while (1)
-        {
-            HandleUARTin();
-            unsigned long now = millis();
-            handleWebUpdateServer(now);
-            updateLEDs(now);
-        }
-#else // target does not have wifi
         connectionState = radioFailed;
         while (1)
         {
             HandleUARTin();
             unsigned long now = millis();
             updateLEDs(now);
-        }
+#if defined(PLATFORM_ESP8266)
+            handleWebUpdateServer(now);
 #endif
+        }
     }
 
     // Set transmit power to maximum
