@@ -79,6 +79,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
+static bool servicesStarted = false;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -365,8 +366,44 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   } 
 }
 
-static void setupWebServer()
+void wifiOff()
 {
+#ifdef PLATFORM_ESP8266
+  WiFi.mode(WIFI_OFF);
+  WiFi.forceSleepBegin();
+#endif /* PLATFORM_ESP8266 */
+}
+
+static void startWifi() {
+  WiFi.persistent(false);
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  #if defined(PLATFORM_ESP8266)
+    WiFi.setOutputPower(13);
+    WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+  #elif defined(PLATFORM_ESP32)
+    WiFi.setTxPower(WIFI_POWER_13dBm);
+  #endif
+  WiFi.setHostname(myHostname);
+  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
+    config.SetSSID(home_wifi_ssid);
+    config.SetPassword(home_wifi_password);
+  }
+  if (config.GetSSID()[0]==0) {
+    changeTime = millis();
+    changeMode = WIFI_AP;
+  } else {
+    changeTime = millis();
+    changeMode = WIFI_STA;
+  }
+  laststatus = WL_DISCONNECTED;
+}
+
+static void startServices()
+{
+  if (servicesStarted) {
+    return;
+  }
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
@@ -397,50 +434,6 @@ static void setupWebServer()
   server.onNotFound(WebUpdateHandleNotFound);
 
   server.begin();
-}
-
-void wifiOff()
-{
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
-}
-
-static void startWifi() {
-  WiFi.persistent(false);
-  WiFi.disconnect();
-  WiFi.mode(WIFI_OFF);
-  #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(13);
-    WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-  #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_13dBm);
-  #endif
-  WiFi.setHostname(myHostname);
-  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
-    config.SetSSID(home_wifi_ssid);
-    config.SetPassword(home_wifi_password);
-  }
-  if (config.GetSSID()[0]==0) {
-    changeTime = millis();
-    changeMode = WIFI_AP;
-  } else {
-    changeTime = millis();
-    changeMode = WIFI_STA;
-  }
-  laststatus = WL_DISCONNECTED;
-}
-
-void BeginWebUpdate(void)
-{
-  DBGLN("Stopping Radio");
-  Radio.End();
-
-  INFOLN("Begin Webupdater");
-  startWifi();
-
-  setupWebServer();
 
   dnsServer.start(DNS_PORT, "*", apIP);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
@@ -467,10 +460,11 @@ void BeginWebUpdate(void)
   MDNS.addServiceTxt("http", "tcp", "version", VERSION);
   MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
 
+  servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 }
 
-void HandleWebUpdate(void)
+void HandleWebUpdate()
 {
   wl_status_t status = WiFi.status();
   unsigned long now = millis();
@@ -506,6 +500,7 @@ void HandleWebUpdate(void)
         WiFi.softAPConfig(apIP, apIP, netMsk);
         WiFi.softAP(ssid, password);
         WiFi.scanNetworks(true);
+        startServices();
         break;
       case WIFI_STA:
         DBGLN("Connecting to home network '%s'", config.GetSSID());
@@ -513,6 +508,7 @@ void HandleWebUpdate(void)
         wifiMode = WIFI_STA;
         changeTime = now;
         WiFi.begin(config.GetSSID(), config.GetPassword());
+        startServices();
       default:
         break;
     }
@@ -529,11 +525,16 @@ void HandleWebUpdate(void)
 
 void beginWebServer()
 {
-    hwTimer::stop();
-    // Set transmit power to minimum
-    POWERMGNT::setPower(MinPower);
-    connectionState = wifiUpdate;
-    BeginWebUpdate();
+  hwTimer::stop();
+  // Set transmit power to minimum
+  POWERMGNT::setPower(MinPower);
+  connectionState = wifiUpdate;
+
+  DBGLN("Stopping Radio");
+  Radio.End();
+
+  INFOLN("Begin Webupdater");
+  startWifi();
 }
 
 bool handleWebUpdateServer(unsigned long now)
