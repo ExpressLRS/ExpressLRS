@@ -968,6 +968,10 @@ static void HandleUARTin()
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
+        if (telemetry.ShouldSendDeviceFrame())
+        {
+            crsf.sendDeviceInfoFrameToFC();
+        }
     }
 }
 
