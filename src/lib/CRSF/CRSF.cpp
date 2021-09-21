@@ -19,6 +19,8 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
 #endif
+#elif defined(TARGET_NATIVE)
+HardwareSerial CRSF::Port = Serial;
 #endif
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);

@@ -12,7 +12,6 @@ StringStream ss(buf);
 // Create a CRSF object to test,
 // using the StringStream as a mock UART
 CRSF crsf(&ss);
-HardwareSerial CRSF::Port = HardwareSerial();
 
 void test_encapsulated_msp_send(void)
 {

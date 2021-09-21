@@ -160,4 +160,6 @@ private:
     static void flush_port_input(void);
 };
 
+extern GENERIC_CRC8 crsf_crc;
+
 #endif
