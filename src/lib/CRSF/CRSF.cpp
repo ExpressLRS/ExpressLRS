@@ -24,10 +24,16 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
-FIFO SerialOutFIFO;
-FIFO MspWriteFIFO;
+static FIFO SerialOutFIFO;
 
-volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+volatile uint16_t CRSF::ChannelDataIn[16] = {0};
+
+volatile inBuffer_U CRSF::inBuffer;
+
+volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
+
+#if CRSF_TX_MODULE
+static FIFO MspWriteFIFO;
 
 void inline CRSF::nullCallback(void) {}
 
@@ -39,26 +45,17 @@ void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges
 void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
 
 /// UART Handling ///
+volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
+volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
+volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
-volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
-
-volatile uint16_t CRSF::ChannelDataIn[16] = {0};
-
-volatile inBuffer_U CRSF::inBuffer;
-
 uint8_t CRSF::modelId = 0;
-
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 volatile bool CRSF::elrsLUAmode = false;
 
-volatile crsf_channels_s CRSF::PackedRCdataOut;
-volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
-
-#if CRSF_TX_MODULE
 /// OpenTX mixer sync ///
 volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
@@ -95,6 +92,9 @@ uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
+#ifdef CRSF_RX_MODULE
+volatile crsf_channels_s CRSF::PackedRCdataOut;
+#endif
 
 void CRSF::Begin()
 {
@@ -354,6 +354,27 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         OpenTXsyncLastSent = now;
     }
+}
+
+void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+{
+    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
+    ChannelDataIn[0] = (rcChannels->ch0);
+    ChannelDataIn[1] = (rcChannels->ch1);
+    ChannelDataIn[2] = (rcChannels->ch2);
+    ChannelDataIn[3] = (rcChannels->ch3);
+    ChannelDataIn[4] = (rcChannels->ch4);
+    ChannelDataIn[5] = (rcChannels->ch5);
+    ChannelDataIn[6] = (rcChannels->ch6);
+    ChannelDataIn[7] = (rcChannels->ch7);
+    ChannelDataIn[8] = (rcChannels->ch8);
+    ChannelDataIn[9] = (rcChannels->ch9);
+    ChannelDataIn[10] = (rcChannels->ch10);
+    ChannelDataIn[11] = (rcChannels->ch11);
+    ChannelDataIn[12] = (rcChannels->ch12);
+    ChannelDataIn[13] = (rcChannels->ch13);
+    ChannelDataIn[14] = (rcChannels->ch14);
+    ChannelDataIn[15] = (rcChannels->ch15);
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
@@ -869,25 +890,3 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     this->_dev->write(data, totalBufferLen);
 }
 #endif // CRSF_TX_MODULE
-
-
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-{
-    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    ChannelDataIn[0] = (rcChannels->ch0);
-    ChannelDataIn[1] = (rcChannels->ch1);
-    ChannelDataIn[2] = (rcChannels->ch2);
-    ChannelDataIn[3] = (rcChannels->ch3);
-    ChannelDataIn[4] = (rcChannels->ch4);
-    ChannelDataIn[5] = (rcChannels->ch5);
-    ChannelDataIn[6] = (rcChannels->ch6);
-    ChannelDataIn[7] = (rcChannels->ch7);
-    ChannelDataIn[8] = (rcChannels->ch8);
-    ChannelDataIn[9] = (rcChannels->ch9);
-    ChannelDataIn[10] = (rcChannels->ch10);
-    ChannelDataIn[11] = (rcChannels->ch11);
-    ChannelDataIn[12] = (rcChannels->ch12);
-    ChannelDataIn[13] = (rcChannels->ch13);
-    ChannelDataIn[14] = (rcChannels->ch14);
-    ChannelDataIn[15] = (rcChannels->ch15);
-}
