@@ -70,9 +70,10 @@ public:
 
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
-    void sendLinkStatisticsToFC();
+    void ICACHE_RAM_ATTR sendLinkStatisticsToFC();
     void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
+    void ICACHE_RAM_ATTR sendDeviceInfoFrameToFC();
 
     uint8_t sendCRSFparam(crsf_frame_type_e frame,uint8_t fieldchunk, crsf_value_type_e dataType, const void * luaData, uint8_t wholePacketSize);
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
@@ -150,7 +151,7 @@ private:
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
-    
+
     static uint32_t luaHiddenFlags;
 
     void getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray);
@@ -165,7 +166,7 @@ private:
      void getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray);
      void getLuaint16StructToArray(const void * luaStruct, uint8_t *outarray);
      void getLuaFloatStructToArray(const void * luaStruct, uint8_t *outarray);
-*/ 
+*/
 
 #endif
 

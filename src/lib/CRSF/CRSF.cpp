@@ -1024,6 +1024,33 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
     this->_dev->write(data, totalBufferLen);
 }
+
+void ICACHE_RAM_ATTR CRSF::sendDeviceInfoFrameToFC()
+{
+    uint8_t buffer[] = {
+        // device_addr, frame_size, type, dest_addr, orig_addr;
+        CRSF_ADDRESS_FLIGHT_CONTROLLER, 0, CRSF_FRAMETYPE_DEVICE_INFO, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_RECEIVER,
+        // name
+        'E', 'L', 'R', 'S', 'R','X', '\0',
+        // serial number
+        0x00, 0x0a, 0xe7, 0xc6,
+        // hw id
+        0, 0, 0, 0,
+        // firmware id
+        0, 0, 0, 0,
+        // parameters count, version number
+        0, 0,
+        // crc
+        0};
+
+    // crc does not include first two fields and crc field
+    buffer[sizeof(buffer) - 1] = crsf_crc.calc(buffer + 2, sizeof(buffer) - 3);
+    // length does not include device_addr + frame_size
+    buffer[1] = sizeof(buffer) - 2;
+#ifndef DEBUG_CRSF_NO_OUTPUT
+    this->_dev->write(buffer, sizeof(buffer));
+#endif
+}
 #endif // CRSF_TX_MODULE
 
 
