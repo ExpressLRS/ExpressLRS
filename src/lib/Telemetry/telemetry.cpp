@@ -35,6 +35,12 @@ bool Telemetry::ShouldCallUpdateModelMatch()
     return updateModelMatch;
 }
 
+bool Telemetry::ShouldSendDeviceFrame()
+{
+    bool deviceFrame = sendDeviceFrame;
+    sendDeviceFrame = false;
+    return deviceFrame;
+}
 
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO);
 
@@ -203,6 +209,12 @@ void Telemetry::AppendTelemetryPackage()
         modelMatchId = CRSFinBuffer[5];
         return;
     }
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_INFO)
+    {
+        sendDeviceFrame = true;
+        return;
+    }
+
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
         // last entry is always reserved and used for every other telemetry response

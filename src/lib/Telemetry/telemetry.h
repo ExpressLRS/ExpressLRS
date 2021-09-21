@@ -45,6 +45,7 @@ public:
     bool ShouldCallBootloader();
     bool ShouldCallEnterBind();
     bool ShouldCallUpdateModelMatch();
+    bool ShouldSendDeviceFrame();
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
@@ -61,5 +62,6 @@ private:
     bool callBootloader;
     bool callEnterBind;
     bool callUpdateModelMatch;
+    bool sendDeviceFrame;
     uint8_t modelMatchId;
 };
