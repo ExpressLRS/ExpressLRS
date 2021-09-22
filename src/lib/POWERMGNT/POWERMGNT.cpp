@@ -129,6 +129,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_100mW;
         break;
     }
+
+#elif defined(TARGET_RX_MATEK_2400)
+#if defined(TARGET_RX) && defined(TARGET_RX_DEFAULT_POWER)
+    Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
+#endif
+
 #elif defined(TARGET_NAMIMNORC_TX)
     // Control Flash 2.4GHz TX module
     int8_t rfpower = -18;
