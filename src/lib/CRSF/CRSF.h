@@ -76,7 +76,7 @@ public:
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
 
-    uint8_t getModelID() const { return modelId; }
+    static uint8_t getModelID() { return modelId; }
 
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms

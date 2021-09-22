@@ -1,5 +1,6 @@
 #include "targets.h"
 #include "common.h"
+#include "device.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -11,16 +12,13 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "lua.h"
-#include "luaParams.h"
+#include "helpers.h"
 
 #include "FHSS.h"
 #include "logging.h"
 #include "POWERMGNT.h"
-#include "LED.h"
 #include "msp.h"
-#include "msptypes.h"
 #include <OTA.h>
-#include "options.h"
 #include "config.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
@@ -38,7 +36,6 @@ SX1280Driver Radio;
 #endif
 
 #include "WebUpdate.h"
-#include "ESP32_BLE_HID.h"
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -60,6 +57,9 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+
+// Internal eventing
+bool eventFired = false;
 
 #if defined(HAS_OLED)
 OLED OLED;
@@ -91,7 +91,6 @@ LQCALC<10> LQCalc;
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
-char luaBadGoodString[10] = {"xxxxx/yyy"};
 
 bool WaitRXresponse = false;
 
@@ -115,6 +114,16 @@ void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
 
 uint8_t baseMac[6];
+
+//////////// DEVICES ////////////
+
+extern device_t RGB_device;
+extern device_t LUA_device;
+
+device_t *ui_devices[] = {
+  &RGB_device,
+  &LUA_device
+};
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -504,215 +513,6 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-void registerLuaParameters() {
-  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
-    if ((arg < RATE_MAX) && (arg >= 0))
-    {
-      DBGLN("Request AirRate: %d", arg);
-      uint8_t rate = RATE_MAX - 1 - arg;
-      rate = adjustPacketRateForBaud(rate);
-      config.SetRate(rate);
-      #if defined(HAS_OLED)
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)RATE_MAX - arg),
-                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
-      #endif
-    }
-  });
-  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
-    if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
-    {
-      DBGLN("Request TLM interval: %d", arg);
-      config.SetTlm((expresslrs_tlm_ratio_e)arg);
-      #if defined(HAS_OLED)
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)arg), commitStr);
-      #endif
-    }
-  });
-  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
-    // Only allow changing switch mode when disconnected since we need to guarantee
-    // the pack and unpack functions are matched
-    if (connectionState == disconnected)
-    {
-      DBGLN("Request Switch Mode: %d", arg);
-      // +1 to the mode because 1-bit was mode 0 and has been removed
-      // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-      uint32_t newSwitchMode = (crsf.ParameterUpdateData[2] + 1) & 0b11;
-      config.SetSwitchMode(newSwitchMode);
-      OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
-    }
-  });
-  registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
-    bool newModelMatch = crsf.ParameterUpdateData[2] & 0b1;
-#ifndef DEBUG_SUPPRESS
-    DBGLN("Request Model Match: %d", newModelMatch);
-#endif
-    config.SetModelMatch(newModelMatch);
-    if (connectionState == connected) {
-      mspPacket_t msp;
-      msp.reset();
-      msp.makeCommand();
-      msp.function = MSP_SET_RX_CONFIG;
-      msp.addByte(MSP_ELRS_MODEL_ID);
-      msp.addByte(newModelMatch ? crsf.getModelID() : 0xff);
-      crsf.AddMspMessage(&msp);
-    }
-  });
-  registerLUAParameter(&luaPowerFolder);
-  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
-    PowerLevels_e newPower = (PowerLevels_e)arg;
-    DBGLN("Request Power: %d", newPower);
-    
-    if (newPower > MaxPower)
-    {
-        newPower = MaxPower;
-    } else if (newPower < MinPower)
-    {
-        newPower = MinPower;
-    }
-    config.SetPower(newPower);
-
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-    #endif
-  }, luaPowerFolder.luaProperties1.id);
-  registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
-      config.SetDynamicPower(arg > 0);
-      config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-  }, luaPowerFolder.luaProperties1.id);
-  registerLUAParameter(&luaVtxFolder);
-  registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
-      config.SetVtxBand(arg);
-  },luaVtxFolder.luaProperties1.id);
-  registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
-      config.SetVtxChannel(arg);
-  },luaVtxFolder.luaProperties1.id);
-  registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
-      config.SetVtxPower(arg);
-  },luaVtxFolder.luaProperties1.id);
-  registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
-      config.SetVtxPitmode(arg);
-  },luaVtxFolder.luaProperties1.id);
-  registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      VtxConfigReadyToSend = true;
-      sendLuaCommandResponse(&luaVtxSend, 2, "Sending...");
-    } else {
-      sendLuaCommandResponse(&luaVtxSend, 0, "Config Sent");
-    }
-  },luaVtxFolder.luaProperties1.id);
-
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      DBGLN("Binding requested from LUA");
-      EnterBindingMode();
-      sendLuaCommandResponse(&luaBind, 2, "Binding...");
-    } else {
-      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
-    }
-  });
-  #ifdef PLATFORM_ESP32
-    registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      DBGVLN("arg %d", arg);
-      if (arg == 4) // 4 = request confirmed, start
-      {
-        //confirm run on ELRSv2.lua or start command from CRSF configurator,
-        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press.
-        DBGLN("Wifi Update Mode Requested!");
-        sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
-        connectionState = wifiUpdate;
-      }
-      else if (arg > 0 && arg < 4)
-      {
-        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update Mode?");
-      }
-      else if (arg == 5)
-      {
-        sendLuaCommandResponse(&luaWebUpdate, 0, "WiFi Cancelled");
-        if (connectionState == wifiUpdate) {
-          rebootTime = millis() + 400;
-        }
-      }
-      else
-      {
-        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
-      }
-    });
-
-    registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
-      if (arg == 4) // 4 = request confirmed, start
-      {
-        //confirm run on ELRSv2.lua or start command from CRSF configurator,
-        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press.
-        connectionState = bleJoystick;
-        DBGLN("BLE Joystick Mode Requested!");
-        hwTimer.stop();
-        crsf.RCdataCallback = &BluetoothJoystickUpdateValues;
-        hwTimer.updateInterval(5000);
-        crsf.setSyncParams(5000); // 200hz
-        delay(100);
-        crsf.disableOpentxSync();
-        POWERMGNT.setPower(MinPower);
-        Radio.End();
-        BluetoothJoystickBegin();
-        sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
-      }
-      else if (arg > 0 && arg < 4) //start command, 1 = start, 2 = running, 3 = request confirmation
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, 3, "Start BLE Joystick?");
-      }
-      else if (arg == 5)
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, 0, "Joystick Cancelled");
-        if (connectionState == bleJoystick) {
-          rebootTime = millis() + 400;
-        }
-      }
-      else
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
-      }
-    });
-
-  #endif
-
-  registerLUAParameter(&luaInfo);
-  registerLUAParameter(&luaELRSversion);
-  registerLUAParameter(NULL);
-}
-
-void resetLuaParams(){
-  uint8_t rate = adjustPacketRateForBaud(config.GetRate());
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
-  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-  setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
-
-  setLuaTextSelectionValue(&luaPower, config.GetPower());
-
-  uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  setLuaTextSelectionValue(&luaDynamicPower,dynamic);
-
-  setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
-  setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
-  setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
-  setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
-}
-
-void updateLUApacketCount(){
-  itoa(crsf.BadPktsCountResult, luaBadGoodString, 10);
-  strcat(luaBadGoodString, "/");
-  itoa(crsf.GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
-  setLuaStringValue(&luaInfo, luaBadGoodString);
-  resetLuaParams();
-}
-
 void UARTdisconnected()
 {
   #if defined(GPIO_PIN_BUZZER)
@@ -749,7 +549,10 @@ void UARTconnected()
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
   SetRFLinkRate(config.GetRate());
-  connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
+  if (connectionState == noCrossfire || connectionState < MODE_STATES)
+  {
+    connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
+  }
   hwTimer.resume();
 }
 
@@ -761,15 +564,6 @@ static void ChangeRadioParams()
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
   // TLM interval is set on the next SYNC packet
-}
-
-void HandleUpdateParameter()
-{
-  bool updated = luaHandleUpdateParameter();
-  if (updated && config.IsModified())
-  {
-    syncSpamCounter = syncSpamAmount;
-  }
 }
 
 void ICACHE_RAM_ATTR ModelUpdateReq()
@@ -791,7 +585,7 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
-  resetLuaParams();
+  eventFired = true;
 }
 
 
@@ -883,7 +677,10 @@ void setup()
     wifiOff();
 #endif
 
-  startupLEDs();
+  // Initialise the UI devices
+  for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
+    (ui_devices[i]->initialize)();
+  }
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
@@ -961,7 +758,6 @@ void setup()
 
   crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
   crsf.disconnected = &UARTdisconnected;
-  crsf.RecvParameterUpdate = &luaParamUpdateReq;
   crsf.RecvModelUpdate = &ModelUpdateReq;
   hwTimer.callbackTock = &timerCallbackNormal;
   DBGLN("ExpressLRS TX Module Booted...");
@@ -982,7 +778,7 @@ void setup()
     while (1)
     {
       unsigned long now = millis();
-      updateLEDs(now, radioFailed, 0, 0);
+      (RGB_device.update)(false, now);
       handleWebUpdateServer(now);
       delay(1);
     }
@@ -1012,9 +808,6 @@ void setup()
   // Set the pkt rate, TLM ratio, and power from the stored eeprom values
   ChangeRadioParams();
 
-  registerLuaParameters();
-  registerLUAPopulateParams(updateLUApacketCount);
-
   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   connectionState = noCrossfire;
@@ -1036,9 +829,19 @@ void loop()
     UpdateConnectDisconnectStatus();
   }
 
-  updateLEDs(now, connectionState, ExpressLRS_currAirRate_Modparams->index, POWERMGNT.currPower());
+  // Update UI devices 
+  bool spamRequired = false;
+  for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
+    spamRequired |= (ui_devices[i]->update)(eventFired, now);
+  }
 
-  HandleUpdateParameter();
+  // Send sync spam if a UI device wants to and the config has changed
+  eventFired = false;
+  if (spamRequired && config.IsModified())
+  {
+    syncSpamCounter = syncSpamAmount;
+  }
+
   CheckConfigChangePending();
 
   #if defined(PLATFORM_ESP32)
@@ -1216,8 +1019,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
     VtxConfigReadyToSend = true;
 
-    resetLuaParams();
-    sendLuaDevicePacket();
+    eventFired = true;
+    sendLuaDevicePacket();    // Why is this here?
   }
 }
 
