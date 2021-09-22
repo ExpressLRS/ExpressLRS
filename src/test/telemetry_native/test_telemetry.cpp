@@ -169,6 +169,15 @@ void test_function_uart_in(void)
     TEST_ASSERT_EQUAL(true, telemetry.RXhandleUARTin(0xEC));
 }
 
+void test_function_ping_received(void)
+{
+    telemetry.ResetState();
+    uint8_t pingSequence[] = {0xC8, 0x4, 0x28, 0xEC, 0xC8, 0x5A};
+    int length = sizeof(pingSequence);
+    int sentLength = sendData(pingSequence, length);
+    TEST_ASSERT_EQUAL(length, sentLength);
+    TEST_ASSERT_EQUAL(true, telemetry.ShouldSendDeviceFrame());
+}
 
 int main(int argc, char **argv)
 {
@@ -181,6 +190,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_add_type);
     RUN_TEST(test_function_recover_from_junk);
     RUN_TEST(test_function_store_unkown_type);
+    RUN_TEST(test_function_ping_received);
     UNITY_END();
 
     return 0;

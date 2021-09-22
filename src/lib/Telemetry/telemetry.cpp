@@ -209,7 +209,7 @@ void Telemetry::AppendTelemetryPackage()
         modelMatchId = CRSFinBuffer[5];
         return;
     }
-    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_INFO)
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING && CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_ADDRESS_CRSF_RECEIVER)
     {
         sendDeviceFrame = true;
         return;
