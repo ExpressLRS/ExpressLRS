@@ -4,11 +4,11 @@
 #include "common.h"
 #include "device.h"
 
+#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"
 #include "LED.h"
-
-#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
 
 static enum {
     STARTUP = 0,
@@ -137,11 +137,11 @@ static bool updateRGB(bool eventFired, unsigned long now)
     return false;
 }
 #else
-void initializeRGB()
+static void initializeRGB()
 {
 }
 
-bool updateRGB(bool eventFired, unsigned long now)
+static bool updateRGB(bool eventFired, unsigned long now)
 {
 }
 #endif

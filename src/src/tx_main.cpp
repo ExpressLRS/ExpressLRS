@@ -26,10 +26,6 @@ SX1280Driver Radio;
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
-#ifdef HAS_OLED
-#include "OLED.h"
-#endif
-
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -60,11 +56,6 @@ TxConfig config;
 
 // Internal eventing
 bool eventFired = false;
-
-#if defined(HAS_OLED)
-OLED OLED;
-char commitStr[7] = {LATEST_COMMIT , 0};
-#endif
 
 volatile uint8_t NonceTX;
 
@@ -119,10 +110,12 @@ uint8_t baseMac[6];
 
 extern device_t RGB_device;
 extern device_t LUA_device;
+extern device_t OLED_device;
 
 device_t *ui_devices[] = {
   &RGB_device,
-  &LUA_device
+  &LUA_device,
+  &OLED_device
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -668,10 +661,6 @@ void setup()
   Serial.setRx(PA3);
 #endif
   Serial.begin(460800);
-#if defined(HAS_OLED)
-  OLED.displayLogo();
-//  OLED.setCommitString(thisCommit, commitStr);
-#endif
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     wifiOff();
@@ -812,11 +801,6 @@ void setup()
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   connectionState = noCrossfire;
   crsf.Begin();
-  #if defined(HAS_OLED)
-    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
-                  OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                  OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
-  #endif
 }
 
 void loop()

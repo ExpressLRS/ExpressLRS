@@ -12,11 +12,6 @@
 #include "hwTimer.h"
 
 #include "ESP32_BLE_HID.h"
-#ifdef HAS_OLED
-#include "OLED.h"
-extern OLED OLED;
-extern char commitStr[7];
-#endif
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -28,9 +23,9 @@ extern SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-const char thisCommit[] = {LATEST_COMMIT, 0};
-const char thisVersion[] = {LATEST_VERSION, 0};
-const char emptySpace[1] = {0};
+static const char thisCommit[] = {LATEST_COMMIT, 0};
+static const char thisVersion[] = {LATEST_VERSION, 0};
+static const char emptySpace[1] = {0};
 
 struct tagLuaItem_textSelection luaAirRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
@@ -206,11 +201,6 @@ static void registerLuaParameters() {
       uint8_t rate = RATE_MAX - 1 - arg;
       rate = adjustPacketRateForBaud(rate);
       config.SetRate(rate);
-      #if defined(HAS_OLED)
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT::currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)RATE_MAX - arg),
-                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
-      #endif
     }
   });
   registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
@@ -218,11 +208,6 @@ static void registerLuaParameters() {
     {
       DBGLN("Request TLM interval: %d", arg);
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
-      #if defined(HAS_OLED)
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT::currPower()),
-                          OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                          OLED.getTLMRatioString((expresslrs_tlm_ratio_e)arg), commitStr);
-      #endif
     }
   });
   registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
@@ -267,12 +252,6 @@ static void registerLuaParameters() {
         newPower = MinPower;
     }
     config.SetPower(newPower);
-
-    #if defined(HAS_OLED)
-      OLED.updateScreen(OLED.getPowerString((PowerLevels_e)arg),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)ExpressLRS_currAirRate_Modparams->TLMinterval), commitStr);
-    #endif
   }, luaPowerFolder.luaProperties1.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
