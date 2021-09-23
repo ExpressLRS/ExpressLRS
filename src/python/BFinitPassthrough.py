@@ -132,7 +132,7 @@ def reset_to_bootloader(args):
     flash_target = re.sub("_VIA_.*", "", args.target.upper())
     if rx_target == "":
         dbg_print("Cannot detect RX target, blindly flashing!")
-    elif rx_target != "1": #flash_target
+    elif rx_target != flash_target:
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
         else:
