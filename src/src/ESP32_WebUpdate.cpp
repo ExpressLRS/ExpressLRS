@@ -56,8 +56,6 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static AsyncWebServer server(80);
 
-bool IsWebUpdateMode = false;
-
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -340,8 +338,6 @@ static void startWifi() {
 
 void BeginWebUpdate()
 {
-  IsWebUpdateMode = true;
-
   DBGLN("Stopping Radio");
   Radio.End();
 
