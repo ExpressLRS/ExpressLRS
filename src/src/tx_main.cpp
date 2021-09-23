@@ -119,6 +119,8 @@ device_t *ui_devices[] = {
   &OLED_device,
   &Buzzer_device
 };
+unsigned long ui_device_timeout[ARRAY_SIZE(ui_devices)] = {0};
+unsigned long nextDeviceTimeout = 0;
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -747,12 +749,26 @@ void setup()
     connectionState = noCrossfire;
     crsf.Begin();
   }
+
+  unsigned long now = millis();
+  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
+  {
+    if (ui_devices[i]->start)
+    {
+      ui_device_timeout[i] = now + (ui_devices[i]->start)();
+      if (ui_device_timeout[i] != DURATION_NEVER && ui_device_timeout[i] != DURATION_IMMEDIATELY)
+      {
+        nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+      }
+    }
+  }
 }
 
 void loop()
 {
   uint32_t now = millis();
   static bool mspTransferActive = false;
+  static connectionState_e lastConnectionState = disconnected;
 
   if (connectionState < MODE_STATES)
   {
@@ -761,13 +777,25 @@ void loop()
 
   // Update UI devices 
   bool spamRequired = false;
-  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
-    if (ui_devices[i]->update) {
-      spamRequired |= (ui_devices[i]->update)(eventFired, now);
+  auto setSpam = [&spamRequired]() mutable { spamRequired = true; };
+  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
+  {
+    if ((eventFired || lastConnectionState != connectionState) && ui_devices[i]->event)
+    {
+      int delay = (ui_devices[i]->event)(setSpam);
+      ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+      nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+    }
+    else if (now > ui_device_timeout[i] && ui_devices[i]->timeout)
+    {
+      int delay = (ui_devices[i]->timeout)(setSpam);
+      ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+      nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
     }
   }
+  lastConnectionState = connectionState;
 
-  // Send sync spam if a UI device wants to and the config has changed
+  // Send sync spam if a UI device has requested to and the config has changed
   eventFired = false;
   if (spamRequired && config.IsModified())
   {

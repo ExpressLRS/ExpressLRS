@@ -360,7 +360,7 @@ static void registerLuaParameters() {
   registerLUAParameter(NULL);
 }
 
-static void updateLUAParams()
+static int event(std::function<void ()> sendSpam)
 {
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
@@ -377,33 +377,36 @@ static void updateLUAParams()
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
-
-  itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
-  strcat(luaBadGoodString, "/");
-  itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
-  setLuaStringValue(&luaInfo, luaBadGoodString);
+  return DURATION_IMMEDIATELY;
 }
 
-static bool updateLUA(bool eventFired, unsigned long now)
+static int timeout(std::function<void ()> sendSpam)
 {
-  bool spamRequired = luaHandleUpdateParameter();
-  if (!eventFired) {
-    return spamRequired;
+  if(luaHandleUpdateParameter())
+  {
+    sendSpam();
   }
-  updateLUAParams();
-  return spamRequired;
+  return DURATION_IMMEDIATELY;
 }
 
-static void initializeLUA()
+static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   registerLuaParameters();
-  registerLUAPopulateParams(updateLUAParams);
+  registerLUAPopulateParams([](){
+    itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
+    strcat(luaBadGoodString, "/");
+    itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+    setLuaStringValue(&luaInfo, luaBadGoodString);
+  });
+  return DURATION_IMMEDIATELY;
 }
 
 device_t LUA_device = {
-    initializeLUA,
-    updateLUA
+  .initialize = NULL,
+  .start = start,
+  .event = event,
+  .timeout = timeout
 };
 
 #endif

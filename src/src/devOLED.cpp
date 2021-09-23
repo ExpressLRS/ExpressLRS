@@ -20,7 +20,7 @@ static void initializeOLED()
     startupTime = millis();
 }
 
-static bool updateOLED(bool eventFired, unsigned long now)
+static bool updateOLED(bool eventFired, unsigned long now, std::function<void ()> sendSpam)
 {
     if (now - startupTime < 1000)
     {
@@ -44,7 +44,6 @@ device_t OLED_device = {
 #else
 
 device_t OLED_device = {
-    NULL,
     NULL
 };
 

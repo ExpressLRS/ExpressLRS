@@ -4,11 +4,14 @@
 #include "common.h"
 #include "device.h"
 #include "helpers.h"
+#include "logging.h"
 
 #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
 
+
 static void initializeBuzzer()
 {
+    pinMode(GPIO_PIN_BUZZER, OUTPUT);
 }
 
 static const int failedTune[][2] = {{480, 200},{400, 200}};
@@ -23,74 +26,76 @@ static const int melody[][2] = {{400,200},{480,200}};
 static const int melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
 #endif
 
-bool playTune(const int tune[][2], int numTones, unsigned long now)
+int playTune(bool start, const int tune[][2], int numTones)
 {
-    static unsigned long lastUpdate = 0;
     static uint8_t tunepos = 0;
-    if ((tunepos == 0 || (int)(now - lastUpdate) > tune[tunepos-1][1]) && tunepos < numTones)
+    if (start)
     {
-        tone(GPIO_PIN_BUZZER, tune[tunepos][0], tune[tunepos][1]);
-        tunepos++;
-        lastUpdate = now;
-        return false;
+        tunepos = 0;
     }
-    else if (tunepos > numTones)
+    if (tunepos > numTones)
     {
         noTone(GPIO_PIN_BUZZER);
         pinMode(GPIO_PIN_BUZZER, INPUT);
         tunepos = 0;
-        return true;
+        return DURATION_NEVER;
     }
-    return false;
+    tone(GPIO_PIN_BUZZER, tune[tunepos][0], tune[tunepos][1]);
+    tunepos++;
+    return tune[tunepos-1][1];
 }
 
-static bool updateBuzzer(bool eventFired, unsigned long now)
+static int updateBuzzer(bool start)
 {
     static bool startComplete = false;
-    static connectionState_e lastState = disconnected;
-
-    if (connectionState == radioFailed && lastState != radioFailed)
+    if (connectionState == radioFailed)
     {
-        if(playTune(failedTune, ARRAY_SIZE(failedTune), now))
-        {
-            lastState = connectionState;
-        }
+        return playTune(start, failedTune, ARRAY_SIZE(failedTune));
     }
 #if !defined(DISABLE_STARTUP_BEEP)
     else if (!startComplete)
     {
-        startComplete = playTune(melody, ARRAY_SIZE(melody), now);
-        lastState = connectionState;
+        int delay = playTune(start, melody, ARRAY_SIZE(melody));
+        if (delay == DURATION_NEVER)
+        {
+            startComplete = true;
+        }
+        return delay;
     }
 #endif
-    else if (connectionState == noCrossfire && lastState != noCrossfire)
+    else if (connectionState == noCrossfire)
     {
-        if (playTune(noCrossfireTune, ARRAY_SIZE(noCrossfireTune), now))
-        {
-            lastState = noCrossfire;
-        }
+        return playTune(start, noCrossfireTune, ARRAY_SIZE(noCrossfireTune));
     }
-    else if (connectionState < MODE_STATES && lastState == noCrossfire)
-    {
 #if !defined(DISABLE_STARTUP_BEEP)
-        if (playTune(crossfireTune, ARRAY_SIZE(crossfireTune), now))
-#endif
-        {
-            lastState = connectionState;
-        }
+    else if (connectionState < MODE_STATES)
+    {
+        return playTune(start, crossfireTune, ARRAY_SIZE(crossfireTune));
     }
-    return false;
+#endif
+    return DURATION_NEVER;
+}
+
+static int event(std::function<void ()> sendSpam)
+{
+    return updateBuzzer(true);
+}
+
+static int timeout(std::function<void ()> sendSpam)
+{
+    return updateBuzzer(false);
 }
 
 device_t Buzzer_device = {
-    initializeBuzzer,
-    updateBuzzer
+    .initialize = initializeBuzzer,
+    .start = NULL,
+    .event = event,
+    .timeout = timeout
 };
 
 #else
 
 device_t Buzzer_device = {
-    NULL,
     NULL
 };
 
