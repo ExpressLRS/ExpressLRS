@@ -667,7 +667,7 @@ void setup()
 #endif
 
   // Initialise the UI devices
-  for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
+  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
     if (ui_devices[i]->initialize) {
       (ui_devices[i]->initialize)();
     }
@@ -792,17 +792,20 @@ void setup()
     #endif // GPIO_PIN_LED_RED
     delay(1000);
   }
-  TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
+  else
+  {
+    TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
 
-  POWERMGNT.init();
+    POWERMGNT.init();
 
-  // Set the pkt rate, TLM ratio, and power from the stored eeprom values
-  ChangeRadioParams();
+    // Set the pkt rate, TLM ratio, and power from the stored eeprom values
+    ChangeRadioParams();
 
-  hwTimer.init();
-  //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
-  connectionState = noCrossfire;
-  crsf.Begin();
+    hwTimer.init();
+    //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+    connectionState = noCrossfire;
+    crsf.Begin();
+  }
 }
 
 void loop()
@@ -817,7 +820,7 @@ void loop()
 
   // Update UI devices 
   bool spamRequired = false;
-  for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
+  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
     if (ui_devices[i]->update) {
       spamRequired |= (ui_devices[i]->update)(eventFired, now);
     }
