@@ -668,7 +668,9 @@ void setup()
 
   // Initialise the UI devices
   for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
-    (ui_devices[i]->initialize)();
+    if (ui_devices[i]->initialize) {
+      (ui_devices[i]->initialize)();
+    }
   }
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -816,7 +818,9 @@ void loop()
   // Update UI devices 
   bool spamRequired = false;
   for(int i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
-    spamRequired |= (ui_devices[i]->update)(eventFired, now);
+    if (ui_devices[i]->update) {
+      spamRequired |= (ui_devices[i]->update)(eventFired, now);
+    }
   }
 
   // Send sync spam if a UI device wants to and the config has changed

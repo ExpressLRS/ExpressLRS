@@ -136,19 +136,19 @@ static bool updateRGB(bool eventFired, unsigned long now)
     }
     return false;
 }
-#else
-static void initializeRGB()
-{
-}
-
-static bool updateRGB(bool eventFired, unsigned long now)
-{
-}
-#endif
 
 device_t RGB_device = {
     initializeRGB,
     updateRGB
 };
 
-#endif
+#else
+
+device_t RGB_device = {
+    NULL,
+    NULL
+};
+
+#endif // WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+
+#endif // TARGET_TX

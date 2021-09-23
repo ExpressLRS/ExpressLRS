@@ -44,8 +44,8 @@ device_t OLED_device = {
 #else
 
 device_t OLED_device = {
-    [](){},
-    [](bool, unsigned long){ return false; }
+    NULL,
+    NULL
 };
 
 #endif
