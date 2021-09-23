@@ -111,11 +111,13 @@ uint8_t baseMac[6];
 extern device_t RGB_device;
 extern device_t LUA_device;
 extern device_t OLED_device;
+extern device_t Buzzer_device;
 
 device_t *ui_devices[] = {
   &RGB_device,
   &LUA_device,
-  &OLED_device
+  &OLED_device,
+  &Buzzer_device
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -508,35 +510,12 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
 
 void UARTdisconnected()
 {
-  #if defined(GPIO_PIN_BUZZER)
-  const uint16_t beepFreq[] = {676, 520};
-  const uint16_t beepDurations[] = {300, 150};
-  for (int i = 0; i < 2; i++)
-  {
-    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-    delay(beepDurations[i]);
-    noTone(GPIO_PIN_BUZZER);
-  }
-  pinMode(GPIO_PIN_BUZZER, INPUT);
-  #endif
   hwTimer.stop();
   connectionState = noCrossfire;
 }
 
 void UARTconnected()
 {
-  #if defined(GPIO_PIN_BUZZER) && !defined(DISABLE_STARTUP_BEEP)
-  const uint16_t beepFreq[] = {520, 676};
-  const uint16_t beepDurations[] = {150, 300};
-  for (int i = 0; i < 2; i++)
-  {
-    tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-    delay(beepDurations[i]);
-    noTone(GPIO_PIN_BUZZER);
-  }
-  pinMode(GPIO_PIN_BUZZER, INPUT);
-  #endif
-
   #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP266)
   webserverPreventAutoStart = true;
   #endif
@@ -682,38 +661,6 @@ void setup()
     digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
   #endif // GPIO_PIN_LED_RED
 
-  #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN) && !defined(DISABLE_STARTUP_BEEP)
-    pinMode(GPIO_PIN_BUZZER, OUTPUT);
-    // Annoying startup beeps
-    #ifndef JUST_BEEP_ONCE
-      #if defined(MY_STARTUP_MELODY_ARR)
-        // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-        const int melody[][2] = MY_STARTUP_MELODY_ARR;
-
-        for(uint i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
-          tone(GPIO_PIN_BUZZER, melody[i][0], melody[i][1]);
-          delay(melody[i][1]);
-          noTone(GPIO_PIN_BUZZER);
-        }
-      #else
-        // use default jingle
-        const int beepFreq[] = {659, 659, 523, 659, 783, 392};
-        const int beepDurations[] = {300, 300, 100, 300, 550, 575};
-
-        for (int i = 0; i < 6; i++)
-        {
-          tone(GPIO_PIN_BUZZER, beepFreq[i], beepDurations[i]);
-          delay(beepDurations[i]);
-          noTone(GPIO_PIN_BUZZER);
-        }
-      #endif
-    #else
-      tone(GPIO_PIN_BUZZER, 400, 200);
-      delay(200);
-      tone(GPIO_PIN_BUZZER, 480, 200);
-    #endif
-  #endif // GPIO_PIN_BUZZER
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
   digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
@@ -777,16 +724,10 @@ void setup()
     #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
     #endif // GPIO_PIN_LED_GREEN
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
-      tone(GPIO_PIN_BUZZER, 480, 200);
-    #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
     delay(200);
-    #if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
-      tone(GPIO_PIN_BUZZER, 400, 200);
-    #endif // GPIO_PIN_BUZZER
     #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
       digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
     #endif // GPIO_PIN_LED_RED
