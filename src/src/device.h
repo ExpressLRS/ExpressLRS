@@ -3,6 +3,7 @@
 #include <functional>
 
 // duration constants which can be returned from start(), event() or timeout()
+#define DURATION_IGNORE -2      // when returned from event() does not update the current timeout
 #define DURATION_NEVER -1       // timeout() will not be called, only event()
 #define DURATION_IMMEDIATELY 0  // timeout() will be called each loop
 

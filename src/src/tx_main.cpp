@@ -783,8 +783,11 @@ void loop()
     if ((eventFired || lastConnectionState != connectionState) && ui_devices[i]->event)
     {
       int delay = (ui_devices[i]->event)(setSpam);
-      ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-      nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+      if (delay != DURATION_IGNORE)
+      {
+        ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+        nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+      }
     }
     else if (now > ui_device_timeout[i] && ui_devices[i]->timeout)
     {

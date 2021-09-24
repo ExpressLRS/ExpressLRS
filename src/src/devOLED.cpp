@@ -12,33 +12,38 @@
 class OLED OLED;
 
 static const char thisCommit[] = {LATEST_COMMIT, 0};
-static unsigned long startupTime = 0;
+static bool startup = false;
 
-static void initializeOLED()
+static int start()
 {
     OLED.displayLogo();
-    startupTime = millis();
+    startup = true;
+    return 1000;    // set callback in 1s
 }
 
-static bool updateOLED(bool eventFired, unsigned long now, std::function<void ()> sendSpam)
+static int event(std::function<void ()> sendSpam)
 {
-    if (now - startupTime < 1000)
+    if (startup)
     {
-        return false;
+        return DURATION_IGNORE; // we are still displaying the startup message, so don't change the timeout
     }
-    if (eventFired || startupTime != 0)
-    {
-        startupTime = 0;
-        OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT::currPower()),
-                            OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                            OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), thisCommit);
-    }
-    return false;
+    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT::currPower()),
+                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
+                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), thisCommit);
+    return DURATION_NEVER;
+}
+
+static int timeout(std::function<void ()> sendSpam)
+{
+    startup = false;
+    return event(sendSpam);
 }
 
 device_t OLED_device = {
-    initializeOLED,
-    updateOLED
+    .initialize = NULL,
+    .start = start,
+    .event = event,
+    .timeout = timeout
 };
 
 #else
