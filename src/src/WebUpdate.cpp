@@ -405,6 +405,7 @@ static void startWiFi(unsigned long now)
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
+    config.Commit();
   }
   if (config.GetSSID()[0]==0) {
     changeTime = now;
