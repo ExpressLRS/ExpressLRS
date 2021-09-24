@@ -31,8 +31,6 @@ SX1280Driver Radio;
 #include "soc/rtc_cntl_reg.h"
 #endif
 
-#include "WebUpdate.h"
-
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
@@ -61,6 +59,7 @@ volatile uint8_t NonceTX;
 
 #ifdef PLATFORM_ESP32
 unsigned long rebootTime = 0;
+extern bool webserverPreventAutoStart;
 #endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
@@ -108,21 +107,6 @@ uint8_t baseMac[6];
 
 //////////// DEVICES ////////////
 
-extern device_t LED_device;
-extern device_t RGB_device;
-extern device_t LUA_device;
-extern device_t OLED_device;
-extern device_t Buzzer_device;
-
-device_t *ui_devices[] = {
-  &LED_device,
-  &RGB_device,
-  &LUA_device,
-  &OLED_device,
-  &Buzzer_device
-};
-unsigned long ui_device_timeout[ARRAY_SIZE(ui_devices)] = {0};
-unsigned long nextDeviceTimeout = 0;
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -520,7 +504,7 @@ void UARTdisconnected()
 
 void UARTconnected()
 {
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP266)
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
@@ -639,16 +623,8 @@ void setup()
 #endif
   Serial.begin(460800);
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    wifiOff();
-#endif
-
   // Initialise the UI devices
-  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
-    if (ui_devices[i]->initialize) {
-      (ui_devices[i]->initialize)();
-    }
-  }
+  initDevices();
 
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
@@ -713,25 +689,13 @@ void setup()
     crsf.Begin();
   }
 
-  unsigned long now = millis();
-  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
-  {
-    if (ui_devices[i]->start)
-    {
-      ui_device_timeout[i] = now + (ui_devices[i]->start)();
-      if (ui_device_timeout[i] != DURATION_NEVER && ui_device_timeout[i] != DURATION_IMMEDIATELY)
-      {
-        nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
-      }
-    }
-  }
+  startDevices();
 }
 
 void loop()
 {
   uint32_t now = millis();
   static bool mspTransferActive = false;
-  static connectionState_e lastConnectionState = disconnected;
 
   if (connectionState < MODE_STATES)
   {
@@ -740,29 +704,10 @@ void loop()
 
   // Update UI devices 
   bool spamRequired = false;
-  auto setSpam = [&spamRequired]() mutable { spamRequired = true; };
-  for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
-  {
-    if ((eventFired || lastConnectionState != connectionState) && ui_devices[i]->event)
-    {
-      int delay = (ui_devices[i]->event)(setSpam);
-      if (delay != DURATION_IGNORE)
-      {
-        ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-        nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
-      }
-    }
-    else if (now > ui_device_timeout[i] && ui_devices[i]->timeout)
-    {
-      int delay = (ui_devices[i]->timeout)(setSpam);
-      ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-      nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
-    }
-  }
-  lastConnectionState = connectionState;
+  handleDevices(now, eventFired, [&spamRequired]() mutable { spamRequired = true; });
+  eventFired = false;
 
   // Send sync spam if a UI device has requested to and the config has changed
-  eventFired = false;
   if (spamRequired && config.IsModified())
   {
     syncSpamCounter = syncSpamAmount;
@@ -775,10 +720,12 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
     }
-    if (handleWebUpdateServer(now)) {
-      return;
-    }
   #endif
+
+  if (connectionState > FAILURE_STATES)
+  {
+    return;
+  }
 
   #ifdef FEATURE_OPENTX_SYNC
     // DBGVLN(crsf.OpenTXsyncOffset);

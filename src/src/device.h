@@ -17,3 +17,7 @@ typedef struct {
     // The duration has passed so take appropriate action and return a new duration
     int (*timeout)(std::function<void ()> sendSpam);
 } device_t;
+
+void initDevices();
+void startDevices();
+void handleDevices(unsigned long now, bool eventFired, std::function<void ()> setSpam);

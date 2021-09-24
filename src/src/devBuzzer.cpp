@@ -26,7 +26,7 @@ static const int melody[][2] = {{400,200},{480,200}};
 static const int melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
 #endif
 
-int playTune(bool start, const int tune[][2], int numTones)
+static int playTune(bool start, const int tune[][2], int numTones)
 {
     static uint8_t tunepos = 0;
     if (start)

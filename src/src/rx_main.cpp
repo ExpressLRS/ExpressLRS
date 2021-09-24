@@ -12,7 +12,7 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#include "WebUpdate.h"
+#include "device.h"
 
 #include "crc.h"
 #include "CRSF.h"
@@ -69,6 +69,7 @@ Telemetry telemetry;
 
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
+extern bool webserverPreventAutoStart;
 #endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
@@ -1098,15 +1099,7 @@ static void setupRadio()
     {
         DBGLN("Failed to detect RF chipset!!!");
         connectionState = radioFailed;
-        while (1)
-        {
-            HandleUARTin();
-            unsigned long now = millis();
-            updateLEDs(now);
-#if defined(PLATFORM_ESP8266)
-            handleWebUpdateServer(now);
-#endif
-        }
+        return;
     }
 
     // Set transmit power to maximum
@@ -1219,9 +1212,8 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    wifiOff();
-#endif
+    initDevices();
+
     ws2812Blink();
     setupBindingFromConfig();
 
@@ -1229,17 +1221,22 @@ void setup()
 
     setupRadio();
 
-    // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
-    // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
+    if (connectionState != radioFailed)
+    {
+        // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
+        // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-    hwTimer.callbackTock = &HWtimerCallbackTock;
-    hwTimer.callbackTick = &HWtimerCallbackTick;
+        hwTimer.callbackTock = &HWtimerCallbackTock;
+        hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
-    Radio.RXnb();
-    crsf.Begin();
-    hwTimer.init();
-    hwTimer.stop();
+        MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
+        Radio.RXnb();
+        crsf.Begin();
+        hwTimer.init();
+        hwTimer.stop();
+    }
+
+    startDevices();
 }
 
 void loop()
@@ -1253,15 +1250,19 @@ void loop()
 
     updateLEDs(now);
 
+    handleDevices(now, false, [](){});
+
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-    if (handleWebUpdateServer(now)) {
+    #endif
+
+    if (connectionState > FAILURE_STATES)
+    {
         return;
     }
-    #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         LostConnection();
