@@ -108,12 +108,14 @@ uint8_t baseMac[6];
 
 //////////// DEVICES ////////////
 
+extern device_t LED_device;
 extern device_t RGB_device;
 extern device_t LUA_device;
 extern device_t OLED_device;
 extern device_t Buzzer_device;
 
 device_t *ui_devices[] = {
+  &LED_device,
   &RGB_device,
   &LUA_device,
   &OLED_device,
@@ -622,16 +624,10 @@ static void UpdateConnectDisconnectStatus()
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
     connectionState = connected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
   }
   else
   {
     connectionState = disconnected;
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
   }
 }
 
@@ -654,20 +650,7 @@ void setup()
     }
   }
 
-  #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
-  #endif // GPIO_PIN_LED_GREEN
-  #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-  #endif // GPIO_PIN_LED_RED
-
 #if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
-  digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
-  pinMode(GPIO_PIN_LED_GREEN_RED, OUTPUT); // Red LED on "Green" LED (off)
-  digitalWrite(GPIO_PIN_LED_GREEN_RED, HIGH);
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
   pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
@@ -714,26 +697,6 @@ void setup()
   if (!init_success)
   {
     connectionState = radioFailed;
-    #ifdef PLATFORM_ESP32
-    while (1)
-    {
-      unsigned long now = millis();
-      (RGB_device.update)(false, now);
-      handleWebUpdateServer(now);
-      delay(1);
-    }
-    #endif
-    #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-    #endif // GPIO_PIN_LED_GREEN
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-    delay(200);
-    #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-      digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-    #endif // GPIO_PIN_LED_RED
-    delay(1000);
   }
   else
   {
