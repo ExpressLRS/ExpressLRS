@@ -93,7 +93,6 @@ private:
     nvs_handle  handle;
 #endif
 };
-#endif
 
 extern TxConfig config;
 

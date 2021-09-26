@@ -47,7 +47,7 @@ extern unsigned long rebootTime;
 
 #if defined(TARGET_TX)
 static const char *myHostname = "elrs_tx";
-static const char *ssid = "ExpressLRS TX Module";
+static const char *ssid = "ExpressLRS TX";
 #else
 static const char *myHostname = "elrs_rx";
 static const char *ssid = "ExpressLRS RX";
@@ -165,10 +165,14 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s;
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID();
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID() + "\"}";
+    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID();
   }
+  #if defined(TARGET_RX)
+  s += "\",\"modelid\":\"" + String(config.GetModelId());
+  #endif
+  s += "\"}";
   request->send(200, "application/json", s);
 }
 
@@ -250,8 +254,8 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
 static void WebUpdateModelId(AsyncWebServerRequest *request)
 {
   long modelid = request->arg("modelid").toInt();
-  if (modelid < 0 || modelid > 63) modelid = 0;
-  DBGLN("Setting model match id %d", (uint8_t)modelid);
+  if (modelid < 0 || modelid > 63) modelid = 255;
+  DBGLN("Setting model match id %u", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
   config.Commit();
 
@@ -368,11 +372,12 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 
 void wifiOff()
 {
-#ifdef PLATFORM_ESP8266
   wifiStarted = false;
+  WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+  #if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
+  #endif
 }
 
 static void startWiFi(unsigned long now)
@@ -503,12 +508,12 @@ static void HandleWebUpdate(unsigned long now)
     }
     laststatus = status;
   }
-  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (changeTime+30000) < now) {
+  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (now - changeTime) > 30000) {
     changeTime = now;
     changeMode = WIFI_AP;
     DBGLN("Connection failed %d", status);
   }
-  if (changeMode != wifiMode && changeMode != WIFI_OFF && (changeTime+500) < now) {
+  if (changeMode != wifiMode && changeMode != WIFI_OFF && (now - changeTime) > 500) {
     switch(changeMode) {
       case WIFI_AP:
         DBGLN("Changing to AP mode");
@@ -565,7 +570,7 @@ bool handleWebUpdateServer(unsigned long now)
       startWiFi(now);
       return true;
     }
-    #elif defined(TARGET_RX)
+    #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
     if (!webserverPreventAutoStart && (connectionState == disconnected) && !wifiStarted)
     {
       if ((!InBindingMode && now > (AUTO_WIFI_ON_INTERVAL * 1000)) || (InBindingMode && now > 60000))

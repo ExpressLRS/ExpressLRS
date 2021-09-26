@@ -1389,16 +1389,6 @@ void EnterBindingMode()
         DBGLN("Cannot enter binding mode!");
         return;
     }
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    if (connectionState == wifiUpdate) {
-        wifiOff();
-        Radio.RXdoneCallback = &RXdoneISR;
-        Radio.TXdoneCallback = &TXdoneISR;
-        Radio.Begin();
-        crsf.Begin();
-        hwTimer.resume();
-    }
-#endif
 
     // Set UID to special binding values
     UID[0] = BindingUID[0];
