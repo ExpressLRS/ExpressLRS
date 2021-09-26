@@ -11,6 +11,12 @@
 #define SSID_CHANGED        0x04
 #define PASSWORD_CHANGED    0x08
 
+TxConfig::TxConfig()
+{
+    SetModelId(0);
+    m_eeprom.Begin();
+}
+
 #if defined(PLATFORM_ESP32)
 void
 TxConfig::Load()
@@ -46,13 +52,11 @@ TxConfig::Load()
             nvs_get_u32(handle, model, (uint32_t*)&value);
             m_config.model_config[i] = value;
         }
-        m_modified = 0;
-        return;
     }
     else
     {
         // Read old eeprom config
-        m_eeprom->Get(0, m_config);
+        m_eeprom.Get(0, m_config);
 
         // Check if version number matches
         if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
@@ -69,16 +73,18 @@ TxConfig::Load()
                 SetDefaults();
             }
         }
+
         nvs_set_u32(handle, "tx_version", TX_CONFIG_VERSION | TX_CONFIG_MAGIC);
         Commit();
     }
+    m_model = &m_config.model_config[m_modelId];
     m_modified = 0;
 }
 #else
 void
 TxConfig::Load()
 {
-    m_eeprom->Get(0, m_config);
+    m_eeprom.Get(0, m_config);
 
     m_modified = 0;
     // Check if version number matches
@@ -133,8 +139,8 @@ TxConfig::Commit()
     nvs_commit(handle);
 #else
     // Write the struct to eeprom
-    m_eeprom->Put(0, m_config);
-    m_eeprom->Commit();
+    m_eeprom.Put(0, m_config);
+    m_eeprom.Commit();
 #endif
     m_modified = 0;
 }
@@ -306,7 +312,7 @@ TxConfig::UpgradeEepromV1ToV4()
     Version1Config v1Config;
 
     // Populate the v1 struct from eeprom
-    m_eeprom->Get(0, v1Config);
+    m_eeprom.Get(0, v1Config);
     
     // Set new config to old values, or defaults if they are new variables
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
@@ -333,15 +339,6 @@ TxConfig::UpgradeEepromV1ToV4()
     Commit();
 
     SetModelId(0);
-}
-
-void
-TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
-{
-    if (eeprom)
-    {
-        m_eeprom = eeprom;
-    }
 }
 
 /**
