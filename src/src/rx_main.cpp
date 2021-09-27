@@ -734,7 +734,8 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 
     if (connectionState == disconnected
         || NonceRX != Radio.RXdataBuffer[2]
-        || FHSSgetCurrIndex() != Radio.RXdataBuffer[1])
+        || FHSSgetCurrIndex() != Radio.RXdataBuffer[1]
+        || connectionHasModelMatch != modelMatched)
     {
         //DBGLN("\r\n%ux%ux%u", NonceRX, Radio.RXdataBuffer[2], Radio.RXdataBuffer[1]);
         FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
