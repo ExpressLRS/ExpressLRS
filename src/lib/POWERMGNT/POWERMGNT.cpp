@@ -102,6 +102,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);
+
+#elif defined(TARGET_RX_DEFAULT_POWER)
+    Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
+    
 #elif defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
@@ -129,11 +133,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_100mW;
         break;
     }
-
-#elif defined(TARGET_RX_MATEK_2400)
-#if defined(TARGET_RX) && defined(TARGET_RX_DEFAULT_POWER)
-    Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
-#endif
 
 #elif defined(TARGET_NAMIMNORC_TX)
     // Control Flash 2.4GHz TX module
