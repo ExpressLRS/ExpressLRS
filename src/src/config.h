@@ -70,7 +70,7 @@ public:
     void SetSwitchMode(uint8_t switchMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults();
-    void UpgradeEepromV1ToV4();
+    void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
     void SetVtxBand(uint8_t vtxBand);
@@ -82,8 +82,10 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
+    bool UpgradeEepromV1ToV4();
+    
     tx_config_t m_config;
-    ELRS_EEPROM m_eeprom;
+    ELRS_EEPROM *m_eeprom;
     uint8_t     m_modified;
     model_config_t *m_model;
     uint8_t     m_modelId;
