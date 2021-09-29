@@ -12,9 +12,7 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#ifdef PLATFORM_ESP8266
-#include "ESP8266_WebUpdate.h"
-#endif
+#include "WebUpdate.h"
 
 #include "crc.h"
 #include "CRSF.h"
@@ -62,11 +60,16 @@ uint32_t LEDWS2812LastUpdate;
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
+POWERMGNT POWERMGNT;
 PFD PFDloop;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
+
+#ifdef PLATFORM_ESP8266
+unsigned long rebootTime = 0;
+#endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
@@ -136,7 +139,6 @@ bool buttonDown = false;     //is the button current pressed down?
 uint32_t buttonLastSampled = 0;
 uint32_t buttonLastPressed = 0;
 
-static bool webserverPreventAutoStart = false;
 ///////////////////////////////////////////////
 
 volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
@@ -611,9 +613,11 @@ void GotConnection(unsigned long now)
 
     connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
-    webserverPreventAutoStart = true;
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    webserverPreventAutoStart = true;
+    #endif
 
     DBGLN("got conn");
 
@@ -823,21 +827,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-static void beginWebsever()
-{
-    hwTimer.stop();
-
-    // Set transmit power to minimum
-    POWERMGNT P;
-    P.init();
-    P.setPower(MinPower);
-
-    connectionState = wifiUpdate;
-    BeginWebUpdate();
-}
-#endif
-
 void sampleButton(unsigned long now)
 {
 #ifdef GPIO_PIN_BUTTON
@@ -858,7 +847,7 @@ void sampleButton(unsigned long now)
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         if (connectionState != wifiUpdate)
         {
-            beginWebsever();
+            connectionState = wifiUpdate;
         }
 #endif
     }
@@ -999,11 +988,35 @@ static void setupBindingFromConfig()
 #endif
 }
 
-#if defined(PLATFORM_ESP8266)
-static void WebUpdateLoop(unsigned long now)
+void updateLEDs(uint32_t now)
 {
-    HandleWebUpdate();
-    if (now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
+#if WS2812_LED_IS_USED
+    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
+    {
+        uint8_t LEDcolor[3] = {0};
+        if (LEDfade == 30 || LEDfade == 0)
+        {
+            LEDfadeDir = !LEDfadeDir;
+        }
+
+        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
+        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
+        WS281BsetLED(LEDcolor);
+        LEDWS2812LastUpdate = now;
+    }
+#endif
+    // Always blink the LED at a steady rate when not connected, independent of the cycle status
+    if (connectionState == disconnected && now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
+    {
+        #ifdef GPIO_PIN_LED
+            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        #elif GPIO_PIN_LED_GREEN
+            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
+        #endif
+        LED = !LED;
+        LEDLastUpdate = now;
+    }
+    else if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
     {
         #ifdef GPIO_PIN_LED
         digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
@@ -1011,8 +1024,46 @@ static void WebUpdateLoop(unsigned long now)
         LED = !LED;
         LEDLastUpdate = now;
     }
+    else if (InBindingMode && now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
+    {
+        if (LEDPulseCounter == 0)
+        {
+            LED = true;
+        }
+        else if (LEDPulseCounter == 4)
+        {
+            LED = false;
+        }
+        else
+        {
+            LED = !LED;
+        }
+
+        if (LEDPulseCounter < 4)
+        {
+            LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
+        }
+        else
+        {
+            LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
+            LEDPulseCounter = 0;
+        }
+
+        #ifdef GPIO_PIN_LED
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        #endif
+
+        LEDPulseCounter++;
+    }
+    else if (connectionState == radioFailed && now > LEDLastUpdate)
+    {
+        #ifdef GPIO_PIN_LED
+        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
+        LED = !LED;
+        #endif
+        LEDLastUpdate = now + LED_INTERVAL_ERROR;
+    }
 }
-#endif
 
 static void HandleUARTin()
 {
@@ -1042,48 +1093,30 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
-#ifdef PLATFORM_ESP8266
+    POWERMGNT.init();
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
-        beginWebsever();
+        connectionState = radioFailed;
         while (1)
         {
             HandleUARTin();
-            WebUpdateLoop(millis());
+            unsigned long now = millis();
+            updateLEDs(now);
+#if defined(PLATFORM_ESP8266)
+            handleWebUpdateServer(now);
+#endif
         }
     }
-#else // target does not have wifi
-    while (!init_success)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        LED = !LED;
-        #endif
-        delay(LED_INTERVAL_ERROR);
-        DBGLN("Failed to detect RF chipset!!!");
-        HandleUARTin();
-    }
-#endif
 
     // Set transmit power to maximum
-    POWERMGNT P;
-    P.init();
-    P.setPower(MaxPower);
+    POWERMGNT.setPower(MaxPower);
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
-}
-
-static void wifiOff()
-{
-#ifdef PLATFORM_ESP8266
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-#endif /* PLATFORM_ESP8266 */
 }
 
 static void ws2812Blink()
@@ -1156,18 +1189,6 @@ static void cycleRfMode(unsigned long now)
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
     } // if time to switch RF mode
-
-    // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
-    {
-        #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    } // if cycle LED
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -1198,7 +1219,9 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     wifiOff();
+#endif
     ws2812Blink();
     setupBindingFromConfig();
 
@@ -1228,20 +1251,14 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
+    updateLEDs(now);
+
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!webserverPreventAutoStart && (connectionState == disconnected) && !InBindingMode && now > (AUTO_WIFI_ON_INTERVAL*1000))
-    {
-        beginWebsever();
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
+        ESP.restart();
     }
-
-    if (!webserverPreventAutoStart && (connectionState == disconnected) && InBindingMode && now > 60000)
-    {
-        beginWebsever();
-    }
-
-    if (connectionState == wifiUpdate)
-    {
-        WebUpdateLoop(now);
+    if (handleWebUpdateServer(now)) {
         return;
     }
     #endif
@@ -1302,22 +1319,6 @@ void loop()
         DBGLN("Timer locked");
     }
 
-#if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
-    {
-        uint8_t LEDcolor[3] = {0};
-        if (LEDfade == 30 || LEDfade == 0)
-        {
-            LEDfadeDir = !LEDfadeDir;
-        }
-
-        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-        WS281BsetLED(LEDcolor);
-        LEDWS2812LastUpdate = now;
-    }
-#endif
-
     // If the eeprom is indicating that we're not bound
     // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
@@ -1337,42 +1338,6 @@ void loop()
         EnterBindingMode();
     }
 #endif
-    // Update the LED while in binding mode
-    if (InBindingMode)
-    {
-        if (now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
-        {
-            if (LEDPulseCounter == 0)
-            {
-                LED = true;
-            }
-            else if (LEDPulseCounter == 4)
-            {
-                LED = false;
-            }
-            else
-            {
-                LED = !LED;
-            }
-
-            if (LEDPulseCounter < 4)
-            {
-                LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
-            }
-            else
-            {
-                LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
-                LEDPulseCounter = 0;
-            }
-
-
-            #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-            #endif
-
-            LEDPulseCounter++;
-        }
-    }
 
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
@@ -1424,16 +1389,6 @@ void EnterBindingMode()
         DBGLN("Cannot enter binding mode!");
         return;
     }
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    if (connectionState == wifiUpdate) {
-        wifiOff();
-        Radio.RXdoneCallback = &RXdoneISR;
-        Radio.TXdoneCallback = &TXdoneISR;
-        Radio.Begin();
-        crsf.Begin();
-        hwTimer.resume();
-    }
-#endif
 
     // Set UID to special binding values
     UID[0] = BindingUID[0];
@@ -1497,7 +1452,9 @@ void OnELRSBindMSP(uint8_t* packet)
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     webserverPreventAutoStart = true;
+    #endif
     ExitBindingMode();
 }
 

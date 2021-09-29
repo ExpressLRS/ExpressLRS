@@ -36,10 +36,9 @@ SX1280Driver Radio;
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
-#ifdef PLATFORM_ESP32
-#include "ESP32_WebUpdate.h"
+
+#include "WebUpdate.h"
 #include "ESP32_BLE_HID.h"
-#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -61,8 +60,6 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-
-static bool webserverPreventAutoStart = false;
 
 #if defined(HAS_OLED)
 OLED OLED;
@@ -506,17 +503,6 @@ void ICACHE_RAM_ATTR timerCallbackIdle()
   }
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-static void beginWebsever()
-{
-    hwTimer.stop();
-    // Set transmit power to minimum
-    POWERMGNT.setPower(MinPower);
-    connectionState = wifiUpdate;
-    BeginWebUpdate();
-}
-#endif
-
 void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
@@ -638,7 +624,7 @@ void registerLuaParameters() {
         //unintentional button press.
         DBGLN("Wifi Update Mode Requested!");
         sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
-        beginWebsever();
+        connectionState = wifiUpdate;
       }
       else if (arg > 0 && arg < 4)
       {
@@ -757,8 +743,10 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
-  rfModeLastChangedMS = millis(); // force syncspam on first packets
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP266)
   webserverPreventAutoStart = true;
+  #endif
+  rfModeLastChangedMS = millis(); // force syncspam on first packets
   SetRFLinkRate(config.GetRate());
   connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
   hwTimer.resume();
@@ -890,6 +878,10 @@ void setup()
 //  OLED.setCommitString(thisCommit, commitStr);
 #endif
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    wifiOff();
+#endif
+
   startupLEDs();
 
   #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -984,13 +976,13 @@ void setup()
   bool init_success = Radio.Begin();
   if (!init_success)
   {
-    #ifdef PLATFORM_ESP32
     connectionState = radioFailed;
-    BeginWebUpdate();
+    #ifdef PLATFORM_ESP32
     while (1)
     {
-      updateLEDs(millis(), radioFailed, 0, 0);
-      HandleWebUpdate();
+      unsigned long now = millis();
+      updateLEDs(now, radioFailed, 0, 0);
+      handleWebUpdateServer(now);
       delay(1);
     }
     #endif
@@ -1048,26 +1040,15 @@ void loop()
   HandleUpdateParameter();
   CheckConfigChangePending();
 
-#if defined(PLATFORM_ESP32)
-  // If the reboot time is set and the current time is past the reboot time then reboot.
-  if (rebootTime != 0 && now > rebootTime) {
-    ESP.restart();
-  }
-
-  #if defined(AUTO_WIFI_ON_INTERVAL)
-    //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-    //start webupdate, there might be wrong configuration flashed.
-    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate){
-      DBGLN("No CRSF ever detected, starting WiFi");
-      beginWebsever();
+  #if defined(PLATFORM_ESP32)
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
+      ESP.restart();
+    }
+    if (handleWebUpdateServer(now)) {
+      return;
     }
   #endif
-  if (connectionState == wifiUpdate)
-  {
-    HandleWebUpdate();
-    return;
-  }
-#endif
 
   #ifdef FEATURE_OPENTX_SYNC
     // DBGVLN(crsf.OpenTXsyncOffset);

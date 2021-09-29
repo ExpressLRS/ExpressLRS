@@ -361,7 +361,6 @@ TxConfig::SetModelId(uint8_t modelId)
 
     return false;
 }
-
 #endif
 
 /////////////////////////////////////////////////////

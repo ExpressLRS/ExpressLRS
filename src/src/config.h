@@ -93,6 +93,9 @@ private:
     nvs_handle  handle;
 #endif
 };
+
+extern TxConfig config;
+
 #endif
 
 ///////////////////////////////////////////////////
@@ -144,4 +147,7 @@ private:
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
 };
+
+extern RxConfig config;
+
 #endif
