@@ -1170,6 +1170,23 @@ static void cycleRfMode(unsigned long now)
     } // if cycle LED
 }
 
+#if defined(PLATFORM_ESP8266)
+// Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
+RF_PRE_INIT()
+{
+    // Set whether the chip will do RF calibration or not when power up.
+    // I believe the Arduino core fakes this (byte 114 of phy_init_data.bin)
+    // to be 1, but the TX power calibration can pull over 300mA which can
+    // lock up receivers built with a underspeced LDO (such as the EP2 "SDG")
+    // Option 2 is just VDD33 measurement
+    #if defined(RF_CAL_MODE)
+    system_phy_set_powerup_option(RF_CAL_MODE);
+    #else
+    system_phy_set_powerup_option(2);
+    #endif
+}
+#endif
+
 void setup()
 {
     setupGpio();
