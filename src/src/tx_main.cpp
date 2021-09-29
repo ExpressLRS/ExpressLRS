@@ -59,6 +59,7 @@ GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 CRSF crsf;
 POWERMGNT POWERMGNT;
 MSP msp;
+ELRS_EEPROM eeprom;
 TxConfig config;
 
 static bool webserverPreventAutoStart = false;
@@ -972,6 +973,8 @@ void setup()
   hwTimer.callbackTock = &timerCallbackNormal;
   DBGLN("ExpressLRS TX Module Booted...");
 
+  eeprom.Begin(); // Init the eeprom
+  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
   config.Load(); // Load the stored values from eeprom
 
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
