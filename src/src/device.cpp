@@ -6,8 +6,8 @@
 
 extern device_t LED_device;
 extern device_t WIFI_device;
-#ifdef TARGET_TX
 extern device_t RGB_device;
+#ifdef TARGET_TX
 extern device_t LUA_device;
 extern device_t OLED_device;
 extern device_t Buzzer_device;
@@ -15,8 +15,8 @@ extern device_t Buzzer_device;
 
 device_t *ui_devices[] = {
   &LED_device,
-#ifdef TARGET_TX
   &RGB_device,
+#ifdef TARGET_TX
   &LUA_device,
   &OLED_device,
   &Buzzer_device,

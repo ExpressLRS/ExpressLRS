@@ -1,14 +1,13 @@
-#ifdef TARGET_TX
-
 #include "targets.h"
 #include "common.h"
 #include "device.h"
+
+#include "LED.h"
 
 #if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
 
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"
-#include "LED.h"
 
 static enum {
     STARTUP = 0,
@@ -82,6 +81,12 @@ static int timeout(std::function<void ()> sendSpam)
         blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 128);
         WS281BsetLED(HsvToRgb(blinkyColor));
         return DURATION_NEVER;
+    case tentative:
+        // Set the color and we're done!
+        blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
+        blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 50);
+        WS281BsetLED(HsvToRgb(blinkyColor));
+        return DURATION_NEVER;
     case disconnected:
         blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
         brightnessFadeLED(blinkyColor, 0, 64);
@@ -122,5 +127,3 @@ device_t RGB_device = {
 };
 
 #endif // WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
-
-#endif // TARGET_TX

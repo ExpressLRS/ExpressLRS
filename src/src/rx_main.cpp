@@ -34,14 +34,6 @@ SX1280Driver Radio;
 #include "options.h"
 #include "POWERMGNT.h"
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
-uint8_t LEDfadeDiv;
-uint8_t LEDfade;
-bool LEDfadeDir;
-uint32_t LEDWS2812LastUpdate;
-#include "STM32F3_WS2812B_LED.h"
-#endif
-
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
@@ -572,13 +564,6 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     LPF_Offset.init(0);
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
-#if WS2812_LED_IS_USED
-    uint8_t LEDcolor[3] = {0};
-    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
-    WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = now;
-#endif
-
     // The caller MUST call hwTimer.resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
 }
@@ -603,13 +588,6 @@ void GotConnection(unsigned long now)
     #endif
 
     DBGLN("got conn");
-
-#if WS2812_LED_IS_USED
-    uint8_t LEDcolor[3] = {0};
-    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
-    WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = now;
-#endif
 }
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
@@ -947,25 +925,6 @@ static void setupBindingFromConfig()
 #endif
 }
 
-void updateLEDs(uint32_t now)
-{
-#if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
-    {
-        uint8_t LEDcolor[3] = {0};
-        if (LEDfade == 30 || LEDfade == 0)
-        {
-            LEDfadeDir = !LEDfadeDir;
-        }
-
-        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-        WS281BsetLED(LEDcolor);
-        LEDWS2812LastUpdate = now;
-    }
-#endif
-}
-
 static void HandleUARTin()
 {
     while (CRSF_RX_SERIAL.available())
@@ -1010,24 +969,6 @@ static void setupRadio()
 
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
-}
-
-static void ws2812Blink()
-{
- #if WS2812_LED_IS_USED // do startup blinkies for fun
-    WS281Binit();
-    uint32_t col = 0x0000FF;
-    for (uint8_t j = 0; j < 3; j++)
-    {
-        for (uint8_t i = 0; i < 5; i++)
-        {
-            WS281BsetLED(col << j*8);
-            delay(15);
-            WS281BsetLED(0, 0, 0);
-            delay(35);
-        }
-    }
-#endif
 }
 
 static void updateTelemetryBurst()
@@ -1113,8 +1054,6 @@ void setup()
     INFOLN("ExpressLRS Module Booting...");
 
     initDevices();
-
-    ws2812Blink();
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
@@ -1147,8 +1086,6 @@ void loop()
     {
         crsf.RXhandleUARTout();
     }
-
-    updateLEDs(now);
 
     handleDevices(now, false, [](){});
 
