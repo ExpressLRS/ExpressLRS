@@ -722,7 +722,7 @@ void loop()
     }
   #endif
 
-  if (connectionState > FAILURE_STATES)
+  if (connectionState > MODE_STATES)
   {
     return;
   }

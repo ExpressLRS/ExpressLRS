@@ -129,11 +129,6 @@ uint32_t GotConnectionMillis = 0;
 static bool connectionHasModelMatch;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 
-// LED Blinking state
-static bool LED = false;
-static uint8_t LEDPulseCounter;
-static uint32_t LEDLastUpdate;
-
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
 bool buttonDown = false;     //is the button current pressed down?
@@ -553,7 +548,6 @@ void LostConnection()
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    LED = false; // Make first LED cycle turn it on
 
     if (!InBindingMode)
     {
@@ -562,18 +556,6 @@ void LostConnection()
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
-
-#ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
-#endif
 }
 
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
@@ -627,18 +609,6 @@ void GotConnection(unsigned long now)
     LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
     WS281BsetLED(LEDcolor);
     LEDWS2812LastUpdate = now;
-#endif
-
-#ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
 #endif
 }
 
@@ -944,18 +914,6 @@ static void setupConfigAndPocCheck()
 
 static void setupGpio()
 {
-#ifdef GPIO_PIN_LED_GREEN
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-#endif /* GPIO_PIN_LED_GREEN */
-#ifdef GPIO_PIN_LED_RED
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif /* GPIO_PIN_LED_RED */
-#if defined(GPIO_PIN_LED)
-    pinMode(GPIO_PIN_LED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif /* GPIO_PIN_LED */
 #ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
@@ -1006,64 +964,6 @@ void updateLEDs(uint32_t now)
         LEDWS2812LastUpdate = now;
     }
 #endif
-    // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (connectionState == disconnected && now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
-    {
-        #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    }
-    else if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    }
-    else if (InBindingMode && now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
-    {
-        if (LEDPulseCounter == 0)
-        {
-            LED = true;
-        }
-        else if (LEDPulseCounter == 4)
-        {
-            LED = false;
-        }
-        else
-        {
-            LED = !LED;
-        }
-
-        if (LEDPulseCounter < 4)
-        {
-            LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
-        }
-        else
-        {
-            LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
-            LEDPulseCounter = 0;
-        }
-
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
-
-        LEDPulseCounter++;
-    }
-    else if (connectionState == radioFailed && now > LEDLastUpdate)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        LED = !LED;
-        #endif
-        LEDLastUpdate = now + LED_INTERVAL_ERROR;
-    }
 }
 
 static void HandleUARTin()

@@ -4,18 +4,18 @@
 #include "common.h"
 #include "helpers.h"
 
-#ifdef TARGET_TX
 extern device_t LED_device;
+extern device_t WIFI_device;
+#ifdef TARGET_TX
 extern device_t RGB_device;
 extern device_t LUA_device;
 extern device_t OLED_device;
 extern device_t Buzzer_device;
 #endif
-extern device_t WIFI_device;
 
 device_t *ui_devices[] = {
-#ifdef TARGET_TX
   &LED_device,
+#ifdef TARGET_TX
   &RGB_device,
   &LUA_device,
   &OLED_device,
