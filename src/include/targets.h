@@ -608,7 +608,6 @@ Designed by NamimnoRC
 #define GPIO_PIN_RST            2
 #define GPIO_PIN_LED            16
 #define GPIO_PIN_BUTTON         0
-#define timerOffset             -1
 #define GPIO_PIN_TX_ENABLE      10
 #ifdef USE_DIVERSITY
     #define GPIO_PIN_ANTENNA_SELECT 9
