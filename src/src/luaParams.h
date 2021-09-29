@@ -10,8 +10,10 @@ extern struct tagLuaItem_command luaBind;
 extern struct tagLuaItem_string luaInfo;
 extern struct tagLuaItem_string luaELRSversion;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 extern struct tagLuaItem_command luaWebUpdate;
+#endif
+#if defined(PLATFORM_ESP32)
 extern struct tagLuaItem_command luaBLEJoystick;
 #endif
 

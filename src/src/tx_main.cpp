@@ -32,13 +32,10 @@ SX1280Driver Radio;
 #include "OLED.h"
 #endif
 
-#ifdef PLATFORM_ESP8266
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#endif
-
 #include "WebUpdate.h"
+#if defined(PLATFORM_ESP32)
 #include "ESP32_BLE_HID.h"
+#endif
 
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
@@ -68,7 +65,7 @@ char commitStr[7] = {LATEST_COMMIT , 0};
 
 volatile uint8_t NonceTX;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 #endif
 //// MSP Data Handling ///////
@@ -113,8 +110,6 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
 void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
-
-uint8_t baseMac[6];
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -614,7 +609,7 @@ void registerLuaParameters() {
       sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
     }
   });
-  #ifdef PLATFORM_ESP32
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
       DBGVLN("arg %d", arg);
       if (arg == 4) // 4 = request confirmed, start
@@ -642,7 +637,9 @@ void registerLuaParameters() {
         sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
       }
     });
+  #endif
 
+  #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg == 4) // 4 = request confirmed, start
       {
@@ -678,8 +675,7 @@ void registerLuaParameters() {
         sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
       }
     });
-
-  #endif
+ #endif
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
@@ -743,7 +739,7 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP266)
+  #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
@@ -947,12 +943,6 @@ void setup()
   button.OnLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
-#ifdef PLATFORM_ESP32
-  // Get base mac address
-  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-  // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-#endif // PLATFORM_ESP32
-
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
   Radio.RXdoneCallback = &RXdoneISR;
@@ -977,7 +967,7 @@ void setup()
   if (!init_success)
   {
     connectionState = radioFailed;
-    #ifdef PLATFORM_ESP32
+    #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
     while (1)
     {
       unsigned long now = millis();
@@ -1040,7 +1030,7 @@ void loop()
   HandleUpdateParameter();
   CheckConfigChangePending();
 
-  #if defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
@@ -1050,13 +1040,9 @@ void loop()
     }
   #endif
 
-  #ifdef FEATURE_OPENTX_SYNC
-    // DBGVLN(crsf.OpenTXsyncOffset);
-  #endif
-
-  #ifdef PLATFORM_STM32
+  #if defined(PLATFORM_STM32) || defined(PLATFORM_ESP8266)
     crsf.handleUARTin();
-  #endif // PLATFORM_STM32
+  #endif
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.update();

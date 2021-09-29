@@ -4,12 +4,12 @@
 #include "logging.h"
 #include "helpers.h"
 
-#ifdef PLATFORM_ESP32
-HardwareSerial SerialPort(1);
-HardwareSerial CRSF::Port = SerialPort;
+#if defined(PLATFORM_ESP32)
+HardwareSerial CRSF::Port = SerialPort(1)
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
+#elif defined(PLATFORM_ESP8266)
+HardwareSerial CRSF::Port = Serial;
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -82,9 +82,8 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
-// This table assumes 115k baud max packet rate is 150hz, all others at 500hz
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::TxToHandsetBauds[5] = {115200, 400000, 921600, 1870000, 3750000};
+uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 921600, 1870000, 3750000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
 bool CRSF::CRSFstate = false;
@@ -104,10 +103,16 @@ void CRSF::Begin()
 #if CRSF_TX_MODULE
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32)
     disableCore0WDT();
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
 
+#elif defined(PLATFORM_ESP8266)
+    CRSF::Port.flush();
+    CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    // Invert RX/TX
+    USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
+    // No log message because this is our only UART
 
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART");
@@ -650,7 +655,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
     gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     #ifdef UART_INVERTED
@@ -662,6 +667,9 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
+#elif defined(PLATFORM_ESP8266)
+    // Enable loopback on UART0 to connect the RX pin to the TX pin
+    //USC0(UART0) |= BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
@@ -671,7 +679,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 
 void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32)
     gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
@@ -682,6 +690,9 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #else
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
     #endif
+#elif defined(PLATFORM_ESP8266)
+    // Disable loopback to disconnect the RX pin from the TX pin
+    //USC0(UART0) &= ~BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
@@ -730,24 +741,24 @@ bool CRSF::UARTwdt()
             adjustMaxPacketSize();
 
             SerialOutFIFO.flush();
-#ifdef PLATFORM_ESP32
-            CRSF::Port.flush();
-            CRSF::Port.updateBaudRate(UARTrequestedBaud);
-#else
-            CRSF::Port.begin(UARTrequestedBaud);
-            #if defined(TARGET_TX_GHOST)
-            USART1->CR1 &= ~USART_CR1_UE;
-            USART1->CR3 |= USART_CR3_HDSEL;
-            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
-            USART1->CR1 |= USART_CR1_UE;
+            #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+                CRSF::Port.flush();
+                CRSF::Port.updateBaudRate(UARTrequestedBaud);
+            #else
+                CRSF::Port.begin(UARTrequestedBaud);
+                #if defined(TARGET_TX_GHOST)
+                USART1->CR1 &= ~USART_CR1_UE;
+                USART1->CR3 |= USART_CR3_HDSEL;
+                USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
+                USART1->CR1 |= USART_CR1_UE;
+                #endif
+                #if defined(TARGET_TX_FM30_MINI)
+                LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
+                USART2->CR1 &= ~USART_CR1_UE;
+                USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+                USART2->CR1 |= USART_CR1_UE;
+                #endif
             #endif
-            #if defined(TARGET_TX_FM30_MINI)
-            LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
-            USART2->CR1 &= ~USART_CR1_UE;
-            USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
-            USART2->CR1 |= USART_CR1_UE;
-            #endif
-#endif
             duplex_set_RX();
             // cleanup input buffer
             flush_port_input();
