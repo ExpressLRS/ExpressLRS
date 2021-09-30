@@ -1272,7 +1272,7 @@ void loop()
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }
 
-    if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RFmodeCycleAddtionalTime))
+    if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
     {
         LostConnection();
         DBGLN("Bad sync, aborting");
@@ -1284,7 +1284,7 @@ void loop()
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
-        ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->RFmodeCycleInterval < (int32_t)(now - localLastValidPacket)))) // check if we lost conn.
+        ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs < (int32_t)(now - localLastValidPacket)))) // check if we lost conn.
     {
         LostConnection();
     }

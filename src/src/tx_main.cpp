@@ -425,6 +425,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     GenerateSyncPacketData();
+    syncSlot = 0; // reset the sync slot in case the new rate (after the syncspam) has a lower FHSShopInterval
   }
   // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
   // But only on the sync FHSS channel and with a timed delay between them
