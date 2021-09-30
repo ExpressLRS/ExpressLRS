@@ -4,6 +4,9 @@
 #include "common.h"
 #include "helpers.h"
 
+// Even though we aren't using anything this keeps the PIO dependency analyzer happy!
+#include "POWERMGNT.h"
+
 static device_t **uiDevices;
 static uint8_t deviceCount;
 static unsigned long deviceTimeout[16] = {0};

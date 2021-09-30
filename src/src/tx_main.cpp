@@ -1,6 +1,5 @@
 #include "targets.h"
 #include "common.h"
-#include "device.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -12,7 +11,6 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "lua.h"
-#include "helpers.h"
 
 #include "FHSS.h"
 #include "logging.h"
@@ -25,6 +23,14 @@ SX1280Driver Radio;
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
+
+#include "helpers.h"
+#include "devLED.h"
+#include "devOLED.h"
+#include "devBuzzer.h"
+#include "devBLE.h"
+#include "devLUA.h"
+#include "devWIFI.h"
 
 #ifdef PLATFORM_ESP8266
 #include "soc/soc.h"
@@ -42,14 +48,6 @@ Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
-
-extern device_t LED_device;
-extern device_t WIFI_device;
-extern device_t RGB_device;
-extern device_t LUA_device;
-extern device_t BLE_device;
-extern device_t OLED_device;
-extern device_t Buzzer_device;
 
 device_t *ui_devices[] = {
   &LED_device,

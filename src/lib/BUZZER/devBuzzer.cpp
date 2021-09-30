@@ -1,13 +1,14 @@
-#if defined(TARGET_TX) 
-
 #include "targets.h"
 #include "common.h"
 #include "device.h"
+
 #include "helpers.h"
 #include "logging.h"
 
-#if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+// Even though we aren't using anything this keeps the PIO dependency analyzer happy!
+#include "POWERMGNT.h"
 
+#if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
 
 static void initializeBuzzer()
 {
@@ -98,7 +99,5 @@ device_t Buzzer_device = {
 device_t Buzzer_device = {
     NULL
 };
-
-#endif
 
 #endif

@@ -12,9 +12,6 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#include "device.h"
-#include "helpers.h"
-
 #include "crc.h"
 #include "CRSF.h"
 #include "telemetry_protocol.h"
@@ -35,6 +32,11 @@ SX1280Driver Radio;
 #include "options.h"
 #include "POWERMGNT.h"
 
+#include "device.h"
+#include "helpers.h"
+#include "devLED.h"
+#include "devWIFI.h"
+
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
 #define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
@@ -49,10 +51,6 @@ SX1280Driver Radio;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
-
-extern device_t LED_device;
-extern device_t WIFI_device;
-extern device_t RGB_device;
 
 device_t *ui_devices[] = {
   &LED_device,

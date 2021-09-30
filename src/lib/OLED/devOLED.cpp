@@ -1,5 +1,3 @@
-#if defined(TARGET_TX) 
-
 #include "targets.h"
 #include "common.h"
 #include "device.h"
@@ -51,7 +49,5 @@ device_t OLED_device = {
 device_t OLED_device = {
     NULL
 };
-
-#endif
 
 #endif
