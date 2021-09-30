@@ -7,5 +7,4 @@
 python/__pycache__/
 *.pyc
 super_defines.txt
-src/ESP32_WebContent.h
-src/ESP8266_WebContent.h
+src/WebContent.h

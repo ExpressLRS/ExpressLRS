@@ -3,6 +3,7 @@ import argparse
 import serials_find
 import SerialHelper
 import bootloader
+from query_yes_no import query_yes_no
 
 SCRIPT_DEBUG = 0
 
@@ -132,7 +133,10 @@ def reset_to_bootloader(args):
     if rx_target == "":
         dbg_print("Cannot detect RX target, blindly flashing!")
     elif rx_target != flash_target:
-        raise WrongTargetSelected("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+        if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
+            dbg_print("Ok, flashing anyway!")
+        else:
+            raise WrongTargetSelected("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
     elif flash_target != "":
         dbg_print("Verified RX target '%s'" % (flash_target))
     time.sleep(.5)

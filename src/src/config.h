@@ -3,6 +3,11 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 
+#if defined(PLATFORM_ESP32)
+#include <nvs_flash.h>
+#include <nvs.h>
+#endif
+
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
@@ -11,6 +16,7 @@
 #define RX_CONFIG_VERSION   3
 #define UID_LEN             6
 
+#if defined(TARGET_TX)
 typedef struct {
     uint8_t     rate:3;
     uint8_t     tlm:3;
@@ -35,7 +41,7 @@ typedef struct {
 class TxConfig
 {
 public:
-    TxConfig() { SetModelId(0); }
+    TxConfig();
     void Load();
     void Commit();
 
@@ -64,7 +70,6 @@ public:
     void SetSwitchMode(uint8_t switchMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults();
-    void UpgradeEepromV1ToV4();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
@@ -77,14 +82,25 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
+    bool UpgradeEepromV1ToV4();
+    
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
-    bool        m_modified;
+    uint8_t     m_modified;
     model_config_t *m_model;
+    uint8_t     m_modelId;
+#if defined(PLATFORM_ESP32)
+    nvs_handle  handle;
+#endif
 };
+
+extern TxConfig config;
+
+#endif
 
 ///////////////////////////////////////////////////
 
+#if defined(TARGET_RX)
 typedef struct {
     uint32_t    version;
     bool        isBound;
@@ -131,3 +147,7 @@ private:
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
 };
+
+extern RxConfig config;
+
+#endif

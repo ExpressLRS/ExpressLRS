@@ -209,7 +209,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     }
     *pos++ = 0xFF;
     *pos++ = 0;
-    luaAgentLite.size = 4 + strlen(luaAgentLite.label1) + 1;
+    luaAgentLite.size = LUA_FOLDER_SIZE(luaAgentLite);
     return;
   }
   struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;

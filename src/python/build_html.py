@@ -45,7 +45,7 @@ def get_git_version(env):
     return '%s (%s)' % (ver, hash)
 
 def build_version(out, env):
-    out.write('static const char VERSION[] = "%s";\n\n' % get_git_version(env))
+    out.write('const char *VERSION = "%s";\n\n' % get_git_version(env))
 
 def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
@@ -66,14 +66,14 @@ def build_common(out, env):
     build_html("flag.svg", "FLAG", out, env)
 
 def build_tx_html(source, target, env):
-    out = open("src/ESP32_WebContent.h", 'w')
+    out = open("src/WebContent.h", 'w')
     build_version(out, env)
     build_html("tx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close
 
 def build_rx_html(source, target, env):
-    out = open("src/ESP8266_WebContent.h", 'w')
+    out = open("src/WebContent.h", 'w')
     build_version(out, env)
     build_html("rx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
