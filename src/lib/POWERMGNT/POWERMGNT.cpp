@@ -458,11 +458,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         break;
     }
 #elif defined(TARGET_RX)
-#ifdef TARGET_SX1280
-    Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
-#else
-    Radio.SetOutputPower(0b1111); //default is max power (17dBm for SX127x RX@)
-#endif
+     // Set to max power for telemetry on the RX if not specified
+    Radio.SetOutputPowerMax();
 #else
 #error "[ERROR] Unknown power management!"
 #endif

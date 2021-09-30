@@ -9,6 +9,7 @@ import BFinitPassthrough
 import SerialHelper
 import re
 import bootloader
+from query_yes_no import query_yes_no
 
 SCRIPT_DEBUG = 0
 BAUDRATE_DEFAULT = 420000
@@ -75,6 +76,7 @@ def uart_upload(port, filename, baudrate, ghst=False, key=None, target=""):
         gotBootloader = 'CCC' in rl.read_line()
 
         # Init bootloader
+        ignore_incorrect_target = False
         if not gotBootloader:
             # legacy bootloader requires a 500ms delay
             delay_seq2 = .5
@@ -141,8 +143,12 @@ def uart_upload(port, filename, baudrate, ghst=False, key=None, target=""):
 
                     elif "_RX_" in line:
                         flash_target = re.sub("_VIA_.*", "", target.upper())
-                        if line != flash_target:
-                            raise Exception("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
+                        if line != flash_target and not ignore_incorrect_target:
+                            if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (line, flash_target)):
+                                ignore_incorrect_target = True
+                                continue
+                            else:
+                                raise Exception("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
                         elif flash_target != "":
                             dbg_print("Verified RX target '%s'" % flash_target)
 

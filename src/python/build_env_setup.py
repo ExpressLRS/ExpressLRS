@@ -60,13 +60,13 @@ elif platform in ['espressif8266']:
                      [esp_compress.compress_files])
     env.AddPostAction("${BUILD_DIR}/${ESP8266_FS_IMAGE_NAME}.bin",
                      [esp_compress.compress_fs_bin])
-    env.AddPreAction("${BUILD_DIR}/src/ESP8266_WebUpdate.cpp.o", build_html.build_rx_html)
+    env.AddPreAction("${BUILD_DIR}/src/WebUpdate.cpp.o", build_html.build_rx_html)
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
 
 elif platform in ['espressif32']:
-    env.AddPreAction("${BUILD_DIR}/src/ESP32_WebUpdate.cpp.o", build_html.build_tx_html)
+    env.AddPreAction("${BUILD_DIR}/src/WebUpdate.cpp.o", build_html.build_tx_html)
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
