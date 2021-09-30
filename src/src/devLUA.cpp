@@ -11,8 +11,6 @@
 #include "OTA.h"
 #include "hwTimer.h"
 
-#include "ESP32_BLE_HID.h"
-
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 extern SX127xDriver Radio;
@@ -324,15 +322,6 @@ static void registerLuaParameters() {
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start BLE to prevent stuck on
         //unintentional button press.
         DBGLN("BLE Joystick Mode Requested!");
-        hwTimer::stop();
-        hwTimer::updateInterval(5000);
-        CRSF::setSyncParams(5000); // 200hz
-        delay(100);
-        CRSF::disableOpentxSync();
-        POWERMGNT::setPower(MinPower);
-        Radio.End();
-        CRSF::RCdataCallback = BluetoothJoystickUpdateValues;
-        BluetoothJoystickBegin();
         sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
         connectionState = bleJoystick;
       }
