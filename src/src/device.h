@@ -18,6 +18,6 @@ typedef struct {
     int (*timeout)(std::function<void ()> sendSpam);
 } device_t;
 
-void initDevices();
+void initDevices(device_t **devices, uint8_t count);
 void startDevices();
 void handleDevices(unsigned long now, bool eventFired, std::function<void ()> setSpam);

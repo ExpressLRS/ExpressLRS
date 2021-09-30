@@ -43,6 +43,24 @@ Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
+extern device_t LED_device;
+extern device_t WIFI_device;
+extern device_t RGB_device;
+extern device_t LUA_device;
+extern device_t BLE_device;
+extern device_t OLED_device;
+extern device_t Buzzer_device;
+
+device_t *ui_devices[] = {
+  &LED_device,
+  &RGB_device,
+  &LUA_device,
+  &BLE_device,
+  &OLED_device,
+  &Buzzer_device,
+  &WIFI_device
+};
+
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
@@ -624,7 +642,7 @@ void setup()
   Serial.begin(460800);
 
   // Initialise the UI devices
-  initDevices();
+  initDevices(ui_devices, ARRAY_SIZE(ui_devices));
 
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)

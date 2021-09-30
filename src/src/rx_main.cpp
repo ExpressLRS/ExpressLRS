@@ -13,6 +13,7 @@ SX1280Driver Radio;
 #endif
 
 #include "device.h"
+#include "helpers.h"
 
 #include "crc.h"
 #include "CRSF.h"
@@ -48,6 +49,16 @@ SX1280Driver Radio;
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
+
+extern device_t LED_device;
+extern device_t WIFI_device;
+extern device_t RGB_device;
+
+device_t *ui_devices[] = {
+  &LED_device,
+  &RGB_device,
+  &WIFI_device
+};
 
 uint8_t antenna = 0;    // which antenna is currently in use
 
@@ -1053,7 +1064,7 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-    initDevices();
+    initDevices(ui_devices, ARRAY_SIZE(ui_devices));
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());

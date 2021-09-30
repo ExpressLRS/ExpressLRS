@@ -4,38 +4,20 @@
 #include "common.h"
 #include "helpers.h"
 
-extern device_t LED_device;
-extern device_t WIFI_device;
-extern device_t RGB_device;
-#ifdef TARGET_TX
-extern device_t LUA_device;
-extern device_t BLE_device;
-extern device_t OLED_device;
-extern device_t Buzzer_device;
-#endif
-
-device_t *ui_devices[] = {
-  &LED_device,
-  &RGB_device,
-#ifdef TARGET_TX
-  &LUA_device,
-  &BLE_device,
-  &OLED_device,
-  &Buzzer_device,
-#endif
-  &WIFI_device,
-};
-
-unsigned long ui_device_timeout[ARRAY_SIZE(ui_devices)] = {0};
-unsigned long nextDeviceTimeout = 0;
+static device_t **uiDevices;
+static uint8_t deviceCount;
+static unsigned long deviceTimeout[16] = {0};
+static unsigned long nextDeviceTimeout = 0;
 
 static connectionState_e lastConnectionState = disconnected;
 
-void initDevices()
+void initDevices(device_t **devices, uint8_t count)
 {
-    for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++) {
-        if (ui_devices[i]->initialize) {
-            (ui_devices[i]->initialize)();
+    uiDevices = devices;
+    deviceCount = count;
+    for(size_t i=0 ; i<count ; i++) {
+        if (uiDevices[i]->initialize) {
+            (uiDevices[i]->initialize)();
         }
     }
 }
@@ -43,39 +25,39 @@ void initDevices()
 void startDevices()
 {
     unsigned long now = millis();
-    for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
+    for(size_t i=0 ; i<deviceCount ; i++)
     {
-        if (ui_devices[i]->start)
+        if (uiDevices[i]->start)
         {
-            int delay = (ui_devices[i]->start)();
-            ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-            nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+            int delay = (uiDevices[i]->start)();
+            deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+            nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
         }
     }
 }
 
 void handleDevices(unsigned long now, bool eventFired, std::function<void ()> setSpam)
 {
-    for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
+    for(size_t i=0 ; i<deviceCount ; i++)
     {
-        if ((eventFired || lastConnectionState != connectionState) && ui_devices[i]->event)
+        if ((eventFired || lastConnectionState != connectionState) && uiDevices[i]->event)
         {
-            int delay = (ui_devices[i]->event)(setSpam);
+            int delay = (uiDevices[i]->event)(setSpam);
             if (delay != DURATION_IGNORE)
             {
-                ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-                nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+                deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+                nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
             }
         }
     }
     lastConnectionState = connectionState;
-    for(size_t i=0 ; i<ARRAY_SIZE(ui_devices) ; i++)
+    for(size_t i=0 ; i<deviceCount ; i++)
     {
-        if (now > ui_device_timeout[i] && ui_devices[i]->timeout)
+        if (now > deviceTimeout[i] && uiDevices[i]->timeout)
         {
-            int delay = (ui_devices[i]->timeout)(setSpam);
-            ui_device_timeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-            nextDeviceTimeout = min(nextDeviceTimeout, ui_device_timeout[i]);
+            int delay = (uiDevices[i]->timeout)(setSpam);
+            deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+            nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
         }
     }
 }
