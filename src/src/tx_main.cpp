@@ -31,11 +31,7 @@ SX1280Driver Radio;
 #include "devBLE.h"
 #include "devLUA.h"
 #include "devWIFI.h"
-
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-#include "button.h"
-Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
-#endif
+#include "devButton.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -43,16 +39,6 @@ Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
-
-device_t *ui_devices[] = {
-  &LED_device,
-  &RGB_device,
-  &LUA_device,
-  &BLE_device,
-  &OLED_device,
-  &Buzzer_device,
-  &WIFI_device
-};
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -112,6 +98,17 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
 void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
+
+device_t *ui_devices[] = {
+  &LED_device,
+  &RGB_device,
+  &LUA_device,
+  &BLE_device,
+  &OLED_device,
+  &Buzzer_device,
+  &WIFI_device,
+  &Button_device
+};
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -648,11 +645,6 @@ void setup()
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-  button.OnShortPress = []() { if (button.getCount() == 3) EnterBindingMode(); };
-  button.OnLongPress = &POWERMGNT.handleCyclePower;
-#endif
-
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
   Radio.RXdoneCallback = &RXdoneISR;
@@ -721,10 +713,6 @@ void loop()
     crsf.handleUARTin();
   #endif
 
-  #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-    button.update();
-  #endif
-  
   if (connectionState > MODE_STATES)
   {
     return;
