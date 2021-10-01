@@ -32,6 +32,7 @@ static int playTune(bool start, const int tune[][2], int numTones)
     static uint8_t tunepos = 0;
     if (start)
     {
+        pinMode(GPIO_PIN_BUZZER, OUTPUT);
         tunepos = 0;
     }
     if (tunepos > numTones)

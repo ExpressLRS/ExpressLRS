@@ -738,11 +738,6 @@ void loop()
     }
   #endif
 
-  if (connectionState > MODE_STATES)
-  {
-    return;
-  }
-
   #ifdef FEATURE_OPENTX_SYNC
     // DBGVLN(crsf.OpenTXsyncOffset);
   #endif
@@ -754,6 +749,11 @@ void loop()
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.update();
   #endif
+  
+  if (connectionState > MODE_STATES)
+  {
+    return;
+  }
 
   if (Serial.available())
   {
