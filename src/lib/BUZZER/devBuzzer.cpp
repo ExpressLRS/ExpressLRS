@@ -35,7 +35,7 @@ static int playTune(bool start, const int tune[][2], int numTones)
         pinMode(GPIO_PIN_BUZZER, OUTPUT);
         tunepos = 0;
     }
-    if (tunepos > numTones)
+    if (tunepos >= numTones)
     {
         noTone(GPIO_PIN_BUZZER);
         pinMode(GPIO_PIN_BUZZER, INPUT);
