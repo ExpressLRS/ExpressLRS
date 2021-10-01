@@ -10,7 +10,7 @@ public:
     int32_t SmoothDataFP;
     int32_t Beta = 3;     // Length = 16
     int32_t FP_Shift = 5; //Number of fractional bits
-    bool _need_reset = true;  // wait for the first data to upcoming.
+    bool NeedReset = true;  // wait for the first data to upcoming.
 
     LPF(int Beta_, int FP_Shift_)
     {
@@ -31,7 +31,7 @@ public:
 
     int32_t ICACHE_RAM_ATTR update(int32_t Indata)
     {
-        if (_need_reset)
+        if (NeedReset)
         {
             init(Indata);
             return SmoothDataINT;
@@ -51,13 +51,13 @@ public:
 
     void ICACHE_RAM_ATTR reset()
     {
-        _need_reset = true;
+        NeedReset = true;
     }
 
 
     void ICACHE_RAM_ATTR init(int32_t Indata)
     {
-        _need_reset = false;
+        NeedReset = false;
 
         SmoothDataINT = Indata;
         SmoothDataFP = SmoothDataINT << FP_Shift;
