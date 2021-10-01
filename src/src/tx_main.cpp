@@ -52,6 +52,8 @@ Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
 
+#define OPCODE_VTX_IDX 0x01
+
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
@@ -113,6 +115,8 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
 void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
+
+void VtxConfigToBackpackOut();
 
 uint8_t baseMac[6];
 
@@ -1232,6 +1236,7 @@ void VtxConfigToMSPOut()
 
   mspPacket_t packet;
   packet.reset();
+  packet.makeCommand();
   packet.function = MSP_SET_VTX_CONFIG;
   packet.addByte(vtxIdx);
   packet.addByte(0);
@@ -1241,6 +1246,8 @@ void VtxConfigToMSPOut()
   crsf.AddMspMessage(&packet);
 
   eepromWriteToMSPOut();
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
 void eepromWriteToMSPOut()

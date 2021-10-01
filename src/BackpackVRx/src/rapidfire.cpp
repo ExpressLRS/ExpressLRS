@@ -37,12 +37,18 @@ Rapidfire::SendBuzzerCmd()
     cmd[2] = 0x00;              // len
     cmd[3] = crc8(cmd, 3);
 
+    // rapidfire sometimes missed a pkt, so send 3x
+    SendSPI(cmd, 4);
+    SendSPI(cmd, 4);
     SendSPI(cmd, 4);
 }
 
 void
 Rapidfire::SendChannelCmd(uint8_t channel)
 {
+    // ELRS channel is zero based, need to add 1
+    channel++;
+
     Serial.print("Setting channel ");
     Serial.println(channel);
 
@@ -54,6 +60,7 @@ Rapidfire::SendChannelCmd(uint8_t channel)
     cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
     cmd[4] = channel;               // assign channel to correct byte 5
 
+    
     SendSPI(cmd, 5);
 }
 
@@ -63,6 +70,15 @@ Rapidfire::SendBandCmd(uint8_t band)
     Serial.print("Setting band ");
     Serial.println(band);
 
+    // ELRS bands
+    // 0x01 - Boscam A
+    // 0x02 - Boscam B
+    // 0x03 - Boscam E
+    // 0x04 - ImmersionRC/FatShark
+    // 0x05 - RaceBand
+    // 0x06 - LowRace
+
+    // rapidfire bands
     // 0x01 - ImmersionRC/FatShark
     // 0x02 - RaceBand
     // 0x03 - Boscam E
@@ -71,13 +87,40 @@ Rapidfire::SendBandCmd(uint8_t band)
     // 0x06 - LowRace
     // 0x07 - Band X
 
+    // convert ELRS band index to IMRC band index:
+    uint8_t imrcBand;
+    switch (band)
+    {
+    case 0x01:
+        imrcBand = 0x05;
+        break;
+    case 0x02:
+        imrcBand = 0x04;
+        break;
+    case 0x03:
+        imrcBand = 0x03;
+        break;
+    case 0x04:
+        imrcBand = 0x01;
+        break;
+    case 0x05:
+        imrcBand = 0x02;
+        break;
+    case 0x06:
+        imrcBand = 0x06;
+        break;
+    default:
+        imrcBand = 0x01;
+        break;
+    }
+
     uint8_t cmd[5];
     cmd[0] = RF_API_BAND_CMD;       // 'C'
     cmd[1] = RF_API_DIR_EQUAL;      // '='
     cmd[2] = 0x01;                  // len
-    cmd[3] = band;                  // temporarily set byte 4 to band for crc calc
+    cmd[3] = imrcBand;              // temporarily set byte 4 to band for crc calc
     cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
-    cmd[4] = band;                  // assign band to correct byte 5
+    cmd[4] = imrcBand;              // assign band to correct byte 5
 
     SendSPI(cmd, 5);
 }
@@ -88,7 +131,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     digitalWrite(PIN_CS, LOW);
     delay(100); // these delays might not be required. Came from example code
 
-    SPI.beginTransaction(SPISettings(40000, MSBFIRST, SPI_MODE0));
+    SPI.beginTransaction(SPISettings(10000, MSBFIRST, SPI_MODE0));
 
     // debug code for printing SPI pkt
     for (int i = 0; i < bufLen; ++i)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "targets.h"
+#include <Arduino.h>
 
 // TODO: MSP_PORT_INBUF_SIZE should be changed to
 // dynamically allocate array length based on the payload size

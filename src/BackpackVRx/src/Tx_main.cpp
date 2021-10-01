@@ -2,6 +2,7 @@
 #include "ESP8266_WebUpdate.h"
 #include <espnow.h>
 #include <EEPROM.h>
+#include "../lib/MSP/msp.h"
 
 #define WIFI_PIN 0
 #define LED_PIN 16
@@ -9,6 +10,14 @@
 #define OPCODE_SET_CHANNEL  0x01
 #define OPCODE_SET_BAND     0x02
 #define OPCODE_WIFI_MODE    0x0F
+
+mspPacket_t* cachedPacket;
+bool cacheFull = false;
+uint32_t lastSentCache = 0;
+
+MSP msp;
+
+void ProcessMSPPacket(mspPacket_t *packet);
 
 uint8_t flashLED = false;
 
@@ -31,6 +40,22 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
   channelHistory[0] = data[8];
     
   flashLED = true;
+}
+
+void sendMSPViaEspnow(mspPacket_t *packet)
+{
+  uint8_t packetSize = msp.getTotalPacketSize(packet);
+  uint8_t nowDataOutput[packetSize];
+
+  uint8_t result = msp.convertToByteArray(packet, nowDataOutput);
+
+  if (!result)
+  {
+    // packet could not be converted to array, bail out
+    return;
+  }
+  
+  esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
 }
 
 void sendVRXChannelCmd(uint8_t channel)
@@ -141,21 +166,28 @@ void loop()
     }
   }
 
-  // test code
-  sendVRXChannelCmd(channel);
-  delay(1000);
-  sendVRXBandCmd(0x01); // fatshark
-
-  if (++channel > 8)
+  if (cacheFull && millis() - lastSentCache > 1000)
   {
-    channel = 1;
+    sendMSPViaEspnow(cachedPacket);
+    lastSentCache = millis();
   }
 
-  if (millis() > 30000)
+  if (Serial.available())
   {
-    // test wifi cmd after 30s of uptime
-    sendVRXWifiCmd();
-  }
+    uint8_t c = Serial.read();
 
-  delay(1000);
+    if (msp.processReceivedByte(c))
+    {
+      // Finished processing a complete packet
+      ProcessMSPPacket(msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
+}
+
+void ProcessMSPPacket(mspPacket_t *packet)
+{
+  // transparently forward MSP packets via espnow to any subscribers
+  cachedPacket = packet;
+  cacheFull = true;
 }
