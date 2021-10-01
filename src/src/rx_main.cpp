@@ -443,6 +443,7 @@ static inline void switchAntenna()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     antenna = !antenna;
+    (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
     digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
 #endif
 }
