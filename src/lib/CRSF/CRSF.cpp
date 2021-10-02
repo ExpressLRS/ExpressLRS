@@ -5,7 +5,7 @@
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
-HardwareSerial CRSF::Port = SerialPort(1)
+HardwareSerial CRSF::Port = HardwareSerial(1);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xESP32uartTask = NULL;
 #elif defined(PLATFORM_ESP8266)
