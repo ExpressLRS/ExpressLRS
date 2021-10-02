@@ -47,6 +47,9 @@ static uint16_t flashLED(uint8_t pin, uint8_t pin_inverted, const uint8_t durati
 static void initialize()
 {
     #if defined(TARGET_TX)
+        #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+            pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
+        #endif
         #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
             pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
             digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
@@ -97,6 +100,27 @@ static int event(std::function<void ()> sendSpam)
         if (InBindingMode)
         {
             return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
+        }
+    #endif
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+        switch (POWERMGNT::currPower())
+        {
+        case PWR_250mW:
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            break;
+        case PWR_500mW:
+            digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            break;
+        case PWR_10mW:
+        case PWR_25mW:
+        case PWR_50mW:
+        case PWR_100mW:
+        default:
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            break;
         }
     #endif
     switch (connectionState)
