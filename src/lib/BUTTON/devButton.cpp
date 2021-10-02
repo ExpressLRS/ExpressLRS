@@ -28,8 +28,25 @@ void EnterBindingMode();
 static void initialize()
 {
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-        button.OnShortPress = []() { if (button.getCount() == 3) EnterBindingMode(); };
-        button.OnLongPress = &POWERMGNT::handleCyclePower;
+        button.OnShortPress = []() {
+            if (button.getCount() == 3)
+                EnterBindingMode();
+        };
+        button.OnLongPress = []() {
+            switch (POWERMGNT::currPower())
+            {
+            case PWR_100mW:
+                POWERMGNT::setPower(PWR_250mW);
+                break;
+            case PWR_250mW:
+                POWERMGNT::setPower(PWR_500mW);
+                break;
+            case PWR_500mW:   
+            default:
+                POWERMGNT::setPower(PWR_100mW);
+                break;
+            }
+        };
     #endif
 }
 
