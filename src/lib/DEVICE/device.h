@@ -20,4 +20,5 @@ typedef struct {
 
 void initDevices(device_t **devices, uint8_t count);
 void startDevices();
-void handleDevices(unsigned long now, bool eventFired, std::function<void ()> setSpam);
+void handleDevices(unsigned long now, std::function<void ()> setSpam);
+void triggerEvent();

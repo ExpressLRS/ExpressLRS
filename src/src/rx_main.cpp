@@ -1096,7 +1096,7 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    handleDevices(now, false, [](){});
+    handleDevices(now, [](){});
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.

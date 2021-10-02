@@ -68,9 +68,6 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 
-// Internal eventing
-bool eventFired = false;
-
 volatile uint8_t NonceTX;
 
 #ifdef PLATFORM_ESP32
@@ -561,7 +558,7 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
-  eventFired = true;
+  triggerEvent();
 }
 
 
@@ -720,8 +717,7 @@ void loop()
 
   // Update UI devices 
   bool spamRequired = false;
-  handleDevices(now, eventFired, [&spamRequired]() mutable { spamRequired = true; });
-  eventFired = false;
+  handleDevices(now, [&spamRequired]() mutable { spamRequired = true; });
 
   // Send sync spam if a UI device has requested to and the config has changed
   if (spamRequired && config.IsModified())
@@ -908,7 +904,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
     VtxConfigReadyToSend = true;
 
-    eventFired = true;
+    triggerEvent();
     sendLuaDevicePacket();    // Why is this here?
   }
 }

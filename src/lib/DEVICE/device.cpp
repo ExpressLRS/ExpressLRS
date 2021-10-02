@@ -7,6 +7,7 @@
 // Even though we aren't using anything this keeps the PIO dependency analyzer happy!
 #include "POWERMGNT.h"
 
+static bool eventFired = false;
 static device_t **uiDevices;
 static uint8_t deviceCount;
 static unsigned long deviceTimeout[16] = {0};
@@ -39,11 +40,18 @@ void startDevices()
     }
 }
 
-void handleDevices(unsigned long now, bool eventFired, std::function<void ()> setSpam)
+void triggerEvent()
 {
+    eventFired = true;
+}
+
+void handleDevices(unsigned long now, std::function<void ()> setSpam)
+{
+    bool handleEvents = eventFired;
+    eventFired = false;
     for(size_t i=0 ; i<deviceCount ; i++)
     {
-        if ((eventFired || lastConnectionState != connectionState) && uiDevices[i]->event)
+        if ((handleEvents || lastConnectionState != connectionState) && uiDevices[i]->event)
         {
             int delay = (uiDevices[i]->event)(setSpam);
             if (delay != DURATION_IGNORE)

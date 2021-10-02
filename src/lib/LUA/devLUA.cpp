@@ -188,7 +188,6 @@ extern bool InBindingMode;
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
 extern void beginWebsever();
-extern bool eventFired;
 #endif
 
 static void registerLuaParameters() {
