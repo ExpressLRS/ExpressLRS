@@ -8,7 +8,7 @@
 
 Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+#if defined(TARGET_TX)
 #include "POWERMGNT.h"
 void EnterBindingMode();
 #endif
@@ -18,21 +18,25 @@ static void initialize()
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
         button.OnShortPress = []() {
             if (button.getCount() == 3)
+            {
                 EnterBindingMode();
+            }
         };
         button.OnLongPress = []() {
-            switch (POWERMGNT::currPower())
+            // Only change power if we are running normally
+            if (connectionState < MODE_STATES)
             {
-            case PWR_100mW:
-                POWERMGNT::setPower(PWR_250mW);
-                break;
-            case PWR_250mW:
-                POWERMGNT::setPower(PWR_500mW);
-                break;
-            case PWR_500mW:   
-            default:
-                POWERMGNT::setPower(PWR_100mW);
-                break;
+                PowerLevels_e curr = POWERMGNT::currPower();
+                if (curr == MaxPower)
+                {
+                    POWERMGNT::setPower(MinPower);
+                }
+                else
+                {
+                    POWERMGNT::incPower();
+                }
+                DBGLN("setpower %d", POWERMGNT::currPower());
+                devicesTriggerEvent();
             }
         };
     #endif
