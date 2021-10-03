@@ -243,6 +243,9 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
 #define GPIO_PIN_BUFFER_OE_INVERTED 0
+#define MinPower PWR_10mW
+#define MaxPower PWR_50mW
+#define POWER_VALUES {8,11,15}
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
@@ -289,6 +292,9 @@ https://github.com/jaxxzer
 #else
 #define GPIO_PIN_BUTTON         0
 #endif
+#define MinPower PWR_10mW
+#define MaxPower PWR_10mW
+#define POWER_VALUES {15}
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
 #define GPIO_PIN_NSS 5
@@ -300,6 +306,9 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST 14
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#define MinPower PWR_10mW
+#define MaxPower PWR_25mW
+#define POWER_VALUES {8, 13}
 
 #elif defined(TARGET_RX_GHOST_ATTO_V1)
 #define GPIO_PIN_NSS            PA15
@@ -344,6 +353,9 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_MOSI          PB5
 #define GPIO_PIN_OLED_SCK           PB3
 #define timerOffset                 1
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-16,-14,-11,-8,-4}
 
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
@@ -361,6 +373,31 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED_WS2812 15
 #define GPIO_PIN_FAN_EN 17
+#if defined(TARGET_TX_ESP32_LORA1280F27)
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-4,0,3,6,12}
+#elif defined(TARGET_HappyModel_ES24TX_2400_TX)
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-17,-13,-9,-6,-2}
+#elif defined(TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX)
+#define MinPower PWR_25mW
+#define MaxPower PWR_1000mW
+#define POWER_VALUES {-18,-15,-12,-7,-4,2}
+#elif defined(TARGET_HGLRC_Hermes_2400_TX)
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-18,-15,-11,-8,-4}
+#elif defined(TARGET_QK_JR_TX)
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-15,-11,-8,-5,0}
+#else
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-15,-11,-8,-5,-1}
+#endif
 
 #elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
 #define GPIO_PIN_NSS         PA4
@@ -428,6 +465,9 @@ Designed by NamimnoRC
 /* WS2812 led */
 #define GPIO_PIN_LED_WS2812      PB0
 #define GPIO_PIN_LED_WS2812_FAST PB_0
+#define MinPower PWR_25mW
+#define MaxPower PWR_1000mW
+#define POWER_VALUES {-18,-15,-12,-8,-5,3}
 
 #elif defined(TARGET_NAMIMNORC_RX)
 /*
@@ -496,6 +536,9 @@ Designed by NamimnoRC
 #define GPIO_PIN_UART3RX_INVERT PB5 // Standalone inverter
 #define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
 #define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-15,-11,-7,-1,6}
 
 #elif defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
 #define GPIO_PIN_NSS            PA15
@@ -522,6 +565,9 @@ Designed by NamimnoRC
     #endif
 // Unused pins
 #define GPIO_PIN_UART1TX_INVERT PF6
+#define MinPower PWR_10mW
+#define MaxPower PWR_250mW
+#define POWER_VALUES {-15,-11,-7,-1,6}
 
 #elif defined(TARGET_ES900TX)
 #define GPIO_PIN_NSS            5
@@ -555,6 +601,9 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED_BLUE       17
 #define GPIO_PIN_LED_GREEN      16
 #define GPIO_PIN_BUTTON         25
+#define MinPower PWR_10mW
+#define MaxPower PWR_500mW
+#define POWER_VALUES {-18,-15,-13,-9,-4,3}
 
 #elif defined(TARGET_RX_BETAFPV_2400_V1)
 #define GPIO_PIN_NSS            15
@@ -570,6 +619,9 @@ Designed by NamimnoRC
 #define timerOffset             -1
 #define GPIO_PIN_RX_ENABLE      9 //enable pa
 #define GPIO_PIN_TX_ENABLE      10
+#define MinPower PWR_10mW
+#define MaxPower PWR_100mW
+#define POWER_VALUES {-10,-6,-3,1}
 
 #elif defined(TARGET_TX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            5
@@ -587,6 +639,9 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED_BLUE       17
 #define GPIO_PIN_LED_GREEN      16
 #define GPIO_PIN_BUTTON         25
+#define MinPower PWR_100mW
+#define MaxPower PWR_500mW
+#define POWER_VALUES {0,3,8}
 
 #elif defined(TARGET_RX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            15
