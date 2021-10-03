@@ -58,10 +58,9 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
 
 void POWERMGNT::init()
 {
-#if DAC_IN_USE
+#if defined(DAC_IN_USE)
     TxDAC.init();
-#endif // DAC_IN_USE
-#ifdef TARGET_R9M_LITE_PRO_TX
+#elif defined(POWER_OUTPUT_ANALOG)
     //initialize both 12 bit DACs
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
@@ -108,12 +107,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);
-#elif defined(TARGET_R9M_LITE_PRO_TX)
+#elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(TARGET_ES900TX)
+#elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #elif defined(POWER_VALUES)

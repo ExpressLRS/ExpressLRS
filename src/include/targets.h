@@ -248,6 +248,7 @@ https://github.com/jaxxzer
 #define POWER_VALUES {8,11,15}
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
+#define POWER_OUTPUT_ANALOG
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
 #define GPIO_PIN_RFamp_APC2           PA5
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
@@ -583,7 +584,12 @@ Designed by NamimnoRC
 #define GPIO_PIN_RCSIGNAL_TX    2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED_WS2812     27
 #define GPIO_PIN_FAN_EN         17
+
+#define POWER_OUTPUT_DACWRITE
 #define GPIO_PIN_RFamp_APC2     25
+#define MinPower PWR_10mW
+#define MaxPower PWR_1000mW
+#define POWER_VALUES {41,60,73,90,110,132,190}
 
 #elif defined(TARGET_TX_BETAFPV_2400_V1)
 #define GPIO_PIN_NSS            5
