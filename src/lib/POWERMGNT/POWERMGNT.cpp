@@ -112,66 +112,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-
-    switch (Power)
-    {
-    case PWR_10mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 600);
-        break;
-    case PWR_25mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 770);
-        break;
-    case PWR_100mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1150);
-        break;
-    case PWR_250mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1480);
-        break;
-#if defined(UNLOCK_HIGHER_POWER)
-    case PWR_500mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 2000);
-        break;
-    case PWR_1000mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 3500);
-        break;
-#endif
-    case PWR_50mW:
-    default:
-        analogWrite(GPIO_PIN_RFamp_APC2, 950);
-        Power = PWR_50mW;
-        break;
-    }
+    analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #elif defined(TARGET_ES900TX)
     Radio.SetOutputPower(0b0000);
-
-    switch (Power)
-    {
-    case PWR_10mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 41);
-        break;
-    case PWR_25mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 60);
-        break;
-    case PWR_100mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 90);
-        break;
-    case PWR_250mW:
-       dacWrite(GPIO_PIN_RFamp_APC2, 110);
-        break;
-#if defined(UNLOCK_HIGHER_POWER)
-    case PWR_500mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 132);
-        break;
-    case PWR_1000mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 190);
-        break;
-    case PWR_50mW:
-#endif
-    default:
-        dacWrite(GPIO_PIN_RFamp_APC2, 73);
-        Power = PWR_50mW;
-        break;
-    }
+    dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #elif defined(POWER_VALUES)
     Radio.SetOutputPower(powerValues[Power - MinPower]);
 #elif defined(TARGET_RX)
