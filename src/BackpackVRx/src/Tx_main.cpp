@@ -18,16 +18,21 @@ uint32_t lastSentCache = 0;
 
 MSP msp;
 
+/////////// FUNCTION DEFS ///////////
+
+void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len);
+void sendMSPViaEspnow(mspPacket_t *packet);
 void ProcessMSPPacket(mspPacket_t *packet);
+void SetSoftMACAddress();
+
+/////////////////////////////////////
 
 uint8_t flashLED = false;
 
 bool startWebUpdater = false;
 uint8_t channelHistory[3] = {255};
 
-uint8_t broadcastAddress[] = {TX_MAC};  // r9 tx    50:02:91:DA:37:84
-
-int channel = 1;  // testing only
+uint8_t broadcastAddress[6] = {MY_UID};
 
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 {
@@ -59,44 +64,28 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
 }
 
-void sendVRXChannelCmd(uint8_t channel)
+void ProcessMSPPacket(mspPacket_t *packet)
 {
-    uint8_t nowDataOutput[2];
-
-    nowDataOutput[0] = OPCODE_SET_CHANNEL;
-    nowDataOutput[1] = channel;
-
-    Serial.println("sending channel change...");
-    
-    esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, sizeof(nowDataOutput));
+  // transparently forward MSP packets via espnow to any subscribers
+  cachedPacket = packet;
+  cacheFull = true;
 }
 
-void sendVRXBandCmd(uint8_t band)
+void SetSoftMACAddress()
 {
-    uint8_t nowDataOutput[2];
+  WiFi.mode(WIFI_STA);
 
-    nowDataOutput[0] = OPCODE_SET_BAND;
-    nowDataOutput[1] = band;
-
-    Serial.println("sending band change...");
-    
-    esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, sizeof(nowDataOutput));
-}
-
-void sendVRXWifiCmd()
-{
-    uint8_t nowDataOutput[1];
-
-    nowDataOutput[0] = OPCODE_WIFI_MODE;
-
-    Serial.println("sending wifi cmd...");
-    
-    esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, sizeof(nowDataOutput));
+  // Soft-set the MAC address to the passphrase UID for binding
+  wifi_set_macaddr(STATION_IF, broadcastAddress);
 }
 
 void setup()
 {
   Serial.begin(460800);
+
+  broadcastAddress[0] = 0; // MAC address can only be set with unicast, so first byte must be even, not odd
+
+  SetSoftMACAddress();
 
   EEPROM.begin(512);
   EEPROM.get(0, startWebUpdater);
@@ -184,11 +173,4 @@ void loop()
       msp.markPacketReceived();
     }
   }
-}
-
-void ProcessMSPPacket(mspPacket_t *packet)
-{
-  // transparently forward MSP packets via espnow to any subscribers
-  cachedPacket = packet;
-  cacheFull = true;
 }

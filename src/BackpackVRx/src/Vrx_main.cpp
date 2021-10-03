@@ -1,16 +1,19 @@
 #include <Arduino.h>
 #include "ESP8266_WebUpdate.h"
 #include <espnow.h>
+#include <ESP8266WiFi.h>
 #include <EEPROM.h>
 #include "msp.h"
 #include "msptypes.h"
 #include "config.h"
 
+extern "C" {
+  #include <user_interface.h>
+}
+
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
 #endif
-
-MSP msp;
 
 #define WIFI_PIN            0
 #define LED_PIN             16
@@ -21,7 +24,7 @@ MSP msp;
 
 #define EEPROM_ADDR_WIFI    0x00
 
-uint8_t broadcastAddress[] = {TX_MAC};  // r9 tx    50:02:91:DA:37:84
+uint8_t broadcastAddress[6] = {MY_UID};
 
 bool startWebUpdater = false;
 uint8_t flashLED = false;
@@ -30,15 +33,22 @@ uint8_t cachedBand = 0;
 uint8_t cachedChannel = 0;
 bool sendChanges = false;
 
+MSP msp;
+
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
 #elif GENERIC_BACKPACK
   // other VRx backpack (i.e. reserved for FENIX or fusion etc.)
 #endif
 
+/////////// FUNCTION DEFS ///////////
+
 void RebootIntoWifi();
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len);
 void ProcessMSPPacket(mspPacket_t *packet);
+void SetSoftMACAddress();
+
+/////////////////////////////////////
 
 void RebootIntoWifi()
 {
@@ -115,9 +125,21 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
+void SetSoftMACAddress()
+{
+  WiFi.mode(WIFI_STA);
+
+  // Soft-set the MAC address to the passphrase UID for binding
+  wifi_set_macaddr(STATION_IF, broadcastAddress);
+}
+
 void setup()
 {
   Serial.begin(460800);
+
+  broadcastAddress[0] = 0; // MAC address can only be set with unicast, so first byte must be even, not odd
+
+  SetSoftMACAddress();
 
   EEPROM.begin(512);
   EEPROM.get(EEPROM_ADDR_WIFI, startWebUpdater);
@@ -131,6 +153,8 @@ void setup()
   else
   {
     WiFi.mode(WIFI_STA);
+    Serial.print("after mode MAC Address: ");
+    Serial.println(WiFi.macAddress());
 
     if (esp_now_init() != 0) {
       Serial.println("Error initializing ESP-NOW");

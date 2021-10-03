@@ -1,0 +1,12 @@
+### The Legal Stuff ###
+
+# The use and operation of this type of device may require a license and some countries may forbid its use entirely.
+# It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required.
+# This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK
+
+# HOW TO USE THIS FILE: https://www.expresslrs.org/1.0/software/user-defines/
+# SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH
+
+
+### BINDING PHRASE: ###
+-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
