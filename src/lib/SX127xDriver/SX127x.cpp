@@ -58,7 +58,8 @@ void SX127xDriver::End()
 {
   SetMode(SX127x_OPMODE_SLEEP);
   hal.end();
-  hal.IsrCallback = nullptr; // remove callbacks
+  TXdoneCallback = &nullCallback; // remove callbacks
+  RXdoneCallback = &nullCallback;
 }
 
 void SX127xDriver::ConfigLoraDefaults()
