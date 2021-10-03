@@ -5,7 +5,6 @@
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"
 
-static bool startLED = false;
 extern bool InBindingMode;
 
 constexpr uint8_t LEDSEQ_RADIO_FAILED[] = { 20, 100 }; // 200ms on, 1000ms off 
@@ -176,12 +175,18 @@ static int event(std::function<void ()> sendSpam)
             return DURATION_NEVER;
         #endif
     case radioFailed:
-        #if defined(TARGET_TX) && defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+        #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
             digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
         #endif // GPIO_PIN_LED_GREEN
-
-        startLED = true;
-        return timeout(sendSpam);
+        #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+            flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+            return timeout(sendSpam);
+        #elif defined(GPIO_PIN_RED) && (GPIO_PIN_RED != UNDEF_PIN)
+            flashLED(GPIO_PIN_LED, GPIO_LED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+            return timeout(sendSpam);
+        #else
+            return DURATION_NEVER;
+        #endif
     default:
         return DURATION_NEVER;
     }
