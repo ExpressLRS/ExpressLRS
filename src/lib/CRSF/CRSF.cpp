@@ -741,7 +741,7 @@ bool CRSF::UARTwdt()
             adjustMaxPacketSize();
 
             SerialOutFIFO.flush();
-            #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+            #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
                 CRSF::Port.flush();
                 CRSF::Port.updateBaudRate(UARTrequestedBaud);
             #else

@@ -739,7 +739,7 @@ void UARTconnected()
   pinMode(GPIO_PIN_BUZZER, INPUT);
   #endif
 
-  #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
@@ -967,7 +967,7 @@ void setup()
   if (!init_success)
   {
     connectionState = radioFailed;
-    #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
+    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     while (1)
     {
       unsigned long now = millis();
@@ -1030,7 +1030,7 @@ void loop()
   HandleUpdateParameter();
   CheckConfigChangePending();
 
-  #if defined(PLATFORM_ESP266) || defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
