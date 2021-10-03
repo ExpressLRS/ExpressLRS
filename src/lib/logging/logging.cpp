@@ -1,4 +1,4 @@
-#include "targets.h"
+#include <Arduino.h>
 #include <cstdarg>
 #include "logging.h"
 

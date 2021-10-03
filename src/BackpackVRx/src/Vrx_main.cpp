@@ -2,8 +2,9 @@
 #include "ESP8266_WebUpdate.h"
 #include <espnow.h>
 #include <EEPROM.h>
-#include "../lib/MSP/msp.h"
-#include "../lib/MSP/msptypes.h"
+#include "msp.h"
+#include "msptypes.h"
+#include "config.h"
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -31,7 +32,7 @@ bool sendChanges = false;
 
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
-#elif VRX_BACKPACK
+#elif GENERIC_BACKPACK
   // other VRx backpack (i.e. reserved for FENIX or fusion etc.)
 #endif
 

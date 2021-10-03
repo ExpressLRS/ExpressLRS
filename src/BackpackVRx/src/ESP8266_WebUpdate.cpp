@@ -3,11 +3,11 @@
 #ifdef RAPIDFIRE_BACKPACK
   #define STASSID "ExpressLRS Rapidfire Backpack"
 #endif
-#ifdef VRX_BACKPACK
+#ifdef GENERIC_BACKPACK
   #define STASSID "ExpressLRS VRx Backpack"
 #endif
-#ifdef TX_BACKPACK
-  #define STASSID "ExpressLRS Tx Backpack"
+#ifdef TARGET_TX_BACKPACK
+  #define STASSID "ExpressLRS TX Backpack"
 #endif
 
 #define STAPSK "expresslrs"

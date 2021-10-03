@@ -2,7 +2,8 @@
 #include "ESP8266_WebUpdate.h"
 #include <espnow.h>
 #include <EEPROM.h>
-#include "../lib/MSP/msp.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #define WIFI_PIN 0
 #define LED_PIN 16

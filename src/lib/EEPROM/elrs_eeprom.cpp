@@ -1,5 +1,4 @@
 #include "elrs_eeprom.h"
-#include "targets.h"
 #include "logging.h"
 
 #if defined(PLATFORM_STM32)
