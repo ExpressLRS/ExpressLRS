@@ -64,6 +64,7 @@ public:
     void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ);
     void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ);
     void SetMode(SX127x_RadioOPmodes mode);
+    void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();
 
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
@@ -85,7 +86,8 @@ public:
     ////////////////////////////////////////////////////
 
     /////////////////Utility Funcitons//////////////////
-    void ClearIRQFlags();
+    uint8_t GetIrqFlags();
+    void ClearIrqFlags();
 
     //////////////RX related Functions/////////////////
 
@@ -97,11 +99,12 @@ public:
     int8_t GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
-    static void TXnb(uint8_t volatile *data, uint8_t length);
-    static void TXnbISR(); //ISR for non-blocking TX routine
+    void TXnb(uint8_t volatile *data, uint8_t length);
     /////////////Non-blocking RX related Functions///////////////
-    static void RXnb();
-    static void RXnbISR(); //ISR for non-blocking RC routin
+    void RXnb();
 
 private:
+    static void ICACHE_RAM_ATTR IsrCallback();
+    void RXnbISR(); // ISR for non-blocking RX routine
+    void TXnbISR(); // ISR for non-blocking TX routine
 };

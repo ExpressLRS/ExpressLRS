@@ -21,13 +21,6 @@ Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 #include "SX1280_Regs.h"
 #include "SX1280.h"
 
-enum SX1280_InterruptAssignment_
-{
-    SX1280_INTERRUPT_NONE,
-    SX1280_INTERRUPT_RX_DONE,
-    SX1280_INTERRUPT_TX_DONE
-};
-
 enum SX1280_BusyState_
 {
     SX1280_NOT_BUSY = true,
@@ -36,10 +29,6 @@ enum SX1280_BusyState_
 
 class SX1280Hal
 {
-
-private:
-    volatile SX1280_InterruptAssignment_ InterruptAssignment = SX1280_INTERRUPT_NONE;
-
 public:
     static SX1280Hal *instance;
 
@@ -61,17 +50,14 @@ public:
     void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size); // Writes and Reads to FIFO
     void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size);
 
-    static void ICACHE_RAM_ATTR nullCallback(void);
-    
     bool ICACHE_RAM_ATTR WaitOnBusy();
-    static ICACHE_RAM_ATTR void dioISR();
     
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
 
-    static void (*TXdoneCallback)(); //function pointer for callback
-    static void (*RXdoneCallback)(); //function pointer for callback
+    static ICACHE_RAM_ATTR void dioISR();
+    void (*IsrCallback)(); //function pointer for callback
 
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     void BusyDelay(uint32_t duration) const { (void)duration; };

@@ -4,12 +4,6 @@
 
 SX127xHal *SX127xHal::instance = NULL;
 
-volatile SX127x_InterruptAssignment SX127xHal::InterruptAssignment = SX127x_INTERRUPT_NONE;
-
-void inline SX127xHal::nullCallback(void) { return; }
-void (*SX127xHal::TXdoneCallback)() = &nullCallback;
-void (*SX127xHal::RXdoneCallback)() = &nullCallback;
-
 SX127xHal::SX127xHal()
 {
   instance = this;
@@ -17,8 +11,10 @@ SX127xHal::SX127xHal()
 
 void SX127xHal::end()
 {
-  SPI.end();
+  RXenable(); // make sure the TX amp pin is disabled
   detachInterrupt(GPIO_PIN_DIO0);
+  SPI.end();
+  IsrCallback = nullptr;
 }
 
 void SX127xHal::init()
@@ -201,8 +197,6 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 
 void ICACHE_RAM_ATTR SX127xHal::TXenable()
 {
-  instance->InterruptAssignment = SX127x_INTERRUPT_TX_DONE;
-
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
@@ -216,8 +210,6 @@ void ICACHE_RAM_ATTR SX127xHal::TXenable()
 
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
-  instance->InterruptAssignment = SX127x_INTERRUPT_RX_DONE;
-
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
 #endif
@@ -231,8 +223,6 @@ void ICACHE_RAM_ATTR SX127xHal::RXenable()
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
-  instance->InterruptAssignment = SX127x_INTERRUPT_NONE;
-
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
@@ -246,14 +236,8 @@ void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()
 {
-  if (instance->InterruptAssignment == SX127x_INTERRUPT_TX_DONE)
-  {
-    TXdoneCallback();
-  }
-  else if (instance->InterruptAssignment == SX127x_INTERRUPT_RX_DONE)
-  {
-    RXdoneCallback();
-  }
+    if (instance->IsrCallback)
+        instance->IsrCallback();
 }
 
 #endif // UNIT_TEST

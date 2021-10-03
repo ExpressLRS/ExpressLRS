@@ -23,11 +23,6 @@ Modified and adapted by Alessandro Carcione for ELRS project
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
-void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void) {}
-
-void (*SX1280Hal::TXdoneCallback)() = &nullCallback;
-void (*SX1280Hal::RXdoneCallback)() = &nullCallback;
-
 SX1280Hal::SX1280Hal()
 {
     instance = this;
@@ -35,8 +30,10 @@ SX1280Hal::SX1280Hal()
 
 void SX1280Hal::end()
 {
-    SPI.end();
+    RXenable(); // make sure the TX amp pin is disabled
     detachInterrupt(GPIO_PIN_DIO1);
+    SPI.end();
+    IsrCallback = nullptr;
 }
 
 void SX1280Hal::init()
@@ -341,20 +338,12 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 {
-    if (instance->InterruptAssignment == SX1280_INTERRUPT_RX_DONE)
-    {
-        RXdoneCallback();
-    }
-    else if (instance->InterruptAssignment == SX1280_INTERRUPT_TX_DONE)
-    {
-        TXdoneCallback();
-    }
+    if (instance->IsrCallback)
+        instance->IsrCallback();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 {
-    instance->InterruptAssignment = SX1280_INTERRUPT_TX_DONE;
-
 #if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 #endif
@@ -375,8 +364,6 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 {
-    instance->InterruptAssignment = SX1280_INTERRUPT_RX_DONE;
-
 #if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 #endif
@@ -397,8 +384,6 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 
 void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 {
-    this->InterruptAssignment = SX1280_INTERRUPT_NONE;
-
 #if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
