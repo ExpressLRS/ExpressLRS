@@ -71,8 +71,19 @@ void ProcessMSPPacket(mspPacket_t *packet)
   cacheFull = true;
 }
 
+// MAC address can only be set with unicast, so first byte must be even, not odd
+void checkBroadcastAddressIsUnicast()
+{
+  if (broadcastAddress[0] % 2)
+  {
+    broadcastAddress[0] += 1;
+  }
+}
+
 void SetSoftMACAddress()
 {
+  checkBroadcastAddressIsUnicast();
+
   WiFi.mode(WIFI_STA);
 
   // Soft-set the MAC address to the passphrase UID for binding
@@ -82,8 +93,6 @@ void SetSoftMACAddress()
 void setup()
 {
   Serial.begin(460800);
-
-  broadcastAddress[0] = 0; // MAC address can only be set with unicast, so first byte must be even, not odd
 
   SetSoftMACAddress();
 
