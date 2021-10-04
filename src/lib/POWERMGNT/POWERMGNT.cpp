@@ -106,7 +106,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #if DAC_IN_USE
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
-    TxDAC.setPower((DAC_PWR_)Power);
+    TxDAC.setPower(powerValues[Power - MinPower]);
 #elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4

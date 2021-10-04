@@ -9,18 +9,6 @@
 
 typedef enum
 {
-    DAC_PWR_10mW = 0,
-    DAC_PWR_25mW = 1,
-    DAC_PWR_50mW = 2,
-    DAC_PWR_100mW = 3,
-    DAC_PWR_250mW = 4,
-    DAC_PWR_500mW = 5,
-    DAC_PWR_1000mW = 6,
-    DAC_PWR_2000mW = 7
-} DAC_PWR_;
-
-typedef enum
-{
     UNKNOWN = 0,
     RUNNING = 1,
     STANDBY = 2
@@ -36,7 +24,7 @@ public:
     void resume();
     void setVoltageMV(uint32_t voltsMV);
     void setVoltageRegDirect(uint8_t voltReg);
-    void setPower(DAC_PWR_ power);
+    void setPower(int16_t milliVolts);
 
 private:
     DAC_STATE_  m_state;

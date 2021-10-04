@@ -219,6 +219,21 @@ https://github.com/jaxxzer
 
 #define DAC_I2C_ADDRESS         0b0001100
 #define DAC_IN_USE              1
+#define MinPower PWR_10mW
+#define MaxPower PWR_1000mW
+#if defined(TARGET_R9M_TX)
+    #if defined(Regulatory_Domain_EU_868)
+    #define POWER_VALUES {650,860,1000,1160,1420,1730,2100,2600}
+    #else
+    #define POWER_VALUES {720,875,1000,1140,1390,1730,2100,2600}
+    #endif
+#else // TARGET_TX_ES915TX
+    #if defined(Regulatory_Domain_EU_868)
+    #define POWER_VALUES {375,850,1200,1400,1700,2000,2400,2600}
+    #else
+    #define POWER_VALUES {875,1065,1200,1355,1600,1900,2400,2600}
+    #endif
+#endif
 
 #elif defined(TARGET_R9M_LITE_TX)
 
@@ -276,6 +291,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF1			        PA7  // 26SU Switch RF1
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
+
+#define MinPower PWR_10mW
+#define MaxPower PWR_1000mW
+#define POWER_VALUES {600,770,950,1150,1480,2000,3500}
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_TX_ESP8266_SX1280)
 #define GPIO_PIN_NSS            15
@@ -434,6 +453,9 @@ Designed by NamimnoRC
     #define GPIO_PIN_RX_ENABLE      PA8     // CRX
     #define GPIO_PIN_TX_ENABLE      PA11    // CTX
     #define GPIO_PIN_PA_ENABLE      PA12    // CSD
+    #define MinPower PWR_25mW
+    #define MaxPower PWR_1000mW
+    #define POWER_VALUES {-18,-15,-12,-8,-5,3}
 #else // !TARGET_MODULE_2400
     #define GPIO_PIN_NSS            PB12
     #define GPIO_PIN_DIO0           PA15
@@ -447,6 +469,13 @@ Designed by NamimnoRC
     #define GPIO_PIN_SCL            PB8
     #define DAC_I2C_ADDRESS         0b0001101
     #define DAC_IN_USE              1
+    #define MinPower PWR_10mW
+    #define MaxPower PWR_2000mW
+    #if defined(Regulatory_Domain_EU_868)
+    #define POWER_VALUES {500,860,1000,1170,1460,1730,2100,2600}
+    #else
+    #define POWER_VALUES {895,1030,1128,1240,1465,1700,2050,2600}
+    #endif
 #endif // TARGET_MODULE_2400
 
 /* S.Port input signal */
@@ -466,9 +495,6 @@ Designed by NamimnoRC
 /* WS2812 led */
 #define GPIO_PIN_LED_WS2812      PB0
 #define GPIO_PIN_LED_WS2812_FAST PB_0
-#define MinPower PWR_25mW
-#define MaxPower PWR_1000mW
-#define POWER_VALUES {-18,-15,-12,-8,-5,3}
 
 #elif defined(TARGET_NAMIMNORC_RX)
 /*
