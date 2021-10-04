@@ -5,24 +5,18 @@
 #include <EEPROM.h>
 #include "msp.h"
 #include "msptypes.h"
-#include "config.h"
-
-extern "C" {
-  #include <user_interface.h>
-}
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
 #endif
 
+/////////// DEFINES ///////////
+
 #define WIFI_PIN            0
 #define LED_PIN             16
-
-#define OPCODE_SET_CHANNEL  0x01
-#define OPCODE_SET_BAND     0x02
-#define OPCODE_WIFI_MODE    0x0F
-
 #define EEPROM_ADDR_WIFI    0x00
+
+/////////// GLOBALS ///////////
 
 uint8_t broadcastAddress[6] = {MY_UID};
 
@@ -31,7 +25,11 @@ uint8_t flashLED = false;
 
 uint8_t cachedBand = 0;
 uint8_t cachedChannel = 0;
-bool sendChanges = false;
+bool sendChangesToVrx = false;
+bool gotInitialPacket = false;
+uint32_t lastSentRequest = 0;
+
+/////////// CLASS OBJECTS ///////////
 
 MSP msp;
 
@@ -47,6 +45,8 @@ void RebootIntoWifi();
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len);
 void ProcessMSPPacket(mspPacket_t *packet);
 void SetSoftMACAddress();
+void RequestVTXPacket();
+void sendMSPViaEspnow(mspPacket_t *packet);
 
 /////////////////////////////////////
 
@@ -92,6 +92,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 {
   if (packet->function == MSP_SET_VTX_CONFIG)
   {
+    gotInitialPacket = true;
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
       // only send new changes to the goggles
@@ -101,12 +102,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
       if (cachedBand != newBand)
       {
         cachedBand = newBand;
-        sendChanges = true;
+        sendChangesToVrx = true;
       }
       if (cachedChannel != newChannel)
       {
         cachedChannel = newChannel;
-        sendChanges = true;
+        sendChangesToVrx = true;
       }
 
       if (cachedBand == 6)
@@ -144,6 +145,33 @@ void SetSoftMACAddress()
   wifi_set_macaddr(STATION_IF, broadcastAddress);
 }
 
+void RequestVTXPacket()
+{  
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_REQU_VTX_PKT;
+  packet.addByte(0);  // empty byte
+
+  sendMSPViaEspnow(&packet);
+}
+
+void sendMSPViaEspnow(mspPacket_t *packet)
+{
+  uint8_t packetSize = msp.getTotalPacketSize(packet);
+  uint8_t nowDataOutput[packetSize];
+
+  uint8_t result = msp.convertToByteArray(packet, nowDataOutput);
+
+  if (!result)
+  {
+    // packet could not be converted to array, bail out
+    return;
+  }
+
+  esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+}
+
 void setup()
 {
   Serial.begin(460800);
@@ -162,14 +190,14 @@ void setup()
   else
   {
     WiFi.mode(WIFI_STA);
-    Serial.print("after mode MAC Address: ");
-    Serial.println(WiFi.macAddress());
 
     if (esp_now_init() != 0) {
       Serial.println("Error initializing ESP-NOW");
       return;
     }
 
+    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+    esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     esp_now_register_recv_cb(OnDataRecv); 
   }
 
@@ -184,6 +212,12 @@ void setup()
 
 void loop()
 {
+  // press the boot button to start webupdater
+  if (!digitalRead(WIFI_PIN))
+  {
+    RebootIntoWifi();
+  }
+  
   if (startWebUpdater)
   {
     HandleWebUpdate();
@@ -202,9 +236,9 @@ void loop()
     }
   }
 
-  if (sendChanges)
+  if (sendChangesToVrx)
   {
-    sendChanges = false;
+    sendChangesToVrx = false;
     // rapidfire sometimes misses pkts, so send each one 3x
     vrxModule.SendBandCmd(cachedBand);
     vrxModule.SendBandCmd(cachedBand);
@@ -213,5 +247,12 @@ void loop()
     vrxModule.SendChannelCmd(cachedChannel);
     vrxModule.SendChannelCmd(cachedChannel);
     vrxModule.SendChannelCmd(cachedChannel);
+  }
+
+  // spam out a bunch of requests for the desired band/channel for the first 5s
+  if (!gotInitialPacket && millis() < 5000 && millis() - lastSentRequest > 1000)
+  {
+    RequestVTXPacket();
+    lastSentRequest = millis();
   }
 }

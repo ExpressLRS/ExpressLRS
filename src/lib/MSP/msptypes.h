@@ -14,6 +14,7 @@
 #define MSP_ELRS_BIND           0x09
 #define MSP_ELRS_MODEL_ID       0x0A
 #define MSP_ELRS_SET_WIFI_MODE  0x0B
+#define MSP_ELRS_REQU_VTX_PKT   0x0C
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_PAYLOAD_SIZE 4
