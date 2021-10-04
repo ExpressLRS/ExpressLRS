@@ -8,12 +8,12 @@
 #define MSP_EEPROM_WRITE    250  //in message          no param
 
 // ELRS specific opcodes
-#define MSP_ELRS_RF_MODE    0x06
-#define MSP_ELRS_TX_PWR     0x07
-#define MSP_ELRS_TLM_RATE   0x08
-#define MSP_ELRS_BIND       0x09
-#define MSP_ELRS_MODEL_ID   0x0A
-#define MSP_SET_WIFI_MODE   0x0B
+#define MSP_ELRS_RF_MODE        0x06
+#define MSP_ELRS_TX_PWR         0x07
+#define MSP_ELRS_TLM_RATE       0x08
+#define MSP_ELRS_BIND           0x09
+#define MSP_ELRS_MODEL_ID       0x0A
+#define MSP_ELRS_SET_WIFI_MODE  0x0B
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_PAYLOAD_SIZE 4

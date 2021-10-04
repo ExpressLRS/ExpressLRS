@@ -119,7 +119,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
       return; // Packets containing frequency in MHz are not yet supported.
     }
   }
-  else if (packet->function == MSP_SET_WIFI_MODE)
+  else if (packet->function == MSP_ELRS_SET_WIFI_MODE)
   {
     RebootIntoWifi();
   }
