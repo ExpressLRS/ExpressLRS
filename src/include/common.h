@@ -46,6 +46,17 @@ typedef enum
     radioFailed
 } connectionState_e;
 
+/**
+ * On the TX, tracks what to do when the Tock timer fires
+ **/
+typedef enum
+{
+    ttrpTransmitting,     // Transmitting RC channels as normal
+    ttrpInReceiveMode,    // Has switched to Receive mode for telemetry on the next slot (set on TX done)
+    ttrpWindowInProgress  // Tock has fired while in receive mode, receiving telemetry on this slot
+                          // Next slot will go back to ttrsTransmitting
+} TxTlmRcvPhase_e;
+
 typedef enum
 {
     tim_disconnected = 0,
