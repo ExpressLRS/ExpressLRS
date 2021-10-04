@@ -62,6 +62,9 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   }
   
   esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+
+  cacheFull = false;
+  flashLED = true;
 }
 
 void ProcessMSPPacket(mspPacket_t *packet)
