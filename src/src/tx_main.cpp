@@ -100,14 +100,28 @@ void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
 
 device_t *ui_devices[] = {
+#ifdef HAS_LED
   &LED_device,
+#endif
+#ifdef HAS_RGB
   &RGB_device,
+#endif
   &LUA_device,
+#ifdef HAS_BLE
   &BLE_device,
+#endif
+#ifdef HAS_OLED
   &OLED_device,
+#endif
+#ifdef HAS_BUZZER
   &Buzzer_device,
+#endif
+#ifdef HAS_WIFI
   &WIFI_device,
+#endif
+#ifdef HAS_BUTTON
   &Button_device
+#endif
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////

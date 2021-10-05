@@ -46,10 +46,18 @@ SX1280Driver Radio;
 ///////////////////
 
 device_t *ui_devices[] = {
+#ifdef HAS_LED
   &LED_device,
+#endif
+#ifdef HAS_RGB
   &RGB_device,
+#endif
+#ifdef HAS_WIFI
   &WIFI_device,
+#endif
+#ifdef HAS_BUTTON
   &Button_device
+#endif
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use

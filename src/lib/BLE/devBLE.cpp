@@ -96,10 +96,4 @@ device_t BLE_device = {
   .timeout = timeout
 };
 
-#else
-
-device_t BLE_device = {
-  NULL
-};
-
 #endif

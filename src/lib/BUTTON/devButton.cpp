@@ -71,10 +71,4 @@ device_t Button_device = {
     .timeout = timeout
 };
 
-#else
-
-device_t Button_device = {
-    NULL
-};
-
 #endif

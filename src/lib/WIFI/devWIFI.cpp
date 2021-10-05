@@ -617,10 +617,4 @@ device_t WIFI_device = {
   .timeout = timeout
 };
 
-#else
-
-device_t WIFI_device = {
-  NULL
-};
-
 #endif
