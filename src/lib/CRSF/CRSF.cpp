@@ -798,6 +798,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     Serial.println("ESP32 CRSF UART LISTEN TASK STARTED");
+    CRSF::duplex_set_TX();
     CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
