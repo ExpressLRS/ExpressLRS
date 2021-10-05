@@ -22,7 +22,7 @@ PowerLevels_e POWERMGNT::incPower()
 
 PowerLevels_e POWERMGNT::decPower()
 {
-    if (CurrentPower > 0)
+    if (CurrentPower > MinPower)
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
@@ -75,6 +75,7 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
+    powerLedInit();
     setDefaultPower();
 }
 
@@ -91,6 +92,11 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     if (Power > MaxPower)
     {
         Power = (PowerLevels_e)MaxPower;
+    }
+
+    if (Power < MinPower)
+    {
+        Power = (PowerLevels_e)MinPower;
     }
 
 #ifdef GPIO_PIN_FAN_EN
@@ -113,16 +119,29 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_25mW;
         break;
     }
+#elif defined(TARGET_RX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-10);
+        break;
+    case PWR_50mW:
+        Radio.SetOutputPower(-3);
+        break;
+    case PWR_100mW:
+    default:
+        Radio.SetOutputPower(1);
+        Power = PWR_100mW;
+        break;
+    }
 #elif defined(TARGET_NAMIMNORC_TX)
     // Control Flash 2.4GHz TX module
     int8_t rfpower = -18;
     switch (Power)
     {
-    case PWR_10mW:
-        rfpower = -18;
-        break;
     case PWR_25mW:
         rfpower = -18;
+        Power = PWR_25mW;
         break;
     case PWR_100mW:
         rfpower = -12;
@@ -260,6 +279,12 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_10mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-17);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            // Tx can not do less than 25 mW
+            Power = PWR_25mW;
+            Radio.SetOutputPower(-18);
+        #elif TARGET_HGLRC_Hermes_2400_TX
+            Radio.SetOutputPower(-18);
         #else
             Radio.SetOutputPower(-15);
         #endif
@@ -267,20 +292,21 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_25mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-13);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-18);
+        #elif TARGET_HGLRC_Hermes_2400_TX
+            Radio.SetOutputPower(-15);
         #else
             Radio.SetOutputPower(-11);
-        #endif
-        break;
-    case PWR_50mW:
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-9);
-        #else
-            Radio.SetOutputPower(-8);
         #endif
         break;
     case PWR_100mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-6);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-12);
+        #elif TARGET_HGLRC_Hermes_2400_TX
+            Radio.SetOutputPower(-8);
         #else
             Radio.SetOutputPower(-5);
         #endif
@@ -288,14 +314,35 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     case PWR_250mW:
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-2);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-7);
+        #elif TARGET_HGLRC_Hermes_2400_TX
+            Radio.SetOutputPower(-4);
+        #elif TARGET_QK_JR_TX
+            Radio.SetOutputPower(0);
         #else
             Radio.SetOutputPower(-1);
         #endif
         break;
+    case PWR_500mW:
+        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-4);
+        #endif
+        break;
+    case PWR_1000mW:
+        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(2);
+        #endif
+        break;
+    case PWR_50mW:
     default:
         Power = PWR_50mW;
         #ifdef TARGET_HappyModel_ES24TX_2400_TX
             Radio.SetOutputPower(-9);
+        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
+            Radio.SetOutputPower(-15);
+        #elif TARGET_HGLRC_Hermes_2400_TX
+            Radio.SetOutputPower(-11);
         #else
             Radio.SetOutputPower(-8);
         #endif
@@ -376,6 +423,45 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Power = PWR_50mW;
         break;
     }
+#elif defined(TARGET_TX_BETAFPV_900_V1)
+    switch (Power)
+    {
+    case PWR_250mW:
+        Radio.SetOutputPower(0b0011);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(0b1000);
+        break;
+    case PWR_100mW:
+    default:
+        Power = PWR_100mW;
+        Radio.SetOutputPower(0b0000);
+        break;
+    }
+#elif defined(TARGET_TX_BETAFPV_2400_V1)
+    switch (Power)
+    {
+    case PWR_10mW:
+        Radio.SetOutputPower(-18);
+        break;
+    case PWR_25mW:
+        Radio.SetOutputPower(-15);
+        break;
+    case PWR_100mW:
+        Radio.SetOutputPower(-9);
+        break;
+    case PWR_250mW:
+        Radio.SetOutputPower(-4);
+        break;
+    case PWR_500mW:
+        Radio.SetOutputPower(3);
+        break;
+    case PWR_50mW:    
+    default:
+        Power = PWR_50mW;
+        Radio.SetOutputPower(-13);
+        break;
+    }
 #elif defined(TARGET_RX)
 #ifdef TARGET_SX1280
     Radio.SetOutputPower(13); //default is max power (12.5dBm for SX1280 RX)
@@ -386,5 +472,58 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
+    powerLedUpdate();
     return Power;
 }
+
+void POWERMGNT::powerLedUpdate()
+{
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    switch (CurrentPower)
+    {
+    case PWR_250mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_500mW:
+        digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+        digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+        break;
+    case PWR_10mW:
+    case PWR_25mW:
+    case PWR_50mW:
+    case PWR_100mW:
+    default:
+        digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+        digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+        break;
+    }
+#endif
+}
+
+void POWERMGNT::powerLedInit()
+{
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);// "RED" LED
+    pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
+#endif
+}
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+void POWERMGNT::handleCyclePower()
+{
+    switch (CurrentPower)
+    {
+    case PWR_100mW:
+        setPower(PWR_250mW);
+        break;
+    case PWR_250mW:
+        setPower(PWR_500mW);
+        break;
+    case PWR_500mW:   
+    default:
+        setPower(PWR_100mW);
+        break;
+    }
+}
+#endif

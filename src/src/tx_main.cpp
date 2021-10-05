@@ -55,7 +55,7 @@ uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
-const uint8_t thisCommit[6] = {LATEST_COMMIT};
+const uint8_t thisCommit[6] = {0, 1, 0, 1, 0, 0}; // {MAJOR , MAJOR , MINOR, MINOR, PATCH, PATCH}
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
@@ -628,6 +628,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleTLM();
 }
 
+
 void setup()
 {
 #if defined(TARGET_TX_GHOST)
@@ -716,6 +717,11 @@ void setup()
   digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
+#endif
+
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+  button.buttonTriplePress = &EnterBindingMode;
+  button.buttonLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
 #ifdef PLATFORM_ESP32

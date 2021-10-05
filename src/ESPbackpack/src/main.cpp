@@ -155,7 +155,7 @@ curl --include \
 </legend>
 <form method='POST' action='/upload' enctype='multipart/form-data'>
 <input type='file' accept='.bin,.elrs' name='firmware' id='stm_fw'>
-<input type='text' value='0x0000' name='flash_address' size='6' id='stm_addr' class="hide">
+<input type='text' value='0x4000' name='flash_address' size='6' id='stm_addr' class="hide">
 <input type='submit' value='Upload and Flash STM32' id='stm_submit' disabled='disabled'>
 </form>
 <div style="color:red;"><span id="stm_message">CAUTION! Be careful to upload the correct firmware file, otherwise a bad flash may occur! If this happens you will need to re-flash the module's firmware via USB/Serial.</span></div>
@@ -315,7 +315,9 @@ int8_t flashSTM32(uint32_t flash_addr)
 {
   int8_t result = -1;
   webSocket.broadcastTXT("STM32 Firmware Flash Requested!");
-  webSocket.broadcastTXT("  the firmware file: '" + uploadedfilename + "'");
+  webSocket.broadcastTXT("  the firmware file: '");
+  webSocket.broadcastTXT(uploadedfilename);
+  webSocket.broadcastTXT("'");
   if (uploadedfilename.endsWith("firmware.elrs")) {
     result = stk500_write_file(uploadedfilename.c_str());
   } else if (uploadedfilename.endsWith("firmware.bin")) {
@@ -384,7 +386,8 @@ void handleFileUpload()
     }
     uploadedfilename = upload.filename;
 
-    webSocket.broadcastTXT("Uploading file: " + uploadedfilename);
+    webSocket.broadcastTXT("Uploading file: ");
+    webSocket.broadcastTXT(uploadedfilename);
 
     if (!uploadedfilename.startsWith("/"))
     {
@@ -470,6 +473,8 @@ void setup()
   wifi_station_set_hostname("elrs_tx");
 
 #ifdef USE_WIFI_MANAGER
+  WiFi.persistent(false);
+  WiFi.disconnect(true);
   WiFiManager wifiManager;
   Serial.println("Starting ESP WiFiManager captive portal...");
   wifiManager.autoConnect("ESP WiFiManager");
