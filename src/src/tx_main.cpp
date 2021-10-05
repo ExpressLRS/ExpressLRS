@@ -93,8 +93,6 @@ static volatile bool ModelUpdatePending;
 
 char luaBadGoodString[10] = {"xxxxx/yyy"};
 
-bool WaitRXresponse = false;
-
 bool InBindingMode = false;
 uint8_t BindingPackage[5];
 uint8_t BindingSendCount = 0;
@@ -105,6 +103,7 @@ void VtxConfigToMSPOut();
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
 
+static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
@@ -352,62 +351,27 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
 void ICACHE_RAM_ATTR HandleFHSS()
 {
-  if (InBindingMode)
-  {
-    return;
-  }
-
-  uint8_t modresult = (NonceTX) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-
-  if (modresult == 0) // if it time to hop, do so.
+  uint8_t modresult = (NonceTX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+  // If the next packet should be on the next FHSS frequency, do the hop
+  if (!InBindingMode && modresult == 0)
   {
     Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
 }
 
-void ICACHE_RAM_ATTR HandleTLM()
+void ICACHE_RAM_ATTR HandlePrepareForTLM()
 {
-  if (ExpressLRS_currAirRate_Modparams->TLMinterval > 0)
+  uint8_t modresult = (NonceTX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+  // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
+  if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
-    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    if (modresult != 0) // wait for tlm response because it's time
-    {
-      return;
-    }
     Radio.RXnb();
-    WaitRXresponse = true;
+    TelemetryRcvPhase = ttrpInReceiveMode;
   }
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
-  uint8_t *data;
-  uint8_t maxLength;
-  uint8_t packageIndex;
-#ifdef FEATURE_OPENTX_SYNC
-  crsf.JustSentRFpacket(); // tells the crsf that we want to send data now - this allows opentx packet syncing
-#endif
-
-  /////// This Part Handles the Telemetry Response ///////
-  if ((uint8_t)ExpressLRS_currAirRate_Modparams->TLMinterval > 0)
-  {
-    uint8_t modresult = (NonceTX) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    if (modresult == 0)
-    { // wait for tlm response
-      if (WaitRXresponse == true)
-      {
-        WaitRXresponse = false;
-        crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
-        LQCalc.inc();
-        return;
-      }
-      else
-      {
-        NonceTX++;
-      }
-    }
-  }
-
   uint32_t now = millis();
   static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
@@ -438,6 +402,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if (NextPacketIsMspData && MspSender.IsActive())
     {
+      uint8_t *data;
+      uint8_t maxLength;
+      uint8_t packageIndex;
       MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
       Radio.TXdataBuffer[0] = MSP_DATA_PACKET & 0b11;
       Radio.TXdataBuffer[1] = packageIndex;
@@ -477,10 +444,35 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 }
 
 /*
- * Called as the timer ISR when transmitting
+ * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
+  #ifdef FEATURE_OPENTX_SYNC
+  // Sync OpenTX to this point
+  crsf.JustSentRFpacket();
+  #endif
+
+  // Nonce advances on every timer tick
+  NonceTX++;
+
+  // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
+  // Skip transmitting on this slot
+  if (TelemetryRcvPhase == ttrpInReceiveMode)
+  {
+    TelemetryRcvPhase = ttrpWindowInProgress;
+    crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    LQCalc.inc();
+    return;
+  }
+  // TLM packet reception was the previous slot, transmit this slot (below)
+  if (TelemetryRcvPhase == ttrpWindowInProgress)
+  {
+    // Stop Receive mode if it is still active
+    Radio.SetTxIdleMode();
+    TelemetryRcvPhase = ttrpTransmitting;
+  }
+
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
   //     this is the case when bench testing and TXing without a handset
@@ -829,6 +821,9 @@ static void CheckConfigChangePending()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
+  // There isn't enough time to receive two packets during one telemetry slot
+  // Stop receiving to prevent a second packet preamble from starting a second receive
+  Radio.SetTxIdleMode();
   ProcessTLMpacket();
   busyTransmitting = false;
 }
@@ -836,9 +831,8 @@ void ICACHE_RAM_ATTR RXdoneISR()
 void ICACHE_RAM_ATTR TXdoneISR()
 {
   busyTransmitting = false;
-  NonceTX++; // must be done before callback
   HandleFHSS();
-  HandleTLM();
+  HandlePrepareForTLM();
 }
 
 static void UpdateConnectDisconnectStatus()
