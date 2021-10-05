@@ -10,12 +10,18 @@ extern struct tagLuaItem_command luaBind;
 extern struct tagLuaItem_string luaInfo;
 extern struct tagLuaItem_string luaELRSversion;
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-extern struct tagLuaItem_command luaWebUpdate;
-#endif
 #if defined(PLATFORM_ESP32)
 extern struct tagLuaItem_command luaBLEJoystick;
 #endif
+
+//---------------------------- WiFi -----------------------------
+extern struct tagLuaItem_folder luaWiFiFolder;
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+extern struct tagLuaItem_command luaWebUpdate;
+#endif
+extern struct tagLuaItem_command luaTxBackpackUpdate;
+extern struct tagLuaItem_command luaVRxBackpackUpdate;
+//---------------------------- WiFi -----------------------------
 
 //----------------------------POWER------------------
 extern struct tagLuaItem_folder luaPowerFolder;

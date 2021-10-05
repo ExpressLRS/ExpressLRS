@@ -97,8 +97,12 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void VtxConfigToMSPOut();
+void TxBackpackWiFiToMSPOut();
+void VRxBackpackWiFiToMSPOut();
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
+uint8_t TxBackpackWiFiReadyToSend = false;
+uint8_t VRxBackpackWiFiReadyToSend = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -593,15 +597,8 @@ void registerLuaParameters() {
     }
   },luaVtxFolder.luaProperties1.id);
 
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      DBGLN("Binding requested from LUA");
-      EnterBindingMode();
-      sendLuaCommandResponse(&luaBind, 2, "Binding...");
-    } else {
-      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
-    }
-  });
+  registerLUAParameter(&luaWiFiFolder);
+
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
       DBGVLN("arg %d", arg);
@@ -629,8 +626,26 @@ void registerLuaParameters() {
       {
         sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
       }
-    });
+    },luaWiFiFolder.luaProperties1.id);
   #endif
+
+  registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      TxBackpackWiFiReadyToSend = true;
+      sendLuaCommandResponse(&luaTxBackpackUpdate, 2, "Sending...");
+    } else {
+      sendLuaCommandResponse(&luaTxBackpackUpdate, 0, " ");
+    }
+  },luaWiFiFolder.luaProperties1.id);
+
+  registerLUAParameter(&luaVRxBackpackUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      VRxBackpackWiFiReadyToSend = true;
+      sendLuaCommandResponse(&luaVRxBackpackUpdate, 2, "Sending...");
+    } else {
+      sendLuaCommandResponse(&luaVRxBackpackUpdate, 0, " ");
+    }
+  },luaWiFiFolder.luaProperties1.id);
 
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
@@ -668,7 +683,17 @@ void registerLuaParameters() {
         sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
       }
     });
- #endif
+  #endif
+
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      DBGLN("Binding requested from LUA");
+      EnterBindingMode();
+      sendLuaCommandResponse(&luaBind, 2, "Binding...");
+    } else {
+      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
+    }
+  });
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
@@ -1061,6 +1086,18 @@ void loop()
     VtxConfigToMSPOut();
   }
 
+  if (TxBackpackWiFiReadyToSend)
+  {
+    TxBackpackWiFiReadyToSend = false;
+    TxBackpackWiFiToMSPOut();
+  }
+
+  if (VRxBackpackWiFiReadyToSend)
+  {
+    VRxBackpackWiFiReadyToSend = false;
+    VRxBackpackWiFiToMSPOut();
+  }
+
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
@@ -1212,6 +1249,7 @@ void VtxConfigToMSPOut()
 
   mspPacket_t packet;
   packet.reset();
+  packet.makeCommand();
   packet.function = MSP_SET_VTX_CONFIG;
   packet.addByte(vtxIdx);
   packet.addByte(0);
@@ -1219,8 +1257,29 @@ void VtxConfigToMSPOut()
   packet.addByte(config.GetVtxPitmode());
 
   crsf.AddMspMessage(&packet);
+  eepromWriteToMSPOut(); // FC eeprom write to save VTx setting after reboot
 
-  eepromWriteToMSPOut();
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
+void TxBackpackWiFiToMSPOut()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE;
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
+void VRxBackpackWiFiToMSPOut()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE;
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
 void eepromWriteToMSPOut()

@@ -88,15 +88,39 @@ struct tagLuaItem_string luaELRSversion = {
     LUA_STRING_SIZE(luaELRSversion)
 };
 
+//---------------------------- WiFi -----------------------------
+struct tagLuaItem_folder luaWiFiFolder = {
+    {0,0,(uint8_t)CRSF_FOLDER},//id,type
+    "WiFi",
+    LUA_FOLDER_SIZE(luaWiFiFolder)
+};
+
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "WiFi Update",
+    "WiFi Tx",
     {0,200},//status,timeout
     emptySpace,
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
 #endif
+
+struct tagLuaItem_command luaTxBackpackUpdate = {
+    {0,0,(uint8_t)CRSF_COMMAND},//id,type
+    "WiFi Tx Backpack",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaTxBackpackUpdate)
+};
+
+struct tagLuaItem_command luaVRxBackpackUpdate = {
+    {0,0,(uint8_t)CRSF_COMMAND},//id,type
+    "WiFi VRx Backpack",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaVRxBackpackUpdate)
+};
+//---------------------------- WiFi -----------------------------
 
 #if defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaBLEJoystick = {
