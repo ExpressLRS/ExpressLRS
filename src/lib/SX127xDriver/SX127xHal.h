@@ -6,14 +6,6 @@
 #include <SPI.h>
 #endif
 
-typedef enum
-{
-    SX127x_INTERRUPT_NONE,
-    SX127x_INTERRUPT_RX_DONE,
-    SX127x_INTERRUPT_TX_DONE,
-    SX127x_INTERRUPT_CAD
-} SX127x_InterruptAssignment;
-
 class SX127xHal
 {
 
@@ -26,9 +18,7 @@ public:
     void end();
 
     static void ICACHE_RAM_ATTR dioISR();
-    static void inline nullCallback(void);
-    static void (*TXdoneCallback)(); //function pointer for callback
-    static void (*RXdoneCallback)(); //function pointer for callback
+    void (*IsrCallback)(); //function pointer for callback
 
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
@@ -44,6 +34,4 @@ public:
     void ICACHE_RAM_ATTR writeRegisterFIFO(volatile uint8_t *data, uint8_t numBytes);
     void ICACHE_RAM_ATTR readRegisterFIFO(volatile uint8_t *data, uint8_t numBytes);
     void ICACHE_RAM_ATTR writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes);
-
-    static volatile SX127x_InterruptAssignment InterruptAssignment;
 };

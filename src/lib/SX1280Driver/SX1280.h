@@ -4,18 +4,8 @@
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 
-void ICACHE_RAM_ATTR TXnbISR();
-
-enum InterruptAssignment_
-{
-    NONE,
-    RX_DONE,
-    TX_DONE
-};
-
 class SX1280Driver
 {
-
 public:
     ///////Callback Function Pointers/////
     static void ICACHE_RAM_ATTR nullCallback(void);
@@ -26,12 +16,8 @@ public:
     static void (*TXtimeout)(); //function pointer for callback
     static void (*RXtimeout)(); //function pointer for callback
 
-    InterruptAssignment_ InterruptAssignment = NONE;
-    /////////////////////////////
-
     ///////////Radio Variables////////
     #define TXRXBuffSize 8 
-
     volatile uint8_t TXdataBuffer[TXRXBuffSize]; // ELRS uses max of 8 bytes
     volatile uint8_t RXdataBuffer[TXRXBuffSize];
 
@@ -73,6 +59,7 @@ public:
     bool Begin();
     void End();
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
+    void SetTxIdleMode() { SetMode(SX1280_MODE_FS); }; // set Idle mode used when switching from RX to TX
     void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ);
     void ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
     void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
@@ -83,13 +70,11 @@ public:
 
     int32_t ICACHE_RAM_ATTR GetFrequencyError();
 
-    static void TXnb(volatile uint8_t *data, uint8_t length);
-    static void TXnbISR(); //ISR for non-blocking TX routine
+    void TXnb(volatile uint8_t *data, uint8_t length);
+    void RXnb();
 
-    static void RXnb();
-    static void RXnbISR(); //ISR for non-blocking RC routine
-
-    void  ClearIrqStatus(uint16_t irqMask);
+    uint16_t GetIrqStatus();
+    void ClearIrqStatus(uint16_t irqMask);
 
     void GetStatus();
 
@@ -100,4 +85,7 @@ public:
     void GetLastPacketStats();
 
 private:
+    static void ICACHE_RAM_ATTR IsrCallback();
+    void RXnbISR(); // ISR for non-blocking RX routine
+    void TXnbISR(); // ISR for non-blocking TX routine
 };
