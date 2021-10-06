@@ -97,8 +97,7 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void VtxConfigToMSPOut();
-void TxBackpackWiFiToMSPOut();
-void VRxBackpackWiFiToMSPOut();
+void BackpackWiFiToMSPOut(uint16_t);
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
 uint8_t TxBackpackWiFiReadyToSend = false;
@@ -113,11 +112,6 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
 void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
-
-uint8_t baseMac[6];
-
-//////////// DEVICES ////////////
-
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -755,13 +749,13 @@ void loop()
   if (TxBackpackWiFiReadyToSend)
   {
     TxBackpackWiFiReadyToSend = false;
-    TxBackpackWiFiToMSPOut();
+    BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
   }
 
   if (VRxBackpackWiFiReadyToSend)
   {
     VRxBackpackWiFiReadyToSend = false;
-    VRxBackpackWiFiToMSPOut();
+    BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
   }
 
   /* Send TLM updates to handset if connected + reporting period
@@ -928,23 +922,12 @@ void VtxConfigToMSPOut()
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
-void TxBackpackWiFiToMSPOut()
+void BackpackWiFiToMSPOut(uint16_t command)
 {
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
-  packet.function = MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE;
-  packet.addByte(0);
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
-}
-
-void VRxBackpackWiFiToMSPOut()
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE;
+  packet.function = command;
   packet.addByte(0);
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP

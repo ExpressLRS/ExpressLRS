@@ -298,20 +298,16 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       VtxConfigReadyToSend = true;
-      sendLuaCommandResponse(&luaVtxSend, 2, "Sending...");
-    } else {
-      sendLuaCommandResponse(&luaVtxSend, 0, "Config Sent");
     }
+    sendLuaCommandResponse(&luaVtxSend, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaVtxFolder.luaProperties1.id);
 
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       DBGLN("Binding requested from LUA");
       EnterBindingMode();
-      sendLuaCommandResponse(&luaBind, 2, "Binding...");
-    } else {
-      sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
     }
+    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
   });
 
   registerLUAParameter(&luaWiFiFolder);
@@ -347,19 +343,15 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       TxBackpackWiFiReadyToSend = true;
-      sendLuaCommandResponse(&luaTxBackpackUpdate, 2, "Sending...");
-    } else {
-      sendLuaCommandResponse(&luaTxBackpackUpdate, 0, " ");
     }
+    sendLuaCommandResponse(&luaTxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaWiFiFolder.luaProperties1.id);
 
   registerLUAParameter(&luaVRxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       VRxBackpackWiFiReadyToSend = true;
-      sendLuaCommandResponse(&luaVRxBackpackUpdate, 2, "Sending...");
-    } else {
-      sendLuaCommandResponse(&luaVRxBackpackUpdate, 0, " ");
     }
+    sendLuaCommandResponse(&luaVRxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaWiFiFolder.luaProperties1.id);
 
   #ifdef PLATFORM_ESP32

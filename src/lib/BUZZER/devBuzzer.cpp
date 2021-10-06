@@ -15,19 +15,19 @@ static void initializeBuzzer()
     pinMode(GPIO_PIN_BUZZER, OUTPUT);
 }
 
-static const int failedTune[][2] = {{480, 200},{400, 200}};
-static const int crossfireTune[][2] = {{520, 150},{676, 300}};
-static const int noCrossfireTune[][2] = {{676, 300},{520, 150}};
+static const uint16_t failedTune[][2] = {{480, 200},{400, 200}};
+static const uint16_t crossfireTune[][2] = {{520, 150},{676, 300}};
+static const uint16_t noCrossfireTune[][2] = {{676, 300},{520, 150}};
 #if defined(MY_STARTUP_MELODY_ARR)
 // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-const int melody[][2] = MY_STARTUP_MELODY_ARR;
+static const uint16_t melody[][2] = MY_STARTUP_MELODY_ARR;
 #elif defined(JUST_BEEP_ONCE)
-static const int melody[][2] = {{400,200},{480,200}};
+static const uint16_t melody[][2] = {{400,200},{480,200}};
 #else
-static const int melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
+static const uint16_t melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
 #endif
 
-static int playTune(bool start, const int tune[][2], int numTones)
+static int playTune(bool start, const uint16_t tune[][2], int numTones)
 {
     static uint8_t tunepos = 0;
     if (start)
