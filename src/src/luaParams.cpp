@@ -88,7 +88,7 @@ struct tagLuaItem_string luaELRSversion = {
     LUA_STRING_SIZE(luaELRSversion)
 };
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "WiFi Update",
@@ -96,7 +96,9 @@ struct tagLuaItem_command luaWebUpdate = {
     emptySpace,
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
+#endif
 
+#if defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaBLEJoystick = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "BLE Joystick",

@@ -272,29 +272,21 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
 
-#elif defined(TARGET_RX_ESP8266_SX1280_V1)
-#define GPIO_PIN_NSS 15
-#define GPIO_PIN_BUSY 5
-#define GPIO_PIN_DIO1 4
-#define GPIO_PIN_MOSI 13
-#define GPIO_PIN_MISO 12
-#define GPIO_PIN_SCK 14
-#define GPIO_PIN_RST 2
-#define GPIO_PIN_RCSIGNAL_RX -1 //only uses default uart pins so leave as -1
-#define GPIO_PIN_RCSIGNAL_TX -1
-#define GPIO_PIN_LED 16
-#define timerOffset -1
-#ifdef USE_DIVERSITY
-/*
-https://www.psemi.com/pdf/datasheets/pe4259ds.pdf
-By default GPIO0 is pulled high. so RF1 is selected, which equals Ant2 on the PCB.
-If flashed without USE_DIVERSITY Ant2 must be connected
-Low = Ant1
-High = Ant2
-*/
-    #define GPIO_PIN_ANTENNA_SELECT 0
+#elif defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_TX_ESP8266_SX1280)
+#define GPIO_PIN_NSS            15
+#define GPIO_PIN_BUSY           5
+#define GPIO_PIN_DIO1           4
+#define GPIO_PIN_MOSI           13
+#define GPIO_PIN_MISO           12
+#define GPIO_PIN_SCK            14
+#define GPIO_PIN_RST            2
+//#define GPIO_PIN_RCSIGNAL_RX -1 // uses default uart pins
+//#define GPIO_PIN_RCSIGNAL_TX -1
+#define GPIO_PIN_LED_RED        16 // LED_RED on TX, copied to LED on RX
+#if defined(TARGET_RX) && defined(USE_DIVERSITY)
+#define GPIO_PIN_ANTENNA_SELECT 0 // Low = Ant1, High = Ant2, pulled high by external resistor
 #else
-    #define GPIO_PIN_BUTTON 0
+#define GPIO_PIN_BUTTON         0
 #endif
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)

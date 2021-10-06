@@ -35,7 +35,7 @@ extern SX1280Driver Radio;
 #endif
 
 #include "config.h"
-#if defined(PLATFORM_ESP32)
+#if defined(TARGET_TX)
 extern TxConfig config;
 #else
 extern RxConfig config;

@@ -1239,7 +1239,6 @@ void setup()
     Radio.RXnb();
     crsf.Begin();
     hwTimer.init();
-    hwTimer.stop();
 }
 
 void loop()
