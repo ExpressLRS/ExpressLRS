@@ -12,7 +12,6 @@ constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500s off
 constexpr uint8_t LEDSEQ_WIFI_UPDATE[] = { 2, 3 };     // 20ms on, 30s off 
 constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 100ms on, 100ms off, 100ms on, 1s off
 
-#if defined(GPIO_PIN_LED_GREEN) || defined(GPIO_PIN_LED)
 static uint8_t _pin = -1;
 static uint8_t _pin_inverted;
 static const uint8_t *_durations;
@@ -41,7 +40,6 @@ static uint16_t flashLED(uint8_t pin, uint8_t pin_inverted, const uint8_t durati
     _count = count;
     return updateLED();
 }
-#endif
 
 static void initialize()
 {
@@ -181,8 +179,8 @@ static int event(std::function<void ()> sendSpam)
         #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
             flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
             return timeout(sendSpam);
-        #elif defined(GPIO_PIN_RED) && (GPIO_PIN_RED != UNDEF_PIN)
-            flashLED(GPIO_PIN_LED, GPIO_LED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        #elif defined(GPIO_PIN_LED) && (GPIO_PIN_LED != UNDEF_PIN)
+            flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
             return timeout(sendSpam);
         #else
             return DURATION_NEVER;
