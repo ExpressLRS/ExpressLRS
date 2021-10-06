@@ -105,15 +105,41 @@ struct tagLuaItem_string luaELRSversion = {
     LUA_STRING_SIZE(luaELRSversion)
 };
 
-#ifdef PLATFORM_ESP32
+//---------------------------- WiFi -----------------------------
+struct tagLuaItem_folder luaWiFiFolder = {
+    {0,0,(uint8_t)CRSF_FOLDER},//id,type
+    "WiFi",
+    LUA_FOLDER_SIZE(luaWiFiFolder)
+};
+
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaWebUpdate = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "WiFi Update",
+    "WiFi Tx",
     {0,200},//status,timeout
     emptySpace,
     LUA_COMMAND_SIZE(luaWebUpdate)
 };
+#endif
 
+struct tagLuaItem_command luaTxBackpackUpdate = {
+    {0,0,(uint8_t)CRSF_COMMAND},//id,type
+    "WiFi Tx Backpack",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaTxBackpackUpdate)
+};
+
+struct tagLuaItem_command luaVRxBackpackUpdate = {
+    {0,0,(uint8_t)CRSF_COMMAND},//id,type
+    "WiFi VRx Backpack",
+    {0,200},//status,timeout
+    emptySpace,
+    LUA_COMMAND_SIZE(luaVRxBackpackUpdate)
+};
+//---------------------------- WiFi -----------------------------
+
+#if defined(PLATFORM_ESP32)
 struct tagLuaItem_command luaBLEJoystick = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
     "BLE Joystick",
@@ -182,6 +208,8 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 
 extern TxConfig config;
 extern uint8_t VtxConfigReadyToSend;
+extern uint8_t TxBackpackWiFiReadyToSend;
+extern uint8_t VRxBackpackWiFiReadyToSend;
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void EnterBindingMode();
 extern bool InBindingMode;
@@ -285,6 +313,8 @@ static void registerLuaParameters() {
       sendLuaCommandResponse(&luaBind, InBindingMode ? 2 : 0, InBindingMode ? "Binding..." : "Binding Sent");
     }
   });
+
+  registerLUAParameter(&luaWiFiFolder);
   #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
       DBGVLN("arg %d", arg);
@@ -312,8 +342,27 @@ static void registerLuaParameters() {
       {
         sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
       }
-    });
+    },luaWiFiFolder.luaProperties1.id);
+  #endif
+  registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      TxBackpackWiFiReadyToSend = true;
+      sendLuaCommandResponse(&luaTxBackpackUpdate, 2, "Sending...");
+    } else {
+      sendLuaCommandResponse(&luaTxBackpackUpdate, 0, " ");
+    }
+  },luaWiFiFolder.luaProperties1.id);
 
+  registerLUAParameter(&luaVRxBackpackUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      VRxBackpackWiFiReadyToSend = true;
+      sendLuaCommandResponse(&luaVRxBackpackUpdate, 2, "Sending...");
+    } else {
+      sendLuaCommandResponse(&luaVRxBackpackUpdate, 0, " ");
+    }
+  },luaWiFiFolder.luaProperties1.id);
+
+  #ifdef PLATFORM_ESP32
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg == 4) // 4 = request confirmed, start
       {

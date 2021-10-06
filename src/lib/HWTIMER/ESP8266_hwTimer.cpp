@@ -16,14 +16,7 @@ bool hwTimer::running = false;
 
 void hwTimer::init()
 {
-    if (!running)
-    {
-        timer1_attachInterrupt(hwTimer::callback);
-        timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
-        timer1_write(hwTimer::HWtimerInterval >> 1);  //120000 us
-        isTick = false;
-        running = true;
-    }
+    running = false;
 }
 
 void hwTimer::stop()
@@ -38,11 +31,17 @@ void hwTimer::stop()
 
 void ICACHE_RAM_ATTR hwTimer::resume()
 {
-    init();
-    // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
-    // tock() should always be the first event to maintain consistency
-    isTick = false;
-    timer1_write(10);
+    if (!running)
+    {
+        timer1_attachInterrupt(hwTimer::callback);
+        timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
+        // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
+        // tock() should always be the first event to maintain consistency
+        isTick = false;
+        timer1_write(10);
+
+        running = true;
+    }
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)

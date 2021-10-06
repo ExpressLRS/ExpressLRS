@@ -34,6 +34,7 @@ void SX1280Hal::end()
     RXenable(); // make sure the TX amp pin is disabled
     detachInterrupt(GPIO_PIN_DIO1);
     SPI.end();
+    IsrCallback = nullptr; // remove callbacks
 }
 
 void SX1280Hal::init()

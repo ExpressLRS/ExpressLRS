@@ -32,11 +32,6 @@ SX1280Driver Radio;
 #include "devLUA.h"
 #include "devWIFI.h"
 
-#ifdef PLATFORM_ESP8266
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#endif
-
 #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
 #include "button.h"
 Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
@@ -70,7 +65,7 @@ TxConfig config;
 
 volatile uint8_t NonceTX;
 
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
@@ -102,8 +97,12 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void VtxConfigToMSPOut();
+void TxBackpackWiFiToMSPOut();
+void VRxBackpackWiFiToMSPOut();
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
+uint8_t TxBackpackWiFiReadyToSend = false;
+uint8_t VRxBackpackWiFiReadyToSend = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -651,12 +650,6 @@ void setup()
   button.OnLongPress = &POWERMGNT.handleCyclePower;
 #endif
 
-#ifdef PLATFORM_ESP32
-  // Get base mac address
-  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-  // UID[0..2] are OUI (organisationally unique identifier) and are not ESP32 unique.  Do not use!
-#endif // PLATFORM_ESP32
-
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
   Radio.RXdoneCallback = &RXdoneISR;
@@ -721,20 +714,16 @@ void loop()
 
   CheckConfigChangePending();
 
-  #if defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
     }
   #endif
 
-  #ifdef FEATURE_OPENTX_SYNC
-    // DBGVLN(crsf.OpenTXsyncOffset);
-  #endif
-
-  #ifdef PLATFORM_STM32
+  #if defined(PLATFORM_STM32) || defined(PLATFORM_ESP8266)
     crsf.handleUARTin();
-  #endif // PLATFORM_STM32
+  #endif
 
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.update();
@@ -761,6 +750,18 @@ void loop()
   {
     VtxConfigReadyToSend = false;
     VtxConfigToMSPOut();
+  }
+
+  if (TxBackpackWiFiReadyToSend)
+  {
+    TxBackpackWiFiReadyToSend = false;
+    TxBackpackWiFiToMSPOut();
+  }
+
+  if (VRxBackpackWiFiReadyToSend)
+  {
+    VRxBackpackWiFiReadyToSend = false;
+    VRxBackpackWiFiToMSPOut();
   }
 
   /* Send TLM updates to handset if connected + reporting period
@@ -914,6 +915,7 @@ void VtxConfigToMSPOut()
 
   mspPacket_t packet;
   packet.reset();
+  packet.makeCommand();
   packet.function = MSP_SET_VTX_CONFIG;
   packet.addByte(vtxIdx);
   packet.addByte(0);
@@ -921,8 +923,31 @@ void VtxConfigToMSPOut()
   packet.addByte(config.GetVtxPitmode());
 
   crsf.AddMspMessage(&packet);
+  eepromWriteToMSPOut(); // FC eeprom write to save VTx setting after reboot
 
-  eepromWriteToMSPOut();
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
+void TxBackpackWiFiToMSPOut()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE;
+  packet.addByte(0);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
+void VRxBackpackWiFiToMSPOut()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE;
+  packet.addByte(0);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
 void eepromWriteToMSPOut()
