@@ -53,6 +53,7 @@ More information can be found on the [website](https://www.expresslrs.org/).
     - [HappyModel ES915TX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - [HappyModel ES900TX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - DIY Module (Full Support, 50mW limit, limited documentation)
+    - [BetaFPV Nano 900Mhz TX](https://betafpv.com/products/elrs-nano-tx-module?variant=39416993415302) (Full Support, 500 mW output power)
 - **RX**
     - [FrSky R9mm](https://www.frsky-rc.com/product/r9-mm-ota/) (Full Support, OTA version can be used)
     - [FrSky R9 Mini](https://www.frsky-rc.com/product/r9-mini-ota/) (Full Support, OTA version can be used)
@@ -64,6 +65,7 @@ More information can be found on the [website](https://www.expresslrs.org/).
     - [HappyModel ES915RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)    
     - [HappyModel ES900RX](http://www.happymodel.cn/index.php/2021/02/19/expresslrs-module-es915tx-long-range-915mhz-transmitter-and-es915rx-receiver/) (Full Support off the shelf)
     - [Namimno Voyager 900 RX](http://www.namimno.com/product.html) (Full Support off the shelf)
+    - [BetaFPV Nano 900Mhz RX](https://betafpv.com/products/elrs-nano-receiver?variant=39416095441030) (Full Support, supports WiFi Updates)
 
 ### 2.4 GHz Hardware:
 
@@ -76,6 +78,7 @@ More information can be found on the [website](https://www.expresslrs.org/).
     - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [HappyModel TX](http://www.happymodel.cn/index.php/2021/04/12/happymodel-2-4g-expresslrs-elrs-micro-tx-module-es24tx/) (Full Support, 250 mW output power)
+    - [BetaFPV Nano 2.4GHz TX](https://betafpv.com/products/elrs-nano-tx-module?variant=39416993382534) (Full Support, 500 mW output power)
 - **RX**
     - [GHOST Atto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Initial flashing with STLINK then both STLINK and BF passthrough)
     - [GHOST Zepto](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, Initial flashing with STLINK then both STLINK and BF passthrough)
@@ -85,6 +88,7 @@ More information can be found on the [website](https://www.expresslrs.org/).
     - [DIY Nano Ceramic RX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/RX_Nano_Ceramic) (Full Support, CRSF Nano Footprint, WiFi Updating, Built in antenna)
     - [HappyModel PP RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, STM32 Based)
     - [HappyModel EP1/EP2 RX](http://www.happymodel.cn/index.php/2021/04/10/happymodel-2-4g-expresslrs-elrs-nano-series-receiver-module-pp-rx-ep1-rx-ep2-rx/) (Full Support, CRSF Nano Pinout, ESP8285 Based, WiFi Updating)
+    - [BetaFPV Nano 2.4GHz RX](https://betafpv.com/products/elrs-nano-receiver?variant=39416095408262) (Full Support, supports WiFi Updates)
 
 ## Long Range Competition
 One of the most frequently asked questions that gets asked by people who are interested in, but haven't yet tried ELRS is "How far does it go, and at what packet rate?"
