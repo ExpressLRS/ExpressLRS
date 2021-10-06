@@ -1268,6 +1268,7 @@ void TxBackpackWiFiToMSPOut()
   packet.reset();
   packet.makeCommand();
   packet.function = MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE;
+  packet.addByte(0);
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
@@ -1278,6 +1279,7 @@ void VRxBackpackWiFiToMSPOut()
   packet.reset();
   packet.makeCommand();
   packet.function = MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE;
+  packet.addByte(0);
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
