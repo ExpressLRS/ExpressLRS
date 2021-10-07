@@ -227,7 +227,7 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
     if (blinkyState == STARTUP && connectionState < FAILURE_STATES)
     {
@@ -268,15 +268,10 @@ static int timeout(std::function<void ()> sendSpam)
     }
 }
 
-static int event(std::function<void ()> sendSpam)
-{
-    return timeout(sendSpam);
-}
-
 device_t RGB_device = {
     .initialize = initialize,
     .start = start,
-    .event = event,
+    .event = timeout,
     .timeout = timeout
 };
 

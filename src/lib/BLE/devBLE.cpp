@@ -73,13 +73,13 @@ void BluetoothJoystickBegin()
     bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
     BluetoothJoystickBegin();
     return DURATION_NEVER;
 }
 
-static int event(std::function<void ()> sendSpam)
+static int event()
 {
     if (connectionState == bleJoystick) {
         hwTimer::stop();

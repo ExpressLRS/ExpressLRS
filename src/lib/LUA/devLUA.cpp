@@ -203,14 +203,13 @@ struct tagLuaItem_command luaVtxSend = {
 //----------------------------VTX ADMINISTRATOR------------------
 
 static char luaBadGoodString[10];
-extern TxConfig config;
-extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 
 extern TxConfig config;
 extern uint8_t VtxConfigReadyToSend;
 extern uint8_t TxBackpackWiFiReadyToSend;
 extern uint8_t VRxBackpackWiFiReadyToSend;
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
+extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
 #ifdef PLATFORM_ESP32
@@ -389,7 +388,7 @@ static void registerLuaParameters() {
   registerLUAParameter(NULL);
 }
 
-static int event(std::function<void ()> sendSpam)
+static int event()
 {
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
@@ -409,11 +408,11 @@ static int event(std::function<void ()> sendSpam)
   return DURATION_IMMEDIATELY;
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
   if(luaHandleUpdateParameter())
   {
-    sendSpam();
+    SetSyncSpam();
   }
   return DURATION_IMMEDIATELY;
 }

@@ -20,6 +20,10 @@ static uint8_t _counter = 0;
 
 static uint16_t updateLED()
 {
+    if (_pin == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     if(_counter % 2 == 0)
         digitalWrite(_pin, LOW ^ _pin_inverted);
     else
@@ -78,27 +82,17 @@ static void initialize()
     #endif
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
 #if defined(GPIO_PIN_LED_GREEN) || defined(GPIO_PIN_LED)
-    if (_pin == -1)
-    {
-        return DURATION_NEVER;
-    }
     return updateLED();
 #else
     return DURATION_NEVER;
 #endif
 }
 
-static int event(std::function<void ()> sendSpam)
+static void setPowerLEDs()
 {
-    #if defined(TARGET_RX) && defined(GPIO_PIN_LED)
-        if (InBindingMode)
-        {
-            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
-        }
-    #endif
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
         switch (POWERMGNT::currPower())
         {
@@ -120,6 +114,17 @@ static int event(std::function<void ()> sendSpam)
             break;
         }
     #endif
+}
+
+static int event()
+{
+    #if defined(TARGET_RX) && defined(GPIO_PIN_LED)
+        if (InBindingMode)
+        {
+            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
+        }
+    #endif
+    setPowerLEDs();
     switch (connectionState)
     {
     case connected:
@@ -155,9 +160,6 @@ static int event(std::function<void ()> sendSpam)
                 digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
             #endif
             #ifdef GPIO_PIN_LED
-                digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
-            #endif
-            #ifdef GPIO_PIN_LED
                 return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
             #elif GPIO_PIN_LED_GREEN
                 return flashLED(GPIO_PIN_LED_GREEN, GPIO_LED_GREEN_INVERTED, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
@@ -177,11 +179,9 @@ static int event(std::function<void ()> sendSpam)
             digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
         #endif // GPIO_PIN_LED_GREEN
         #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-            flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
-            return timeout(sendSpam);
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         #elif defined(GPIO_PIN_LED) && (GPIO_PIN_LED != UNDEF_PIN)
-            flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
-            return timeout(sendSpam);
+            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         #else
             return DURATION_NEVER;
         #endif
@@ -190,14 +190,9 @@ static int event(std::function<void ()> sendSpam)
     }
 }
 
-static int start()
-{
-    return event([](){});
-}
-
 device_t LED_device = {
     .initialize = initialize,
-    .start = start,
+    .start = event,
     .event = event,
     .timeout = timeout
 };

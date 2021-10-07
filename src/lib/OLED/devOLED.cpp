@@ -19,7 +19,7 @@ static int start()
     return 1000;    // set callback in 1s
 }
 
-static int event(std::function<void ()> sendSpam)
+static int event()
 {
     if (startup)
     {
@@ -31,10 +31,10 @@ static int event(std::function<void ()> sendSpam)
     return DURATION_NEVER;
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
     startup = false;
-    return event(sendSpam);
+    return event();
 }
 
 device_t OLED_device = {

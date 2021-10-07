@@ -1062,7 +1062,7 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-    initDevices(ui_devices, ARRAY_SIZE(ui_devices));
+    devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
@@ -1083,7 +1083,7 @@ void setup()
         hwTimer.init();
     }
 
-    startDevices();
+    devicesStart();
 }
 
 void loop()
@@ -1095,7 +1095,7 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    handleDevices(now, [](){});
+    devicesUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
@@ -1255,7 +1255,7 @@ void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    triggerEvent();
+    devicesTriggerEvent();
 }
 
 void ExitBindingMode()
@@ -1275,7 +1275,7 @@ void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
-    triggerEvent();
+    devicesTriggerEvent();
 }
 
 void OnELRSBindMSP(uint8_t* packet)

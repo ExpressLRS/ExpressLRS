@@ -1,6 +1,7 @@
 #pragma once
 
-#include <functional>
+#include <stdio.h>
+#include <stdint.h>
 
 // duration constants which can be returned from start(), event() or timeout()
 #define DURATION_IGNORE -2      // when returned from event() does not update the current timeout
@@ -13,12 +14,12 @@ typedef struct {
     // start() is called at the end of setup() and returns the number of ms when to call timeout()
     int (*start)();
     // An event was fired, take action and return new duration for timeout call
-    int (*event)(std::function<void ()> sendSpam);
-    // The duration has passed so take appropriate action and return a new duration
-    int (*timeout)(std::function<void ()> sendSpam);
+    int (*event)();
+    // The duration has passed so take appropriate action and return a new duration, this function should never return DURATION_IGNORE
+    int (*timeout)();
 } device_t;
 
-void initDevices(device_t **devices, uint8_t count);
-void startDevices();
-void handleDevices(unsigned long now, std::function<void ()> setSpam);
-void triggerEvent();
+void devicesInit(device_t **devices, uint8_t count);
+void devicesStart();
+void devicesUpdate(unsigned long now);
+void devicesTriggerEvent();

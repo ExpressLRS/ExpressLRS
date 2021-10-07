@@ -78,12 +78,12 @@ static int updateBuzzer(bool start)
     return DURATION_NEVER;
 }
 
-static int event(std::function<void ()> sendSpam)
+static int event()
 {
     return updateBuzzer(true);
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
     return updateBuzzer(false);
 }

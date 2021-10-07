@@ -543,7 +543,7 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   config.Commit();
   hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
-  triggerEvent();
+  devicesTriggerEvent();
 }
 
 
@@ -615,6 +615,15 @@ static void UpdateConnectDisconnectStatus()
   }
 }
 
+void SetSyncSpam()
+{
+  // Send sync spam if a UI device has requested to and the config has changed
+  if (config.IsModified())
+  {
+    syncSpamCounter = syncSpamAmount;
+  }
+}
+
 void setup()
 {
 #if defined(TARGET_TX_GHOST)
@@ -624,7 +633,7 @@ void setup()
   Serial.begin(460800);
 
   // Initialise the UI devices
-  initDevices(ui_devices, ARRAY_SIZE(ui_devices));
+  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
@@ -683,7 +692,7 @@ void setup()
     crsf.Begin();
   }
 
-  startDevices();
+  devicesStart();
 }
 
 void loop()
@@ -697,14 +706,7 @@ void loop()
   }
 
   // Update UI devices 
-  bool spamRequired = false;
-  handleDevices(now, [&spamRequired]() mutable { spamRequired = true; });
-
-  // Send sync spam if a UI device has requested to and the config has changed
-  if (spamRequired && config.IsModified())
-  {
-    syncSpamCounter = syncSpamAmount;
-  }
+  devicesUpdate(now);
 
   CheckConfigChangePending();
 
@@ -893,7 +895,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
     VtxConfigReadyToSend = true;
 
-    triggerEvent();
+    devicesTriggerEvent();
     sendLuaDevicePacket();    // Why is this here?
   }
 }

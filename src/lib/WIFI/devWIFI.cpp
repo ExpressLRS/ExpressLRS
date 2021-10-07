@@ -558,11 +558,11 @@ static int start()
   #ifdef AUTO_WIFI_ON_INTERVAL
     return AUTO_WIFI_ON_INTERVAL * 1000;
   #else
-    return DURATION_NEVER
+    return DURATION_NEVER;
   #endif
 }
 
-static int event(std::function<void ()> sendSpam)
+static int event()
 {
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
@@ -574,7 +574,7 @@ static int event(std::function<void ()> sendSpam)
   return DURATION_IGNORE;
 }
 
-static int timeout(std::function<void ()> sendSpam)
+static int timeout()
 {
   if (wifiStarted)
   {

@@ -11,11 +11,10 @@ static bool eventFired = false;
 static device_t **uiDevices;
 static uint8_t deviceCount;
 static unsigned long deviceTimeout[16] = {0};
-static unsigned long nextDeviceTimeout = 0;
 
 static connectionState_e lastConnectionState = disconnected;
 
-void initDevices(device_t **devices, uint8_t count)
+void devicesInit(device_t **devices, uint8_t count)
 {
     uiDevices = devices;
     deviceCount = count;
@@ -26,7 +25,7 @@ void initDevices(device_t **devices, uint8_t count)
     }
 }
 
-void startDevices()
+void devicesStart()
 {
     unsigned long now = millis();
     for(size_t i=0 ; i<deviceCount ; i++)
@@ -35,17 +34,16 @@ void startDevices()
         {
             int delay = (uiDevices[i]->start)();
             deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-            nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
         }
     }
 }
 
-void triggerEvent()
+void devicesTriggerEvent()
 {
     eventFired = true;
 }
 
-void handleDevices(unsigned long now, std::function<void ()> setSpam)
+void devicesUpdate(unsigned long now)
 {
     bool handleEvents = eventFired;
     eventFired = false;
@@ -53,11 +51,10 @@ void handleDevices(unsigned long now, std::function<void ()> setSpam)
     {
         if ((handleEvents || lastConnectionState != connectionState) && uiDevices[i]->event)
         {
-            int delay = (uiDevices[i]->event)(setSpam);
+            int delay = (uiDevices[i]->event)();
             if (delay != DURATION_IGNORE)
             {
                 deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-                nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
             }
         }
     }
@@ -66,9 +63,8 @@ void handleDevices(unsigned long now, std::function<void ()> setSpam)
     {
         if (now > deviceTimeout[i] && uiDevices[i]->timeout)
         {
-            int delay = (uiDevices[i]->timeout)(setSpam);
+            int delay = (uiDevices[i]->timeout)();
             deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-            nextDeviceTimeout = min(nextDeviceTimeout, deviceTimeout[i]);
         }
     }
 }
