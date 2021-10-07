@@ -756,6 +756,8 @@ bool CRSF::UARTwdt()
             USART2->CR1 &= ~USART_CR1_UE;
             USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
             USART2->CR1 |= USART_CR1_UE;
+#else
+            CRSF::Port.begin(UARTrequestedBaud);
 #endif
             duplex_set_RX();
             // cleanup input buffer
