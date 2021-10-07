@@ -1255,6 +1255,7 @@ void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+    triggerEvent();
 }
 
 void ExitBindingMode()
@@ -1274,6 +1275,7 @@ void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+    triggerEvent();
 }
 
 void OnELRSBindMSP(uint8_t* packet)
