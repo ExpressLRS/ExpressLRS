@@ -306,22 +306,4 @@ void sendLuaDevicePacket(void)
   crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
 }
 
-void setLuaTextSelectionValue(struct tagLuaItem_textSelection *luaStruct, uint8_t newvalue){
-    luaStruct->luaProperties2.value = newvalue;
-}
-void setLuaCommandValue(struct tagLuaItem_command *luaStruct, uint8_t newvalue){
-    luaStruct->luaProperties2.status = newvalue;
-}
-void setLuaUint8Value(struct tagLuaItem_uint8 *luaStruct, uint8_t newvalue){
-    luaStruct->luaProperties2.value = newvalue;
-}
-void setLuaUint16Value(struct tagLuaItem_uint16 *luaStruct, uint16_t newvalue){
-    luaStruct->luaProperties2.value = (newvalue >> 8) | (newvalue << 8);
-}
-void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
-    luaStruct->label2 = newvalue;
-}
-void setLuaCommandInfo(struct tagLuaItem_command *luaStruct,const char *newvalue){
-    luaStruct->label2 = newvalue;
-}
 #endif
