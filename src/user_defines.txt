@@ -42,9 +42,12 @@
 # modules are almost all inverted. ESP32 targets only
 -DUART_INVERTED
 
+# Remove comment to use rx with a KISS v1 FC. Sets a baud rate of 400k for the rx.
+#-DUART_RX_SPEED_400K
+
 # Invert the TX pin in the receiver code to allow an inverted RX pin on the
 # FC to be used (usually labeled SBUS input or RXI). Inverted CRSF output.
-# RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will 
+# RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will
 # not work, only via_Wifi. ESP8266/8285 targets only
 #-DRCVR_INVERT_TX
 
