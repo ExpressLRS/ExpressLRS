@@ -34,6 +34,10 @@
 #define GPIO_PIN_LED 2
 #define GPIO_PIN_BUTTON 0
 
+#define MinPower PWR_10mW
+#define MaxPower PWR_50mW
+#define POWER_VALUES {8,12,15}
+
 #elif defined(TARGET_TTGO_LORA_V1_AS_RX)
 
 #elif defined(TARGET_TTGO_LORA_V2_AS_TX)
@@ -49,6 +53,10 @@
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_BUTTON 39
+
+#define MinPower PWR_10mW
+#define MaxPower PWR_50mW
+#define POWER_VALUES {8,12,15}
 
 #elif defined(TARGET_TTGO_LORA_V2_AS_RX)
  // not supported
@@ -66,6 +74,10 @@
 #define GPIO_PIN_RCSIGNAL_RX 2
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED 27
+
+#define MinPower PWR_10mW
+#define MaxPower PWR_50mW
+#define POWER_VALUES {8,12,15}
 
 #elif defined(TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY)
 #define GPIO_PIN_BUTTON 36
@@ -312,9 +324,12 @@ https://github.com/jaxxzer
 #else
 #define GPIO_PIN_BUTTON         0
 #endif
+
+#if defined(TARGET_TX_ESP8266_SX1280)
 #define MinPower PWR_10mW
 #define MaxPower PWR_10mW
-#define POWER_VALUES {15}
+#define POWER_VALUES {13}
+#endif
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
 #define GPIO_PIN_NSS 5
@@ -326,6 +341,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RST 14
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+
 #define MinPower PWR_10mW
 #define MaxPower PWR_25mW
 #define POWER_VALUES {8, 13}
@@ -373,6 +389,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_MOSI          PB5
 #define GPIO_PIN_OLED_SCK           PB3
 #define timerOffset                 1
+
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
 #define POWER_VALUES {-16,-14,-11,-8,-4}
@@ -393,6 +410,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_RCSIGNAL_TX 13
 #define GPIO_PIN_LED_WS2812 15
 #define GPIO_PIN_FAN_EN 17
+
 #if defined(TARGET_TX_ESP32_LORA1280F27)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
@@ -453,6 +471,7 @@ Designed by NamimnoRC
     #define GPIO_PIN_RX_ENABLE      PA8     // CRX
     #define GPIO_PIN_TX_ENABLE      PA11    // CTX
     #define GPIO_PIN_PA_ENABLE      PA12    // CSD
+
     #define MinPower PWR_25mW
     #define MaxPower PWR_1000mW
     #define POWER_VALUES {-18,-15,-12,-8,-5,3}
@@ -468,6 +487,7 @@ Designed by NamimnoRC
     #define GPIO_PIN_SDA            PB9
     #define GPIO_PIN_SCL            PB8
     #define DAC_I2C_ADDRESS         0b0001101
+
     #define DAC_IN_USE              1
     #define MinPower PWR_10mW
     #define MaxPower PWR_2000mW
@@ -563,9 +583,11 @@ Designed by NamimnoRC
 #define GPIO_PIN_UART3RX_INVERT PB5 // Standalone inverter
 #define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
 #define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
+
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
 #define POWER_VALUES {-15,-11,-7,-1,6}
+#define HIGHER_POWER PWR_100mW
 
 #elif defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
 #define GPIO_PIN_NSS            PA15
@@ -592,9 +614,19 @@ Designed by NamimnoRC
     #endif
 // Unused pins
 #define GPIO_PIN_UART1TX_INVERT PF6
+
+#if defined(TARGET_TX_FM30_MINI)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
 #define POWER_VALUES {-15,-11,-7,-1,6}
+#define HIGHER_POWER PWR_100mW
+#else
+#ifdef UNLOCK_HIGHER_POWER
+#define POWER_VALUE 6  // 250mW (uses values as above)
+#else
+#define POWER_VALUE -1 // 100mW (uses values as above)
+#endif
+#endif
 
 #elif defined(TARGET_ES900TX)
 #define GPIO_PIN_NSS            5
@@ -610,9 +642,9 @@ Designed by NamimnoRC
 #define GPIO_PIN_RCSIGNAL_TX    2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED_WS2812     27
 #define GPIO_PIN_FAN_EN         17
+#define GPIO_PIN_RFamp_APC2     25
 
 #define POWER_OUTPUT_DACWRITE
-#define GPIO_PIN_RFamp_APC2     25
 #define MinPower PWR_10mW
 #define MaxPower PWR_1000mW
 #define POWER_VALUES {41,60,73,90,110,132,190}
@@ -633,6 +665,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED_BLUE       17
 #define GPIO_PIN_LED_GREEN      16
 #define GPIO_PIN_BUTTON         25
+
 #define MinPower PWR_10mW
 #define MaxPower PWR_500mW
 #define POWER_VALUES {-18,-15,-13,-9,-4,3}
@@ -651,9 +684,8 @@ Designed by NamimnoRC
 #define timerOffset             -1
 #define GPIO_PIN_RX_ENABLE      9 //enable pa
 #define GPIO_PIN_TX_ENABLE      10
-#define MinPower PWR_10mW
-#define MaxPower PWR_100mW
-#define POWER_VALUES {-10,-6,-3,1}
+
+#define POWER_VALUE 1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
 
 #elif defined(TARGET_TX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            5
@@ -671,6 +703,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED_BLUE       17
 #define GPIO_PIN_LED_GREEN      16
 #define GPIO_PIN_BUTTON         25
+
 #define MinPower PWR_100mW
 #define MaxPower PWR_500mW
 #define POWER_VALUES {0,3,8}

@@ -16,7 +16,11 @@ static int16_t powerValues[] = POWER_VALUES;
 
 PowerLevels_e POWERMGNT::incPower()
 {
+#if (MaxPower > HIGHER_POWER) && !defined(UNLOCK_HIGHER_POWER)
+    if (CurrentPower < HIGHER_POWER)
+#else
     if (CurrentPower < MaxPower)
+#endif
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
@@ -80,9 +84,22 @@ void POWERMGNT::init()
     setDefaultPower();
 }
 
+PowerLevels_e POWERMGNT::getDefaultPower()
+{
+    if (MinPower > PWR_50mW)
+    {
+        return MinPower;
+    }
+    if (MaxPower < PWR_50mW)
+    {
+        return MaxPower;
+    }
+    return PWR_50mW;
+}
+
 void POWERMGNT::setDefaultPower()
 {
-    setPower(DefaultPowerEnum);
+    setPower(getDefaultPower());
 }
 
 PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
@@ -103,7 +120,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
 #endif
 
-#if DAC_IN_USE
+#if defined(DAC_IN_USE)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower(powerValues[Power - MinPower]);
@@ -115,8 +132,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_VALUES)
+#elif defined(POWER_VALUES) && defined(TARGET_TX)
     Radio.SetOutputPower(powerValues[Power - MinPower]);
+#elif defined(POWER_VALUE) && defined(TARGET_RX)
+    Radio.SetOutputPower(POWER_VALUE);
 #elif defined(TARGET_RX)
     #if defined(TARGET_RX_DEFAULT_POWER)
         Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);

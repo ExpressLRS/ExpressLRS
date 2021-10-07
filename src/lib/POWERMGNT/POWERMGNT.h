@@ -10,28 +10,10 @@
 #include "SX1280Driver.h"
 #endif
 
-#if defined(TARGET_1000mW_MODULE) && !defined(POWER_VALUES)
-#define MinPower PWR_50mW
-#define MaxPower PWR_1000mW
-#define POWER_VALUES {2,5,8,12,15}
-#endif
-#if !defined(POWER_VALUES)
-#define MinPower PWR_10mW
-#define MaxPower PWR_50mW
-#define POWER_VALUES {8,11,15}
-#endif
-
-#if !defined(UNLOCK_HIGHER_POWER) && MaxPower > PWR_250mW
-#undef MaxPower
-#define MaxPower PWR_250mW
-#endif
-
-#if MinPower > PWR_50mW
-#define DefaultPowerEnum MinPower
-#elif MaxPower < PWR_50mW
-#define DefaultPowerEnum MaxPower
-#else
-#define DefaultPowerEnum PWR_50mW
+#if defined(TARGET_RX)
+    // These are "fake" values as the power on the RX is not user selectable
+    #define MinPower PWR_10mW
+    #define MaxPower PWR_10mW
 #endif
 
 typedef enum
@@ -59,6 +41,7 @@ public:
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
+    static PowerLevels_e getDefaultPower();
     static void setDefaultPower();
     static void init();
 };
