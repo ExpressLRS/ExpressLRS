@@ -103,14 +103,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower((DAC_PWR_)Power);
 
-#elif defined(TARGET_RX)
-    #if defined(TARGET_RX_DEFAULT_POWER)
-        Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
-    #else
-        // Set to max power for telemetry on the RX if not specified
-        Radio.SetOutputPowerMax();
-    #endif
-
 #elif defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
     switch (Power)
     {
@@ -467,6 +459,13 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-13);
         break;
     }
+#elif defined(TARGET_RX)
+    #if defined(TARGET_RX_DEFAULT_POWER)
+        Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
+    #else
+        // Set to max power for telemetry on the RX if not specified
+        Radio.SetOutputPowerMax();
+    #endif
 #else
 #error "[ERROR] Unknown power management!"
 #endif
