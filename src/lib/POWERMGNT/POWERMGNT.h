@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Arduino.h"
 #include "targets.h"
 #include "DAC.h"
 
@@ -14,6 +13,11 @@
     // These are "fake" values as the power on the RX is not user selectable
     #define MinPower PWR_10mW
     #define MaxPower PWR_10mW
+#endif
+
+#if defined(HighPower) && !defined(UNLOCK_HIGHER_POWER)
+    #undef MaxPower
+    #define MaxPower HighPower
 #endif
 
 typedef enum

@@ -230,9 +230,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #define DAC_I2C_ADDRESS         0b0001100
-#define POWER_OUTPUT_DAC              1
-#define MinPower PWR_10mW
-#define MaxPower PWR_1000mW
+#define POWER_OUTPUT_DAC
+#define MinPower                PWR_10mW
+#define HighPower               PWR_250mW
+#define MaxPower                PWR_1000mW
 #if defined(TARGET_R9M_TX)
     #if defined(Regulatory_Domain_EU_868)
     #define POWER_OUTPUT_VALUES {650,860,1000,1160,1420,1730,2100,2600}
@@ -270,12 +271,12 @@ https://github.com/jaxxzer
 
 #define GPIO_PIN_BUFFER_OE      PA5  //CONFIRMED
 #define GPIO_PIN_BUFFER_OE_INVERTED 0
+
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
 #define POWER_OUTPUT_VALUES {8,11,15}
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
-#define POWER_OUTPUT_ANALOG
 #define GPIO_PIN_RFamp_APC1           PA4  //2.7V
 #define GPIO_PIN_RFamp_APC2           PA5
 #define GPIO_PIN_RFswitch_CONTROL     PA6  // confirmed  //HIGH = RX, LOW = TX
@@ -304,8 +305,10 @@ https://github.com/jaxxzer
 #define GPIO_PIN_VRF2			        PB1  // 26SU Switch RF2
 #define GPIO_PIN_SWR			         PA0  // SWR ADC1_IN1
 
-#define MinPower PWR_10mW
-#define MaxPower PWR_1000mW
+#define MinPower            PWR_10mW
+#define HighPower           PWR_250mW
+#define MaxPower            PWR_1000mW
+#define POWER_OUTPUT_ANALOG
 #define POWER_OUTPUT_VALUES {600,770,950,1150,1480,2000,3500}
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_TX_ESP8266_SX1280)
@@ -489,8 +492,8 @@ Designed by NamimnoRC
     #define DAC_I2C_ADDRESS         0b0001101
 
     #define POWER_OUTPUT_DAC              1
-    #define MinPower PWR_10mW
-    #define MaxPower PWR_2000mW
+    #define MinPower            PWR_10mW
+    #define MaxPower            PWR_2000mW
     #if defined(Regulatory_Domain_EU_868)
     #define POWER_OUTPUT_VALUES {500,860,1000,1170,1460,1730,2100,2600}
     #else
@@ -584,10 +587,10 @@ Designed by NamimnoRC
 #define GPIO_PIN_BLUETOOTH_EN   PA8 // Bluetooth power on (active low)
 #define GPIO_PIN_UART1RX_INVERT PB6 // XOR chip
 
-#define MinPower PWR_10mW
-#define MaxPower PWR_250mW
-#define POWER_OUTPUT_VALUES {-15,-11,-7,-1,6}
-#define HIGHER_POWER PWR_100mW
+#define MinPower                PWR_10mW
+#define HighPower               PWR_100mW
+#define MaxPower                PWR_250mW
+#define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
 
 #elif defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
 #define GPIO_PIN_NSS            PA15
@@ -616,10 +619,10 @@ Designed by NamimnoRC
 #define GPIO_PIN_UART1TX_INVERT PF6
 
 #if defined(TARGET_TX_FM30_MINI)
-#define MinPower PWR_10mW
-#define MaxPower PWR_250mW
+#define MinPower            PWR_10mW
+#define HighPower           PWR_100mW
+#define MaxPower            PWR_250mW
 #define POWER_OUTPUT_VALUES {-15,-11,-7,-1,6}
-#define HIGHER_POWER PWR_100mW
 #else
 #ifdef UNLOCK_HIGHER_POWER
 #define POWER_OUTPUT_VALUE 6  // 250mW (uses values as above)
@@ -644,10 +647,11 @@ Designed by NamimnoRC
 #define GPIO_PIN_FAN_EN         17
 #define GPIO_PIN_RFamp_APC2     25
 
+#define MinPower                PWR_10mW
+#define HighPower               PWR_250mW
+#define MaxPower                PWR_1000mW
 #define POWER_OUTPUT_DACWRITE
-#define MinPower PWR_10mW
-#define MaxPower PWR_1000mW
-#define POWER_OUTPUT_VALUES {41,60,73,90,110,132,190}
+#define POWER_OUTPUT_VALUES     {41,60,73,90,110,132,190}
 
 #elif defined(TARGET_TX_BETAFPV_2400_V1)
 #define GPIO_PIN_NSS            5

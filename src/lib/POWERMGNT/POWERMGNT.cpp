@@ -16,11 +16,7 @@ static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 
 PowerLevels_e POWERMGNT::incPower()
 {
-#if (MaxPower > HIGHER_POWER) && !defined(UNLOCK_HIGHER_POWER)
-    if (CurrentPower < HIGHER_POWER)
-#else
     if (CurrentPower < MaxPower)
-#endif
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
