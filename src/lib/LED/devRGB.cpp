@@ -2,23 +2,15 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
 #include <NeoPixelBus.h>
 static constexpr uint16_t PixelCount = 2;
 #ifdef WS2812_IS_GRB
-static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
+static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
 #else
-static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED);
-#endif
-#endif
-
-#if (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
-#include "STM32F3_WS2812B_LED.h"
+static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
 #endif
 
-#include "logging.h"
-
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED)
 void WS281Binit()
 {
     strip.Begin();
@@ -31,8 +23,14 @@ void WS281BsetLED(uint32_t color)
 }
 #endif
 
-#if WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+#if defined(PLATFORM_STM32) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
+#include "STM32F3_WS2812B_LED.h"
+#endif
 
+
+#if defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+
+#include "logging.h"
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"
 
@@ -281,4 +279,4 @@ device_t RGB_device = {
     NULL
 };
 
-#endif // WS2812_LED_IS_USED || (defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED))
+#endif
