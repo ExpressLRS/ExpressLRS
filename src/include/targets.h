@@ -36,7 +36,7 @@
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
-#define POWER_VALUES {8,12,15}
+#define POWER_OUTPUT_VALUES {8,12,15}
 
 #elif defined(TARGET_TTGO_LORA_V1_AS_RX)
 
@@ -56,7 +56,7 @@
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
-#define POWER_VALUES {8,12,15}
+#define POWER_OUTPUT_VALUES {8,12,15}
 
 #elif defined(TARGET_TTGO_LORA_V2_AS_RX)
  // not supported
@@ -77,7 +77,7 @@
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
-#define POWER_VALUES {8,12,15}
+#define POWER_OUTPUT_VALUES {8,12,15}
 
 #elif defined(TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY)
 #define GPIO_PIN_BUTTON 36
@@ -230,20 +230,20 @@ https://github.com/jaxxzer
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
 #define DAC_I2C_ADDRESS         0b0001100
-#define DAC_IN_USE              1
+#define POWER_OUTPUT_DAC              1
 #define MinPower PWR_10mW
 #define MaxPower PWR_1000mW
 #if defined(TARGET_R9M_TX)
     #if defined(Regulatory_Domain_EU_868)
-    #define POWER_VALUES {650,860,1000,1160,1420,1730,2100,2600}
+    #define POWER_OUTPUT_VALUES {650,860,1000,1160,1420,1730,2100,2600}
     #else
-    #define POWER_VALUES {720,875,1000,1140,1390,1730,2100,2600}
+    #define POWER_OUTPUT_VALUES {720,875,1000,1140,1390,1730,2100,2600}
     #endif
 #else // TARGET_TX_ES915TX
     #if defined(Regulatory_Domain_EU_868)
-    #define POWER_VALUES {375,850,1200,1400,1700,2000,2400,2600}
+    #define POWER_OUTPUT_VALUES {375,850,1200,1400,1700,2000,2400,2600}
     #else
-    #define POWER_VALUES {875,1065,1200,1355,1600,1900,2400,2600}
+    #define POWER_OUTPUT_VALUES {875,1065,1200,1355,1600,1900,2400,2600}
     #endif
 #endif
 
@@ -272,7 +272,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_BUFFER_OE_INVERTED 0
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
-#define POWER_VALUES {8,11,15}
+#define POWER_OUTPUT_VALUES {8,11,15}
 
 #elif defined(TARGET_R9M_LITE_PRO_TX)
 #define POWER_OUTPUT_ANALOG
@@ -306,7 +306,7 @@ https://github.com/jaxxzer
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_1000mW
-#define POWER_VALUES {600,770,950,1150,1480,2000,3500}
+#define POWER_OUTPUT_VALUES {600,770,950,1150,1480,2000,3500}
 
 #elif defined(TARGET_RX_ESP8266_SX1280_V1) || defined(TARGET_TX_ESP8266_SX1280)
 #define GPIO_PIN_NSS            15
@@ -328,7 +328,7 @@ https://github.com/jaxxzer
 #if defined(TARGET_TX_ESP8266_SX1280)
 #define MinPower PWR_10mW
 #define MaxPower PWR_10mW
-#define POWER_VALUES {13}
+#define POWER_OUTPUT_VALUES {13}
 #endif
 
 #elif defined(TARGET_TX_ESP32_SX1280_V1)
@@ -344,7 +344,7 @@ https://github.com/jaxxzer
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_25mW
-#define POWER_VALUES {8, 13}
+#define POWER_OUTPUT_VALUES {8, 13}
 
 #elif defined(TARGET_RX_GHOST_ATTO_V1)
 #define GPIO_PIN_NSS            PA15
@@ -392,7 +392,7 @@ https://github.com/jaxxzer
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-16,-14,-11,-8,-4}
+#define POWER_OUTPUT_VALUES {-16,-14,-11,-8,-4}
 
 #elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || defined(TARGET_TX_ESP32_LORA1280F27)
 #define GPIO_PIN_NSS 5
@@ -414,27 +414,27 @@ https://github.com/jaxxzer
 #if defined(TARGET_TX_ESP32_LORA1280F27)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-4,0,3,6,12}
+#define POWER_OUTPUT_VALUES {-4,0,3,6,12}
 #elif defined(TARGET_HappyModel_ES24TX_2400_TX)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-17,-13,-9,-6,-2}
+#define POWER_OUTPUT_VALUES {-17,-13,-9,-6,-2}
 #elif defined(TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX)
 #define MinPower PWR_25mW
 #define MaxPower PWR_1000mW
-#define POWER_VALUES {-18,-15,-12,-7,-4,2}
+#define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
 #elif defined(TARGET_HGLRC_Hermes_2400_TX)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-18,-15,-11,-8,-4}
+#define POWER_OUTPUT_VALUES {-18,-15,-11,-8,-4}
 #elif defined(TARGET_QK_JR_TX)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-15,-11,-8,-5,0}
+#define POWER_OUTPUT_VALUES {-15,-11,-8,-5,0}
 #else
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-15,-11,-8,-5,-1}
+#define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 #endif
 
 #elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
@@ -474,7 +474,7 @@ Designed by NamimnoRC
 
     #define MinPower PWR_25mW
     #define MaxPower PWR_1000mW
-    #define POWER_VALUES {-18,-15,-12,-8,-5,3}
+    #define POWER_OUTPUT_VALUES {-18,-15,-12,-8,-5,3}
 #else // !TARGET_MODULE_2400
     #define GPIO_PIN_NSS            PB12
     #define GPIO_PIN_DIO0           PA15
@@ -488,13 +488,13 @@ Designed by NamimnoRC
     #define GPIO_PIN_SCL            PB8
     #define DAC_I2C_ADDRESS         0b0001101
 
-    #define DAC_IN_USE              1
+    #define POWER_OUTPUT_DAC              1
     #define MinPower PWR_10mW
     #define MaxPower PWR_2000mW
     #if defined(Regulatory_Domain_EU_868)
-    #define POWER_VALUES {500,860,1000,1170,1460,1730,2100,2600}
+    #define POWER_OUTPUT_VALUES {500,860,1000,1170,1460,1730,2100,2600}
     #else
-    #define POWER_VALUES {895,1030,1128,1240,1465,1700,2050,2600}
+    #define POWER_OUTPUT_VALUES {895,1030,1128,1240,1465,1700,2050,2600}
     #endif
 #endif // TARGET_MODULE_2400
 
@@ -586,7 +586,7 @@ Designed by NamimnoRC
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-15,-11,-7,-1,6}
+#define POWER_OUTPUT_VALUES {-15,-11,-7,-1,6}
 #define HIGHER_POWER PWR_100mW
 
 #elif defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
@@ -618,13 +618,13 @@ Designed by NamimnoRC
 #if defined(TARGET_TX_FM30_MINI)
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_VALUES {-15,-11,-7,-1,6}
+#define POWER_OUTPUT_VALUES {-15,-11,-7,-1,6}
 #define HIGHER_POWER PWR_100mW
 #else
 #ifdef UNLOCK_HIGHER_POWER
-#define POWER_VALUE 6  // 250mW (uses values as above)
+#define POWER_OUTPUT_VALUE 6  // 250mW (uses values as above)
 #else
-#define POWER_VALUE -1 // 100mW (uses values as above)
+#define POWER_OUTPUT_VALUE -1 // 100mW (uses values as above)
 #endif
 #endif
 
@@ -647,7 +647,7 @@ Designed by NamimnoRC
 #define POWER_OUTPUT_DACWRITE
 #define MinPower PWR_10mW
 #define MaxPower PWR_1000mW
-#define POWER_VALUES {41,60,73,90,110,132,190}
+#define POWER_OUTPUT_VALUES {41,60,73,90,110,132,190}
 
 #elif defined(TARGET_TX_BETAFPV_2400_V1)
 #define GPIO_PIN_NSS            5
@@ -668,7 +668,7 @@ Designed by NamimnoRC
 
 #define MinPower PWR_10mW
 #define MaxPower PWR_500mW
-#define POWER_VALUES {-18,-15,-13,-9,-4,3}
+#define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
 
 #elif defined(TARGET_RX_BETAFPV_2400_V1)
 #define GPIO_PIN_NSS            15
@@ -685,7 +685,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_RX_ENABLE      9 //enable pa
 #define GPIO_PIN_TX_ENABLE      10
 
-#define POWER_VALUE 1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+#define POWER_OUTPUT_VALUE 1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
 
 #elif defined(TARGET_TX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            5
@@ -706,7 +706,7 @@ Designed by NamimnoRC
 
 #define MinPower PWR_100mW
 #define MaxPower PWR_500mW
-#define POWER_VALUES {0,3,8}
+#define POWER_OUTPUT_VALUES {0,3,8}
 
 #elif defined(TARGET_RX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            15
@@ -733,7 +733,7 @@ Designed by NamimnoRC
 #ifdef USE_DIVERSITY
     #define GPIO_PIN_ANTENNA_SELECT 9
 #endif
-#define POWER_VALUE             3
+#define POWER_OUTPUT_VALUE             3
 
 #else
 #error "Unknown target!"

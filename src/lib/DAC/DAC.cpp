@@ -1,7 +1,7 @@
 
 #include "DAC.h"
 
-#if DAC_IN_USE && defined(DAC_I2C_ADDRESS)
+#if defined(DAC_I2C_ADDRESS)
 #include "helpers.h"
 #include "logging.h"
 #include <Wire.h>
@@ -67,4 +67,4 @@ void DAC::setPower(int16_t milliVolts)
 
 DAC TxDAC;
 
-#endif // DAC_IN_USE && defined(DAC_I2C_ADDRESS)
+#endif // defined(DAC_I2C_ADDRESS)

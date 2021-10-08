@@ -10,8 +10,8 @@ extern SX1280Driver Radio;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
-#if defined(POWER_VALUES)
-static int16_t powerValues[] = POWER_VALUES;
+#if defined(POWER_OUTPUT_VALUES)
+static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #endif
 
 PowerLevels_e POWERMGNT::incPower()
@@ -62,7 +62,7 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
 
 void POWERMGNT::init()
 {
-#if defined(DAC_IN_USE)
+#if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
 #elif defined(POWER_OUTPUT_ANALOG)
     //initialize both 12 bit DACs
@@ -120,7 +120,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
 #endif
 
-#if defined(DAC_IN_USE)
+#if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
     TxDAC.setPower(powerValues[Power - MinPower]);
@@ -132,10 +132,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_VALUES) && defined(TARGET_TX)
+#elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
     Radio.SetOutputPower(powerValues[Power - MinPower]);
-#elif defined(POWER_VALUE) && defined(TARGET_RX)
-    Radio.SetOutputPower(POWER_VALUE);
+#elif defined(POWER_OUTPUT_VALUE) && defined(TARGET_RX)
+    Radio.SetOutputPower(POWER_OUTPUT_VALUE);
 #elif defined(TARGET_RX)
     // Set to max power for telemetry on the RX if not specified
     Radio.SetOutputPowerMax();
