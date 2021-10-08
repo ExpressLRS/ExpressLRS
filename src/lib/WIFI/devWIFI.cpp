@@ -226,7 +226,8 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
-  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://elrs_tx.local from a browser on that network";
+  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
+    myHostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
 
