@@ -544,12 +544,17 @@ static void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
+
   if (servicesStarted)
   {
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
     #endif
+    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
+    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+    if (!Update.isRunning())
+      delay(1);
   }
 }
 
