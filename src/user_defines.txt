@@ -45,6 +45,9 @@
 
 -DUART_INVERTED
 
+# Remove comment to use rx with a KISS v1 FC. Sets a baud rate of 400k for the rx.
+#-DUART_RX_SPEED_400K
+
 #-DUSE_R9MM_R9MINI_SBUS
 
 #-DTLM_REPORT_INTERVAL_MS=320LU
