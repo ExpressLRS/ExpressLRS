@@ -12,8 +12,6 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#include "WebUpdate.h"
-
 #include "crc.h"
 #include "CRSF.h"
 #include "telemetry_protocol.h"
@@ -34,13 +32,10 @@ SX1280Driver Radio;
 #include "options.h"
 #include "POWERMGNT.h"
 
-#ifdef TARGET_RX_GHOST_ATTO_V1
-uint8_t LEDfadeDiv;
-uint8_t LEDfade;
-bool LEDfadeDir;
-uint32_t LEDWS2812LastUpdate;
-#include "STM32F3_WS2812B_LED.h"
-#endif
+#include "device.h"
+#include "helpers.h"
+#include "devLED.h"
+#include "devWIFI.h"
 
 //// CONSTANTS ////
 #define BUTTON_SAMPLE_INTERVAL 150
@@ -57,6 +52,12 @@ uint32_t LEDWS2812LastUpdate;
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
+device_t *ui_devices[] = {
+  &LED_device,
+  &RGB_device,
+  &WIFI_device
+};
+
 uint8_t antenna = 0;    // which antenna is currently in use
 
 hwTimer hwTimer;
@@ -69,6 +70,7 @@ Telemetry telemetry;
 
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
+extern bool webserverPreventAutoStart;
 #endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
@@ -127,11 +129,6 @@ RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 static bool connectionHasModelMatch;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
-
-// LED Blinking state
-static bool LED = false;
-static uint8_t LEDPulseCounter;
-static uint32_t LEDLastUpdate;
 
 //// Variables Relating to Button behaviour ////
 bool buttonPrevValue = true; //default pullup
@@ -552,7 +549,6 @@ void LostConnection()
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    LED = false; // Make first LED cycle turn it on
 
     if (!InBindingMode)
     {
@@ -561,18 +557,6 @@ void LostConnection()
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
-
-#ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
-#endif
 }
 
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
@@ -588,13 +572,6 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     prevOffset = 0;
     LPF_Offset.init(0);
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
-
-#if WS2812_LED_IS_USED
-    uint8_t LEDcolor[3] = {0};
-    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 50;
-    WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = now;
-#endif
 
     // The caller MUST call hwTimer.resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
@@ -620,25 +597,6 @@ void GotConnection(unsigned long now)
     #endif
 
     DBGLN("got conn");
-
-#if WS2812_LED_IS_USED
-    uint8_t LEDcolor[3] = {0};
-    LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = 255;
-    WS281BsetLED(LEDcolor);
-    LEDWS2812LastUpdate = now;
-#endif
-
-#ifdef GPIO_PIN_LED_GREEN
-    digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED_RED
-    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-#endif
-
-#ifdef GPIO_PIN_LED
-    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
-#endif
 }
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
@@ -943,18 +901,6 @@ static void setupConfigAndPocCheck()
 
 static void setupGpio()
 {
-#ifdef GPIO_PIN_LED_GREEN
-    pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-#endif /* GPIO_PIN_LED_GREEN */
-#ifdef GPIO_PIN_LED_RED
-    pinMode(GPIO_PIN_LED_RED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif /* GPIO_PIN_LED_RED */
-#if defined(GPIO_PIN_LED)
-    pinMode(GPIO_PIN_LED, OUTPUT);
-    digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED);
-#endif /* GPIO_PIN_LED */
 #ifdef GPIO_PIN_BUTTON
     pinMode(GPIO_PIN_BUTTON, INPUT);
 #endif /* GPIO_PIN_BUTTON */
@@ -986,83 +932,6 @@ static void setupBindingFromConfig()
         CRCInitializer = (UID[4] << 8) | UID[5];
     }
 #endif
-}
-
-void updateLEDs(uint32_t now)
-{
-#if WS2812_LED_IS_USED
-    if ((connectionState == disconnected) && (now - LEDWS2812LastUpdate > 25))
-    {
-        uint8_t LEDcolor[3] = {0};
-        if (LEDfade == 30 || LEDfade == 0)
-        {
-            LEDfadeDir = !LEDfadeDir;
-        }
-
-        LEDfadeDir ? LEDfade = LEDfade + 2 :  LEDfade = LEDfade - 2;
-        LEDcolor[(2 - ExpressLRS_currAirRate_Modparams->index) % 3] = LEDfade;
-        WS281BsetLED(LEDcolor);
-        LEDWS2812LastUpdate = now;
-    }
-#endif
-    // Always blink the LED at a steady rate when not connected, independent of the cycle status
-    if (connectionState == disconnected && now - LEDLastUpdate > LED_INTERVAL_DISCONNECTED)
-    {
-        #ifdef GPIO_PIN_LED
-            digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #elif GPIO_PIN_LED_GREEN
-            digitalWrite(GPIO_PIN_LED_GREEN, LED ^ GPIO_LED_GREEN_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    }
-    else if (connectionState == wifiUpdate && now - LEDLastUpdate > LED_INTERVAL_WEB_UPDATE)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
-        LED = !LED;
-        LEDLastUpdate = now;
-    }
-    else if (InBindingMode && now > LEDLastUpdate) // LEDLastUpdate is actually next update here, flagged for refactor
-    {
-        if (LEDPulseCounter == 0)
-        {
-            LED = true;
-        }
-        else if (LEDPulseCounter == 4)
-        {
-            LED = false;
-        }
-        else
-        {
-            LED = !LED;
-        }
-
-        if (LEDPulseCounter < 4)
-        {
-            LEDLastUpdate = now + LED_INTERVAL_BIND_SHORT;
-        }
-        else
-        {
-            LEDLastUpdate = now + LED_INTERVAL_BIND_LONG;
-            LEDPulseCounter = 0;
-        }
-
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        #endif
-
-        LEDPulseCounter++;
-    }
-    else if (connectionState == radioFailed && now > LEDLastUpdate)
-    {
-        #ifdef GPIO_PIN_LED
-        digitalWrite(GPIO_PIN_LED, LED ^ GPIO_LED_RED_INVERTED);
-        LED = !LED;
-        #endif
-        LEDLastUpdate = now + LED_INTERVAL_ERROR;
-    }
 }
 
 static void HandleUARTin()
@@ -1098,15 +967,7 @@ static void setupRadio()
     {
         DBGLN("Failed to detect RF chipset!!!");
         connectionState = radioFailed;
-        while (1)
-        {
-            HandleUARTin();
-            unsigned long now = millis();
-            updateLEDs(now);
-#if defined(PLATFORM_ESP8266)
-            handleWebUpdateServer(now);
-#endif
-        }
+        return;
     }
 
     // Set transmit power to maximum
@@ -1117,24 +978,6 @@ static void setupRadio()
 
     SetRFLinkRate(RATE_DEFAULT);
     RFmodeCycleMultiplier = 1;
-}
-
-static void ws2812Blink()
-{
- #if WS2812_LED_IS_USED // do startup blinkies for fun
-    WS281Binit();
-    uint32_t col = 0x0000FF;
-    for (uint8_t j = 0; j < 3; j++)
-    {
-        for (uint8_t i = 0; i < 5; i++)
-        {
-            WS281BsetLED(col << j*8);
-            delay(15);
-            WS281BsetLED(0, 0, 0);
-            delay(35);
-        }
-    }
-#endif
 }
 
 static void updateTelemetryBurst()
@@ -1219,26 +1062,28 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    wifiOff();
-#endif
-    ws2812Blink();
+    devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     setupRadio();
 
-    // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
-    // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
+    if (connectionState != radioFailed)
+    {
+        // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
+        // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-    hwTimer.callbackTock = &HWtimerCallbackTock;
-    hwTimer.callbackTick = &HWtimerCallbackTick;
+        hwTimer.callbackTock = &HWtimerCallbackTock;
+        hwTimer.callbackTick = &HWtimerCallbackTick;
 
-    MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
-    Radio.RXnb();
-    crsf.Begin();
-    hwTimer.init();
+        MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
+        Radio.RXnb();
+        crsf.Begin();
+        hwTimer.init();
+    }
+
+    devicesStart();
 }
 
 void loop()
@@ -1250,17 +1095,19 @@ void loop()
         crsf.RXhandleUARTout();
     }
 
-    updateLEDs(now);
+    devicesUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-    if (handleWebUpdateServer(now)) {
+    #endif
+
+    if (connectionState > FAILURE_STATES)
+    {
         return;
     }
-    #endif
 
     if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
         LostConnection();
@@ -1408,6 +1255,7 @@ void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+    devicesTriggerEvent();
 }
 
 void ExitBindingMode()
@@ -1427,6 +1275,7 @@ void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+    devicesTriggerEvent();
 }
 
 void OnELRSBindMSP(uint8_t* packet)

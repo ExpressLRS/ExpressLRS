@@ -1,3 +1,5 @@
+#include "device.h"
+
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
 #if defined(PLATFORM_ESP32)
@@ -370,7 +372,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   } 
 }
 
-void wifiOff()
+static void wifiOff()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -488,8 +490,9 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 }
 
-static void HandleWebUpdate(unsigned long now)
+static void HandleWebUpdate()
 {
+  unsigned long now = millis();
   wl_status_t status = WiFi.status();
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
@@ -550,38 +553,70 @@ static void HandleWebUpdate(unsigned long now)
   }
 }
 
-bool handleWebUpdateServer(unsigned long now)
+static int start()
+{
+  #ifdef AUTO_WIFI_ON_INTERVAL
+    return AUTO_WIFI_ON_INTERVAL * 1000;
+  #else
+    return DURATION_NEVER;
+  #endif
+}
+
+static int event()
 {
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
     if (!wifiStarted) {
-      startWiFi(now);
+      startWiFi(millis());
+      return DURATION_IMMEDIATELY;
     }
-    HandleWebUpdate(now);
-    return true;
   }
-  else
-  {
-    #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-    //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-    //start webupdate, there might be wrong configuration flashed.
-    if(webserverPreventAutoStart == false && now > (AUTO_WIFI_ON_INTERVAL * 1000) && connectionState < wifiUpdate && !wifiStarted){
-      DBGLN("No CRSF ever detected, starting WiFi");
-      startWiFi(now);
-      return true;
-    }
-    #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
-    if (!webserverPreventAutoStart && (connectionState == disconnected) && !wifiStarted)
-    {
-      if ((!InBindingMode && now > (AUTO_WIFI_ON_INTERVAL * 1000)) || (InBindingMode && now > 60000))
-      {
-        startWiFi(now);
-        return true;
-      }
-    }
-    #endif
-  }
-  return false;
+  return DURATION_IGNORE;
 }
+
+static int timeout()
+{
+  if (wifiStarted)
+  {
+    HandleWebUpdate();
+    return DURATION_IMMEDIATELY;
+  }
+
+  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
+  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
+  //start webupdate, there might be wrong configuration flashed.
+  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
+    DBGLN("No CRSF ever detected, starting WiFi");
+    connectionState = wifiUpdate;
+    return DURATION_IMMEDIATELY;
+  }
+  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
+  if (!webserverPreventAutoStart && (connectionState == disconnected))
+  {
+    static bool pastAutoInterval = false;
+    if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
+    {
+      connectionState = wifiUpdate;
+      return DURATION_IMMEDIATELY;
+    }
+    pastAutoInterval = true;
+    return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
+  }
+  #endif
+  return DURATION_NEVER;
+}
+
+device_t WIFI_device = {
+  .initialize = wifiOff,
+  .start = start,
+  .event = event,
+  .timeout = timeout
+};
+
+#else
+
+device_t WIFI_device = {
+  NULL
+};
 
 #endif

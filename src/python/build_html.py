@@ -1,3 +1,4 @@
+Import("env")
 import os
 import re
 import sys
@@ -65,16 +66,23 @@ def build_common(out, env):
     build_html("main.css", "CSS", out, env)
     build_html("flag.svg", "FLAG", out, env)
 
-def build_tx_html(source, target, env):
-    out = open("src/WebContent.h", 'w')
+def build_tx_html(env):
+    out = open("include/WebContent.h", 'w')
     build_version(out, env)
     build_html("tx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close
 
-def build_rx_html(source, target, env):
-    out = open("src/WebContent.h", 'w')
+def build_rx_html(env):
+    out = open("include/WebContent.h", 'w')
     build_version(out, env)
     build_html("rx_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close
+
+platform = env.get('PIOPLATFORM', '')
+
+if platform in ['espressif8266']:
+    build_rx_html(env)
+elif platform in ['espressif32']:
+    build_tx_html(env)
