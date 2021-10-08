@@ -408,7 +408,6 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  WiFi.setHostname(myHostname);
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
@@ -533,6 +532,7 @@ static void HandleWebUpdate()
         DBGLN("Connecting to home network '%s'", config.GetSSID());
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
+        WiFi.setHostname(myHostname); // hostname must be set after the mode is set to STA
         changeTime = now;
         WiFi.begin(config.GetSSID(), config.GetPassword());
         startServices();
