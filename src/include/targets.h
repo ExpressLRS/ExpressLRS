@@ -358,7 +358,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_OLED_SCK -1
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
-#define GPIO_PIN_LED 15
+#define GPIO_PIN_LED_WS2812 15
 #define GPIO_PIN_FAN_EN 17
 
 #elif defined(TARGET_SX1280_RX_CCG_NANO_v05)
@@ -534,7 +534,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_TX_ENABLE      12
 #define GPIO_PIN_RCSIGNAL_RX    2
 #define GPIO_PIN_RCSIGNAL_TX    2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
-#define GPIO_PIN_LED            27
+#define GPIO_PIN_LED_WS2812     27
 #define GPIO_PIN_FAN_EN         17
 #define GPIO_PIN_RFamp_APC2     25
 
@@ -582,7 +582,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_TX_ENABLE      26
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
-#define GPIO_PIN_LED            -1
+#define GPIO_PIN_LED_WA2812     -1
 #define GPIO_PIN_LED_BLUE       17
 #define GPIO_PIN_LED_GREEN      16
 #define GPIO_PIN_BUTTON         25
@@ -617,6 +617,7 @@ Designed by NamimnoRC
 #error "Unknown target!"
 #endif
 
+#if defined(PLATFORM_STM32)
 #ifdef GPIO_PIN_LED_WS2812
 #ifndef GPIO_PIN_LED_WS2812_FAST
 #error "WS2812 support requires _FAST pin!"
@@ -624,6 +625,7 @@ Designed by NamimnoRC
 #else
 #define GPIO_PIN_LED_WS2812         UNDEF_PIN
 #define GPIO_PIN_LED_WS2812_FAST    UNDEF_PIN
+#endif
 #endif
 
 /* Set red led to default */
