@@ -471,19 +471,17 @@ static void startServices()
   
   String instance = String(myHostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  #ifdef PLATFORM_ESP8266
-    MDNS.setInstanceName(myHostname);
-    MDNS.addService(instance.c_str(), "http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "type", "rx");
-  #else
-    MDNS.setInstanceName(instance);
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
-  #endif
+  MDNS.setInstanceName(instance);
+  MDNS.addService("http", "tcp", 80);
   MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
   MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
   MDNS.addServiceTxt("http", "tcp", "version", VERSION);
   MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+  #if defined(TARGET_RX)
+    MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  #else
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
