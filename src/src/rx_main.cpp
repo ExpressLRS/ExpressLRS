@@ -55,7 +55,7 @@ uint32_t LEDWS2812LastUpdate;
 #define LED_INTERVAL_BIND_SHORT 100
 #define LED_INTERVAL_BIND_LONG  1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
-#define DIVERSITY_ANTENNA_INTERVAL 30
+#define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
@@ -448,6 +448,7 @@ static inline void switchAntenna()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     antenna = !antenna;
+    (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
     digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
 #endif
 }
