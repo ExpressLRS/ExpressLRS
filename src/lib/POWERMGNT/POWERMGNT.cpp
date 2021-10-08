@@ -137,12 +137,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_VALUE) && defined(TARGET_RX)
     Radio.SetOutputPower(POWER_VALUE);
 #elif defined(TARGET_RX)
-    #if defined(TARGET_RX_DEFAULT_POWER)
-        Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
-    #else
-        // Set to max power for telemetry on the RX if not specified
-        Radio.SetOutputPowerMax();
-    #endif
+    // Set to max power for telemetry on the RX if not specified
+    Radio.SetOutputPowerMax();
 #else
 #error "[ERROR] Unknown power management!"
 #endif

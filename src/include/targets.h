@@ -733,6 +733,7 @@ Designed by NamimnoRC
 #ifdef USE_DIVERSITY
     #define GPIO_PIN_ANTENNA_SELECT 9
 #endif
+#define POWER_VALUE             3
 
 #else
 #error "Unknown target!"
