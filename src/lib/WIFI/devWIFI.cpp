@@ -226,7 +226,8 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
-  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://elrs_tx.local from a browser on that network";
+  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
+    myHostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
 
@@ -408,7 +409,6 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  WiFi.setHostname(myHostname);
   if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
@@ -472,19 +472,17 @@ static void startServices()
   
   String instance = String(myHostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  #ifdef PLATFORM_ESP8266
-    MDNS.setInstanceName(myHostname);
-    MDNS.addService(instance.c_str(), "http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "type", "rx");
-  #else
-    MDNS.setInstanceName(instance);
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
-  #endif
+  MDNS.setInstanceName(instance);
+  MDNS.addService("http", "tcp", 80);
   MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
   MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
   MDNS.addServiceTxt("http", "tcp", "version", VERSION);
   MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+  #if defined(TARGET_RX)
+    MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  #else
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
@@ -533,6 +531,7 @@ static void HandleWebUpdate()
         DBGLN("Connecting to home network '%s'", config.GetSSID());
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
+        WiFi.setHostname(myHostname); // hostname must be set after the mode is set to STA
         changeTime = now;
         WiFi.begin(config.GetSSID(), config.GetPassword());
         startServices();
@@ -544,12 +543,17 @@ static void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
+
   if (servicesStarted)
   {
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
     #endif
+    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
+    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+    if (!Update.isRunning())
+      delay(1);
   }
 }
 
