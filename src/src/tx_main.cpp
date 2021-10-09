@@ -84,6 +84,7 @@ void ExitBindingMode();
 void SendUIDOverMSP();
 void VtxConfigToMSPOut();
 void BackpackWiFiToMSPOut(uint16_t);
+void VRxBackpackBinding();
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
 #if defined(USE_TX_BACKPACK)
@@ -940,6 +941,22 @@ void BackpackWiFiToMSPOut(uint16_t command)
 }
 #endif // USE_TX_BACKPACK
 
+void VRxBackpackBinding()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_BIND;
+  packet.addByte(MasterUID[0]);
+  packet.addByte(MasterUID[1]);
+  packet.addByte(MasterUID[2]);
+  packet.addByte(MasterUID[3]);
+  packet.addByte(MasterUID[4]);
+  packet.addByte(MasterUID[5]);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
 void eepromWriteToMSPOut()
 {
   mspPacket_t packet;
@@ -987,6 +1004,8 @@ void EnterBindingMode()
   hwTimer.resume();
 
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+
+  VRxBackpackBinding(); // Bind button also sends backpack bind packet.  Not sure if its a good idea :|
 }
 
 void ExitBindingMode()
