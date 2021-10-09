@@ -488,10 +488,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 void ICACHE_RAM_ATTR timerCallbackIdle()
 {
   NonceTX++;
-  if ((NonceTX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-  {
-    FHSSptr++;
-  }
+  HandleFHSS();
 }
 
 void UARTdisconnected()
