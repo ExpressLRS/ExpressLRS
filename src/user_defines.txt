@@ -42,7 +42,7 @@
 # modules are almost all inverted. ESP32 targets only
 -DUART_INVERTED
 
-# To use receiver with a KISS v1 FC or any other odball baud. Sets a baud rate of 400k
+# Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
 #-DRCVR_UART_BAUD=400000
 
 # Invert the TX pin in the receiver code to allow an inverted RX pin on the
