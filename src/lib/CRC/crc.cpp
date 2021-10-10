@@ -15,9 +15,13 @@ GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
     }
 }
 
-uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(uint8_t *data, uint8_t len)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t data)
 {
-    uint8_t crc = 0;
+    return crc8tab[data];
+}
+
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t *data, uint8_t len, uint8_t crc)
+{
     while (len--)
     {
         crc = crc8tab[crc ^ *data++];
@@ -25,9 +29,8 @@ uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(uint8_t *data, uint8_t len)
     return crc;
 }
 
-uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(volatile uint8_t *data, uint8_t len)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(volatile const uint8_t *data, uint8_t len, uint8_t crc)
 {
-    uint8_t crc = 0;
     while (len--)
     {
         crc = crc8tab[crc ^ *data++];

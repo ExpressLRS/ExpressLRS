@@ -1,5 +1,5 @@
 #include "CRSF.h"
-#include "../../lib/FIFO/FIFO.h"
+#include "FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
 #include "helpers.h"
@@ -162,7 +162,6 @@ void CRSF::End()
     }
 #endif
     uint32_t startTime = millis();
-    #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
     {
         handleUARTin();
@@ -193,22 +192,22 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
         return;
     }
 
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    constexpr uint8_t outBuffer[4] = {
+        LinkStatisticsFrameLength + 4,
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        LinkStatisticsFrameLength + 2,
+        CRSF_FRAMETYPE_LINK_STATISTICS
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
-    outBuffer[LinkStatisticsFrameLength + 3] = crc;
+    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    SerialOutFIFO.push(crc);
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -223,23 +222,30 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     if (!CRSF::CRSFstate)
         return;
 
-    uint8_t buf[6 + len];
+    static uint8_t buf[6] = {
+        0, // length
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        0,
+        0,
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        CRSF_ADDRESS_CRSF_TRANSMITTER
+    };
+
     // Header info
-    buf[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buf[1] = len + 4; // Type + DST + SRC + CRC
-    buf[2] = type;
-    buf[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buf[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-    // Payload
-    memcpy(&buf[5], data, len);
+    buf[0] = len + 6;
+    buf[2] = len + 4; // Type + DST + SRC + CRC
+    buf[3] = type;
+    
     // CRC - Starts at type, ends before CRC
-    buf[5+len] = crsf_crc.calc(&buf[2], len + 3);
+    uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
+    crc = crsf_crc.calc((byte *)data, len, crc);
 
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(sizeof(buf));
     SerialOutFIFO.pushBytes(buf, sizeof(buf));
+    SerialOutFIFO.pushBytes((byte *)data, len);
+    SerialOutFIFO.push(crc);
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -328,16 +334,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     uint32_t now = millis();
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
-        uint32_t packetRate;
-        if (CRSF::TxToHandsetBauds[UARTcurrentBaudIdx] == 115200 && CRSF::RequestedRCpacketInterval == 2000)
-        {
-            packetRate = 40000; //constrain to 250hz max
-        }
-        else
-        {
-            packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        }
-
+        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
         struct otxSyncData {
@@ -823,41 +820,43 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    constexpr uint8_t outBuffer[4] = {
+        LinkStatisticsFrameLength + 4,
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        LinkStatisticsFrameLength + 2,
+        CRSF_FRAMETYPE_LINK_STATISTICS
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
-
-    outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    SerialOutFIFO.push(crc);
+
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-    uint8_t outBuffer[RCframeLength + 4];
+    constexpr uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        RCframeLength + 2,
+        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = RCframeLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+    uint8_t crc = crsf_crc.calc(outBuffer[2]);
+    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], RCframeLength + 1);
-
-    outBuffer[RCframeLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
     //SerialOutFIFO.push(RCframeLength + 4);
     //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-    this->_dev->write(outBuffer, RCframeLength + 4);
+    this->_dev->write(outBuffer, sizeof(outBuffer));
+    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+    this->_dev->write(crc);
 #endif
 }
 
