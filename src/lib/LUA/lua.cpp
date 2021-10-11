@@ -34,7 +34,7 @@ static char luaSelectionOptionCount(const char *strOptions)
   }
 }
 
-static uint8_t getLuaTextSelectionStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *outarray)
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
@@ -43,55 +43,49 @@ static uint8_t getLuaTextSelectionStructToArray(const void *luaStruct, uint8_t *
   *next++ = 0; // min
   *next++ = luaSelectionOptionCount(p1->options); //max
   *next++ = 0; // default value
-  next = stpcpy(next, p1->units) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy(next, p1->units);
 }
 
-static uint8_t getLuaCommandStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaCommandStructToArray(const void *luaStruct, uint8_t *outarray)
 {
   struct luaItem_command *p1 = (struct luaItem_command *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   *next++ = p1->step;
   *next++ = 200; // timeout in 10ms
-  next = stpcpy(next, p1->info) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy(next, p1->info);
 }
 
-static uint8_t getLuaInt8StructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaInt8StructToArray(const void *luaStruct, uint8_t *outarray)
 {
   struct luaItem_int8 *p1 = (struct luaItem_int8 *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
-  next = stpcpy(next, p1->units) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy(next, p1->units);
 }
 
-static uint8_t getLuaInt16StructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *outarray)
 {
   struct luaItem_int16 *p1 = (struct luaItem_int16 *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   memcpy(next,&p1->properties,sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
-  next = stpcpy(next, p1->units) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy(next, p1->units);
 }
 
-static uint8_t getLuaStringStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *outarray)
 {
   struct luaItem_string *p1 = (struct luaItem_string *)luaStruct;
   char *next = stpcpy((char *)outarray,p1->name) + 1;
-  next = stpcpy(next, p1->value) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy(next, p1->value);
 }
 
-static uint8_t getLuaFolderStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *outarray)
 {
   struct luaItem_folder *p1 = (struct luaItem_folder *)luaStruct;
-  char *next = stpcpy((char *)outarray, p1->name) + 1;
-  return (uint8_t *)next - outarray + 2;
+  return (uint8_t *)stpcpy((char *)outarray, p1->name);
 }
 
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
@@ -112,28 +106,28 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   }
 
   uint8_t *chunkStart = &chunkBuffer[4];
-  uint8_t dataSize;
+  uint8_t *dataEnd;
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
-      dataSize = getLuaTextSelectionStructToArray(luaData, chunkStart);
+      dataEnd = luaTextSelectionStructToArray(luaData, chunkStart);
       break;
     case CRSF_COMMAND:
-      dataSize = getLuaCommandStructToArray(luaData, chunkStart);
+      dataEnd = luaCommandStructToArray(luaData, chunkStart);
       break;
     case CRSF_INT8: // fallthrough
     case CRSF_UINT8:
-      dataSize = getLuaInt8StructToArray(luaData, chunkStart);
+      dataEnd = luaInt8StructToArray(luaData, chunkStart);
       break;
     case CRSF_INT16: // fallthrough
     case CRSF_UINT16:
-      dataSize = getLuaInt16StructToArray(luaData, chunkStart);
+      dataEnd = luaInt16StructToArray(luaData, chunkStart);
       break;
-    case CRSF_STRING:
+    case CRSF_STRING: // fallthough
     case CRSF_INFO:
-      dataSize = getLuaStringStructToArray(luaData, chunkStart);
+      dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      dataSize = getLuaFolderStructToArray(luaData, chunkStart);
+      dataEnd = luaFolderStructToArray(luaData, chunkStart);
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
@@ -141,6 +135,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       return 0;
   }
 
+  // dataEnd points to the end of the last string
+  // 2 for parent, datatype, +1 for the null on the last string
+  uint8_t dataSize = 2 + (dataEnd - chunkStart) + 1;
   // Maximum number of chunked bytes that can be sent in one response
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
