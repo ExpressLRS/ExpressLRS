@@ -48,7 +48,7 @@ static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *ne
 
 static uint8_t *luaCommandStructToArray(const void *luaStruct, uint8_t *next)
 {
-  struct luaItem_command *p1 = (struct luaItem_command *)luaStruct;
+  const struct luaItem_command *p1 = (const struct luaItem_command *)luaStruct;
   *next++ = p1->step;
   *next++ = 200; // timeout in 10ms
   return (uint8_t *)stpcpy((char *)next, p1->info);
@@ -56,7 +56,7 @@ static uint8_t *luaCommandStructToArray(const void *luaStruct, uint8_t *next)
 
 static uint8_t *luaInt8StructToArray(const void *luaStruct, uint8_t *next)
 {
-  struct luaItem_int8 *p1 = (struct luaItem_int8 *)luaStruct;
+  const struct luaItem_int8 *p1 = (const struct luaItem_int8 *)luaStruct;
   memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
@@ -65,7 +65,7 @@ static uint8_t *luaInt8StructToArray(const void *luaStruct, uint8_t *next)
 
 static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *next)
 {
-  struct luaItem_int16 *p1 = (struct luaItem_int16 *)luaStruct;
+  const struct luaItem_int16 *p1 = (const struct luaItem_int16 *)luaStruct;
   memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
@@ -74,7 +74,7 @@ static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *next)
 
 static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 {
-  struct luaItem_string *p1 = (struct luaItem_string *)luaStruct;
+  const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
 
