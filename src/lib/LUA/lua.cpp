@@ -16,7 +16,7 @@ static uint8_t luaWarningFLags = false;
 static uint8_t suppressedLuaWarningFlags = true;
 
 #define LUA_MAX_PARAMS 32
-static const void *paramDefinitions[LUA_MAX_PARAMS] = {0};
+static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
@@ -260,10 +260,12 @@ bool luaHandleUpdateParameter()
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
-        DBGVLN("Write lua param %u %u", id, arg);
+        // All paramDefinitions are not luaItem_command but the common part is the same
+        struct luaItem_command *p = (struct luaItem_command *)paramDefinitions[id];
+        DBGLN("Set Lua [%s]=%u", p->common.name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
           if (arg == 6 && nextStatusChunk != 0) {
-            pushResponseChunk((struct luaItem_command *)paramDefinitions[id]);
+            pushResponseChunk(p);
           } else {
             paramCallbacks[id](id, arg);
           }

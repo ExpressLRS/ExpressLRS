@@ -193,7 +193,6 @@ static void registerLuaParameters()
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      DBGLN("Request AirRate: %u", arg);
       uint8_t rate = RATE_MAX - 1 - arg;
       rate = adjustPacketRateForBaud(rate);
       config.SetRate(rate);
@@ -202,7 +201,6 @@ static void registerLuaParameters()
   registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      DBGLN("Request TLM interval: %u", arg);
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
@@ -211,7 +209,6 @@ static void registerLuaParameters()
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
     {
-      DBGLN("Request Switch Mode: %u", arg);
       // +1 to the mode because 1-bit was mode 0 and has been removed
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
       uint32_t newSwitchMode = (arg + 1) & 0b11;
@@ -220,7 +217,6 @@ static void registerLuaParameters()
     }
   });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
-    DBGLN("Request Model Match: %u", arg);
     bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
     if (connectionState == connected) {
@@ -238,7 +234,6 @@ static void registerLuaParameters()
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
-    DBGLN("Request Power: %u", newPower);
     
     if (newPower > MaxPower)
     {
@@ -278,13 +273,11 @@ static void registerLuaParameters()
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      DBGVLN("arg %d", arg);
       if (arg == 4) // 4 = request confirmed, start
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        DBGLN("Wifi Update Mode Requested!");
         sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
         connectionState = wifiUpdate;
       }
@@ -329,7 +322,6 @@ static void registerLuaParameters()
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start BLE to prevent stuck on
         //unintentional button press.
-        DBGLN("BLE Joystick Mode Requested!");
         sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
         connectionState = bleJoystick;
       }
@@ -354,7 +346,6 @@ static void registerLuaParameters()
 
   registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
-      DBGLN("Binding requested from LUA");
       EnterBindingMode();
     }
     sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
