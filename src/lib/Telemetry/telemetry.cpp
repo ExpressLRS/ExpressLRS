@@ -36,7 +36,7 @@ bool Telemetry::ShouldCallUpdateModelMatch()
 }
 
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, MSP_RESP);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
@@ -205,9 +205,10 @@ void Telemetry::AppendTelemetryPackage()
     }
     for (int8_t i = 0; i < payloadTypesCount; i++)
     {
-        if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type && !payloadTypes[i].locked)
+        // last two entries are always reserved and used for every other telemetry response
+        if (i+1 == payloadTypesCount || i+2 == payloadTypesCount || CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type)
         {
-            if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
+            if (!payloadTypes[i].locked && CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
             {
                 memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
                 payloadTypes[i].updated = true;
@@ -218,7 +219,6 @@ void Telemetry::AppendTelemetryPackage()
                 cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
             }
             #endif
-            return;
         }
     }
 }

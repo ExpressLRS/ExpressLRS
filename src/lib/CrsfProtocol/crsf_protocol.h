@@ -103,6 +103,7 @@ static const unsigned int VTXtable[6][8] =
 typedef enum
 {
     CRSF_FRAMETYPE_GPS = 0x02,
+    CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
@@ -117,10 +118,15 @@ typedef enum
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
     CRSF_FRAMETYPE_COMMAND = 0x32,
+    // KISS frames
+    CRSF_FRAMETYPE_KISS_REQ  = 0x78,
+    CRSF_FRAMETYPE_KISS_RESP = 0x79,
     // MSP commands
     CRSF_FRAMETYPE_MSP_REQ = 0x7A,   // response request using msp sequence as command
     CRSF_FRAMETYPE_MSP_RESP = 0x7B,  // reply with 58 byte chunked binary
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
+    // Ardupilot frames
+    CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,
 } crsf_frame_type_e;
 
 typedef enum {
@@ -139,11 +145,12 @@ enum {
 
 enum {
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
+    CRSF_FRAME_VARIO_PAYLOAD_SIZE = 2,
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
     CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
     CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = 16,
-    CRSF_FRAME_MSP_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
+    CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
 };
 
 typedef enum
