@@ -25,25 +25,23 @@ static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
-struct tagLuaItem_textSelection luaAirRate = {
+struct luaItem_Selection luaAirRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
+    0, // value
     "Packet Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
     "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
     "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
 #endif
-    {0,0,3},//value,min,max
-    "Hz",
-    LUA_TEXTSELECTION_SIZE(luaAirRate)
+    "Hz"
 };
-struct tagLuaItem_textSelection luaTlmRate = {
+struct luaItem_Selection luaTlmRate = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Telem Ratio",
     "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
-    {0,0,7},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaTlmRate)
+    emptySpace
 };
 //----------------------------POWER------------------
 struct tagLuaItem_folder luaPowerFolder = {
@@ -51,39 +49,35 @@ struct tagLuaItem_folder luaPowerFolder = {
     "TX Power",
     LUA_FOLDER_SIZE(luaPowerFolder)
 };
-struct tagLuaItem_textSelection luaPower = {
+struct luaItem_Selection luaPower = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Max Power",
     "10;25;50;100;250;500;1000;2000",
-    {0,0,7},//value,min,max
-    "mW",
-    LUA_TEXTSELECTION_SIZE(luaPower)
+    "mW"
 };
-struct tagLuaItem_textSelection luaDynamicPower = {
+struct luaItem_Selection luaDynamicPower = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Dynamic",
     "Off;On;AUX9;AUX10;AUX11;AUX12",
-    {0,0,5},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaDynamicPower)
+    emptySpace
 };
 //----------------------------POWER------------------
 
-struct tagLuaItem_textSelection luaSwitch = {
+struct luaItem_Selection luaSwitch = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Switch Mode",
     "Hybrid;Wide",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaSwitch)
+    emptySpace
 };
-struct tagLuaItem_textSelection luaModelMatch = {
+struct luaItem_Selection luaModelMatch = {
     {5,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Model Match",
     "Off;On",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaModelMatch)
+    emptySpace
 };
 struct tagLuaItem_command luaBind = {
     {0,0,(uint8_t)CRSF_COMMAND},//id,type
@@ -156,40 +150,36 @@ struct tagLuaItem_folder luaVtxFolder = {
     LUA_FOLDER_SIZE(luaVtxFolder)
 };
 
-struct tagLuaItem_textSelection luaVtxBand = {
+struct luaItem_Selection luaVtxBand = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Band",
     "Off;A;B;E;F;R;L",
-    {0,0,6},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxBand)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxChannel = {
+struct luaItem_Selection luaVtxChannel = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Channel",
     "1;2;3;4;5;6;7;8",
-    {0,0,7},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxPwr = {
+struct luaItem_Selection luaVtxPwr = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Pwr Lvl",
     "-;1;2;3;4;5;6;7;8",
-    {0,0,8},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxPwr)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxPit = {
+struct luaItem_Selection luaVtxPit = {
     {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
+    0, // value
     "Pitmode",
     "Off;On",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxPit)
+    emptySpace
 };
 
 struct tagLuaItem_command luaVtxSend = {

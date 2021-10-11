@@ -319,13 +319,6 @@ struct tagLuaDeviceProperties {
     uint32_t softwareVer;
     uint8_t fieldCnt; //number of field of params this device has
 }PACKED;
-struct tagLuaTextSelectionProperties{
-    uint8_t value;
-    const uint8_t min;
-    const uint8_t max;
-//    uint8_t defaultValue;
-}PACKED;
-
 struct tagLuaCommandProperties{
     uint8_t status;
     const uint8_t timeout;
@@ -362,13 +355,12 @@ struct tagLuaFloatProperties{
 //    float defaultValue;
 }PACKED;
 
-struct tagLuaItem_textSelection {
+struct luaItem_Selection {
     struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    const char* const textOption; //ascii representative of param value
-    struct tagLuaTextSelectionProperties luaProperties2;
-    const char *label2; //param unit
-    uint8_t size;
+    uint8_t value;
+    const char* const name;    // display name
+    const char* const options; // selection options, separated by ';'
+    const char* const units;
 } PACKED;
 struct tagLuaItem_command {
     struct tagLuaProperties1 luaProperties1;

@@ -21,16 +21,30 @@ static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
+static char luaSelectionOptionCount(const char *strOptions)
+{
+  uint8_t retVal = 0;
+  while (true)
+  {
+    char c = *strOptions++;
+    if (c == ';')
+      ++retVal;
+    else if (c == '\0')
+      return retVal;
+  }
+}
 
-static uint8_t getLuaTextSelectionStructToArray(const void * luaStruct, uint8_t *outarray){
-  struct tagLuaItem_textSelection *p1 = (struct tagLuaItem_textSelection*)luaStruct;
-  char *next = stpcpy((char *)outarray,p1->label1) + 1;
-  next = stpcpy(next,p1->textOption) + 1;
-  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-  next+=sizeof(p1->luaProperties2);
-  *next++=0; // default value
-  stpcpy(next,p1->label2);
-  return p1->size;
+static uint8_t getLuaTextSelectionStructToArray(const void *luaStruct, uint8_t *outarray)
+{
+  const struct luaItem_Selection *p1 = (const struct luaItem_Selection *)luaStruct;
+  char *next = stpcpy((char *)outarray, p1->name) + 1;
+  next = stpcpy(next, p1->options) + 1;
+  *next++ = p1->value; // value
+  *next++ = 0; // min
+  *next++ = luaSelectionOptionCount(p1->options); //max
+  *next++ = 0; // default value
+  next = stpcpy(next, p1->units) + 1;
+  return (uint8_t *)next - outarray + 2;
 }
 
 static uint8_t getLuaCommandStructToArray(const void * luaStruct, uint8_t *outarray){
