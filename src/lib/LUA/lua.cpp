@@ -89,7 +89,7 @@ static uint8_t getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarr
   return p1->size;
 }
 
-static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct tagLuaProperties1 *luaData)
+static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
   
@@ -155,8 +155,8 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 }
 
 static void pushResponseChunk(struct tagLuaItem_command *cmd) {
-  DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->luaProperties1.id, nextStatusChunk, cmd->luaProperties2.status);
-  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct tagLuaProperties1 *)cmd) == 0) {
+  DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->common.id, nextStatusChunk, cmd->luaProperties2.status);
+  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -200,23 +200,22 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
   UpdateParamReq = true;
 }
 
-uint8_t agentLiteFolder[4+32+2] = "HooJ";
-struct tagLuaItem_folder luaAgentLite = {
-    {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    (const char *)agentLiteFolder,
-    0
-};
-
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   if (definition == NULL)
   {
+    static uint8_t agentLiteFolder[4+32+2] = "HooJ";
+    static struct tagLuaItem_folder luaAgentLite = {
+        {CRSF_FOLDER},
+        (const char *)agentLiteFolder,
+    };
+
     paramDefinitions[0] = &luaAgentLite;
     paramCallbacks[0] = 0;
     uint8_t *pos = agentLiteFolder + 4;
     for (int i=1;i<=lastLuaField;i++)
     {
-      struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)paramDefinitions[i];
+      struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)paramDefinitions[i];
       if (p->parent == 0) {
         *pos++ = i;
       }
@@ -226,7 +225,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     luaAgentLite.size = LUA_FOLDER_SIZE(luaAgentLite);
     return;
   }
-  struct tagLuaProperties1 *p = (struct tagLuaProperties1 *)definition;
+  struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
@@ -287,12 +286,12 @@ bool luaHandleUpdateParameter()
       {
         DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
         struct tagLuaItem_command *field = (struct tagLuaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
-        if (field != 0 && (field->luaProperties1.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
+        if (field != 0 && (field->common.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
           field->luaProperties2.status = 0;
           field->label2 = "";
           field->size = LUA_COMMAND_SIZE((*field));
         }
-        sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct tagLuaProperties1 *)field);
+        sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct luaPropertiesCommon *)field);
       }
       break;
 

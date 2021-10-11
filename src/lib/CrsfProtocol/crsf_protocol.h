@@ -306,13 +306,12 @@ typedef struct crsfPayloadLinkstatistics_s
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
-// only 1st properties has the same type on all lua packet type.
-struct tagLuaProperties1{
-    uint8_t id;
-//    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
-    uint8_t parent;
-    const uint8_t type;
-}PACKED;
+struct luaPropertiesCommon {
+    const crsf_value_type_e type;
+    uint8_t id;         // Sequential id assigned by enumeration
+    uint8_t parent;     // id of parent folder
+} PACKED;
+
 struct tagLuaDeviceProperties {
     uint32_t serialNo;
     uint32_t hardwareVer;
@@ -356,14 +355,14 @@ struct tagLuaFloatProperties{
 }PACKED;
 
 struct luaItem_Selection {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     uint8_t value;
     const char* const name;    // display name
     const char* const options; // selection options, separated by ';'
     const char* const units;
 } PACKED;
 struct tagLuaItem_command {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //command name
     struct tagLuaCommandProperties luaProperties2;
     const char *label2; //command info
@@ -371,48 +370,48 @@ struct tagLuaItem_command {
 } PACKED;
 
 struct tagLuaItem_uint8 {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //param name
     struct tagLuaUint8Properties luaProperties2;
     const char* const label2;//param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_int8 {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //param name
     struct tagLuaInt8Properties luaProperties2;
     const char* const label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_uint16 {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //param name
     struct tagLuaUint16Properties luaProperties2;
     const char* const label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_int16 {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //param name
     struct tagLuaInt16Properties luaProperties2;
     const char* const label2; //param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_float {
-    struct tagLuaProperties1 luaProperties1;
+    struct luaPropertiesCommon common;
     const char* const label1; //param name
     struct tagLuaFloatProperties luaProperties2;
     const char* const label2;//param unit
     uint8_t size;
 } PACKED;
 struct tagLuaItem_string {
-    const struct tagLuaProperties1 luaProperties1;
+    const struct luaPropertiesCommon common;
     const char* const label1; //param name
     const char *label2; //string value
     uint8_t size;
 } PACKED;
 struct tagLuaItem_folder {
-    const struct tagLuaProperties1 luaProperties1;
+    const struct luaPropertiesCommon common;
     const char* const label1; //param name
     uint8_t size;
 } PACKED;
