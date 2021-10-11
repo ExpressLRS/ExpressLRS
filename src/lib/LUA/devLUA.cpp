@@ -207,7 +207,7 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      DBGLN("Request AirRate: %d", arg);
+      DBGLN("Request AirRate: %u", arg);
       uint8_t rate = RATE_MAX - 1 - arg;
       rate = adjustPacketRateForBaud(rate);
       config.SetRate(rate);
@@ -216,7 +216,7 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      DBGLN("Request TLM interval: %d", arg);
+      DBGLN("Request TLM interval: %u", arg);
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
@@ -228,16 +228,14 @@ static void registerLuaParameters() {
       DBGLN("Request Switch Mode: %d", arg);
       // +1 to the mode because 1-bit was mode 0 and has been removed
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-      uint32_t newSwitchMode = (CRSF::ParameterUpdateData[2] + 1) & 0b11;
+      uint32_t newSwitchMode = (arg + 1) & 0b11;
       config.SetSwitchMode(newSwitchMode);
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
   });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
-    bool newModelMatch = CRSF::ParameterUpdateData[2] & 0b1;
-#ifndef DEBUG_SUPPRESS
-    DBGLN("Request Model Match: %d", newModelMatch);
-#endif
+    DBGLN("Request Model Match: %u", arg);
+    bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
     if (connectionState == connected) {
       mspPacket_t msp;
@@ -252,7 +250,7 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
-    DBGLN("Request Power: %d", newPower);
+    DBGLN("Request Power: %u", newPower);
     
     if (newPower > MaxPower)
     {
