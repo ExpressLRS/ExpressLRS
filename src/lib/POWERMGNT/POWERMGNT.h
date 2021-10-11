@@ -75,7 +75,7 @@
 #define DefaultPowerEnum PWR_50mW
 #define MinPower PWR_10mW
 
-#else
+#elif defined(TARGET_TX)
 // Default is "100mW module"
 //  ==> average ouput is 50mW with high duty cycle
 #define MaxPower PWR_50mW
