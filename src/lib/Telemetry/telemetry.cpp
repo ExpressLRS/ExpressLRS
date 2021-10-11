@@ -212,9 +212,14 @@ void Telemetry::AppendTelemetryPackage()
             {
                 memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));
                 payloadTypes[i].updated = true;
+                return;
+            }
+            // don't use the fallback buffer if the registered sensor is locked
+            else if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type) {
+                return;
             }
             #if defined(UNIT_TEST)
-            else
+            else if (CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) > payloadTypes[i].size)
             {
                 cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
             }
