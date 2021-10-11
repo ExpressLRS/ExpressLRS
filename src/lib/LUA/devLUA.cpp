@@ -225,7 +225,7 @@ static void registerLuaParameters() {
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
     {
-      DBGLN("Request Switch Mode: %d", arg);
+      DBGLN("Request Switch Mode: %u", arg);
       // +1 to the mode because 1-bit was mode 0 and has been removed
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
       uint32_t newSwitchMode = (arg + 1) & 0b11;
