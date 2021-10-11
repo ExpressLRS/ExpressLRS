@@ -100,8 +100,10 @@ void VtxConfigToMSPOut();
 void BackpackWiFiToMSPOut(uint16_t);
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
+#if defined(USE_TX_BACKPACK)
 uint8_t TxBackpackWiFiReadyToSend = false;
 uint8_t VRxBackpackWiFiReadyToSend = false;
+#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -748,6 +750,7 @@ void loop()
     VtxConfigToMSPOut();
   }
 
+#if defined(USE_TX_BACKPACK)
   if (TxBackpackWiFiReadyToSend)
   {
     TxBackpackWiFiReadyToSend = false;
@@ -759,6 +762,7 @@ void loop()
     VRxBackpackWiFiReadyToSend = false;
     BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
   }
+#endif
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
@@ -924,6 +928,7 @@ void VtxConfigToMSPOut()
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
+#if defined(USE_TX_BACKPACK)
 void BackpackWiFiToMSPOut(uint16_t command)
 {
   mspPacket_t packet;
@@ -934,6 +939,7 @@ void BackpackWiFiToMSPOut(uint16_t command)
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
+#endif // USE_TX_BACKPACK
 
 void eepromWriteToMSPOut()
 {

@@ -417,7 +417,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_BUFFER_OE_INVERTED 1
 #define GPIO_PIN_FAN_EN         PB1
 /* Backpack logger connection */
-#ifdef USE_ESP8266_BACKPACK
+#ifdef USE_TX_BACKPACK
     #define GPIO_PIN_DEBUG_RX   PA10
     #define GPIO_PIN_DEBUG_TX   PA9
 #else
