@@ -63,6 +63,11 @@
 #-DHOME_WIFI_SSID=""
 #-DHOME_WIFI_PASSWORD=""
 
+# Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
+# The device target should enable this automatically for devices that come with this, but can be added
+# to any device.
+#-DUSE_TX_BACKPACK
+
 #-DJUST_BEEP_ONCE
 #-DDISABLE_STARTUP_BEEP
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
