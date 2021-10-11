@@ -203,7 +203,8 @@ extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
-static void registerLuaParameters() {
+static void registerLuaParameters()
+{
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
@@ -247,6 +248,8 @@ static void registerLuaParameters() {
       CRSF::AddMspMessage(&msp);
     }
   });
+
+  // POWER folder
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
@@ -285,16 +288,9 @@ static void registerLuaParameters() {
     sendLuaCommandResponse(&luaVtxSend, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaVtxFolder.common.id);
 
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      DBGLN("Binding requested from LUA");
-      EnterBindingMode();
-    }
-    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
-  });
-
+  // WIFI folder
   registerLUAParameter(&luaWiFiFolder);
-  #ifdef PLATFORM_ESP32
+  #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
       DBGVLN("arg %d", arg);
       if (arg == 4) // 4 = request confirmed, start
@@ -366,6 +362,14 @@ static void registerLuaParameters() {
     });
 
   #endif
+
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      DBGLN("Binding requested from LUA");
+      EnterBindingMode();
+    }
+    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
+  });
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
