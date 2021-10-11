@@ -100,7 +100,7 @@ static struct luaItem_folder luaWiFiFolder = {
 };
 
 #if defined(PLATFORM_ESP32)
-static struct tagLuaItem_command luaWebUpdate = {
+static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     0, // step
     emptySpace
@@ -124,7 +124,7 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 #endif
 
 #if defined(PLATFORM_ESP32)
-static struct tagLuaItem_command luaBLEJoystick = {
+static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
     0, // step
     emptySpace
@@ -301,7 +301,7 @@ static void registerLuaParameters()
       }
       else
       {
-        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
+        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.step, luaWebUpdate.info);
       }
     },luaWiFiFolder.common.id);
   #endif
@@ -346,7 +346,7 @@ static void registerLuaParameters()
       }
       else
       {
-        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
+        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.step, luaBLEJoystick.info);
       }
     });
 
