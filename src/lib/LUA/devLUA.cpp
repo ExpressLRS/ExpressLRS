@@ -26,9 +26,8 @@ static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
 static struct luaItem_selection luaAirRate = {
-    {CRSF_TEXT_SELECTION},
+    {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-    "Packet Rate",
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
     "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
@@ -38,99 +37,86 @@ static struct luaItem_selection luaAirRate = {
 };
 
 static struct luaItem_selection luaTlmRate = {
-    {CRSF_TEXT_SELECTION},
+    {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Telem Ratio",
     "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
     emptySpace
 };
 
 //----------------------------POWER------------------
 static struct luaItem_folder luaPowerFolder = {
-    {CRSF_FOLDER},
-    "TX Power"
+    {"TX Power", CRSF_FOLDER},
 };
 
 static struct luaItem_selection luaPower = {
-    {CRSF_TEXT_SELECTION},
+    {"Max Power", CRSF_TEXT_SELECTION},
     0, // value
-    "Max Power",
     "10;25;50;100;250;500;1000;2000",
     "mW"
 };
 
 static struct luaItem_selection luaDynamicPower = {
-    {CRSF_TEXT_SELECTION},
+    {"Dynamic", CRSF_TEXT_SELECTION},
     0, // value
-    "Dynamic",
     "Off;On;AUX9;AUX10;AUX11;AUX12",
     emptySpace
 };
 //----------------------------POWER------------------
 
 static struct luaItem_selection luaSwitch = {
-    {CRSF_TEXT_SELECTION},
+    {"Switch Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Switch Mode",
     "Hybrid;Wide",
     emptySpace
 };
 
 static struct luaItem_selection luaModelMatch = {
-    {CRSF_TEXT_SELECTION},
+    {"Model Match", CRSF_TEXT_SELECTION},
     0, // value
-    "Model Match",
     "Off;On",
     emptySpace
 };
 
 static struct luaItem_command luaBind = {
-    {CRSF_COMMAND},
+    {"Bind", CRSF_COMMAND},
     0, // step
-    "Bind",
     emptySpace
 };
 
 static struct luaItem_string luaInfo = {
-    {(crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
-    "Bad/Good",
+    {"Bad/Good", (crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
     emptySpace
 };
 
 static struct luaItem_string luaELRSversion = {
-    {CRSF_INFO},
-    thisVersion,
+    {thisVersion, CRSF_INFO},
     thisCommit
 };
 
 #if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
 //---------------------------- WiFi -----------------------------
 static struct luaItem_folder luaWiFiFolder = {
-    {CRSF_FOLDER},
-    "WiFi Connectivity"
+    {"WiFi Connectivity", CRSF_FOLDER}
 };
 
 #if defined(PLATFORM_ESP32)
 static struct tagLuaItem_command luaWebUpdate = {
-    {CRSF_COMMAND},
+    {"Enable WiFi", CRSF_COMMAND},
     0, // step
-    "Enable WiFi",
     emptySpace
 };
 #endif
 
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
-    {CRSF_COMMAND},
+    {"Enable Backpack WiFi", CRSF_COMMAND},
     0, // step
-    "Enable Backpack WiFi",
     emptySpace
 };
 
 static struct luaItem_command luaVRxBackpackUpdate = {
-    {CRSF_COMMAND},
+    {"Enable VRx WiFi", CRSF_COMMAND},
     0, // step
-    "Enable VRx WiFi",
     emptySpace
 };
 #endif // USE_TX_BACKPACK
@@ -139,55 +125,48 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 
 #if defined(PLATFORM_ESP32)
 static struct tagLuaItem_command luaBLEJoystick = {
-    {CRSF_COMMAND},
+    {"BLE Joystick", CRSF_COMMAND},
     0, // step
-    "BLE Joystick",
     emptySpace
 };
 #endif
 
 //----------------------------VTX ADMINISTRATOR------------------
 static struct luaItem_folder luaVtxFolder = {
-    {CRSF_FOLDER},
-    "VTX Administrator"
+    {"VTX Administrator", CRSF_FOLDER},
 };
 
 static struct luaItem_selection luaVtxBand = {
-    {CRSF_TEXT_SELECTION},
+    {"Band", CRSF_TEXT_SELECTION},
     0, // value
-    "Band",
     "Off;A;B;E;F;R;L",
     emptySpace
 };
 
 static struct luaItem_selection luaVtxChannel = {
-    {CRSF_TEXT_SELECTION},
+    {"Channel", CRSF_TEXT_SELECTION},
     0, // value
-    "Channel",
     "1;2;3;4;5;6;7;8",
     emptySpace
 };
 
 static struct luaItem_selection luaVtxPwr = {
-    {CRSF_TEXT_SELECTION},
+    {"Pwr Lvl", CRSF_TEXT_SELECTION},
     0, // value
-    "Pwr Lvl",
     "-;1;2;3;4;5;6;7;8",
     emptySpace
 };
 
 static struct luaItem_selection luaVtxPit = {
-    {CRSF_TEXT_SELECTION},
+    {"Pitmode", CRSF_TEXT_SELECTION},
     0, // value
-    "Pitmode",
     "Off;On",
     emptySpace
 };
 
 static struct luaItem_command luaVtxSend = {
-    {CRSF_COMMAND},
+    {"Send VTx", CRSF_COMMAND},
     0, // step
-    "Send VTx",
     emptySpace
 };
 //----------------------------VTX ADMINISTRATOR------------------

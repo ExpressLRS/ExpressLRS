@@ -6,6 +6,7 @@
 #include "crsf_protocol.h"
 
 struct luaPropertiesCommon {
+    const char* const name;    // display name
     const crsf_value_type_e type;
     uint8_t id;         // Sequential id assigned by enumeration
     uint8_t parent;     // id of parent folder
@@ -21,7 +22,6 @@ struct tagLuaDeviceProperties {
 struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
-    const char* const name;    // display name
     const char* const options; // selection options, separated by ';'
     const char* const units;
 } PACKED;
@@ -29,7 +29,6 @@ struct luaItem_selection {
 struct luaItem_command {
     struct luaPropertiesCommon common;
     uint8_t step;           // state
-    const char* const name; // display name
     const char *info;       // status info to display
 } PACKED;
 
@@ -51,7 +50,6 @@ struct luaPropertiesInt8 {
 struct luaItem_int8 {
     struct luaPropertiesCommon common;
     struct luaPropertiesInt8 properties;
-    const char* const name;  // display name
     const char* const units;
 } PACKED;
 
@@ -73,19 +71,16 @@ struct luaPropertiesInt16 {
 struct luaItem_int16 {
     struct luaPropertiesCommon common;
     struct luaPropertiesInt16 properties;
-    const char* const name; // display name
     const char* const units;
 } PACKED;
 
 struct luaItem_string {
     const struct luaPropertiesCommon common;
-    const char* const name; // display name
     const char* value;
 } PACKED;
 
 struct luaItem_folder {
     const struct luaPropertiesCommon common;
-    const char* const name; // display name
 } PACKED;
 
 struct tagLuaElrsParams {

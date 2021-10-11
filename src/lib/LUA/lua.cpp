@@ -22,7 +22,7 @@ static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
-static char luaSelectionOptionCount(const char *strOptions)
+static uint8_t luaSelectionOptionCount(const char *strOptions)
 {
   uint8_t retVal = 0;
   while (true)
@@ -35,58 +35,47 @@ static char luaSelectionOptionCount(const char *strOptions)
   }
 }
 
-static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
-  char *next = stpcpy((char *)outarray, p1->name) + 1;
-  next = stpcpy(next, p1->options) + 1;
+  next = (uint8_t *)stpcpy((char *)next, p1->options) + 1;
   *next++ = p1->value; // value
   *next++ = 0; // min
   *next++ = luaSelectionOptionCount(p1->options); //max
   *next++ = 0; // default value
-  return (uint8_t *)stpcpy(next, p1->units);
+  return (uint8_t *)stpcpy((char *)next, p1->units);
 }
 
-static uint8_t *luaCommandStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaCommandStructToArray(const void *luaStruct, uint8_t *next)
 {
   struct luaItem_command *p1 = (struct luaItem_command *)luaStruct;
-  char *next = stpcpy((char *)outarray, p1->name) + 1;
   *next++ = p1->step;
   *next++ = 200; // timeout in 10ms
-  return (uint8_t *)stpcpy(next, p1->info);
+  return (uint8_t *)stpcpy((char *)next, p1->info);
 }
 
-static uint8_t *luaInt8StructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaInt8StructToArray(const void *luaStruct, uint8_t *next)
 {
   struct luaItem_int8 *p1 = (struct luaItem_int8 *)luaStruct;
-  char *next = stpcpy((char *)outarray, p1->name) + 1;
   memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
-  return (uint8_t *)stpcpy(next, p1->units);
+  return (uint8_t *)stpcpy((char *)next, p1->units);
 }
 
-static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *next)
 {
   struct luaItem_int16 *p1 = (struct luaItem_int16 *)luaStruct;
-  char *next = stpcpy((char *)outarray, p1->name) + 1;
-  memcpy(next,&p1->properties,sizeof(p1->properties));
+  memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
   *next++ = 0; // default value
-  return (uint8_t *)stpcpy(next, p1->units);
+  return (uint8_t *)stpcpy((char *)next, p1->units);
 }
 
-static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *outarray)
+static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 {
   struct luaItem_string *p1 = (struct luaItem_string *)luaStruct;
-  char *next = stpcpy((char *)outarray,p1->name) + 1;
-  return (uint8_t *)stpcpy(next, p1->value);
-}
-
-static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *outarray)
-{
-  struct luaItem_folder *p1 = (struct luaItem_folder *)luaStruct;
-  return (uint8_t *)stpcpy((char *)outarray, p1->name);
+  return (uint8_t *)stpcpy((char *)next, p1->value);
 }
 
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
@@ -105,8 +94,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   if (crsf.elrsLUAmode) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
+  // Copy the name to the buffer starting at chunkBuffer[4]
+  uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
 
-  uint8_t *chunkStart = &chunkBuffer[4];
   uint8_t *dataEnd;
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
@@ -128,7 +118,10 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      dataEnd = luaFolderStructToArray(luaData, chunkStart);
+      // Nothing to do, the name is all there is
+      // but subtract 1 because dataSize expects the end to not include the null
+      // which is already accounted for in chunkStart
+      dataEnd = chunkStart - 1;
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
@@ -137,8 +130,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   }
 
   // dataEnd points to the end of the last string
-  // 2 for parent, datatype, +1 for the null on the last string
-  uint8_t dataSize = 2 + (dataEnd - chunkStart) + 1;
+  // -2 bytes Lua chunk header: FieldId, ChunksRemain
+  // +1 for the null on the last string
+  uint8_t dataSize = (dataEnd - chunkBuffer) - 2 + 1;
   // Maximum number of chunked bytes that can be sent in one response
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
@@ -207,8 +201,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   {
     static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
-        {CRSF_FOLDER},
-        (const char *)agentLiteFolder,
+        {(const char *)agentLiteFolder, CRSF_FOLDER},
     };
 
     paramDefinitions[0] = &luaAgentLite;
