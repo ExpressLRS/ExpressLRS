@@ -92,18 +92,16 @@ static struct luaItem_command luaBind = {
     emptySpace
 };
 
-static struct tagLuaItem_string luaInfo = {
+static struct luaItem_string luaInfo = {
     {(crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
     "Bad/Good",
-    thisCommit,
-    LUA_STRING_SIZE(luaInfo)
+    emptySpace
 };
 
-static struct tagLuaItem_string luaELRSversion = {
+static struct luaItem_string luaELRSversion = {
     {CRSF_INFO},
     thisVersion,
-    thisCommit,
-    LUA_STRING_SIZE(luaELRSversion)
+    thisCommit
 };
 
 //---------------------------- WiFi -----------------------------

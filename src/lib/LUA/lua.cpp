@@ -70,7 +70,7 @@ static uint8_t getLuaInt8StructToArray(const void *luaStruct, uint8_t *outarray)
 
 static uint8_t getLuaInt16StructToArray(const void *luaStruct, uint8_t *outarray)
 {
-  struct luaItem_int16 *p1 = (struct luaItem_int16*)luaStruct;
+  struct luaItem_int16 *p1 = (struct luaItem_int16 *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   memcpy(next,&p1->properties,sizeof(p1->properties));
   next += sizeof(p1->properties);
@@ -79,11 +79,12 @@ static uint8_t getLuaInt16StructToArray(const void *luaStruct, uint8_t *outarray
   return (uint8_t *)next - outarray + 2;
 }
 
-static uint8_t getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
-  struct tagLuaItem_string *p1 = (struct tagLuaItem_string*)luaStruct;
-  char *next = stpcpy((char *)outarray,p1->label1) + 1;
-  stpcpy(next,p1->label2);
-  return p1->size;
+static uint8_t getLuaStringStructToArray(const void *luaStruct, uint8_t *outarray)
+{
+  struct luaItem_string *p1 = (struct luaItem_string *)luaStruct;
+  char *next = stpcpy((char *)outarray,p1->name) + 1;
+  next = stpcpy(next, p1->value) + 1;
+  return (uint8_t *)next - outarray + 2;
 }
 
 static uint8_t getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){

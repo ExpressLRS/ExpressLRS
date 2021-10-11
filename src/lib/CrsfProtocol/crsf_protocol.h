@@ -319,13 +319,6 @@ struct tagLuaDeviceProperties {
     uint8_t fieldCnt; //number of field of params this device has
 }PACKED;
 
-struct tagLuaFloatProperties{
-    float value;
-    const float min;
-    const float max;
-//    float defaultValue;
-}PACKED;
-
 struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
@@ -385,19 +378,12 @@ struct luaItem_int16 {
     const char* const units;
 } PACKED;
 
-struct tagLuaItem_float {
-    struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    struct tagLuaFloatProperties luaProperties2;
-    const char* const label2;//param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_string {
+struct luaItem_string {
     const struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    const char *label2; //string value
-    uint8_t size;
+    const char* const name; // display name
+    const char* value;
 } PACKED;
+
 struct tagLuaItem_folder {
     const struct luaPropertiesCommon common;
     const char* const label1; //param name

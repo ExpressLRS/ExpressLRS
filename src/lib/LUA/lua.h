@@ -5,10 +5,6 @@
 #include "targets.h"
 #include "crsf_protocol.h"
 
-#define LUA_DEVICE_SIZE(X) (uint8_t)(sizeof(tagLuaDeviceProperties)+strlen(X.label1)+1)
-#define LUA_UINT8_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+sizeof(tagLuaUint8Properties)+1+strlen(X.label2)+1)
-#define LUA_UINT16_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+sizeof(tagLuaUint16Properties)+2+strlen(X.label2)+1)
-#define LUA_STRING_SIZE(X) (uint8_t)(2+strlen(X.label1)+1+strlen(X.label2)+1)
 #define LUA_FOLDER_SIZE(X) (uint8_t)(2+strlen(X.label1)+1)
 
 extern void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
@@ -39,7 +35,7 @@ inline void setLuaUint16Value(struct luaItem_int16 *luaStruct, uint16_t newvalue
 inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) {
     luaStruct->properties.s.value = (newvalue >> 8) | (newvalue << 8);
 }
-inline void setLuaStringValue(struct tagLuaItem_string *luaStruct,const char *newvalue){
-    luaStruct->label2 = newvalue;
+inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
+    luaStruct->value = newvalue;
 }
 #endif
