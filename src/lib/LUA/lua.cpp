@@ -36,7 +36,7 @@ static char luaSelectionOptionCount(const char *strOptions)
 
 static uint8_t getLuaTextSelectionStructToArray(const void *luaStruct, uint8_t *outarray)
 {
-  const struct luaItem_Selection *p1 = (const struct luaItem_Selection *)luaStruct;
+  const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   next = stpcpy(next, p1->options) + 1;
   *next++ = p1->value; // value
@@ -49,7 +49,7 @@ static uint8_t getLuaTextSelectionStructToArray(const void *luaStruct, uint8_t *
 
 static uint8_t getLuaCommandStructToArray(const void *luaStruct, uint8_t *outarray)
 {
-  struct luaItem_Command *p1 = (struct luaItem_Command *)luaStruct;
+  struct luaItem_command *p1 = (struct luaItem_command *)luaStruct;
   char *next = stpcpy((char *)outarray, p1->name) + 1;
   *next++ = p1->step;
   *next++ = 200; // timeout in 10ms
@@ -57,24 +57,26 @@ static uint8_t getLuaCommandStructToArray(const void *luaStruct, uint8_t *outarr
   return (uint8_t *)next - outarray + 2;
 }
 
-static uint8_t getLuaUint8StructToArray(const void * luaStruct, uint8_t *outarray){
-  struct tagLuaItem_uint8 *p1 = (struct tagLuaItem_uint8*)luaStruct;
-  char *next = stpcpy((char *)outarray,p1->label1) + 1;
-  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-  next+=sizeof(p1->luaProperties2);
-  *next++=0; // default value
-  stpcpy(next,p1->label2);
-  return p1->size;
+static uint8_t getLuaInt8StructToArray(const void *luaStruct, uint8_t *outarray)
+{
+  struct luaItem_int8 *p1 = (struct luaItem_int8 *)luaStruct;
+  char *next = stpcpy((char *)outarray, p1->name) + 1;
+  memcpy(next, &p1->properties, sizeof(p1->properties));
+  next += sizeof(p1->properties);
+  *next++ = 0; // default value
+  next = stpcpy(next, p1->units) + 1;
+  return (uint8_t *)next - outarray + 2;
 }
 
-static uint8_t getLuaUint16StructToArray(const void * luaStruct, uint8_t *outarray){
-  struct tagLuaItem_uint16 *p1 = (struct tagLuaItem_uint16*)luaStruct;
-  char *next = stpcpy((char *)outarray,p1->label1) + 1;
-  memcpy(next,&p1->luaProperties2,sizeof(p1->luaProperties2));
-  next+=sizeof(p1->luaProperties2);
-  *next++=0; // default value
-  stpcpy(next,p1->label2);
-  return p1->size;
+static uint8_t getLuaInt16StructToArray(const void *luaStruct, uint8_t *outarray)
+{
+  struct luaItem_int16 *p1 = (struct luaItem_int16*)luaStruct;
+  char *next = stpcpy((char *)outarray, p1->name) + 1;
+  memcpy(next,&p1->properties,sizeof(p1->properties));
+  next += sizeof(p1->properties);
+  *next++ = 0; // default value
+  next = stpcpy(next, p1->units) + 1;
+  return (uint8_t *)next - outarray + 2;
 }
 
 static uint8_t getLuaStringStructToArray(const void * luaStruct, uint8_t *outarray){
@@ -116,11 +118,13 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_COMMAND:
       dataSize = getLuaCommandStructToArray(luaData, chunkStart);
       break;
+    case CRSF_INT8: // fallthrough
     case CRSF_UINT8:
-      dataSize = getLuaUint8StructToArray(luaData, chunkStart);
+      dataSize = getLuaInt8StructToArray(luaData, chunkStart);
       break;
+    case CRSF_INT16: // fallthrough
     case CRSF_UINT16:
-      dataSize = getLuaUint16StructToArray(luaData, chunkStart);
+      dataSize = getLuaInt16StructToArray(luaData, chunkStart);
       break;
     case CRSF_STRING:
     case CRSF_INFO:
@@ -129,8 +133,6 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_FOLDER:
       dataSize = getLuaFolderStructToArray(luaData, chunkStart);
       break;
-    case CRSF_INT8:
-    case CRSF_INT16:
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
     default:
@@ -155,7 +157,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   return chunkCnt - (fieldChunk+1);
 }
 
-static void pushResponseChunk(struct luaItem_Command *cmd) {
+static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->common.id, nextStatusChunk, cmd->luaProperties2.status);
   if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
@@ -164,7 +166,7 @@ static void pushResponseChunk(struct luaItem_Command *cmd) {
   }
 }
 
-void sendLuaCommandResponse(struct luaItem_Command *cmd, uint8_t step, const char *message) {
+void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message) {
   DBGVLN("%s step=%u", cmd->name, step);
   cmd->step = step;
   cmd->info = message;
@@ -269,7 +271,7 @@ bool luaHandleUpdateParameter()
         uint8_t param = crsf.ParameterUpdateData[1];
         if (param < 32 && paramCallbacks[param] != 0) {
           if (crsf.ParameterUpdateData[2] == 6 && nextStatusChunk != 0) {
-            pushResponseChunk((struct luaItem_Command *)paramDefinitions[param]);
+            pushResponseChunk((struct luaItem_command *)paramDefinitions[param]);
           } else {
             paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
           }
@@ -285,7 +287,7 @@ bool luaHandleUpdateParameter()
     case CRSF_FRAMETYPE_PARAMETER_READ: //param info
       {
         DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
-        struct luaItem_Command *field = (struct luaItem_Command *)paramDefinitions[crsf.ParameterUpdateData[1]];
+        struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
         if (field != 0 && (field->common.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
           field->step = 0;
           field->info = "";

@@ -25,7 +25,7 @@ static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
-static struct luaItem_Selection luaAirRate = {
+static struct luaItem_selection luaAirRate = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Packet Rate",
@@ -37,7 +37,7 @@ static struct luaItem_Selection luaAirRate = {
     "Hz"
 };
 
-static struct luaItem_Selection luaTlmRate = {
+static struct luaItem_selection luaTlmRate = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Telem Ratio",
@@ -52,7 +52,7 @@ static struct tagLuaItem_folder luaPowerFolder = {
     LUA_FOLDER_SIZE(luaPowerFolder)
 };
 
-static struct luaItem_Selection luaPower = {
+static struct luaItem_selection luaPower = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Max Power",
@@ -60,7 +60,7 @@ static struct luaItem_Selection luaPower = {
     "mW"
 };
 
-static struct luaItem_Selection luaDynamicPower = {
+static struct luaItem_selection luaDynamicPower = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Dynamic",
@@ -69,7 +69,7 @@ static struct luaItem_Selection luaDynamicPower = {
 };
 //----------------------------POWER------------------
 
-static struct luaItem_Selection luaSwitch = {
+static struct luaItem_selection luaSwitch = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Switch Mode",
@@ -77,7 +77,7 @@ static struct luaItem_Selection luaSwitch = {
     emptySpace
 };
 
-static struct luaItem_Selection luaModelMatch = {
+static struct luaItem_selection luaModelMatch = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Model Match",
@@ -85,7 +85,7 @@ static struct luaItem_Selection luaModelMatch = {
     emptySpace
 };
 
-static struct luaItem_Command luaBind = {
+static struct luaItem_command luaBind = {
     {CRSF_COMMAND},
     0, // step
     "Bind",
@@ -122,14 +122,14 @@ static struct tagLuaItem_command luaWebUpdate = {
 };
 #endif
 
-static struct luaItem_Command luaTxBackpackUpdate = {
+static struct luaItem_command luaTxBackpackUpdate = {
     {CRSF_COMMAND},
     0, // step
     "WiFi Tx Backpack",
     emptySpace
 };
 
-static struct luaItem_Command luaVRxBackpackUpdate = {
+static struct luaItem_command luaVRxBackpackUpdate = {
     {CRSF_COMMAND},
     0, // step
     "WiFi VRx Backpack",
@@ -153,7 +153,7 @@ static struct tagLuaItem_folder luaVtxFolder = {
     LUA_FOLDER_SIZE(luaVtxFolder)
 };
 
-static struct luaItem_Selection luaVtxBand = {
+static struct luaItem_selection luaVtxBand = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Band",
@@ -161,7 +161,7 @@ static struct luaItem_Selection luaVtxBand = {
     emptySpace
 };
 
-static struct luaItem_Selection luaVtxChannel = {
+static struct luaItem_selection luaVtxChannel = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Channel",
@@ -169,7 +169,7 @@ static struct luaItem_Selection luaVtxChannel = {
     emptySpace
 };
 
-static struct luaItem_Selection luaVtxPwr = {
+static struct luaItem_selection luaVtxPwr = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Pwr Lvl",
@@ -177,7 +177,7 @@ static struct luaItem_Selection luaVtxPwr = {
     emptySpace
 };
 
-static struct luaItem_Selection luaVtxPit = {
+static struct luaItem_selection luaVtxPit = {
     {CRSF_TEXT_SELECTION},
     0, // value
     "Pitmode",
@@ -185,7 +185,7 @@ static struct luaItem_Selection luaVtxPit = {
     emptySpace
 };
 
-static struct luaItem_Command luaVtxSend = {
+static struct luaItem_command luaVtxSend = {
     {CRSF_COMMAND},
     0, // step
     "Send VTx",

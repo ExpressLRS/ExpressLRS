@@ -319,30 +319,6 @@ struct tagLuaDeviceProperties {
     uint8_t fieldCnt; //number of field of params this device has
 }PACKED;
 
-struct tagLuaUint8Properties{
-    uint8_t value;
-    const uint8_t min;
-    const uint8_t max;
-//    uint8_t defaultValue;
-}PACKED;
-struct tagLuaInt8Properties{
-    int8_t value;
-    const int8_t min;
-    const int8_t max;
-//    int8_t defaultValue;
-}PACKED;
-struct tagLuaUint16Properties{
-    uint16_t value;
-    const uint16_t min;
-    const uint16_t max;
-//    uint16_t defaultValue;
-}PACKED;
-struct tagLuaInt16Properties{
-    int16_t value;
-    const int16_t min;
-    const int16_t max;
-//    int16_t defaultValue;
-}PACKED;
 struct tagLuaFloatProperties{
     float value;
     const float min;
@@ -350,7 +326,7 @@ struct tagLuaFloatProperties{
 //    float defaultValue;
 }PACKED;
 
-struct luaItem_Selection {
+struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
     const char* const name;    // display name
@@ -358,41 +334,57 @@ struct luaItem_Selection {
     const char* const units;
 } PACKED;
 
-struct luaItem_Command {
+struct luaItem_command {
     struct luaPropertiesCommon common;
     uint8_t step;           // state
     const char* const name; // display name
     const char *info;       // status info to display
 } PACKED;
 
-struct tagLuaItem_uint8 {
-    struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    struct tagLuaUint8Properties luaProperties2;
-    const char* const label2;//param unit
-    uint8_t size;
+struct luaPropertiesInt8 {
+    union {
+        struct {
+            int8_t value;
+            const int8_t min;
+            const int8_t max;
+        } s;
+        struct {
+            uint8_t value;
+            const uint8_t min;
+            const uint8_t max;
+        } u;
+    };
 } PACKED;
-struct tagLuaItem_int8 {
+
+struct luaItem_int8 {
     struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    struct tagLuaInt8Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
+    struct luaPropertiesInt8 properties;
+    const char* const name;  // display name
+    const char* const units;
 } PACKED;
-struct tagLuaItem_uint16 {
+
+struct luaPropertiesInt16 {
+    union {
+        struct {
+            int16_t value;
+            const int16_t min;
+            const int16_t max;
+        } s;
+        struct {
+            uint16_t value;
+            const uint16_t min;
+            const uint16_t max;
+        } u;
+    };
+}PACKED;
+
+struct luaItem_int16 {
     struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    struct tagLuaUint16Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
+    struct luaPropertiesInt16 properties;
+    const char* const name; // display name
+    const char* const units;
 } PACKED;
-struct tagLuaItem_int16 {
-    struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    struct tagLuaInt16Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
-} PACKED;
+
 struct tagLuaItem_float {
     struct luaPropertiesCommon common;
     const char* const label1; //param name
