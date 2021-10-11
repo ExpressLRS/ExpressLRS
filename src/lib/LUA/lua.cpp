@@ -157,7 +157,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 }
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
-  DBGVLN("sending response for id=%u chunk=%u status=%u", cmd->common.id, nextStatusChunk, cmd->luaProperties2.status);
+  DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->name, nextStatusChunk, cmd->step);
   if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
@@ -166,7 +166,6 @@ static void pushResponseChunk(struct luaItem_command *cmd) {
 }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message) {
-  DBGVLN("%s step=%u", cmd->name, step);
   cmd->step = step;
   cmd->info = message;
   nextStatusChunk = 0;
