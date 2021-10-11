@@ -15,8 +15,9 @@ static volatile bool UpdateParamReq = false;
 static uint8_t luaWarningFLags = false;
 static uint8_t suppressedLuaWarningFlags = true;
 
-static const void *paramDefinitions[32] = {0};
-static luaCallback paramCallbacks[32] = {0};
+#define LUA_MAX_PARAMS 32
+static const void *paramDefinitions[LUA_MAX_PARAMS] = {0};
+static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
@@ -204,7 +205,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
 {
   if (definition == NULL)
   {
-    static uint8_t agentLiteFolder[4+32+2] = "HooJ";
+    static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
         {CRSF_FOLDER},
         (const char *)agentLiteFolder,
@@ -264,13 +265,14 @@ bool luaHandleUpdateParameter()
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
       } else {
-        DBGVLN("Write lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
-        uint8_t param = crsf.ParameterUpdateData[1];
-        if (param < 32 && paramCallbacks[param] != 0) {
-          if (crsf.ParameterUpdateData[2] == 6 && nextStatusChunk != 0) {
-            pushResponseChunk((struct luaItem_command *)paramDefinitions[param]);
+        uint8_t id = crsf.ParameterUpdateData[1];
+        uint8_t arg = crsf.ParameterUpdateData[2];
+        DBGVLN("Write lua param %u %u", id, arg);
+        if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
+          if (arg == 6 && nextStatusChunk != 0) {
+            pushResponseChunk((struct luaItem_command *)paramDefinitions[id]);
           } else {
-            paramCallbacks[param](param, crsf.ParameterUpdateData[2]);
+            paramCallbacks[id](id, arg);
           }
         }
       }
