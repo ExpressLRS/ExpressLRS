@@ -318,10 +318,6 @@ struct tagLuaDeviceProperties {
     uint32_t softwareVer;
     uint8_t fieldCnt; //number of field of params this device has
 }PACKED;
-struct tagLuaCommandProperties{
-    uint8_t status;
-    const uint8_t timeout;
-}PACKED;
 
 struct tagLuaUint8Properties{
     uint8_t value;
@@ -361,12 +357,12 @@ struct luaItem_Selection {
     const char* const options; // selection options, separated by ';'
     const char* const units;
 } PACKED;
-struct tagLuaItem_command {
+
+struct luaItem_Command {
     struct luaPropertiesCommon common;
-    const char* const label1; //command name
-    struct tagLuaCommandProperties luaProperties2;
-    const char *label2; //command info
-    uint8_t size;
+    uint8_t step;           // state
+    const char* const name; // display name
+    const char *info;       // status info to display
 } PACKED;
 
 struct tagLuaItem_uint8 {

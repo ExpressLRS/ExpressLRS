@@ -84,12 +84,12 @@ static struct luaItem_Selection luaModelMatch = {
     "Off;On",
     emptySpace
 };
-static struct tagLuaItem_command luaBind = {
+
+static struct luaItem_Command luaBind = {
     {CRSF_COMMAND},
+    0, // step
     "Bind",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaBind)
+    emptySpace
 };
 
 static struct tagLuaItem_string luaInfo = {
@@ -116,37 +116,33 @@ static struct tagLuaItem_folder luaWiFiFolder = {
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 static struct tagLuaItem_command luaWebUpdate = {
     {CRSF_COMMAND},
+    0, // step
     "WiFi Tx",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaWebUpdate)
+    emptySpace
 };
 #endif
 
-static struct tagLuaItem_command luaTxBackpackUpdate = {
+static struct luaItem_Command luaTxBackpackUpdate = {
     {CRSF_COMMAND},
+    0, // step
     "WiFi Tx Backpack",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaTxBackpackUpdate)
+    emptySpace
 };
 
-static struct tagLuaItem_command luaVRxBackpackUpdate = {
+static struct luaItem_Command luaVRxBackpackUpdate = {
     {CRSF_COMMAND},
+    0, // step
     "WiFi VRx Backpack",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaVRxBackpackUpdate)
+    emptySpace
 };
 //---------------------------- WiFi -----------------------------
 
 #if defined(PLATFORM_ESP32)
 static struct tagLuaItem_command luaBLEJoystick = {
     {CRSF_COMMAND},
+    0, // step
     "BLE Joystick",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaBLEJoystick)
+    emptySpace
 };
 #endif
 
@@ -189,12 +185,11 @@ static struct luaItem_Selection luaVtxPit = {
     emptySpace
 };
 
-static struct tagLuaItem_command luaVtxSend = {
+static struct luaItem_Command luaVtxSend = {
     {CRSF_COMMAND},
+    0, // step
     "Send VTx",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaVtxSend)
+    emptySpace
 };
 //----------------------------VTX ADMINISTRATOR------------------
 
