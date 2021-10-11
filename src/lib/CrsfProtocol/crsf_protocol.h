@@ -384,10 +384,9 @@ struct luaItem_string {
     const char* value;
 } PACKED;
 
-struct tagLuaItem_folder {
+struct luaItem_folder {
     const struct luaPropertiesCommon common;
-    const char* const label1; //param name
-    uint8_t size;
+    const char* const name; // display name
 } PACKED;
 
 struct tagLuaElrsParams {

@@ -87,10 +87,11 @@ static uint8_t getLuaStringStructToArray(const void *luaStruct, uint8_t *outarra
   return (uint8_t *)next - outarray + 2;
 }
 
-static uint8_t getLuaFolderStructToArray(const void * luaStruct, uint8_t *outarray){
-  struct tagLuaItem_folder *p1 = (struct tagLuaItem_folder*)luaStruct;
-  stpcpy((char *)outarray,p1->label1);
-  return p1->size;
+static uint8_t getLuaFolderStructToArray(const void *luaStruct, uint8_t *outarray)
+{
+  struct luaItem_folder *p1 = (struct luaItem_folder *)luaStruct;
+  char *next = stpcpy((char *)outarray, p1->name) + 1;
+  return (uint8_t *)next - outarray + 2;
 }
 
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
@@ -208,7 +209,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   if (definition == NULL)
   {
     static uint8_t agentLiteFolder[4+32+2] = "HooJ";
-    static struct tagLuaItem_folder luaAgentLite = {
+    static struct luaItem_folder luaAgentLite = {
         {CRSF_FOLDER},
         (const char *)agentLiteFolder,
     };
@@ -225,7 +226,6 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     }
     *pos++ = 0xFF;
     *pos++ = 0;
-    luaAgentLite.size = LUA_FOLDER_SIZE(luaAgentLite);
     return;
   }
   struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;

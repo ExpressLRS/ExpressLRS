@@ -5,8 +5,6 @@
 #include "targets.h"
 #include "crsf_protocol.h"
 
-#define LUA_FOLDER_SIZE(X) (uint8_t)(2+strlen(X.label1)+1)
-
 extern void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
 
 extern void suppressCurrentLuaWarning(void);

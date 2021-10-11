@@ -46,10 +46,9 @@ static struct luaItem_selection luaTlmRate = {
 };
 
 //----------------------------POWER------------------
-static struct tagLuaItem_folder luaPowerFolder = {
+static struct luaItem_folder luaPowerFolder = {
     {CRSF_FOLDER},
-    "TX Power",
-    LUA_FOLDER_SIZE(luaPowerFolder)
+    "TX Power"
 };
 
 static struct luaItem_selection luaPower = {
@@ -105,10 +104,9 @@ static struct luaItem_string luaELRSversion = {
 };
 
 //---------------------------- WiFi -----------------------------
-static struct tagLuaItem_folder luaWiFiFolder = {
+static struct luaItem_folder luaWiFiFolder = {
     {CRSF_FOLDER},
-    "WiFi",
-    LUA_FOLDER_SIZE(luaWiFiFolder)
+    "WiFi"
 };
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
@@ -145,10 +143,9 @@ static struct tagLuaItem_command luaBLEJoystick = {
 #endif
 
 //----------------------------VTX ADMINISTRATOR------------------
-static struct tagLuaItem_folder luaVtxFolder = {
+static struct luaItem_folder luaVtxFolder = {
     {CRSF_FOLDER},
-    "VTX Administrator",
-    LUA_FOLDER_SIZE(luaVtxFolder)
+    "VTX Administrator"
 };
 
 static struct luaItem_selection luaVtxBand = {
