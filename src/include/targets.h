@@ -75,9 +75,16 @@
 #define GPIO_PIN_RCSIGNAL_TX 2 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
 #define GPIO_PIN_LED 27
 
+#if defined(TARGET_1000mW_MODULE)
+#define MinPower PWR_50mW
+#define HighPower PWR_250mW
+#define MaxPower PWR_1000mW
+#define POWER_OUTPUT_VALUES {2,5,8,12,15}
+#else
 #define MinPower PWR_10mW
 #define MaxPower PWR_50mW
 #define POWER_OUTPUT_VALUES {8,12,15}
+#endif
 
 #elif defined(TARGET_EXPRESSLRS_PCB_TX_V3_LEGACY)
 #define GPIO_PIN_BUTTON 36
