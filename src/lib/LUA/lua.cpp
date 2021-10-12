@@ -24,6 +24,8 @@ static uint8_t nextStatusChunk = 0;
 
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
+  // Returns the max index of the semicolon-delimited option string
+  // e.g. A;B;C;D = 3
   uint8_t retVal = 0;
   while (true)
   {
