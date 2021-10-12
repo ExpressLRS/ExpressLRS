@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || defined(Regulatory_Domain_KR_917)
 #include "SX127xDriver.h"
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280Driver.h"
@@ -22,8 +22,10 @@
 #define Regulatory_Domain_Index 6
 #elif defined Regulatory_Domain_IN_866
 #define Regulatory_Domain_Index 7
-#else
+#elif defined Regulatory_Domain_KR_917
 #define Regulatory_Domain_Index 8
+#else
+#define Regulatory_Domain_Index 9
 #endif
 
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))

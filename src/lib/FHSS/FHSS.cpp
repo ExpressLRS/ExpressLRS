@@ -70,6 +70,24 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(865900000),
     FREQ_HZ_TO_REG_VAL(866425000),
     FREQ_HZ_TO_REG_VAL(866950000)};
+#elif defined Regulatory_Domain_KR_917
+/**
+ * Frequency bands for LoRa (LR-WPANs) in Republic of Korea (South Korea) are taken from TTAK.KO-06.0246/R1
+ * https://www.tta.or.kr/data/ttas_view.jsp?&pk_num=TTAK.KO-06.0246%2FR1
+ * Allowed frequencies: 917-923.5 Mhz, Max. allowed power is 25 mW
+ * 10 channels are allowed for 600 kHz BW, calculated by 917.5+(n-1)*0.6 MHz
+ */
+const uint32_t FHSSfreqs[] = {
+    FREQ_HZ_TO_REG_VAL(917500000),
+    FREQ_HZ_TO_REG_VAL(918100000),
+    FREQ_HZ_TO_REG_VAL(918700000),
+    FREQ_HZ_TO_REG_VAL(919300000),
+    FREQ_HZ_TO_REG_VAL(919900000),
+    FREQ_HZ_TO_REG_VAL(920500000),
+    FREQ_HZ_TO_REG_VAL(921100000),
+    FREQ_HZ_TO_REG_VAL(921700000),
+    FREQ_HZ_TO_REG_VAL(922300000),
+    FREQ_HZ_TO_REG_VAL(922900000)};
 #elif defined Regulatory_Domain_EU_433
 /* Frequency band G, taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: As is the case with the 868Mhz band, these frequencies only comply to the license free portion
@@ -273,6 +291,8 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     INFOLN("Setting 433MHz AU Mode");
 #elif defined Regulatory_Domain_EU_433
     INFOLN("Setting 433MHz EU Mode");
+#elif defined Regulatory_Domain_KR_917
+    INFOLN("Setting 917MHz KR Mode");
 #elif defined Regulatory_Domain_ISM_2400
     INFOLN("Setting 2400MHz Mode");
 #else

@@ -2,7 +2,7 @@
 #include "common.h"
 #include "LowPassFilter.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || defined(Regulatory_Domain_KR_917)
 #include "SX127xDriver.h"
 SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)

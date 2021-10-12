@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_ESP32)
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || defined(Regulatory_Domain_KR_917)
 extern SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)
 extern SX1280Driver Radio;
