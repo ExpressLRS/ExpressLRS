@@ -22,7 +22,7 @@ static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
-static uint8_t luaSelectionOptionCount(const char *strOptions)
+static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
   uint8_t retVal = 0;
   while (true)
@@ -41,7 +41,7 @@ static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *ne
   next = (uint8_t *)stpcpy((char *)next, p1->options) + 1;
   *next++ = p1->value; // value
   *next++ = 0; // min
-  *next++ = luaSelectionOptionCount(p1->options); //max
+  *next++ = luaSelectionOptionMax(p1->options); //max
   *next++ = 0; // default value
   return (uint8_t *)stpcpy((char *)next, p1->units);
 }
