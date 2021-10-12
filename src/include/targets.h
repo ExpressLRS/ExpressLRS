@@ -236,8 +236,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_BUFFER_OE_INVERTED 0
 #define GPIO_PIN_DIO1           PA1  //Not Needed, HEARTBEAT pin
 
-#define DAC_I2C_ADDRESS         0b0001100
-#define POWER_OUTPUT_DAC
+#define POWER_OUTPUT_DAC        0b0001100
 #define MinPower                PWR_10mW
 #define HighPower               PWR_250mW
 #define MaxPower                PWR_1000mW
@@ -496,9 +495,8 @@ Designed by NamimnoRC
     /* DAC settings */
     #define GPIO_PIN_SDA            PB9
     #define GPIO_PIN_SCL            PB8
-    #define DAC_I2C_ADDRESS         0b0001101
 
-    #define POWER_OUTPUT_DAC              1
+    #define POWER_OUTPUT_DAC    0b0001101
     #define MinPower            PWR_10mW
     #define MaxPower            PWR_2000mW
     #if defined(Regulatory_Domain_EU_868)
@@ -632,9 +630,9 @@ Designed by NamimnoRC
 #define POWER_OUTPUT_VALUES {-15,-11,-7,-1,6}
 #else
 #ifdef UNLOCK_HIGHER_POWER
-#define POWER_OUTPUT_VALUE 6  // 250mW (uses values as above)
+#define POWER_OUTPUT_FIXED 6  // 250mW (uses values as above)
 #else
-#define POWER_OUTPUT_VALUE -1 // 100mW (uses values as above)
+#define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
 #endif
 #endif
 
@@ -696,7 +694,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_RX_ENABLE      9 //enable pa
 #define GPIO_PIN_TX_ENABLE      10
 
-#define POWER_OUTPUT_VALUE 1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+#define POWER_OUTPUT_FIXED 1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
 
 #elif defined(TARGET_TX_BETAFPV_900_V1)
 #define GPIO_PIN_NSS            5
@@ -744,7 +742,7 @@ Designed by NamimnoRC
 #ifdef USE_DIVERSITY
     #define GPIO_PIN_ANTENNA_SELECT 9
 #endif
-#define POWER_OUTPUT_VALUE             3
+#define POWER_OUTPUT_FIXED             3
 
 #else
 #error "Unknown target!"

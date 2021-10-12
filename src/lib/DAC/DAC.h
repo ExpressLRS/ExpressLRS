@@ -3,7 +3,7 @@
 #include "targets.h"
 #include <Wire.h>
 
-#if defined(DAC_I2C_ADDRESS)
+#if defined(POWER_OUTPUT_DAC)
 
 typedef enum
 {
@@ -31,4 +31,4 @@ private:
 };
 
 extern DAC TxDAC;
-#endif // defined(DAC_I2C_ADDRESS)
+#endif // defined(POWER_OUTPUT_DAC)

@@ -128,10 +128,10 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_FIXED)
+    Radio.SetOutputPower(POWER_OUTPUT_FIXED);
 #elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
     Radio.SetOutputPower(powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_VALUE) && defined(TARGET_RX)
-    Radio.SetOutputPower(POWER_OUTPUT_VALUE);
 #elif defined(TARGET_RX)
     // Set to max power for telemetry on the RX if not specified
     Radio.SetOutputPowerMax();

@@ -1,7 +1,7 @@
 
 #include "DAC.h"
 
-#if defined(DAC_I2C_ADDRESS)
+#if defined(POWER_OUTPUT_DAC)
 #include "helpers.h"
 #include "logging.h"
 #include <Wire.h>
@@ -24,7 +24,7 @@ void DAC::standby()
 {
     if (m_state != STANDBY)
     {
-        Wire.beginTransmission(DAC_I2C_ADDRESS);
+        Wire.beginTransmission(POWER_OUTPUT_DAC);
         Wire.write(0x00);
         Wire.write(0x00);
         Wire.endTransmission();
@@ -54,7 +54,7 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
-    Wire.beginTransmission(DAC_I2C_ADDRESS);
+    Wire.beginTransmission(POWER_OUTPUT_DAC);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();
@@ -67,4 +67,4 @@ void DAC::setPower(int16_t milliVolts)
 
 DAC TxDAC;
 
-#endif // defined(DAC_I2C_ADDRESS)
+#endif // defined(POWER_OUTPUT_DAC)
