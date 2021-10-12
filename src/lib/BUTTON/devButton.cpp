@@ -6,51 +6,61 @@
 #include "logging.h"
 #include "button.h"
 
-Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
+static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 
 #if defined(TARGET_TX)
 #include "POWERMGNT.h"
 void EnterBindingMode();
+
+static std::function<void()> enterBindMode3Click = []()
+{
+    if (button.getCount() == 3)
+    {
+        EnterBindingMode();
+    }
+};
+
+static std::function<void()> cyclePower = []()
+{
+    // Only change power if we are running normally
+    if (connectionState < MODE_STATES)
+    {
+        PowerLevels_e curr = POWERMGNT::currPower();
+        if (curr == MaxPower)
+        {
+            POWERMGNT::setPower(MinPower);
+        }
+        else
+        {
+            POWERMGNT::incPower();
+        }
+        devicesTriggerEvent();
+    }
+};
+#endif
+
+#if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
+static std::function<void()> rxWebUpdateReboot = []()
+{
+    if (button.getLongCount() > 4 && connectionState != wifiUpdate)
+    {
+        connectionState = wifiUpdate;
+    }
+    if (button.getLongCount() > 8)
+    {
+        ESP.restart();
+    }
+};
 #endif
 
 static void initialize()
 {
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-        button.OnShortPress = []() {
-            if (button.getCount() == 3)
-            {
-                EnterBindingMode();
-            }
-        };
-        button.OnLongPress = []() {
-            // Only change power if we are running normally
-            if (connectionState < MODE_STATES)
-            {
-                PowerLevels_e curr = POWERMGNT::currPower();
-                if (curr == MaxPower)
-                {
-                    POWERMGNT::setPower(MinPower);
-                }
-                else
-                {
-                    POWERMGNT::incPower();
-                }
-                DBGLN("setpower %d", POWERMGNT::currPower());
-                devicesTriggerEvent();
-            }
-        };
+        button.OnShortPress = enterBindMode3Click;
+        button.OnLongPress = cyclePower;
     #endif
     #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-        button.OnLongPress = []() {
-            if (button.getLongCount() > 4 && connectionState != wifiUpdate)
-            {
-                connectionState = wifiUpdate;
-            }
-            if (button.getLongCount() > 8)
-            {
-                ESP.restart();
-            }
-        };
+        button.OnLongPress = rxWebUpdateReboot;
     #endif
 }
 
