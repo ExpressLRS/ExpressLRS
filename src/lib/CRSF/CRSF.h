@@ -59,9 +59,9 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
     #endif
-    
+
     #ifdef CRSF_RX_MODULE
-    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    static crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
     #endif
 
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
@@ -116,7 +116,7 @@ public:
 private:
     Stream *_dev;
 
-    static volatile inBuffer_U inBuffer;
+    static inBuffer_U inBuffer;
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///

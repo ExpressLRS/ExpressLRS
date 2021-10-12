@@ -30,7 +30,7 @@ static FIFO SerialOutFIFO;
 
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 
-volatile inBuffer_U CRSF::inBuffer;
+inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
@@ -95,7 +95,7 @@ uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
 #ifdef CRSF_RX_MODULE
-volatile crsf_channels_s CRSF::PackedRCdataOut;
+crsf_channels_s CRSF::PackedRCdataOut;
 #endif
 
 void CRSF::Begin()
@@ -172,7 +172,7 @@ void CRSF::End()
             break;
         }
     }
-    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
+    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
@@ -237,7 +237,7 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     buf[0] = len + 6;
     buf[2] = len + 4; // Type + DST + SRC + CRC
     buf[3] = type;
-    
+
     // CRC - Starts at type, ends before CRC
     uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
     crc = crsf_crc.calc((byte *)data, len, crc);
@@ -344,7 +344,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
         } PACKED;
-        
+
         uint8_t buffer[sizeof(otxSyncData)];
         struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
 
@@ -393,7 +393,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
-    
+
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -418,7 +418,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             } else {
                 elrsLUAmode = false;
             }
-            if (packetType == CRSF_FRAMETYPE_COMMAND && 
+            if (packetType == CRSF_FRAMETYPE_COMMAND &&
                 SerialInBuffer[5] == SUBCOMMAND_CRSF &&
                 SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
                     modelId = SerialInBuffer[7];
@@ -431,8 +431,8 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             RecvParameterUpdate();
             return true;
         }
-        DBGLN("Got Other Packet");        
-        //GoodPktsCount++;        
+        DBGLN("Got Other Packet");
+        //GoodPktsCount++;
     }
     return false;
 }
@@ -533,7 +533,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
 
 void ICACHE_RAM_ATTR CRSF::handleUARTin()
 {
-    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+    uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (UARTwdt())
     {
@@ -591,10 +591,10 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
-                char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+                char CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {        
+                {
                     GoodPktsCount++;
                     if (ProcessPacket())
                     {
