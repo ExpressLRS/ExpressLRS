@@ -70,7 +70,8 @@ static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_int16 *p1 = (const struct luaItem_int16 *)luaStruct;
   memcpy(next, &p1->properties, sizeof(p1->properties));
   next += sizeof(p1->properties);
-  *next++ = 0; // default value
+  *next++ = 0; // default value byte 1
+  *next++ = 0; // default value byte 2
   return (uint8_t *)stpcpy((char *)next, p1->units);
 }
 
