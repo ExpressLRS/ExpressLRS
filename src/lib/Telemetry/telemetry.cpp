@@ -208,6 +208,11 @@ void Telemetry::AppendTelemetryPackage()
         // last two entries are always reserved and used for every other telemetry response
         if (i+1 == payloadTypesCount || i+2 == payloadTypesCount || CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == payloadTypes[i].type)
         {
+            // reserve second last slot for adrupilot custom frame with the sub type status text: this is needed to make sure the important status messages are not lost
+            if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_ARDUPILOT_RESP && CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1] != CRSF_AP_CUSTOM_TELEM_STATUS_TEXT && i+2 == payloadTypesCount) {
+                continue;
+            }
+
             if (!payloadTypes[i].locked && CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
             {
                 memcpy(payloadTypes[i].data, CRSFinBuffer, CRSF_FRAME_SIZE(CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX]));

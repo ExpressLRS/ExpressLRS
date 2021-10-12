@@ -156,11 +156,46 @@ void test_function_bootloader_called(void)
 void test_function_store_unkown_type(void)
 {
     telemetry.ResetState();
-    uint8_t bootloaderSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
-    int length = sizeof(bootloaderSequence);
-    int sentLength = sendData(bootloaderSequence, length);
+    uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
+    int length = sizeof(unknownSequence);
+    int sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
     TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
+}
+
+void test_function_store_unkown_type_two_slots(void)
+{
+    telemetry.ResetState();
+    uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
+    int length = sizeof(unknownSequence);
+    int sentLength = sendData(unknownSequence, length);
+    TEST_ASSERT_EQUAL(length, sentLength);
+
+    uint8_t* data;
+    uint8_t receivedLength;
+    telemetry.GetNextPayload(&receivedLength, &data);
+
+    sentLength = sendData(unknownSequence, length);
+    TEST_ASSERT_EQUAL(length, sentLength);
+
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+}
+
+void test_function_store_ardupilot_status_text(void)
+{
+    telemetry.ResetState();
+    uint8_t statusSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_STATUS_TEXT,0x6c,60};
+    uint8_t otherSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH,0x6c,55};
+
+    int length = sizeof(otherSequence);
+    int sentLength = sendData(otherSequence, length);
+    TEST_ASSERT_EQUAL(length, sentLength);
+
+    length = sizeof(statusSequence);
+    sentLength = sendData(statusSequence, length);
+    TEST_ASSERT_EQUAL(length, sentLength);
+
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
 }
 
 void test_function_uart_in(void)
@@ -181,6 +216,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_add_type);
     RUN_TEST(test_function_recover_from_junk);
     RUN_TEST(test_function_store_unkown_type);
+    RUN_TEST(test_function_store_unkown_type_two_slots);
+    RUN_TEST(test_function_store_ardupilot_status_text);
     UNITY_END();
 
     return 0;

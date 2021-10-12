@@ -3,6 +3,12 @@
 #include <cstdint>
 #include "crsf_protocol.h"
 
+enum CustomTelemSubTypeID : uint8_t {
+    CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
+    CRSF_AP_CUSTOM_TELEM_STATUS_TEXT = 0xF1,
+    CRSF_AP_CUSTOM_TELEM_MULTI_PACKET_PASSTHROUGH = 0xF2,
+};
+
 typedef enum {
     TELEMETRY_IDLE = 0,
     RECEIVING_LENGTH,
