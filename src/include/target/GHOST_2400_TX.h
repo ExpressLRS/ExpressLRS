@@ -19,7 +19,7 @@
 #define GPIO_PIN_RCSIGNAL_TX        PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
 #define GPIO_PIN_LED_WS2812         PB6
 #define GPIO_PIN_LED_WS2812_FAST    PB_6
-#define GPIO_PIN_PA_SE2622L_ENABLE  PB11  // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
+#define GPIO_PIN_PA_ENABLE          PB11  // https://www.skyworksinc.com/-/media/SkyWorks/Documents/Products/2101-2200/SE2622L_202733C.pdf
 #define GPIO_PIN_RF_AMP_DET         PA3  // Voltage detector pin
 #define GPIO_PIN_BUZZER             PC13
 #define GPIO_PIN_OLED_CS            PC14
