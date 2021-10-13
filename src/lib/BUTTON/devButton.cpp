@@ -8,11 +8,11 @@
 
 static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 
-#if defined(TARGET_TX)
+#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
 #include "POWERMGNT.h"
 void EnterBindingMode();
 
-static std::function<void()> enterBindMode3Click = []()
+static void enterBindMode3Click()
 {
     if (button.getCount() == 3)
     {
@@ -20,7 +20,7 @@ static std::function<void()> enterBindMode3Click = []()
     }
 };
 
-static std::function<void()> cyclePower = []()
+static void cyclePower()
 {
     // Only change power if we are running normally
     if (connectionState < MODE_STATES)
@@ -40,7 +40,7 @@ static std::function<void()> cyclePower = []()
 #endif
 
 #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-static std::function<void()> rxWebUpdateReboot = []()
+static void rxWebUpdateReboot()
 {
     if (button.getLongCount() > 4 && connectionState != wifiUpdate)
     {
