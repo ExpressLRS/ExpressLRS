@@ -1,5 +1,6 @@
 #ifdef PLATFORM_PIC32
 #include "PIC32_hwTimer.h"
+#include "PIC32_Timer_Library.h"
 
 void inline hwTimer::nullCallback(void) {}
 
@@ -23,29 +24,20 @@ bool hwTimer::alreadyInit = false;
 
 void hwTimer::init()
 {
-//     if (!alreadyInit)
-//     {
-//         MyTim->attachInterrupt(hwTimer::callback);
-//         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
-// #if defined(TARGET_TX)
-//         // The prescaler only adjusts AFTER the overflow interrupt fires so
-//         // to make Pause() work, the prescaler needs to be fixed to avoid
-//         // having to ramp between prescalers
-//         MyTim->setPrescaleFactor(MyTim->getTimerClkFreq() / 1000000); // 1us per tick
-//         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
-// #else
-//         MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, MICROSEC_FORMAT); // 22(50Hz) to 3(500Hz) scaler
-// #endif
-//         MyTim->setPreloadEnable(false);
-//         alreadyInit = true;
-//     }
+    if (!running)
+    {
+        picStartTimer(0,1000);
+        picAttachTimerInterrupt(0,&callback);
+        Serial.println("hwTimer Init");
+    }
 }
+
 
 void hwTimer::stop()
 {
-    // running = false;
-    // MyTim->pause();
-    // MyTim->setCount(0);
+    picStopTimer(0);
+    picDetachTimerInterrupt(0);
+    running = false;
 }
 
 /*
@@ -56,44 +48,39 @@ void hwTimer::stop()
  */
 void hwTimer::pause(uint32_t duration)
 {
-// #if defined(TARGET_TX)
-//     PauseDuration = duration;
-//     while(PauseDuration);
-// #endif
+    picStopTimer(duration);
 }
 
 void hwTimer::resume()
 {
-    // isTick = false;
-    // running = true;
-    // #if defined(TARGET_TX)
-    // MyTim->setOverflow(hwTimer::HWtimerInterval >> 1, TICK_FORMAT);
-    // #else
-    // MyTim->setOverflow((hwTimer::HWtimerInterval >> 1), MICROSEC_FORMAT);
-    // #endif
-    // MyTim->setCount(0);
-    // MyTim->resume();
-    // MyTim->refresh(); // will trigger the interrupt immediately, but will update the prescaler shadow reg
+    if (!running)
+    {
+        init();
+        running = true;
+    }
+
 }
 
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
-    // hwTimer::HWtimerInterval = newTimerInterval;
+    hwTimer::HWtimerInterval = newTimerInterval;
+
 }
 
 void hwTimer::resetFreqOffset()
 {
-    // FreqOffset = 0;
+    // WOrking on this later for RXes
 }
 
 void hwTimer::incFreqOffset()
 {
-    // FreqOffset++;
+    // Work on this later for RXes
 }
 
 void hwTimer::decFreqOffset()
 {
     // FreqOffset--;
+    // Work on this later for RXes
 }
 
 void hwTimer::phaseShift(int32_t newPhaseShift)
@@ -105,6 +92,7 @@ void hwTimer::phaseShift(int32_t newPhaseShift)
 
 void hwTimer::callback(void)
 {
+    // pic
 //     if (hwTimer::isTick)
 //     {
 // #if defined(TARGET_TX)

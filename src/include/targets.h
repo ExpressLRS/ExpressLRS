@@ -534,6 +534,29 @@ Designed by NamimnoRC
 #define GPIO_PIN_SCL            14 // EEPROM ST M24C02-W
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
 
+#elif defined(TARGET_TX_FUBARINO)
+#define GPIO_PIN_NSS            5
+#define GPIO_PIN_BUSY           21
+#define GPIO_PIN_DIO1           8
+// #define GPIO_PIN_DIO2           4
+// #define GPIO_PIN_DIO3           5
+#define GPIO_PIN_MOSI           19
+#define GPIO_PIN_MISO           18 
+#define GPIO_PIN_SCK            3
+#define GPIO_PIN_RST            4
+#define GPIO_PIN_LED            1
+// #define GPIO_PIN_RCSIGNAL_TX    32
+// #define GPIO_PIN_LED_WS2812         3
+// #define GPIO_PIN_LED_WS2812_FAST    3
+// #define GPIO_PIN_RX_ENABLE    43
+// #define GPIO_PIN_TX_ENABLE       42// CTX on SE2431L
+// // #define GPIO_PIN_ANT_CTRL_2      42// Low for left (stock), high for right (empty)
+// #define GPIO_PIN_RCSIGNAL_RX     13// UART1
+// #define GPIO_PIN_RCSIGNAL_TX      14// UART1
+// #define GPIO_PIN_SDA            9 // EEPROM ST M24C02-W
+// #define GPIO_PIN_SCL            10 // EEPROM ST M24C02-W
+//#define GPIO_PIN_BUZZER       UNDEF_PIN
+
 #elif defined(TARGET_ES900TX)
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_DIO0           26

@@ -72,7 +72,7 @@ volatile static voidFuncPtr intFunc[5];
 **	Example:
 **		startTimer(TIMER23, 10000000);	Starts a 32 bit timer (TIMER2 & TIMER3) with a period of 10 seconds
 */
-void startTimer(uint8_t timerNum, long microseconds){
+void picStartTimer(uint8_t timerNum, long microseconds){
 
 	unsigned long cycles = (F_CPU / 1000000) * microseconds;	//Number of cycles = Cycles per second * Seconds
 	if (timerNum < 7){
@@ -148,7 +148,7 @@ void startTimer(uint8_t timerNum, long microseconds){
 **	Example:
 **		stopTimer(TIMER23)	Stops the 32 bit timer (TIMER2 & TIMER3)
 */
-void stopTimer(uint8_t timerNum){
+void picStopTimer(uint8_t timerNum){
 	if (timerNum < 7){
 		switch(timerNum){
 			case TIMER1:IEC0CLR = _IEC0_T1IE_MASK, T1CON = 0x0;
@@ -188,8 +188,8 @@ void stopTimer(uint8_t timerNum){
 **	Example:
 **		startTimer(TIMER4, 100000);	Starts a 16 bit timer (TIMER4) with a period of 100 milliseconds.
 */
-void setTimerPeriod(uint8_t timerNum, long microseconds){
-	startTimer(timerNum, microseconds);
+void picSetTimerPeriod(uint8_t timerNum, long microseconds){
+	picStartTimer(timerNum, microseconds);
 }
 
 /* --------------------------------------------------------------------------------------------------------------------------------------- */
@@ -210,7 +210,7 @@ void setTimerPeriod(uint8_t timerNum, long microseconds){
 **	Example:
 **		timerReset(TIMER23);	Resets the 32 bit timer 2-3 count to 0.
 */
-void timerReset(uint8_t timerNum){
+void picTimerReset(uint8_t timerNum){
 	switch(timerNum){
 		case TIMER1: TMR1=0;
 			break;
@@ -247,7 +247,7 @@ void timerReset(uint8_t timerNum){
 **	Example:
 **		attachTimerInterrupt(TIMER23, toggleLED);	Attaches the 32 bit timer 2-3 to the function toggleLED();
 */
-void attachTimerInterrupt(uint8_t timerNum, void (*userFunc)(void))
+void picAttachTimerInterrupt(uint8_t timerNum, void (*userFunc)(void))
 {
     if (timerNum < 7)
     {
@@ -335,7 +335,7 @@ void attachTimerInterrupt(uint8_t timerNum, void (*userFunc)(void))
 **	Example:
 **		detachTimerInterrupt(TIMER23);	Detaches timer 2-3 from its ISR, 
 */
-void detachTimerInterrupt(uint8_t timerNum)
+void picDetachTimerInterrupt(uint8_t timerNum)
 {
     if (timerNum < 7)
     {
@@ -385,7 +385,7 @@ void detachTimerInterrupt(uint8_t timerNum)
 **	Example:
 **		disableTimerInterrupt(TIMER4);	Disables timer 4 
 */
-void disableTimerInterrupt(uint8_t timerNum)
+void picDisableTimerInterrupt(uint8_t timerNum)
 {
     if (timerNum < 7)
     {
@@ -429,7 +429,7 @@ void disableTimerInterrupt(uint8_t timerNum)
 **	Example:
 **		enableTimerInterrupt(TIMER4);	Enables timer 4 
 */
-void enableTimerInterrupt(uint8_t timerNum)
+void picEnableTimerInterrupt(uint8_t timerNum)
 {
     if (timerNum < 7)
     {
@@ -476,7 +476,7 @@ void enableTimerInterrupt(uint8_t timerNum)
 **	Example:
 **		startPWM(TIMER2, OC1, 80);		Initializes OC1 as a PWM output with 80% duty cycle, and TIMER2's period
 */
-void startPWM(uint8_t timerNum, uint8_t OCnum, uint8_t dutycycle){
+void picStartPWM(uint8_t timerNum, uint8_t OCnum, uint8_t dutycycle){
 	
 	unsigned long outputCompareValue;
 	
@@ -564,7 +564,7 @@ void startPWM(uint8_t timerNum, uint8_t OCnum, uint8_t dutycycle){
 **	Example:
 **		stopPWM(OC1);	Turns off the PWM signal being output by OC1
 */
-void stopPWM(uint8_t OCnum){
+void picStopPWM(uint8_t OCnum){
 	switch(OCnum){
 		case OC1: IEC0CLR = _IEC0_OC1IE_MASK;
 			OC1CONCLR = _OC1CON_ON_MASK;
@@ -603,7 +603,7 @@ void stopPWM(uint8_t OCnum){
 **	Example:
 **		setDutyCycle(OC3, 90);	Sets the PWM signal on OC3 to 90% duty cycle
 */
-void setDutyCycle(uint8_t OCnum, float dutycycle){
+void picSetDutyCycle(uint8_t OCnum, float dutycycle){
 
 	unsigned long outputCompareValue;
 	bool timerSrc;

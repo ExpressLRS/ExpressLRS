@@ -123,18 +123,18 @@ void __attribute__((interrupt(),nomips16)) Timer4IntHandler(void);
 void __attribute__((interrupt(),nomips16)) Timer5IntHandler(void);
 
 //Forward references to library functions
-void startTimer(uint8_t timerNum, long microseconds);
-void stopTimer(uint8_t timerNum);
-void setTimerPeriod(uint8_t timerNum, long microseconds);
-void timerReset(uint8_t timerNum);
-void attachTimerInterrupt(uint8_t timerNum, void (*userFunc)(void));
-void detachTimerInterrupt(uint8_t timerNum);
-void disableTimerInterrupt(uint8_t timerNum);
-void enableTimerInterrupt(uint8_t timerNum);
+void picStartTimer(uint8_t timerNum, long microseconds);
+void picStopTimer(uint8_t timerNum);
+void picSetTimerPeriod(uint8_t timerNum, long microseconds);
+void picTimerReset(uint8_t timerNum);
+void picAttachTimerInterrupt(uint8_t timerNum, void (*userFunc)(void));
+void picDetachTimerInterrupt(uint8_t timerNum);
+void picDisableTimerInterrupt(uint8_t timerNum);
+void picEnableTimerInterrupt(uint8_t timerNum);
 
-void startPWM(uint8_t timerNum, uint8_t OCnum, uint8_t dutycycle);
-void stopPWM(uint8_t OCnum);
-void setDutyCycle(uint8_t OCnum, float dutycycle);
+void picStartPWM(uint8_t timerNum, uint8_t OCnum, uint8_t dutycycle);
+void picStopPWM(uint8_t OCnum);
+void picSetDutyCycle(uint8_t OCnum, float dutycycle);
 
 
 
