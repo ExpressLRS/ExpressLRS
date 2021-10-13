@@ -113,6 +113,16 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
+#ifdef PLATFORM_PIC32
+    Serial.println("Config SPI");
+    // We do not have to configure this because SPI is setup at the board config level. :(
+    //  https://github.com/chipKIT32/chipKIT-core/blob/master/pic32/variants/Fubarino_Mini_20/Board_Defs.h
+    SPI.setBitOrder(MSBFIRST);
+    SPI.setDataMode(SPI_MODE0);
+    SPI.begin();
+    SPI.setClockDivider(SPI_CLOCK_DIV4);
+#endif
+
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
@@ -130,13 +140,15 @@ void SX1280Hal::reset(void)
     {
         #ifdef PLATFORM_STM32
         __NOP();
+        #elif PLATFORM_PIC32
+        Nop();
         #elif PLATFORM_ESP32
         _NOP();
         #elif PLATFORM_ESP8266
         _NOP();
         #endif
     }
-#else
+#else        
     delay(10); // typically 2ms observed
 #endif
 

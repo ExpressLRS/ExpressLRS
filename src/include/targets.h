@@ -534,6 +534,7 @@ Designed by NamimnoRC
 #define GPIO_PIN_SCL            14 // EEPROM ST M24C02-W
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
 
+// https://github.com/chipKIT32/chipKIT-core/blob/master/pic32/variants/Fubarino_Mini_20/Board_Defs.h
 #elif defined(TARGET_TX_FUBARINO)
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21
