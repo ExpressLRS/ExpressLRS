@@ -48,6 +48,7 @@
 #define GPIO_PIN_OLED_RST U8X8_PIN_NONE
 #define GPIO_PIN_RCSIGNAL_RX 13
 #define GPIO_PIN_RCSIGNAL_TX 13
+#define GPIO_PIN_BUTTON 39
 
 #elif defined(TARGET_TTGO_LORA_V2_AS_RX)
  // not supported
