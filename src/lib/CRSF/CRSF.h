@@ -26,22 +26,21 @@ class CRSF
 
 public:
     #if CRSF_RX_MODULE
-
     CRSF(Stream *dev) : _dev(dev)
     {
     }
 
     CRSF(Stream &dev) : _dev(&dev) {}
-
     #endif
 
     static HardwareSerial Port;
 
     static volatile uint16_t ChannelDataIn[16];
-    static volatile uint16_t ChannelDataOut[16];
 
-    // The model ID as received from the Transmitter
-    static uint8_t modelId;
+    /////Variables/////
+
+    #ifdef CRSF_TX_MODULE
+    static void inline nullCallback(void);
 
     static void (*disconnected)();
     static void (*connected)();
@@ -50,33 +49,33 @@ public:
     static void (*RecvParameterUpdate)();
     static void (*RCdataCallback)();
 
+    // The model ID as received from the Transmitter
+    static uint8_t modelId;
+
     static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
-
-    /////Variables/////
-
-    static volatile crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
-    static volatile crsf_sensor_battery_s TLMbattSensor;
 
     /// UART Handling ///
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
+    #endif
+
+    #ifdef CRSF_RX_MODULE
+    static crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    #endif
+
+    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
 
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc
 
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
-    void sendLinkStatisticsToFC();
-    void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
-    void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
+    #ifdef CRSF_TX_MODULE
+    static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
     static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
-
-    static uint8_t getModelID() { return modelId; }
 
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
@@ -86,17 +85,10 @@ public:
     static void disableOpentxSync();
     static void enableOpentxSync();
 
-    /////////////////////////////////////////////////////////////
-
-    static void ICACHE_RAM_ATTR GetChannelDataIn();
-    static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
-    static void ICACHE_RAM_ATTR updateSwitchValues();
-
-    static void inline nullCallback(void);
-
     static void handleUARTin();
-    bool RXhandleUARTout();
-#if CRSF_TX_MODULE
+
+    static uint8_t getModelID() { return modelId; }
+
     static uint8_t* GetMspMessage();
     static void UnlockMspMessage();
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
@@ -105,16 +97,26 @@ public:
     static volatile uint32_t OpenTXsyncLastSent;
     static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
-#endif
+
+    static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
+    static void ICACHE_RAM_ATTR updateSwitchValues();
+    static void ICACHE_RAM_ATTR GetChannelDataIn();
+    #endif
+
+    #ifdef CRSF_RX_MODULE
+    bool RXhandleUARTout();
+    void ICACHE_RAM_ATTR sendRCFrameToFC();
+    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
+    void sendLinkStatisticsToFC();
+    #endif
+
+
+    /////////////////////////////////////////////////////////////
+
 private:
     Stream *_dev;
 
-    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
-    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
-
-    static volatile inBuffer_U inBuffer;
-
-    static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
+    static inBuffer_U inBuffer;
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
@@ -129,6 +131,9 @@ private:
 #endif
 
     /// UART Handling ///
+    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
+    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
+    static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
@@ -138,23 +143,23 @@ private:
     static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
+
 #ifdef PLATFORM_ESP32
     static void ESP32uartTask(void *pvParameters);
     static void ESP32syncPacketTask(void *pvParameters);
 #endif
 
+    static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();
     static void duplex_set_TX();
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
-    static void ICACHE_RAM_ATTR adjustMaxPacketSize();
-    
 #endif
 
     static void flush_port_input(void);
-
-
 };
+
+extern GENERIC_CRC8 crsf_crc;
 
 #endif
