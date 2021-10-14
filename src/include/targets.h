@@ -546,7 +546,8 @@ Designed by NamimnoRC
 #define GPIO_PIN_SCK            3
 #define GPIO_PIN_RST            4
 #define GPIO_PIN_LED            1
-// #define GPIO_PIN_RCSIGNAL_TX    32
+#define GPIO_PIN_RCSIGNAL_TX    26
+#define GPIO_PIN_RCSIGNAL_RX    25
 // #define GPIO_PIN_LED_WS2812         3
 // #define GPIO_PIN_LED_WS2812_FAST    3
 // #define GPIO_PIN_RX_ENABLE    43

@@ -16,14 +16,11 @@ TaskHandle_t xESP32uartTask = NULL;
 // HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler, int pinT, int pinR, ppsFunctionType ppsT, ppsFunctionType ppsR);
 // Or 
 // HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler);
-p32_uart * uartP;
+// p32_uart * uartP(_SER1_BASE);
 isrFunc isrHandler;
 ppsFunctionType ppsT, ppsR;
-// int irq = 0; //Find real value
-// int vec = 0;//Find real value
-int ip1 = 0; //Find real value
-int sp1 = 0;//Find real value
-HardwareSerial CRSF::Port(uartP, 0, 0, 0, 0, isrHandler, 0, 0, ppsT, ppsR);
+HardwareSerial CRSF::Port((p32_uart *)_SER1_BASE, _SER1_IRQ, _SER1_VECTOR, _SER1_IPL, _SER1_SPL, isrFunc(), GPIO_PIN_RCSIGNAL_TX, GPIO_PIN_RCSIGNAL_RX, PPS_OUT_U2TX, PPS_IN_U2RX);
+
 
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
@@ -121,8 +118,10 @@ void CRSF::Begin()
     disableCore0WDT();
     xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
 
+#elif defined(PLATFORM_PIC32)
+    CRSF::Port.begin(CRSF_OPENTX_FAST_BAUDRATE);
 
-#elif defined(PLATFORM_STM32)
+#elif defined(PLATFORM_STM32) 
     Serial.println("Start STM32 R9M TX CRSF UART");
 
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
