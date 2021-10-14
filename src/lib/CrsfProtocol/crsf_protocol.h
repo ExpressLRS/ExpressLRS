@@ -25,10 +25,8 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#ifdef UART_RX_SPEED_400K
-#define CRSF_RX_BAUDRATE 400000
-#else
-#define CRSF_RX_BAUDRATE 420000
+#ifndef RCVR_UART_BAUD
+#define RCVR_UART_BAUD 420000
 #endif
 
 #define CRSF_NUM_CHANNELS 16

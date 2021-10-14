@@ -837,7 +837,7 @@ static void setupSerial()
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
@@ -848,7 +848,7 @@ static void setupSerial()
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
     CRSF_RX_SERIAL.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
@@ -857,17 +857,17 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_TX_SERIAL.begin(RCVR_UART_BAUD);
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
+    Serial.begin(RCVR_UART_BAUD); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    Serial.begin(CRSF_RX_BAUDRATE);
+    Serial.begin(RCVR_UART_BAUD);
     #if defined(RCVR_INVERT_TX)
     USC0(UART0) |= BIT(UCTXI);
     #endif
