@@ -862,6 +862,10 @@ void loop()
     crsf.handleUARTin();
   #endif // PLATFORM_STM32
 
+  #ifdef PLATFORM_PIC32
+    crsf.handleUARTin();
+  #endif // PLATFORM_STM32
+
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.handle();
   #endif
