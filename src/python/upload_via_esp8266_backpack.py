@@ -3,15 +3,11 @@ import opentx
 
 def on_upload(source, target, env):
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
-
-    print('env:\n', env, '\nsource:\n', source, '\ntarget:\n', target)
-
     upload_addr = ['elrs_tx', 'elrs_tx.local']
     app_start = 0 # eka bootloader offset
 
     # Parse upload flags:
     upload_flags = env.get('UPLOAD_FLAGS', [])
-    print('upload_flags:\n', upload_flags)
     for line in upload_flags:
         flags = line.split()
         for flag in flags:
