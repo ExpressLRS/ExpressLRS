@@ -3,6 +3,8 @@ import opentx
 
 def on_upload(source, target, env):
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
+    bootloader_target = None
+
     upload_addr = ['elrs_tx', 'elrs_tx.local']
     app_start = 0 # eka bootloader offset
 
@@ -20,7 +22,7 @@ def on_upload(source, target, env):
                 app_start = offset
             if "BOOTLOADER=" in flag:
                 bootloader_file = flag.split("=")[1]
-                print(bootloader_file)
+                bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
 			
 
     firmware_path = str(source[0])
@@ -34,18 +36,14 @@ def on_upload(source, target, env):
     cmd = ["curl", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",
            "-F", "data=@%s" % (elrs_bin_target,)]
-    try:
-        bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
-        cmd_bootloader = ["curl", "--max-time", "60",
-        "--retry", "2", "--retry-delay", "1",
-        "-F", "data=@%s" % (bootloader_target,)]
-    except NameError:
-        print('No bootloader for target')
 
+    if  bootloader_target is not None and isstm:
+        cmd_bootloader = ["curl", "--max-time", "60",
+            "--retry", "2", "--retry-delay", "1",
+            "-F", "data=@%s" % (bootloader_target,), "-F", "flash_address=0x0000"]
 		   
     if isstm:
         cmd += ["-F", "flash_address=0x%X" % (app_start,)]
-        cmd_bootloader += ["-F", "flash_address=0x0000"]
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is not None:
@@ -55,14 +53,12 @@ def on_upload(source, target, env):
         addr = "http://%s/%s" % (addr, ['update', 'upload'][isstm])
         print(" ** UPLOADING TO: %s" % addr)
         try:
-            try:         
+            if  bootloader_target is not None:  
                 print("** Flashing Bootloader...")
                 print(cmd_bootloader,cmd)
                 subprocess.check_call(cmd_bootloader + [addr])
                 print("** Bootloader Flashed!")
                 print()
-            except NameError:
-                print('No bootloader for target')
             subprocess.check_call(cmd + [addr])
             print()
             print("** UPLOAD SUCCESS. Flashing in progress.")
