@@ -55,7 +55,6 @@ def on_upload(source, target, env):
         try:
             if  bootloader_target is not None:  
                 print("** Flashing Bootloader...")
-                print(cmd_bootloader,cmd)
                 subprocess.check_call(cmd_bootloader + [addr])
                 print("** Bootloader Flashed!")
                 print()
