@@ -527,7 +527,11 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
-        WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
+          WiFi.mode(WIFI_AP_STA);
+        #else
+          WiFi.mode(WIFI_AP);
+        #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
         WiFi.softAP(ssid, password);
