@@ -12,15 +12,7 @@ TaskHandle_t xHandleOpenTXsync = NULL;
 TaskHandle_t xESP32uartTask = NULL;
 
 #elif PLATFORM_PIC32
-#include "wiring.h"
-// HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler, int pinT, int pinR, ppsFunctionType ppsT, ppsFunctionType ppsR);
-// Or 
-// HardwareSerial(p32_uart * uartP, int irq, int vec, int ipl, int spl, isrFunc isrHandler);
-// p32_uart * uartP(_SER1_BASE);
-isrFunc isrHandler;
-ppsFunctionType ppsT, ppsR;
-HardwareSerial CRSF::Port((p32_uart *)_SER1_BASE, _SER1_IRQ, _SER1_VECTOR, _SER1_IPL, _SER1_SPL, isrFunc(), GPIO_PIN_RCSIGNAL_TX, GPIO_PIN_RCSIGNAL_RX, PPS_OUT_U2TX, PPS_IN_U2RX);
-
+HardwareSerial CRSF::Port = Serial1;
 
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
@@ -176,9 +168,6 @@ void CRSF::End()
 
 void CRSF::flush_port_input(void)
 {
-    #ifdef PLATFORM_PIC32
-    HardwareSerial Port = CRSF::Port;
-#endif
     // Make sure there is no garbage on the UART at the start
     while (CRSF::Port.available())
     {

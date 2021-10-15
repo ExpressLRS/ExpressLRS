@@ -548,13 +548,6 @@ Designed by NamimnoRC
 #define GPIO_PIN_LED            1
 #define GPIO_PIN_RCSIGNAL_TX    26
 #define GPIO_PIN_RCSIGNAL_RX    25
-// #define GPIO_PIN_LED_WS2812         3
-// #define GPIO_PIN_LED_WS2812_FAST    3
-// #define GPIO_PIN_RX_ENABLE    43
-// #define GPIO_PIN_TX_ENABLE       42// CTX on SE2431L
-// // #define GPIO_PIN_ANT_CTRL_2      42// Low for left (stock), high for right (empty)
-// #define GPIO_PIN_RCSIGNAL_RX     13// UART1
-// #define GPIO_PIN_RCSIGNAL_TX      14// UART1
 // #define GPIO_PIN_SDA            9 // EEPROM ST M24C02-W
 // #define GPIO_PIN_SCL            10 // EEPROM ST M24C02-W
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
