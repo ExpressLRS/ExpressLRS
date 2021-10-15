@@ -2,6 +2,34 @@
 #include "DAC.h"
 #include "targets.h"
 
+/*
+ * Moves the power management values and special cases out of the main code and into `targets.h`.
+ *
+ * TX Targets
+ * ***********
+ *
+ * A new target now just needs to define
+ * - `MinPower`, the minimum power level supported
+ * - `MaxPower`, the absolute maximum power level supported
+ * - optionally `HighPower`, if defined then module uses this as max unless `UNLOCK_HIGHER_POWER` is defined by the user
+ * - `POWER_OUTPUT_VALUES` array of values to be used to set appropriate power level from `MinPower` to `MaxPower`
+ *
+ * A target can also define one of the following to configure how the output power is set, the value given to the function
+ * is the value from the `POWER_OUTPUT_VALUES` array.
+ *
+ * - `POWER_OUTPUT_DAC` to use i2c DAC specify the address of the DAC in this define
+ * - `POWER_OUTPUT_DACWRITE` to use `dacWrite` function
+ * - `POWER_OUTPUT_ANALOG` to use `analogWrite` function
+ * - `POWER_OUTPUT_FIXED` which will provide the value to `Radio.SetOutputPower` function
+ * - default is to use `Radio.SetOutputPower` function
+ *
+ * RX Targets
+ * **********
+ *
+ * Can define `POWER_OUTPUT_FIXED` which will provide the value to `Radio.SetOutputPower` function.
+ * If nothing is defined then the default method `Radio.SetOutputPowerMax` will be used, which sets the value to
+ * 13 on SX1280 (~12.5dBm) or 15 on SX127x (~17dBm)
+ */
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 extern SX127xDriver Radio;
@@ -10,6 +38,9 @@ extern SX1280Driver Radio;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
+#if defined(POWER_OUTPUT_VALUES)
+static int16_t powerValues[] = POWER_OUTPUT_VALUES;
+#endif
 
 PowerLevels_e POWERMGNT::incPower()
 {
@@ -55,10 +86,9 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
 
 void POWERMGNT::init()
 {
-#if DAC_IN_USE
+#if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
-#endif // DAC_IN_USE
-#ifdef TARGET_R9M_LITE_PRO_TX
+#elif defined(POWER_OUTPUT_ANALOG)
     //initialize both 12 bit DACs
     pinMode(GPIO_PIN_RFamp_APC1, OUTPUT);
     pinMode(GPIO_PIN_RFamp_APC2, OUTPUT);
@@ -78,9 +108,22 @@ void POWERMGNT::init()
     setDefaultPower();
 }
 
+PowerLevels_e POWERMGNT::getDefaultPower()
+{
+    if (MinPower > PWR_50mW)
+    {
+        return MinPower;
+    }
+    if (MaxPower < PWR_50mW)
+    {
+        return MaxPower;
+    }
+    return PWR_50mW;
+}
+
 void POWERMGNT::setDefaultPower()
 {
-    setPower((PowerLevels_e)DefaultPowerEnum);
+    setPower(getDefaultPower());
 }
 
 PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
@@ -88,383 +131,38 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     if (Power == CurrentPower)
         return CurrentPower;
 
-    if (Power > MaxPower)
+    if (Power < MinPower)
     {
-        Power = (PowerLevels_e)MaxPower;
+        Power = MinPower;
+    }
+    else if (Power > MaxPower)
+    {
+        Power = MaxPower;
     }
 
 #ifdef GPIO_PIN_FAN_EN
     digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
 #endif
 
-#if DAC_IN_USE
+#if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
-    TxDAC.setPower((DAC_PWR_)Power);
-
-#elif defined(TARGET_TX_ESP32_SX1280_V1) || defined(TARGET_RX_ESP8266_SX1280_V1)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(8);
-        break;
-    case PWR_25mW:
-    default:
-        Radio.SetOutputPower(13);
-        Power = PWR_25mW;
-        break;
-    }
-#elif defined(TARGET_RX_BETAFPV_2400_V1)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(-10);
-        break;
-    case PWR_50mW:
-        Radio.SetOutputPower(-3);
-        break;
-    case PWR_100mW:
-    default:
-        Radio.SetOutputPower(1);
-        Power = PWR_100mW;
-        break;
-    }
-
-#elif defined(TARGET_NAMIMNORC_TX)
-    // Control Flash 2.4GHz TX module
-    int8_t rfpower = -18;
-    switch (Power)
-    {
-    case PWR_25mW:
-        rfpower = -18;
-        Power = PWR_25mW;
-        break;
-    case PWR_100mW:
-        rfpower = -12;
-        break;
-    case PWR_250mW:
-        rfpower = -8;
-        break;
-    case PWR_500mW:
-        rfpower = -5;
-        break;
-    case PWR_1000mW:
-        rfpower = 3;
-        break;
-    case PWR_50mW:
-    default:
-        rfpower = -15;
-        Power = PWR_50mW;
-        break;
-    }
-    Radio.SetOutputPower(rfpower);
-
-#elif defined(TARGET_TX_GHOST)
-    switch (Power)
-    {
-    case PWR_10mW:
-        #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-16);
-        #else
-            Radio.SetOutputPower(-16);
-        #endif
-        break;
-    case PWR_25mW:
-        #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-14);
-        #else
-            Radio.SetOutputPower(-14);
-        #endif
-        break;
-    case PWR_100mW:
-        #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-8);
-        #else
-            Radio.SetOutputPower(-8);
-        #endif
-        break;
-    case PWR_250mW:
-        #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-4);
-        #else
-            Radio.SetOutputPower(-4);
-        #endif
-        break;
-    case PWR_50mW:
-    default:
-        Power = PWR_50mW;
-        #ifdef TARGET_TX_GHOST_LITE
-            Radio.SetOutputPower(-11);
-        #else
-            Radio.SetOutputPower(-11);
-        #endif
-        break;
-    }
-#elif defined(TARGET_R9M_LITE_PRO_TX)
+    TxDAC.setPower(powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
-
-    switch (Power)
-    {
-    case PWR_10mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 600);
-        break;
-    case PWR_25mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 770);
-        break;
-    case PWR_100mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1150);
-        break;
-    case PWR_250mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 1480);
-        break;
-    case PWR_500mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 2000);
-        break;
-    case PWR_1000mW:
-        analogWrite(GPIO_PIN_RFamp_APC2, 3500);
-        break;
-    case PWR_50mW:
-    default:
-        analogWrite(GPIO_PIN_RFamp_APC2, 950);
-        Power = PWR_50mW;
-        break;
-    }
-#elif defined(TARGET_100mW_MODULE) || defined(TARGET_R9M_LITE_TX)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(0b1000);
-        CurrentPower = PWR_10mW;
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(0b1100);
-        CurrentPower = PWR_25mW;
-        break;
-    case PWR_50mW:
-    default:
-        Power = PWR_50mW;
-        Radio.SetOutputPower(0b1111); //15
-        break;
-    }
-#elif defined(TARGET_1000mW_MODULE)
-    switch (Power)
-    {
-    case PWR_100mW:
-        Radio.SetOutputPower(0b0101);
-        break;
-    case PWR_250mW:
-        Radio.SetOutputPower(0b1000);
-        break;
-    case PWR_500mW:
-        Radio.SetOutputPower(0b1100);
-        break;
-    case PWR_1000mW:
-        Radio.SetOutputPower(0b1111);
-        break;
-    case PWR_50mW:
-    default:
-        Radio.SetOutputPower(0b0010);
-        Power = PWR_50mW;
-        break;
-    }
-#elif defined(TARGET_TX_ESP32_E28_SX1280_V1)
-    switch (Power)
-    {
-    case PWR_10mW:
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-17);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            // Tx can not do less than 25 mW
-            Power = PWR_25mW;
-            Radio.SetOutputPower(-18);
-        #elif TARGET_HGLRC_Hermes_2400_TX
-            Radio.SetOutputPower(-18);
-        #else
-            Radio.SetOutputPower(-15);
-        #endif
-        break;
-    case PWR_25mW:
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-13);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(-18);
-        #elif TARGET_HGLRC_Hermes_2400_TX
-            Radio.SetOutputPower(-15);
-        #else
-            Radio.SetOutputPower(-11);
-        #endif
-        break;
-    case PWR_100mW:
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-6);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(-12);
-        #elif TARGET_HGLRC_Hermes_2400_TX
-            Radio.SetOutputPower(-8);
-        #else
-            Radio.SetOutputPower(-5);
-        #endif
-        break;
-    case PWR_250mW:
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-2);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(-7);
-        #elif TARGET_HGLRC_Hermes_2400_TX
-            Radio.SetOutputPower(-4);
-        #elif TARGET_QK_JR_TX
-            Radio.SetOutputPower(0);
-        #else
-            Radio.SetOutputPower(-1);
-        #endif
-        break;
-    case PWR_500mW:
-        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(-4);
-        #endif
-        break;
-    case PWR_1000mW:
-        #ifdef TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(2);
-        #endif
-        break;
-    case PWR_50mW:
-    default:
-        Power = PWR_50mW;
-        #ifdef TARGET_HappyModel_ES24TX_2400_TX
-            Radio.SetOutputPower(-9);
-        #elif TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX
-            Radio.SetOutputPower(-15);
-        #elif TARGET_HGLRC_Hermes_2400_TX
-            Radio.SetOutputPower(-11);
-        #else
-            Radio.SetOutputPower(-8);
-        #endif
-        break;
-    }
-#elif defined(TARGET_TX_ESP32_LORA1280F27)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(-4);
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(0);
-        break;
-    case PWR_50mW:
-        Radio.SetOutputPower(3);
-        break;
-    case PWR_100mW:
-        Radio.SetOutputPower(6);
-        break;
-    case PWR_250mW:
-        Radio.SetOutputPower(12);
-        break;
-    default:
-        Power = PWR_50mW;
-        Radio.SetOutputPower(3);
-        break;
-    }
-#elif defined(TARGET_TX_FM30) || defined(TARGET_RX_FM30_MINI) || defined(TARGET_TX_FM30_MINI)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(-15); // ~10.5mW
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(-11); // ~26mW
-        break;
-    case PWR_100mW:
-        Radio.SetOutputPower(-1);  // ~99mW
-        break;
-    case PWR_250mW:
-        // The original FM30 can somehow put out +22dBm but the 2431L max input
-        // is +6dBm, and even when SetOutputPower(13) you still only get 150mW
-        Radio.SetOutputPower(6);  // ~150mW
-        break;
-    case PWR_50mW:
-    default:
-        Power = PWR_50mW;
-        Radio.SetOutputPower(-7); // -7=~55mW, -8=46mW
-        break;
-    }
-#elif defined(TARGET_ES900TX)
+    analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
-
-    switch (Power)
-    {
-    case PWR_10mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 41);
-        break;
-    case PWR_25mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 60);
-        break;
-    case PWR_100mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 90);
-        break;
-    case PWR_250mW:
-       dacWrite(GPIO_PIN_RFamp_APC2, 110);
-        break;
-    case PWR_500mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 132);
-        break;
-    case PWR_1000mW:
-        dacWrite(GPIO_PIN_RFamp_APC2, 190);
-        break;
-    case PWR_50mW:
-    default:
-        dacWrite(GPIO_PIN_RFamp_APC2, 73);
-        Power = PWR_50mW;
-        break;
-    }
-#elif defined(TARGET_TX_BETAFPV_900_V1)
-    switch (Power)
-    {
-    case PWR_250mW:
-        Radio.SetOutputPower(0b0011);
-        break;
-    case PWR_500mW:
-        Radio.SetOutputPower(0b1000);
-        break;
-    case PWR_100mW:
-    default:
-        Power = PWR_100mW;
-        Radio.SetOutputPower(0b0000);
-        break;
-    }
-#elif defined(TARGET_TX_BETAFPV_2400_V1)
-    switch (Power)
-    {
-    case PWR_10mW:
-        Radio.SetOutputPower(-18);
-        break;
-    case PWR_25mW:
-        Radio.SetOutputPower(-15);
-        break;
-    case PWR_100mW:
-        Radio.SetOutputPower(-9);
-        break;
-    case PWR_250mW:
-        Radio.SetOutputPower(-4);
-        break;
-    case PWR_500mW:
-        Radio.SetOutputPower(3);
-        break;
-    case PWR_50mW:    
-    default:
-        Power = PWR_50mW;
-        Radio.SetOutputPower(-13);
-        break;
-    }
+    dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_FIXED)
+    Radio.SetOutputPower(POWER_OUTPUT_FIXED);
+#elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
+    Radio.SetOutputPower(powerValues[Power - MinPower]);
 #elif defined(TARGET_RX)
-    #if defined(TARGET_RX_DEFAULT_POWER)
-        Radio.SetOutputPower(TARGET_RX_DEFAULT_POWER);
-    #else
-        // Set to max power for telemetry on the RX if not specified
-        Radio.SetOutputPowerMax();
-    #endif
+    // Set to max power for telemetry on the RX if not specified
+    Radio.SetOutputPowerMax();
 #else
 #error "[ERROR] Unknown power management!"
 #endif
