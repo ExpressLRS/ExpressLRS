@@ -594,7 +594,7 @@ local function handleDevicePageEvent(event)
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, 0x2E, 0x00 })
     else
       local field = getField(lineIndex)
-      if field.name then
+      if field and field.type then
         if field.type == 10 then
           if edit == false then
             edit = true
