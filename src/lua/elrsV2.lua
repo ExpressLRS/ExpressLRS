@@ -562,7 +562,7 @@ local function handleDevicePageEvent(event)
       fieldData = {}
       crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
     else
-      if folderAccess == 0 then -- only do reload if we're in the root folder
+      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading
         allParamsLoaded = 0
         fieldTimeout = getTime() + 200 -- 2s
         fieldId, fieldChunk = 1, 0
