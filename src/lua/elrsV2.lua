@@ -17,7 +17,7 @@
 ---- #########################################################################
 local deviceId = 0
 local deviceName = ""
-local lineIndex = 0
+local lineIndex = 1
 local pageOffset = 0
 local edit = false
 local charIndex = 1
@@ -59,17 +59,6 @@ local function getField(line)
           return field
         end
       end
-    end
-  end
-end
-
-local function initLineIndex()
-  lineIndex = 0
-  for i = 1, #fields do
-    local field = getField(i)
-    if field then
-      lineIndex = i
-      break
     end
   end
 end
@@ -344,7 +333,7 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
-  initLineIndex()
+  lineIndex = 1
   pageOffset = 0
   folderAccess = field.id
   fields[fields_count+1].parent = folderAccess
@@ -455,16 +444,11 @@ local function parseParameterInfoMessage(data)
       functions[field.type+1].load(field, fieldData, i)
     end
     if not fieldPopup then
-      if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent then
-        initLineIndex()
-      end
-      if fieldPopup == nil then
-        if fieldId == fields_count then
-          allParamsLoaded = 1
-          fieldId = 1
-        else
-          fieldId = 1 + (fieldId % (#fields-1))
-        end
+      if fieldId == fields_count then
+        allParamsLoaded = 1
+        fieldId = 1
+      else
+        fieldId = 1 + (fieldId % (#fields-1))
       end
       fieldTimeout = getTime() + 200
     else
@@ -733,12 +717,10 @@ local function setMock()
   fields, goodPkt = mock(), 500
   fields_count = #fields - 1
   fieldId = #fields - 3
-  initLineIndex()
 end
 
 -- Init
 local function init()
-  lineIndex, edit = 0, false
   setLCDvar()
   setMock()
 end
