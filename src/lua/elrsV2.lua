@@ -110,7 +110,7 @@ local function selectField(step)
       pageOffset = 0
     end
     field = getField(newLineIndex)
-  until newLineIndex == lineIndex or field
+  until newLineIndex == lineIndex or (field and field.name)
   lineIndex = newLineIndex
   if lineIndex > maxLineIndex + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
     pageOffset = lineIndex - maxLineIndex 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
