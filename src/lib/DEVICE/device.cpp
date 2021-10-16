@@ -30,6 +30,7 @@ void devicesStart()
     unsigned long now = millis();
     for(size_t i=0 ; i<deviceCount ; i++)
     {
+        deviceTimeout[i] = 0xFFFFFFFF;
         if (uiDevices[i]->start)
         {
             int delay = (uiDevices[i]->start)();
