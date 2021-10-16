@@ -51,7 +51,8 @@ local function getField(line)
   for i = 1, #fields do
     local field = fields[i]
     if not field.hidden then
-      if folderAccess == field.parent then
+      -- parent will be nil if it is in the list but the details are not loaded yet
+      if field.parent == nil or folderAccess == field.parent then
         if counter < line then
           counter = counter + 1
         else
@@ -66,7 +67,7 @@ local function initLineIndex()
   lineIndex = 0
   for i = 1, #fields do
     local field = getField(i)
-    if field and field.type ~= 12 and field.name ~= nil then
+    if field then
       lineIndex = i
       break
     end
@@ -113,14 +114,14 @@ local function selectField(step)
   local field
   repeat
     newLineIndex = newLineIndex + step
-    if newLineIndex == 0 then
+    if newLineIndex <= 0 then
       newLineIndex = #fields
     elseif newLineIndex == 1 + #fields then
       newLineIndex = 1
       pageOffset = 0
     end
     field = getField(newLineIndex)
-  until newLineIndex == lineIndex or (field and field.name)
+  until newLineIndex == lineIndex or field
   lineIndex = newLineIndex
   if lineIndex > maxLineIndex + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
     pageOffset = lineIndex - maxLineIndex 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
@@ -454,7 +455,7 @@ local function parseParameterInfoMessage(data)
       functions[field.type+1].load(field, fieldData, i)
     end
     if not fieldPopup then
-      if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent and field.type and field.type ~= 12 then
+      if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent then
         initLineIndex()
       end
       if fieldPopup == nil then
