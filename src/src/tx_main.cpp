@@ -741,6 +741,7 @@ void loop()
     }
   }
 
+#if defined(USE_TX_BACKPACK)
   if (TxBackpackWiFiReadyToSend)
   {
     TxBackpackWiFiReadyToSend = false;
@@ -887,13 +888,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
       return; // Packets containing frequency in MHz are not yet supported.
     }
 
-    VtxConfigReadyToSend = true;
-
-    devicesTriggerEvent();
-    sendLuaDevicePacket();    // Why is this here?
+    VtxTriggerSend();
   }
 }
 
+#if defined(USE_TX_BACKPACK)
 void BackpackWiFiToMSPOut(uint16_t command)
 {
   mspPacket_t packet;

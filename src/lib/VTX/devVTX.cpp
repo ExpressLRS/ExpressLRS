@@ -11,9 +11,19 @@ extern bool ICACHE_RAM_ATTR IsArmed();
 extern CRSF crsf;
 extern MSP msp;
 
-bool VtxConfigReadyToSend = false;
+static enum VtxSendState_e
+{
+  VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
+  VTXSS_MODIFIED,  // Config is editied, should always be sent regardless of connect state
+  VTXSS_SENDING1, VTXSS_SENDING2, VTXSS_SENDING3,  VTXSS_SENDINGDONE, // Send the config 3x
+  VTXSS_CONFIRMED  // Status of remote side is consistent with our config
+} VtxSendState;
 
-static bool VtxConfigSent = false;
+void VtxTriggerSend()
+{
+    VtxSendState = VTXSS_MODIFIED;
+    devicesTriggerEvent();
+}
 
 static void eepromWriteToMSPOut()
 {
@@ -35,6 +45,7 @@ static void VtxConfigToMSPOut()
     if (!config.GetVtxBand() || IsArmed())
         return;
 
+    DBGLN("Sending VtxConfig");
     uint8_t vtxIdx = (config.GetVtxBand()-1) * 8 + config.GetVtxChannel();
 
     mspPacket_t packet;
@@ -54,39 +65,41 @@ static void VtxConfigToMSPOut()
 
 static int event()
 {
-    if (VtxConfigReadyToSend && connectionState == connected)
+    if (VtxSendState == VTXSS_MODIFIED ||
+        (VtxSendState == VTXSS_UNKNOWN && connectionState == connected))
     {
-        DBGLN("Sending VTX Config, because connected");
-        VtxConfigReadyToSend = false;
-        VtxConfigSent = true;
-        VtxConfigToMSPOut();
-        return DURATION_NEVER;
+        VtxSendState = VTXSS_SENDING1;
+        return DURATION_IMMEDIATELY;
     }
-    else if (VtxConfigReadyToSend)
-    {
-        VtxConfigReadyToSend = false;
-        VtxConfigSent = false;
-        DBGLN("Delaying send till connected");
-        return DURATION_NEVER;
-    }
-    else if(connectionState == connected && !VtxConfigSent)
-    {
-        DBGLN("Connected, lesh go");
-        VtxConfigSent = true;
-        return 5000; // callback in 5s to do the send
-    }
-    else if(connectionState == disconnected)
-    {
-        VtxConfigSent = false;
-        return DURATION_NEVER;
-    }
+
+    if (connectionState == disconnected)
+        VtxSendState = VTXSS_UNKNOWN;
+
     return DURATION_NEVER;
 }
 
 static int timeout()
 {
-    DBGLN("Sending VTX Config");
     VtxConfigToMSPOut();
+
+    VtxSendState = (VtxSendState_e)((int)VtxSendState + 1);
+    if (VtxSendState < VTXSS_SENDINGDONE)
+        return 500; // repeat send in 500ms
+
+    if (connectionState == connected)
+    {
+        // Connected while sending, assume the MSP got to the RX
+        VtxSendState = VTXSS_CONFIRMED;
+        eepromWriteToMSPOut();
+    }
+    else
+    {
+        VtxSendState = VTXSS_UNKNOWN;
+        // Never received a connection, clear the queue which now
+        // has multiple VTX config packets in it
+        crsf.ResetMspQueue();
+    }
+
     return DURATION_NEVER;
 }
 
