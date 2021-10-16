@@ -153,7 +153,7 @@ local function parseDeviceInfoMessage(data)
   deviceName, offset = fieldGetString(data, 3)
   fields_count = data[offset+12]
   for i=1, fields_count do
-    fields[i] = { name=nil }
+    fields[i] = { }
   end
   fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
 end
