@@ -21,6 +21,7 @@ private:
     uint32_t _lastFallingEdge; // millis of last debounced falling edge
     uint8_t _state; // pin history
     bool _isLongPress; // true if last press was a long
+    uint8_t _longCount; // number of times long press has repeated
     uint8_t _pressCount; // number of short presses before timeout
 public:
     // Callbacks
@@ -28,21 +29,19 @@ public:
     std::function<void ()>OnLongPress;
     // Properties
     uint8_t getCount() const { return _pressCount; }
+    uint8_t getLongCount() const { return _longCount; }
 
     Button() :
         _lastCheck(0), _lastFallingEdge(0), _state(STATE_IDLE),
-        _isLongPress(false), _pressCount(0)
+        _isLongPress(false), _longCount(0), _pressCount(0)
     {
         pinMode(PIN, IDLELOW ? INPUT : INPUT_PULLUP);
     }
 
     // Call this in loop()
-    void update()
+    int update()
     {
         const uint32_t now = millis();
-        if (now - _lastCheck < MS_DEBOUNCE)
-            return;
-        _lastCheck = now;
 
         // Reset press count if it has been too long since last rising edge
         if (now - _lastFallingEdge > MS_MULTI_TIMEOUT)
@@ -67,19 +66,22 @@ public:
         else if (_state == STATE_FALL)
         {
             _lastFallingEdge = now;
+            _longCount = 0;
         }
         // Three or more low in a row
         else if (_state == STATE_HELD)
         {
             if (now - _lastFallingEdge > MS_LONG)
             {
-                DBGLN("Button long");
+                DBGLN("Button long %d", _longCount);
                 _isLongPress = true;
                 if (OnLongPress)
                     OnLongPress();
-                // Reset state so long can fire again
-                _state = STATE_IDLE;
+                // Reset time so long can fire again
+                _lastFallingEdge = now;
+                _longCount++;
             }
         }
+        return MS_DEBOUNCE;
     }
 };

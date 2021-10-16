@@ -16,7 +16,6 @@
 #include <OTA.h>
 
 CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
-HardwareSerial CRSF::Port = HardwareSerial();
 
 void test_crsfToBit()
 {

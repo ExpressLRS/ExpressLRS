@@ -9,6 +9,8 @@ using namespace std;
 
 #if CRSF_RX_MODULE
 
+#include "CRSF.h"
+
 Telemetry::Telemetry()
 {
     ResetState();
@@ -160,7 +162,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
             if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte)
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
-                uint8_t crc = CalcCRC(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
+                uint8_t crc = crsf_crc.calc(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
                 telemetry_state = TELEMETRY_IDLE;
 
                 if (data == crc)
