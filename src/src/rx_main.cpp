@@ -75,6 +75,14 @@ unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+#include <Servo.h> 
+static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
+static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+static Servo *Servos[SERVO_COUNT];
+static bool newChannelsAvailable;
+#endif
+
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
@@ -196,6 +204,15 @@ static uint8_t minLqForChaos()
     const uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
     return interval * ((interval * numfhss + 99) / (interval * numfhss));
 }
+
+static void servosFailsafe()
+{
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+    for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        Servos[ch]->writeMicroseconds(config.GetPwmChannel(ch)->val.failsafe + 988U);
+#endif
+}
+
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
@@ -553,6 +570,8 @@ void LostConnection()
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
+
+    servosFailsafe();
 }
 
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
@@ -608,7 +627,13 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
 
     // No channels packets to the FC if no model match
     if (connectionHasModelMatch)
+    {
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
+        newChannelsAvailable = true;
+        #else
         crsf.sendRCFrameToFC();
+        #endif
+    }
 }
 
 /**
@@ -794,8 +819,28 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #endif
 }
 
+static void setupServos()
+{
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+    for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+    {
+        Servo *servo = new Servo();
+        Servos[ch] = servo;
+        servo->attach(SERVO_PINS[ch], 988, 2012, config.GetPwmChannel(ch)->val.failsafe + 988U);
+    }
+#endif
+}
+
 static void setupSerial()
 {
+#if defined(CRSF_RX_NO_SERIAL)
+    // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
+    #if defined(DEBUG_LOG)
+    Serial.begin(RCVR_UART_BAUD);
+    #endif
+    return;
+#endif
+
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -895,6 +940,7 @@ static void setupBindingFromConfig()
 
 static void HandleUARTin()
 {
+#if !defined(CRSF_RX_NO_SERIAL)
     while (CRSF_RX_SERIAL.available())
     {
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
@@ -912,6 +958,7 @@ static void HandleUARTin()
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
     }
+#endif
 }
 
 static void setupRadio()
@@ -993,6 +1040,27 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
+static void servosUpdate(unsigned long now)
+{
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+    if (!newChannelsAvailable)
+        return;
+
+    static uint32_t lastUpdate;
+    if (now - lastUpdate >= 20)
+    {
+        lastUpdate = now;
+        newChannelsAvailable = false;
+        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        {
+            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+            uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
+            Servos[ch]->writeMicroseconds(us);
+        }
+    }
+#endif
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -1026,6 +1094,7 @@ void setup()
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
+    setupServos();
     setupRadio();
 
     if (connectionState != radioFailed)
@@ -1055,6 +1124,7 @@ void loop()
     }
 
     devicesUpdate(now);
+    servosUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.

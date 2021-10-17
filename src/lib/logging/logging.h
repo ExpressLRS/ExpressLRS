@@ -12,6 +12,13 @@
  * Set LOGGING_UART define to Serial instance to use if not Serial
  **/
 
+// DEBUG_LOG_VERBOSE and DEBUG_RX_SCOREBOARD implies DEBUG_LOG
+#if !defined(DEBUG_LOG)
+  #if defined(DEBUG_LOG_VERBOSE) || defined(DEBUG_RX_SCOREBOARD)
+    #define DEBUG_LOG
+  #endif
+#endif
+
 #ifndef LOGGING_UART
 #define LOGGING_UART Serial
 #endif
@@ -20,13 +27,18 @@
 
 extern void debugPrintf(const char* fmt, ...);
 
-#define INFOLN(msg, ...) { \
-  debugPrintf(msg, ##__VA_ARGS__); \
-  LOGGING_UART.println(); \
-}
+#if defined(CRSF_RX_NO_SERIAL) && !defined(DEBUG_LOG)
+  #define INFOLN(msg, ...)
+  #define ERRLN(msg)
+#else
+  #define INFOLN(msg, ...) { \
+     debugPrintf(msg, ##__VA_ARGS__); \
+     LOGGING_UART.println(); \
+   }
 #define ERRLN(msg) LOGGING_UART.println("ERROR: " msg)
+#endif
 
-#if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE)
+#if defined(DEBUG_LOG)
   #define DBGCR   LOGGING_UART.println()
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM

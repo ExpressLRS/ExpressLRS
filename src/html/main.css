@@ -1164,4 +1164,12 @@ th {
   .info-bg {
 	background: #88cef7;
   }
-  
+  /* Custon code for ExpressLRS PWM Output table */
+  .pwmtbl th {
+	  text-align: center;
+	  font-weight: bold;
+  }
+  .pwmtbl td {
+	padding-left: 2px;
+	padding-right: 2px;
+  }
