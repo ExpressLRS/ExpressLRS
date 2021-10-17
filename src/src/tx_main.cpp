@@ -925,7 +925,9 @@ void VtxConfigToMSPOut()
   crsf.AddMspMessage(&packet);
   eepromWriteToMSPOut(); // FC eeprom write to save VTx setting after reboot
 
+#if defined(USE_TX_BACKPACK)
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+#endif // USE_TX_BACKPACK
 }
 
 #if defined(USE_TX_BACKPACK)
@@ -939,7 +941,6 @@ void BackpackWiFiToMSPOut(uint16_t command)
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
-#endif // USE_TX_BACKPACK
 
 void BackpackBinding()
 {
@@ -956,6 +957,7 @@ void BackpackBinding()
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
+#endif // USE_TX_BACKPACK
 
 void eepromWriteToMSPOut()
 {
@@ -1005,7 +1007,9 @@ void EnterBindingMode()
 
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 
-  BackpackBinding(); // Bind button also sends backpack bind packet.  Not sure if its a good idea :|
+#if defined(USE_TX_BACKPACK)
+  BackpackBinding();
+#endif // USE_TX_BACKPACK
 }
 
 void ExitBindingMode()
