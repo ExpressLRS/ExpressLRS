@@ -1,5 +1,7 @@
 #define TX_DEVICE_NAME "HM ES24TX"
 
+#define USE_TX_BACKPACK
+
 // Output Power
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW

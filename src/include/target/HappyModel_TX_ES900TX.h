@@ -1,5 +1,7 @@
 #define TX_DEVICE_NAME          "HM ES900TX"
 
+#define USE_TX_BACKPACK
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_DIO0           26

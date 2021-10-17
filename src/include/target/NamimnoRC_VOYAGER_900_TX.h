@@ -1,5 +1,7 @@
 #define TX_DEVICE_NAME "Namimno Voyager"
 
+#define USE_TX_BACKPACK
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PB12
 #define GPIO_PIN_DIO0               PA15

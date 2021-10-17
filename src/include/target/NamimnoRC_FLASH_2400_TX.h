@@ -1,5 +1,7 @@
 #define TX_DEVICE_NAME "Namimno Flash"
 
+#define USE_TX_BACKPACK
+
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4
 #define GPIO_PIN_BUSY           PB5

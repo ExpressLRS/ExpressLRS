@@ -1,5 +1,7 @@
 #define TX_DEVICE_NAME "ES24TX Slim Pro"
 
+#define USE_TX_BACKPACK
+
 // Output Power
 #define MinPower PWR_25mW
 #define MaxPower PWR_1000mW
