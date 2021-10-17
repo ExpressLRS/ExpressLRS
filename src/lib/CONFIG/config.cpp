@@ -450,6 +450,9 @@ RxConfig::SetDefaults()
     SetModelId(0xFF);
     SetSSID("");
     SetPassword("");
+    for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
+        SetPwmChannel(ch, 512, ch);
+    SetPwmChannel(2, 0, 2); // ch2 is throttle, failsafe it to 988
     Commit();
 }
 
@@ -473,6 +476,35 @@ void
 RxConfig::SetPassword(const char *password)
 {
     strncpy(m_config.password, password, sizeof(m_config.password)-1);
+    m_modified = true;
+}
+
+void
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh)
+{
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
+    if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh)
+        return;
+    
+    pwm->val.failsafe = failsafe;
+    pwm->val.inputChannel = inputCh;
+    m_modified = true;
+}
+
+void
+RxConfig::SetPwmChannelRaw(uint8_t ch, uint16_t raw)
+{
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
+    if (pwm->raw == raw)
+        return;
+
+    pwm->raw = raw;
     m_modified = true;
 }
 

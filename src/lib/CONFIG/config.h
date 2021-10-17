@@ -13,7 +13,7 @@
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
 #define TX_CONFIG_VERSION   4
-#define RX_CONFIG_VERSION   3
+#define RX_CONFIG_VERSION   4
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -101,6 +101,17 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
+constexpr uint8_t PWM_MAX_CHANNELS = 8;
+
+typedef union {
+    struct {
+        uint16_t failsafe:10; // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        uint8_t inputChannel:4; // 0-based input channel
+        uint8_t unused:2;
+    } val;
+    uint16_t raw;
+} rx_config_pwm_t;
+
 typedef struct {
     uint32_t    version;
     bool        isBound;
@@ -109,6 +120,7 @@ typedef struct {
     uint8_t     modelId;
     char        ssid[33];
     char        password[33];
+    rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
 class RxConfig
@@ -131,6 +143,9 @@ public:
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
+    #endif
 
     // Setters
     void SetIsBound(bool isBound);
@@ -141,6 +156,10 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh);
+    void SetPwmChannelRaw(uint8_t ch, uint16_t raw);
+    #endif
 
 private:
     rx_config_t m_config;
