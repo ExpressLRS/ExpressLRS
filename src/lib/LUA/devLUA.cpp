@@ -25,203 +25,174 @@ static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
-struct tagLuaItem_textSelection luaAirRate = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION}, //id,type
-    "Packet Rate",
+static struct luaItem_selection luaAirRate = {
+    {"Packet Rate", CRSF_TEXT_SELECTION},
+    0, // value
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
     "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
     "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
 #endif
-    {0,0,3},//value,min,max
-    "Hz",
-    LUA_TEXTSELECTION_SIZE(luaAirRate)
+    "Hz"
 };
-struct tagLuaItem_textSelection luaTlmRate = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Telem Ratio",
+
+static struct luaItem_selection luaTlmRate = {
+    {"Telem Ratio", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
-    {0,0,7},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaTlmRate)
+    emptySpace
 };
+
 //----------------------------POWER------------------
-struct tagLuaItem_folder luaPowerFolder = {
-    {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    "TX Power",
-    LUA_FOLDER_SIZE(luaPowerFolder)
+static struct luaItem_folder luaPowerFolder = {
+    {"TX Power", CRSF_FOLDER},
 };
-struct tagLuaItem_textSelection luaPower = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Max Power",
+
+static struct luaItem_selection luaPower = {
+    {"Max Power", CRSF_TEXT_SELECTION},
+    0, // value
     "10;25;50;100;250;500;1000;2000",
-    {0,0,7},//value,min,max
-    "mW",
-    LUA_TEXTSELECTION_SIZE(luaPower)
+    "mW"
 };
-struct tagLuaItem_textSelection luaDynamicPower = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Dynamic",
+
+static struct luaItem_selection luaDynamicPower = {
+    {"Dynamic", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;On;AUX9;AUX10;AUX11;AUX12",
-    {0,0,5},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaDynamicPower)
+    emptySpace
 };
 //----------------------------POWER------------------
 
-struct tagLuaItem_textSelection luaSwitch = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Switch Mode",
+static struct luaItem_selection luaSwitch = {
+    {"Switch Mode", CRSF_TEXT_SELECTION},
+    0, // value
     "Hybrid;Wide",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaSwitch)
+    emptySpace
 };
-struct tagLuaItem_textSelection luaModelMatch = {
-    {5,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Model Match",
+
+static struct luaItem_selection luaModelMatch = {
+    {"Model Match", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;On",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaModelMatch)
-};
-struct tagLuaItem_command luaBind = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "Bind",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaBind)
-};
-struct tagLuaItem_string luaInfo = {
-    {0,0,(uint8_t)CRSF_INFO|CRSF_FIELD_ELRS_HIDDEN},//id,type
-    "Bad/Good",
-    thisCommit,
-    LUA_STRING_SIZE(luaInfo)
-};
-struct tagLuaItem_string luaELRSversion = {
-    {0,0,(uint8_t)CRSF_INFO},//id,type
-    thisVersion,
-    thisCommit,
-    LUA_STRING_SIZE(luaELRSversion)
+    emptySpace
 };
 
+static struct luaItem_command luaBind = {
+    {"Bind", CRSF_COMMAND},
+    0, // step
+    emptySpace
+};
+
+static struct luaItem_string luaInfo = {
+    {"Bad/Good", (crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
+    emptySpace
+};
+
+static struct luaItem_string luaELRSversion = {
+    {thisVersion, CRSF_INFO},
+    thisCommit
+};
+
+#if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
 //---------------------------- WiFi -----------------------------
-struct tagLuaItem_folder luaWiFiFolder = {
-    {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    "WiFi",
-    LUA_FOLDER_SIZE(luaWiFiFolder)
+static struct luaItem_folder luaWiFiFolder = {
+    {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-struct tagLuaItem_command luaWebUpdate = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "WiFi Tx",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaWebUpdate)
+#if defined(PLATFORM_ESP32)
+static struct luaItem_command luaWebUpdate = {
+    {"Enable WiFi", CRSF_COMMAND},
+    0, // step
+    emptySpace
 };
 #endif
 
-struct tagLuaItem_command luaTxBackpackUpdate = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "WiFi Tx Backpack",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaTxBackpackUpdate)
+#if defined(USE_TX_BACKPACK)
+static struct luaItem_command luaTxBackpackUpdate = {
+    {"Enable Backpack WiFi", CRSF_COMMAND},
+    0, // step
+    emptySpace
 };
 
-struct tagLuaItem_command luaVRxBackpackUpdate = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "WiFi VRx Backpack",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaVRxBackpackUpdate)
+static struct luaItem_command luaVRxBackpackUpdate = {
+    {"Enable VRx WiFi", CRSF_COMMAND},
+    0, // step
+    emptySpace
 };
+#endif // USE_TX_BACKPACK
 //---------------------------- WiFi -----------------------------
+#endif
 
 #if defined(PLATFORM_ESP32)
-struct tagLuaItem_command luaBLEJoystick = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "BLE Joystick",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaBLEJoystick)
+static struct luaItem_command luaBLEJoystick = {
+    {"BLE Joystick", CRSF_COMMAND},
+    0, // step
+    emptySpace
 };
 #endif
 
 //----------------------------VTX ADMINISTRATOR------------------
-struct tagLuaItem_folder luaVtxFolder = {
-    {0,0,(uint8_t)CRSF_FOLDER},//id,type
-    "VTX Administrator",
-    LUA_FOLDER_SIZE(luaVtxFolder)
+static struct luaItem_folder luaVtxFolder = {
+    {"VTX Administrator", CRSF_FOLDER},
 };
 
-struct tagLuaItem_textSelection luaVtxBand = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Band",
+static struct luaItem_selection luaVtxBand = {
+    {"Band", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;A;B;E;F;R;L",
-    {0,0,6},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxBand)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxChannel = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Channel",
+static struct luaItem_selection luaVtxChannel = {
+    {"Channel", CRSF_TEXT_SELECTION},
+    0, // value
     "1;2;3;4;5;6;7;8",
-    {0,0,7},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxChannel)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxPwr = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Pwr Lvl",
+static struct luaItem_selection luaVtxPwr = {
+    {"Pwr Lvl", CRSF_TEXT_SELECTION},
+    0, // value
     "-;1;2;3;4;5;6;7;8",
-    {0,0,8},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxPwr)
+    emptySpace
 };
 
-struct tagLuaItem_textSelection luaVtxPit = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "Pitmode",
+static struct luaItem_selection luaVtxPit = {
+    {"Pitmode", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;On",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaVtxPit)
+    emptySpace
 };
 
-struct tagLuaItem_command luaVtxSend = {
-    {0,0,(uint8_t)CRSF_COMMAND},//id,type
-    "Send VTx",
-    {0,200},//status,timeout
-    emptySpace,
-    LUA_COMMAND_SIZE(luaVtxSend)
+static struct luaItem_command luaVtxSend = {
+    {"Send VTx", CRSF_COMMAND},
+    0, // step
+    emptySpace
 };
-
 //----------------------------VTX ADMINISTRATOR------------------
 
 static char luaBadGoodString[10];
 
 extern TxConfig config;
 extern uint8_t VtxConfigReadyToSend;
-extern uint8_t TxBackpackWiFiReadyToSend;
-extern uint8_t VRxBackpackWiFiReadyToSend;
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
+#if defined(USE_TX_BACKPACK)
+extern uint8_t TxBackpackWiFiReadyToSend;
+extern uint8_t VRxBackpackWiFiReadyToSend;
+#endif
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
-static void registerLuaParameters() {
+static void registerLuaParameters()
+{
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      DBGLN("Request AirRate: %d", arg);
       uint8_t rate = RATE_MAX - 1 - arg;
       rate = adjustPacketRateForBaud(rate);
       config.SetRate(rate);
@@ -230,7 +201,6 @@ static void registerLuaParameters() {
   registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
-      DBGLN("Request TLM interval: %d", arg);
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
@@ -239,19 +209,15 @@ static void registerLuaParameters() {
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
     {
-      DBGLN("Request Switch Mode: %d", arg);
       // +1 to the mode because 1-bit was mode 0 and has been removed
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-      uint32_t newSwitchMode = (CRSF::ParameterUpdateData[2] + 1) & 0b11;
+      uint32_t newSwitchMode = (arg + 1) & 0b11;
       config.SetSwitchMode(newSwitchMode);
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
   });
   registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
-    bool newModelMatch = CRSF::ParameterUpdateData[2] & 0b1;
-#ifndef DEBUG_SUPPRESS
-    DBGLN("Request Model Match: %d", newModelMatch);
-#endif
+    bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
     if (connectionState == connected) {
       mspPacket_t msp;
@@ -263,10 +229,11 @@ static void registerLuaParameters() {
       CRSF::AddMspMessage(&msp);
     }
   });
+
+  // POWER folder
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
-    DBGLN("Request Power: %d", newPower);
     
     if (newPower > MaxPower)
     {
@@ -276,49 +243,41 @@ static void registerLuaParameters() {
         newPower = MinPower;
     }
     config.SetPower(newPower);
-  }, luaPowerFolder.luaProperties1.id);
+  }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-  }, luaPowerFolder.luaProperties1.id);
+  }, luaPowerFolder.common.id);
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
-  },luaVtxFolder.luaProperties1.id);
+  },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
       config.SetVtxChannel(arg);
-  },luaVtxFolder.luaProperties1.id);
+  },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
       config.SetVtxPower(arg);
-  },luaVtxFolder.luaProperties1.id);
+  },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
       config.SetVtxPitmode(arg);
-  },luaVtxFolder.luaProperties1.id);
+  },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       VtxConfigReadyToSend = true;
     }
     sendLuaCommandResponse(&luaVtxSend, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaVtxFolder.luaProperties1.id);
+  },luaVtxFolder.common.id);
 
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      DBGLN("Binding requested from LUA");
-      EnterBindingMode();
-    }
-    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
-  });
-
+  // WIFI folder
+  #if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaWiFiFolder);
-  #ifdef PLATFORM_ESP32
+  #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      DBGVLN("arg %d", arg);
       if (arg == 4) // 4 = request confirmed, start
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        DBGLN("Wifi Update Mode Requested!");
         sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
         connectionState = wifiUpdate;
       }
@@ -335,32 +294,34 @@ static void registerLuaParameters() {
       }
       else
       {
-        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.luaProperties2.status, luaWebUpdate.label2);
+        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.step, luaWebUpdate.info);
       }
-    },luaWiFiFolder.luaProperties1.id);
+    },luaWiFiFolder.common.id);
   #endif
+  #if defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       TxBackpackWiFiReadyToSend = true;
     }
     sendLuaCommandResponse(&luaTxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaWiFiFolder.luaProperties1.id);
+  },luaWiFiFolder.common.id);
 
   registerLUAParameter(&luaVRxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
       VRxBackpackWiFiReadyToSend = true;
     }
     sendLuaCommandResponse(&luaVRxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaWiFiFolder.luaProperties1.id);
+  },luaWiFiFolder.common.id);
+  #endif // USE_TX_BACKPACK
+#endif
 
-  #ifdef PLATFORM_ESP32
+  #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg == 4) // 4 = request confirmed, start
       {
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start BLE to prevent stuck on
         //unintentional button press.
-        DBGLN("BLE Joystick Mode Requested!");
         sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
         connectionState = bleJoystick;
       }
@@ -377,11 +338,18 @@ static void registerLuaParameters() {
       }
       else
       {
-        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.luaProperties2.status, luaBLEJoystick.label2);
+        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.step, luaBLEJoystick.info);
       }
     });
 
   #endif
+
+  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      EnterBindingMode();
+    }
+    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
+  });
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
