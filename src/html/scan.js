@@ -333,7 +333,8 @@ _('access').addEventListener('click', callback("Access Point", "An error occurre
 _('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
 _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
 if (_('modelmatch') != undefined) {
-    _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model", null));
+    _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model",
+        () => { return new FormData(_('modelmatch')); }));
 }
 
 //=========================================================
