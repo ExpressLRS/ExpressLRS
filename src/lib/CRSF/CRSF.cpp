@@ -899,7 +899,6 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     this->_dev->write(data, totalBufferLen);
 #endif // CRSF_RX_NO_SERIAL
 }
-#endif // CRSF_TX_MODULE
 
 /**
  * @brief   Get encoded channel position from PackedRCdataOut
@@ -926,3 +925,5 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
             return 0;
     }
 }
+
+#endif // CRSF_RX_MODULE
