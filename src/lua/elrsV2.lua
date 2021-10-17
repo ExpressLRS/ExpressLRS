@@ -174,7 +174,7 @@ local function getBitBin(data, bitPosition)
     return nil
   end
   
-  local function parseOtherDeviceMessage(data)  --parse deviceInfo beside our TXModule
+  local function parseOtherDeviceMessage(data)  --parse deviceInfo beside current selected device
     if data[2] == 0xEE then
       return
     end
