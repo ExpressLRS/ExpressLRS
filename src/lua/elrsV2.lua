@@ -182,7 +182,7 @@ local function getBitBin(data, bitPosition)
       return
     end
     
-    fields[fields_count+2].parent = 0
+    fields[fields_count+2].parent = 0 -- show other device folder
   
     local offset
     local id = data[2]
@@ -651,10 +651,16 @@ local function handleDevicePageEvent(event)
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
     else
       if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder
+        if deviceId ~= 0xEE then
+          deviceId = 0xEE
+          handsetId = 0xEF
+          fields_count = 0
+          reloadAllField()
+          crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+        else
+          crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
+        end
         reloadAllField()
-        crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-        deviceId = 0xEE
-        handsetId = 0xEF
       end
       folderAccess = 0
       fields[fields_count+1].parent = 255
