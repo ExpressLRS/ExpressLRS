@@ -650,11 +650,8 @@ local function handleDevicePageEvent(event)
       fieldData = {}
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
     else
-      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading
-        allParamsLoaded = 0
-        fieldTimeout = getTime() + 200 -- 2s
-        fieldId, fieldChunk = 1, 0
-        fieldData = {}
+      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder
+        reloadAllField()
         crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
         deviceId = 0xEE
         handsetId = 0xEF
@@ -687,8 +684,7 @@ local function handleDevicePageEvent(event)
           if field.type < 11 then
             -- we need a short time because if the packet rate changes we need time for the module to react
             fieldTimeout = getTime() + 20
-            allParamsLoaded = 0
-            fieldId = 1
+            reloadAllField()
           end
         end
       end
@@ -748,9 +744,7 @@ local function runPopupPage(event)
   if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
       result = popupConfirmation(fieldPopup.info, "Stopped!", event)
       fieldPopup.lastStatus = status
-      fieldChunk = 0
-      fieldData = {}
-      allParamsLoaded = 0
+      reloadAllField()
       fieldPopup = nil
   elseif fieldPopup.status == 3 then -- confirmation required
     result = popupConfirmation(fieldPopup.info, "PRESS [OK] to confirm", event)
