@@ -1,5 +1,5 @@
 #include "CRSF.h"
-#include "../../lib/FIFO/FIFO.h"
+#include "FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
 #include "helpers.h"
@@ -19,16 +19,24 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
 #endif
+#elif defined(TARGET_NATIVE)
+HardwareSerial CRSF::Port = Serial;
 #endif
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 ///Out FIFO to buffer messages///
-FIFO SerialOutFIFO;
-FIFO MspWriteFIFO;
+static FIFO SerialOutFIFO;
 
-volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+volatile uint16_t CRSF::ChannelDataIn[16] = {0};
+
+inBuffer_U CRSF::inBuffer;
+
+volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
+
+#if CRSF_TX_MODULE
+static FIFO MspWriteFIFO;
 
 void inline CRSF::nullCallback(void) {}
 
@@ -40,26 +48,17 @@ void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges
 void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
 
 /// UART Handling ///
+volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
+volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
+volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
-volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
-
-volatile uint16_t CRSF::ChannelDataIn[16] = {0};
-
-volatile inBuffer_U CRSF::inBuffer;
-
 uint8_t CRSF::modelId = 0;
-
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 volatile bool CRSF::elrsLUAmode = false;
 
-volatile crsf_channels_s CRSF::PackedRCdataOut;
-volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-volatile crsf_sensor_battery_s CRSF::TLMbattSensor;
-
-#if CRSF_TX_MODULE
 /// OpenTX mixer sync ///
 volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
@@ -96,6 +95,9 @@ uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
+#ifdef CRSF_RX_MODULE
+crsf_channels_s CRSF::PackedRCdataOut;
+#endif
 
 void CRSF::Begin()
 {
@@ -163,7 +165,6 @@ void CRSF::End()
     }
 #endif
     uint32_t startTime = millis();
-    #define timeout 2000
     while (SerialOutFIFO.peek() > 0)
     {
         handleUARTin();
@@ -172,7 +173,7 @@ void CRSF::End()
             break;
         }
     }
-    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
+    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
@@ -194,22 +195,22 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
         return;
     }
 
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    constexpr uint8_t outBuffer[4] = {
+        LinkStatisticsFrameLength + 4,
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        LinkStatisticsFrameLength + 2,
+        CRSF_FRAMETYPE_LINK_STATISTICS
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
-    outBuffer[LinkStatisticsFrameLength + 3] = crc;
+    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4); // length
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    SerialOutFIFO.push(crc);
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -224,23 +225,30 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     if (!CRSF::CRSFstate)
         return;
 
-    uint8_t buf[6 + len];
+    static uint8_t buf[6] = {
+        0, // length
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        0,
+        0,
+        CRSF_ADDRESS_RADIO_TRANSMITTER,
+        CRSF_ADDRESS_CRSF_TRANSMITTER
+    };
+
     // Header info
-    buf[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buf[1] = len + 4; // Type + DST + SRC + CRC
-    buf[2] = type;
-    buf[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buf[4] = CRSF_ADDRESS_CRSF_TRANSMITTER;
-    // Payload
-    memcpy(&buf[5], data, len);
+    buf[0] = len + 6;
+    buf[2] = len + 4; // Type + DST + SRC + CRC
+    buf[3] = type;
+
     // CRC - Starts at type, ends before CRC
-    buf[5+len] = crsf_crc.calc(&buf[2], len + 3);
+    uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
+    crc = crsf_crc.calc((byte *)data, len, crc);
 
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.push(sizeof(buf));
     SerialOutFIFO.pushBytes(buf, sizeof(buf));
+    SerialOutFIFO.pushBytes((byte *)data, len);
+    SerialOutFIFO.push(crc);
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -329,16 +337,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     uint32_t now = millis();
     if (CRSF::CRSFstate && now >= (OpenTXsyncLastSent + OpenTXsyncPacketInterval))
     {
-        uint32_t packetRate;
-        if (CRSF::TxToHandsetBauds[UARTcurrentBaudIdx] == 115200 && CRSF::RequestedRCpacketInterval == 2000)
-        {
-            packetRate = 40000; //constrain to 250hz max
-        }
-        else
-        {
-            packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        }
-
+        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
         struct otxSyncData {
@@ -346,7 +345,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
         } PACKED;
-        
+
         uint8_t buffer[sizeof(otxSyncData)];
         struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
 
@@ -358,6 +357,27 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
         OpenTXsyncLastSent = now;
     }
+}
+
+void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+{
+    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
+    ChannelDataIn[0] = (rcChannels->ch0);
+    ChannelDataIn[1] = (rcChannels->ch1);
+    ChannelDataIn[2] = (rcChannels->ch2);
+    ChannelDataIn[3] = (rcChannels->ch3);
+    ChannelDataIn[4] = (rcChannels->ch4);
+    ChannelDataIn[5] = (rcChannels->ch5);
+    ChannelDataIn[6] = (rcChannels->ch6);
+    ChannelDataIn[7] = (rcChannels->ch7);
+    ChannelDataIn[8] = (rcChannels->ch8);
+    ChannelDataIn[9] = (rcChannels->ch9);
+    ChannelDataIn[10] = (rcChannels->ch10);
+    ChannelDataIn[11] = (rcChannels->ch11);
+    ChannelDataIn[12] = (rcChannels->ch12);
+    ChannelDataIn[13] = (rcChannels->ch13);
+    ChannelDataIn[14] = (rcChannels->ch14);
+    ChannelDataIn[15] = (rcChannels->ch15);
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
@@ -374,7 +394,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
-    
+
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -399,7 +419,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             } else {
                 elrsLUAmode = false;
             }
-            if (packetType == CRSF_FRAMETYPE_COMMAND && 
+            if (packetType == CRSF_FRAMETYPE_COMMAND &&
                 SerialInBuffer[5] == SUBCOMMAND_CRSF &&
                 SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
                     modelId = SerialInBuffer[7];
@@ -412,8 +432,8 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             RecvParameterUpdate();
             return true;
         }
-        DBGLN("Got Other Packet");        
-        //GoodPktsCount++;        
+        DBGLN("Got Other Packet");
+        //GoodPktsCount++;
     }
     return false;
 }
@@ -514,7 +534,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
 
 void ICACHE_RAM_ATTR CRSF::handleUARTin()
 {
-    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+    uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (UARTwdt())
     {
@@ -572,10 +592,10 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
-                char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
+                char CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {        
+                {
                     GoodPktsCount++;
                     if (ProcessPacket())
                     {
@@ -826,41 +846,43 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    constexpr uint8_t outBuffer[4] = {
+        LinkStatisticsFrameLength + 4,
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        LinkStatisticsFrameLength + 2,
+        CRSF_FRAMETYPE_LINK_STATISTICS
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = LinkStatisticsFrameLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    memcpy(outBuffer + 3, (byte *)&LinkStatistics, LinkStatisticsFrameLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], LinkStatisticsFrameLength + 1);
-
-    outBuffer[LinkStatisticsFrameLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
-    SerialOutFIFO.push(LinkStatisticsFrameLength + 4);
-    SerialOutFIFO.pushBytes(outBuffer, LinkStatisticsFrameLength + 4);
+    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    SerialOutFIFO.push(crc);
+
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-    uint8_t outBuffer[RCframeLength + 4];
+    constexpr uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        RCframeLength + 2,
+        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
 
-    outBuffer[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    outBuffer[1] = RCframeLength + 2;
-    outBuffer[2] = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+    uint8_t crc = crsf_crc.calc(outBuffer[2]);
+    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-    memcpy(outBuffer + 3, (byte *)&PackedRCdataOut, RCframeLength);
-
-    uint8_t crc = crsf_crc.calc(&outBuffer[2], RCframeLength + 1);
-
-    outBuffer[RCframeLength + 3] = crc;
 #ifndef DEBUG_CRSF_NO_OUTPUT
     //SerialOutFIFO.push(RCframeLength + 4);
     //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-    this->_dev->write(outBuffer, RCframeLength + 4);
+    this->_dev->write(outBuffer, sizeof(outBuffer));
+    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+    this->_dev->write(crc);
 #endif
 }
 
@@ -873,25 +895,3 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     this->_dev->write(data, totalBufferLen);
 }
 #endif // CRSF_TX_MODULE
-
-
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
-{
-    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    ChannelDataIn[0] = (rcChannels->ch0);
-    ChannelDataIn[1] = (rcChannels->ch1);
-    ChannelDataIn[2] = (rcChannels->ch2);
-    ChannelDataIn[3] = (rcChannels->ch3);
-    ChannelDataIn[4] = (rcChannels->ch4);
-    ChannelDataIn[5] = (rcChannels->ch5);
-    ChannelDataIn[6] = (rcChannels->ch6);
-    ChannelDataIn[7] = (rcChannels->ch7);
-    ChannelDataIn[8] = (rcChannels->ch8);
-    ChannelDataIn[9] = (rcChannels->ch9);
-    ChannelDataIn[10] = (rcChannels->ch10);
-    ChannelDataIn[11] = (rcChannels->ch11);
-    ChannelDataIn[12] = (rcChannels->ch12);
-    ChannelDataIn[13] = (rcChannels->ch13);
-    ChannelDataIn[14] = (rcChannels->ch14);
-    ChannelDataIn[15] = (rcChannels->ch15);
-}

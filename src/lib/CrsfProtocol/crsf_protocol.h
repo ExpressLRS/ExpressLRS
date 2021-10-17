@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <cmath>
-
+#include "crc.h"
 
 #if TARGET_TX && PLATFORM_STM32
 #define CRSF_TX_MODULE_STM32 1
@@ -25,10 +25,8 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#ifdef UART_RX_SPEED_400K
-#define CRSF_RX_BAUDRATE 400000
-#else
-#define CRSF_RX_BAUDRATE 420000
+#ifndef RCVR_UART_BAUD
+#define RCVR_UART_BAUD 420000
 #endif
 
 #define CRSF_NUM_CHANNELS 16
@@ -72,25 +70,6 @@
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
-
-/* CRC8 implementation with polynom = x​7​+ x​6​+ x​4​+ x​2​+ x​0 ​(0xD5) */
-static const unsigned char crc8tab[256] = {
-    0x00, 0xD5, 0x7F, 0xAA, 0xFE, 0x2B, 0x81, 0x54, 0x29, 0xFC, 0x56, 0x83, 0xD7, 0x02, 0xA8, 0x7D,
-    0x52, 0x87, 0x2D, 0xF8, 0xAC, 0x79, 0xD3, 0x06, 0x7B, 0xAE, 0x04, 0xD1, 0x85, 0x50, 0xFA, 0x2F,
-    0xA4, 0x71, 0xDB, 0x0E, 0x5A, 0x8F, 0x25, 0xF0, 0x8D, 0x58, 0xF2, 0x27, 0x73, 0xA6, 0x0C, 0xD9,
-    0xF6, 0x23, 0x89, 0x5C, 0x08, 0xDD, 0x77, 0xA2, 0xDF, 0x0A, 0xA0, 0x75, 0x21, 0xF4, 0x5E, 0x8B,
-    0x9D, 0x48, 0xE2, 0x37, 0x63, 0xB6, 0x1C, 0xC9, 0xB4, 0x61, 0xCB, 0x1E, 0x4A, 0x9F, 0x35, 0xE0,
-    0xCF, 0x1A, 0xB0, 0x65, 0x31, 0xE4, 0x4E, 0x9B, 0xE6, 0x33, 0x99, 0x4C, 0x18, 0xCD, 0x67, 0xB2,
-    0x39, 0xEC, 0x46, 0x93, 0xC7, 0x12, 0xB8, 0x6D, 0x10, 0xC5, 0x6F, 0xBA, 0xEE, 0x3B, 0x91, 0x44,
-    0x6B, 0xBE, 0x14, 0xC1, 0x95, 0x40, 0xEA, 0x3F, 0x42, 0x97, 0x3D, 0xE8, 0xBC, 0x69, 0xC3, 0x16,
-    0xEF, 0x3A, 0x90, 0x45, 0x11, 0xC4, 0x6E, 0xBB, 0xC6, 0x13, 0xB9, 0x6C, 0x38, 0xED, 0x47, 0x92,
-    0xBD, 0x68, 0xC2, 0x17, 0x43, 0x96, 0x3C, 0xE9, 0x94, 0x41, 0xEB, 0x3E, 0x6A, 0xBF, 0x15, 0xC0,
-    0x4B, 0x9E, 0x34, 0xE1, 0xB5, 0x60, 0xCA, 0x1F, 0x62, 0xB7, 0x1D, 0xC8, 0x9C, 0x49, 0xE3, 0x36,
-    0x19, 0xCC, 0x66, 0xB3, 0xE7, 0x32, 0x98, 0x4D, 0x30, 0xE5, 0x4F, 0x9A, 0xCE, 0x1B, 0xB1, 0x64,
-    0x72, 0xA7, 0x0D, 0xD8, 0x8C, 0x59, 0xF3, 0x26, 0x5B, 0x8E, 0x24, 0xF1, 0xA5, 0x70, 0xDA, 0x0F,
-    0x20, 0xF5, 0x5F, 0x8A, 0xDE, 0x0B, 0xA1, 0x74, 0x09, 0xDC, 0x76, 0xA3, 0xF7, 0x22, 0x88, 0x5D,
-    0xD6, 0x03, 0xA9, 0x7C, 0x28, 0xFD, 0x57, 0x82, 0xFF, 0x2A, 0x80, 0x55, 0x01, 0xD4, 0x7E, 0xAB,
-    0x84, 0x51, 0xFB, 0x2E, 0x7A, 0xAF, 0x05, 0xD0, 0xAD, 0x78, 0xD2, 0x07, 0x53, 0x86, 0x2C, 0xF9};
 
 static const unsigned int VTXtable[6][8] =
     {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
@@ -306,132 +285,6 @@ typedef struct crsfPayloadLinkstatistics_s
 
 typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
 
-// only 1st properties has the same type on all lua packet type.
-struct tagLuaProperties1{
-    uint8_t id;
-//    uint8_t chunk; //chunk put in struct just to reserve the byte space, will be overwritten when sending
-    uint8_t parent;
-    const uint8_t type;
-}PACKED;
-struct tagLuaDeviceProperties {
-    uint32_t serialNo;
-    uint32_t hardwareVer;
-    uint32_t softwareVer;
-    uint8_t fieldCnt; //number of field of params this device has
-}PACKED;
-struct tagLuaTextSelectionProperties{
-    uint8_t value;
-    const uint8_t min;
-    const uint8_t max;
-//    uint8_t defaultValue;
-}PACKED;
-
-struct tagLuaCommandProperties{
-    uint8_t status;
-    const uint8_t timeout;
-}PACKED;
-
-struct tagLuaUint8Properties{
-    uint8_t value;
-    const uint8_t min;
-    const uint8_t max;
-//    uint8_t defaultValue;
-}PACKED;
-struct tagLuaInt8Properties{
-    int8_t value;
-    const int8_t min;
-    const int8_t max;
-//    int8_t defaultValue;
-}PACKED;
-struct tagLuaUint16Properties{
-    uint16_t value;
-    const uint16_t min;
-    const uint16_t max;
-//    uint16_t defaultValue;
-}PACKED;
-struct tagLuaInt16Properties{
-    int16_t value;
-    const int16_t min;
-    const int16_t max;
-//    int16_t defaultValue;
-}PACKED;
-struct tagLuaFloatProperties{
-    float value;
-    const float min;
-    const float max;
-//    float defaultValue;
-}PACKED;
-
-struct tagLuaItem_textSelection {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    const char* const textOption; //ascii representative of param value
-    struct tagLuaTextSelectionProperties luaProperties2;
-    const char *label2; //param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_command {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //command name
-    struct tagLuaCommandProperties luaProperties2;
-    const char *label2; //command info
-    uint8_t size;
-} PACKED;
-
-struct tagLuaItem_uint8 {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    struct tagLuaUint8Properties luaProperties2;
-    const char* const label2;//param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_int8 {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    struct tagLuaInt8Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_uint16 {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    struct tagLuaUint16Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_int16 {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    struct tagLuaInt16Properties luaProperties2;
-    const char* const label2; //param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_float {
-    struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    struct tagLuaFloatProperties luaProperties2;
-    const char* const label2;//param unit
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_string {
-    const struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    const char *label2; //string value
-    uint8_t size;
-} PACKED;
-struct tagLuaItem_folder {
-    const struct tagLuaProperties1 luaProperties1;
-    const char* const label1; //param name
-    uint8_t size;
-} PACKED;
-
-struct tagLuaElrsParams {
-    uint8_t pktsBad;
-    uint16_t pktsGood; // Big-Endian
-    uint8_t flags;
-    char msg[1]; // null-terminated string
-} PACKED;
-
 // typedef struct crsfOpenTXsyncFrame_s
 // {
 //     uint32_t adjustedRefreshRate;
@@ -516,26 +369,6 @@ static inline uint8_t ICACHE_RAM_ATTR CRSF_to_BIT(uint16_t val)
 static inline uint16_t ICACHE_RAM_ATTR BIT_to_CRSF(uint8_t val)
 {
     return (val) ? CRSF_CHANNEL_VALUE_2000 : CRSF_CHANNEL_VALUE_1000;
-}
-
-static inline uint8_t ICACHE_RAM_ATTR CalcCRC(volatile uint8_t *data, int length)
-{
-    uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
-    {
-        crc = crc8tab[crc ^ *data++];
-    }
-    return crc;
-}
-
-static inline uint8_t ICACHE_RAM_ATTR CalcCRC(uint8_t *data, int length)
-{
-    uint8_t crc = 0;
-    for (uint8_t i = 0; i < length; i++)
-    {
-        crc = crc8tab[crc ^ *data++];
-    }
-    return crc;
 }
 
 static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)

@@ -95,10 +95,4 @@ device_t Buzzer_device = {
     .timeout = timeout
 };
 
-#else
-
-device_t Buzzer_device = {
-    NULL
-};
-
 #endif

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Arduino.h"
 #include "targets.h"
 #include "DAC.h"
 
@@ -10,92 +9,15 @@
 #include "SX1280Driver.h"
 #endif
 
-#if defined(TARGET_1000mW_MODULE) || \
-    defined(TARGET_R9M_TX)        || \
-    defined(TARGET_TX_ES915TX)    || \
-    defined(TARGET_ES900TX)
-#if defined(UNLOCK_HIGHER_POWER)
-#define MaxPower PWR_1000mW
-#else
-#define MaxPower PWR_250mW
-#endif
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_NAMIMNORC_TX)
-#if TARGET_MODULE_2400
-#define MaxPower PWR_1000mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_25mW
-#else
-#define MaxPower PWR_2000mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
+#if defined(TARGET_RX)
+    // These are "fake" values as the power on the RX is not user selectable
+    #define MinPower PWR_10mW
+    #define MaxPower PWR_10mW
 #endif
 
-#elif defined(TARGET_R9M_LITE_PRO_TX)
-#define MaxPower PWR_1000mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_HappyModel_ES24TX_Slim_Pro_2400_TX)
-#define MaxPower PWR_1000mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_25mW
-
-#elif defined(TARGET_TX_BETAFPV_900_V1)
-#define MaxPower PWR_500mW
-#define DefaultPowerEnum PWR_100mW
-#define MinPower PWR_100mW
-
-#elif defined(TARGET_TX_BETAFPV_2400_V1)
-#define MaxPower PWR_500mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_RX_BETAFPV_2400_V1)
-#define MaxPower PWR_100mW
-#define DefaultPowerEnum PWR_100mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_TX_ESP32_E28_SX1280_V1) || \
-      defined(TARGET_TX_ESP32_LORA1280F27)   || \
-      defined(TARGET_TX_GHOST)
-#define MaxPower PWR_250mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_TX_ESP32_SX1280_V1)
-#define MaxPower PWR_10mW // Output is actually 14mW
-#define DefaultPowerEnum PWR_10mW
-#define MinPower PWR_10mW
-
-#elif defined(TARGET_TX_FM30) || \
-      defined(TARGET_RX_FM30_MINI) || \
-      defined(TARGET_TX_FM30_MINI)
-#if defined(UNLOCK_HIGHER_POWER)
-#define MaxPower PWR_250mW
-#else
-#define MaxPower PWR_100mW
-#endif
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-
-#else
-// Default is "100mW module"
-//  ==> average ouput is 50mW with high duty cycle
-#define MaxPower PWR_50mW
-#define DefaultPowerEnum PWR_50mW
-#define MinPower PWR_10mW
-#ifndef TARGET_100mW_MODULE
-#define TARGET_100mW_MODULE 1
-#endif
-#endif
-
-#if !defined(MaxPower) && defined(TARGET_RX)
-#define MaxPower PWR_2000mW
-#define DefaultPowerEnum PWR_2000mW
-#define MinPower PWR_10mW
+#if defined(HighPower) && !defined(UNLOCK_HIGHER_POWER)
+    #undef MaxPower
+    #define MaxPower HighPower
 #endif
 
 typedef enum
@@ -123,9 +45,7 @@ public:
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
+    static PowerLevels_e getDefaultPower();
     static void setDefaultPower();
     static void init();
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-        static void handleCyclePower();
-    #endif
 };

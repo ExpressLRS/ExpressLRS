@@ -31,11 +31,7 @@ SX1280Driver Radio;
 #include "devBLE.h"
 #include "devLUA.h"
 #include "devWIFI.h"
-
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-#include "button.h"
-Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
-#endif
+#include "devButton.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -43,16 +39,6 @@ Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
 #ifndef TLM_REPORT_INTERVAL_MS
 #define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
 #endif
-
-device_t *ui_devices[] = {
-  &LED_device,
-  &RGB_device,
-  &LUA_device,
-  &BLE_device,
-  &OLED_device,
-  &Buzzer_device,
-  &WIFI_device
-};
 
 /// define some libs to use ///
 hwTimer hwTimer;
@@ -100,8 +86,10 @@ void VtxConfigToMSPOut();
 void BackpackWiFiToMSPOut(uint16_t);
 void eepromWriteToMSPOut();
 uint8_t VtxConfigReadyToSend = false;
+#if defined(USE_TX_BACKPACK)
 uint8_t TxBackpackWiFiReadyToSend = false;
 uint8_t VRxBackpackWiFiReadyToSend = false;
+#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -112,6 +100,31 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void OnRFModePacket(mspPacket_t *packet);
 void OnTxPowerPacket(mspPacket_t *packet);
 void OnTLMRatePacket(mspPacket_t *packet);
+
+device_t *ui_devices[] = {
+#ifdef HAS_LED
+  &LED_device,
+#endif
+#ifdef HAS_RGB
+  &RGB_device,
+#endif
+  &LUA_device,
+#ifdef HAS_BLE
+  &BLE_device,
+#endif
+#ifdef HAS_OLED
+  &OLED_device,
+#endif
+#ifdef HAS_BUZZER
+  &Buzzer_device,
+#endif
+#ifdef HAS_WIFI
+  &WIFI_device,
+#endif
+#ifdef HAS_BUTTON
+  &Button_device
+#endif
+};
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -488,10 +501,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 void ICACHE_RAM_ATTR timerCallbackIdle()
 {
   NonceTX++;
-  if (NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-  {
-    FHSSptr++;
-  }
+  HandleFHSS();
 }
 
 void UARTdisconnected()
@@ -651,11 +661,6 @@ static void setupTarget()
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
-
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
-  button.OnShortPress = []() { if (button.getCount() == 3) EnterBindingMode(); };
-  button.OnLongPress = &POWERMGNT.handleCyclePower;
-#endif
 }
 
 void setup()
@@ -665,6 +670,7 @@ void setup()
 
   // Initialise the UI devices
   devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
   Radio.RXdoneCallback = &RXdoneISR;
@@ -717,7 +723,7 @@ void loop()
     UpdateConnectDisconnectStatus();
   }
 
-  // Update UI devices 
+  // Update UI devices
   devicesUpdate(now);
 
   CheckConfigChangePending();
@@ -733,10 +739,6 @@ void loop()
     crsf.handleUARTin();
   #endif
 
-  #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
-    button.update();
-  #endif
-  
   if (connectionState > MODE_STATES)
   {
     return;
@@ -760,6 +762,7 @@ void loop()
     VtxConfigToMSPOut();
   }
 
+#if defined(USE_TX_BACKPACK)
   if (TxBackpackWiFiReadyToSend)
   {
     TxBackpackWiFiReadyToSend = false;
@@ -771,6 +774,7 @@ void loop()
     VRxBackpackWiFiReadyToSend = false;
     BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
   }
+#endif
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
@@ -936,6 +940,7 @@ void VtxConfigToMSPOut()
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
+#if defined(USE_TX_BACKPACK)
 void BackpackWiFiToMSPOut(uint16_t command)
 {
   mspPacket_t packet;
@@ -946,6 +951,7 @@ void BackpackWiFiToMSPOut(uint16_t command)
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
+#endif // USE_TX_BACKPACK
 
 void eepromWriteToMSPOut()
 {
