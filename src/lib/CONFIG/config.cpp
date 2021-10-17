@@ -450,9 +450,11 @@ RxConfig::SetDefaults()
     SetModelId(0xFF);
     SetSSID("");
     SetPassword("");
+#if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
         SetPwmChannel(ch, 512, ch);
     SetPwmChannel(2, 0, 2); // ch2 is throttle, failsafe it to 988
+#endif
     Commit();
 }
 
@@ -479,6 +481,7 @@ RxConfig::SetPassword(const char *password)
     m_modified = true;
 }
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh)
 {
@@ -507,5 +510,6 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint16_t raw)
     pwm->raw = raw;
     m_modified = true;
 }
+#endif
 
 #endif
