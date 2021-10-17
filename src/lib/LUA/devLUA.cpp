@@ -172,13 +172,11 @@ static struct luaItem_command luaVtxSend = {
 //----------------------------VTX ADMINISTRATOR------------------
 
 #if defined(TARGET_TX_FM30)
-struct tagLuaItem_textSelection luaBluetoothTelem = {
-    {0,0,(uint8_t)CRSF_TEXT_SELECTION},//id,type
-    "BT Telemetry",
+struct luaItem_selection luaBluetoothTelem = {
+    {"BT Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
     "Off;On",
-    {0,0,1},//value,min,max
-    emptySpace,
-    LUA_TEXTSELECTION_SIZE(luaPower)
+    emptySpace
 };
 #endif
 
