@@ -705,7 +705,7 @@ void loop()
     UpdateConnectDisconnectStatus();
   }
 
-  // Update UI devices 
+  // Update UI devices
   devicesUpdate(now);
 
   CheckConfigChangePending();
@@ -724,7 +724,7 @@ void loop()
   #if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
     button.update();
   #endif
-  
+
   if (connectionState > MODE_STATES)
   {
     return;

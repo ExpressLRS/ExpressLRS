@@ -171,7 +171,7 @@ void CRSF::End()
             break;
         }
     }
-    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial 
+    //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
 #endif // CRSF_TX_MODULE
 }
@@ -345,7 +345,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
         } PACKED;
-        
+
         uint8_t buffer[sizeof(otxSyncData)];
         struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
 
@@ -361,6 +361,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
+    bool packetReceived = false;
+
     if (CRSFstate == false)
     {
         CRSFstate = true;
@@ -373,48 +375,48 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 #endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
-    
+
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
         GetChannelDataIn();
-        return true;
+        packetReceived = true;
     }
-    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
+    // check for all extended frames that are a broadcast or a message to the FC
+    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+            (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
     {
-        volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
-        return true;
-    } else {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-            (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+        packetReceived = true;
+    }
+
+    // always execute this check since broadcast needs to be handeled in all cases
+    if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+        (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+    {
+        elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
+
+        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
         {
-            if(SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA){
-                elrsLUAmode = true;
-            } else {
-                elrsLUAmode = false;
-            }
-            if (packetType == CRSF_FRAMETYPE_COMMAND && 
-                SerialInBuffer[5] == SUBCOMMAND_CRSF &&
-                SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
-                    modelId = SerialInBuffer[7];
-                    RecvModelUpdate();
-                    return true;
-            }
+            modelId = SerialInBuffer[7];
+            RecvModelUpdate();
+        }
+        else
+        {
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
             RecvParameterUpdate();
-            return true;
         }
-        DBGLN("Got Other Packet");        
-        //GoodPktsCount++;        
+
+        packetReceived = true;
     }
-    return false;
+
+    return packetReceived;
 }
 
 uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
@@ -574,7 +576,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 char CalculatedCRC = crsf_crc.calc((uint8_t *)SerialInBuffer + 2, SerialInPacketPtr - 3);
 
                 if (CalculatedCRC == inChar)
-                {        
+                {
                     GoodPktsCount++;
                     if (ProcessPacket())
                     {
@@ -863,11 +865,11 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-    const uint8_t totalBufferLen = 14;
-
-    // SerialOutFIFO.push(totalBufferLen);
-    // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
-    this->_dev->write(data, totalBufferLen);
+    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+    {
+        this->_dev->write(data, totalBufferLen);
+    }
 }
 #endif // CRSF_TX_MODULE
 

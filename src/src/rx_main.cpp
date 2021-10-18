@@ -627,7 +627,7 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     else
     {
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch)
+        if (connectionHasModelMatch && (MspData[3] == CRSF_ADDRESS_BROADCAST || MspData[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER))
             crsf.sendMSPFrameToFC(MspData);
     }
 
@@ -667,7 +667,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
     // Only require the first 18 bits of the UID to match to establish a connection
-    // but the last 6 bits must modelmatch before sending any data to the FC            
+    // but the last 6 bits must modelmatch before sending any data to the FC
     if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
         return false;
 
