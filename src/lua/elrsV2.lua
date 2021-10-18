@@ -174,44 +174,29 @@ local function getBitBin(data, bitPosition)
     return nil
   end
   
-  local function parseOtherDeviceMessage(data)  --parse deviceInfo beside current selected device
-    if data[2] == 0xEE then
-      return
-    end
-    if fields_count < 1 then
-      return
-    end
-    
-    fields[fields_count+2].parent = 0 -- show other device folder
-  
-    local offset
-    local id = data[2]
-    local name = ""
-    name, offset = fieldGetString(data, 3)
-    local device = getDevice(name)
-    if device == nil then
-      device = createDevice(id, name)
-      devices[#devices + 1] = device
-     -- createDeviceField(#devices+1,name)
-    end
-  end
-  
 local function parseDeviceInfoMessage(data)
-  if data[2] ~= deviceId then
-    fieldData = {}
-    fieldChunk = 0
-    return
-  end
   local offset
+  local id = data[2]
+  local devicesName = ""
   reloadAllField()
   -- deviceId = data[2]
-  deviceName, offset = fieldGetString(data, 3)
-  fields_count = data[offset+12]
-  for i=1, fields_count do
-    fields[i] = { }
+  devicesName, offset = fieldGetString(data, 3)
+  local device = getDevice(devicesName)
+  if device == nil then
+    device = createDevice(id, devicesName)
+    devices[#devices + 1] = device
   end
-  fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
-  fields[fields_count+2] = {id = fields_count+2, name="Other Devices", parent = 255, type=16} -- add other devices folders
+  if deviceId == id then
+    deviceName = devicesName
+    fields_count = data[offset+12]
+    for i=1, fields_count do
+      fields[i] = { }
+    end
+    if folderAccess == 0 then
+    fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
+    end
+    fields[fields_count+2] = {id = fields_count+2, name="Other Devices", parent = 255, type=16} -- add other devices folders
+  end
 end
 
 local function fieldGetValue(data, offset, size)
@@ -438,6 +423,10 @@ local function UIbackExec(field)
 end
 
 local function changeDeviceId(field)
+  folderAccess = 0
+  for i=1, fields_count + 2 + #devices do
+    fields[i] = { name=nil }
+  end
   local device = getDevice(field.name)
   deviceId = device.id
   if deviceId == 0xEE then
@@ -446,7 +435,6 @@ local function changeDeviceId(field)
     handsetId = 0xEA
   end
   fields_count = 0
-  folderAccess = 0
   reloadAllField()
 end
 
@@ -470,7 +458,7 @@ local functions = {
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
 }
 
-local function createDeviceField(fieldId, deviceName) -- put other device in the field list
+local function createDeviceField() -- put other device in the field list
   for i=1, #devices do
   fields[fields_count+2+i] = {id = fields_count+2+i, name=devices[i].name, parent = fields_count+2, type=15}
   end
@@ -559,10 +547,8 @@ end
 
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
-  if command == 0x29 and data[2] == deviceId then
+  if command == 0x29 then
     parseDeviceInfoMessage(data)
-  elseif command == 0x29 and data[2] ~= deviceId then
-    parseOtherDeviceMessage(data)
   elseif command == 0x2B then
     parseParameterInfoMessage(data)
     if allParamsLoaded < 1 or statusComplete == 0 then
@@ -715,6 +701,11 @@ local function runDevicePage(event)
   handleDevicePageEvent(event)
 
   lcd_title()
+  
+  if(#devices > 0) then -- show other device folder
+    fields[fields_count+2].parent = 0
+  end
+
   if elrsFlags > 0 then
     lcd_warn()
   else
