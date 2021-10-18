@@ -645,6 +645,7 @@ local function handleDevicePageEvent(event)
     else
       if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder
         if deviceId ~= 0xEE then
+          clearAllField()
           deviceId = 0xEE
           handsetId = 0xEF
           fields_count = 0
