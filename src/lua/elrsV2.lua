@@ -159,7 +159,7 @@ local function getBitBin(data, bitPosition)
 
   local function clearAllField()
     for i=1, fields_count+2 + #devices do
-      fields[i] = { name=nil }
+      fields[i] = { }
     end
     backButtonId = fields_count + 2 + #devices
     fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
@@ -389,7 +389,7 @@ end
 
 local function fieldFolderDeviceOpen(field)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA }) --broadcast with standard handset ID to get all node respond correctly
-  initLineIndex()
+  lineIndex = 1
   pageOffset = 0
   folderAccess = field.id
   fields[backButtonId].parent = folderAccess
@@ -720,9 +720,7 @@ local function runDevicePage(event)
       local field = getField(pageOffset+y)
       if not field then
         break
-      elseif field.name == nil then
-        lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
-      else
+      elseif field.name ~= nil then
         local attr = lineIndex == (pageOffset+y)
           and ((edit == true and BLINK or 0) + INVERS)
           or 0
