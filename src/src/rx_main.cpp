@@ -1050,10 +1050,13 @@ static void servosUpdate(unsigned long now)
     if (!newChannelsAvailable)
         return;
 
+    // The ESP waveform generator is nice because it doesn't change the value
+    // mid-cycle, but it does busywait if there's already a change queued.
+    // Updating every 20ms minimizes the amount of waiting (0-800us cycling
+    // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
     static uint32_t lastUpdate;
     if (now - lastUpdate >= 20)
     {
-        lastUpdate = now;
         newChannelsAvailable = false;
         for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
         {
@@ -1063,6 +1066,9 @@ static void servosUpdate(unsigned long now)
                 us = 3000U - us;
             Servos[ch]->writeMicroseconds(us);
         }
+        // need to sample actual millis at the end to account for any
+        // waiting that happened in Servo::writeMicroseconds()
+        lastUpdate = millis();
     }
 #endif
 }
