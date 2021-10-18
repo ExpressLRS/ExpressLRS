@@ -648,7 +648,6 @@ local function handleDevicePageEvent(event)
           deviceId = 0xEE
           handsetId = 0xEF
           fields_count = 0
-          reloadAllField()
           crossfireTelemetryPush(0x28, { 0x00, 0xEA })
         else
           crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
