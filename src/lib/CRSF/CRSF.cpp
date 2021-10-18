@@ -392,7 +392,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         packetReceived = true;
-        DBGLN("adding msg type %d length %d", packetType, length);
     }
 
     // always execute this check since broadcast needs to be handeled in all cases
