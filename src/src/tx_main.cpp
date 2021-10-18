@@ -32,6 +32,7 @@ SX1280Driver Radio;
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devVTX.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -82,10 +83,7 @@ uint8_t BindingSendCount = 0;
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
-void VtxConfigToMSPOut();
 void BackpackWiFiToMSPOut(uint16_t);
-void eepromWriteToMSPOut();
-uint8_t VtxConfigReadyToSend = false;
 #if defined(USE_TX_BACKPACK)
 uint8_t TxBackpackWiFiReadyToSend = false;
 uint8_t VRxBackpackWiFiReadyToSend = false;
@@ -122,8 +120,9 @@ device_t *ui_devices[] = {
   &WIFI_device,
 #endif
 #ifdef HAS_BUTTON
-  &Button_device
+  &Button_device,
 #endif
+  &VTX_device
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -143,7 +142,7 @@ static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
 
-static bool ICACHE_RAM_ATTR IsArmed()
+bool ICACHE_RAM_ATTR IsArmed()
 {
    return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 }
@@ -247,7 +246,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
   if (connectionState != connected)
   {
     connectionState = connected;
-    VtxConfigReadyToSend = true;
     DBGLN("got downlink conn");
   }
 
@@ -710,7 +708,7 @@ void loop()
     UpdateConnectDisconnectStatus();
   }
 
-  // Update UI devices 
+  // Update UI devices
   devicesUpdate(now);
 
   CheckConfigChangePending();
@@ -741,12 +739,6 @@ void loop()
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
-  }
-
-  if (VtxConfigReadyToSend)
-  {
-    VtxConfigReadyToSend = false;
-    VtxConfigToMSPOut();
   }
 
 #if defined(USE_TX_BACKPACK)
@@ -896,35 +888,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
       return; // Packets containing frequency in MHz are not yet supported.
     }
 
-    VtxConfigReadyToSend = true;
-
-    devicesTriggerEvent();
-    sendLuaDevicePacket();    // Why is this here?
+    VtxTriggerSend();
   }
-}
-
-void VtxConfigToMSPOut()
-{
-  // 0 = off in the lua Band field
-  // Do not send while armed
-  if (!config.GetVtxBand() || IsArmed())
-    return;
-
-  uint8_t vtxIdx = (config.GetVtxBand()-1) * 8 + config.GetVtxChannel();
-
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = MSP_SET_VTX_CONFIG;
-  packet.addByte(vtxIdx);
-  packet.addByte(0);
-  packet.addByte(config.GetVtxPower());
-  packet.addByte(config.GetVtxPitmode());
-
-  crsf.AddMspMessage(&packet);
-  eepromWriteToMSPOut(); // FC eeprom write to save VTx setting after reboot
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
 #if defined(USE_TX_BACKPACK)
@@ -939,19 +904,6 @@ void BackpackWiFiToMSPOut(uint16_t command)
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 #endif // USE_TX_BACKPACK
-
-void eepromWriteToMSPOut()
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.function = MSP_EEPROM_WRITE;
-  packet.addByte(0);
-  packet.addByte(0);
-  packet.addByte(0);
-  packet.addByte(0);
-
-  crsf.AddMspMessage(&packet);
-}
 
 void EnterBindingMode()
 {
