@@ -209,7 +209,11 @@ static void servosFailsafe()
 {
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-        Servos[ch]->writeMicroseconds(config.GetPwmChannel(ch)->val.failsafe + 988U);
+    {
+        // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
+        uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
+        Servos[ch]->writeMicroseconds(us);
+    }
 #endif
 }
 
@@ -1055,6 +1059,8 @@ static void servosUpdate(unsigned long now)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
+            if (chConfig->val.inverted)
+                us = 3000U - us;
             Servos[ch]->writeMicroseconds(us);
         }
     }

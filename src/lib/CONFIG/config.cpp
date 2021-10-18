@@ -452,8 +452,8 @@ RxConfig::SetDefaults()
     SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch);
-    SetPwmChannel(2, 0, 2); // ch2 is throttle, failsafe it to 988
+        SetPwmChannel(ch, 512, ch, false);
+    SetPwmChannel(2, 0, 2, false); // ch2 is throttle, failsafe it to 988
 #endif
     Commit();
 }
@@ -483,17 +483,19 @@ RxConfig::SetPassword(const char *password)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh)
+    if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh
+        && pwm->val.inverted == inverted)
         return;
     
     pwm->val.failsafe = failsafe;
     pwm->val.inputChannel = inputCh;
+    pwm->val.inverted = inverted;
     m_modified = true;
 }
 

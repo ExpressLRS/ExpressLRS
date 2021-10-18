@@ -1166,10 +1166,11 @@ th {
   }
   /* Custon code for ExpressLRS PWM Output table */
   .pwmtbl th {
-	  text-align: center;
-	  font-weight: bold;
+	text-align: center;
+	font-weight: bold;
   }
   .pwmtbl td {
+	text-align: center;
 	padding-left: 2px;
 	padding-right: 2px;
   }

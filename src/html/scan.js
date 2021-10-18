@@ -13,14 +13,15 @@ function getPwmFormData()
     while (inField = _(`pwm_${ch}_ch`))
     {
         let inChannel = inField.value;
+        let invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
         let failsafeField = _(`pwm_${ch}_fs`);
         let failsafe = failsafeField.value;
         if (failsafe > 2011) failsafe = 2011;
         if (failsafe < 988) failsafe = 988;
         failsafeField.value = failsafe;
 
-        let raw = (inChannel << 10) | (failsafe - 988);
-        //console.log(`PWM ${ch} input=${inChannel} fs=${failsafe} raw=${raw}`);
+        let raw = (invert << 14) | (inChannel << 10) | (failsafe - 988);
+        //console.log(`PWM ${ch} input=${inChannel} fs=${failsafe} inv=${invert} raw=${raw}`);
         outData.push(raw);
         ++ch;
     }
@@ -34,12 +35,13 @@ function updatePwmSettings(arPwm)
 {
     if (arPwm === undefined)
         return;
-    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel
-    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Input</th><th>Failsafe</th></tr>'];
+    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert
+    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Input</th><th>Invert?</th><th>Failsafe</th></tr>'];
     arPwm.forEach((item, index) => {
         let failsafe = (item & 1023) + 988; // 10 bits
         let ch = (item >> 10) & 15; // 4 bits
-        htmlFields.push(`<tr><td>${index+1}</td><td><select id="pwm_${index}_ch">
+        let inv = (item >> 14) & 1;
+        htmlFields.push(`<tr><th>${index+1}</th><td><select id="pwm_${index}_ch">
           <option value="0"${(ch===0) ? ' selected' : ''}>ch1</option>
           <option value="1"${(ch===1) ? ' selected' : ''}>ch2</option>
           <option value="2"${(ch===2) ? ' selected' : ''}>ch3</option>
@@ -52,9 +54,10 @@ function updatePwmSettings(arPwm)
           <option value="9"${(ch===9) ? ' selected' : ''}>ch10 (AUX6)</option>
           <option value="10"${(ch===10) ? ' selected' : ''}>ch11 (AUX7)</option>
           <option value="11"${(ch===11) ? ' selected' : ''}>ch12 (AUX8)</option>
-        </select></td><td><input id="pwm_${index}_fs" value="${failsafe}" size="4"/></td></tr>`);
+        </select></td><td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
+        <td><input id="pwm_${index}_fs" value="${failsafe}" size="4"/></td></tr>`);
     });
-    htmlFields.push('<tr><td colspan="3"><input type="submit" value="Set PWM Output"></td></tr></table>');
+    htmlFields.push('<tr><td colspan="4"><input type="submit" value="Set PWM Output"></td></tr></table>');
 
     let grp = document.createElement('DIV');
     grp.setAttribute('class', 'group');
