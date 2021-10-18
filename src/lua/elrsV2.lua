@@ -33,6 +33,7 @@ local goodPkt = 0
 local elrsFlags = 0
 local elrsFlagsInfo = "no"
 local fields_count = 0
+local backButtonId = 2
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
@@ -156,6 +157,17 @@ local function getBitBin(data, bitPosition)
     return 0
   end
 
+  local function clearAllField()
+    for i=1, fields_count+2 + #devices do
+      fields[i] = { name=nil }
+    end
+    backButtonId = fields_count + 2 + #devices
+    fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
+    if folderAccess ~= 0 then
+      fields[backButtonId].parent = folderAccess
+    end
+  end
+
   local function createDevice(devId, devName)
     local device = {
       id = devId,
@@ -189,13 +201,8 @@ local function parseDeviceInfoMessage(data)
   if deviceId == id then
     deviceName = devicesName
     fields_count = data[offset+12]
-    for i=1, fields_count do
-      fields[i] = { }
-    end
-    if folderAccess == 0 then
-    fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
-    end
-    fields[fields_count+2] = {id = fields_count+2, name="Other Devices", parent = 255, type=16} -- add other devices folders
+    clearAllField()
+    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
   end
 end
 
@@ -377,7 +384,7 @@ local function fieldFolderOpen(field)
   lineIndex = 1
   pageOffset = 0
   folderAccess = field.id
-  fields[fields_count+1].parent = folderAccess
+  fields[backButtonId].parent = folderAccess
 end
 
 local function fieldFolderDeviceOpen(field)
@@ -385,7 +392,7 @@ local function fieldFolderDeviceOpen(field)
   initLineIndex()
   pageOffset = 0
   folderAccess = field.id
-  fields[fields_count+1].parent = folderAccess
+  fields[backButtonId].parent = folderAccess
 end
 
 local function fieldFolderDisplay(field,y ,attr)
@@ -419,14 +426,12 @@ end
 
 local function UIbackExec(field)
   folderAccess = 0
-  fields[fields_count+1].parent = 255
+  fields[backButtonId].parent = 255
 end
 
 local function changeDeviceId(field)
   folderAccess = 0
-  for i=1, fields_count + 2 + #devices do
-    fields[i] = { name=nil }
-  end
+  clearAllField()
   local device = getDevice(field.name)
   deviceId = device.id
   if deviceId == 0xEE then
@@ -459,8 +464,10 @@ local functions = {
 }
 
 local function createDeviceField() -- put other device in the field list
+  fields[fields_count+2+#devices] = fields[backButtonId]
+  backButtonId = fields_count+2+#devices
   for i=1, #devices do
-  fields[fields_count+2+i] = {id = fields_count+2+i, name=devices[i].name, parent = fields_count+2, type=15}
+  fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
   end
 end
 
@@ -649,7 +656,7 @@ local function handleDevicePageEvent(event)
         reloadAllField()
       end
       folderAccess = 0
-      fields[fields_count+1].parent = 255
+      fields[backButtonId].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
@@ -702,8 +709,8 @@ local function runDevicePage(event)
 
   lcd_title()
   
-  if(#devices > 0) then -- show other device folder
-    fields[fields_count+2].parent = 0
+  if #devices > 1 then -- show other device folder
+    fields[fields_count+1].parent = 0
   end
 
   if elrsFlags > 0 then
