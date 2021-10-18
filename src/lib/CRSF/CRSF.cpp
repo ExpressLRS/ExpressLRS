@@ -392,6 +392,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
         packetReceived = true;
+        DBGLN("adding msg type %d length %d", packetType, length);
     }
 
     // always execute this check since broadcast needs to be handeled in all cases
@@ -868,6 +869,7 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
+        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
         this->_dev->write(data, totalBufferLen);
     }
 }
