@@ -113,8 +113,6 @@ uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Spec
 
 uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
 
-uint8_t invertIQ = UID[5] & 0x01;
-
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
 
