@@ -50,9 +50,19 @@ local lcdIsColor
 
 local devices = { }
 
+local function clearAllField()
+  for i=1, fields_count+2 + #devices do
+    fields[i] = { }
+  end
+  backButtonId = fields_count + 2 + #devices
+  fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
+  if folderAccess ~= 0 then
+    fields[backButtonId].parent = folderAccess
+  end
+end
+
 local function reloadAllField()
   allParamsLoaded = 0
-  fieldTimeout = getTime() + 200 -- 2s
   fieldId, fieldChunk = 1, 0
   fieldData = {}
 end
@@ -157,17 +167,6 @@ local function getBitBin(data, bitPosition)
     return 0
   end
 
-  local function clearAllField()
-    for i=1, fields_count+2 + #devices do
-      fields[i] = { }
-    end
-    backButtonId = fields_count + 2 + #devices
-    fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
-    if folderAccess ~= 0 then
-      fields[backButtonId].parent = folderAccess
-    end
-  end
-
   local function createDevice(devId, devName)
     local device = {
       id = devId,
@@ -190,7 +189,6 @@ local function parseDeviceInfoMessage(data)
   local offset
   local id = data[2]
   local devicesName = ""
-  reloadAllField()
   -- deviceId = data[2]
   devicesName, offset = fieldGetString(data, 3)
   local device = getDevice(devicesName)
@@ -201,6 +199,7 @@ local function parseDeviceInfoMessage(data)
   if deviceId == id then
     deviceName = devicesName
     fields_count = data[offset+12]
+    reloadAllField()
     clearAllField()
     fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
   end
