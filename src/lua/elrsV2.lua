@@ -42,6 +42,7 @@ local commandRunningIndicator = 1
 local expectedChunks = -1
 local deviceIsELRS = false
 local linkstatTimeout = 100
+local serialNum = 0xFFFFFFFF
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -186,33 +187,6 @@ local function getBitBin(data, bitPosition)
     end
     return nil
   end
-  
-local function parseDeviceInfoMessage(data)
-  local offset
-  local id = data[2]
-  local devicesName = ""
-  -- deviceId = data[2]
-  devicesName, offset = fieldGetString(data, 3)
-  local device = getDevice(devicesName)
-  if device == nil then
-    device = createDevice(id, devicesName)
-    devices[#devices + 1] = device
-  end
-  if deviceId == id then
-    local serialNum
-    deviceName = devicesName
-    serialNum, offset = fieldGetString(data,offset)
-    if serialNum == "ELRS" then
-      deviceIsELRS = true
-    else
-      deviceIsELRS = false
-    end
-    fields_count = data[offset+8]
-    reloadAllField()
-    clearAllField()
-    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
-  end
-end
 
 local function fieldGetValue(data, offset, size)
   local result = 0
@@ -443,7 +417,8 @@ local function changeDeviceId(devId) --change to selected device ID
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
   if devId == 0xEE then
     handsetId = 0xEF
-  else  --else we would act like the legacy lua
+  else --else we would act like the legacy lua
+    deviceIsELRS = false
     handsetId = 0xEA
   end
   deviceId = devId
@@ -454,6 +429,33 @@ local function fieldDeviceIdSelect(field)
   local device = getDevice(field.name)
   changeDeviceId(device.id)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+end
+
+local function parseDeviceInfoMessage(data)
+  local offset
+  local id = data[2]
+  local devicesName = ""
+  -- deviceId = data[2]
+  devicesName, offset = fieldGetString(data, 3)
+  local device = getDevice(devicesName)
+  if device == nil then
+    device = createDevice(id, devicesName)
+    devices[#devices + 1] = device
+  end
+  if deviceId == id then
+    local serialNum
+    deviceName = devicesName
+    serialNum = fieldGetValue(data,offset,4)
+    if serialNum == 0x454C5253 then
+      deviceIsELRS = true
+    else
+      deviceIsELRS = false
+    end
+    fields_count = data[offset+12]
+    reloadAllField()
+    clearAllField()
+    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+  end
 end
 
 local functions = {
@@ -591,7 +593,7 @@ local function refreshNext()
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-  elseif deviceIsELRS == true and time > linkstatTimeout then
+  elseif deviceIsELRS == true and time > linkstatTimeout and elrsFlags == 0 then
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     linkstatTimeout = time + 100
   elseif time > fieldTimeout and not edit then
