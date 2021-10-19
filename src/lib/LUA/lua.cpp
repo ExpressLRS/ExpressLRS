@@ -242,7 +242,6 @@ bool luaHandleUpdateParameter()
   if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
       LUAfieldReported = millis();
       populateHandler();
-      sendELRSstatus();
   }
 
   if (UpdateParamReq == false)
