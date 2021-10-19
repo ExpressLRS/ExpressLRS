@@ -27,9 +27,11 @@ static const uint16_t melody[][2] = {{400,200},{480,200}};
 static const uint16_t melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
 #endif
 
+static uint8_t tunepos = 0;
+static bool callAfterComplete = false;
+
 static int playTune(bool start, const uint16_t tune[][2], int numTones)
 {
-    static uint8_t tunepos = 0;
     if (start)
     {
         pinMode(GPIO_PIN_BUZZER, OUTPUT);
@@ -40,6 +42,7 @@ static int playTune(bool start, const uint16_t tune[][2], int numTones)
         noTone(GPIO_PIN_BUZZER);
         pinMode(GPIO_PIN_BUZZER, INPUT);
         tunepos = 0;
+
         return DURATION_NEVER;
     }
     tone(GPIO_PIN_BUZZER, tune[tunepos][0], tune[tunepos][1]);
@@ -80,12 +83,28 @@ static int updateBuzzer(bool start)
 
 static int event()
 {
-    return updateBuzzer(true);
+    if (tunepos == 0)
+    {
+        return updateBuzzer(true);
+    }
+    else
+    {
+        // if we are currently playing a tune then set a flag so that we can do a start after it completes
+        callAfterComplete = true;
+        return DURATION_IGNORE;
+    }
 }
 
 static int timeout()
 {
-    return updateBuzzer(false);
+    int duration = updateBuzzer(false);
+    if (duration == DURATION_NEVER && callAfterComplete)
+    {
+        // tune completed and the flag is set to start the next one
+        callAfterComplete = false;
+        duration = updateBuzzer(true);
+    }
+    return duration;
 }
 
 device_t Buzzer_device = {
