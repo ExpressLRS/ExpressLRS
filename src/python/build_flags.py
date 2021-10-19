@@ -152,8 +152,9 @@ condense_flags()
 if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
     print_error('Please define a Regulatory_Domain in user_defines.txt')
 
-if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*'):
-    # remove ISM_2400 domain flag, it is defined per target config
+if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
+        env.get('PIOENV', '').upper() != "NATIVE":
+    # Remove ISM_2400 domain flag if not unit test, it is defined per target config
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
 
 env['BUILD_FLAGS'] = build_flags

@@ -84,6 +84,7 @@
 
 #elif !(defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915) || \
         defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || \
-        defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433))
+        defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || \
+        defined(UNIT_TEST))
 #error "Regulatory_Domain is not defined for 900MHz devices. Check user_defines.txt!"
 #endif
