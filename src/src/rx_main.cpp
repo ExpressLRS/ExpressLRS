@@ -36,16 +36,9 @@ SX1280Driver Radio;
 #include "helpers.h"
 #include "devLED.h"
 #include "devWIFI.h"
+#include "devButton.h"
 
 //// CONSTANTS ////
-#define BUTTON_SAMPLE_INTERVAL 150
-#define WEB_UPDATE_PRESS_INTERVAL 2000 // hold button for 2 sec to enable webupdate mode
-#define BUTTON_RESET_INTERVAL 4000     //hold button for 4 sec to reboot RX
-#define LED_INTERVAL_WEB_UPDATE 25
-#define LED_INTERVAL_ERROR      100
-#define LED_INTERVAL_DISCONNECTED 500
-#define LED_INTERVAL_BIND_SHORT 100
-#define LED_INTERVAL_BIND_LONG  1000
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
@@ -53,9 +46,18 @@ SX1280Driver Radio;
 ///////////////////
 
 device_t *ui_devices[] = {
+#ifdef HAS_LED
   &LED_device,
+#endif
+#ifdef HAS_RGB
   &RGB_device,
-  &WIFI_device
+#endif
+#ifdef HAS_WIFI
+  &WIFI_device,
+#endif
+#ifdef HAS_BUTTON
+  &Button_device
+#endif
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -127,14 +129,8 @@ int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
-static bool connectionHasModelMatch;
+bool connectionHasModelMatch;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
-
-//// Variables Relating to Button behaviour ////
-bool buttonPrevValue = true; //default pullup
-bool buttonDown = false;     //is the button current pressed down?
-uint32_t buttonLastSampled = 0;
-uint32_t buttonLastPressed = 0;
 
 ///////////////////////////////////////////////
 
@@ -225,7 +221,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
     crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
-    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
+    //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
     crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
@@ -245,6 +241,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+    bool invertIQ = UID[5] & 0x01;
 
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
@@ -423,6 +420,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
     // Save the LQ value before the inc() reduces it by 1
     uplinkLQ = LQCalc.getLQ();
+    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
         LQCalc.inc();
@@ -785,40 +783,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-void sampleButton(unsigned long now)
-{
-#ifdef GPIO_PIN_BUTTON
-    bool buttonValue = digitalRead(GPIO_PIN_BUTTON);
-
-    if (buttonValue == false && buttonPrevValue == true)
-    { //falling edge
-        buttonDown = true;
-    }
-
-    if (buttonValue == true && buttonPrevValue == false)
-    { //rising edge
-        buttonDown = false;
-    }
-
-    if ((now > buttonLastPressed + WEB_UPDATE_PRESS_INTERVAL) && buttonDown)
-    { // button held down for WEB_UPDATE_PRESS_INTERVAL
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        if (connectionState != wifiUpdate)
-        {
-            connectionState = wifiUpdate;
-        }
-#endif
-    }
-    if ((now > buttonLastPressed + BUTTON_RESET_INTERVAL) && buttonDown)
-    {
-#ifdef PLATFORM_ESP8266
-        ESP.restart();
-#endif
-    }
-    buttonPrevValue = buttonValue;
-#endif
-}
-
 void ICACHE_RAM_ATTR RXdoneISR()
 {
     ProcessRFPacket();
@@ -837,7 +801,7 @@ static void setupSerial()
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
@@ -848,7 +812,7 @@ static void setupSerial()
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
     CRSF_RX_SERIAL.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
@@ -857,17 +821,17 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(CRSF_RX_BAUDRATE);
+    CRSF_TX_SERIAL.begin(RCVR_UART_BAUD);
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(CRSF_RX_BAUDRATE); // Same baud as CRSF for simplicity
+    Serial.begin(RCVR_UART_BAUD); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    Serial.begin(CRSF_RX_BAUDRATE);
+    Serial.begin(RCVR_UART_BAUD);
     #if defined(RCVR_INVERT_TX)
     USC0(UART0) |= BIT(UCTXI);
     #endif
@@ -901,9 +865,6 @@ static void setupConfigAndPocCheck()
 
 static void setupGpio()
 {
-#ifdef GPIO_PIN_BUTTON
-    pinMode(GPIO_PIN_BUTTON, INPUT);
-#endif /* GPIO_PIN_BUTTON */
 #if defined(GPIO_PIN_ANTENNA_SELECT)
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
     digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
@@ -1151,12 +1112,6 @@ void loop()
             crsf.sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = now;
         }
-    }
-
-    if (now > (buttonLastSampled + BUTTON_SAMPLE_INTERVAL))
-    {
-        sampleButton(now);
-        buttonLastSampled = now;
     }
 
     if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))

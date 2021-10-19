@@ -33,24 +33,25 @@
 
 #include "targets.h"
 
-#define FIFO_SIZE 255
+// If this is 256 then the compiler can optimise out the modulo because the head/tail are uint8_t types
+#define FIFO_SIZE 256
 
 class FIFO
 {
 private:
     uint8_t head;
     uint8_t tail;
-    uint8_t numElements;
+    uint16_t numElements;
     uint8_t buffer[FIFO_SIZE] = {0};
 
 public:
     FIFO();
     ~FIFO();
-    void ICACHE_RAM_ATTR push(uint8_t data);
-    void ICACHE_RAM_ATTR pushBytes(uint8_t *data, int len);
+    void ICACHE_RAM_ATTR push(const uint8_t data);
+    void ICACHE_RAM_ATTR pushBytes(const uint8_t *data, int len);
     uint8_t ICACHE_RAM_ATTR pop();
     void ICACHE_RAM_ATTR popBytes(uint8_t *data, int len);
     uint8_t ICACHE_RAM_ATTR peek();
-    int ICACHE_RAM_ATTR size();
+    uint16_t ICACHE_RAM_ATTR size();
     void ICACHE_RAM_ATTR flush();
 };

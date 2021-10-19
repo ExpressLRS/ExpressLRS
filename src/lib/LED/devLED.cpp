@@ -6,11 +6,15 @@
 #include "POWERMGNT.h"
 
 extern bool InBindingMode;
+#if defined(TARGET_RX)
+extern bool connectionHasModelMatch;
+#endif
 
-constexpr uint8_t LEDSEQ_RADIO_FAILED[] = { 20, 100 }; // 200ms on, 1000ms off 
-constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500s off 
-constexpr uint8_t LEDSEQ_WIFI_UPDATE[] = { 2, 3 };     // 20ms on, 30s off 
-constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 100ms on, 100ms off, 100ms on, 1s off
+constexpr uint8_t LEDSEQ_RADIO_FAILED[] = { 20, 100 }; // 200ms on, 1000ms off
+constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500ms off
+constexpr uint8_t LEDSEQ_WIFI_UPDATE[] = { 2, 3 };     // 20ms on, 30ms off
+constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 2x 100ms blink, 1s pause
+constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x 100ms blink, 1s pause
 
 static uint8_t _pin = -1;
 static uint8_t _pin_inverted;
@@ -24,7 +28,7 @@ static uint16_t updateLED()
     {
         return DURATION_NEVER;
     }
-    if(_counter % 2 == 0)
+    if(_counter % 2 == 1)
         digitalWrite(_pin, LOW ^ _pin_inverted);
     else
         digitalWrite(_pin, HIGH ^ _pin_inverted);
@@ -141,7 +145,14 @@ static int event()
             #endif
 
             #ifdef GPIO_PIN_LED
-                digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
+                if (connectionHasModelMatch)
+                {
+                    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
+                }
+                else
+                {
+                    return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
+                }
             #endif
         #endif
         return DURATION_NEVER;
