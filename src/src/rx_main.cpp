@@ -205,18 +205,6 @@ static uint8_t minLqForChaos()
     return interval * ((interval * numfhss + 99) / (interval * numfhss));
 }
 
-static void servosFailsafe()
-{
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-    {
-        // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
-        uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
-        Servos[ch]->writeMicroseconds(us);
-    }
-#endif
-}
-
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
@@ -574,8 +562,6 @@ void LostConnection()
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
-
-    servosFailsafe();
 }
 
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
@@ -1047,15 +1033,16 @@ static void cycleRfMode(unsigned long now)
 static void servosUpdate(unsigned long now)
 {
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-    if (!newChannelsAvailable)
-        return;
-
     // The ESP waveform generator is nice because it doesn't change the value
     // mid-cycle, but it does busywait if there's already a change queued.
     // Updating every 20ms minimizes the amount of waiting (0-800us cycling
     // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
     static uint32_t lastUpdate;
-    if (now - lastUpdate >= 20)
+    const uint32_t elapsed = now - lastUpdate;
+    if (elapsed < 20)
+        return;
+
+    if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
         for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
@@ -1066,10 +1053,23 @@ static void servosUpdate(unsigned long now)
                 us = 3000U - us;
             Servos[ch]->writeMicroseconds(us);
         }
-        // need to sample actual millis at the end to account for any
-        // waiting that happened in Servo::writeMicroseconds()
-        lastUpdate = millis();
     }
+    else if (elapsed > 1000U && connectionState == connected)
+    {
+        // No update for 1s, go to failsafe
+        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        {
+            // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
+            uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
+            Servos[ch]->writeMicroseconds(us);
+        }
+    }
+    else
+        return; // prevent updating lastUpdate
+
+    // need to sample actual millis at the end to account for any
+    // waiting that happened in Servo::writeMicroseconds()
+    lastUpdate = millis();
 #endif
 }
 
