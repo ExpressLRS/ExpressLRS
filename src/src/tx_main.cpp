@@ -379,7 +379,8 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 void ICACHE_RAM_ATTR timerCallbackIdle()
 {
   NonceTX++;
-  HandleFHSS();
+  if ((NonceTX + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+    ++FHSSptr;
 }
 
 void sendLuaParams()
@@ -544,7 +545,9 @@ static void ConfigChangeCommit()
   // Write the uncommitted eeprom values
   Serial.println("EEPROM COMMIT");
   config.Commit();
-  hwTimer.callbackTock = &timerCallbackNormal; // Resume the timer
+  // Resume the timer, will take one hop for the radio to be on the right frequency
+  // if we missed a hop
+  hwTimer.callbackTock = &timerCallbackNormal;
   sendLuaParams();
 }
 
