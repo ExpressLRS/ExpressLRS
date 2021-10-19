@@ -824,7 +824,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
-#if !defined(CRSF_RX_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL)
     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
     if (peekVal > 0)
     {
@@ -839,13 +839,13 @@ bool CRSF::RXhandleUARTout()
             return true;
         }
     }
-#endif // CRSF_RX_NO_SERIAL
+#endif // CRSF_RCVR_NO_SERIAL
     return false;
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-#if !defined(CRSF_RX_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL)
     constexpr uint8_t outBuffer[4] = {
         LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -863,12 +863,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
-#endif // CRSF_RX_NO_SERIAL
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-#if !defined(CRSF_RX_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL)
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -886,18 +886,18 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
     this->_dev->write(crc);
 #endif
-#endif // CRSF_RX_NO_SERIAL
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(CRSF_RX_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL)
     const uint8_t totalBufferLen = 14;
 
     // SerialOutFIFO.push(totalBufferLen);
     // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
     this->_dev->write(data, totalBufferLen);
-#endif // CRSF_RX_NO_SERIAL
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
 /**

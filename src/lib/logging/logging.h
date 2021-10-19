@@ -27,7 +27,7 @@
 
 extern void debugPrintf(const char* fmt, ...);
 
-#if defined(CRSF_RX_NO_SERIAL) && !defined(DEBUG_LOG)
+#if defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_LOG)
   #define INFOLN(msg, ...)
   #define ERRLN(msg)
 #else

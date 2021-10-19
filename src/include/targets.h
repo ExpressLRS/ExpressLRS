@@ -352,7 +352,7 @@ https://github.com/jaxxzer
 //#define GPIO_PIN_RCSIGNAL_RX -1 // does not use UART
 //#define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED_RED        16 // LED_RED on RX
-#define CRSF_RX_NO_SERIAL
+#define CRSF_RCVR_NO_SERIAL
 #if defined(DEBUG_LOG)
 #define GPIO_PIN_PWM_OUTPUTS    {0, 9, 10}
 #else

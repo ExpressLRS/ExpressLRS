@@ -823,7 +823,7 @@ static void setupServos()
 
 static void setupSerial()
 {
-#if defined(CRSF_RX_NO_SERIAL)
+#if defined(CRSF_RCVR_NO_SERIAL)
     // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
     #if defined(DEBUG_LOG)
     Serial.begin(RCVR_UART_BAUD);
@@ -930,7 +930,7 @@ static void setupBindingFromConfig()
 
 static void HandleUARTin()
 {
-#if !defined(CRSF_RX_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL)
     while (CRSF_RX_SERIAL.available())
     {
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
