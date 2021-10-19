@@ -14,3 +14,5 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 
 // Output Power - default for SX120
+
+#define Regulatory_Domain_ISM_2400 1

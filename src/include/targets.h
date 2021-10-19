@@ -72,3 +72,18 @@
 #ifndef GPIO_LED_GREEN_INVERTED
 #define GPIO_LED_GREEN_INVERTED 0
 #endif
+
+#if defined(Regulatory_Domain_ISM_2400)
+// ISM 2400 band is use => undefine other requlatory domain defines
+#undef Regulatory_Domain_AU_915
+#undef Regulatory_Domain_EU_868
+#undef Regulatory_Domain_IN_866
+#undef Regulatory_Domain_FCC_915
+#undef Regulatory_Domain_AU_433
+#undef Regulatory_Domain_EU_433
+
+#elif !(defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915) || \
+        defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || \
+        defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433))
+#error "Regulatory_Domain is not defined for 900MHz devices. Check user_defines.txt!"
+#endif

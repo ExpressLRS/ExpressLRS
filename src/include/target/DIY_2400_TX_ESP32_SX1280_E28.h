@@ -29,3 +29,5 @@
 #if !defined(POWER_OUTPUT_VALUES)
     #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 #endif
+
+#define Regulatory_Domain_ISM_2400 1

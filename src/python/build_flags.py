@@ -15,11 +15,11 @@ define = ""
 
 def print_error(error):
     time.sleep(1)
-    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\n\n\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
     sys.stdout.write("\033[47;31m!!!             ExpressLRS Warning Below             !!!\n")
     sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
     sys.stdout.write("\033[47;30m  %s \n" % error)
-    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n")
     sys.stdout.flush()
     time.sleep(3)
     raise Exception('!!! %s !!!' % error)
@@ -91,7 +91,7 @@ def get_git_sha():
             git_root = git_repo.git.rev_parse("--show-toplevel")
             ExLRS_Repo = git.Repo(git_root)
             sha = ExLRS_Repo.head.object.hexsha
-            
+
         except git.InvalidGitRepositoryError:
             pass
     if not sha:
@@ -149,45 +149,29 @@ build_flags.append("-DLATEST_VERSION=" + get_git_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", env['PIOENV'].upper()))
 condense_flags()
 
-env['BUILD_FLAGS'] = build_flags
-print("build flags: %s" % env['BUILD_FLAGS'])
-
-if not fnmatch.filter(env['BUILD_FLAGS'], '*-DRegulatory_Domain*'):
+if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
     print_error('Please define a Regulatory_Domain in user_defines.txt')
 
-if fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP32*'):
+if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*'):
+    # remove ISM_2400 domain flag, it is defined per target config
+    build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
+
+env['BUILD_FLAGS'] = build_flags
+sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
+
+if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
-elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_STM32*'):
+elif fnmatch.filter(build_flags, '*PLATFORM_STM32*'):
     sys.stdout.write("\u001b[32mBuilding for STM32 Platform\n")
-elif fnmatch.filter(env['BUILD_FLAGS'], '*PLATFORM_ESP8266*'):
+elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
     sys.stdout.write("\u001b[32mBuilding for ESP8266/ESP8285 Platform\n")
-    if fnmatch.filter(env['BUILD_FLAGS'], '-DAUTO_WIFI_ON_INTERVAL*'):
+    if fnmatch.filter(build_flags, '-DAUTO_WIFI_ON_INTERVAL*'):
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = ON\n")
     else:
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = OFF\n")
 
-if fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_915*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1276 915AU\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_868*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1276 868EU\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_IN_866*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1276 866IN\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_AU_433*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_EU_433*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1278 433AU\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_FCC_915*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1276 915FCC\n")
-
-elif fnmatch.filter(env['BUILD_FLAGS'], '*Regulatory_Domain_ISM_2400*'):
-    sys.stdout.write("\u001b[32mBuilding for SX1280 2400ISM\n")
-
-time.sleep(1)
+sys.stdout.flush()
+time.sleep(.5)
 
 # Set upload_protovol = 'custom' for STM32 MCUs
 #  otherwise firmware.bin is not generated

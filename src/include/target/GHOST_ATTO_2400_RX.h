@@ -20,3 +20,5 @@
 //#define GPIO_PIN_BUTTON         PA12
 
 // Output Power - use default SX1280
+
+#define Regulatory_Domain_ISM_2400 1

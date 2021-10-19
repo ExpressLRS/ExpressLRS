@@ -34,3 +34,5 @@
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
 
 #define HAS_OLED
+
+#define Regulatory_Domain_ISM_2400 1
