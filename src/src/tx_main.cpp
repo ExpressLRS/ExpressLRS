@@ -632,16 +632,16 @@ void SetSyncSpam()
   }
 }
 
-void setup()
+/**
+ * Target-specific initialization code called early in setup()
+ * Setup GPIOs or other hardware, config not yet loaded
+ ***/
+static void setupTarget()
 {
 #if defined(TARGET_TX_GHOST)
   Serial.setTx(PA2);
   Serial.setRx(PA3);
 #endif
-  Serial.begin(460800);
-
-  // Initialise the UI devices
-  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
@@ -650,11 +650,24 @@ void setup()
   digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
+  HardwareSerial *uart2 = new HardwareSerial(USART2);
+  uart2->begin(57600);
+  CRSF::PortSecondary = uart2;
 #endif
+
 #if defined(TARGET_TX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+}
+
+void setup()
+{
+  Serial.begin(460800);
+  setupTarget();
+
+  // Initialise the UI devices
+  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 

@@ -171,6 +171,16 @@ static struct luaItem_command luaVtxSend = {
 };
 //----------------------------VTX ADMINISTRATOR------------------
 
+#if defined(TARGET_TX_FM30)
+struct luaItem_selection luaBluetoothTelem = {
+    {"BT Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    emptySpace
+};
+#endif
+
+
 static char luaBadGoodString[10];
 
 extern TxConfig config;
@@ -204,6 +214,12 @@ static void registerLuaParameters()
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
+  #if defined(TARGET_TX_FM30)
+  registerLUAParameter(&luaBluetoothTelem, [](uint8_t id, uint8_t arg) {
+    digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
+    devicesTriggerEvent();
+  });
+  #endif
   registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
     // Only allow changing switch mode when disconnected since we need to guarantee
     // the pack and unpack functions are matched
@@ -373,6 +389,9 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  #if defined(TARGET_TX_FM30)
+    setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
+  #endif
   return DURATION_IMMEDIATELY;
 }
 

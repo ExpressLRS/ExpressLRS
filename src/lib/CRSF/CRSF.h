@@ -34,6 +34,7 @@ public:
     #endif
 
     static HardwareSerial Port;
+    static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static volatile uint16_t ChannelDataIn[16];
 
