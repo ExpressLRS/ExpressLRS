@@ -21,6 +21,7 @@ static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
+static uint8_t elrsStatus = 0b000;  // low -> high = LuaWarning, Connected, ConnectionHasModelMatch
 
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
@@ -84,7 +85,7 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
-  
+
   // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
   // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
   // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
@@ -178,6 +179,11 @@ bool getLuaWarning(void){ //1 if alarm
   return luaWarningFLags & suppressedLuaWarningFlags;
 }
 
+void setELRSStatus(uint8_t status)
+{
+  elrsStatus = status;
+}
+
 void sendELRSstatus()
 {
   uint8_t buffer[sizeof(tagLuaElrsParams) + 0];
@@ -185,7 +191,8 @@ void sendELRSstatus()
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarning();
+  params->flags = getLuaWarning() ? 1 : 0;
+  params->flags |= elrsStatus << 1;
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   params->msg[0] = '\0';

@@ -179,6 +179,7 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
+extern bool connectionHasModelMatch;
 #if defined(USE_TX_BACKPACK)
 extern uint8_t TxBackpackWiFiReadyToSend;
 extern uint8_t VRxBackpackWiFiReadyToSend;
@@ -373,6 +374,7 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  setELRSStatus((connectionState == connected ? 1 : 0) | (connectionHasModelMatch ? 2 : 0));
   return DURATION_IMMEDIATELY;
 }
 

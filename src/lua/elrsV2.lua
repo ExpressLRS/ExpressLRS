@@ -31,6 +31,8 @@ local badPkt = 0
 local goodPkt = 0
 local elrsFlags = 0
 local elrsFlagsInfo = "no"
+local connectionState = 0
+local connectionHasModelMatch = 0
 local fields_count = 0
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
@@ -467,7 +469,10 @@ local function parseElrsInfoMessage(data)
   end
   badPkt = data[3]
   goodPkt = (data[4]*256) + data[5]
-  elrsFlags = data[6]
+  elrsFlags = bit32.extract(data[6],0)
+  connectionState = bit32.extract(data[6],1)
+  connectionHasModelMatch = bit32.extract(data[6],2)
+
   elrsFlagsInfo,offset = fieldGetString(data,7)
 end
 
@@ -503,6 +508,7 @@ end
 
 local function lcd_title()
   local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  local state = (connectionState==1 and connectionHasModelMatch==1 and "C ") or (connectionState==1 and "M ") or "- "
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -518,7 +524,7 @@ local function lcd_title()
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
     lcd.setColor(CUSTOM_COLOR, BLACK)
     lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+    lcd.drawText(LCD_W-3, 4, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
       local barW = (COL2-4)*fieldId/fields_count
@@ -532,7 +538,7 @@ local function lcd_title()
     local barHeight = 9
 
     lcd.clear()
-    lcd.drawText(LCD_W, 1, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+    lcd.drawText(LCD_W, 1, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
     -- keep the title this way to keep the script from error when module is not set correctly
     if allParamsLoaded ~= 1 and fields_count > 0 then
       lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
@@ -543,7 +549,6 @@ local function lcd_title()
     end
   end
 end
-  
 
 local function lcd_warn()
   lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
@@ -686,7 +691,7 @@ local function runPopupPage(event)
   end
   return 0
 end
-  
+
 local function setLCDvar()
   lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
@@ -700,7 +705,7 @@ local function setLCDvar()
       COL2 = 110
     else
       COL2 = 70
-    end  
+    end
     maxLineIndex = 6
     textXoffset = 0
     textYoffset = 3
