@@ -51,7 +51,7 @@ local lcdIsColor
 local devices = { }
 
 local function clearAllField()
-  for i=1, fields_count+2 + #devices do
+  for i=1, fields_count + 2 + #devices do
     fields[i] = { }
   end
   backButtonId = fields_count + 2 + #devices
@@ -428,18 +428,21 @@ local function UIbackExec(field)
   fields[backButtonId].parent = 255
 end
 
-local function changeDeviceId(field)
+local function changeDeviceId(devId)
   folderAccess = 0
   clearAllField()
-  local device = getDevice(field.name)
-  deviceId = device.id
-  if deviceId == 0xEE then
+  if devId == 0xEE then
     handsetId = 0xEF
   else
     handsetId = 0xEA
   end
+  deviceId = devId
   fields_count = 0
-  reloadAllField()
+end
+
+local function fieldDeviceIdSelect(field)
+  local device = getDevice(field.name)
+  changeDeviceId(device.id)
 end
 
 local functions = {
@@ -458,7 +461,7 @@ local functions = {
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13 INFO(12)
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14 COMMAND(13)
   { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
-  { load=nil, save=changeDeviceId, display=fieldCommandDisplay }, --16 device(15)
+  { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
 }
 
@@ -466,7 +469,9 @@ local function createDeviceField() -- put other device in the field list
   fields[fields_count+2+#devices] = fields[backButtonId]
   backButtonId = fields_count+2+#devices
   for i=1, #devices do
-  fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    if devices[i].id ~= deviceId then
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    end
   end
 end
 
@@ -644,15 +649,10 @@ local function handleDevicePageEvent(event)
     else
       if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder
         if deviceId ~= 0xEE then
-          clearAllField()
-          deviceId = 0xEE
-          handsetId = 0xEF
-          fields_count = 0
-          crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+          changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
         else
-          crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
+          reloadAllField()
         end
-        reloadAllField()
       end
       folderAccess = 0
       fields[backButtonId].parent = 255
