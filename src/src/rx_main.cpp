@@ -809,18 +809,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #endif
 }
 
-static void setupServos()
-{
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-    {
-        Servo *servo = new Servo();
-        Servos[ch] = servo;
-        servo->attach(SERVO_PINS[ch], 988, 2012, config.GetPwmChannel(ch)->val.failsafe + 988U);
-    }
-#endif
-}
-
 static void setupSerial()
 {
 #if defined(CRSF_RCVR_NO_SERIAL)
@@ -1051,9 +1039,20 @@ static void servosUpdate(unsigned long now)
             uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
             if (chConfig->val.inverted)
                 us = 3000U - us;
-            Servos[ch]->writeMicroseconds(us);
-        }
-    }
+
+            if (Servos[ch])
+                Servos[ch]->writeMicroseconds(us);
+            else if (us >= 988U && us <= 2012U) 
+            {
+                // us might be out of bounds if this is a switch channel and it has not been
+                // received yet. Delay initializing the servo until the channel is valid
+                Servo *servo = new Servo();
+                Servos[ch] = servo;
+                servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
+            }
+        } /* for each servo */
+    } /* if newChannelsAvailable */
+
     else if (elapsed > 1000U && connectionState == connected)
     {
         // No update for 1s, go to failsafe
@@ -1061,9 +1060,11 @@ static void servosUpdate(unsigned long now)
         {
             // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
             uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
-            Servos[ch]->writeMicroseconds(us);
+            if (Servos[ch])
+                Servos[ch]->writeMicroseconds(us);
         }
     }
+
     else
         return; // prevent updating lastUpdate
 
@@ -1106,7 +1107,6 @@ void setup()
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
-    setupServos();
     setupRadio();
 
     if (connectionState != radioFailed)
