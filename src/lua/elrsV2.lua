@@ -414,11 +414,12 @@ end
 local function changeDeviceId(devId) --change to selected device ID
   folderAccess = 0
   clearAllField()
+  deviceIsELRS = false
+  elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
   if devId == 0xEE then
     handsetId = 0xEF
   else --else we would act like the legacy lua
-    deviceIsELRS = false
     handsetId = 0xEA
   end
   deviceId = devId
