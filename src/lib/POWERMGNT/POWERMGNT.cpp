@@ -322,6 +322,8 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
             Radio.SetOutputPower(-4);
         #elif TARGET_QK_JR_TX
             Radio.SetOutputPower(0);
+        #elif TARGET_QK_SLIM_TX
+            Radio.SetOutputPower(0);
         #else
             Radio.SetOutputPower(-1);
         #endif
