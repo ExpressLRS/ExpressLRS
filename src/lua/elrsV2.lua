@@ -192,7 +192,7 @@ local function parseDeviceInfoMessage(data)
   -- deviceId = data[2]
   devicesName, offset = fieldGetString(data, 3)
   local device = getDevice(devicesName)
-  if device == nil and deviceId ~= id then
+  if device == nil then
     device = createDevice(id, devicesName)
     devices[#devices + 1] = device
   end
@@ -470,7 +470,11 @@ local function createDeviceField() -- put other device in the field list
   fields[fields_count+2+#devices] = fields[backButtonId]
   backButtonId = fields_count+2+#devices
   for i=1, #devices do
-    fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    if devices[i].id == deviceId then
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
+    else
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    end
   end
 end
 
@@ -708,7 +712,7 @@ local function runDevicePage(event)
 
   lcd_title()
   
-  if #devices > 0 then -- show other device folder
+  if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end
 
