@@ -594,13 +594,17 @@ local function refreshNext()
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-  elseif deviceIsELRS == true and time > linkstatTimeout and elrsFlags == 0 then
+  elseif time > linkstatTimeout then
+    if deviceIsELRS == false and allParamsLoaded == 1 then
+      linkstatTimeout = time + 100
+      -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
+      -- reloadAllField()
+      -- linkstatTimeout = time + 300 --reload all param every 3s if not elrs
+    elseif  elrsFlags == 0 then
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     linkstatTimeout = time + 100
-  elseif time > fieldTimeout and not edit then
-    if deviceIsELRS == false and allParamsLoaded ~= 1 then
-      reloadAllField()
     end
+  elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 or statusComplete == 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
       fieldTimeout = time + 300 -- 3s
