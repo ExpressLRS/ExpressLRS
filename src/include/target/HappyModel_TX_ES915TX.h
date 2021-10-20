@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "FrSky R9M"
+#define TX_DEVICE_NAME "HM ES915TX"
 
 #if defined(Regulatory_Domain_EU_868)
     #define POWER_OUTPUT_VALUES {375,850,1200,1400,1700,2000,2400,2600}
