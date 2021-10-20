@@ -169,11 +169,11 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
   pushResponseChunk(cmd);
 }
 
-void suppressCurrentLuaWarning(void){ //0 to suppress
+void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarning()) returns 0
   suppressedLuaWarningFlags = ~luaWarningFLags;
 }
 
-bool getLuaWarning(void){ //1 if alarm
+uint8_t getLuaWarning(void){ //return an unsppressed warning flag
   return luaWarningFLags & suppressedLuaWarningFlags;
 }
 

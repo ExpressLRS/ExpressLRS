@@ -93,7 +93,7 @@ struct tagLuaElrsParams {
 extern void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
 
 extern void suppressCurrentLuaWarning(void);
-extern bool getLuaWarning(void);
+extern uint8_t getLuaWarning(void);
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
 
