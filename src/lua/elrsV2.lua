@@ -42,6 +42,8 @@ local commandRunningIndicator = 1
 local expectedChunks = -1
 local deviceIsELRS = false
 local linkstatTimeout = 100
+local titleShowWarn = false
+local titleShowWarnTimeout = 100
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -605,10 +607,18 @@ local function refreshNext()
     end
     linkstatTimeout = time + 100
   end
+  if time > titleShowWarnTimeout then
+    if elrsFlags > 0 and titleShowWarn == false then
+        titleShowWarn = true
+    else
+        titleShowWarn = false
+    end
+    titleShowWarnTimeout = time + 100
+  end
 end
 
 local function lcd_title()
-  local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  local title = allParamsLoaded == 1 and deviceName or "Loading..."
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -623,8 +633,13 @@ local function lcd_title()
     -- title bar
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
     lcd.setColor(CUSTOM_COLOR, BLACK)
-    lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W-3, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+    if titleShowWarn == false then
+      lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
+      lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+    else
+      lcd.drawText(textXoffset+1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+      lcd.drawText(LCD_W-3, 4, tostring(elrsFlags))
+    end
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
       local barW = (COL2-4)*fieldId/fields_count
@@ -734,23 +749,19 @@ local function runDevicePage(event)
     fields[fields_count+1].parent = 0
   end
 
-  if elrsFlags > 0 then
-    lcd_warn()
-  else
-    for y = 1, maxLineIndex+1 do
-      local field = getField(pageOffset+y)
-      if not field then
-        break
-      elseif field.name ~= nil then
-        local attr = lineIndex == (pageOffset+y)
-          and ((edit == true and BLINK or 0) + INVERS)
-          or 0
-        if field.type < 11 or field.type == 12 then -- if not folder, command, or back
-          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
-        end
-        if functions[field.type+1].display then
-          functions[field.type+1].display(field, y*textSize+textYoffset, attr)
-        end
+  for y = 1, maxLineIndex+1 do
+    local field = getField(pageOffset+y)
+    if not field then
+      break
+    elseif field.name ~= nil then
+      local attr = lineIndex == (pageOffset+y)
+        and ((edit == true and BLINK or 0) + INVERS)
+        or 0
+      if field.type < 11 or field.type == 12 then -- if not folder, command, or back
+        lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
+      end
+      if functions[field.type+1].display then
+        functions[field.type+1].display(field, y*textSize+textYoffset, attr)
       end
     end
   end
