@@ -16,7 +16,7 @@ static void initializeBuzzer()
 }
 
 static const uint16_t failedTune[][2] = {{480, 200},{400, 200}};
-static const uint16_t crossfireTune[][2] = {{520, 150},{676, 300}};
+static const uint16_t crossfireTune[][2] = {{520, 150},{676, 300},{0,1000}}; // we have a dead-time to stop spamming
 static const uint16_t noCrossfireTune[][2] = {{676, 300},{520, 150}};
 #if defined(MY_STARTUP_MELODY_ARR)
 // It's silly but I couldn't help myself. See: BLHeli32 startup tones.
@@ -40,10 +40,18 @@ static int playTune()
         noTone(GPIO_PIN_BUZZER);
         pinMode(GPIO_PIN_BUZZER, INPUT);
         tunepos = 0;
-        DBGLN(">> end tune");
+        DBGVLN(">> end tune");
         return DURATION_NEVER;
     }
-    tone(GPIO_PIN_BUZZER, _tune[tunepos][0], _tune[tunepos][1]);
+    if (_tune[tunepos][0] == 0)
+    {
+        // we have dead-time so play no-tone and just set the timeout
+        noTone(GPIO_PIN_BUZZER);
+    }
+    else
+    {
+        tone(GPIO_PIN_BUZZER, _tune[tunepos][0], _tune[tunepos][1]);
+    }
     tunepos++;
     return _tune[tunepos-1][1];
 }
@@ -61,18 +69,18 @@ static int updateBuzzer()
 {
     if (connectionState == radioFailed)
     {
-        DBGLN(">> start failed tune");
+        DBGVLN(">> start failed tune");
         return startTune(failedTune, ARRAY_SIZE(failedTune));
     }
     else if (connectionState == noCrossfire)
     {
-        DBGLN(">> start no-xfire tune");
+        DBGVLN(">> start no-xfire tune");
         return startTune(noCrossfireTune, ARRAY_SIZE(noCrossfireTune));
     }
 #if !defined(DISABLE_STARTUP_BEEP)
     else if (connectionState == connected || connectionState == disconnected)
     {
-        DBGLN(">> start conn/disconn tune");
+        DBGVLN(">> start conn/disconn tune");
         return startTune(crossfireTune, ARRAY_SIZE(crossfireTune));
     }
 #endif
@@ -82,7 +90,7 @@ static int updateBuzzer()
 static int start()
 {
 #if !defined(DISABLE_STARTUP_BEEP)
-    DBGLN(">> start startup tune");
+    DBGVLN(">> start startup tune");
     return startTune(melody, ARRAY_SIZE(melody));
 #else
     return DURATION_NEVER;
@@ -96,7 +104,7 @@ static int event()
     {
         if (connectionState != lastConnectionState)
         {
-            DBGLN(">> starting %d -> %d", lastConnectionState, connectionState);
+            DBGVLN(">> starting %d -> %d", lastConnectionState, connectionState);
             lastConnectionState = connectionState;
             return updateBuzzer();
         }
@@ -106,8 +114,12 @@ static int event()
     if(!startComplete)
     {
         // if we are currently playing the startup tune then set a flag so that we trigger an update after it completes
-        DBGLN(">> call after");
+        DBGVLN(">> call after");
         callAfterComplete = true;
+    }
+    else
+    {
+        DBGVLN(">> ignored %d -> %d", lastConnectionState, connectionState);
     }
     return DURATION_IGNORE;
 }
@@ -115,7 +127,7 @@ static int event()
 static int timeout()
 {
     int duration = playTune();
-    DBGLN(">> timeout %d", duration);
+    DBGVLN(">> timeout %d", duration);
     if (duration == DURATION_NEVER && !startComplete)
     {
         startComplete = true;
@@ -123,7 +135,7 @@ static int timeout()
         {
             // tune completed and the flag is set to start the next one
             callAfterComplete = false;
-            DBGLN(">> call after update");
+            DBGVLN(">> call after update");
             duration = updateBuzzer();
         }
     }
