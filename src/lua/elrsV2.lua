@@ -638,7 +638,7 @@ local function lcd_title()
       lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
     else
       lcd.drawText(textXoffset+1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-      lcd.drawText(LCD_W-3, 4, tostring(elrsFlags))
+      lcd.drawText(LCD_W-3, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
     end
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
