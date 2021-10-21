@@ -51,7 +51,7 @@ uint32_t LEDupdateCounterMillis;
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
-const uint8_t thisCommit[6] = {0, 1, 0, 1, 0, 0}; // {MAJOR , MAJOR , MINOR, MINOR, PATCH, PATCH}
+const uint8_t thisCommit[6] = {0, 1, 0, 2, 0, 0}; // {MAJOR , MAJOR , MINOR, MINOR, PATCH, PATCH}
 
 //// CONSTANTS ////
 #define RX_CONNECTION_LOST_TIMEOUT 3000LU // After 3000ms of no TLM response consider that slave has lost connection
