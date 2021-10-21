@@ -742,9 +742,11 @@ end
 -- Main
 local function runDevicePage(event)
   handleDevicePageEvent(event)
-
-  lcd_title()
-
+  if elrsFlags > 0x1F then
+    lcd_warn()
+  else
+    lcd_title()
+  end
   if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end
