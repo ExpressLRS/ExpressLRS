@@ -15,7 +15,8 @@
 ---- # GNU General Public License for more details.                          #
 ---- #                                                                       #
 ---- #########################################################################
-local deviceId = 0
+local deviceId = 0xEE
+local handsetId = 0xEF
 local deviceName = ""
 local lineIndex = 1
 local pageOffset = 0
@@ -32,6 +33,7 @@ local goodPkt = 0
 local elrsFlags = 0
 local elrsFlagsInfo = "no"
 local fields_count = 0
+local backButtonId = 2
 local devicesRefreshTimeout = 100
 local allParamsLoaded = 0
 local folderAccess = 0
@@ -45,6 +47,25 @@ local textXoffset = 0
 local textYoffset = 1
 local textSize = 8
 local lcdIsColor
+
+local devices = { }
+
+local function clearAllField()
+  for i=1, fields_count + 2 + #devices do
+    fields[i] = { }
+  end
+  backButtonId = fields_count + 2 + #devices
+  fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
+  if folderAccess ~= 0 then
+    fields[backButtonId].parent = folderAccess
+  end
+end
+
+local function reloadAllField()
+  allParamsLoaded = 0
+  fieldId, fieldChunk = 1, 0
+  fieldData = {}
+end
 
 local function getField(line)
   local counter = 1
@@ -146,16 +167,42 @@ local function getBitBin(data, bitPosition)
     return 0
   end
 
+  local function createDevice(devId, devName)
+    local device = {
+      id = devId,
+      name = devName,
+      timeout = 0
+    }
+    return device
+  end
+  
+  local function getDevice(name)
+    for i=1, #devices do
+      if devices[i].name == name then
+        return devices[i]
+      end
+    end
+    return nil
+  end
+  
 local function parseDeviceInfoMessage(data)
   local offset
-  allParamsLoaded = 0
-  deviceId = data[2]
-  deviceName, offset = fieldGetString(data, 3)
-  fields_count = data[offset+12]
-  for i=1, fields_count do
-    fields[i] = { }
+  local id = data[2]
+  local devicesName = ""
+  -- deviceId = data[2]
+  devicesName, offset = fieldGetString(data, 3)
+  local device = getDevice(devicesName)
+  if device == nil then
+    device = createDevice(id, devicesName)
+    devices[#devices + 1] = device
   end
-  fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
+  if deviceId == id then
+    deviceName = devicesName
+    fields_count = data[offset+12]
+    reloadAllField()
+    clearAllField()
+    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+  end
 end
 
 local function fieldGetValue(data, offset, size)
@@ -189,7 +236,7 @@ end
 end
 
 local function fieldIntSave(index, value, size)
-  local frame = { deviceId, 0xEF, index }
+  local frame = { deviceId, handsetId, index }
   for i=size-1, 0, -1 do
     frame[#frame + 1] = (bit32.rshift(value, 8*i) % 256)
   end
@@ -295,7 +342,7 @@ local function fieldTextSelectionLoad(field, data, offset)
 end
 
 local function fieldTextSelectionSave(field)
-  crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.value })
+  crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.value })
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
@@ -313,7 +360,7 @@ local function fieldStringLoad(field, data, offset)
 end
 
 local function fieldStringSave(field)
-  local frame = { deviceId, 0xEF, field.id }
+  local frame = { deviceId, handsetId, field.id }
   for i=1, string.len(field.value) do
     frame[#frame + 1] = string.byte(field.value, i)
   end
@@ -336,7 +383,15 @@ local function fieldFolderOpen(field)
   lineIndex = 1
   pageOffset = 0
   folderAccess = field.id
-  fields[fields_count+1].parent = folderAccess
+  fields[backButtonId].parent = folderAccess
+end
+
+local function fieldFolderDeviceOpen(field)
+  crossfireTelemetryPush(0x28, { 0x00, 0xEA }) --broadcast with standard handset ID to get all node respond correctly
+  lineIndex = 1
+  pageOffset = 0
+  folderAccess = field.id
+  fields[backButtonId].parent = folderAccess
 end
 
 local function fieldFolderDisplay(field,y ,attr)
@@ -356,7 +411,7 @@ end
 local function fieldCommandSave(field)
   if field.status < 4 then
     field.status = 1
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, field.id, field.status })
+    crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.status })
     fieldPopup = field
     fieldPopup.lastStatus = 0
     commandRunningIndicator = 1
@@ -370,7 +425,26 @@ end
 
 local function UIbackExec(field)
   folderAccess = 0
-  fields[fields_count+1].parent = 255
+  fields[backButtonId].parent = 255
+end
+
+local function changeDeviceId(devId) --change to selected device ID
+  folderAccess = 0
+  clearAllField()
+  --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
+  if devId == 0xEE then
+    handsetId = 0xEF
+  else  --else we would act like the legacy lua
+    handsetId = 0xEA
+  end
+  deviceId = devId
+  fields_count = 0  --set this because next target wouldn't have the same count, and this trigger to request the new count
+end
+
+local function fieldDeviceIdSelect(field)
+  local device = getDevice(field.name)
+  changeDeviceId(device.id)
+  crossfireTelemetryPush(0x28, { 0x00, 0xEA })
 end
 
 local functions = {
@@ -389,7 +463,21 @@ local functions = {
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13 INFO(12)
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14 COMMAND(13)
   { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
+  { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
+  { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
 }
+
+local function createDeviceField() -- put other device in the field list
+  fields[fields_count+2+#devices] = fields[backButtonId]
+  backButtonId = fields_count+2+#devices
+  for i=1, #devices do
+    if devices[i].id == deviceId then
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
+    else
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    end
+  end
+end
 
 local function parseParameterInfoMessage(data)
   if data[2] ~= deviceId or data[3] ~= fieldId then
@@ -447,6 +535,7 @@ local function parseParameterInfoMessage(data)
       if fieldId == fields_count then
         allParamsLoaded = 1
         fieldId = 1
+        createDeviceField()
       else
         fieldId = 1 + (fieldId % (#fields-1))
       end
@@ -487,15 +576,15 @@ local function refreshNext()
   local time = getTime()
   if fieldPopup then
     if time > fieldTimeout and fieldPopup.status ~= 3 then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 6 })
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 6 })
       fieldTimeout = time + fieldPopup.timeout
     end
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
-    crossfireTelemetryPush(0x28, { 0x00, 0xEF })
+    crossfireTelemetryPush(0x28, { 0x00, 0xEA })
   elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 or statusComplete == 0 then
-      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
+      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
       fieldTimeout = time + 300 -- 3s
     end
   end
@@ -560,22 +649,23 @@ local function handleDevicePageEvent(event)
       fieldTimeout = getTime() + 200 -- 2s
       fieldId, fieldChunk = field.id, 0
       fieldData = {}
-      crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
+      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
     else
-      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading
-        allParamsLoaded = 0
-        fieldTimeout = getTime() + 200 -- 2s
-        fieldId, fieldChunk = 1, 0
-        fieldData = {}
-        crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
+      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading.
+        if deviceId ~= 0xEE then
+          changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
+        else
+          reloadAllField()
+        end
+        crossfireTelemetryPush(0x28, { 0x00, 0xEA })
       end
       folderAccess = 0
-      fields[fields_count+1].parent = 255
+      fields[backButtonId].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0 then
       elrsFlags = 0
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, 0x2E, 0x00 })
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
     else
       local field = getField(lineIndex)
       if field and field.name then
@@ -597,8 +687,7 @@ local function handleDevicePageEvent(event)
           if field.type < 11 then
             -- we need a short time because if the packet rate changes we need time for the module to react
             fieldTimeout = getTime() + 20
-            allParamsLoaded = 0
-            fieldId = 1
+            reloadAllField()
           end
         end
       end
@@ -623,6 +712,11 @@ local function runDevicePage(event)
   handleDevicePageEvent(event)
 
   lcd_title()
+  
+  if #devices > 1 then -- show other device folder
+    fields[fields_count+1].parent = 0
+  end
+
   if elrsFlags > 0 then
     lcd_warn()
   else
@@ -630,9 +724,7 @@ local function runDevicePage(event)
       local field = getField(pageOffset+y)
       if not field then
         break
-      elseif field.name == nil then
-        lcd.drawText(textXoffset, y*textSize+textYoffset, "...")
-      else
+      elseif field.name ~= nil then
         local attr = lineIndex == (pageOffset+y)
           and ((edit == true and BLINK or 0) + INVERS)
           or 0
@@ -650,7 +742,7 @@ end
 
 local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
-    crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+    crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 })
     fieldTimeout = getTime() + 200 -- 2s
   end
 
@@ -658,15 +750,13 @@ local function runPopupPage(event)
   if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
       result = popupConfirmation(fieldPopup.info, "Stopped!", event)
       fieldPopup.lastStatus = status
-      fieldChunk = 0
-      fieldData = {}
-      allParamsLoaded = 0
+      reloadAllField()
       fieldPopup = nil
   elseif fieldPopup.status == 3 then -- confirmation required
     result = popupConfirmation(fieldPopup.info, "PRESS [OK] to confirm", event)
     fieldPopup.lastStatus = status
     if result == "OK" then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 4 })
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 4 })
       fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
       fieldPopup.status = 4
     elseif result == "CANCEL" then
@@ -679,7 +769,7 @@ local function runPopupPage(event)
     result = popupConfirmation(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
     fieldPopup.lastStatus = status
     if result == "CANCEL" then
-      crossfireTelemetryPush(0x2D, { deviceId, 0xEF, fieldPopup.id, 5 })
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 })
       fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
       fieldPopup = nil
     end
