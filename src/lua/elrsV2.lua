@@ -428,16 +428,17 @@ local function UIbackExec(field)
   fields[backButtonId].parent = 255
 end
 
-local function changeDeviceId(devId)
+local function changeDeviceId(devId) --change to selected device ID
   folderAccess = 0
   clearAllField()
+  --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
   if devId == 0xEE then
     handsetId = 0xEF
-  else
+  else  --else we would act like the legacy lua
     handsetId = 0xEA
   end
   deviceId = devId
-  fields_count = 0
+  fields_count = 0  --set this because next target wouldn't have the same count, and this trigger to request the new count
 end
 
 local function fieldDeviceIdSelect(field)
@@ -650,7 +651,7 @@ local function handleDevicePageEvent(event)
       fieldData = {}
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
     else
-      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder
+      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading.
         if deviceId ~= 0xEE then
           changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
         else
