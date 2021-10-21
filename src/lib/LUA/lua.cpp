@@ -11,7 +11,7 @@ extern CRSF crsf;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-static uint8_t luaWarningFLags = 0; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
+static uint8_t luaWarningFLags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
@@ -180,7 +180,30 @@ uint8_t getLuaWarning(void){ //return an unsppressed warning flag
 
 void sendELRSstatus()
 {
-  uint8_t buffer[sizeof(tagLuaElrsParams) + 0];
+  const char * warningInfo = "!See Flag In Doc";
+  switch(getLuaWarning()){
+    case 0b00000001:
+    {
+      warningInfo = "!Bad S.Port"; //bad uart
+      break;
+    }
+    case 0b00000010:
+    {
+      warningInfo = "!Close LUA"; //if armed and elrsStatus is requested (if armed while LUA is open)
+      break;
+    }
+    case 0b00000100:
+    {
+      warningInfo = "!Model Mismatch";
+      break;
+    }
+    default:
+    {
+      warningInfo = "!See Flag In Doc"; //combination of flags
+      break;
+    }
+  }
+  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)+1];
   struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
   params->pktsBad = crsf.BadPktsCountResult;
@@ -189,7 +212,8 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   params->msg[0] = '\0';
-
+  memcpy(buffer+(sizeof(struct tagLuaElrsParams))-1,warningInfo,strlen(warningInfo));
+  buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)] = '\0';
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
