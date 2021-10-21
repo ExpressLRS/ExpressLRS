@@ -84,6 +84,7 @@ void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void BackpackWiFiToMSPOut(uint16_t);
+void BackpackBinding();
 #if defined(USE_TX_BACKPACK)
 uint8_t TxBackpackWiFiReadyToSend = false;
 uint8_t VRxBackpackWiFiReadyToSend = false;
@@ -916,6 +917,22 @@ void BackpackWiFiToMSPOut(uint16_t command)
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
+
+void BackpackBinding()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_BIND;
+  packet.addByte(MasterUID[0]);
+  packet.addByte(MasterUID[1]);
+  packet.addByte(MasterUID[2]);
+  packet.addByte(MasterUID[3]);
+  packet.addByte(MasterUID[4]);
+  packet.addByte(MasterUID[5]);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
 #endif // USE_TX_BACKPACK
 
 void EnterBindingMode()
@@ -952,6 +969,10 @@ void EnterBindingMode()
   hwTimer.resume();
 
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+
+#if defined(USE_TX_BACKPACK)
+  BackpackBinding();
+#endif // USE_TX_BACKPACK
 }
 
 void ExitBindingMode()
