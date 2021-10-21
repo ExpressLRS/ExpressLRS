@@ -22,6 +22,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSF::Port = Serial;
 #endif
+Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
@@ -657,6 +658,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 
         // write the packet out, if it's a large package the offset holds the starting position
         CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+        if (CRSF::PortSecondary)
+            CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
         CRSF::Port.flush();
 
         sendingOffset += writeLength;

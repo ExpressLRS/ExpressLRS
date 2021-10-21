@@ -370,7 +370,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       #endif
       DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
-  } 
+  }
 }
 
 static void wifiOff()
@@ -425,11 +425,46 @@ static void startWiFi(unsigned long now)
   wifiStarted = true;
 }
 
+static void startMDNS()
+{
+  if (!MDNS.begin(myHostname))
+  {
+    DBGLN("Error starting mDNS");
+    return;
+  }
+
+  String instance = String(myHostname) + "_" + WiFi.macAddress();
+  instance.replace(":", "");
+  #ifdef PLATFORM_ESP8266
+    // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
+    MDNS.setInstanceName(myHostname);
+    MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+    MDNS.addServiceTxt(service, "vendor", "elrs");
+    MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt(service, "version", VERSION);
+    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt(service, "type", "rx");
+  #else
+    MDNS.setInstanceName(instance);
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt("http", "tcp", "version", VERSION);
+    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #endif
+}
+
 static void startServices()
 {
   if (servicesStarted) {
+    #if defined(PLATFORM_ESP32)
+      MDNS.end();
+      startMDNS();
+    #endif
     return;
   }
+
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
@@ -464,25 +499,7 @@ static void startServices()
   dnsServer.start(DNS_PORT, "*", apIP);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
-  if (!MDNS.begin(myHostname))
-  {
-    DBGLN("Error starting mDNS");
-    return;
-  }
-  
-  String instance = String(myHostname) + "_" + WiFi.macAddress();
-  instance.replace(":", "");
-  MDNS.setInstanceName(instance);
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-  MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-  MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-  MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
-  #if defined(TARGET_RX)
-    MDNS.addServiceTxt("http", "tcp", "type", "rx");
-  #else
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
-  #endif
+  startMDNS();
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
@@ -520,7 +537,11 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
-        WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
+          WiFi.mode(WIFI_AP_STA);
+        #else
+          WiFi.mode(WIFI_AP);
+        #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
         WiFi.softAP(ssid, password);

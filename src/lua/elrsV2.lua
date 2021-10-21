@@ -17,7 +17,7 @@
 ---- #########################################################################
 local deviceId = 0
 local deviceName = ""
-local lineIndex = 0
+local lineIndex = 1
 local pageOffset = 0
 local edit = false
 local charIndex = 1
@@ -51,24 +51,14 @@ local function getField(line)
   for i = 1, #fields do
     local field = fields[i]
     if not field.hidden then
-      if folderAccess == field.parent then
+      -- parent will be nil if it is in the list but the details are not loaded yet
+      if field.parent == nil or folderAccess == field.parent then
         if counter < line then
           counter = counter + 1
         else
           return field
         end
       end
-    end
-  end
-end
-
-local function initLineIndex()
-  lineIndex = 0
-  for i = 1, #fields do
-    local field = getField(i)
-    if field and field.type ~= 12 and field.name ~= nil then
-      lineIndex = i
-      break
     end
   end
 end
@@ -113,7 +103,7 @@ local function selectField(step)
   local field
   repeat
     newLineIndex = newLineIndex + step
-    if newLineIndex == 0 then
+    if newLineIndex <= 0 then
       newLineIndex = #fields
     elseif newLineIndex == 1 + #fields then
       newLineIndex = 1
@@ -163,7 +153,7 @@ local function parseDeviceInfoMessage(data)
   deviceName, offset = fieldGetString(data, 3)
   fields_count = data[offset+12]
   for i=1, fields_count do
-    fields[i] = { name=nil }
+    fields[i] = { }
   end
   fields[fields_count+1] = {id = fields_count+1, name="----BACK----", parent = 255, type=14}
 end
@@ -343,7 +333,7 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
-  initLineIndex()
+  lineIndex = 1
   pageOffset = 0
   folderAccess = field.id
   fields[fields_count+1].parent = folderAccess
@@ -454,16 +444,11 @@ local function parseParameterInfoMessage(data)
       functions[field.type+1].load(field, fieldData, i)
     end
     if not fieldPopup then
-      if lineIndex == 0 and field.hidden ~= true and folderAccess == field.parent and field.type and field.type ~= 12 then
-        initLineIndex()
-      end
-      if fieldPopup == nil then
-        if fieldId == fields_count then
-          allParamsLoaded = 1
-          fieldId = 1
-        else
-          fieldId = 1 + (fieldId % (#fields-1))
-        end
+      if fieldId == fields_count then
+        allParamsLoaded = 1
+        fieldId = 1
+      else
+        fieldId = 1 + (fieldId % (#fields-1))
       end
       fieldTimeout = getTime() + 200
     else
@@ -577,7 +562,7 @@ local function handleDevicePageEvent(event)
       fieldData = {}
       crossfireTelemetryPush(0x2C, { deviceId, 0xEF, fieldId, fieldChunk })
     else
-      if folderAccess == 0 then -- only do reload if we're in the root folder
+      if folderAccess == 0 and allParamsLoaded == 1 then -- only do reload if we're in the root folder and finished loading
         allParamsLoaded = 0
         fieldTimeout = getTime() + 200 -- 2s
         fieldId, fieldChunk = 1, 0
@@ -593,7 +578,7 @@ local function handleDevicePageEvent(event)
       crossfireTelemetryPush(0x2D, { deviceId, 0xEF, 0x2E, 0x00 })
     else
       local field = getField(lineIndex)
-      if field.name then
+      if field and field.name then
         if field.type == 10 then
           if edit == false then
             edit = true
@@ -732,12 +717,10 @@ local function setMock()
   fields, goodPkt = mock(), 500
   fields_count = #fields - 1
   fieldId = #fields - 3
-  initLineIndex()
 end
 
 -- Init
 local function init()
-  lineIndex, edit = 0, false
   setLCDvar()
   setMock()
 end
