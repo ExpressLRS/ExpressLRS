@@ -593,7 +593,7 @@ local function refreshNext()
   elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 or statusComplete == 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time + 300 -- 3s
+      fieldTimeout = time +50 -- 0.5s
     end
   end
 
@@ -695,7 +695,7 @@ local function handleDevicePageEvent(event)
       fields[backButtonId].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
-    if elrsFlags > 0 then
+    if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
     else
