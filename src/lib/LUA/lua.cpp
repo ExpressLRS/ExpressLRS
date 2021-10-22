@@ -241,15 +241,14 @@ bool luaHandleUpdateParameter()
     return false;
   }
 
-  populateHandler();
-
-  switch(crsf.ParameterUpdateData[0])
+    switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for elrs linkstat request
         DBGVLN("ELRS status request");
+        populateHandler();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
@@ -270,6 +269,7 @@ bool luaHandleUpdateParameter()
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
+        populateHandler();
         sendLuaDevicePacket();
         break;
 
