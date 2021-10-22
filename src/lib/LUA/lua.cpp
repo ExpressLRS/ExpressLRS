@@ -11,7 +11,6 @@ extern CRSF crsf;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-#define LUA_PKTCOUNT_INTERVAL_MS 1000LU
 static uint8_t luaWarningFLags = false;
 static uint8_t suppressedLuaWarningFlags = true;
 
@@ -237,15 +236,13 @@ void registerLUAPopulateParams(void (*populate)())
 
 bool luaHandleUpdateParameter()
 {
-  static uint32_t LUAfieldReported = 0;
-  
-  populateHandler();
-
   if (UpdateParamReq == false)
   {
     return false;
   }
-
+  
+  populateHandler();
+  
   switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:

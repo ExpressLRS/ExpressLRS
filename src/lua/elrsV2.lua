@@ -444,7 +444,7 @@ local function parseDeviceInfoMessage(data)
   end
   if deviceId == id then
     deviceName = devicesName
-    deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253
+    deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253 -- SerialNumber = 'E L R S'
     fields_count = data[offset+12]
     reloadAllField()
     clearAllField()
@@ -596,14 +596,13 @@ local function refreshNext()
 
   if time > linkstatTimeout then
     if deviceIsELRS == false and allParamsLoaded == 1 then
-      linkstatTimeout = time + 100
       -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
       -- reloadAllField()
       -- linkstatTimeout = time + 300 --reload all param every 3s if not elrs
     else
-    crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
-    linkstatTimeout = time + 100
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     end
+    linkstatTimeout = time + 100
   end
 end
 
