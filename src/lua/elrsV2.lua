@@ -619,7 +619,7 @@ end
 
 local function lcd_title()
   local title = allParamsLoaded == 1 and deviceName or "Loading..."
-  local state = (elrsFlags & 1 == 1) and "C " or "-" 
+  local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -751,9 +751,9 @@ end
 -- Main
 local function runDevicePage(event)
   handleDevicePageEvent(event)
-  
+
   lcd_title()
-  
+
   if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end

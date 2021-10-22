@@ -375,8 +375,8 @@ static void registerLuaParameters()
 
 static int event()
 {
-  setLuaWarningFlag(2,connectionHasModelMatch);
-  setLuaWarningFlag(1,(connectionState == connected ? 1 : 0));
+  setLuaWarningFlag(2, connectionState == connected && connectionHasModelMatch == false);
+  setLuaWarningFlag(0, connectionState == connected);
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());

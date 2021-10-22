@@ -11,7 +11,7 @@ extern CRSF crsf;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-static uint8_t luaWarningFLags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
+static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
@@ -171,27 +171,36 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
 
 void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
                                       //only flip 3 Most significant bit, they are the critical warning that blocks lua
-  suppressedLuaWarningFlags = ~luaWarningFLags | 0b00011111;
+  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
 }
 
 void setLuaWarningFlag(uint8_t bitOrder, bool value){
-  luaWarningFlags ^= (-value ^ luaWarningFlags) & (1 << ((bitOrder)));
+  if (value)
+  {
+    luaWarningFlags |= 1 << bitOrder;
+  }
+  else
+  {
+    luaWarningFlags &= ~(1 << bitOrder);
+  }
 }
 
 uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
-  return luaWarningFLags & suppressedLuaWarningFlags;
+  return luaWarningFlags & suppressedLuaWarningFlags;
 }
 
 void sendELRSstatus()
 {
-  constexpr messages[] = {"critical warning1",
-  "critical warning2",
-  "critical warning3",
-  "warning1",
-  "warning2",
-  "Model Mismatch",
-  "status1",
-  "connected"};
+  constexpr const char *messages[] = {
+    "connected",
+    "status1",
+    "Model Mismatch",
+    "warning2",
+    "warning1",
+    "critical warning3",
+    "critical warning2",
+    "critical warning1"
+  };
   const char * warningInfo = "";
 
   for (int i=7 ; i>=0 ; i--)
