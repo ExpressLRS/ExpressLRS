@@ -443,7 +443,6 @@ local function parseDeviceInfoMessage(data)
     devices[#devices + 1] = device
   end
   if deviceId == id then
-    local serialNum
     deviceName = devicesName
     deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253
     fields_count = data[offset+12]
