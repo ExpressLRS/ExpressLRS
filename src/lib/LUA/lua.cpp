@@ -238,11 +238,8 @@ void registerLUAPopulateParams(void (*populate)())
 bool luaHandleUpdateParameter()
 {
   static uint32_t LUAfieldReported = 0;
-
-  if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
-      LUAfieldReported = millis();
-      populateHandler();
-  }
+  
+  populateHandler();
 
   if (UpdateParamReq == false)
   {

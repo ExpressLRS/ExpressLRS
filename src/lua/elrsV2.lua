@@ -42,7 +42,6 @@ local commandRunningIndicator = 1
 local expectedChunks = -1
 local deviceIsELRS = false
 local linkstatTimeout = 100
-local serialNum = 0xFFFFFFFF
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -446,12 +445,7 @@ local function parseDeviceInfoMessage(data)
   if deviceId == id then
     local serialNum
     deviceName = devicesName
-    serialNum = fieldGetValue(data,offset,4)
-    if serialNum == 0x454C5253 then
-      deviceIsELRS = true
-    else
-      deviceIsELRS = false
-    end
+    deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253
     fields_count = data[offset+12]
     reloadAllField()
     clearAllField()
@@ -594,20 +588,21 @@ local function refreshNext()
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-  elseif time > linkstatTimeout then
+  elseif time > fieldTimeout and not edit then
+    if allParamsLoaded < 1 or statusComplete == 0 then
+      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
+      fieldTimeout = time + 300 -- 3s
+    end
+  end
+  if time > linkstatTimeout then
     if deviceIsELRS == false and allParamsLoaded == 1 then
       linkstatTimeout = time + 100
       -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
       -- reloadAllField()
       -- linkstatTimeout = time + 300 --reload all param every 3s if not elrs
-    elseif  elrsFlags == 0 then
+    else
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     linkstatTimeout = time + 100
-    end
-  elseif time > fieldTimeout and not edit then
-    if allParamsLoaded < 1 or statusComplete == 0 then
-      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time + 300 -- 3s
     end
   end
 end
