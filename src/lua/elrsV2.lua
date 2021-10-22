@@ -608,7 +608,7 @@ local function refreshNext()
     linkstatTimeout = time + 100
   end
   if time > titleShowWarnTimeout then
-    if elrsFlags > 0 and titleShowWarn == false then
+    if elrsFlags > 3 and titleShowWarn == false then --if elrsFlags bit set is bit higher than bit 0 and bit 1, it is warning flags
         titleShowWarn = true
     else
         titleShowWarn = false
@@ -619,6 +619,7 @@ end
 
 local function lcd_title()
   local title = allParamsLoaded == 1 and deviceName or "Loading..."
+  local state = (elrsFlags & 1 == 1) and "C " or "-" 
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -635,7 +636,7 @@ local function lcd_title()
     lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn == false then
       lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-      lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W-3, 4, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
     else
       lcd.drawText(textXoffset+1, 4, elrsFlagsInfo, CUSTOM_COLOR)
       lcd.drawText(LCD_W-3, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
@@ -653,14 +654,22 @@ local function lcd_title()
     local barHeight = 9
 
     lcd.clear()
-    lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
+    if titleShowWarn == false then
+      lcd.drawText(LCD_W, 1, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+    else
+      lcd.drawText(LCD_W, 1,tostring(elrsFlags), RIGHT)
+    end
     -- keep the title this way to keep the script from error when module is not set correctly
     if allParamsLoaded ~= 1 and fields_count > 0 then
       lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
       lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
     else
       lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
-      lcd.drawText(textXoffset, 1, title, INVERS)
+      if titleShowWarn == false then
+        lcd.drawText(textXoffset, 1, title, INVERS)
+      else
+        lcd.drawText(textXoffset, 1, elrsFlagsInfo, INVERS)
+      end
     end
   end
 end

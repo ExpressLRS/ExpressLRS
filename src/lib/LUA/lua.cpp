@@ -180,28 +180,23 @@ uint8_t getLuaWarning(void){ //return an unsppressed warning flag
 
 void sendELRSstatus()
 {
-  const char * warningInfo = "!See Flag In Doc";
-  switch(getLuaWarning()){
-    case 0b00000001:
-    {
-      warningInfo = "!Bad S.Port"; //bad uart
-      break;
-    }
-    case 0b00000010:
-    {
-      warningInfo = "!Close LUA"; //if armed and elrsStatus is requested (if armed while LUA is open)
-      break;
-    }
-    case 0b00000100:
-    {
-      warningInfo = "!Model Mismatch";
-      break;
-    }
-    default:
-    {
-      warningInfo = "!See Flag In Doc"; //combination of flags
-      break;
-    }
+  constexpr messages[] = {"critical warning1",
+  "critical warning2",
+  "critical warning3",
+  "warning1",
+  "warning2",
+  "Model Mismatch",
+  "status1",
+  "connected"};
+  const char * warningInfo = "";
+
+  for (int i=7 ; i>=0 ; i--)
+  {
+      if(getLuaWarning() & (1<<i))
+      {
+          warningInfo = messages[i];
+          break;
+      }
   }
   uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)+1];
   struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
