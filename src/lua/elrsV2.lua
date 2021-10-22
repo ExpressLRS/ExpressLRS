@@ -34,12 +34,14 @@ local elrsFlags = 0
 local elrsFlagsInfo = "no"
 local fields_count = 0
 local backButtonId = 2
-local devicesRefreshTimeout = 100
+local devicesRefreshTimeout = 50
 local allParamsLoaded = 0
 local folderAccess = 0
 local statusComplete = 0
 local commandRunningIndicator = 1
 local expectedChunks = -1
+local deviceIsELRS = false
+local linkstatTimeout = 100
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -184,26 +186,6 @@ local function getBitBin(data, bitPosition)
     end
     return nil
   end
-  
-local function parseDeviceInfoMessage(data)
-  local offset
-  local id = data[2]
-  local devicesName = ""
-  -- deviceId = data[2]
-  devicesName, offset = fieldGetString(data, 3)
-  local device = getDevice(devicesName)
-  if device == nil then
-    device = createDevice(id, devicesName)
-    devices[#devices + 1] = device
-  end
-  if deviceId == id then
-    deviceName = devicesName
-    fields_count = data[offset+12]
-    reloadAllField()
-    clearAllField()
-    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
-  end
-end
 
 local function fieldGetValue(data, offset, size)
   local result = 0
@@ -431,10 +413,12 @@ end
 local function changeDeviceId(devId) --change to selected device ID
   folderAccess = 0
   clearAllField()
+  deviceIsELRS = false
+  elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
   if devId == 0xEE then
     handsetId = 0xEF
-  else  --else we would act like the legacy lua
+  else --else we would act like the legacy lua
     handsetId = 0xEA
   end
   deviceId = devId
@@ -445,6 +429,27 @@ local function fieldDeviceIdSelect(field)
   local device = getDevice(field.name)
   changeDeviceId(device.id)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+end
+
+local function parseDeviceInfoMessage(data)
+  local offset
+  local id = data[2]
+  local devicesName = ""
+  -- deviceId = data[2]
+  devicesName, offset = fieldGetString(data, 3)
+  local device = getDevice(devicesName)
+  if device == nil then
+    device = createDevice(id, devicesName)
+    devices[#devices + 1] = device
+  end
+  if deviceId == id then
+    deviceName = devicesName
+    deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253 -- SerialNumber = 'E L R S'
+    fields_count = data[offset+12]
+    reloadAllField()
+    clearAllField()
+    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+  end
 end
 
 local functions = {
@@ -587,6 +592,17 @@ local function refreshNext()
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
       fieldTimeout = time + 300 -- 3s
     end
+  end
+
+  if time > linkstatTimeout then
+    if deviceIsELRS == false and allParamsLoaded == 1 then
+      -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
+      -- reloadAllField()
+      -- linkstatTimeout = time + 300 --reload all param every 3s if not elrs
+    else
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
+    end
+    linkstatTimeout = time + 100
   end
 end
 
