@@ -169,12 +169,16 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
   pushResponseChunk(cmd);
 }
 
-void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarning()) returns 0
+void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
                                       //only flip 3 Most significant bit, they are the critical warning that blocks lua
   suppressedLuaWarningFlags = ~luaWarningFLags | 0b00011111;
 }
 
-uint8_t getLuaWarning(void){ //return an unsppressed warning flag
+void setLuaWarningFlag(uint8_t bitOrder, bool value){
+  luaWarningFlags ^= (-value ^ luaWarningFlags) & (1 << ((bitOrder)));
+}
+
+uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
   return luaWarningFLags & suppressedLuaWarningFlags;
 }
 
@@ -192,7 +196,7 @@ void sendELRSstatus()
 
   for (int i=7 ; i>=0 ; i--)
   {
-      if(getLuaWarning() & (1<<i))
+      if(getLuaWarningFlags() & (1<<i))
       {
           warningInfo = messages[i];
           break;
@@ -203,7 +207,7 @@ void sendELRSstatus()
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarning();
+  params->flags = getLuaWarningFlags();
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   params->msg[0] = '\0';

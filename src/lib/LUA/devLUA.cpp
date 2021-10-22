@@ -189,6 +189,7 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
+extern bool connectionHasModelMatch;
 #if defined(USE_TX_BACKPACK)
 extern uint8_t TxBackpackWiFiReadyToSend;
 extern uint8_t VRxBackpackWiFiReadyToSend;
@@ -374,6 +375,8 @@ static void registerLuaParameters()
 
 static int event()
 {
+  setLuaWarningFlag(2,connectionHasModelMatch);
+  setLuaWarningFlag(1,(connectionState == connected ? 1 : 0));
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
