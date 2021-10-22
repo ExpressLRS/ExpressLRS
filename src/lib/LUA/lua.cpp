@@ -251,8 +251,8 @@ bool luaHandleUpdateParameter()
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
       {
-        // special case for sending commit packet
-        DBGVLN("send all lua params");
+        // special case for elrs linkstat request
+        DBGVLN("ELRS status request");
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
