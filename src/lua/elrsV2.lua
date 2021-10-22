@@ -593,6 +593,7 @@ local function refreshNext()
       fieldTimeout = time + 300 -- 3s
     end
   end
+
   if time > linkstatTimeout then
     if deviceIsELRS == false and allParamsLoaded == 1 then
       linkstatTimeout = time + 100
