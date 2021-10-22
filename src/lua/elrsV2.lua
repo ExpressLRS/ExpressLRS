@@ -751,28 +751,29 @@ end
 -- Main
 local function runDevicePage(event)
   handleDevicePageEvent(event)
-  if elrsFlags > 0x1F then
-    lcd_warn()
-  else
-    lcd_title()
-  end
+  
+  lcd_title()
+  
   if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end
-
-  for y = 1, maxLineIndex+1 do
-    local field = getField(pageOffset+y)
-    if not field then
-      break
-    elseif field.name ~= nil then
-      local attr = lineIndex == (pageOffset+y)
-        and ((edit == true and BLINK or 0) + INVERS)
-        or 0
-      if field.type < 11 or field.type == 12 then -- if not folder, command, or back
-        lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
-      end
-      if functions[field.type+1].display then
-        functions[field.type+1].display(field, y*textSize+textYoffset, attr)
+  if elrsFlags > 0x1F then
+    lcd_warn()
+  else
+    for y = 1, maxLineIndex+1 do
+      local field = getField(pageOffset+y)
+      if not field then
+        break
+      elseif field.name ~= nil then
+        local attr = lineIndex == (pageOffset+y)
+          and ((edit == true and BLINK or 0) + INVERS)
+          or 0
+        if field.type < 11 or field.type == 12 then -- if not folder, command, or back
+          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
+        end
+        if functions[field.type+1].display then
+          functions[field.type+1].display(field, y*textSize+textYoffset, attr)
+        end
       end
     end
   end
