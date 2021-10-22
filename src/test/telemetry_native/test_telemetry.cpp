@@ -153,7 +153,7 @@ void test_function_bootloader_called(void)
     TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
 }
 
-void test_function_store_unkown_type(void)
+void test_function_store_unknown_type(void)
 {
     telemetry.ResetState();
     uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
@@ -163,7 +163,7 @@ void test_function_store_unkown_type(void)
     TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
 }
 
-void test_function_store_unkown_type_two_slots(void)
+void test_function_store_unknown_type_two_slots(void)
 {
     telemetry.ResetState();
     uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
@@ -215,8 +215,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_do_not_replace_old_locked);
     RUN_TEST(test_function_add_type);
     RUN_TEST(test_function_recover_from_junk);
-    RUN_TEST(test_function_store_unkown_type);
-    RUN_TEST(test_function_store_unkown_type_two_slots);
+    RUN_TEST(test_function_store_unknown_type);
+    RUN_TEST(test_function_store_unknown_type_two_slots);
     RUN_TEST(test_function_store_ardupilot_status_text);
     UNITY_END();
 
