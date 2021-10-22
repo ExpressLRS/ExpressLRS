@@ -83,7 +83,7 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
-  
+
   // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
   // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
   // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
@@ -240,9 +240,9 @@ bool luaHandleUpdateParameter()
   {
     return false;
   }
-  
+
   populateHandler();
-  
+
   switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
@@ -270,7 +270,6 @@ bool luaHandleUpdateParameter()
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        populateHandler();
         sendLuaDevicePacket();
         break;
 
