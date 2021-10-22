@@ -248,7 +248,6 @@ bool luaHandleUpdateParameter()
       {
         // special case for elrs linkstat request
         DBGVLN("ELRS status request");
-        populateHandler();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
