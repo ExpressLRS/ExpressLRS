@@ -28,10 +28,9 @@ local fieldId = 1
 local fieldChunk = 0
 local fieldData = {}
 local fields = {}
-local badPkt = 0
-local goodPkt = 0
+local goodBadPkt = "?/???"
 local elrsFlags = 0
-local elrsFlagsInfo = "no"
+local elrsFlagsInfo
 local fields_count = 0
 local backButtonId = 2
 local devicesRefreshTimeout = 50
@@ -135,21 +134,33 @@ local function selectField(step)
     field = getField(newLineIndex)
   until newLineIndex == lineIndex or (field and field.name)
   lineIndex = newLineIndex
-  if lineIndex > maxLineIndex + pageOffset then 	-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
-    pageOffset = lineIndex - maxLineIndex 		-- NOTE: increased from 7 to 11 to allow 11 lines in Horus display
+  if lineIndex > maxLineIndex + pageOffset then
+    pageOffset = lineIndex - maxLineIndex
   elseif lineIndex <= pageOffset then
     pageOffset = lineIndex - 1
   end
 end
 
-local function split(str)
-  local t = {}
-  local i = 1
-  for s in string.gmatch(str, "([^;]+)") do
-    t[i] = s
-    i = i + 1
+local function fieldGetSelectOpts(data, offset)
+  -- Split a table of byte values (string) with ; separator into a table
+  local r = {}
+  local opt = ''
+  local b = data[offset]
+  while b ~= 0 do
+    if b == 59 then -- ';'
+      r[#r+1] = opt
+      opt = ''
+    else
+      opt = opt .. string.char(b)
+    end
+    offset = offset + 1
+    b = data[offset]
   end
-  return t
+
+  r[#r+1] = opt
+  offset = offset + 1
+
+  return r, offset
 end
 
 local function fieldGetString(data, offset)
@@ -177,7 +188,7 @@ local function getBitBin(data, bitPosition)
     }
     return device
   end
-  
+
   local function getDevice(name)
     for i=1, #devices do
       if devices[i].name == name then
@@ -311,11 +322,7 @@ end
 
 -- TEXT SELECTION
 local function fieldTextSelectionLoad(field, data, offset)
-  local values
-  values, offset = fieldGetString(data, offset)
-  if values ~= "" then
-    field.values = split(values)
-  end
+  field.values, offset = fieldGetSelectOpts(data, offset)
   field.value = data[offset]
   field.min = data[offset+1]
   field.max = data[offset+2]
@@ -328,9 +335,8 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  -- lcd.drawText(COL2, y, field.values[field.value+1], attr)			-- NOTE: original code getLastPos not available in Horus
-  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) 				-- NOTE: original code getLastPos not available in Horus
-  lcd.drawText(COL2, y, field.values[field.value+1] .. field.unit, attr) -- NOTE: Concenated fields instead of get lastPos
+  lcd.drawText(COL2, y, field.values[field.value+1], attr)
+  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
 end
 
 -- STRING
@@ -526,12 +532,12 @@ local function parseParameterInfoMessage(data)
     field.hidden = hidden
     local name, i = fieldGetString(fieldData, 3)
     if name ~= "" then
-      local indent = ""
+      local indent = 0
       while parent ~= 0 do
-        indent = indent .. " "
+        indent = indent + 1
         parent = fields[parent].parent
       end
-      field.name = indent .. name
+      field.name = string.rep(" ", indent) .. name
     end
     if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, i)
@@ -559,10 +565,11 @@ local function parseElrsInfoMessage(data)
     fieldChunk = 0
     return
   end
-  badPkt = data[3]
-  goodPkt = (data[4]*256) + data[5]
+  local badPkt = data[3]
+  local goodPkt = (data[4]*256) + data[5]
+  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt)
   elrsFlags = data[6]
-  elrsFlagsInfo,offset = fieldGetString(data,7)
+  elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
 end
 
 local function refreshNext()
@@ -623,7 +630,7 @@ local function lcd_title()
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
     lcd.setColor(CUSTOM_COLOR, BLACK)
     lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W-3, 4, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+    lcd.drawText(LCD_W-3, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
       local barW = (COL2-4)*fieldId/fields_count
@@ -637,7 +644,7 @@ local function lcd_title()
     local barHeight = 9
 
     lcd.clear()
-    lcd.drawText(LCD_W, 1, tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+    lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
     -- keep the title this way to keep the script from error when module is not set correctly
     if allParamsLoaded ~= 1 and fields_count > 0 then
       lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
@@ -648,7 +655,7 @@ local function lcd_title()
     end
   end
 end
-  
+
 
 local function lcd_warn()
   lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
@@ -728,7 +735,7 @@ local function runDevicePage(event)
   handleDevicePageEvent(event)
 
   lcd_title()
-  
+
   if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end
@@ -792,7 +799,7 @@ local function runPopupPage(event)
   end
   return 0
 end
-  
+
 local function setLCDvar()
   lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
@@ -806,7 +813,7 @@ local function setLCDvar()
       COL2 = 110
     else
       COL2 = 70
-    end  
+    end
     maxLineIndex = 6
     textXoffset = 0
     textYoffset = 3
@@ -820,7 +827,7 @@ local function setMock()
   if string.sub(rv, -5) ~= "-simu" then return end
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, goodPkt = mock(), 500
+  fields, goodBadPkt = mock(), "0/500"
   fields_count = #fields - 1
   fieldId = #fields - 3
 end
