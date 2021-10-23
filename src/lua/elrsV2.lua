@@ -28,6 +28,7 @@ local fieldId = 1
 local fieldChunk = 0
 local fieldData = {}
 local fields = {}
+local devices = {}
 local goodBadPkt = "?/???"
 local elrsFlags = 0
 local elrsFlagsInfo
@@ -49,9 +50,8 @@ local textYoffset = 1
 local textSize = 8
 local lcdIsColor
 
-local devices = { }
-
-local function clearAllField()
+local function allocateFields()
+  fields = {}
   for i=1, fields_count + 2 + #devices do
     fields[i] = { }
   end
@@ -141,7 +141,18 @@ local function selectField(step)
   end
 end
 
-local function fieldGetSelectOpts(data, offset)
+local function fieldStrFF(data, offset, last)
+  while data[offset] ~= 0 do
+    offset = offset + 1
+  end
+  return last, offset + 1
+end
+
+local function fieldGetSelectOpts(data, offset, last)
+  if last then
+    return fieldStrFF(data, offset, last)
+  end
+
   -- Split a table of byte values (string) with ; separator into a table
   local r = {}
   local opt = ''
@@ -158,19 +169,21 @@ local function fieldGetSelectOpts(data, offset)
   end
 
   r[#r+1] = opt
-  offset = offset + 1
-
-  return r, offset
+  return r, offset + 1
 end
 
-local function fieldGetString(data, offset)
+local function fieldGetString(data, offset, last)
+  if last then
+    return fieldStrFF(data, offset, last)
+  end
+
   local result = ""
   while data[offset] ~= 0 do
     result = result .. string.char(data[offset])
     offset = offset + 1
   end
-  offset = offset + 1
-  return result, offset
+
+  return result, offset + 1
 end
 
 local function getBitBin(data, bitPosition)
@@ -211,7 +224,7 @@ local function fieldUnsignedLoad(field, data, offset, size)
   field.min = fieldGetValue(data, offset+size, size)
   field.max = fieldGetValue(data, offset+2*size, size)
   field.default = fieldGetValue(data, offset+3*size, size)
-  field.unit, offset = fieldGetString(data, offset+4*size)
+  field.unit, offset = fieldGetString(data, offset+4*size, field.unit)
   field.step = 1
 end
 
@@ -303,7 +316,7 @@ local function fieldFloatLoad(field, data, offset)
     field.prec = 3
   end
   field.step = fieldGetValue(data, offset+17, 4)
-  field.unit, offset = fieldGetString(data, offset+21)
+  field.unit, offset = fieldGetString(data, offset+21, field.unit)
 end
 
 local function formatFloat(num, decimals)
@@ -322,12 +335,12 @@ end
 
 -- TEXT SELECTION
 local function fieldTextSelectionLoad(field, data, offset)
-  field.values, offset = fieldGetSelectOpts(data, offset)
+  field.values, offset = fieldGetSelectOpts(data, offset, field.values)
   field.value = data[offset]
   field.min = data[offset+1]
   field.max = data[offset+2]
   field.default = data[offset+3]
-  field.unit, offset = fieldGetString(data, offset+4)
+  field.unit, offset = fieldGetString(data, offset+4, field.unit)
 end
 
 local function fieldTextSelectionSave(field)
@@ -418,7 +431,6 @@ end
 
 local function changeDeviceId(devId) --change to selected device ID
   folderAccess = 0
-  clearAllField()
   deviceIsELRS = false
   elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
@@ -441,7 +453,6 @@ local function parseDeviceInfoMessage(data)
   local offset
   local id = data[2]
   local devicesName = ""
-  -- deviceId = data[2]
   devicesName, offset = fieldGetString(data, 3)
   local device = getDevice(devicesName)
   if device == nil then
@@ -451,10 +462,13 @@ local function parseDeviceInfoMessage(data)
   if deviceId == id then
     deviceName = devicesName
     deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253 -- SerialNumber = 'E L R S'
-    fields_count = data[offset+12]
+    local newFieldCount = data[offset+12]
     reloadAllField()
-    clearAllField()
-    fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+    if newFieldCount ~= fields_count then
+      fields_count = newFieldCount
+      allocateFields()
+      fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+    end
   end
 end
 
@@ -518,27 +532,10 @@ local function parseParameterInfoMessage(data)
       return -- no data extraction
     end
     field.id = fieldId
-    local parent = fieldData[1]
-    local type = fieldData[2] % 128
-    local hidden = (bit32.rshift(fieldData[2], 7) == 1)
-    if field.name ~= nil then -- already seen this field before, so we can validate this packet is correct
-      if field.parent ~= parent or field.type ~= type or field.hidden ~= hidden then
-        fieldData = {}
-        return -- no data extraction
-      end
-    end
-    field.parent = parent
-    field.type = type
-    field.hidden = hidden
-    local name, i = fieldGetString(fieldData, 3)
-    if name ~= "" then
-      local indent = 0
-      while parent ~= 0 do
-        indent = indent + 1
-        parent = fields[parent].parent
-      end
-      field.name = string.rep(" ", indent) .. name
-    end
+    field.parent = fieldData[1]
+    field.type = fieldData[2] % 128
+    field.hidden = (bit32.rshift(fieldData[2], 7) == 1)
+    field.name, i = fieldGetString(fieldData, 3, field.name)
     if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, i)
     end
