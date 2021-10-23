@@ -231,6 +231,18 @@ typedef struct rcPacket_s
     crsf_channels_s channels;
 } PACKED rcPacket_t;
 
+typedef struct deviceInformationPacket_s
+{
+    uint32_t serialNo;
+    uint32_t hardwareVer;
+    uint32_t softwareVer;
+    uint8_t fieldCnt;          //number of field of params this device has
+    uint8_t parameterVersion;
+} PACKED deviceInformationPacket_t;
+
+#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + sizeof(DEVICE_NAME))
+#define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
+
 /**
  * Union to allow accessing the input buffer as different data shapes
  * without generating compiler warnings (and relying on undefined C++ behaviour!)
