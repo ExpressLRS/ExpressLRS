@@ -625,7 +625,7 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     else
     {
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch)
+        if (connectionHasModelMatch && (MspData[3] == CRSF_ADDRESS_BROADCAST || MspData[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER))
             crsf.sendMSPFrameToFC(MspData);
     }
 
