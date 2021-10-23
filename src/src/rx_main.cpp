@@ -935,6 +935,7 @@ static void HandleUARTin()
         {
             uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
             crsf.GetDeviceInformation(deviceInformation, 0, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            deviceInformation[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
             crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
