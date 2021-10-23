@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "HGLRC Hermes 24"
+#define DEVICE_NAME "HGLRC Hermes 24"
 
 // Output Power
 #define MinPower PWR_10mW

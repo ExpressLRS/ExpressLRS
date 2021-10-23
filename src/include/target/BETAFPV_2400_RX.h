@@ -1,3 +1,4 @@
+#define DEVICE_NAME "BETAFPV 2400RX"
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5

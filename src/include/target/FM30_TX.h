@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME          "SIYI FM30"
+#define DEVICE_NAME          "SIYI FM30"
 
 // There is some special handling for this target
 #define TARGET_TX_FM30

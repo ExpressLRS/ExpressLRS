@@ -1,3 +1,4 @@
+#define DEVICE_NAME "ELRS 2400RX"
 // GPIO pin definitions
 #define GPIO_PIN_NSS         PA4
 #define GPIO_PIN_MOSI        PA7

@@ -1,5 +1,5 @@
-#if !defined(TX_DEVICE_NAME)
-    #define TX_DEVICE_NAME "DIY2400 E28"
+#if !defined(DEVICE_NAME)
+    #define DEVICE_NAME "DIY2400 E28"
 #endif
 
 // GPIO pin definitions
