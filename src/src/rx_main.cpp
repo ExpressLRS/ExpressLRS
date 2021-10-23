@@ -651,6 +651,10 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
         OnELRSBindMSP(MspData);
         MspReceiver.ResetState();
     }
+    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
+    {
+        connectionState = wifiUpdate;
+    }  
     else if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();

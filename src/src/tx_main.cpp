@@ -78,13 +78,15 @@ static volatile bool ModelUpdatePending;
 
 
 bool InBindingMode = false;
-uint8_t BindingPackage[5];
+uint8_t MSPDataPackage[5];
 uint8_t BindingSendCount = 0;
+void SendRxWiFIOverMSP();
 void EnterBindingMode();
 void ExitBindingMode();
 void SendUIDOverMSP();
 void BackpackWiFiToMSPOut(uint16_t);
 void BackpackBinding();
+uint8_t RxWiFiReadyToSend = false;
 #if defined(USE_TX_BACKPACK)
 uint8_t TxBackpackWiFiReadyToSend = false;
 uint8_t VRxBackpackWiFiReadyToSend = false;
@@ -755,6 +757,15 @@ void loop()
     }
   }
 
+  if (RxWiFiReadyToSend)
+  {
+    RxWiFiReadyToSend = false;
+    if (!IsArmed())
+    {
+      SendRxWiFIOverMSP();
+    }
+  }
+
 #if defined(USE_TX_BACKPACK)
   if (TxBackpackWiFiReadyToSend)
   {
@@ -935,6 +946,13 @@ void BackpackBinding()
 }
 #endif // USE_TX_BACKPACK
 
+void SendRxWiFIOverMSP()
+{
+  MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
+  MspSender.ResetState();
+  MspSender.SetDataToTransmit(1, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
+}
+
 void EnterBindingMode()
 {
   if (InBindingMode) {
@@ -1003,14 +1021,14 @@ void ExitBindingMode()
 
 void SendUIDOverMSP()
 {
-  BindingPackage[0] = MSP_ELRS_BIND;
-  BindingPackage[1] = MasterUID[2];
-  BindingPackage[2] = MasterUID[3];
-  BindingPackage[3] = MasterUID[4];
-  BindingPackage[4] = MasterUID[5];
+  MSPDataPackage[0] = MSP_ELRS_BIND;
+  MSPDataPackage[1] = MasterUID[2];
+  MSPDataPackage[2] = MasterUID[3];
+  MSPDataPackage[3] = MasterUID[4];
+  MSPDataPackage[4] = MasterUID[5];
   MspSender.ResetState();
   BindingSendCount = 0;
-  MspSender.SetDataToTransmit(5, BindingPackage, ELRS_MSP_BYTES_PER_CALL);
+  MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
   InBindingMode = true;
 }
 

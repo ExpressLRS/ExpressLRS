@@ -107,6 +107,12 @@ static struct luaItem_command luaWebUpdate = {
 };
 #endif
 
+static struct luaItem_command luaRxWebUpdate = {
+    {"Enable Rx WiFi", CRSF_COMMAND},
+    0, // step
+    emptySpace
+};
+
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
@@ -189,6 +195,7 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
+extern uint8_t RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern uint8_t TxBackpackWiFiReadyToSend;
 extern uint8_t VRxBackpackWiFiReadyToSend;
@@ -314,6 +321,14 @@ static void registerLuaParameters()
       }
     },luaWiFiFolder.common.id);
   #endif
+
+  registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      RxWiFiReadyToSend = true;
+    }
+    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
+  },luaWiFiFolder.common.id);
+
   #if defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
