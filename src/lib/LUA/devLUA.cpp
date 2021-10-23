@@ -93,7 +93,6 @@ static struct luaItem_string luaELRSversion = {
     thisCommit
 };
 
-#if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
 //---------------------------- WiFi -----------------------------
 static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
@@ -127,7 +126,6 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 };
 #endif // USE_TX_BACKPACK
 //---------------------------- WiFi -----------------------------
-#endif
 
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
