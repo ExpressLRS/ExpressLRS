@@ -193,10 +193,10 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
-extern uint8_t RxWiFiReadyToSend;
+extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
-extern uint8_t TxBackpackWiFiReadyToSend;
-extern uint8_t VRxBackpackWiFiReadyToSend;
+extern bool TxBackpackWiFiReadyToSend;
+extern bool VRxBackpackWiFiReadyToSend;
 #endif
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
