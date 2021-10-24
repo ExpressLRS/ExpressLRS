@@ -263,9 +263,7 @@ local function fieldSignedSave(field, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
-  -- lcd.drawNumber(COL2, y, field.value, LEFT + attr)    -- NOTE: original code getLastPos not available in Horus
-  -- lcd.drawText(lcd.getLastPos(), y, field.unit, attr) -- NOTE: original code getLastPos not available in Horus
-  lcd.drawText(COL2, y, field.value .. field.unit, attr)  -- NOTE: Concenated fields instead of get lastPos
+  lcd.drawText(COL2, y, field.value .. field.unit, attr)
 end
 
 -- UINT8
@@ -348,8 +346,7 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(COL2, y, field.values[field.value+1], attr)
-  lcd.drawText(lcd.getLastPos(), y, field.unit, attr)
+  lcd.drawText(COL2, y, field.values[field.value+1] .. field.unit, attr)
 end
 
 -- STRING
