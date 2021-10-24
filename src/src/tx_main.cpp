@@ -665,7 +665,7 @@ void BackpackBinding()
 }
 #endif // USE_TX_BACKPACK
 
-static void SendRxWiFIOverMSP()
+static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
   MspSender.ResetState();
@@ -679,7 +679,7 @@ static void CheckReadyToSend()
     RxWiFiReadyToSend = false;
     if (!IsArmed())
     {
-      SendRxWiFIOverMSP();
+      SendRxWiFiOverMSP();
     }
   }
 
