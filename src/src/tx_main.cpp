@@ -76,31 +76,19 @@ LQCALC<10> LQCalc;
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
-
 bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 uint8_t BindingSendCount = 0;
-void SendRxWiFIOverMSP();
-void EnterBindingMode();
-void ExitBindingMode();
-void SendUIDOverMSP();
-void BackpackWiFiToMSPOut(uint16_t);
-void BackpackBinding();
-uint8_t RxWiFiReadyToSend = false;
+bool RxWiFiReadyToSend = false;
 #if defined(USE_TX_BACKPACK)
-uint8_t TxBackpackWiFiReadyToSend = false;
-uint8_t VRxBackpackWiFiReadyToSend = false;
+bool TxBackpackWiFiReadyToSend = false;
+bool VRxBackpackWiFiReadyToSend = false;
 #endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
-// MSP packet handling function defs
-void ProcessMSPPacket(mspPacket_t *packet);
-void OnRFModePacket(mspPacket_t *packet);
-void OnTxPowerPacket(mspPacket_t *packet);
-void OnTLMRatePacket(mspPacket_t *packet);
 
 device_t *ui_devices[] = {
 #ifdef HAS_LED
@@ -144,6 +132,19 @@ static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
+
+#ifdef TARGET_TX_GHOST
+extern "C"
+/**
+  * @brief This function handles external line 2 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI2_TSC_IRQHandler()
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+}
+#endif
 
 bool ICACHE_RAM_ATTR IsArmed()
 {
@@ -635,6 +636,234 @@ void SetSyncSpam()
   }
 }
 
+#if defined(USE_TX_BACKPACK)
+static void BackpackWiFiToMSPOut(uint16_t command)
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = command;
+  packet.addByte(0);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+
+void BackpackBinding()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_BIND;
+  packet.addByte(MasterUID[0]);
+  packet.addByte(MasterUID[1]);
+  packet.addByte(MasterUID[2]);
+  packet.addByte(MasterUID[3]);
+  packet.addByte(MasterUID[4]);
+  packet.addByte(MasterUID[5]);
+
+  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+}
+#endif // USE_TX_BACKPACK
+
+static void SendRxWiFIOverMSP()
+{
+  MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
+  MspSender.ResetState();
+  MspSender.SetDataToTransmit(1, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
+}
+
+static void CheckReadyToSend()
+{
+  if (RxWiFiReadyToSend)
+  {
+    RxWiFiReadyToSend = false;
+    if (!IsArmed())
+    {
+      SendRxWiFIOverMSP();
+    }
+  }
+
+#if defined(USE_TX_BACKPACK)
+  if (TxBackpackWiFiReadyToSend)
+  {
+    TxBackpackWiFiReadyToSend = false;
+    BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
+  }
+
+  if (VRxBackpackWiFiReadyToSend)
+  {
+    VRxBackpackWiFiReadyToSend = false;
+    BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
+  }
+#endif
+}
+
+void OnRFModePacket(mspPacket_t *packet)
+{
+  // Parse the RF mode
+  uint8_t rfMode = packet->readByte();
+  CHECK_PACKET_PARSING();
+
+  switch (rfMode)
+  {
+  case RATE_200HZ:
+  case RATE_100HZ:
+  case RATE_50HZ:
+    SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
+    break;
+  default:
+    // Unsupported rate requested
+    break;
+  }
+}
+
+void OnTxPowerPacket(mspPacket_t *packet)
+{
+  // Parse the TX power
+  uint8_t txPower = packet->readByte();
+  CHECK_PACKET_PARSING();
+  DBGLN("TX setpower");
+
+  if (txPower < PWR_COUNT)
+    POWERMGNT.setPower((PowerLevels_e)txPower);
+}
+
+void OnTLMRatePacket(mspPacket_t *packet)
+{
+  // Parse the TLM rate
+  // uint8_t tlmRate = packet->readByte();
+  CHECK_PACKET_PARSING();
+
+  // TODO: Implement dynamic TLM rates
+  // switch (tlmRate) {
+  // case TLM_RATIO_NO_TLM:
+  //   break;
+  // case TLM_RATIO_1_128:
+  //   break;
+  // default:
+  //   // Unsupported rate requested
+  //   break;
+  // }
+}
+
+void SendUIDOverMSP()
+{
+  MSPDataPackage[0] = MSP_ELRS_BIND;
+  MSPDataPackage[1] = MasterUID[2];
+  MSPDataPackage[2] = MasterUID[3];
+  MSPDataPackage[3] = MasterUID[4];
+  MSPDataPackage[4] = MasterUID[5];
+  MspSender.ResetState();
+  BindingSendCount = 0;
+  MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
+  InBindingMode = true;
+}
+
+void EnterBindingMode()
+{
+  if (InBindingMode) {
+      // Don't enter binding if we're already binding
+      return;
+  }
+
+  // Disable the TX timer and wait for any TX to complete
+  hwTimer.stop();
+  while (busyTransmitting);
+
+  // Queue up sending the Master UID as MSP packets
+  SendUIDOverMSP();
+
+  // Set UID to special binding values
+  UID[0] = BindingUID[0];
+  UID[1] = BindingUID[1];
+  UID[2] = BindingUID[2];
+  UID[3] = BindingUID[3];
+  UID[4] = BindingUID[4];
+  UID[5] = BindingUID[5];
+
+  CRCInitializer = 0;
+
+  InBindingMode = true;
+
+  // Start attempting to bind
+  // Lock the RF rate and freq while binding
+  SetRFLinkRate(RATE_DEFAULT);
+  Radio.SetFrequencyReg(GetInitialFreq());
+  // Start transmitting again
+  hwTimer.resume();
+
+  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+
+#if defined(USE_TX_BACKPACK)
+  BackpackBinding();
+#endif // USE_TX_BACKPACK
+}
+
+void ExitBindingMode()
+{
+  if (!InBindingMode)
+  {
+    // Not in binding mode
+    return;
+  }
+
+  // Reset UID to defined values
+  UID[0] = MasterUID[0];
+  UID[1] = MasterUID[1];
+  UID[2] = MasterUID[2];
+  UID[3] = MasterUID[3];
+  UID[4] = MasterUID[4];
+  UID[5] = MasterUID[5];
+
+  CRCInitializer = (UID[4] << 8) | UID[5];
+
+  InBindingMode = false;
+
+  MspSender.ResetState();
+  SetRFLinkRate(config.GetRate()); //return to original rate
+
+  DBGLN("Exiting binding mode");
+}
+
+void ProcessMSPPacket(mspPacket_t *packet)
+{
+  // Inspect packet for ELRS specific opcodes
+  if (packet->function == MSP_ELRS_FUNC)
+  {
+    uint8_t opcode = packet->readByte();
+
+    CHECK_PACKET_PARSING();
+
+    switch (opcode)
+    {
+    case MSP_ELRS_RF_MODE:
+      OnRFModePacket(packet);
+      break;
+    case MSP_ELRS_TX_PWR:
+      OnTxPowerPacket(packet);
+      break;
+    case MSP_ELRS_TLM_RATE:
+      OnTLMRatePacket(packet);
+      break;
+    default:
+      break;
+    }
+  }
+  else if (packet->function == MSP_SET_VTX_CONFIG)
+  {
+    if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
+    {
+      config.SetVtxBand(packet->payload[0] / 8 + 1);
+      config.SetVtxChannel(packet->payload[0] % 8);
+    } else
+    {
+      return; // Packets containing frequency in MHz are not yet supported.
+    }
+
+    VtxTriggerSend();
+  }
+}
+
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -717,7 +946,6 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-  static bool mspTransferActive = false;
 
   if (connectionState < MODE_STATES)
   {
@@ -726,8 +954,6 @@ void loop()
 
   // Update UI devices
   devicesUpdate(now);
-
-  CheckConfigChangePending();
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
@@ -745,40 +971,19 @@ void loop()
     return;
   }
 
+  CheckReadyToSend();
+  CheckConfigChangePending();
+  DynamicPower_Update();
+
   if (Serial.available())
   {
-    uint8_t c = Serial.read();
-
-    if (msp.processReceivedByte(c))
+    if (msp.processReceivedByte(Serial.read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
   }
-
-  if (RxWiFiReadyToSend)
-  {
-    RxWiFiReadyToSend = false;
-    if (!IsArmed())
-    {
-      SendRxWiFIOverMSP();
-    }
-  }
-
-#if defined(USE_TX_BACKPACK)
-  if (TxBackpackWiFiReadyToSend)
-  {
-    TxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
-  }
-
-  if (VRxBackpackWiFiReadyToSend)
-  {
-    VRxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
-  }
-#endif
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
@@ -789,17 +994,14 @@ void loop()
     TLMpacketReported = now;
   }
 
-
   if (TelemetryReceiver.HasFinishedData())
   {
       crsf.sendTelemetryToTX(CRSFinBuffer);
       TelemetryReceiver.Unlock();
   }
 
-  // Actual update of dynamic power is done here
-  DynamicPower_Update();
-
   // only send msp data when binding is not active
+  static bool mspTransferActive = false;
   if (InBindingMode)
   {
     // exit bind mode if package after some repeats
@@ -829,220 +1031,3 @@ void loop()
     }
   }
 }
-
-void OnRFModePacket(mspPacket_t *packet)
-{
-  // Parse the RF mode
-  uint8_t rfMode = packet->readByte();
-  CHECK_PACKET_PARSING();
-
-  switch (rfMode)
-  {
-  case RATE_200HZ:
-  case RATE_100HZ:
-  case RATE_50HZ:
-    SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
-    break;
-  default:
-    // Unsupported rate requested
-    break;
-  }
-}
-
-void OnTxPowerPacket(mspPacket_t *packet)
-{
-  // Parse the TX power
-  uint8_t txPower = packet->readByte();
-  CHECK_PACKET_PARSING();
-  DBGLN("TX setpower");
-
-  if (txPower < PWR_COUNT)
-    POWERMGNT.setPower((PowerLevels_e)txPower);
-}
-
-void OnTLMRatePacket(mspPacket_t *packet)
-{
-  // Parse the TLM rate
-  // uint8_t tlmRate = packet->readByte();
-  CHECK_PACKET_PARSING();
-
-  // TODO: Implement dynamic TLM rates
-  // switch (tlmRate) {
-  // case TLM_RATIO_NO_TLM:
-  //   break;
-  // case TLM_RATIO_1_128:
-  //   break;
-  // default:
-  //   // Unsupported rate requested
-  //   break;
-  // }
-}
-
-void ProcessMSPPacket(mspPacket_t *packet)
-{
-  // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC)
-  {
-    uint8_t opcode = packet->readByte();
-
-    CHECK_PACKET_PARSING();
-
-    switch (opcode)
-    {
-    case MSP_ELRS_RF_MODE:
-      OnRFModePacket(packet);
-      break;
-    case MSP_ELRS_TX_PWR:
-      OnTxPowerPacket(packet);
-      break;
-    case MSP_ELRS_TLM_RATE:
-      OnTLMRatePacket(packet);
-      break;
-    default:
-      break;
-    }
-  }
-  else if (packet->function == MSP_SET_VTX_CONFIG)
-  {
-    if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
-    {
-      config.SetVtxBand(packet->payload[0] / 8 + 1);
-      config.SetVtxChannel(packet->payload[0] % 8);
-    } else
-    {
-      return; // Packets containing frequency in MHz are not yet supported.
-    }
-
-    VtxTriggerSend();
-  }
-}
-
-#if defined(USE_TX_BACKPACK)
-void BackpackWiFiToMSPOut(uint16_t command)
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = command;
-  packet.addByte(0);
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
-}
-
-void BackpackBinding()
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = MSP_ELRS_BIND;
-  packet.addByte(MasterUID[0]);
-  packet.addByte(MasterUID[1]);
-  packet.addByte(MasterUID[2]);
-  packet.addByte(MasterUID[3]);
-  packet.addByte(MasterUID[4]);
-  packet.addByte(MasterUID[5]);
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
-}
-#endif // USE_TX_BACKPACK
-
-void SendRxWiFIOverMSP()
-{
-  MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
-  MspSender.ResetState();
-  MspSender.SetDataToTransmit(1, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
-}
-
-void EnterBindingMode()
-{
-  if (InBindingMode) {
-      // Don't enter binding if we're already binding
-      return;
-  }
-
-  // Disable the TX timer and wait for any TX to complete
-  hwTimer.stop();
-  while (busyTransmitting);
-
-  // Queue up sending the Master UID as MSP packets
-  SendUIDOverMSP();
-
-  // Set UID to special binding values
-  UID[0] = BindingUID[0];
-  UID[1] = BindingUID[1];
-  UID[2] = BindingUID[2];
-  UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
-
-  CRCInitializer = 0;
-
-  InBindingMode = true;
-
-  // Start attempting to bind
-  // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_DEFAULT);
-  Radio.SetFrequencyReg(GetInitialFreq());
-  // Start transmitting again
-  hwTimer.resume();
-
-  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-
-#if defined(USE_TX_BACKPACK)
-  BackpackBinding();
-#endif // USE_TX_BACKPACK
-}
-
-void ExitBindingMode()
-{
-  if (!InBindingMode)
-  {
-    // Not in binding mode
-    return;
-  }
-
-  // Reset UID to defined values
-  UID[0] = MasterUID[0];
-  UID[1] = MasterUID[1];
-  UID[2] = MasterUID[2];
-  UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
-
-  CRCInitializer = (UID[4] << 8) | UID[5];
-
-  InBindingMode = false;
-
-  MspSender.ResetState();
-  SetRFLinkRate(config.GetRate()); //return to original rate
-
-  DBGLN("Exiting binding mode");
-}
-
-void SendUIDOverMSP()
-{
-  MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
-  MspSender.ResetState();
-  BindingSendCount = 0;
-  MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = true;
-}
-
-
-
-#ifdef TARGET_TX_GHOST
-extern "C"
-/**
-  * @brief This function handles external line 2 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI2_TSC_IRQHandler()
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
-}
-#endif
