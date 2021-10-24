@@ -620,10 +620,13 @@ end
 local function lcd_title()
   local title = allParamsLoaded == 1 and deviceName or "Loading..."
   local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
+  local indicator = tostring(badPkt) .. "/" .. tostring(goodPkt) .. "   " .. state
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
     local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
+    local EGREY1 = lcd.RGB(0x91, 0xb2, 0xc9)
+    local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
     local barHeight = 30
 
     lcd.clear()
@@ -633,13 +636,18 @@ local function lcd_title()
     lcd.drawRectangle(1, 0, LCD_W - 2, LCD_H - 1, CUSTOM_COLOR)
     -- title bar
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY1)
+    lcd.drawFilledRectangle(LCD_W - textSize, 0, textSize, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY2)
+    lcd.drawRectangle(LCD_W - textSize, 0, textSize, barHeight - 1, CUSTOM_COLOR)
+    lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
     lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn == false then
       lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-      lcd.drawText(LCD_W-3, 4, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W-4, 4, indicator, RIGHT + BOLD + CUSTOM_COLOR)
     else
       lcd.drawText(textXoffset+1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-      lcd.drawText(LCD_W-3, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W - textSize - 4, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
     end
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
@@ -655,7 +663,7 @@ local function lcd_title()
 
     lcd.clear()
     if titleShowWarn == false then
-      lcd.drawText(LCD_W, 1, state .. tostring(badPkt) .. "/" .. tostring(goodPkt), RIGHT)
+      lcd.drawText(LCD_W, 1, indicator, RIGHT)
     else
       lcd.drawText(LCD_W, 1,tostring(elrsFlags), RIGHT)
     end
