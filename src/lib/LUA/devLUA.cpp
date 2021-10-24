@@ -290,7 +290,6 @@ static void registerLuaParameters()
   },luaVtxFolder.common.id);
 
   // WIFI folder
-  #if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
@@ -342,7 +341,6 @@ static void registerLuaParameters()
     sendLuaCommandResponse(&luaVRxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
-#endif
 
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
