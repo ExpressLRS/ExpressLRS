@@ -6,12 +6,12 @@
 #include "crsf_protocol.h"
 
 enum lua_Flags{
-    LUA_FLAG_CONNECTED = 0,
+    LUA_FLAG_CONNECTED = 0, //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
     LUA_FLAG_STATUS1,
-    LUA_FLAG_MODEL_MATCH,
+    LUA_FLAG_MODEL_MATCH,   //bit 2,3,4 are warning flags, change the tittle bar every 0.5s
     LUA_FLAG_WARNING2,
     LUA_FLAG_WARNING1,
-    LUA_FLAG_CRITICAL_WARNING1,
+    LUA_FLAG_CRITICAL_WARNING1, //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
     LUA_FLAG_CRITICAL_WARNING2,
     LUA_FLAG_CRITICAL_WARNING3
 };
