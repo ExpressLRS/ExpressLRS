@@ -5,6 +5,17 @@
 #include "targets.h"
 #include "crsf_protocol.h"
 
+enum lua_Flags{
+    LUA_FLAG_CONNECTED = 0,
+    LUA_FLAG_STATUS1,
+    LUA_FLAG_MODEL_MATCH,
+    LUA_FLAG_WARNING2,
+    LUA_FLAG_WARNING1,
+    LUA_FLAG_CRITICAL_WARNING1,
+    LUA_FLAG_CRITICAL_WARNING2,
+    LUA_FLAG_CRITICAL_WARNING3
+};
+
 struct luaPropertiesCommon {
     const char* const name;    // display name
     const crsf_value_type_e type;
@@ -93,7 +104,7 @@ struct tagLuaElrsParams {
 extern void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
 
 extern void suppressCurrentLuaWarning(void);
-extern void setLuaWarningFlag(uint8_t bitOrder, bool value);
+extern void setLuaWarningFlag(lua_Flags flag, bool value);
 extern uint8_t getLuaWarningFlags(void);
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();

@@ -174,14 +174,14 @@ void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so th
   suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
 }
 
-void setLuaWarningFlag(uint8_t bitOrder, bool value){
+void setLuaWarningFlag(lua_Flags flag, bool value){
   if (value)
   {
-    luaWarningFlags |= 1 << bitOrder;
+    luaWarningFlags |= 1 << (uint8_t)flag;
   }
   else
   {
-    luaWarningFlags &= ~(1 << bitOrder);
+    luaWarningFlags &= ~(1 << (uint8_t)flag);
   }
 }
 
