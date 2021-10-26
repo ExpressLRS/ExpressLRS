@@ -978,6 +978,7 @@ void EnterBindingMode()
   sendLuaPlayHaptic((uint16_t)250);
   sendLuaPlayTone((uint16_t)1000, (uint16_t)250);
   sendLuaPlayNumber((uint16_t)1345);
+  sendLuaPlayNumber((uint16_t)(1345 % 10) * 100); // hack to get second decimal place
   
 }
 
