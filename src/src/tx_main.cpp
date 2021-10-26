@@ -973,6 +973,12 @@ void EnterBindingMode()
 #if defined(USE_TX_BACKPACK)
   BackpackBinding();
 #endif // USE_TX_BACKPACK
+
+  // REMOVE AFTER TESTING
+  sendLuaPlayHaptic((uint16_t)250);
+  sendLuaPlayTone((uint16_t)1000, (uint16_t)250);
+  sendLuaPlayNumber((uint16_t)1345);
+  
 }
 
 void ExitBindingMode()

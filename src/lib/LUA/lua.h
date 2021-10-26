@@ -4,6 +4,7 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#include "luaDefines.h"
 
 struct luaPropertiesCommon {
     const char* const name;    // display name
@@ -121,4 +122,9 @@ inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) 
 inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
     luaStruct->value = newvalue;
 }
+
+void sendLuaPlayHaptic(uint16_t durationMillisSec);
+void sendLuaPlayTone(uint16_t frequency, uint16_t durationMillisSec);
+void sendLuaPlayNumber(uint16_t number);
+
 #endif

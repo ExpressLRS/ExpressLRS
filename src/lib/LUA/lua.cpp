@@ -189,7 +189,7 @@ void sendELRSstatus()
   // and copied into params->msg (with trailing null)
   params->msg[0] = '\0';
 
-  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
+  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer)); // 0x2E magic number :|
 }
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()
@@ -308,6 +308,40 @@ void sendLuaDevicePacket(void)
   device->fieldCnt = lastLuaField;
 
   crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
+}
+
+void sendLuaPlayHaptic(uint16_t durationMillisSec)
+{
+  uint8_t buffer[2];
+  
+  buffer[0] = (uint8_t)(durationMillisSec & 0xFF);
+  buffer[1] = (uint8_t)(durationMillisSec >> 8);
+
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_LUA_PLAYHAPTIC, buffer, sizeof(buffer));
+}
+
+void sendLuaPlayTone(uint16_t frequency, uint16_t durationMillisSec)
+{
+  uint8_t buffer[4];
+  
+  buffer[0] = (uint8_t)(frequency & 0xFF);
+  buffer[1] = (uint8_t)(frequency >> 8);
+  buffer[2] = (uint8_t)(durationMillisSec & 0xFF);
+  buffer[3] = (uint8_t)(durationMillisSec >> 8);
+
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_LUA_PLAYTONE, buffer, sizeof(buffer));
+}
+
+void sendLuaPlayNumber(uint16_t number)
+{
+  uint8_t buffer[4];
+  
+  buffer[0] = (uint8_t)(number & 0xFF);
+  buffer[1] = (uint8_t)(number >> 8);
+  buffer[2] = UNIT_SECONDS; // not working
+  buffer[3] = PREC2; // not working
+
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_LUA_PLAYNUMBER, buffer, sizeof(buffer));
 }
 
 #endif

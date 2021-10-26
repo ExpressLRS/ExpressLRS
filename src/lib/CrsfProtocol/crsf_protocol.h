@@ -106,6 +106,10 @@ typedef enum
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
     // Ardupilot frames
     CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,
+    // LUA Functions - https://doc.open-tx.org/opentx-2-2-lua-reference-guide/part_iii_-_opentx_lua_api_reference/general_functions
+    CRSF_FRAMETYPE_LUA_PLAYNUMBER = 0xA0,
+    CRSF_FRAMETYPE_LUA_PLAYTONE = 0xA1,
+    CRSF_FRAMETYPE_LUA_PLAYHAPTIC = 0xA2,
 } crsf_frame_type_e;
 
 typedef enum {

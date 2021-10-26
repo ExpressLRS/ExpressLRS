@@ -15,6 +15,13 @@
 ---- # GNU General Public License for more details.                          #
 ---- #                                                                       #
 ---- #########################################################################
+  
+local CRSF_FRAMETYPE_DEVICE_INFO = 0x29
+local CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B
+local CRSF_FRAMETYPE_LUA_PLAYNUMBER = 0xA0
+local CRSF_FRAMETYPE_LUA_PLAYTONE = 0xA1
+local CRSF_FRAMETYPE_LUA_PLAYHAPTIC = 0xA2
+
 local deviceId = 0xEE
 local handsetId = 0xEF
 local deviceName = ""
@@ -565,17 +572,35 @@ local function parseElrsInfoMessage(data)
   elrsFlagsInfo,offset = fieldGetString(data,7)
 end
 
+local function parsePlayNumber(data)
+  playNumber(data[3] + (data[4]*256), data[5], data[6])
+end
+
+local function parsePlayTone(data)
+  playTone(data[3] + (data[4]*256), data[5] + (data[6]*256), 0, 0, 0)
+end
+
+local function parsePlayHaptic(data)
+  playHaptic(data[3] + (data[4]*256), 0, 0)
+end
+
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
-  if command == 0x29 then
+  if command == CRSF_FRAMETYPE_DEVICE_INFO then
     parseDeviceInfoMessage(data)
-  elseif command == 0x2B then
+  elseif command == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY then
     parseParameterInfoMessage(data)
     if allParamsLoaded < 1 or statusComplete == 0 then
       fieldTimeout = 0 -- go fast until we have complete status record
     end
-  elseif command == 0x2E then
+  elseif command == 0x2E then -- 0x2E magic number
     parseElrsInfoMessage(data)
+  elseif command == CRSF_FRAMETYPE_LUA_PLAYNUMBER then
+    parsePlayNumber(data)
+  elseif command == CRSF_FRAMETYPE_LUA_PLAYTONE then
+    parsePlayTone(data)
+  elseif command == CRSF_FRAMETYPE_LUA_PLAYHAPTIC then
+    parsePlayHaptic(data)
   end
 
   local time = getTime()
