@@ -239,13 +239,7 @@ bool luaHandleUpdateParameter()
     return false;
   }
 
-<<<<<<< HEAD
-    switch(crsf.ParameterUpdateData[0])
-=======
-  populateHandler();
-
   switch(crsf.ParameterUpdateData[0])
->>>>>>> 158738a (refactor device info frame out and add ping response to rx)
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
