@@ -593,7 +593,7 @@ local function refreshNext()
   elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 or statusComplete == 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time +50 -- 0.5s
+      fieldTimeout = time + 50 -- 0.5s
     end
   end
 
@@ -643,10 +643,10 @@ local function lcd_title()
     lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
     lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn == false then
-      lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-      lcd.drawText(LCD_W-4, 4, indicator, RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
+      lcd.drawText(LCD_W - 4, 4, indicator, RIGHT + BOLD + CUSTOM_COLOR)
     else
-      lcd.drawText(textXoffset+1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+      lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
       lcd.drawText(LCD_W - textSize - 4, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
     end
     -- progress bar

@@ -211,7 +211,7 @@ void sendELRSstatus()
           break;
       }
   }
-  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)+1];
+  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1];
   struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
   params->pktsBad = crsf.BadPktsCountResult;
@@ -220,7 +220,7 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   params->msg[0] = '\0';
-  memcpy(buffer+(sizeof(struct tagLuaElrsParams))-1,warningInfo,strlen(warningInfo));
+  memcpy(buffer + (sizeof(struct tagLuaElrsParams)) - 1, warningInfo, strlen(warningInfo));
   buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)] = '\0';
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
