@@ -563,7 +563,9 @@ local function parseElrsInfoMessage(data)
   end
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
-  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt)
+  local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
+  
+  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. "   " .. state
   elrsFlags = data[6]
   elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
 end
@@ -619,8 +621,6 @@ end
 
 local function lcd_title()
   local title = allParamsLoaded == 1 and deviceName or "Loading..."
-  local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
-  local indicator = tostring(badPkt) .. "/" .. tostring(goodPkt) .. "   " .. state
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -644,7 +644,7 @@ local function lcd_title()
     lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn == false then
       lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
-      lcd.drawText(LCD_W - 4, 4, indicator, RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W - 4, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
     else
       lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
       lcd.drawText(LCD_W - textSize - 4, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
@@ -663,7 +663,7 @@ local function lcd_title()
 
     lcd.clear()
     if titleShowWarn == false then
-      lcd.drawText(LCD_W, 1, indicator, RIGHT)
+      lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
     else
       lcd.drawText(LCD_W, 1,tostring(elrsFlags), RIGHT)
     end
