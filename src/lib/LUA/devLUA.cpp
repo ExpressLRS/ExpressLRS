@@ -281,16 +281,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaPowerFolder);
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
-    PowerLevels_e newPower = (PowerLevels_e)arg;
-
-    if (newPower > MaxPower)
-    {
-        newPower = MaxPower;
-    } else if (newPower < MinPower)
-    {
-        newPower = MinPower;
-    }
-    config.SetPower(newPower);
+    config.SetPower((PowerLevels_e)constrain(arg, MinPower, MaxPower));
   }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
