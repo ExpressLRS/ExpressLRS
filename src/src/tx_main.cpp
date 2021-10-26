@@ -622,6 +622,7 @@ static void UpdateConnectDisconnectStatus()
   else
   {
     connectionState = disconnected;
+    connectionHasModelMatch = true;
   }
 }
 
