@@ -299,7 +299,7 @@ bool luaHandleUpdateParameter()
 void sendLuaDevicePacket(void)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-  crsf.GetDeviceInformation(deviceInformation, lastLuaField, 0);
+  crsf.GetDeviceInformation(deviceInformation, lastLuaField);
   // does append header + crc again so substract size from length
   crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
 }

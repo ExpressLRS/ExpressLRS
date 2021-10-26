@@ -638,9 +638,8 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
                 if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
                 {
                     uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-                    crsf.GetDeviceInformation(deviceInformation, 0, CRSF_ADDRESS_RADIO_TRANSMITTER);
-                    crsf_ext_header_t *header = (crsf_ext_header_t *) deviceInformation;
-                    header->device_addr = CRSF_ADDRESS_CRSF_TRANSMITTER;
+                    crsf.GetDeviceInformation(deviceInformation, 0);
+                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
                     telemetry.AppendTelemetryPackage(deviceInformation);
                 }
             }
@@ -934,8 +933,8 @@ static void HandleUARTin()
         if (telemetry.ShouldSendDeviceFrame())
         {
             uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-            crsf.GetDeviceInformation(deviceInformation, 0, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            deviceInformation[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+            crsf.GetDeviceInformation(deviceInformation, 0);
+            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
