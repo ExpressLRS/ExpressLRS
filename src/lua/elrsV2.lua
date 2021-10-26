@@ -564,7 +564,7 @@ local function parseElrsInfoMessage(data)
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
   local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
-  
+
   goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. "   " .. state
   elrsFlags = data[6]
   elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
@@ -665,7 +665,7 @@ local function lcd_title()
     if titleShowWarn == false then
       lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
     else
-      lcd.drawText(LCD_W, 1,tostring(elrsFlags), RIGHT)
+      lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
     end
     -- keep the title this way to keep the script from error when module is not set correctly
     if allParamsLoaded ~= 1 and fields_count > 0 then
@@ -684,8 +684,8 @@ end
 
 
 local function lcd_warn()
-  lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
-  lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
+  lcd.drawText(textSize*3, textSize*2, tostring(elrsFlags).." : "..elrsFlagsInfo, 0)
+  lcd.drawText(textSize*10, textSize*6, "ok", BLINK + INVERS)
 end
 
 local function handleDevicePageEvent(event)
