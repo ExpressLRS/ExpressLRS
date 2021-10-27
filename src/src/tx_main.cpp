@@ -76,6 +76,7 @@ char commitStr[7] = "commit";
 #endif
 
 #if defined(HAS_I2C_OLED_MENU)
+char commitStr[7] = "commit";
 OLED_MENU OLED_MENU;
 extern void shortPressCallback(void);
 extern void longPressCallback(void);
@@ -494,7 +495,7 @@ void HandleUpdateParameter()
     #if defined(HAS_I2C_OLED_MENU)
        OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
        config.GetRate(),
-       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval),commitStr);
     #endif
 
     }
@@ -515,7 +516,7 @@ void HandleUpdateParameter()
     #if defined(HAS_I2C_OLED_MENU)
        OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
        config.GetRate(),
-       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval),commitStr);
     #endif
 
     }
@@ -535,7 +536,7 @@ void HandleUpdateParameter()
       #if defined(HAS_I2C_OLED_MENU)
          OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
          config.GetRate(),
-         (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
+         (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval),commitStr);
       #endif
     }
     break;
@@ -648,7 +649,8 @@ void menuSetTLM(uint32_t TLM) {config.SetTlm(TLM);}
 void menuSetPow(uint32_t pow) {config.SetPower(pow);}
 void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
                        config.GetRate(),
-                       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));}
+                       (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval),
+                       commitStr);}
 
 
 void uartConnected(void) {UARTconnected();}
@@ -658,7 +660,6 @@ void menuBinding(void)
     OLED_MENU.Bind_prompt();
     EnterBindingMode();
     uartDisconnected();
-    
 }
 void menuWifiUpdate(void) 
 { 
@@ -688,6 +689,7 @@ void setup()
 #if defined(HAS_I2C_OLED_MENU)
   OLED_MENU.Init();
   OLED_MENU.Boot_animation();
+  OLED_MENU.setCommitString(thisCommit, commitStr);
 #endif
 
   startupLEDs();
@@ -837,13 +839,6 @@ button.buttonLongPress = &longPressCallback;
                   OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), commitStr);
   #endif
 
-  #if defined(HAS_I2C_OLED_MENU)
-    //Serial.println(config.GetRate());
-    // uartDisconnected(); 
-    // OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
-    // config.GetRate(),
-    // (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-  #endif
 }
 
 void loop()

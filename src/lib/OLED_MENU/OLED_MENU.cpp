@@ -123,6 +123,7 @@ uint8_t  OLED_MENU::showBaseIndex = 0;
 uint8_t  OLED_MENU::screenLocked = 0;
 uint8_t  OLED_MENU::wifiupdateSta = 0;
 uint8_t  OLED_MENU::BindingSta = false;
+char*    OLED_MENU::Hashcode;
 
 void shortPressCallback(void)
 {
@@ -203,14 +204,14 @@ void OLED_MENU::ScreenLocked(void)
     }
 }
 
-void OLED_MENU::menuUpdata(void)
+void OLED_MENU::menuUpdata(const char * Hashcode)
 {
     u8g2.clearBuffer();
     u8g2.setFontMode(1);  /* activate transparent font mode */
-    u8g2.setDrawColor(1); /* color 1 for the box */
-    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.setDrawColor(2); /* color 1 for the box */
     u8g2.drawBox(0,0,128, 10);
-    u8g2.setDrawColor(2);
+    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.drawUTF8(90,8,Hashcode);
     u8g2.drawUTF8(3,8, "ExpressLRS");
 
     for(int i=0;i<6;i++)
@@ -237,14 +238,15 @@ void OLED_MENU::menuUpdata(void)
     u8g2.sendBuffer();
 }
 
-void OLED_MENU::updateScreen(const char power ,const char rate, const char tlm)
+void OLED_MENU::updateScreen(const char power ,const char rate, const char tlm,char * commitStr)
 {
      currentItem[0].value = rate;
      currentItem[1].value = tlm;
      currentItem[2].value = power;
+     Hashcode = commitStr;
     if(OLED_MENU::screenLocked == 0)
     {
-        OLED_MENU::menuUpdata();
+        OLED_MENU::menuUpdata(Hashcode);
     }    
 }
 
@@ -260,7 +262,7 @@ void OLED_MENU::shortPressCB(void)
             currentIndex = 0;
             showBaseIndex =0;
         }
-        OLED_MENU::menuUpdata();
+        OLED_MENU::menuUpdata(Hashcode);
     }
 }
 
@@ -283,7 +285,7 @@ void OLED_MENU::longPressCB(void)
     {
         if(OLED_MENU::wifiupdateSta == 0)
         {
-            OLED_MENU::menuUpdata();
+            OLED_MENU::menuUpdata(Hashcode);
         }
     }
    
@@ -441,4 +443,18 @@ const char *OLED_MENU::getTLMRatioString(int ratio){
     }
 }
 
+/**
+ * Sets the commit string by converting unsigned integers to signed char's (Char array)
+ *
+ * @param values commit = unsigned 8 byte int array for the commit and char array for commit string.
+ * @return void
+ */
+void OLED_MENU::setCommitString(const uint8_t * commit, char * commitStr){
+
+    for(int i = 0; i < 6; i++ ){
+        if (commit[i] < 10) commitStr[i] = commit[i] + 48; // gets us 0 to 9
+        else commitStr[i] = commit[i] + 87; // gets us a to f
+    }
+
+}
 #endif

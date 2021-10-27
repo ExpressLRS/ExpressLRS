@@ -70,6 +70,7 @@ public:
     static uint8_t screenLocked;
     static uint8_t wifiupdateSta;
     static uint8_t BindingSta;
+    static char *Hashcode;
 private:
     static uint8_t showBaseIndex;
     static menuShow_t currentItem[];
@@ -88,7 +89,7 @@ public:
     void Bind_prompt(void);
     void Boot_animation(void);
     static void Init(void);
-    static void updateScreen(const char power ,const char rate, const char tlm);
+    static void updateScreen(const char power ,const char rate, const char tlm,char * commitStr);
     static void WIFIUpdateScreen(void);
     static const char * getPowerString(int power);
     static const char * getRateString(int rate);
@@ -109,7 +110,7 @@ public:
     static void longPressCB(void);
     static void HandleUpdataMenu(void);
     void ScreenLocked(void);
-    static void menuUpdata(void);
+    static void menuUpdata(const char * Hashcode);
 
     static const char *getOptionString(int index);
 };
