@@ -31,7 +31,7 @@ local fields = {}
 local devices = {}
 local goodBadPkt = "?/???"
 local elrsFlags = 0
-local elrsFlagsInfo
+local elrsFlagsInfo = ""
 local fields_count = 0
 local backButtonId = 2
 local devicesRefreshTimeout = 50
@@ -569,7 +569,7 @@ local function parseElrsInfoMessage(data)
   local state = (bit32.btest(elrsFlags, 1) and "   C") or "   -"
 
   goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. state
-  elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or " "
+  elrsFlagsInfo = fieldGetString(data, 7)
 end
 
 local function refreshNext()
