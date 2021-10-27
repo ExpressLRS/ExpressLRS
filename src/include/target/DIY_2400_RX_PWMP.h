@@ -1,4 +1,4 @@
-#define _DEVICE_NAME "DIY2400 PWMP"
+#define DEVICE_NAME "DIY2400 PWMP"
 
 // GPIO pin definitions
 // same as TARGET_RX_ESP8266_SX1280_V1 except with no serial and PWM outputs
