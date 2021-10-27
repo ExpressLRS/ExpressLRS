@@ -569,7 +569,7 @@ local function parseElrsInfoMessage(data)
   local state = (bit32.btest(elrsFlags, 1) and "   C") or "   -"
 
   goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. state
-  elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
+  elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or " "
 end
 
 local function refreshNext()
@@ -623,6 +623,8 @@ end
 
 local function lcd_title()
   local title = allParamsLoaded == 1 and deviceName or "Loading..."
+  lcd.clear()
+
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
@@ -631,7 +633,6 @@ local function lcd_title()
     local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
     local barHeight = 30
 
-    lcd.clear()
     -- Field display area (white w/ 2px green border)
     lcd.setColor(CUSTOM_COLOR, EGREEN)
     lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
@@ -646,10 +647,10 @@ local function lcd_title()
     lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn == false then
       lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
-      lcd.drawText(LCD_W - 4, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
     else
       lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-      lcd.drawText(LCD_W - textSize - 4, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
+      lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
     end
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
@@ -663,9 +664,9 @@ local function lcd_title()
     -- B&W screen
     local barHeight = 9
 
-    lcd.clear()
     if titleShowWarn == false then
-      lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
+      lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
+      lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
     else
       lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
     end
@@ -854,7 +855,7 @@ local function setMock()
   if string.sub(rv, -5) ~= "-simu" then return end
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, goodBadPkt = mock(), "0/500"
+  fields, goodBadPkt = mock(), "0/500   C"
   fields_count = #fields - 1
   fieldId = #fields - 3
 end
