@@ -191,15 +191,15 @@ uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
 
 void sendELRSstatus()
 {
-  constexpr const char *messages[] = {
-    "connected",
-    "status1",
-    "Model Mismatch",
-    "warning2",
-    "warning1",
-    "critical warning3",
-    "critical warning2",
-    "critical warning1"
+  constexpr const char *messages[] = { //higher order = higher priority
+    "",                   //status2 = connected status
+    "",                   //status1, reserved for future use
+    "Model Mismatch",     //warning3, model mismatch
+    "",           //warning2, reserved for future use
+    "",           //warning1, reserved for future use
+    "",  //critical warning3, reserved for future use
+    "",  //critical warning2, reserved for future use
+    ""   //critical warning1, reserved for future use
   };
   const char * warningInfo = "";
 

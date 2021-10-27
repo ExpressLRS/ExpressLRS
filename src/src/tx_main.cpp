@@ -257,7 +257,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     {
         case ELRS_TELEMETRY_TYPE_LINK:
             // Antenna is the high bit in the RSSI_1 value
-            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
             // RSSI received is signed, inverted polarity (positive value = -dBm)
             // OpenTX's value is signed and will display +dBm and -dBm properly
             crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
@@ -266,6 +265,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
             crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
             connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
             // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
             // -- rf_mode is updated when we change rates

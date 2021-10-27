@@ -561,12 +561,14 @@ local function parseElrsInfoMessage(data)
     fieldChunk = 0
     return
   end
+  
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
-  local state = (bit32.btest(elrsFlags, 1) and "C ") or "- "
-
-  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. "   " .. state
   elrsFlags = data[6]
+  
+  local state = (bit32.btest(elrsFlags, 1) and "   C") or "   -"
+
+  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. state
   elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
 end
 
