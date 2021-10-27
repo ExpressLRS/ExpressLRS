@@ -219,9 +219,7 @@ void sendELRSstatus()
   params->flags = getLuaWarningFlags();
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
-  params->msg[0] = '\0';
-  memcpy(buffer + (sizeof(struct tagLuaElrsParams)) - 1, warningInfo, strlen(warningInfo));
-  buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo)] = '\0';
+  strcpy(params->msg, warningInfo);
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
