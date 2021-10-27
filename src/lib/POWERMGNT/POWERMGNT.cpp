@@ -424,7 +424,7 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(-4);
         break;
     case PWR_500mW:
-        Radio.SetOutputPower(3);
+        Radio.SetOutputPower(5);
         break;
     case PWR_50mW:    
     default:

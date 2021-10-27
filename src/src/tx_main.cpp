@@ -649,38 +649,27 @@ void menuSetPow(uint32_t pow) {config.SetPower(pow);}
 void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
                        config.GetRate(),
                        (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));}
+
+
+void uartConnected(void) {UARTconnected();}
+void uartDisconnected(void) {UARTdisconnected();}
 void menuBinding(void) 
 {
-    while (busyTransmitting);
-    // Queue up sending the Master UID as MSP packets
-    SendUIDOverMSP();
-    // Set UID to special binding values
-    UID[0] = BindingUID[0];
-    UID[1] = BindingUID[1];
-    UID[2] = BindingUID[2];
-    UID[3] = BindingUID[3];
-    UID[4] = BindingUID[4];
-    UID[5] = BindingUID[5];
-    CRCInitializer = 0;
-    //InBindingMode = true;
-    // Start attempting to bind
-    // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.SetFrequencyReg(GetInitialFreq());
-    startupLEDs();
+    OLED_MENU.Bind_prompt();
+    EnterBindingMode();
+    uartDisconnected();
+    
 }
 void menuWifiUpdate(void) 
 { 
+    uartConnected();
+    usleep(500);
     webUpdateMode = true;
-    Serial.println("Wifi Update Mode Requested!");
     sendLuaParams();
     sendLuaParams();
     BeginWebUpdate();
     OLED_MENU.WIFIUpdateScreen();
 };
-
-void uartConnected(void) {UARTconnected();}
-void uartDisconnected(void) {UARTdisconnected();}
 #endif
 
 
@@ -695,10 +684,10 @@ void setup()
   OLED.displayLogo();
   OLED.setCommitString(thisCommit, commitStr);
 #endif
-
+ 
 #if defined(HAS_I2C_OLED_MENU)
   OLED_MENU.Init();
-  OLED_MENU.displayLockScreen();
+  OLED_MENU.Boot_animation();
 #endif
 
   startupLEDs();
@@ -839,7 +828,7 @@ button.buttonLongPress = &longPressCallback;
   POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   
 
-  hwTimer.init();
+   hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
   crsf.Begin();
   #if defined(HAS_OLED)
@@ -850,10 +839,10 @@ button.buttonLongPress = &longPressCallback;
 
   #if defined(HAS_I2C_OLED_MENU)
     //Serial.println(config.GetRate());
-     OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
-     config.GetRate(),
-     (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
-     hwTimer.stop();
+    // uartDisconnected(); 
+    // OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower(),
+    // config.GetRate(),
+    // (expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval));
   #endif
 }
 
@@ -1073,7 +1062,9 @@ void EnterBindingMode()
   Radio.SetFrequencyReg(GetInitialFreq());
   // Start transmitting again
   hwTimer.resume();
-
+  #ifdef TARGET_TX_BETAFPV_900_MICRO_V1
+    startupLEDs();
+  #endif
   Serial.print("Entered binding mode at freq = ");
   Serial.println(Radio.currFreq);
 }

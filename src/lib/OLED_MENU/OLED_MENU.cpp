@@ -122,6 +122,7 @@ uint8_t  OLED_MENU::currentIndex = 0;
 uint8_t  OLED_MENU::showBaseIndex = 0;
 uint8_t  OLED_MENU::screenLocked = 0;
 uint8_t  OLED_MENU::wifiupdateSta = 0;
+uint8_t  OLED_MENU::BindingSta = false;
 
 void shortPressCallback(void)
 {
@@ -149,6 +150,35 @@ void OLED_MENU::displayLockScreen()
     u8g2.sendBuffer();
 }
 
+void OLED_MENU::Bind_prompt()
+{
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_unifont_t_symbols);
+    u8g2.drawGlyph(58, 30, 0x23f3);	/* dec 9731/hex 2603 Snowman */
+    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.drawUTF8(38,50, "Binding...");
+    u8g2.sendBuffer(); 
+}
+
+void OLED_MENU::Boot_animation(void)
+{
+    u8g2.clearBuffer();
+    u8g2.drawXBM(0, 32, 32, 32, elrs32); 
+    u8g2.sendBuffer(); 
+    delay(300);
+    u8g2.clearBuffer();
+    u8g2.drawXBM(20, 20, 40, 40, elrs40); 
+    u8g2.sendBuffer(); 
+    delay(300);
+    u8g2.clearBuffer();
+    u8g2.drawXBM(30, 10, 56, 56, elrs56); 
+    u8g2.sendBuffer(); 
+    delay(300);
+    u8g2.clearBuffer();
+    u8g2.drawXBM(35, 0, 64, 64, elrs64); 
+    u8g2.sendBuffer(); 
+}
+
 void OLED_MENU::WIFIUpdateScreen(void)
 {
     u8g2.clearBuffer();
@@ -172,6 +202,7 @@ void OLED_MENU::ScreenLocked(void)
         uartConnected();
     }
 }
+
 void OLED_MENU::menuUpdata(void)
 {
     u8g2.clearBuffer();
@@ -194,7 +225,15 @@ void OLED_MENU::menuUpdata(void)
         u8g2.setDrawColor(2);
         u8g2.drawUTF8(currentItem[i].option[1].line,currentItem[i].option[1].row,currentItem[i].option[1].getStr(currentItem[i].value));
     }
-    delay(100);
+    if(currentIndex == 4)
+    {
+        BindingSta = true;
+    }
+    else
+    {
+        BindingSta = false;
+    }
+    //delay(100);
     u8g2.sendBuffer();
 }
 
@@ -232,15 +271,20 @@ void OLED_MENU::longPressCB(void)
     {
         screenLocked = 0;
         uartDisconnected();   
-        weakupMenu();    
+        weakupMenu();   
+        delay(600); 
     }
     else
     {  
         currentItem[currentIndex].lpcb(currentIndex);
     }  
-    if(OLED_MENU::wifiupdateSta == 0)
+
+    if(OLED_MENU::BindingSta == false)
     {
-         OLED_MENU::menuUpdata();
+        if(OLED_MENU::wifiupdateSta == 0)
+        {
+            OLED_MENU::menuUpdata();
+        }
     }
    
 }
@@ -316,9 +360,9 @@ const char * OLED_MENU::getRgbString(int rgb)
 {
     switch (rgb)
     {
-    case 0: return "White";
+    case 0: return "Cyan";
     case 1: return "Blue";
-    case 2: return "Cyan";
+    case 2: return "White";
     case 3: return "Aqua";
     case 4: return "Red";
     case 5: return "Green";

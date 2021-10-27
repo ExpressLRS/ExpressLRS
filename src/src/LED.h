@@ -24,9 +24,9 @@ static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_L
 
 #if defined(HAS_I2C_OLED_MENU)
 static uint32_t colors[9] = {
-    0xFFFFFF,     // white
+    0xF000FF,     // white
     0x0F00FF,     // Blue
-    0xF000FF,     // Cyan
+    0xFFFFFF,     // Cyan
     0xFF359A,     // Aqua
     0x00FF00,     // red
     0xFF7F00,     // green

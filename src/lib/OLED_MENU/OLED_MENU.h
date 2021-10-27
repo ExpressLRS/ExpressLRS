@@ -69,6 +69,7 @@ public:
     static uint8_t currentIndex;
     static uint8_t screenLocked;
     static uint8_t wifiupdateSta;
+    static uint8_t BindingSta;
 private:
     static uint8_t showBaseIndex;
     static menuShow_t currentItem[];
@@ -83,7 +84,9 @@ private:
     };
 
 public:
-    void displayLockScreen();
+    void displayLockScreen(void);
+    void Bind_prompt(void);
+    void Boot_animation(void);
     static void Init(void);
     static void updateScreen(const char power ,const char rate, const char tlm);
     static void WIFIUpdateScreen(void);
