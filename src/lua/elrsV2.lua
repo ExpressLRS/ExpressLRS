@@ -370,8 +370,6 @@ end
 
 local function fieldStringDisplay(field, y, attr)
   if edit == true and attr then
-    -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
-    -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
     lcd.drawText(COL2, y, field.value, attr)
     lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), attr)
   else
@@ -493,7 +491,7 @@ local functions = {
 
 local function createDeviceField() -- put other device in the field list
   fields[fields_count+2+#devices] = fields[backButtonId]
-  backButtonId = fields_count+2+#devices
+  backButtonId = fields_count+2+#devices  -- move back button to the end of the list, so it will always show up at the bottom.
   for i=1, #devices do
     if devices[i].id == deviceId then
       fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
@@ -670,7 +668,7 @@ local function lcd_title()
     else
       lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
     end
-    -- keep the title this way to keep the script from error when module is not set correctly
+
     if allParamsLoaded ~= 1 and fields_count > 0 then
       lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
       lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
@@ -828,14 +826,14 @@ local function runPopupPage(event)
   return 0
 end
 
-local function setLCDvar()
+local function setLCDvar()  --set constant value depending on LCD resolution
   lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
     textXoffset = 3
     textYoffset = 10
-    textSize = 22
+    textSize = 22 --textSize is actually referring to the text Height
   else
     if LCD_W == 212 then
       COL2 = 110
