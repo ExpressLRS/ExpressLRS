@@ -274,7 +274,7 @@ void OLED_MENU::longPressCB(void)
         screenLocked = 0;
         uartDisconnected();   
         weakupMenu();   
-        delay(600); 
+        while(!digitalRead(GPIO_PIN_BUTTON));  //Wait for the button to spring up
     }
     else
     {  
