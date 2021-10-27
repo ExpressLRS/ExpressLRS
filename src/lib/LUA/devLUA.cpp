@@ -28,7 +28,7 @@ static const char emptySpace[1] = {0};
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) 
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
 #elif defined(Regulatory_Domain_ISM_2400)
     "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
@@ -171,10 +171,20 @@ static struct luaItem_command luaVtxSend = {
 };
 //----------------------------VTX ADMINISTRATOR------------------
 
+#if defined(TARGET_TX_FM30)
+struct luaItem_selection luaBluetoothTelem = {
+    {"BT Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    emptySpace
+};
+#endif
+
+
 static char luaBadGoodString[10];
 
 extern TxConfig config;
-extern uint8_t VtxConfigReadyToSend;
+extern void VtxTriggerSend();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
@@ -204,6 +214,12 @@ static void registerLuaParameters()
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
+  #if defined(TARGET_TX_FM30)
+  registerLUAParameter(&luaBluetoothTelem, [](uint8_t id, uint8_t arg) {
+    digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
+    devicesTriggerEvent();
+  });
+  #endif
   registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
     // Only allow changing switch mode when disconnected since we need to guarantee
     // the pack and unpack functions are matched
@@ -234,7 +250,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaPowerFolder);
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
     PowerLevels_e newPower = (PowerLevels_e)arg;
-    
+
     if (newPower > MaxPower)
     {
         newPower = MaxPower;
@@ -263,7 +279,7 @@ static void registerLuaParameters()
   },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
-      VtxConfigReadyToSend = true;
+      VtxTriggerSend();
     }
     sendLuaCommandResponse(&luaVtxSend, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaVtxFolder.common.id);
@@ -373,6 +389,9 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  #if defined(TARGET_TX_FM30)
+    setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
+  #endif
   return DURATION_IMMEDIATELY;
 }
 

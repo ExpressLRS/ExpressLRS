@@ -22,6 +22,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSF::Port = Serial;
 #endif
+Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
@@ -381,6 +382,8 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
+    bool packetReceived = false;
+
     if (CRSFstate == false)
     {
         CRSFstate = true;
@@ -395,46 +398,46 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
         GetChannelDataIn();
-        return true;
+        packetReceived = true;
     }
-    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
+    // check for all extended frames that are a broadcast or a message to the FC
+    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+            (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
     {
-        volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
-        return true;
-    } else {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-            (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+        packetReceived = true;
+    }
+
+    // always execute this check since broadcast needs to be handeled in all cases
+    if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+        (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+    {
+        elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
+
+        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
         {
-            if(SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA){
-                elrsLUAmode = true;
-            } else {
-                elrsLUAmode = false;
-            }
-            if (packetType == CRSF_FRAMETYPE_COMMAND &&
-                SerialInBuffer[5] == SUBCOMMAND_CRSF &&
-                SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
-                    modelId = SerialInBuffer[7];
-                    RecvModelUpdate();
-                    return true;
-            }
+            modelId = SerialInBuffer[7];
+            RecvModelUpdate();
+        }
+        else
+        {
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
             RecvParameterUpdate();
-            return true;
         }
-        DBGLN("Got Other Packet");
-        //GoodPktsCount++;
+
+        packetReceived = true;
     }
-    return false;
+
+    return packetReceived;
 }
 
 uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
@@ -657,6 +660,8 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 
         // write the packet out, if it's a large package the offset holds the starting position
         CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+        if (CRSF::PortSecondary)
+            CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
         CRSF::Port.flush();
 
         sendingOffset += writeLength;
@@ -892,11 +897,12 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(CRSF_RCVR_NO_SERIAL)
-    const uint8_t totalBufferLen = 14;
-
-    // SerialOutFIFO.push(totalBufferLen);
-    // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
-    this->_dev->write(data, totalBufferLen);
+    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+    {
+        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        this->_dev->write(data, totalBufferLen);
+    }
 #endif // CRSF_RCVR_NO_SERIAL
 }
 

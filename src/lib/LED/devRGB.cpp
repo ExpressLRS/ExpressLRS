@@ -34,6 +34,11 @@ void WS281BsetLED(uint32_t color)
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"
 
+#if defined(TARGET_RX)
+extern bool InBindingMode;
+extern bool connectionHasModelMatch;
+#endif
+
 typedef struct {
   uint8_t h, s, v;
 } blinkyColor_t;
@@ -48,7 +53,7 @@ uint32_t HsvToRgb(blinkyColor_t &blinkyColor)
     }
 
     region = blinkyColor.h / 43;
-    remainder = (blinkyColor.h - (region * 43)) * 6; 
+    remainder = (blinkyColor.h - (region * 43)) * 6;
 
     p = (blinkyColor.v * (255 - blinkyColor.s)) >> 8;
     q = (blinkyColor.v * (255 - ((blinkyColor.s * remainder) >> 8))) >> 8;
@@ -173,7 +178,10 @@ static enum {
 } blinkyState;
 
 constexpr uint8_t LEDSEQ_RADIO_FAILED[] = {  10, 10 }; // 100ms on, 100ms off (fast blink)
-constexpr uint8_t LEDSEQ_NO_CROSSFIRE[] = {  10, 90 }; // 100ms on, 900ms off (one blink/s)
+constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500ms off
+constexpr uint8_t LEDSEQ_NO_CROSSFIRE[] = {  10, 100 }; // 1 blink, 1s pause (one blink/s)
+constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 2x 100ms blink, 1s pause
+constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x 100ms blink, 1s pause
 
 #define NORMAL_UPDATE_INTERVAL 50
 
@@ -231,9 +239,23 @@ static int timeout()
     {
         return blinkyUpdate();
     }
+    #if defined(TARGET_RX)
+        if (InBindingMode)
+        {
+            blinkyColor.h = 10;
+            return flashLED(blinkyColor, 192, 0, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
+        }
+    #endif
     switch (connectionState)
     {
     case connected:
+        #if defined(TARGET_RX)
+            if (!connectionHasModelMatch)
+            {
+                blinkyColor.h = 10;
+                return flashLED(blinkyColor, 192, 0, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
+            }
+        #endif
         // Set the color and we're done!
         blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
         blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 128);
@@ -246,9 +268,15 @@ static int timeout()
         WS281BsetLED(HsvToRgb(blinkyColor));
         return DURATION_NEVER;
     case disconnected:
-        blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
-        brightnessFadeLED(blinkyColor, 0, 64);
-        return NORMAL_UPDATE_INTERVAL;
+        #if defined(TARGET_RX)
+            blinkyColor.h = 10;
+            return flashLED(blinkyColor, 192, 0, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
+        #endif
+        #if defined(TARGET_TX)
+            blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
+            brightnessFadeLED(blinkyColor, 0, 64);
+            return NORMAL_UPDATE_INTERVAL;
+        #endif
     case wifiUpdate:
         hueFadeLED(blinkyColor, 85, 85-30, 128, 2);      // Yellow->Green cross-fade
         return 5;

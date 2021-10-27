@@ -11,7 +11,6 @@ extern CRSF crsf;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-#define LUA_PKTCOUNT_INTERVAL_MS 1000LU
 static uint8_t luaWarningFLags = false;
 static uint8_t suppressedLuaWarningFlags = true;
 
@@ -84,7 +83,7 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
-  
+
   // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
   // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
   // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
@@ -237,26 +236,18 @@ void registerLUAPopulateParams(void (*populate)())
 
 bool luaHandleUpdateParameter()
 {
-  static uint32_t LUAfieldReported = 0;
-
-  if (millis() >= (uint32_t)(LUA_PKTCOUNT_INTERVAL_MS + LUAfieldReported)){
-      LUAfieldReported = millis();
-      populateHandler();
-      sendELRSstatus();
-  }
-
   if (UpdateParamReq == false)
   {
     return false;
   }
 
-  switch(crsf.ParameterUpdateData[0])
+    switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
       {
-        // special case for sending commit packet
-        DBGVLN("send all lua params");
+        // special case for elrs linkstat request
+        DBGVLN("ELRS status request");
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
