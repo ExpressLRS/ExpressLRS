@@ -34,3 +34,4 @@
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
 
 #define HAS_OLED
+#define HAS_OLED_SPI

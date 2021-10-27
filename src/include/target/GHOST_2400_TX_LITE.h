@@ -6,4 +6,5 @@
 // There is some special handling for this target
 #define TARGET_TX_GHOST_LITE
 
-#define HAS_OLED_128_32
+#undef HAS_OLED_SPI  // We are extending ghost tx full so we have to remote this
+#define HAS_OLED_SPI_SMALL
