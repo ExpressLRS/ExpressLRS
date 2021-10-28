@@ -307,7 +307,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // and must be inverted on the TX side. Positive values are used
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
@@ -640,8 +640,25 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     else
     {
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && (MspData[3] == CRSF_ADDRESS_BROADCAST || MspData[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-            crsf.sendMSPFrameToFC(MspData);
+        if (connectionHasModelMatch)
+        {
+            crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+            {
+                crsf.sendMSPFrameToFC(MspData);
+            }
+
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+            {
+                if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
+                {
+                    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+                    crsf.GetDeviceInformation(deviceInformation, 0);
+                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+                    telemetry.AppendTelemetryPackage(deviceInformation);
+                }
+            }
+        }
     }
 
     MspReceiver.Unlock();
@@ -936,6 +953,13 @@ static void HandleUARTin()
         if (telemetry.ShouldCallUpdateModelMatch())
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
+        if (telemetry.ShouldSendDeviceFrame())
+        {
+            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+            crsf.GetDeviceInformation(deviceInformation, 0);
+            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
 #endif

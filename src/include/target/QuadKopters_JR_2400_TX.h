@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "QuadKopters 24"
+#define DEVICE_NAME "QuadKopters 24"
 
 // Output Power
 #define MinPower PWR_10mW

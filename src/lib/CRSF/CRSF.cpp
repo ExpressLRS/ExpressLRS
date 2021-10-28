@@ -25,6 +25,7 @@ HardwareSerial CRSF::Port = Serial;
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+const char deviceName[] = DEVICE_NAME;
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -933,3 +934,30 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 }
 
 #endif // CRSF_RX_MODULE
+
+void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
+{
+    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + sizeof(deviceName));
+    // Packet starts with device name
+    memcpy(frame + sizeof(crsf_ext_header_t), deviceName, sizeof(deviceName));
+    // Followed by the device
+    device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+    device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+    device->softwareVer = 0; // unused currently by us, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->fieldCnt = fieldCount;
+    device->parameterVersion = 0;
+}
+
+void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
+{
+    crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
+    header->dest_addr = destAddr;
+    header->device_addr = destAddr;
+    header->type = frameType;
+    header->orig_addr = senderAddr;
+    header->frame_size = frameSize;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
+
+    frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}

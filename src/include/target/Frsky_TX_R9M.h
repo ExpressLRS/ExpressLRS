@@ -1,6 +1,6 @@
 
-#if !defined(TX_DEVICE_NAME)
-    #define TX_DEVICE_NAME "FrSky R9M"
+#if !defined(DEVICE_NAME)
+    #define DEVICE_NAME "FrSky R9M"
 #endif
 
 #define TARGET_USE_EEPROM               1
