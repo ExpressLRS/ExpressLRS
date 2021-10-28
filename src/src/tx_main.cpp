@@ -654,7 +654,9 @@ void weakupMenu(void) {OLED_MENU.updateScreen((PowerLevels_e)POWERMGNT.currPower
 
 
 void uartConnected(void) {UARTconnected();}
+void OLED_MENU_start(void) {crsf.Begin();};    //After the startup animation is complete, open the CRSF serial port to avoid startup failure
 void uartDisconnected(void) {UARTdisconnected();}
+
 void menuBinding(void) 
 {
     OLED_MENU.Bind_prompt();
@@ -832,7 +834,12 @@ button.buttonLongPress = &longPressCallback;
 
    hwTimer.init();
   //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
+ 
+#if defined(TARGET_TX_BETAFPV_2400_MICRO_V1) || defined(TARGET_TX_BETAFPV_900_MICRO_V1)
+
+#else
   crsf.Begin();
+#endif
   #if defined(HAS_OLED)
     OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT.currPower()),
                   OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),

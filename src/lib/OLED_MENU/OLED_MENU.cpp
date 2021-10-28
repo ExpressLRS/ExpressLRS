@@ -28,6 +28,7 @@ extern void menuSetRate(uint32_t rate);
 extern void menuSetTLM(uint32_t TLM);
 extern void menuSetPow(uint32_t pow);
 extern void uartConnected(void);
+extern void OLED_MENU_start(void);
 extern void weakupMenu(void);
 extern void menuBinding(void);
 extern void uartDisconnected(void);
@@ -124,6 +125,7 @@ uint8_t  OLED_MENU::screenLocked = 0;
 uint8_t  OLED_MENU::wifiupdateSta = 0;
 uint8_t  OLED_MENU::BindingSta = false;
 char*    OLED_MENU::Hashcode;
+bool     OLED_MENU::FirstTimeBootFlag = false;
 
 void shortPressCallback(void)
 {
@@ -150,6 +152,8 @@ void OLED_MENU::displayLockScreen()
     u8g2.drawUTF8(78,50,SCREEN_FR_STRING); 
     u8g2.sendBuffer();
 }
+
+
 
 void OLED_MENU::Bind_prompt()
 {
@@ -197,6 +201,11 @@ void OLED_MENU::ScreenLocked(void)
     uint32_t now = millis();
     if(now - OLED_MENU::lastProcessTime > LOCKTIME && OLED_MENU::screenLocked == 0) // LOCKTIME seconds later lock the screen
     {
+        if(!FirstTimeBootFlag)
+        {
+            OLED_MENU_start();
+            FirstTimeBootFlag = true;
+        }
         displayLockScreen();
         OLED_MENU::screenLocked = 1;
         OLED_MENU::lastProcessTime = now;

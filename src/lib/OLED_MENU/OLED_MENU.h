@@ -70,6 +70,7 @@ public:
     static uint8_t screenLocked;
     static uint8_t wifiupdateSta;
     static uint8_t BindingSta;
+    static bool FirstTimeBootFlag;
     static char *Hashcode;
 private:
     static uint8_t showBaseIndex;
@@ -89,6 +90,7 @@ public:
     void Bind_prompt(void);
     void Boot_animation(void);
     static void Init(void);
+    static void start(void);
     static void updateScreen(const char power ,const char rate, const char tlm,char * commitStr);
     static void WIFIUpdateScreen(void);
     static const char * getPowerString(int power);
