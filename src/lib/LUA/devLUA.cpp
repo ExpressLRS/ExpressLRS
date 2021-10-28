@@ -205,15 +205,15 @@ static void luadevGeneratePowerOpts()
   // be called more than once!
   char *out = strPowerLevels;
   PowerLevels_e pwr = PWR_10mW;
-  // COMMENTED OUT: our lua forces "min" to 0, so always include PWR_10mW to MinPower in the options
   // Count the semicolons to move `out` to point to the MINth item
-  // while (pwr < MinPower)
-  // {
-  //   while (*out++ != ';') ;
-  //   pwr = (PowerLevels_e)((unsigned int)pwr + 1);
-  // }
+  while (pwr < MinPower)
+  {
+    while (*out++ != ';') ;
+    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
+  }
+  // There is no min field, compensate by shifting the index when sending/receiving
   // luaPower.min = (uint8_t)MinPower;
-  // luaPower.options = (const char *)out;
+  luaPower.options = (const char *)out;
 
   // Continue until after than MAXth item and drop a null in the orginal
   // string on the semicolon (not after like the previous loop)
@@ -281,7 +281,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaPowerFolder);
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
-    config.SetPower((PowerLevels_e)constrain(arg, MinPower, MaxPower));
+    config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
   }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
@@ -402,7 +402,7 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
-  setLuaTextSelectionValue(&luaPower, config.GetPower());
+  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);

@@ -22,7 +22,7 @@ struct tagLuaDeviceProperties {
 struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
-    const char* const options; // selection options, separated by ';'
+    const char* options; // selection options, separated by ';'
     const char* const units;
 } PACKED;
 
