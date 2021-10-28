@@ -40,7 +40,6 @@ local folderAccess = 0
 local statusComplete = 0
 local commandRunningIndicator = 1
 local expectedChunks = -1
-local deviceIsELRS = false
 local linkstatTimeout = 100
 local titleShowWarn = false
 local titleShowWarnTimeout = 100
@@ -428,7 +427,6 @@ end
 
 local function changeDeviceId(devId) --change to selected device ID
   folderAccess = 0
-  deviceIsELRS = false
   elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
   if devId == 0xEE then
@@ -458,7 +456,6 @@ local function parseDeviceInfoMessage(data)
   end
   if deviceId == id then
     deviceName = devicesName
-    deviceIsELRS = fieldGetValue(data,offset,4) == 0x454C5253 -- SerialNumber = 'E L R S'
     local newFieldCount = data[offset+12]
     reloadAllField()
     if newFieldCount ~= fields_count then
@@ -554,7 +551,7 @@ local function parseParameterInfoMessage(data)
 end
 
 local function parseElrsInfoMessage(data)
-  if data[2] ~= deviceId then
+  if data[2] ~= 0xEE then
     fieldData = {}
     fieldChunk = 0
     return
@@ -600,13 +597,7 @@ local function refreshNext()
   end
 
   if time > linkstatTimeout then
-    if deviceIsELRS == false and allParamsLoaded == 1 then
-      -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
-      -- reloadAllField()
-      -- linkstatTimeout = time + 300 --reload all param every 3s if not elrs
-    else
-      crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
-    end
+    crossfireTelemetryPush(0x2D, { 0xEE, handsetId, 0x0, 0x0 }) --request linkstat
     linkstatTimeout = time + 100
   end
   if time > titleShowWarnTimeout then
