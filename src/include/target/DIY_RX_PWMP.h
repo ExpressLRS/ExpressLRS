@@ -1,7 +1,6 @@
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
     #define DEVICE_NAME "DIY900 PWMP"
 #else
-    #define Regulatory_Domain_ISM_2400
     #define DEVICE_NAME "DIY2400 PWMP"
 #endif
 
