@@ -1,10 +1,11 @@
 #if defined(RX_AS_TX)
-    #define TX_DEVICE_NAME          "SIYI FR Mini"
+    #define DEVICE_NAME          "SIYI FR Mini"
     // There is some special handling for this target
     #define TARGET_TX_FM30_MINI
 #else
     // There is some special handling for this target
     #define TARGET_RX_FM30_MINI
+    #define DEVICE_NAME "FM30 MINI"
 #endif
 
 // GPIO pin definitions

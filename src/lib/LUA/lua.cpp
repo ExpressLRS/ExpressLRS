@@ -4,8 +4,6 @@
 #include "CRSF.h"
 #include "logging.h"
 
-const char txDeviceName[] = TX_DEVICE_NAME;
-
 extern CRSF crsf;
 
 static volatile bool UpdateParamReq = false;
@@ -241,7 +239,7 @@ bool luaHandleUpdateParameter()
     return false;
   }
 
-    switch(crsf.ParameterUpdateData[0])
+  switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
@@ -294,18 +292,10 @@ bool luaHandleUpdateParameter()
 
 void sendLuaDevicePacket(void)
 {
-  uint8_t buffer[sizeof(txDeviceName) + sizeof(struct tagLuaDeviceProperties)];
-  struct tagLuaDeviceProperties * const device = (struct tagLuaDeviceProperties * const)&buffer[sizeof(txDeviceName)];
-
-  // Packet starts with device name
-  memcpy(buffer, txDeviceName, sizeof(txDeviceName));
-  // Followed by the device
-  device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
-  device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-  device->softwareVer = 0; // unused currently by ys, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
-  device->fieldCnt = lastLuaField;
-
-  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
+  uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+  crsf.GetDeviceInformation(deviceInformation, lastLuaField);
+  // does append header + crc again so substract size from length
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
 }
 
 #endif

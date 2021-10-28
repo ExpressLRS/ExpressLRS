@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME          "BETAFPV 2400TX"
+#define DEVICE_NAME          "BETAFPV 2400TX"
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_V1

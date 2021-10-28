@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "Namimno Voyager"
+#define DEVICE_NAME "Namimno Voyager"
 
 #define USE_TX_BACKPACK
 
