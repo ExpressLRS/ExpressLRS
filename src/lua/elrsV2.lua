@@ -31,7 +31,7 @@ local fields = {}
 local devices = {}
 local goodBadPkt = "?/???"
 local elrsFlags = 0
-local elrsFlagsInfo
+local elrsFlagsInfo = ""
 local fields_count = 0
 local backButtonId = 2
 local devicesRefreshTimeout = 50
@@ -42,6 +42,8 @@ local commandRunningIndicator = 1
 local expectedChunks = -1
 local deviceIsELRS = false
 local linkstatTimeout = 100
+local titleShowWarn = false
+local titleShowWarnTimeout = 100
 
 local COL2 = 70
 local maxLineIndex = 7
@@ -368,8 +370,6 @@ end
 
 local function fieldStringDisplay(field, y, attr)
   if edit == true and attr then
-    -- lcd.drawText(COL2, y, field.value, FIXEDWIDTH)	-- NOTE: FIXEDWIDTH unknown....
-    -- lcd.drawText(134+6*charIndex, y, string.sub(field.value, charIndex, charIndex), FIXEDWIDTH + attr)	-- NOTE: FIXEDWIDTH unknown....
     lcd.drawText(COL2, y, field.value, attr)
     lcd.drawText(COL2+6*(charIndex-1), y, string.sub(field.value, charIndex, charIndex), attr)
   else
@@ -491,7 +491,7 @@ local functions = {
 
 local function createDeviceField() -- put other device in the field list
   fields[fields_count+2+#devices] = fields[backButtonId]
-  backButtonId = fields_count+2+#devices
+  backButtonId = fields_count+2+#devices  -- move back button to the end of the list, so it will always show up at the bottom.
   for i=1, #devices do
     if devices[i].id == deviceId then
       fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
@@ -559,11 +559,15 @@ local function parseElrsInfoMessage(data)
     fieldChunk = 0
     return
   end
+  
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
-  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt)
   elrsFlags = data[6]
-  elrsFlagsInfo = elrsFlags ~= 0 and fieldGetString(data, 7) or nil
+  
+  local state = (bit32.btest(elrsFlags, 1) and "   C") or "   -"
+
+  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. state
+  elrsFlagsInfo = fieldGetString(data, 7)
 end
 
 local function refreshNext()
@@ -591,7 +595,7 @@ local function refreshNext()
   elseif time > fieldTimeout and not edit then
     if allParamsLoaded < 1 or statusComplete == 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time + 300 -- 3s
+      fieldTimeout = time + 50 -- 0.5s
     end
   end
 
@@ -605,26 +609,47 @@ local function refreshNext()
     end
     linkstatTimeout = time + 100
   end
+  if time > titleShowWarnTimeout then
+    if elrsFlags > 3 and titleShowWarn == false then --if elrsFlags bit set is bit higher than bit 0 and bit 1, it is warning flags
+        titleShowWarn = true
+    else
+        titleShowWarn = false
+    end
+    titleShowWarnTimeout = time + 100
+  end
 end
 
 local function lcd_title()
-  local title = (allParamsLoaded == 1 or elrsFlags > 0) and deviceName or "Loading..."
+  local title = allParamsLoaded == 1 and deviceName or "Loading..."
+  lcd.clear()
+
   if lcdIsColor then
     -- Color screen
     local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
     local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
+    local EGREY1 = lcd.RGB(0x91, 0xb2, 0xc9)
+    local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
     local barHeight = 30
 
-    lcd.clear()
     -- Field display area (white w/ 2px green border)
     lcd.setColor(CUSTOM_COLOR, EGREEN)
     lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
     lcd.drawRectangle(1, 0, LCD_W - 2, LCD_H - 1, CUSTOM_COLOR)
     -- title bar
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY1)
+    lcd.drawFilledRectangle(LCD_W - textSize, 0, textSize, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY2)
+    lcd.drawRectangle(LCD_W - textSize, 0, textSize, barHeight - 1, CUSTOM_COLOR)
+    lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
     lcd.setColor(CUSTOM_COLOR, BLACK)
-    lcd.drawText(textXoffset+1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W-3, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+    if titleShowWarn == false then
+      lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
+      lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+    else
+      lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+      lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
+    end
     -- progress bar
     if allParamsLoaded ~= 1 and fields_count > 0 then
       local barW = (COL2-4)*fieldId/fields_count
@@ -637,23 +662,31 @@ local function lcd_title()
     -- B&W screen
     local barHeight = 9
 
-    lcd.clear()
-    lcd.drawText(LCD_W, 1, goodBadPkt, RIGHT)
-    -- keep the title this way to keep the script from error when module is not set correctly
+    if titleShowWarn == false then
+      lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
+      lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
+    else
+      lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
+    end
+
     if allParamsLoaded ~= 1 and fields_count > 0 then
       lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
       lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
     else
       lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
-      lcd.drawText(textXoffset, 1, title, INVERS)
+      if titleShowWarn == false then
+        lcd.drawText(textXoffset, 1, title, INVERS)
+      else
+        lcd.drawText(textXoffset, 1, elrsFlagsInfo, INVERS)
+      end
     end
   end
 end
 
 
 local function lcd_warn()
-  lcd.drawText(textSize*3,textSize*2,tostring(elrsFlags).." : "..elrsFlagsInfo,0)
-  lcd.drawText(textSize*10,textSize*6,"ok",BLINK + INVERS)
+  lcd.drawText(textSize*3, textSize*2, tostring(elrsFlags).." : "..elrsFlagsInfo, 0)
+  lcd.drawText(textSize*10, textSize*6, "ok", BLINK + INVERS)
 end
 
 local function handleDevicePageEvent(event)
@@ -680,7 +713,7 @@ local function handleDevicePageEvent(event)
       fields[backButtonId].parent = 255
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
-    if elrsFlags > 0 then
+    if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
     else
@@ -733,8 +766,7 @@ local function runDevicePage(event)
   if #devices > 1 then -- show other device folder
     fields[fields_count+1].parent = 0
   end
-
-  if elrsFlags > 0 then
+  if elrsFlags > 0x1F then
     lcd_warn()
   else
     for y = 1, maxLineIndex+1 do
@@ -794,14 +826,14 @@ local function runPopupPage(event)
   return 0
 end
 
-local function setLCDvar()
+local function setLCDvar()  --set constant value depending on LCD resolution
   lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
     textXoffset = 3
     textYoffset = 10
-    textSize = 22
+    textSize = 22 --textSize is actually referring to the text Height
   else
     if LCD_W == 212 then
       COL2 = 110
@@ -821,7 +853,7 @@ local function setMock()
   if string.sub(rv, -5) ~= "-simu" then return end
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, goodBadPkt = mock(), "0/500"
+  fields, goodBadPkt = mock(), "0/500   C"
   fields_count = #fields - 1
   fieldId = #fields - 3
 end
