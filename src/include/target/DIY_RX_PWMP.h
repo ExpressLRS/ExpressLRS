@@ -1,7 +1,13 @@
-#define DEVICE_NAME "DIY2400 PWMP"
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+    #define DEVICE_NAME "DIY900 PWMP"
+#else
+    #define Regulatory_Domain_ISM_2400
+    #define DEVICE_NAME "DIY2400 PWMP"
+#endif
 
 // GPIO pin definitions
-// same as TARGET_RX_ESP8266_SX1280_V1 except with no serial and PWM outputs
+// same as TARGET_RX_ESP8266_SX1280_V1 or DIY_900_RX_ESP8285_SX127x_via_UART
+// except with no serial and PWM outputs
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5
 #define GPIO_PIN_DIO1           4
