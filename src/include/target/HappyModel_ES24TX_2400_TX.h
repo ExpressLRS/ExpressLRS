@@ -1,6 +1,7 @@
 #define DEVICE_NAME "HM ES24TX"
 
 #define USE_TX_BACKPACK
+#define USE_SX1280_DCDC
 
 // Output Power
 #define MinPower PWR_10mW
