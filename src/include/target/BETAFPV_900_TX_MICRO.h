@@ -20,3 +20,4 @@
 
 #define HAS_OLED
 #define HAS_OLED_I2C
+#define OLED_REVERSED
