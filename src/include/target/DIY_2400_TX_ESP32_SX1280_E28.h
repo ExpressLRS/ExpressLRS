@@ -19,6 +19,7 @@
 #define GPIO_PIN_LED_WS2812     15
 #define GPIO_PIN_FAN_EN         17
 #define HAS_OLED
+#define HAS_OLED_SPI
 
 // Output Power
 #if !defined(MinPower)
