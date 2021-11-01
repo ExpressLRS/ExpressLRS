@@ -9,9 +9,9 @@
 #define TARGET_TX_BETAFPV_900_MICRO_V1
 
 
-#undef GPIO_PIN_LED            -1
-#undef GPIO_PIN_LED_BLUE       17
-#undef GPIO_PIN_LED_GREEN      16
+#undef GPIO_PIN_LED            
+#undef GPIO_PIN_LED_BLUE       
+#undef GPIO_PIN_LED_GREEN      
 #define GPIO_PIN_FAN            17
 #define GPIO_PIN_LED            16
 #define GPIO_PIN_OLED_RST -1
