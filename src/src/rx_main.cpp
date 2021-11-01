@@ -298,7 +298,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // and must be inverted on the TX side. Positive values are used
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
@@ -630,7 +630,24 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     {
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch)
-            crsf.sendMSPFrameToFC(MspData);
+        {
+            crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+            {
+                crsf.sendMSPFrameToFC(MspData);
+            }
+
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+            {
+                if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
+                {
+                    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+                    crsf.GetDeviceInformation(deviceInformation, 0);
+                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+                    telemetry.AppendTelemetryPackage(deviceInformation);
+                }
+            }
+        }
     }
 
     MspReceiver.Unlock();
@@ -917,6 +934,13 @@ static void HandleUARTin()
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
+        if (telemetry.ShouldSendDeviceFrame())
+        {
+            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+            crsf.GetDeviceInformation(deviceInformation, 0);
+            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            crsf.sendMSPFrameToFC(deviceInformation);
+        }
     }
 }
 
@@ -1074,11 +1098,11 @@ void loop()
         return;
     }
 
-    if ((connectionState != disconnected) && (ExpressLRS_nextAirRateIndex != ExpressLRS_currAirRate_Modparams->index)){ // forced change
+    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)){ // forced change
+        DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         LostConnection();
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
-        DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         crsf.sendLinkStatisticsToFC();
         crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
     }

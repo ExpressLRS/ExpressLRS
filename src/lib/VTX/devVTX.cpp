@@ -40,11 +40,6 @@ static void eepromWriteToMSPOut()
 
 static void VtxConfigToMSPOut()
 {
-    // 0 = off in the lua Band field
-    // Do not send while armed
-    if (!config.GetVtxBand() || IsArmed())
-        return;
-
     DBGLN("Sending VtxConfig");
     uint8_t vtxIdx = (config.GetVtxBand()-1) * 8 + config.GetVtxChannel();
 
@@ -58,8 +53,6 @@ static void VtxConfigToMSPOut()
     packet.addByte(config.GetVtxPitmode());
 
     crsf.AddMspMessage(&packet);
-    eepromWriteToMSPOut(); // FC eeprom write to save VTx setting after reboot
-
     msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
 
@@ -80,6 +73,14 @@ static int event()
 
 static int timeout()
 {
+    // 0 = off in the lua Band field
+    // Do not send while armed
+    if (config.GetVtxBand() == 0 || IsArmed())
+    {
+        VtxSendState = VTXSS_CONFIRMED;
+        return DURATION_NEVER;
+    }
+
     VtxConfigToMSPOut();
 
     VtxSendState = (VtxSendState_e)((int)VtxSendState + 1);

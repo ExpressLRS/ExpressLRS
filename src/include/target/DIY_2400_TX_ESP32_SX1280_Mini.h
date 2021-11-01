@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "DIY2400 Mini"
+#define DEVICE_NAME "DIY2400 Mini"
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS 5

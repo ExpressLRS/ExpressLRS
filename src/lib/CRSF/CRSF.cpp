@@ -25,6 +25,7 @@ HardwareSerial CRSF::Port = Serial;
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+const char deviceName[] = DEVICE_NAME;
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -382,6 +383,8 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
 {
+    bool packetReceived = false;
+
     if (CRSFstate == false)
     {
         CRSFstate = true;
@@ -396,46 +399,46 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
+    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
         GetChannelDataIn();
-        return true;
+        packetReceived = true;
     }
-    else if (packetType == CRSF_FRAMETYPE_MSP_REQ || packetType == CRSF_FRAMETYPE_MSP_WRITE)
+    // check for all extended frames that are a broadcast or a message to the FC
+    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+            (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
     {
-        volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
         const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
         AddMspMessage(length, SerialInBuffer);
-        return true;
-    } else {
-        const volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
-        if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-            (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+        packetReceived = true;
+    }
+
+    // always execute this check since broadcast needs to be handeled in all cases
+    if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+        (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
+    {
+        elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
+
+        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
         {
-            if(SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA){
-                elrsLUAmode = true;
-            } else {
-                elrsLUAmode = false;
-            }
-            if (packetType == CRSF_FRAMETYPE_COMMAND &&
-                SerialInBuffer[5] == SUBCOMMAND_CRSF &&
-                SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID) {
-                    modelId = SerialInBuffer[7];
-                    RecvModelUpdate();
-                    return true;
-            }
+            modelId = SerialInBuffer[7];
+            RecvModelUpdate();
+        }
+        else
+        {
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
             RecvParameterUpdate();
-            return true;
         }
-        DBGLN("Got Other Packet");
-        //GoodPktsCount++;
+
+        packetReceived = true;
     }
-    return false;
+
+    return packetReceived;
 }
 
 uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
@@ -888,10 +891,38 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-    const uint8_t totalBufferLen = 14;
-
-    // SerialOutFIFO.push(totalBufferLen);
-    // SerialOutFIFO.pushBytes(outBuffer, totalBufferLen);
-    this->_dev->write(data, totalBufferLen);
+    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+    {
+        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        this->_dev->write(data, totalBufferLen);
+    }
 }
 #endif // CRSF_TX_MODULE
+
+void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
+{
+    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + sizeof(deviceName));
+    // Packet starts with device name
+    memcpy(frame + sizeof(crsf_ext_header_t), deviceName, sizeof(deviceName));
+    // Followed by the device
+    device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+    device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+    device->softwareVer = 0; // unused currently by us, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->fieldCnt = fieldCount;
+    device->parameterVersion = 0;
+}
+
+void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
+{
+    crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
+    header->dest_addr = destAddr;
+    header->device_addr = destAddr;
+    header->type = frameType;
+    header->orig_addr = senderAddr;
+    header->frame_size = frameSize;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
+
+    frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}

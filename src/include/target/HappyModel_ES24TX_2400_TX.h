@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "HM ES24TX"
+#define DEVICE_NAME "HM ES24TX"
 
 #define USE_TX_BACKPACK
 

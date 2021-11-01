@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "R9M Lite Pro"
+#define DEVICE_NAME "R9M Lite Pro"
 
 #define TARGET_USE_EEPROM           1
 #define TARGET_EEPROM_ADDR          0x51

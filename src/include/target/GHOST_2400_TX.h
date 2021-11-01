@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME              "Ghost 24TX"
+#define DEVICE_NAME              "Ghost 24TX"
 
 // There is some special handling for this target
 #define TARGET_TX_GHOST

@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "DIY2400 ESP8266"
+#define DEVICE_NAME "DIY2400 ESP8266"
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15

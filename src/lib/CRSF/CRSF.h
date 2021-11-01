@@ -70,6 +70,9 @@ public:
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc
 
+    static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);

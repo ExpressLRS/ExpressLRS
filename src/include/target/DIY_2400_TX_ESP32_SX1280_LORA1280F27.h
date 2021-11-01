@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "DIY2400 F27"
+#define DEVICE_NAME "DIY2400 F27"
 
 // Output Power
 #define MinPower PWR_10mW
