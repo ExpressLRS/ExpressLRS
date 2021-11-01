@@ -18,6 +18,7 @@
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15
 #define GPIO_PIN_FAN_EN         17
+#define HAS_OLED
 
 // Output Power
 #if !defined(MinPower)
