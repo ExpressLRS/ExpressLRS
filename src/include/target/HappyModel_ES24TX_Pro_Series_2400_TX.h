@@ -1,4 +1,4 @@
-#define DEVICE_NAME "ES24TX Pro Series"
+#define DEVICE_NAME "ES24TX Pro Ser"
 
 #define USE_TX_BACKPACK
 
