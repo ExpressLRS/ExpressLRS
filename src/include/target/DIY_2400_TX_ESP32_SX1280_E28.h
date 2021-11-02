@@ -2,6 +2,10 @@
     #define TX_DEVICE_NAME "DIY2400 E28"
 #endif
 
+// Any device features
+#define HAS_OLED
+#define HAS_OLED_SPI
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21
@@ -12,17 +16,15 @@
 #define GPIO_PIN_RST            14
 #define GPIO_PIN_RX_ENABLE      27
 #define GPIO_PIN_TX_ENABLE      26
-#define GPIO_PIN_OLED_CS 15
-#define GPIO_PIN_OLED_RST 16
-#define GPIO_PIN_OLED_DC 17
-#define GPIO_PIN_OLED_MOSI 32
-#define GPIO_PIN_OLED_SCK 33
+#define GPIO_PIN_OLED_CS        15
+#define GPIO_PIN_OLED_RST       16
+#define GPIO_PIN_OLED_DC        17
+#define GPIO_PIN_OLED_MOSI      32
+#define GPIO_PIN_OLED_SCK       33
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15
 #define GPIO_PIN_FAN_EN         17
-#define HAS_OLED
-#define HAS_OLED_SPI
 
 // Output Power
 #if !defined(MinPower)

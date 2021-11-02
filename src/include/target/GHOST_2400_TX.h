@@ -3,6 +3,10 @@
 // There is some special handling for this target
 #define TARGET_TX_GHOST
 
+// Any device features
+#define HAS_OLED
+#define HAS_OLED_SPI
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PA15
 #define GPIO_PIN_BUSY               PB15
@@ -33,5 +37,3 @@
 #define MaxPower                    PWR_250mW
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
 
-#define HAS_OLED
-#define HAS_OLED_SPI
