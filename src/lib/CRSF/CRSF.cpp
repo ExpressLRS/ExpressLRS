@@ -813,11 +813,12 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    CRSF::duplex_set_TX();
+    portDISABLE_INTERRUPTS();
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
+    portENABLE_INTERRUPTS();
     flush_port_input();
     (void)pvParameters;
     for (;;)
