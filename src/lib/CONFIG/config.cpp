@@ -10,6 +10,8 @@
 #define VTX_CHANGED         0x02
 #define SSID_CHANGED        0x04
 #define PASSWORD_CHANGED    0x08
+#define FAN_CHANGED         0x10
+#define MOTION_CHANGED      0x20
 
 TxConfig::TxConfig()
 {
@@ -42,6 +44,13 @@ TxConfig::Load()
         m_config.vtxChannel = value >> 16;
         m_config.vtxPower = value >> 8;
         m_config.vtxPitmode = value;
+
+        nvs_get_u32(handle, "fan", &value);
+        m_config.fanMode = value;
+
+        nvs_get_u32(handle, "motion", &value);
+        m_config.motionMode = value;
+
         value = sizeof(m_config.ssid);
         nvs_get_str(handle, "ssid", m_config.ssid, &value);
         value = sizeof(m_config.password);
@@ -114,6 +123,16 @@ TxConfig::Commit()
             m_config.vtxPower << 8 |
             m_config.vtxPitmode;
         nvs_set_u32(handle, "vtx", value);
+    }
+    if (m_modified & FAN_CHANGED)
+    {
+        uint32_t value = m_config.fanMode;
+        nvs_set_u32(handle, "fan", value);
+    }
+    if (m_modified & MOTION_CHANGED)
+    {
+        uint32_t value = m_config.motionMode;
+        nvs_set_u32(handle, "motion", value);
     }
     if (m_modified & SSID_CHANGED)
         nvs_set_str(handle, "ssid", m_config.ssid);
@@ -263,6 +282,26 @@ TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 }
 
 void
+TxConfig::SetFanMode(uint8_t fanMode)
+{
+    if (m_config.fanMode != fanMode)
+    {
+        m_config.fanMode = fanMode;
+        m_modified |= FAN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetMotionMode(uint8_t motionMode)
+{
+    if (m_config.motionMode != motionMode)
+    {
+        m_config.motionMode = motionMode;
+        m_modified |= MOTION_CHANGED;
+    }
+}
+
+void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
@@ -283,6 +322,8 @@ TxConfig::SetDefaults()
         SetBoostChannel(0);
         SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
+        SetFanMode(0);
+        SetMotionMode(0);
         Commit();
     }
 
@@ -337,6 +378,8 @@ TxConfig::UpgradeEepromV1ToV4()
         SetBoostChannel(0);
         SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
+        SetFanMode(0);
+        SetMotionMode(0);
         Commit();
     }
 

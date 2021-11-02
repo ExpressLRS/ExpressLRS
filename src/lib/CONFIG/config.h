@@ -36,6 +36,8 @@ typedef struct {
     uint8_t         vtxPower;
     uint8_t         vtxPitmode;
     model_config_t  model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode;
 } tx_config_t;
 
 class TxConfig
@@ -60,6 +62,8 @@ public:
     uint8_t  GetVtxChannel() const { return m_config.vtxChannel; }
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
+    uint8_t  GetFanMode() const { return m_config.fanMode; }
+    uint8_t  GetMotionMode() const { return m_config.motionMode; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -77,6 +81,8 @@ public:
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
+    void SetFanMode(uint8_t fanMode);
+    void SetMotionMode(uint8_t motionMode);
 
     // State setters
     bool SetModelId(uint8_t modelId);
