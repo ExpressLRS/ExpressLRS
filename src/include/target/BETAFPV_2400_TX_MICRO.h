@@ -17,8 +17,8 @@
 #undef GPIO_PIN_LED_GREEN     
 #define GPIO_PIN_FAN            17
 #define GPIO_PIN_LED_WS2812     16
-#define GPIO_PIN_OLED_RST -1
-#define GPIO_PIN_OLED_SCK 32
-#define GPIO_PIN_OLED_SDA 22
+#define GPIO_PIN_OLED_RST       -1
+#define GPIO_PIN_OLED_SCK       32
+#define GPIO_PIN_OLED_SDA       22
 
 
