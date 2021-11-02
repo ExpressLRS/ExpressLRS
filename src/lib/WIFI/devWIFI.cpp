@@ -444,6 +444,15 @@ static void startMDNS()
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
     MDNS.addServiceTxt(service, "type", "rx");
+    // If the probe result fails because there is another device on the network with the same name
+    // use our unique instance name as the hostname. A better way to do this would be to use
+    // MDNSResponder::indexDomain and change myHostname as well.
+    MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
+      if (!p_bProbeResult) {
+        WiFi.hostname(instance);
+        MDNS.setInstanceName(instance);
+      }
+    });
   #else
     MDNS.setInstanceName(instance);
     MDNS.addService("http", "tcp", 80);
