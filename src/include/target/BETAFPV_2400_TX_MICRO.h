@@ -1,7 +1,12 @@
-#define DEVICE_NAME          "BETAFPV 2400TX"
+#define DEVICE_NAME              "BETAFPV 2400TX Micro"
+
+// Any device features
+#define HAS_OLED
+#define HAS_OLED_I2C
+#define OLED_REVERSED
 
 // There is some special handling for this target
-#define TARGET_TX_BETAFPV_2400_V1
+#define TARGET_TX_BETAFPV_2400_MICRO_V1
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -16,8 +21,11 @@
 #define GPIO_PIN_TX_ENABLE      26
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
-#define GPIO_PIN_LED_BLUE       17
-#define GPIO_PIN_LED_GREEN      16
+#define GPIO_PIN_FAN            17
+#define GPIO_PIN_LED_WS2812     16
+#define GPIO_PIN_OLED_RST       -1
+#define GPIO_PIN_OLED_SCK       32
+#define GPIO_PIN_OLED_SDA       22
 #define GPIO_PIN_BUTTON         25
 
 // Output Power
@@ -25,4 +33,3 @@
 #define MaxPower PWR_500mW
 #define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
 
-#define Regulatory_Domain_ISM_2400 1

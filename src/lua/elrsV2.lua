@@ -348,7 +348,7 @@ local function fieldTextSelectionSave(field)
 end
 
 local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(COL2, y, field.values[field.value+1] .. field.unit, attr)
+  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR") .. field.unit, attr)
 end
 
 -- STRING

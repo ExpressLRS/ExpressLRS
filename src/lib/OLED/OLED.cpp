@@ -23,19 +23,22 @@
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 #include "XBMStrings.h" // Contains all the express logos and animation for UI
 
-#if defined HAS_OLED_128_32
-// https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
-// https://www.winstar.com.tw/products/oled-module/graphic-oled-display/wearable-displays.html
-// Used on the Ghost TX Lite
+#ifdef HAS_OLED_SPI_SMALL
 U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-#else
-#ifdef HAS_OLED_I2C
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
-#else 
-// https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
+#endif
+
+#ifdef HAS_OLED_SPI
 U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
 #endif
+
+#ifdef HAS_OLED_I2C
+#ifdef OLED_REVERSED
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+#else
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 #endif
+#endif 
+
 
 /**
  * helper function is used to draw xbmp on the OLED. 
@@ -90,7 +93,7 @@ void OLED::displayLogo(){
     #if defined TARGET_TX_GHOST
         ghostChase();
     #else
-        #if defined HAS_OLED_128_32
+        #if defined HAS_OLED_SPI_SMALL
             u8g2.drawXBM(48, 0, 32, 32, elrs32);
         #else
             u8g2.drawXBM(32, 0, 64, 64, elrs64);
@@ -110,7 +113,7 @@ void OLED::displayLogo(){
 void OLED::updateScreen(const char * power, const char * rate, const char * ratio, const char * commitStr){
     u8g2.clearBuffer();
 
-    #if defined HAS_OLED_128_32
+    #if defined HAS_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, rate);
         u8g2.setFont(u8g2_font_courR10_tr);
