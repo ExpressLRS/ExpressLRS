@@ -88,6 +88,7 @@ static bool servicesStarted = false;
 static bool target_seen = false;
 static uint8_t target_pos = 0;
 static bool force_update = false;
+static uint32_t totalSize;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -346,13 +347,16 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-static void WebUploadResponseHander(AsyncWebServerRequest *request) {
+static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   if (Update.hasError()) {
     StreamString p = StreamString();
     Update.printError(p);
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
-    request->send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
@@ -362,13 +366,12 @@ static void WebUploadResponseHander(AsyncWebServerRequest *request) {
       request->client()->close();
       rebootTime = millis() + 200;
     } else {
-      request->send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Wrong firmware uploaded, does not match target type.\"}");
+      request->send(200, "application/json", "{\"status\": \"mismatch\", \"msg\": \"Flashing this firmware may cause unexpected behavior or problems, Do you wish to proceed?\"}");
     }
   }
 }
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
-  static uint32_t totalSize;
   if (index == 0) {
     DBGLN("Update: %s", filename.c_str());
     #if defined(PLATFORM_ESP8266)
@@ -420,6 +423,23 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       #endif
       DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
+  }
+}
+
+static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
+  target_seen = true;
+  if (request->arg("action").equals("confirm")) {
+    if (Update.end(true)) { //true to set the size to the current progress
+      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn resume blinking before disconnecting power", totalSize);
+    } else {
+      Update.printError(Serial);
+    }
+    WebUploadResponseHandler(request);
+  } else {
+    #if defined(PLATFORM_ESP32)
+      Update.abort();
+    #endif
+    request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
 }
 
@@ -545,7 +565,8 @@ static void startServices()
   server.on("/ncsi.txt", WebUpdateHandleRoot);
   server.on("/fwlink", WebUpdateHandleRoot);
 
-  server.on("/update", HTTP_POST, WebUploadResponseHander, WebUploadDataHandler);
+  server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
+  server.on("/forceupdate", WebUploadForceUpdateHandler);
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);

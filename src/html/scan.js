@@ -161,13 +161,13 @@ function autocomplete(inp, arr) {
                 /*insert a input field that will hold the current array item's value:*/
                 b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
                 /*execute a function when someone clicks on the item value (DIV element):*/
-                b.addEventListener("click", function (e) {
+                b.addEventListener("click", ((arg) => (e) => {
                     /*insert the value for the autocomplete text field:*/
-                    inp.value = this.getElementsByTagName("input")[0].value;
+                    inp.value = arg.getElementsByTagName("input")[0].value;
                     /*close the list of autocompleted values,
                     (or any other open lists of autocompleted values:*/
                     closeAllLists();
-                });
+                })(b));
                 a.appendChild(b);
             }
         }
@@ -176,7 +176,7 @@ function autocomplete(inp, arr) {
     inp.addEventListener("click", handler);
 
     /*execute a function presses a key on the keyboard:*/
-    inp.addEventListener("keydown", function (e) {
+    inp.addEventListener("keydown", (e) => {
         var x = _(this.id + "autocomplete-list");
         if (x) x = x.getElementsByTagName("div");
         if (e.keyCode == 40) {
@@ -227,7 +227,7 @@ function autocomplete(inp, arr) {
         }
     }
     /*execute a function when someone clicks in the document:*/
-    document.addEventListener("click", function (e) {
+    document.addEventListener("click", (e) => {
         closeAllLists(e.target);
     });
 }
@@ -264,6 +264,41 @@ function completeHandler(event) {
             title: "Update Succeeded",
             message: data.msg
         });
+    } else if (data.status === 'mismatch') {
+        cuteAlert({
+            type: 'question',
+            title: "Targets Mismatch",
+            message: data.msg,
+            confirmText: "Yes",
+            cancelText: "No"
+        }).then((e)=>{
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    _("status").innerHTML = "";
+                    _("progressBar").value = 0;
+                    if (this.status == 200) {
+                        var data = JSON.parse(this.responseText);
+                        cuteAlert({
+                            type: "info",
+                            title: "Force Update",
+                            message: data.msg
+                        });
+                    }
+                    else {
+                        cuteAlert({
+                            type: "error",
+                            title: "Force Update",
+                            message: "An error occurred trying to force the update"
+                        });
+                    }
+                }
+            };
+            xmlhttp.open("POST", "/forceupdate", true);
+            var data = new FormData();
+            data.append("action", e);
+            xmlhttp.send(data);
+        });
     } else {
         cuteAlert({
             type: 'error',
@@ -277,9 +312,9 @@ function errorHandler(event) {
     _("status").innerHTML = "";
     _("progressBar").value = 0;
     cuteAlert({
-      type: "error",
-      title: "Update Failed",
-      message: event.target.responseText
+        type: "error",
+        title: "Update Failed",
+        message: event.target.responseText
     });
 }
 
@@ -287,9 +322,9 @@ function abortHandler(event) {
     _("status").innerHTML = "";
     _("progressBar").value = 0;
     cuteAlert({
-      type: "info",
-      title: "Update Aborted",
-      message: event.target.responseText
+        type: "info",
+        title: "Update Aborted",
+        message: event.target.responseText
     });
 }
 
@@ -297,6 +332,8 @@ _('upload_form').addEventListener('submit', (e) => {
     e.preventDefault();
     uploadFile();
 });
+
+//=========================================================
 
 function callback(title, msg, url, getdata) {
     return function(e) {
