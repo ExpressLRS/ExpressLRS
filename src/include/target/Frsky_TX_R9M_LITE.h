@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "FrSky R9M Lite"
+#define DEVICE_NAME "FrSky R9M Lite"
 
 #define TARGET_USE_EEPROM           1
 #define TARGET_EEPROM_ADDR          0x51

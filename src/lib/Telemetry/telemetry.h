@@ -53,13 +53,14 @@ public:
     bool ShouldCallBootloader();
     bool ShouldCallEnterBind();
     bool ShouldCallUpdateModelMatch();
+    bool ShouldSendDeviceFrame();
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
+    bool AppendTelemetryPackage(uint8_t *package);
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
-    void AppendTelemetryPackage();
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
     telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
@@ -69,5 +70,6 @@ private:
     bool callBootloader;
     bool callEnterBind;
     bool callUpdateModelMatch;
+    bool sendDeviceFrame;
     uint8_t modelMatchId;
 };

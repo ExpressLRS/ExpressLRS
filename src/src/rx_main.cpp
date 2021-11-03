@@ -75,6 +75,14 @@ unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+#include <Servo.h> 
+static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
+static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+static Servo *Servos[SERVO_COUNT];
+static bool newChannelsAvailable;
+#endif
+
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
@@ -196,6 +204,7 @@ static uint8_t minLqForChaos()
     const uint8_t interval = ExpressLRS_currAirRate_Modparams->FHSShopInterval;
     return interval * ((interval * numfhss + 99) / (interval * numfhss));
 }
+
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
@@ -298,7 +307,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // and must be inverted on the TX side. Positive values are used
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2;
+        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
@@ -610,7 +619,13 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
 
     // No channels packets to the FC if no model match
     if (connectionHasModelMatch)
+    {
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
+        newChannelsAvailable = true;
+        #else
         crsf.sendRCFrameToFC();
+        #endif
+    }
 }
 
 /**
@@ -622,11 +637,32 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     {
         UpdateModelMatch(MspData[9]);
     }
+    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
+    {
+        connectionState = wifiUpdate;
+    }
     else
     {
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && (MspData[3] == CRSF_ADDRESS_BROADCAST || MspData[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-            crsf.sendMSPFrameToFC(MspData);
+        if (connectionHasModelMatch)
+        {
+            crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+            {
+                crsf.sendMSPFrameToFC(MspData);
+            }
+
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+            {
+                if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
+                {
+                    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+                    crsf.GetDeviceInformation(deviceInformation, 0);
+                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+                    telemetry.AppendTelemetryPackage(deviceInformation);
+                }
+            }
+        }
     }
 
     MspReceiver.Unlock();
@@ -798,6 +834,14 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 static void setupSerial()
 {
+#if defined(CRSF_RCVR_NO_SERIAL)
+    // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
+    #if defined(DEBUG_LOG)
+    Serial.begin(RCVR_UART_BAUD);
+    #endif
+    return;
+#endif
+
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -897,6 +941,7 @@ static void setupBindingFromConfig()
 
 static void HandleUARTin()
 {
+#if !defined(CRSF_RCVR_NO_SERIAL)
     while (CRSF_RX_SERIAL.available())
     {
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
@@ -913,7 +958,15 @@ static void HandleUARTin()
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
+        if (telemetry.ShouldSendDeviceFrame())
+        {
+            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+            crsf.GetDeviceInformation(deviceInformation, 0);
+            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            crsf.sendMSPFrameToFC(deviceInformation);
+        }
     }
+#endif
 }
 
 static void setupRadio()
@@ -995,6 +1048,62 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
+static void servosUpdate(unsigned long now)
+{
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+    // The ESP waveform generator is nice because it doesn't change the value
+    // mid-cycle, but it does busywait if there's already a change queued.
+    // Updating every 20ms minimizes the amount of waiting (0-800us cycling
+    // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
+    static uint32_t lastUpdate;
+    const uint32_t elapsed = now - lastUpdate;
+    if (elapsed < 20)
+        return;
+
+    if (newChannelsAvailable)
+    {
+        newChannelsAvailable = false;
+        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        {
+            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+            uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
+            if (chConfig->val.inverted)
+                us = 3000U - us;
+
+            if (Servos[ch])
+                Servos[ch]->writeMicroseconds(us);
+            else if (us >= 988U && us <= 2012U) 
+            {
+                // us might be out of bounds if this is a switch channel and it has not been
+                // received yet. Delay initializing the servo until the channel is valid
+                Servo *servo = new Servo();
+                Servos[ch] = servo;
+                servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
+            }
+        } /* for each servo */
+    } /* if newChannelsAvailable */
+
+    else if (elapsed > 1000U && connectionState == connected)
+    {
+        // No update for 1s, go to failsafe
+        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        {
+            // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
+            uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
+            if (Servos[ch])
+                Servos[ch]->writeMicroseconds(us);
+        }
+    }
+
+    else
+        return; // prevent updating lastUpdate
+
+    // need to sample actual millis at the end to account for any
+    // waiting that happened in Servo::writeMicroseconds()
+    lastUpdate = millis();
+#endif
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -1057,6 +1166,7 @@ void loop()
     }
 
     devicesUpdate(now);
+    servosUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.

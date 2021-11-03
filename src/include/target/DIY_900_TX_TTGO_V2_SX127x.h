@@ -1,5 +1,5 @@
 // The name of the device in the LUA module
-#define TX_DEVICE_NAME "DIY900 TTGO V2"
+#define DEVICE_NAME "DIY900 TTGO V2"
 
 // Any device features
 #define HAS_OLED

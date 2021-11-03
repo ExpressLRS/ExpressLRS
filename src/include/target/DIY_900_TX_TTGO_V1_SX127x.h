@@ -1,9 +1,9 @@
 // The name of the device in the LUA module
-#define TX_DEVICE_NAME "DIY900 TTGO V1"
+#define DEVICE_NAME "DIY900 TTGO V1"
 
 // Any device features
-#define HAS_OLED 
-#define HAS_OLED_I2C 
+#define HAS_OLED
+#define HAS_OLED_I2C
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS 18

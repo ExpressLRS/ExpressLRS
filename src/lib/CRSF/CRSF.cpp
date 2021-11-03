@@ -25,6 +25,7 @@ HardwareSerial CRSF::Port = Serial;
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+const char deviceName[] = DEVICE_NAME;
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -829,6 +830,7 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
+#if !defined(CRSF_RCVR_NO_SERIAL)
     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
     if (peekVal > 0)
     {
@@ -843,11 +845,13 @@ bool CRSF::RXhandleUARTout()
             return true;
         }
     }
+#endif // CRSF_RCVR_NO_SERIAL
     return false;
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
+#if !defined(CRSF_RCVR_NO_SERIAL)
     constexpr uint8_t outBuffer[4] = {
         LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -865,10 +869,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
+#if !defined(CRSF_RCVR_NO_SERIAL)
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -886,15 +892,72 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
     this->_dev->write(crc);
 #endif
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
+#if !defined(CRSF_RCVR_NO_SERIAL)
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
         data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
         this->_dev->write(data, totalBufferLen);
     }
+#endif // CRSF_RCVR_NO_SERIAL
 }
-#endif // CRSF_TX_MODULE
+
+/**
+ * @brief   Get encoded channel position from PackedRCdataOut
+ * @param   ch: zero-based channel number
+ * @return  CRSF-encoded channel position, or 0 if invalid channel
+ **/
+uint16_t CRSF::GetChannelOutput(uint8_t ch)
+{
+    switch (ch)
+    {
+        case 0: return PackedRCdataOut.ch0;
+        case 1: return PackedRCdataOut.ch1;
+        case 2: return PackedRCdataOut.ch2;
+        case 3: return PackedRCdataOut.ch3;
+        case 4: return PackedRCdataOut.ch4;
+        case 5: return PackedRCdataOut.ch5;
+        case 6: return PackedRCdataOut.ch6;
+        case 7: return PackedRCdataOut.ch7;
+        case 8: return PackedRCdataOut.ch8;
+        case 9: return PackedRCdataOut.ch9;
+        case 10: return PackedRCdataOut.ch10;
+        case 11: return PackedRCdataOut.ch11;
+        default:
+            return 0;
+    }
+}
+
+#endif // CRSF_RX_MODULE
+
+void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
+{
+    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + sizeof(deviceName));
+    // Packet starts with device name
+    memcpy(frame + sizeof(crsf_ext_header_t), deviceName, sizeof(deviceName));
+    // Followed by the device
+    device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+    device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+    device->softwareVer = 0; // unused currently by us, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->fieldCnt = fieldCount;
+    device->parameterVersion = 0;
+}
+
+void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
+{
+    crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
+    header->dest_addr = destAddr;
+    header->device_addr = destAddr;
+    header->type = frameType;
+    header->orig_addr = senderAddr;
+    header->frame_size = frameSize;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
+
+    frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}

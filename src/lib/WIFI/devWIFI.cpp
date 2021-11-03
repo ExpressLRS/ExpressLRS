@@ -23,6 +23,7 @@
 #include "hwTimer.h"
 #include "logging.h"
 #include "options.h"
+#include "helpers.h"
 
 #include "WebContent.h"
 
@@ -163,6 +164,52 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
+constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+
+static String WebGetPwmStr()
+{
+  // Output is raw integers, the Javascript side needs to parse it
+  // ,"pwm":[49664,50688,51200] = 3 channels, 0=512, 1=512, 2=0
+  String pwmStr(",\"pwm\":[");
+  for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+  {
+    if (ch > 0)
+      pwmStr.concat(',');
+    pwmStr.concat(config.GetPwmChannel(ch)->raw);
+  }
+  pwmStr.concat(']');
+
+  return pwmStr;
+}
+
+static void WebUpdatePwm(AsyncWebServerRequest *request)
+{
+  String pwmStr = request->arg("pwm");
+  if (pwmStr.isEmpty())
+  {
+    request->send(400, "text/plain", "Empty pwm parameter");
+    return;
+  }
+
+  // parse out the integers representing the PWM values
+  // strtok will modify the string as it parses
+  char *token = strtok((char *)pwmStr.c_str(), ",");
+  uint8_t channel = 0;
+  while (token != nullptr && channel < SERVO_COUNT)
+  {
+    uint16_t val = atoi(token);
+    DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetPwmChannelRaw(channel, val);
+    ++channel;
+    token = strtok(nullptr, ",");
+  }
+  config.Commit();
+  request->send(200, "text/plain", "PWM outputs updated");
+}
+#endif
+
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s;
@@ -172,9 +219,12 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
     s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID();
   }
   #if defined(TARGET_RX)
-  s += "\",\"modelid\":\"" + String(config.GetModelId());
+  s += "\",\"modelid\":" + String(config.GetModelId());
   #endif
-  s += "\"}";
+  #if defined(GPIO_PIN_PWM_OUTPUTS)
+  s += WebGetPwmStr();
+  #endif
+  s += "}";
   request->send(200, "application/json", s);
 }
 
@@ -490,6 +540,9 @@ static void startServices()
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
+  #endif
+  #if defined(GPIO_PIN_PWM_OUTPUTS)
+    server.on("/pwm", WebUpdatePwm);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);

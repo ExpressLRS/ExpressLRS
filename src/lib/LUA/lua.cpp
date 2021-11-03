@@ -4,15 +4,13 @@
 #include "CRSF.h"
 #include "logging.h"
 
-const char txDeviceName[] = TX_DEVICE_NAME;
-
 extern CRSF crsf;
 
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-static uint8_t luaWarningFLags = false;
-static uint8_t suppressedLuaWarningFlags = true;
+static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
+static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
 static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
@@ -169,26 +167,57 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
   pushResponseChunk(cmd);
 }
 
-void suppressCurrentLuaWarning(void){ //0 to suppress
-  suppressedLuaWarningFlags = ~luaWarningFLags;
+void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
+                                      //only flip 3 Most significant bit, they are the critical warning that blocks lua
+  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
 }
 
-bool getLuaWarning(void){ //1 if alarm
-  return luaWarningFLags & suppressedLuaWarningFlags;
+void setLuaWarningFlag(lua_Flags flag, bool value){
+  if (value)
+  {
+    luaWarningFlags |= 1 << (uint8_t)flag;
+  }
+  else
+  {
+    luaWarningFlags &= ~(1 << (uint8_t)flag);
+  }
+}
+
+uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
+  return luaWarningFlags & suppressedLuaWarningFlags;
 }
 
 void sendELRSstatus()
 {
-  uint8_t buffer[sizeof(tagLuaElrsParams) + 0];
+  constexpr const char *messages[] = { //higher order = higher priority
+    "",                   //status2 = connected status
+    "",                   //status1, reserved for future use
+    "Model Mismatch",     //warning3, model mismatch
+    "",           //warning2, reserved for future use
+    "",           //warning1, reserved for future use
+    "",  //critical warning3, reserved for future use
+    "",  //critical warning2, reserved for future use
+    ""   //critical warning1, reserved for future use
+  };
+  const char * warningInfo = "";
+
+  for (int i=7 ; i>=0 ; i--)
+  {
+      if(getLuaWarningFlags() & (1<<i))
+      {
+          warningInfo = messages[i];
+          break;
+      }
+  }
+  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1];
   struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarning();
+  params->flags = getLuaWarningFlags();
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
-  params->msg[0] = '\0';
-
+  strcpy(params->msg, warningInfo);
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
@@ -241,7 +270,7 @@ bool luaHandleUpdateParameter()
     return false;
   }
 
-    switch(crsf.ParameterUpdateData[0])
+  switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
       if (crsf.ParameterUpdateData[1] == 0)
@@ -294,18 +323,10 @@ bool luaHandleUpdateParameter()
 
 void sendLuaDevicePacket(void)
 {
-  uint8_t buffer[sizeof(txDeviceName) + sizeof(struct tagLuaDeviceProperties)];
-  struct tagLuaDeviceProperties * const device = (struct tagLuaDeviceProperties * const)&buffer[sizeof(txDeviceName)];
-
-  // Packet starts with device name
-  memcpy(buffer, txDeviceName, sizeof(txDeviceName));
-  // Followed by the device
-  device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
-  device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-  device->softwareVer = 0; // unused currently by ys, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
-  device->fieldCnt = lastLuaField;
-
-  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, buffer, sizeof(buffer));
+  uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+  crsf.GetDeviceInformation(deviceInformation, lastLuaField);
+  // does append header + crc again so substract size from length
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
 }
 
 #endif

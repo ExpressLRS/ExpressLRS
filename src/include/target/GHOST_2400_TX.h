@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME              "Ghost 24TX"
+#define DEVICE_NAME              "Ghost 24TX"
 
 // There is some special handling for this target
 #define TARGET_TX_GHOST
@@ -37,3 +37,5 @@
 #define MaxPower                    PWR_250mW
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
 
+#define HAS_OLED
+#define Regulatory_Domain_ISM_2400 1

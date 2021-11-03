@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME "DIY2400 ESP8266"
+#define DEVICE_NAME "DIY2400 ESP8266"
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
@@ -17,3 +17,5 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_10mW
 #define POWER_OUTPUT_VALUES {13}
+
+#define Regulatory_Domain_ISM_2400 1

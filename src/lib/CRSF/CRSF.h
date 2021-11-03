@@ -63,12 +63,16 @@ public:
 
     #ifdef CRSF_RX_MODULE
     static crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
+    static uint16_t GetChannelOutput(uint8_t ch);
     #endif
 
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
 
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc
+
+    static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
 
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();

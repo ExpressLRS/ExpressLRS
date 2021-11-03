@@ -1,5 +1,5 @@
-#if !defined(TX_DEVICE_NAME)
-    #define TX_DEVICE_NAME "DIY2400 E28"
+#if !defined(DEVICE_NAME)
+    #define DEVICE_NAME "DIY2400 E28"
 #endif
 
 // Any device features
@@ -36,3 +36,5 @@
 #if !defined(POWER_OUTPUT_VALUES)
     #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 #endif
+
+#define Regulatory_Domain_ISM_2400 1
