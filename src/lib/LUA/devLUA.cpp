@@ -24,6 +24,7 @@ extern SX1280Driver Radio;
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
+static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -51,7 +52,7 @@ static struct luaItem_folder luaPowerFolder = {
 static struct luaItem_selection luaPower = {
     {"Max Power", CRSF_TEXT_SELECTION},
     0, // value
-    "10;25;50;100;250;500;1000;2000",
+    strPowerLevels,
     "mW"
 };
 
@@ -199,6 +200,36 @@ extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
+static void luadevGeneratePowerOpts()
+{
+  // This function modifies the strPowerLevels in place and must not
+  // be called more than once!
+  char *out = strPowerLevels;
+  PowerLevels_e pwr = PWR_10mW;
+  // Count the semicolons to move `out` to point to the MINth item
+  while (pwr < MinPower)
+  {
+    while (*out++ != ';') ;
+    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
+  }
+  // There is no min field, compensate by shifting the index when sending/receiving
+  // luaPower.min = (uint8_t)MinPower;
+  luaPower.options = (const char *)out;
+
+  // Continue until after than MAXth item and drop a null in the orginal
+  // string on the semicolon (not after like the previous loop)
+  while (pwr <= MaxPower)
+  {
+    // If out still points to a semicolon from the last loop move past it
+    if (*out)
+      ++out;
+    while (*out && *out != ';')
+      ++out;
+    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
+  }
+  *out = '\0';
+}
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
@@ -249,17 +280,9 @@ static void registerLuaParameters()
 
   // POWER folder
   registerLUAParameter(&luaPowerFolder);
+  luadevGeneratePowerOpts();
   registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
-    PowerLevels_e newPower = (PowerLevels_e)arg;
-
-    if (newPower > MaxPower)
-    {
-        newPower = MaxPower;
-    } else if (newPower < MinPower)
-    {
-        newPower = MinPower;
-    }
-    config.SetPower(newPower);
+    config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
   }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
       config.SetDynamicPower(arg > 0);
@@ -382,8 +405,7 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
-
-  setLuaTextSelectionValue(&luaPower, config.GetPower());
+  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);
