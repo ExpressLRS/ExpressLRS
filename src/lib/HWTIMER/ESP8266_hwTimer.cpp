@@ -11,11 +11,15 @@ volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
 bool hwTimer::running = false;
+uint32_t hwTimer::NextTimeout;
 
 #define HWTIMER_TICKS_PER_US 5
+#define HWTIMER_PRESCALER (clockCyclesPerMicrosecond() / HWTIMER_TICKS_PER_US)
+
 
 void hwTimer::init()
 {
+    timer0_isr_init();
     running = false;
 }
 
@@ -23,8 +27,7 @@ void hwTimer::stop()
 {
     if (running)
     {
-        timer1_disable();
-        timer1_detachInterrupt();
+        timer0_detachInterrupt();
         running = false;
     }
 }
@@ -33,12 +36,15 @@ void ICACHE_RAM_ATTR hwTimer::resume()
 {
     if (!running)
     {
-        timer1_attachInterrupt(hwTimer::callback);
-        timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP); //5MHz ticks
+        noInterrupts();
+        timer0_attachInterrupt(hwTimer::callback);
         // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
         // tock() should always be the first event to maintain consistency
         isTick = false;
-        timer1_write(10);
+        // Fire the timer in 2us to get it started close to now
+        NextTimeout = ESP.getCycleCount() + (2 * HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
+        timer0_write(NextTimeout);
+        interrupts();
 
         running = true;
     }
@@ -47,7 +53,7 @@ void ICACHE_RAM_ATTR hwTimer::resume()
 void hwTimer::updateInterval(uint32_t newTimerInterval)
 {
     // timer should not be running when updateInterval() is called
-    hwTimer::HWtimerInterval = newTimerInterval * HWTIMER_TICKS_PER_US;
+    hwTimer::HWtimerInterval = newTimerInterval * (HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
 }
 
 void ICACHE_RAM_ATTR hwTimer::resetFreqOffset()
@@ -70,7 +76,8 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
     int32_t minVal = -(hwTimer::HWtimerInterval >> 2);
     int32_t maxVal = (hwTimer::HWtimerInterval >> 2);
 
-    hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal) * HWTIMER_TICKS_PER_US;
+    // phase shift is in microseconds
+    hwTimer::PhaseShift = constrain(newPhaseShift, minVal, maxVal) * (HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
 }
 
 void ICACHE_RAM_ATTR hwTimer::callback()
@@ -80,14 +87,16 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         return;
     }
 
+    NextTimeout += (hwTimer::HWtimerInterval >> 1) + (FreqOffset * HWTIMER_PRESCALER);
     if (hwTimer::isTick)
     {
-        timer1_write((hwTimer::HWtimerInterval >> 1) + FreqOffset);
+        timer0_write(NextTimeout);
         hwTimer::callbackTick();
     }
     else
     {
-        timer1_write((hwTimer::HWtimerInterval >> 1) + hwTimer::PhaseShift + FreqOffset);
+        NextTimeout += hwTimer::PhaseShift;
+        timer0_write(NextTimeout);
         hwTimer::PhaseShift = 0;
         hwTimer::callbackTock();
     }
