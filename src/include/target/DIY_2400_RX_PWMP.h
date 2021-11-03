@@ -19,3 +19,5 @@
 #else
 #define GPIO_PIN_PWM_OUTPUTS    {0, 1, 3, 9, 10}
 #endif
+
+#define Regulatory_Domain_ISM_2400 1
