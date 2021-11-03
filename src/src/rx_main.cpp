@@ -637,6 +637,10 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     {
         UpdateModelMatch(MspData[9]);
     }
+    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
+    {
+        connectionState = wifiUpdate;
+    }
     else
     {
         // No MSP data to the FC if no model match

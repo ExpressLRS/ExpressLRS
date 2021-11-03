@@ -94,7 +94,6 @@ static struct luaItem_string luaELRSversion = {
     thisCommit
 };
 
-#if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
 //---------------------------- WiFi -----------------------------
 static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
@@ -107,6 +106,12 @@ static struct luaItem_command luaWebUpdate = {
     emptySpace
 };
 #endif
+
+static struct luaItem_command luaRxWebUpdate = {
+    {"Enable Rx WiFi", CRSF_COMMAND},
+    0, // step
+    emptySpace
+};
 
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
@@ -122,7 +127,6 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 };
 #endif // USE_TX_BACKPACK
 //---------------------------- WiFi -----------------------------
-#endif
 
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
@@ -191,9 +195,10 @@ extern void SetSyncSpam();
 extern void EnterBindingMode();
 extern bool InBindingMode;
 extern bool connectionHasModelMatch;
+extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
-extern uint8_t TxBackpackWiFiReadyToSend;
-extern uint8_t VRxBackpackWiFiReadyToSend;
+extern bool TxBackpackWiFiReadyToSend;
+extern bool VRxBackpackWiFiReadyToSend;
 #endif
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
@@ -309,7 +314,6 @@ static void registerLuaParameters()
   },luaVtxFolder.common.id);
 
   // WIFI folder
-  #if defined(PLATFORM_ESP32) || defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
@@ -338,6 +342,14 @@ static void registerLuaParameters()
       }
     },luaWiFiFolder.common.id);
   #endif
+
+  registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
+    if (arg < 5) {
+      RxWiFiReadyToSend = true;
+    }
+    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
+  },luaWiFiFolder.common.id);
+
   #if defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
@@ -353,7 +365,6 @@ static void registerLuaParameters()
     sendLuaCommandResponse(&luaVRxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   },luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
-#endif
 
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
