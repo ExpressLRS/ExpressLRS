@@ -11,7 +11,7 @@ TFT_eSPI tft = TFT_eSPI();
 #define POWERSAVING_MAX_NUMBER 2
 #define SMARTFAN_MAX_NUMBER 3
 
-#define VERSION_MAX_LENGTH  5
+#define VERSION_MAX_LENGTH  6
 
 boolean is_confirmed = false;
 

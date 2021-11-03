@@ -10,6 +10,8 @@
 #define HAS_THERMAL
 #define HAS_THERMAL_LM75A
 
+#define TX_UART_BAUD 420000
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21

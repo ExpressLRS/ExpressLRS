@@ -41,6 +41,10 @@ SX1280Driver Radio;
 #include "devScreen.h"
 #endif
 
+#ifndef TX_UART_BAUD
+#define TX_UART_BAUD 460800
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -682,11 +686,8 @@ static void setupTarget()
 
 void setup()
 {
-#ifdef TARGET_AXIS_THOR_2400_TX
-  Serial.begin(420000);
-#else  
-  Serial.begin(460800);
-#endif  
+  Serial.begin(TX_UART_BAUD);
+
   setupTarget();
 
   // Initialise the UI devices
