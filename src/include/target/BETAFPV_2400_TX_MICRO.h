@@ -1,4 +1,4 @@
-#define TX_DEVICE_NAME              "BETAFPV 2400TX Micro"
+#define DEVICE_NAME              "BETAFPV 2400TX Micro"
 
 // Any device features
 #define HAS_OLED
