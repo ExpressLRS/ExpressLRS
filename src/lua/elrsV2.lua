@@ -458,7 +458,7 @@ local function parseDeviceInfoMessage(data)
   end
   if deviceId == id then
     deviceName = devicesName
-    deviceIsELRS_TX = (fieldGetValue(data,offset,4) == 0x454C5253) == (deviceId == 0xEE) -- SerialNumber = 'E L R S' and ID is TX module
+    deviceIsELRS_TX = (fieldGetValue(data,offset,4) == 0x454C5253) and (deviceId == 0xEE) -- SerialNumber = 'E L R S' and ID is TX module
     local newFieldCount = data[offset+12]
     reloadAllField()
     if newFieldCount ~= fields_count then
