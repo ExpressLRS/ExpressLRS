@@ -28,7 +28,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_
 #endif
 
 #ifdef HAS_OLED_SPI
-U8G2_SH1106_128X64_NONAME_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
+U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
 #endif
 
 #ifdef HAS_OLED_I2C
@@ -96,7 +96,7 @@ void OLED::displayLogo(){
         #if defined HAS_OLED_SPI_SMALL
             u8g2.drawXBM(48, 0, 32, 32, elrs32);
         #else
-            u8g2.drawXBM(16, 16, 64, 64, elrs64);
+            u8g2.drawXBM(32, 0, 64, 64, elrs64);
         #endif
     #endif
     u8g2.sendBuffer();
@@ -125,7 +125,7 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
         u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(0,24, "Hash: ");
+        u8g2.drawStr(0,24, "Ver: ");
         u8g2.drawStr(38,24, commitStr);
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,42, rate);
@@ -133,7 +133,7 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
         u8g2.drawStr(70,42 , ratio);
         u8g2.drawStr(0,57, power);
         u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(70,53, "TELEM");
+        u8g2.drawStr(70,53, "TLM");
     #endif
     u8g2.sendBuffer();
 }
@@ -149,13 +149,13 @@ const char * OLED::getPowerString(int power){
     {
     case 0: return "10 mW";
     case 1: return "25 mW";
+    case 2: return "50 mW";
     case 3: return "100 mW";
     case 4: return "250 mW";
-    case 5: return "500 mmW";
+    case 5: return "500 mW";
     case 6: return "1000 mW";
     case 7: return "2000 mW";
-    case 2: return "50 mW";
-    default: return "Error";
+    default: return "ERR";
     }
 }
 
@@ -176,7 +176,7 @@ const char * OLED::getRateString(int rate){
     case 5: return "50 Hz";
     case 6: return "25 Hz";
     case 7: return "4 Hz";
-    default: return "ERROR";
+    default: return "ERR";
     }
 }
 
@@ -197,7 +197,7 @@ const char * OLED::getTLMRatioString(int ratio){
     case 5: return "1:8";
     case 6: return "1:4";
     case 7: return "1:2";
-    default: return "error";
+    default: return "ERR";
     }
 }
 
