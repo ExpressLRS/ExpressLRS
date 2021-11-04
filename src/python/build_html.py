@@ -34,7 +34,7 @@ def get_git_version(env):
                 os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
                 search_parent_directories=False)
             try:
-                ver = git_repo.git.describe("--tags", "--exact-match")
+                ver = re.sub(r".*/", "", git_repo.git.describe("--all", "--exact-match"))
             except git.exc.GitCommandError:
                 try:
                     ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
