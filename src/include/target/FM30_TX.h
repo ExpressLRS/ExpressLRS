@@ -2,6 +2,7 @@
 
 // There is some special handling for this target
 #define TARGET_TX_FM30
+#define USE_SX1280_DCDC
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PB12

@@ -8,6 +8,8 @@
     #define DEVICE_NAME "FM30 MINI"
 #endif
 
+#define USE_SX1280_DCDC
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PA15
 #define GPIO_PIN_BUSY               PE9
