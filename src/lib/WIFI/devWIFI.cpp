@@ -405,11 +405,11 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         target_seen = true;
       if (!target_seen) {
         for (size_t i=0 ; i<len ;i++) {
-          if (target_pos >= 4 && !target_complete) {
+          if (!target_complete && (target_pos >= 4 || target_found.length() > 0)) {
             if (target_pos == 4) {
               target_found.clear();
             }
-            if (data[i] == 0) {
+            if (data[i] == 0 || target_found.length() > 50) {
               target_complete = true;
             }
             else {
