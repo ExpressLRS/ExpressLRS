@@ -102,7 +102,7 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
-#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#if defined(GPIO_PIN_FAN_EN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
     setDefaultPower();
@@ -128,14 +128,14 @@ void POWERMGNT::setDefaultPower()
 
 void POWERMGNT::updateFan()
 {
-#ifdef GPIO_PIN_FAN_EN
+#if defined(GPIO_PIN_FAN_EN)
     digitalWrite(GPIO_PIN_FAN_EN, (CurrentPower >= FanEnableThreshold) ? HIGH : LOW);
 #endif
 }
 
 void POWERMGNT::setFanEnableTheshold(PowerLevels_e Power)
 {
-#ifdef GPIO_PIN_FAN_EN
+#if defined(GPIO_PIN_FAN_EN)
     FanEnableThreshold = Power;
     updateFan();
 #endif
