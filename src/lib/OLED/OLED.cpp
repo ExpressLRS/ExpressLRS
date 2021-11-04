@@ -14,7 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAS_OLED // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
 
 // Default header files for Express LRS
 #include "targets.h"
@@ -23,21 +23,23 @@
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 #include "XBMStrings.h" // Contains all the express logos and animation for UI
 
-#ifdef HAS_OLED_SPI_SMALL
-U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-#endif
-
-#ifdef HAS_OLED_SPI
-U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-#endif
-
-#ifdef HAS_OLED_I2C
 #ifdef OLED_REVERSED
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+    #define OLED_ROTATION U8G2_R2
 #else
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+    #define OLED_ROTATION U8G2_R0
 #endif
-#endif 
+
+#ifdef USE_OLED_SPI_SMALL
+U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI u8g2(OLED_ROTATION, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
+#endif
+
+#ifdef USE_OLED_SPI
+U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(OLED_ROTATION, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
+#endif
+
+#ifdef USE_OLED_I2C
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+#endif
 
 
 /**
@@ -74,10 +76,10 @@ void ghostChase(){
      *  helper function just draw's the XBM strings.   
      */
     #ifndef TARGET_TX_GHOST_LITE
-    helper(38,12,40,elrs40);
-    helper(36,8,48,elrs48);
-    helper(34,4,56,elrs56);
-    helper(32,0,64,elrs64);
+        helper(38,12,40,elrs40);
+        helper(36,8,48,elrs48);
+        helper(34,4,56,elrs56);
+        helper(32,0,64,elrs64);
     #endif
 }
 
@@ -90,10 +92,10 @@ void ghostChase(){
 void OLED::displayLogo(){
     u8g2.begin();
     u8g2.clearBuffer();
-    #if defined TARGET_TX_GHOST
+    #ifdef TARGET_TX_GHOST
         ghostChase();
     #else
-        #if defined HAS_OLED_SPI_SMALL
+        #ifdef HAS_OLED_SPI_SMALL
             u8g2.drawXBM(48, 0, 32, 32, elrs32);
         #else
             u8g2.drawXBM(32, 0, 64, 64, elrs64);
@@ -116,24 +118,19 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
     #if defined HAS_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, rate);
-        u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(70,15 , ratio);
         u8g2.drawStr(0,32, power);
-        u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(70,32, commitStr);
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(0,24, "Ver: ");
-        u8g2.drawStr(38,24, commitStr);
-        u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,42, rate);
-        u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(70,42 , ratio);
         u8g2.drawStr(0,57, power);
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(70,53, "TLM");
+        u8g2.drawStr(0,24, "Ver: ");
+        u8g2.drawStr(38,24, commitStr);
     #endif
     u8g2.sendBuffer();
 }
