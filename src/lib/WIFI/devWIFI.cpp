@@ -369,11 +369,10 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       rebootTime = millis() + 200;
     } else {
       String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
-      if (target_found.length()==0) {
-        target_found = "unknown";
+      if (target_found.length() != 0) {
+        message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
       }
-      message += "<b>Uploaded image:</b> " + target_found + ".<br><br>";
-      message += "Flashing the wrong firmware may lock or damage your device.\"}";
+      message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
       request->send(200, "application/json", message);
     }
   }
