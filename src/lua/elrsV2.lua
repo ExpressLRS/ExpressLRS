@@ -446,6 +446,18 @@ local function fieldDeviceIdSelect(field)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA })
 end
 
+local function createDeviceField() -- put other device in the field list
+  fields[fields_count+2+#devices] = fields[backButtonId]
+  backButtonId = fields_count+2+#devices  -- move back button to the end of the list, so it will always show up at the bottom.
+  for i=1, #devices do
+    if devices[i].id == deviceId then
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
+    else
+      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+    end
+  end
+end
+
 local function parseDeviceInfoMessage(data)
   local offset
   local id = data[2]
@@ -461,10 +473,15 @@ local function parseDeviceInfoMessage(data)
     deviceIsELRS_TX = (fieldGetValue(data,offset,4) == 0x454C5253) and (deviceId == 0xEE) -- SerialNumber = 'E L R S' and ID is TX module
     local newFieldCount = data[offset+12]
     reloadAllField()
-    if newFieldCount ~= fields_count then
+    if newFieldCount ~= fields_count or newFieldCount == 0 then
       fields_count = newFieldCount
       allocateFields()
       fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
+      if newFieldCount == 0 then
+        allParamsLoaded = 1
+        fieldId = 1
+        createDeviceField()
+      end
     end
   end
 end
@@ -488,18 +505,6 @@ local functions = {
   { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
 }
-
-local function createDeviceField() -- put other device in the field list
-  fields[fields_count+2+#devices] = fields[backButtonId]
-  backButtonId = fields_count+2+#devices  -- move back button to the end of the list, so it will always show up at the bottom.
-  for i=1, #devices do
-    if devices[i].id == deviceId then
-      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
-    else
-      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
-    end
-  end
-end
 
 local function parseParameterInfoMessage(data)
   if data[2] ~= deviceId or data[3] ~= fieldId then
@@ -691,7 +696,13 @@ local function lcd_warn()
 end
 
 local function handleDevicePageEvent(event)
-  if fields_count == 0 then return end
+  if #fields == 0 then --if there is no field yet
+    return 
+  else
+    if fields[backButtonId].name == nil then --if back button is not assigned yet, means there is no field yet.
+      return
+    end
+  end
 
   if event == EVT_VIRTUAL_EXIT then             -- exit script
     if edit == true then -- reload the field
