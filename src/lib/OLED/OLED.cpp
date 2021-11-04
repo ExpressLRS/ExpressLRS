@@ -16,8 +16,12 @@
 
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
 
-// OLED specific header files
+// Default header files for Express LRS
+#include "targets.h"
+// OLED specific header files. 
 #include "OLED.h"
+#include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
+#include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 
 #ifdef OLED_REVERSED
     #define OLED_ROTATION U8G2_R2

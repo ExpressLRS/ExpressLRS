@@ -15,12 +15,6 @@
  */
 
 #pragma once
-// Default header files for Express LRS
-#include "targets.h"
-// OLED specific header files. 
-#include <U8g2lib.h>   // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
-#include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
-
 
 class OLED
 {
