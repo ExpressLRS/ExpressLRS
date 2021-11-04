@@ -1,6 +1,7 @@
 #define DEVICE_NAME "GHOST ATTO"
 // There is some special handling for this target
 #define TARGET_RX_GHOST_ATTO_V1
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
@@ -20,5 +21,3 @@
 //#define GPIO_PIN_BUTTON         PA12
 
 // Output Power - use default SX1280
-
-#define Regulatory_Domain_ISM_2400 1

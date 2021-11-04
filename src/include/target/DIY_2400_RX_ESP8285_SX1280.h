@@ -1,4 +1,7 @@
 #define DEVICE_NAME "ELRS 2400RX"
+
+#define Regulatory_Domain_ISM_2400
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5
@@ -13,5 +16,3 @@
 #endif
 
 // Output Power - use default SX1280
-
-#define Regulatory_Domain_ISM_2400 1

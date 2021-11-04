@@ -132,7 +132,7 @@ const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(925700000),
     FREQ_HZ_TO_REG_VAL(926300000),
     FREQ_HZ_TO_REG_VAL(926900000)};
-#elif Regulatory_Domain_ISM_2400
+#elif defined Regulatory_Domain_ISM_2400
 const uint32_t FHSSfreqs[] = {
     FREQ_HZ_TO_REG_VAL(2400400000),
     FREQ_HZ_TO_REG_VAL(2401400000),

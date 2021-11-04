@@ -3,6 +3,8 @@
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_V1
 
+#define Regulatory_Domain_ISM_2400
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21
@@ -24,5 +26,3 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_500mW
 #define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
-
-#define Regulatory_Domain_ISM_2400 1

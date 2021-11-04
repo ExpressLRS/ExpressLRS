@@ -3,6 +3,7 @@
 // Features
 #define USE_TX_BACKPACK
 #define USE_OLED
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 #define GPIO_PIN_RST            21
@@ -44,5 +45,3 @@
 #define MinPower                PWR_25mW
 #define MaxPower                PWR_1000mW
 #define POWER_OUTPUT_VALUES     {-18,-13,-10,-5,-2,3}
-
-#define Regulatory_Domain_ISM_2400 1

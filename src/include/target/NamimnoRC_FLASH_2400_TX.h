@@ -1,6 +1,7 @@
 #define DEVICE_NAME "Namimno Flash"
 
 #define USE_TX_BACKPACK
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4
@@ -38,5 +39,3 @@
 #define MinPower PWR_25mW
 #define MaxPower PWR_1000mW
 #define POWER_OUTPUT_VALUES {-18,-15,-12,-8,-5,3}
-
-#define Regulatory_Domain_ISM_2400 1

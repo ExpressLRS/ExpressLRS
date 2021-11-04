@@ -1,6 +1,7 @@
 #define DEVICE_NAME "BETAFPV 2400RX"
 
 #define USE_SX1280_DCDC
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
@@ -18,5 +19,3 @@
 
 // Output Power
 #define POWER_OUTPUT_FIXED      1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
-
-#define Regulatory_Domain_ISM_2400 1

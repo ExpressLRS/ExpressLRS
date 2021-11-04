@@ -9,6 +9,7 @@
 #endif
 
 #define USE_SX1280_DCDC
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PA15
@@ -49,5 +50,3 @@
         #define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
     #endif
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

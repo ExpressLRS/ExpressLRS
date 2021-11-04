@@ -1,6 +1,7 @@
 #define DEVICE_NAME "DIY2400 PWMP"
 
 #define CRSF_RCVR_NO_SERIAL
+#define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
 // same as TARGET_RX_ESP8266_SX1280 except with no serial/button and PWM outputs
@@ -19,5 +20,3 @@
 #else
 #define GPIO_PIN_PWM_OUTPUTS    {0, 1, 3, 9, 10}
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

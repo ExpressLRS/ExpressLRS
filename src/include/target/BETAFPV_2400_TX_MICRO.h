@@ -4,6 +4,7 @@
 #define HAS_OLED
 #define HAS_OLED_I2C
 #define OLED_REVERSED
+#define Regulatory_Domain_ISM_2400
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_MICRO_V1
@@ -32,5 +33,3 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_500mW
 #define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
-
-#define Regulatory_Domain_ISM_2400 1
