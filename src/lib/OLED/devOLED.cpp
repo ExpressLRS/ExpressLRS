@@ -2,7 +2,7 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(HAS_OLED)
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
 
 #include "POWERMGNT.h"
 

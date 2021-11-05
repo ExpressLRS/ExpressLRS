@@ -3,8 +3,7 @@
 #endif
 
 // Any device features
-#define HAS_OLED
-#define HAS_OLED_SPI
+#define USE_OLED_SPI
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5

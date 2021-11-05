@@ -2,7 +2,7 @@
 
 // Features
 #define USE_TX_BACKPACK
-#define USE_OLED
+#define USE_OLED_SPI
 
 // GPIO pin definitions
 #define GPIO_PIN_RST            21
