@@ -3,8 +3,7 @@
 #endif
 
 // Any device features
-#define HAS_OLED
-#define HAS_OLED_SPI
+#define USE_OLED_SPI
 #define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions

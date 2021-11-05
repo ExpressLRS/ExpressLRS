@@ -4,8 +4,7 @@
 #define TARGET_TX_BETAFPV_900_MICRO_V1
 
 // Any device features
-#define HAS_OLED
-#define HAS_OLED_I2C
+#define USE_OLED_I2C
 #define OLED_REVERSED
   
 // GPIO pin definitions

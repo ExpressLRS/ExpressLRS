@@ -64,6 +64,7 @@ function updatePwmSettings(arPwm)
     grp.innerHTML = htmlFields.join('');
 
     _('pwm').appendChild(grp);
+    _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
     _('pwm_container').style.display = 'block';
 }
 
@@ -85,7 +86,8 @@ function get_mode() {
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
-            _('modelid').value = data.modelid;
+            if (data.modelid !== undefined)
+                _('modelid').value = data.modelid;
             updatePwmSettings(data.pwm);
         }
     };
@@ -334,7 +336,6 @@ _('sethome').addEventListener('submit', callback("Set Home Network", "An error o
 _('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
 _('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
 _('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
-_('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
 if (_('modelmatch') != undefined) {
     _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model",
         () => { return new FormData(_('modelmatch')); }));
@@ -356,9 +357,9 @@ function cuteAlert({
     return new Promise((resolve) => {
       setInterval(() => {}, 5000);
       const body = document.querySelector("body");
-  
+
       const scripts = document.getElementsByTagName("script");
-  
+
       let closeStyleTemplate = "alert-close";
       if (closeStyle === "circle") {
         closeStyleTemplate = "alert-close-circle";
@@ -373,7 +374,7 @@ function cuteAlert({
 </div>
 `;
       }
-  
+
       let svgTemplate = `
 <svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
 <path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
@@ -384,7 +385,7 @@ function cuteAlert({
       if (type === "success") {
         svgTemplate = `
 <svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
-<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24 
+<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
 24zm12.252-34.664l-15.369 17.29-9.259-7.407a1 1 0 0 0-1.249 1.562l10 8a1 1 0 0 0 1.373-.117l16-18a1 1 0 1 0-1.496-1.328z"/>
 </svg>
 `;
@@ -413,13 +414,13 @@ function cuteAlert({
   </div>
 </div>
 `;
-  
+
       body.insertAdjacentHTML("afterend", template);
-  
+
       const alertWrapper = document.querySelector(".alert-wrapper");
       const alertFrame = document.querySelector(".alert-frame");
       const alertClose = document.querySelector(`.${closeStyleTemplate}`);
-  
+
       function resolveIt() {
         alertWrapper.remove();
         resolve();
@@ -435,15 +436,15 @@ function cuteAlert({
       if (type === "question") {
         const confirmButton = document.querySelector(".confirm-button");
         const cancelButton = document.querySelector(".cancel-button");
-  
+
         confirmButton.addEventListener("click", confirmIt);
           cancelButton.addEventListener("click", resolveIt);
       } else {
         const alertButton = document.querySelector(".alert-button");
-  
+
         alertButton.addEventListener("click", resolveIt);
       }
-  
+
       alertClose.addEventListener("click", resolveIt);
       alertWrapper.addEventListener("click", resolveIt);
       alertFrame.addEventListener("click", stopProp);

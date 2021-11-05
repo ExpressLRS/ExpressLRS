@@ -1,8 +1,7 @@
 #define DEVICE_NAME              "BETAFPV 2400TX Micro"
 
 // Any device features
-#define HAS_OLED
-#define HAS_OLED_I2C
+#define USE_OLED_I2C
 #define OLED_REVERSED
 #define Regulatory_Domain_ISM_2400
 

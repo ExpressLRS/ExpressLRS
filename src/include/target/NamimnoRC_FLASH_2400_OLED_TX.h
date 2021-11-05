@@ -2,7 +2,7 @@
 
 // Features
 #define USE_TX_BACKPACK
-#define USE_OLED
+#define USE_OLED_SPI
 #define Regulatory_Domain_ISM_2400
 
 // GPIO pin definitions
