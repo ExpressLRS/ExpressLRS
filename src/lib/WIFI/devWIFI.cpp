@@ -212,14 +212,14 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
-  String s;
+  String s = String("{\"ssid\":\"") + config.GetSSID() + "\",\"mode\":\"";
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID();
+    s += "STA\"";
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID();
+    s += "AP\"";
   }
   #if defined(TARGET_RX)
-  s += "\",\"modelid\":" + String(config.GetModelId());
+  s += ",\"modelid\":" + String(config.GetModelId());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   s += WebGetPwmStr();
