@@ -19,7 +19,7 @@
 #define GPIO_PIN_TX_ENABLE      26
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13 // so we don't have to solder the extra resistor, we switch rx/tx using gpio mux
-#define GPIO_PIN_FAN            17
+#define GPIO_PIN_FAN_EN         17
 #define GPIO_PIN_LED_WS2812     16
 #define GPIO_PIN_OLED_RST       -1
 #define GPIO_PIN_OLED_SCK       32

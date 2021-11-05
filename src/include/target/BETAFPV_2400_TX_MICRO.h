@@ -20,7 +20,7 @@
 #define GPIO_PIN_TX_ENABLE      26
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
-#define GPIO_PIN_FAN            17
+#define GPIO_PIN_FAN_EN         17
 #define GPIO_PIN_LED_WS2812     16
 #define GPIO_PIN_OLED_RST       -1
 #define GPIO_PIN_OLED_SCK       32
