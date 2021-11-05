@@ -755,7 +755,7 @@ local function runDevicePage(event)
   lcd_title()
 
   if #devices > 1 then -- show other device folder
-    fields[fields_count+1].parent = 0
+    fields[fields_count+1].parent = nil
   end
   if elrsFlags > 0x1F then
     lcd_warn()
