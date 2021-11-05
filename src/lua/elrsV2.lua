@@ -777,7 +777,6 @@ local function runDevicePage(event)
       end
     end
   end
-  return 0
 end
 
 local function runPopupPage(event)
@@ -813,7 +812,6 @@ local function runPopupPage(event)
       fieldPopup = nil
     end
   end
-  return 0
 end
 
 local function setLCDvar()
@@ -866,16 +864,15 @@ local function run(event)
     return 2
   end
 
-  local result
   if fieldPopup ~= nil then
-    result = runPopupPage(event)
+    runPopupPage(event)
   else
-    result = runDevicePage(event)
+    runDevicePage(event)
   end
 
   refreshNext()
 
-  return result
+  return 0
 end
 
 return { init=init, run=run }
