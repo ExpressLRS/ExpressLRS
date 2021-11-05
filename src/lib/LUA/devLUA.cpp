@@ -62,6 +62,16 @@ static struct luaItem_selection luaDynamicPower = {
     "Off;On;AUX9;AUX10;AUX11;AUX12",
     emptySpace
 };
+
+#if defined(GPIO_PIN_FAN_EN)
+static struct luaItem_selection luaFanThreshold = {
+    {"Fan Thresh", CRSF_TEXT_SELECTION},
+    0, // value
+    "10mW;25mW;50mW;100mW;250mW;500mW;1000mW;2000mW;Never",
+    emptySpace // units embedded so it won't display "NevermW"
+};
+#endif
+
 //----------------------------POWER------------------
 
 static struct luaItem_selection luaSwitch = {
@@ -293,6 +303,13 @@ static void registerLuaParameters()
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
   }, luaPowerFolder.common.id);
+#if defined(GPIO_PIN_FAN_EN)
+  registerLUAParameter(&luaFanThreshold, [](uint8_t id, uint8_t arg){
+      config.SetPowerFanThreshold(arg);
+      POWERMGNT::setFanEnableTheshold((PowerLevels_e)arg);
+  }, luaPowerFolder.common.id);
+#endif
+  // VTX folder
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
       config.SetVtxBand(arg);
@@ -417,6 +434,9 @@ static int event()
   setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+#if defined(GPIO_PIN_FAN_EN)
+  setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
+#endif
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower,dynamic);

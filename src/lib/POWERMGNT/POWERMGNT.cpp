@@ -37,6 +37,7 @@ extern SX1280Driver Radio;
 #endif
 
 PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
+PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 #if defined(POWER_OUTPUT_VALUES)
 static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #endif
@@ -101,7 +102,7 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
-#if defined(GPIO_PIN_FAN_EN) && (GPIO_PIN_FAN_EN != UNDEF_PIN)
+#if defined(GPIO_PIN_FAN_EN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
     setDefaultPower();
@@ -125,10 +126,25 @@ void POWERMGNT::setDefaultPower()
     setPower(getDefaultPower());
 }
 
-PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
+void POWERMGNT::updateFan()
+{
+#if defined(GPIO_PIN_FAN_EN)
+    digitalWrite(GPIO_PIN_FAN_EN, (CurrentPower >= FanEnableThreshold) ? HIGH : LOW);
+#endif
+}
+
+void POWERMGNT::setFanEnableTheshold(PowerLevels_e Power)
+{
+#if defined(GPIO_PIN_FAN_EN)
+    FanEnableThreshold = Power;
+    updateFan();
+#endif
+}
+
+void POWERMGNT::setPower(PowerLevels_e Power)
 {
     if (Power == CurrentPower)
-        return CurrentPower;
+        return;
 
     if (Power < MinPower)
     {
@@ -138,10 +154,6 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MaxPower;
     }
-
-#ifdef GPIO_PIN_FAN_EN
-    digitalWrite(GPIO_PIN_FAN_EN, (Power >= PWR_250mW) ? HIGH : LOW);
-#endif
 
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
@@ -166,5 +178,5 @@ PowerLevels_e POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
-    return Power;
+    updateFan();
 }

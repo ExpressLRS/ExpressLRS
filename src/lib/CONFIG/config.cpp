@@ -6,10 +6,11 @@
 
 #if defined(TARGET_TX)
 
-#define MODEL_CHANGED       0x01
-#define VTX_CHANGED         0x02
-#define SSID_CHANGED        0x04
-#define PASSWORD_CHANGED    0x08
+#define MODEL_CHANGED       bit(1)
+#define VTX_CHANGED         bit(2)
+#define SSID_CHANGED        bit(3)
+#define PASSWORD_CHANGED    bit(4)
+#define MAIN_CHANGED        bit(5) // catch-all for global config item
 
 TxConfig::TxConfig()
 {
@@ -32,10 +33,10 @@ TxConfig::Load()
 
     // read version field
     uint32_t version;
-    if(nvs_get_u32(handle, "tx_version", &version) != ESP_ERR_NVS_NOT_FOUND 
+    if(nvs_get_u32(handle, "tx_version", &version) != ESP_ERR_NVS_NOT_FOUND
         && version == (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
-        DBGLN("Found version 4 config!");
+        DBGLN("Found version %u config", TX_CONFIG_VERSION);
         uint32_t value;
         nvs_get_u32(handle, "vtx", &value);
         m_config.vtxBand = value >> 24;
@@ -46,11 +47,14 @@ TxConfig::Load()
         nvs_get_str(handle, "ssid", m_config.ssid, &value);
         value = sizeof(m_config.password);
         nvs_get_str(handle, "password", m_config.password, &value);
+        uint8_t value8;
+        nvs_get_u8(handle, "fanthresh", &value8);
+        m_config.powerFanThreshold = value8;
         for(int i=0 ; i<64 ; i++)
         {
             char model[10] = "model";
             model_config_t value;
-            itoa(i, model+5, 10); 
+            itoa(i, model+5, 10);
             nvs_get_u32(handle, model, (uint32_t*)&value);
             m_config.model_config[i] = value;
         }
@@ -103,13 +107,13 @@ TxConfig::Commit()
     {
         uint32_t value = *((uint32_t *)m_model);
         char model[10] = "model";
-        itoa(m_modelId, model+5, 10); 
+        itoa(m_modelId, model+5, 10);
         nvs_set_u32(handle, model, value);
     }
     if (m_modified & VTX_CHANGED)
     {
-        uint32_t value = 
-            m_config.vtxBand << 24 | 
+        uint32_t value =
+            m_config.vtxBand << 24 |
             m_config.vtxChannel << 16 |
             m_config.vtxPower << 8 |
             m_config.vtxPitmode;
@@ -119,6 +123,10 @@ TxConfig::Commit()
         nvs_set_str(handle, "ssid", m_config.ssid);
     if (m_modified & PASSWORD_CHANGED)
         nvs_set_str(handle, "password", m_config.password);
+    if (m_modified & MAIN_CHANGED)
+    {
+        nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
+    }
     nvs_commit(handle);
 #else
     // Write the struct to eeprom
@@ -240,6 +248,16 @@ TxConfig::SetVtxPitmode(uint8_t vtxPitmode)
 }
 
 void
+TxConfig::SetPowerFanThreshold(uint8_t powerFanThreshold)
+{
+    if (m_config.powerFanThreshold != powerFanThreshold)
+    {
+        m_config.powerFanThreshold = powerFanThreshold;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
 TxConfig::SetSSID(const char *ssid)
 {
     strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
@@ -273,6 +291,7 @@ TxConfig::SetDefaults()
     SetVtxChannel(0);
     SetVtxPower(0);
     SetVtxPitmode(0);
+    SetPowerFanThreshold(PWR_250mW);
     Commit();
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
@@ -309,8 +328,8 @@ TxConfig::UpgradeEepromV1ToV4()
         return false;
     }
 
-    DBGLN("EEPROM version 1 is out of date... upgrading to version 4");
-    
+    DBGLN("EEPROM version 1 is out of date... upgrading to version %u", TX_CONFIG_VERSION);
+
     v1Config.version = 0;
     m_eeprom->Put(0, v1Config);
     m_eeprom->Commit();
@@ -325,6 +344,7 @@ TxConfig::UpgradeEepromV1ToV4()
     SetVtxChannel(0);
     SetVtxPower(0);
     SetVtxPitmode(0);
+    SetPowerFanThreshold(PWR_250mW);
     Commit();
 
     for (int i = 0; i < 64; ++i)
@@ -492,7 +512,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
     if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh
         && pwm->val.inverted == inverted)
         return;
-    
+
     pwm->val.failsafe = failsafe;
     pwm->val.inputChannel = inputCh;
     pwm->val.inverted = inverted;

@@ -936,6 +936,7 @@ void setup()
     TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
 
     POWERMGNT.init();
+    POWERMGNT.setFanEnableTheshold((PowerLevels_e)config.GetPowerFanThreshold());
 
     // Set the pkt rate, TLM ratio, and power from the stored eeprom values
     ChangeRadioParams();

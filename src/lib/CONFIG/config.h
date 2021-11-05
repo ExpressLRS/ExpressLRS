@@ -12,7 +12,7 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   4
+#define TX_CONFIG_VERSION   5
 #define RX_CONFIG_VERSION   4
 #define UID_LEN             6
 
@@ -35,6 +35,7 @@ typedef struct {
     uint8_t         vtxChannel;
     uint8_t         vtxPower;
     uint8_t         vtxPitmode;
+    uint8_t         powerFanThreshold:4; // Power level to enable fan if present
     model_config_t  model_config[64];
 } tx_config_t;
 
@@ -60,6 +61,7 @@ public:
     uint8_t  GetVtxChannel() const { return m_config.vtxChannel; }
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
+    uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -77,13 +79,14 @@ public:
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
+    void SetPowerFanThreshold(uint8_t powerFanThreshold);
 
     // State setters
     bool SetModelId(uint8_t modelId);
 
 private:
     bool UpgradeEepromV1ToV4();
-    
+
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     uint8_t     m_modified;
