@@ -846,7 +846,7 @@ th {
   .alert-frame {
 	background: #fff;
 	min-height: 400px;
-	width: 300px;
+	width: 450px;
 	box-shadow: 5px 5px 10px rgb(0, 0, 0, 0.2);
 	border-radius: 10px;
 	animation: open-frame 0.3s linear;
