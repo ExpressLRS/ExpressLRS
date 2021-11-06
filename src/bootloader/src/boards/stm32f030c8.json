@@ -1,0 +1,50 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0",
+    "extra_flags": "-DSTM32F0",
+    "f_cpu": "48000000L",
+
+    "ldscript": "linker/stm32.ld",
+    "mcu": "stm32f030c8t6",
+    "product_line": "STM32F030xB",
+    "variants_dir": "variants",
+    "variant": "F030XX",
+    "zephyr": {
+       "variant": "stm32_min_dev_blue"
+    }
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F030C8",
+    "openocd_extra_args": [
+      "-c",
+      "reset_config none"
+    ],
+    "openocd_target": "stm32f0x",
+    "svd_path": "STM32F103xx.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "libopencm3",
+    "stm32cube",
+    "zephyr"
+  ],
+  "name": "STM32F030C8",
+  "upload": {
+    "maximum_ram_size": 8192,
+    "maximum_size": 65536,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "dfu"
+    ]
+  },
+  "url": "http://www.st.com/content/st_com/en/products/microcontrollers/stm32-32-bit-arm-cortex-mcus/stm32f1-series/stm32f103/stm32f103c8.html",
+  "vendor": "Generic"
+}
