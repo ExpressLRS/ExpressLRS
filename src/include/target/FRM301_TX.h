@@ -1,9 +1,5 @@
 #define DEVICE_NAME          "FLYSKY FRM301"
 
-// There is some special handling for this target
-#define TARGET_TX_FRM301
-#define USE_SX1280_DCDC
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_DIO1           PC14
