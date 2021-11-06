@@ -1,10 +1,9 @@
 {
-    "comment": "STM32F103C8 definition for use with 16MHz crystal (DIV2 prescaler)",
     "build": {
       "core": "stm32",
-      "extra_flags": "-DSTM32F030xB",
-      "cpu": "cortex-m3",
-      "f_cpu": "72000000L",
+      "extra_flags": "-DSTM32F0",
+      "cpu": "cortex-m0",
+      "f_cpu": "48000000L",
       "ldscript": "variants/FRM301/ldscript.ld",
       "mcu": "stm32f030c8t6",
       "variants_dir": "variants",
@@ -19,8 +18,8 @@
         "-c",
         "reset_config none"
       ],
-      "openocd_target": "stm32f03",
-      "svd_path": "STM32F030xx.svd"
+      "openocd_target": "STM32F0xx",
+      "svd_path": "STM32F0xx.svd"
     },
     "frameworks": [
       "arduino",
@@ -31,7 +30,7 @@
     ],
     "name": "FRM301",
     "upload": {
-      "maximum_ram_size": 20480,
+      "maximum_ram_size": 8192,
       "maximum_size": 65536,
       "protocol": "stlink",
       "protocols": [
