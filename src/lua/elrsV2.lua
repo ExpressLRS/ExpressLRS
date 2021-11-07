@@ -494,7 +494,7 @@ local function parseParameterInfoMessage(data)
   end
   local field = fields[fieldId]
   local chunks = data[4]
-  if chunks ~= expectedChunks and expectedChunks ~= -1 then
+  if not field or (chunks ~= expectedChunks and expectedChunks ~= -1) then
     return -- we will ignore this and subsequent chunks till we send a new command
   end
   expectedChunks = chunks - 1
