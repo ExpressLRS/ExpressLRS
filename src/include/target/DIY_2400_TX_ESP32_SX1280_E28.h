@@ -1,9 +1,8 @@
-#if !defined(DEVICE_NAME)
-    #define DEVICE_NAME "DIY2400 E28"
-#endif
+#define DEVICE_NAME "DIY2400 E28"
 
 // Any device features
 #define USE_OLED_SPI
+#define USE_SX1280_DCDC
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -26,14 +25,8 @@
 #define GPIO_PIN_FAN_EN         17
 
 // Output Power
-#if !defined(MinPower)
-    #define MinPower            PWR_10mW
-#endif
-#if !defined(MaxPower)
-    #define MaxPower            PWR_250mW
-#endif
-#if !defined(POWER_OUTPUT_VALUES)
-    #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
-#endif
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_250mW
+#define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 
 #define Regulatory_Domain_ISM_2400 1
