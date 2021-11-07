@@ -1,8 +1,8 @@
-#define DEVICE_NAME "DIY2400 E28 Man Kim FPV"
-
+#define DEVICE_NAME "DIY2400 E28"
 
 // Any device features
 //#define USE_OLED_SPI
+//#define USE_OLED_I2C_SSH1106
 #define USE_OLED_I2C
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -14,18 +14,25 @@
 #define GPIO_PIN_RST            14
 #define GPIO_PIN_RX_ENABLE      27
 #define GPIO_PIN_TX_ENABLE      26
-// #define GPIO_PIN_OLED_CS        15
-// #define GPIO_PIN_OLED_RST       16
-// #define GPIO_PIN_OLED_DC        17
-// #define GPIO_PIN_OLED_MOSI      32
-// #define GPIO_PIN_OLED_SCK       33
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15
 #define GPIO_PIN_FAN_EN         17
+#if defined(USE_OLED_SPI)
+#define GPIO_PIN_OLED_CS        15
+#define GPIO_PIN_OLED_RST       16
+#define GPIO_PIN_OLED_DC        17
+#define GPIO_PIN_OLED_MOSI      32
+#define GPIO_PIN_OLED_SCK       33
+#elif defined(USE_OLED_I2C)
 #define GPIO_PIN_OLED_SCK       22
 #define GPIO_PIN_OLED_SDA       21
 #define GPIO_PIN_OLED_RST       -1
+#elif defined(USE_OLED_I2C_SSH1106)
+#define GPIO_PIN_OLED_SCK       22
+#define GPIO_PIN_OLED_SDA       21
+#define GPIO_PIN_OLED_RST       -1
+#endif
 
 // Output Power
 #define MinPower            PWR_10mW
