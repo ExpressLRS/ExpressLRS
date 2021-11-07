@@ -1,5 +1,6 @@
 #define DEVICE_NAME "QuadKopters 24"
 
+// Any device features
 #define USE_TX_BACKPACK
 
 // GPIO pin definitions

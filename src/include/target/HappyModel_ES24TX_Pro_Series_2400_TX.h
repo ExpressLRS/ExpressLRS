@@ -1,5 +1,6 @@
 #define DEVICE_NAME "ES24TX Pro Ser"
 
+// Any device features
 #define USE_TX_BACKPACK
 #define USE_SX1280_DCDC
 

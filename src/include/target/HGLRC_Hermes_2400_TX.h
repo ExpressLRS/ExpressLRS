@@ -1,5 +1,6 @@
 #define DEVICE_NAME "HGLRC Hermes 24"
 
+// Any device features
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

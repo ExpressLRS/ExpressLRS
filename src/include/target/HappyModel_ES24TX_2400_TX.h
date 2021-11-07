@@ -1,5 +1,6 @@
 #define DEVICE_NAME "HM ES24TX"
 
+// Any device features
 #define USE_TX_BACKPACK
 #define USE_SX1280_DCDC
 
