@@ -1196,7 +1196,6 @@ void loop()
     }
 
     devicesUpdate(now);
-    servosUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
@@ -1205,7 +1204,7 @@ void loop()
     }
     #endif
 
-    if (connectionState > FAILURE_STATES)
+    if (connectionState > MODE_STATES)
     {
         return;
     }
@@ -1228,6 +1227,7 @@ void loop()
     }
 
     cycleRfMode(now);
+    servosUpdate(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
