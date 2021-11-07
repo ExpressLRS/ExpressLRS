@@ -102,7 +102,7 @@ device_t *ui_devices[] = {
 #ifdef HAS_BLE
   &BLE_device,
 #endif
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(USE_OLED_I2C_SSH1106)
   &OLED_device,
 #endif
 #ifdef HAS_BUZZER

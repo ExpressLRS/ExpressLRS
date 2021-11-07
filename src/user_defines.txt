@@ -27,7 +27,7 @@
 ### PERFORMANCE OPTIONS: ###
 
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
-#-DUNLOCK_HIGHER_POWER
+-DUNLOCK_HIGHER_POWER
 
 #-DNO_SYNC_ON_ARM
 
@@ -67,7 +67,7 @@
 # Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
 # The device target should enable this automatically for devices that come with this, but can be added
 # to any device.
-#-DUSE_TX_BACKPACK
+-DUSE_TX_BACKPACK
 
 #-DJUST_BEEP_ONCE
 #-DDISABLE_STARTUP_BEEP
