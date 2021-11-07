@@ -1,5 +1,5 @@
 #define DEVICE_NAME "DIY2400 E28"
-
+#define TARGET_TX_GHOST
 // Any device features
 //#define USE_OLED_SPI
 //#define USE_OLED_I2C_SSH1106
@@ -24,10 +24,9 @@
 #define GPIO_PIN_OLED_DC        17
 #define GPIO_PIN_OLED_MOSI      32
 #define GPIO_PIN_OLED_SCK       33
-#elif defined(USE_OLED_I2C)
-#define GPIO_PIN_OLED_SCK       22
-#define GPIO_PIN_OLED_SDA       21
-#define GPIO_PIN_OLED_RST       -1
+#elif defined(USE_OLED_I2C) // config for use sofware I2C
+#define GPIO_PIN_OLED_SCK       33
+#define GPIO_PIN_OLED_SDA       32
 #elif defined(USE_OLED_I2C_SSH1106)
 #define GPIO_PIN_OLED_SCK       22
 #define GPIO_PIN_OLED_SDA       21
