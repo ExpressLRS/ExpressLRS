@@ -79,7 +79,7 @@ volatile bool connectionHasModelMatch = true;
 
 bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
-uint8_t BindingSendCount = 0;
+static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 #if defined(USE_TX_BACKPACK)
 bool TxBackpackWiFiReadyToSend = false;
@@ -351,7 +351,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     && (invertIQ == Radio.IQinverted))
     return;
 
-  DBGLN("set rate");
+  DBGLN("set rate %u", index);
   hwTimer.updateInterval(ModParams->interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
 
@@ -391,10 +391,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
   uint32_t SyncInterval = 250;
-  bool skipSync = IsArmed();
+  bool skipSync = IsArmed() || InBindingMode;
 #else
   uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  bool skipSync = false;
+  bool skipSync = InBindingMode;
 #endif
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
@@ -447,7 +447,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
   // artificially inject the low bits of the nonce on data packets, this will be overwritten with the CRC after it's calculated
-  if (Radio.TXdataBuffer[0] != SYNC_PACKET && OtaSwitchModeCurrent == smHybridWide)
+  if (Radio.TXdataBuffer[0] == RC_DATA_PACKET && OtaSwitchModeCurrent == smHybridWide)
     Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
 
   ///// Next, Calculate the CRC and put it into the buffer /////
@@ -469,7 +469,8 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   #endif
 
   // Nonce advances on every timer tick
-  NonceTX++;
+  if (!InBindingMode)
+    NonceTX++;
 
   // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
   // Skip transmitting on this slot
@@ -762,7 +763,6 @@ void SendUIDOverMSP()
   MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
-  InBindingMode = true;
 }
 
 void EnterBindingMode()
@@ -788,12 +788,12 @@ void EnterBindingMode()
   UID[5] = BindingUID[5];
 
   CRCInitializer = 0;
-
+  NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
   InBindingMode = true;
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_DEFAULT);
+  SetRFLinkRate(RATE_BINDING);
   Radio.SetFrequencyReg(GetInitialFreq());
   // Start transmitting again
   hwTimer.resume();
