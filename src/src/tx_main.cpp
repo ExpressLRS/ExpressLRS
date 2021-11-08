@@ -959,7 +959,7 @@ void loop()
 {
   uint32_t now = millis();
 
-  #if defined(PLATFORM_ESP32) && defined(USE_BLE_JOYSTICK)
+  #if defined(USE_BLE_JOYSTICK)
   if (connectionState != bleJoystick && connectionState != noCrossfire) // Wait until the correct crsf baud has been found
   {
       connectionState = bleJoystick;
