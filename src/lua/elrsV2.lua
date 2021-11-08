@@ -844,9 +844,12 @@ local function setMock()
   if string.sub(rv, -5) ~= "-simu" then return end
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, goodBadPkt = mock(), "0/500   C"
+  fields, goodBadPkt, deviceName = mock(), "0/500   C", "ExpressLRS TX"
   fields_count = #fields - 1
-  fieldId = #fields - 3
+  fieldId = #fields
+  deviceIsELRS_TX = true
+  allParamsLoaded = 1
+  backButtonId = #fields
 end
 
 -- Init
