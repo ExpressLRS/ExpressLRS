@@ -512,10 +512,19 @@ local function parseParameterInfoMessage(data)
     end
 
     field.id = fieldId
-    field.parent = (fieldData[1] ~= 0) and fieldData[1] or nil
-    field.type = fieldData[2] % 128
-    field.hidden = (bit32.rshift(fieldData[2], 7) == 1) or nil
+    local parent = (fieldData[1] ~= 0) and fieldData[1] or nil
+    local type = fieldData[2] % 128
+    local hidden = (bit32.rshift(fieldData[2], 7) == 1) or nil
     local offset
+    if field.name ~= nil then -- already seen this field before, so we can validate this packet is correct
+      if field.parent ~= parent or field.type ~= type or field.hidden ~= hidden then
+        fieldData = {}
+        return -- no data extraction
+      end
+    end
+    field.parent = parent
+    field.type = type
+    field.hidden = hidden
     field.name, offset = fieldGetString(fieldData, 3, field.name)
     if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, offset)
