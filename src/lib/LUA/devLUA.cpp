@@ -470,6 +470,7 @@ static int start()
     itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
     setLuaStringValue(&luaInfo, luaBadGoodString);
   });
+  event();
   return DURATION_IMMEDIATELY;
 }
 
