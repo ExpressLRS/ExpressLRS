@@ -45,11 +45,12 @@ local linkstatTimeout = 100
 local titleShowWarn = nil
 local titleShowWarnTimeout = 100
 
-local COL2
-local maxLineIndex
-local textXoffset
-local textYoffset
-local textSize
+local COL2 = 70
+local maxLineIndex = 7
+local textXoffset = 0
+local textYoffset = 1
+local textSize = 8
+local lcdIsColor
 
 local function allocateFields()
   fields = {}
@@ -824,6 +825,7 @@ end
 
 local function setLCDvar()
   -- Set the title function depending on if LCD is color, and free the other function
+  lcdIsColor = lcd.RGB ~= nil
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
