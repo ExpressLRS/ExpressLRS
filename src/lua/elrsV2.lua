@@ -824,7 +824,6 @@ end
 
 local function setLCDvar()
   -- Set the title function depending on if LCD is color, and free the other function
-  lcd_title()
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
