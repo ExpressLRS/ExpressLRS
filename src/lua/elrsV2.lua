@@ -824,9 +824,7 @@ end
 
 local function setLCDvar()
   -- Set the title function depending on if LCD is color, and free the other function
-  lcd_title = (lcd.RGB ~= nil) and lcd_title_color or lcd_title_bw
-  lcd_title_color = nil
-  lcd_title_bw = nil
+  lcd_title()
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
