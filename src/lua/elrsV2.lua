@@ -613,67 +613,66 @@ local function refreshNext()
   end
 end
 
-local lcd_title -- holds function that is color/bw version
-local function lcd_title_color()
+local function lcd_title()
   lcd.clear()
+  
+  if lcdIsColor then
+    -- Color screen
+    local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
+    local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
+    local EGREY1 = lcd.RGB(0x91, 0xb2, 0xc9)
+    local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
+    local barHeight = 30
 
-  local EBLUE = lcd.RGB(0x43, 0x61, 0xAA)
-  local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
-  local EGREY1 = lcd.RGB(0x91, 0xb2, 0xc9)
-  local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
-  local barHeight = 30
-
-  -- Field display area (white w/ 2px green border)
-  lcd.setColor(CUSTOM_COLOR, EGREEN)
-  lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
-  lcd.drawRectangle(1, 0, LCD_W - 2, LCD_H - 1, CUSTOM_COLOR)
-  -- title bar
-  lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
-  lcd.setColor(CUSTOM_COLOR, EGREY1)
-  lcd.drawFilledRectangle(LCD_W - textSize, 0, textSize, barHeight, CUSTOM_COLOR)
-  lcd.setColor(CUSTOM_COLOR, EGREY2)
-  lcd.drawRectangle(LCD_W - textSize, 0, textSize, barHeight - 1, CUSTOM_COLOR)
-  lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
-  lcd.setColor(CUSTOM_COLOR, BLACK)
-  if titleShowWarn then
-    lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-    lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
-  else
-    local title = allParamsLoaded == 1 and deviceName or "Loading..."
-    lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
-  end
-  -- progress bar
-  if allParamsLoaded ~= 1 and fields_count > 0 then
-    local barW = (COL2-4)*fieldId/fields_count
-    lcd.setColor(CUSTOM_COLOR, EBLUE)
-    lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
-    lcd.setColor(CUSTOM_COLOR, WHITE)
-    lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
-  end
-end
-
-local function lcd_title_bw()
-  lcd.clear()
-  -- B&W screen
-  local barHeight = 9
-  if titleShowWarn then
-    lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
-  else
-    lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
-    lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
-  end
-
-  if allParamsLoaded ~= 1 and fields_count > 0 then
-    lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
-    lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
-  else
-    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
+    -- Field display area (white w/ 2px green border)
+    lcd.setColor(CUSTOM_COLOR, EGREEN)
+    lcd.drawRectangle(0, 0, LCD_W, LCD_H, CUSTOM_COLOR)
+    lcd.drawRectangle(1, 0, LCD_W - 2, LCD_H - 1, CUSTOM_COLOR)
+    -- title bar
+    lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY1)
+    lcd.drawFilledRectangle(LCD_W - textSize, 0, textSize, barHeight, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR, EGREY2)
+    lcd.drawRectangle(LCD_W - textSize, 0, textSize, barHeight - 1, CUSTOM_COLOR)
+    lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
+    lcd.setColor(CUSTOM_COLOR, BLACK)
     if titleShowWarn then
-      lcd.drawText(textXoffset, 1, elrsFlagsInfo, INVERS)
+      lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+      lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
     else
       local title = allParamsLoaded == 1 and deviceName or "Loading..."
-      lcd.drawText(textXoffset, 1, title, INVERS)
+      lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
+      lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+    end
+    -- progress bar
+    if allParamsLoaded ~= 1 and fields_count > 0 then
+      local barW = (COL2-4)*fieldId/fields_count
+      lcd.setColor(CUSTOM_COLOR, EBLUE)
+      lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+      lcd.setColor(CUSTOM_COLOR, WHITE)
+      lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
+    end
+  else
+    -- B&W screen
+    local barHeight = 9
+    if titleShowWarn then
+      lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
+    else
+      lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
+      lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
+    end
+
+    if allParamsLoaded ~= 1 and fields_count > 0 then
+      lcd.drawFilledRectangle(COL2, 0, LCD_W, barHeight, GREY_DEFAULT)
+      lcd.drawGauge(0, 0, COL2, barHeight, fieldId, fields_count, 0)
+    else
+      lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
+      if titleShowWarn then
+        lcd.drawText(textXoffset, 1, elrsFlagsInfo, INVERS)
+      else
+        local title = allParamsLoaded == 1 and deviceName or "Loading..."
+        lcd.drawText(textXoffset, 1, title, INVERS)
+      end
     end
   end
 end
