@@ -558,11 +558,10 @@ local function parseElrsInfoMessage(data)
 
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
+  local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
+  goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
+
   elrsFlags = data[6]
-
-  local state = (bit32.btest(elrsFlags, 1) and "   C") or "   -"
-
-  goodBadPkt = tostring(badPkt) .. "/" .. tostring(goodPkt) .. state
   elrsFlagsInfo = fieldGetString(data, 7)
 end
 
