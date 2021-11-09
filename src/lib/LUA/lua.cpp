@@ -305,7 +305,7 @@ bool luaHandleUpdateParameter()
       {
         uint8_t fieldId = crsf.ParameterUpdateData[1];
         uint8_t fieldChunk = crsf.ParameterUpdateData[2];
-        DBGVLN("Read lua param %u %u", fieldId, chunkNo);
+        DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
         if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
         {
           struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[fieldId];
