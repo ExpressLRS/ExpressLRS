@@ -76,7 +76,7 @@ extern bool webserverPreventAutoStart;
 #endif
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-#include <Servo.h> 
+#include <Servo.h>
 static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
 static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
 static Servo *Servos[SERVO_COUNT];
@@ -670,6 +670,14 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
 {
+    // Always examine MSP packets for bind information if in bind mode
+    // [1] is the package index, first packet of the MSP
+    if (InBindingMode && Radio.RXdataBuffer[1] == 1 && Radio.RXdataBuffer[2] == MSP_ELRS_BIND)
+    {
+        OnELRSBindMSP((uint8_t *)&Radio.RXdataBuffer[2]);
+        return;
+    }
+
     // Must be fully connected to process MSP, prevents processing MSP
     // during sync, where packets can be received before connection
     if (connectionState != connected)
@@ -681,13 +689,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
     {
         NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
     }
-
-    if (Radio.RXdataBuffer[1] == 1 && MspData[0] == MSP_ELRS_BIND)
-    {
-        OnELRSBindMSP(MspData);
-        MspReceiver.ResetState();
-    }
-    else if (MspReceiver.HasFinishedData())
+    if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
     }
@@ -753,8 +755,8 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     uint16_t inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
 
     // For smHybrid the CRC only has the packet type in byte 0
-    // For smHybridWide the FHSS slot is added to the CRC in byte 0 except on SYNC packets
-    if (type == SYNC_PACKET || OtaSwitchModeCurrent != smHybridWide)
+    // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
+    if (type != RC_DATA_PACKET || OtaSwitchModeCurrent != smHybridWide)
     {
         Radio.RXdataBuffer[0] = type;
     }
@@ -797,7 +799,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         // not implimented yet
         break;
     case SYNC_PACKET: //sync packet from master
-        doStartTimer = ProcessRfPacket_SYNC(now);
+        doStartTimer = ProcessRfPacket_SYNC(now) && !InBindingMode;
         break;
     default: // code to be executed if n doesn't match any cases
         break;
@@ -1072,7 +1074,7 @@ static void servosUpdate(unsigned long now)
 
             if (Servos[ch])
                 Servos[ch]->writeMicroseconds(us);
-            else if (us >= 988U && us <= 2012U) 
+            else if (us >= 988U && us <= 2012U)
             {
                 // us might be out of bounds if this is a switch channel and it has not been
                 // received yet. Delay initializing the servo until the channel is valid
@@ -1101,6 +1103,34 @@ static void servosUpdate(unsigned long now)
     // need to sample actual millis at the end to account for any
     // waiting that happened in Servo::writeMicroseconds()
     lastUpdate = millis();
+#endif
+}
+
+static void updateBindingMode()
+{
+    // If the eeprom is indicating that we're not bound
+    // and we're not already in binding mode, enter binding
+    if (!config.GetIsBound() && !InBindingMode)
+    {
+        INFOLN("RX has not been bound, enter binding mode...");
+        EnterBindingMode();
+    }
+    // If in binding mode and the bind packet has come in, leave binding mode
+    else if (config.GetIsBound() && InBindingMode)
+    {
+        ExitBindingMode();
+    }
+
+#ifndef MY_UID
+    // If the power on counter is >=3, enter binding and clear counter
+    if (config.GetPowerOnCounter() >= 3)
+    {
+        config.SetPowerOnCounter(0);
+        config.Commit();
+
+        INFOLN("Power on counter >=3, enter binding mode...");
+        EnterBindingMode();
+    }
 #endif
 }
 
@@ -1166,7 +1196,6 @@ void loop()
     }
 
     devicesUpdate(now);
-    servosUpdate(now);
 
     #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
@@ -1175,7 +1204,7 @@ void loop()
     }
     #endif
 
-    if (connectionState > FAILURE_STATES)
+    if (connectionState > MODE_STATES)
     {
         return;
     }
@@ -1198,6 +1227,7 @@ void loop()
     }
 
     cycleRfMode(now);
+    servosUpdate(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
@@ -1230,26 +1260,6 @@ void loop()
         DBGLN("Timer locked");
     }
 
-    // If the eeprom is indicating that we're not bound
-    // and we're not already in binding mode, enter binding
-    if (!config.GetIsBound() && !InBindingMode)
-    {
-        INFOLN("RX has not been bound, enter binding mode...");
-        EnterBindingMode();
-    }
-
-    // If the power on counter is >=3, enter binding and clear counter
-#ifndef MY_UID
-    if (config.GetPowerOnCounter() >= 3)
-    {
-        config.SetPowerOnCounter(0);
-        config.Commit();
-
-        INFOLN("Power on counter >=3, enter binding mode...");
-        EnterBindingMode();
-    }
-#endif
-
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
     if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
@@ -1257,6 +1267,7 @@ void loop()
         TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
     }
     updateTelemetryBurst();
+    updateBindingMode();
 }
 
 struct bootloader {
@@ -1310,11 +1321,12 @@ void EnterBindingMode()
     UID[5] = BindingUID[5];
 
     CRCInitializer = 0;
+    config.SetIsBound(false);
     InBindingMode = true;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_DEFAULT);
+    SetRFLinkRate(RATE_BINDING);
     Radio.SetFrequencyReg(GetInitialFreq());
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
@@ -1325,13 +1337,25 @@ void EnterBindingMode()
 
 void ExitBindingMode()
 {
-    if (!InBindingMode) {
+    if (!InBindingMode)
+    {
         // Not in binding mode
         DBGLN("Cannot exit binding mode, not in binding mode!");
         return;
     }
 
+    // Prevent any new packets from coming in
+    Radio.SetTxIdleMode();
     LostConnection();
+    // Write the values to eeprom
+    config.Commit();
+
+    CRCInitializer = (UID[4] << 8) | UID[5];
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
+
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    webserverPreventAutoStart = true;
+    #endif
 
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
@@ -1340,17 +1364,16 @@ void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+    DBGLN("Exiting binding mode");
     devicesTriggerEvent();
 }
 
-void OnELRSBindMSP(uint8_t* packet)
+void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* packet)
 {
     for (int i = 1; i <=4; i++)
     {
         UID[i + 1] = packet[i];
     }
-
-    CRCInitializer = (UID[4] << 8) | UID[5];
 
     DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
 
@@ -1360,15 +1383,7 @@ void OnELRSBindMSP(uint8_t* packet)
     // Set eeprom byte to indicate RX is bound
     config.SetIsBound(true);
 
-    // Write the values to eeprom
-    config.Commit();
-
-    FHSSrandomiseFHSSsequence(uidMacSeedGet());
-
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    webserverPreventAutoStart = true;
-    #endif
-    ExitBindingMode();
+    // EEPROM commit will happen on the main thread in ExitBindingMode()
 }
 
 void UpdateModelMatch(uint8_t model)

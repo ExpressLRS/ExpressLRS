@@ -105,6 +105,7 @@ typedef struct expresslrs_rf_pref_params_s
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
+#define RATE_BINDING 2 // 50Hz bind mode
 typedef struct expresslrs_mod_settings_s
 {
     int8_t index;
@@ -124,6 +125,7 @@ typedef struct expresslrs_mod_settings_s
 #if defined(Regulatory_Domain_ISM_2400)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
+#define RATE_BINDING 3 // 50Hz bind mode
 typedef struct expresslrs_mod_settings_s
 {
     int8_t index;

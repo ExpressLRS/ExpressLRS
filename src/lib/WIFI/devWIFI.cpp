@@ -722,8 +722,13 @@ static int timeout()
   if (!webserverPreventAutoStart && (connectionState == disconnected))
   {
     static bool pastAutoInterval = false;
+    // If InBindingMode then wait at least 60 seconds before going into wifi,
+    // regardless of if AUTO_WIFI_ON_INTERVAL is set to less
     if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
     {
+      // No need to ExitBindingMode(), the radio is about to be stopped. Need
+      // to change this before the mode change event so the LED is updated
+      InBindingMode = false;
       connectionState = wifiUpdate;
       return DURATION_IMMEDIATELY;
     }
