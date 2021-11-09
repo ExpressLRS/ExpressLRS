@@ -24,6 +24,7 @@ SX1280Driver Radio;
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
+
 #include "helpers.h"
 #include "devLED.h"
 #include "devOLED.h"
@@ -33,6 +34,16 @@ SX1280Driver Radio;
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
+#include "devGsensor.h"
+#include "devThermal.h"
+
+#ifdef TARGET_AXIS_THOR_2400_TX
+#include "devScreen.h"
+#endif
+
+#ifndef TX_UART_BAUD
+#define TX_UART_BAUD 460800
+#endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -113,6 +124,15 @@ device_t *ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   &Button_device,
+#endif
+#ifdef HAS_TFT_SCREEN
+  &Screen_device,
+#endif
+#ifdef HAS_GSENSOR
+  &Gsensor_device,
+#endif
+#ifdef HAS_THERMAL
+  &Thermal_device,
 #endif
   &VTX_device
 };
@@ -593,7 +613,7 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
-    ConfigChangeCommit();
+    ConfigChangeCommit();  
   }
 }
 
@@ -901,7 +921,8 @@ static void setupTarget()
 
 void setup()
 {
-  Serial.begin(460800);
+  Serial.begin(TX_UART_BAUD);
+
   setupTarget();
 
   // Initialise the UI devices
@@ -948,8 +969,8 @@ void setup()
   }
 
   devicesStart();
-}
 
+}
 void loop()
 {
   uint32_t now = millis();
@@ -958,7 +979,6 @@ void loop()
   {
     UpdateConnectDisconnectStatus();
   }
-
   // Update UI devices
   devicesUpdate(now);
 

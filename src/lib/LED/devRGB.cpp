@@ -4,7 +4,12 @@
 
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
 #include <NeoPixelBus.h>
+#ifdef TARGET_AXIS_THOR_2400_TX
+static constexpr uint16_t PixelCount = 1;
+#define WS2812_IS_GRB
+#else
 static constexpr uint16_t PixelCount = 2;
+#endif
 #ifdef WS2812_IS_GRB
 static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
 #else
