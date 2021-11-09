@@ -80,7 +80,7 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
-  uint8_t dataType = luaData->type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN);
+  uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
   // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
   // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
@@ -153,7 +153,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,nextStatusChunk,(struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -301,15 +301,22 @@ bool luaHandleUpdateParameter()
         sendLuaDevicePacket();
         break;
 
-    case CRSF_FRAMETYPE_PARAMETER_READ: //param info
+    case CRSF_FRAMETYPE_PARAMETER_READ:
       {
-        DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], crsf.ParameterUpdateData[2]);
+        uint8_t fieldChunk = crsf.ParameterUpdateData[2];
+        DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], chunkNo);
         struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
-        if (field != 0 && (field->common.type & ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)) == CRSF_COMMAND && crsf.ParameterUpdateData[2] == 0) {
-          field->step = 0;
-          field->info = "";
+        if (field)
+        {
+          uint8_t dataType = field->common.type & CRSF_FIELD_TYPE_MASK;
+          // On first chunk of a command, reset the step/info of the command
+          if (dataType == CRSF_COMMAND && fieldChunk == 0)
+          {
+            field->step = 0;
+            field->info = "";
+          }
+          sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
         }
-        sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,crsf.ParameterUpdateData[2],(struct luaPropertiesCommon *)field);
       }
       break;
 
