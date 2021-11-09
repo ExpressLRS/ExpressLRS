@@ -16,11 +16,11 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA2  // UART2
 //#define GPIO_PIN_BUFFER_OE      PB7
 //#define GPIO_PIN_BUFFER_OE_INVERTED 0
-#define GPIO_PIN_LED_RED        PB12 // Right Red LED (active low)
+#define GPIO_PIN_LED_RED        PB12 // Red LED (active low)
 #define GPIO_LED_RED_INVERTED   1
-#define GPIO_PIN_LED_GREEN      PB13 // Left Green LED (active low)
+#define GPIO_PIN_LED_GREEN      PB13 // Green LED (active low)
 #define GPIO_LED_GREEN_INVERTED 1
-#define GPIO_PIN_LED_BLUE       PB14 // Left Green LED (active low)
+#define GPIO_PIN_LED_BLUE       PB14 // Blue LED (active low)
 #define GPIO_LED_BLUE_INVERTED  1
 #define GPIO_PIN_BUTTON         PB9 // active low
 //#define GPIO_PIN_BUZZER       UNDEF_PIN
