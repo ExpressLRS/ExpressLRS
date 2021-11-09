@@ -375,7 +375,6 @@ local function fieldCommandLoad(field, data, offset)
   field.timeout = data[offset+1]
   field.info = fieldGetString(data, offset+2)
   if field.status == 0 then
-    field.previousInfo = field.info
     fieldPopup = nil
   end
 end
@@ -725,14 +724,15 @@ local function handleDevicePageEvent(event)
           edit = not edit
         end
         if not edit then
-          functions[field.type+1].save(field)
-          if field.type < 11 then
-            -- Request this field's data again, with a short delay
-            -- to allow the module EEPROM to commit
+          if field.type < 11 or field.type == 13 then
+            -- For editable field types and commands, request this field's
+            -- data again, with a short delay to allow the module EEPROM to
+            -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
             fieldId, fieldChunk = field.id, 0
             fieldData = {}
           end
+          functions[field.type+1].save(field)
         end
       end
     end
