@@ -305,9 +305,10 @@ bool luaHandleUpdateParameter()
       {
         uint8_t fieldChunk = crsf.ParameterUpdateData[2];
         DBGVLN("Read lua param %u %u", crsf.ParameterUpdateData[1], chunkNo);
-        struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[crsf.ParameterUpdateData[1]];
-        if (field)
+        uint8_t fieldId = crsf.ParameterUpdateData[1];
+        if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
         {
+          struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[fieldId];
           uint8_t dataType = field->common.type & CRSF_FIELD_TYPE_MASK;
           // On first chunk of a command, reset the step/info of the command
           if (dataType == CRSF_COMMAND && fieldChunk == 0)
