@@ -33,6 +33,12 @@ SX1280Driver Radio;
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
+#include "devGsensor.h"
+#include "devThermal.h"
+
+#ifdef TARGET_AXIS_THOR_2400_TX
+#include "devScreen.h"
+#endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -113,6 +119,15 @@ device_t *ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   &Button_device,
+#endif
+#ifdef HAS_TFT_SCREEN
+  &Screen_device,
+#endif
+#ifdef HAS_GSENSOR
+  &Gsensor_device,
+#endif
+#ifdef HAS_THERMAL
+  &Thermal_device,
 #endif
   &VTX_device
 };
@@ -901,7 +916,7 @@ static void setupTarget()
 
 void setup()
 {
-  Serial.begin(460800);
+  Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
 
   // Initialise the UI devices
@@ -927,7 +942,7 @@ void setup()
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
-  
+
   #if defined(USE_BLE_JOYSTICK)
     init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
   #endif

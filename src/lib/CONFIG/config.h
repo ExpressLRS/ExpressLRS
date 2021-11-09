@@ -37,6 +37,8 @@ typedef struct {
     uint8_t         vtxPitmode;
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
     model_config_t  model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode;
 } tx_config_t;
 
 class TxConfig
@@ -62,6 +64,8 @@ public:
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
+    uint8_t  GetFanMode() const { return m_config.fanMode; }
+    uint8_t  GetMotionMode() const { return m_config.motionMode; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -80,6 +84,8 @@ public:
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
+    void SetFanMode(uint8_t fanMode);
+    void SetMotionMode(uint8_t motionMode);
 
     // State setters
     bool SetModelId(uint8_t modelId);
