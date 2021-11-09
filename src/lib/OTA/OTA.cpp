@@ -299,7 +299,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(volatile uint8_t* Buffer, CRSF 
 #endif
 
 OtaSwitchMode_e OtaSwitchModeCurrent;
-void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
+void ICACHE_RAM_ATTR OtaSetSwitchMode(OtaSwitchMode_e switchMode)
 {
     switch(switchMode)
     {
