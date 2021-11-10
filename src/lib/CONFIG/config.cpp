@@ -198,6 +198,16 @@ TxConfig::SetSwitchMode(uint8_t switchMode)
 }
 
 void
+TxConfig::SetTelemetryForward(uint8_t telemetryForward)
+{
+    if (GetTelemetryForward() != telemetryForward)
+    {
+        m_model->telemetryForward = telemetryForward;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetModelMatch(bool modelMatch)
 {
     if (GetModelMatch() != modelMatch)

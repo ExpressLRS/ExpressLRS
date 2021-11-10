@@ -25,6 +25,7 @@ typedef struct {
     uint8_t     modelMatch:1;
     uint8_t     dynamicPower:1;
     uint8_t     boostChannel:3;
+    uint8_t     telemetryForward:1;
 } model_config_t;
 
 typedef struct {
@@ -62,6 +63,7 @@ public:
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
+    uint8_t GetTelemetryForward() const { return m_model->telemetryForward; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -80,6 +82,7 @@ public:
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
+    void SetTelemetryForward(uint8_t telemetryForward);
 
     // State setters
     bool SetModelId(uint8_t modelId);

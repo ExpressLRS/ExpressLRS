@@ -4,9 +4,10 @@
 
 // TODO: MSP_PORT_INBUF_SIZE should be changed to
 // dynamically allocate array length based on the payload size
-// Hardcoding payload size to 8 bytes for now, since MSP is
-// limited to a 4 byte payload on the BF side
-#define MSP_PORT_INBUF_SIZE 8
+// Hardcoding payload size to 64 bytes for now, since 
+// MSP is limited to a 4 byte payload on the BF side, and
+// max crsf packet is 48 bytes so far (to accomodate crsf embeding). 
+#define MSP_PORT_INBUF_SIZE 64
 
 #define CHECK_PACKET_PARSING() \
   if (packet->readError) {\

@@ -88,6 +88,15 @@ static struct luaItem_selection luaModelMatch = {
     emptySpace
 };
 
+#if defined(USE_TX_BACKPACK)
+static struct luaItem_selection luaTelemetryForward = {
+    {"Telemetry Forward", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    emptySpace
+};
+#endif
+
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
     0, // step
@@ -292,6 +301,11 @@ static void registerLuaParameters()
       CRSF::AddMspMessage(&msp);
     }
   });
+#if defined(USE_TX_BACKPACK)
+  registerLUAParameter(&luaTelemetryForward, [](uint8_t id, uint8_t arg){
+    config.SetTelemetryForward(arg);
+  });
+#endif
 
   // POWER folder
   registerLUAParameter(&luaPowerFolder);
@@ -445,6 +459,9 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  #if defined(USE_TX_BACKPACK)
+  setLuaTextSelectionValue(&luaTelemetryForward, config.GetTelemetryForward());
+  #endif
   #if defined(TARGET_TX_FM30)
     setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
   #endif

@@ -670,6 +670,22 @@ void BackpackBinding()
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
+
+void ForwardTelemetryViaBackpack(uint8_t *data) {
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_CRSF_PACKET;
+  uint8_t pSize = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+  if(pSize > sizeof(packet.payload)) {
+    DBGLN("CRSF packet is larger than msp buffer, refusing to forward. ");
+  } else {
+    for(uint8_t i=0; i<pSize; i++) {
+      packet.addByte(data[i]);
+    }
+    msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
+  }
+}
 #endif // USE_TX_BACKPACK
 
 static void SendRxWiFiOverMSP()
@@ -1004,6 +1020,13 @@ void loop()
   if (TelemetryReceiver.HasFinishedData())
   {
       crsf.sendTelemetryToTX(CRSFinBuffer);
+
+      #if defined(USE_TX_BACKPACK)
+      if(config.GetTelemetryForward()){
+        ForwardTelemetryViaBackpack(CRSFinBuffer);
+      }
+      #endif
+
       TelemetryReceiver.Unlock();
   }
 
