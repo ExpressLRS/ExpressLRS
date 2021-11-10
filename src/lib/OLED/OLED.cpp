@@ -49,11 +49,13 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_
  * size = demensions of the box size x size, this only works for square images 1:1
  * image = XBM character string
  */
+#ifndef TARGET_TX_GHOST_LITE
 static void helper(int x, int y, int size,  const unsigned char * image){
     u8g2.clearBuffer();
     u8g2.drawXBMP(x, y, size, size, image);
     u8g2.sendBuffer();
 }
+#endif
 
 /**
  *  ghostChase will only be called for ghost TX hardware.
@@ -118,9 +120,9 @@ void OLED::updateScreen(int power, int rate, int ratio, const char *commitStr){
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, rate);
-        u8g2.drawStr(70,15 , ratio);
-        u8g2.drawStr(0,32, power);
+        u8g2.drawStr(0,15, getRateString(rate));
+        u8g2.drawStr(70,15 , getTLMRatioString(ratio));
+        u8g2.drawStr(0,32, getPowerString(power));
         u8g2.drawStr(70,32, commitStr);
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
