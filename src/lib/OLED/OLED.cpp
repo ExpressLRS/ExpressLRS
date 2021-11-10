@@ -164,30 +164,18 @@ const char * OLED::getPowerString(int power){
  * @return const char array for packet rate Ex: "500 hz\0"
  */
 const char * OLED::getRateString(int rate){
-
-#if defined(Regulatory_Domain_ISM_2400)
     switch (rate)
     {
     case 0: return "500 Hz";
     case 1: return "250 Hz";
-    case 2: return "150 Hz";
-    case 3: return "50 Hz";
+    case 2: return "200 Hz";
+    case 3: return "150 Hz";
+    case 4: return "100 Hz";
+    case 5: return "50 Hz";
+    case 6: return "25 Hz";
+    case 7: return "4 Hz";
     default: return "ERR";
     }
-
-#else // Non 2.4ghz devices
-    switch (rate)
-    {
-    case 0: return "200 Hz";
-    case 1: return "100 Hz";
-    case 2: return "50 Hz";
-    case 3: return "25 Hz";
-    default: return "ERR";
-    }
-#endif
-
-
-
 }
 
 /**

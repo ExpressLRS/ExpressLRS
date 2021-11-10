@@ -1,7 +1,6 @@
 #include "targets.h"
 #include "common.h"
 #include "device.h"
-#include "config.h"
 
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
 
