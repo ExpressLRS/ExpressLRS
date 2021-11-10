@@ -8,10 +8,6 @@
 #include "POWERMGNT.h"
 #include "OLED.h"
 
-extern TxConfig config;
-
-static const char thisCommit[] = {LATEST_COMMIT, 0};
-
 static int start()
 {
     OLED::displayLogo();
@@ -23,6 +19,7 @@ static int timeout()
     static PowerLevels_e lastPower;
     static expresslrs_RFrates_e lastRate;
     static expresslrs_tlm_ratio_e lastRatio;
+    const char thisCommit[] = {LATEST_COMMIT, 0};
 
     PowerLevels_e newPower = POWERMGNT::currPower();
     expresslrs_RFrates_e newRate = ExpressLRS_currAirRate_Modparams->enum_rate;
