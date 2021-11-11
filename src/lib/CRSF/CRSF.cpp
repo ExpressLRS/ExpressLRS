@@ -5,6 +5,8 @@
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
+#include "device.h"
+
 HardwareSerial CRSF::Port = HardwareSerial(1);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 TaskHandle_t xESP32uartTask = NULL;
@@ -817,6 +819,7 @@ bool CRSF::UARTwdt()
 void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
 {
     DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
+    devicesInit();
     portDISABLE_INTERRUPTS();
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
@@ -824,10 +827,12 @@ void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
     CRSF::duplex_set_RX();
     portENABLE_INTERRUPTS();
     flush_port_input();
+    devicesStart();
     (void)pvParameters;
     for (;;)
     {
         handleUARTin();
+        devicesUpdate(millis());
     }
 }
 #endif // PLATFORM_ESP32

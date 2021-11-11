@@ -45,18 +45,18 @@ SX1280Driver Radio;
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
-device_t *ui_devices[] = {
+device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
-  &LED_device,
+  {&LED_device, 0},
 #endif
 #ifdef HAS_RGB
-  &RGB_device,
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  &WIFI_device,
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  &Button_device
+  {&Button_device, 0},
 #endif
 };
 
@@ -1164,7 +1164,9 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-    devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+    devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+    devicesInit();
+
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
