@@ -98,7 +98,7 @@ typedef enum
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
-    
+
     CRSF_FRAMETYPE_COMMAND = 0x32,
     // KISS frames
     CRSF_FRAMETYPE_KISS_REQ  = 0x78,
@@ -403,7 +403,6 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
     return crc;
 }
 
-#if !defined(UNIT_TEST)
 static inline uint16_t htobe16(uint16_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
@@ -421,4 +420,3 @@ static inline uint32_t htobe32(uint32_t val)
     return __builtin_bswap32(val);
 #endif
 }
-#endif
