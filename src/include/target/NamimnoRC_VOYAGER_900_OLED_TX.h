@@ -1,4 +1,4 @@
-#define DEVICE_NAME "Namimno Voyager OLED"
+#define DEVICE_NAME "Nm.Voyager OLED"
 
 // Features
 #define USE_TX_BACKPACK
