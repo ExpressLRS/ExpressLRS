@@ -1,16 +1,16 @@
-/* 
+/*
  * This file is part of the ExpressLRS distribution (https://github.com/ExpressLRS/ExpressLRS).
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -18,7 +18,7 @@
 
 // Default header files for Express LRS
 #include "targets.h"
-// OLED specific header files. 
+// OLED specific header files.
 #include "OLED.h"
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
@@ -43,23 +43,25 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_
 
 #ifdef TARGET_TX_GHOST
 /**
- * helper function is used to draw xbmp on the OLED. 
+ * helper function is used to draw xbmp on the OLED.
  * x = x position of the image
  * y = y position of the image
  * size = demensions of the box size x size, this only works for square images 1:1
  * image = XBM character string
  */
+#ifndef TARGET_TX_GHOST_LITE
 static void helper(int x, int y, int size,  const unsigned char * image){
     u8g2.clearBuffer();
     u8g2.drawXBMP(x, y, size, size, image);
     u8g2.sendBuffer();
 }
+#endif
 
 /**
- *  ghostChase will only be called for ghost TX hardware.  
+ *  ghostChase will only be called for ghost TX hardware.
  */
 static void ghostChase(){
-    // Using i < 16 and (i*4) to get 64 total pixels. Change to i < 32 (i*2) to slow animation. 
+    // Using i < 16 and (i*4) to get 64 total pixels. Change to i < 32 (i*2) to slow animation.
     for(int i = 0; i < 20; i++){
         u8g2.clearBuffer();
         #ifndef TARGET_TX_GHOST_LITE
@@ -73,7 +75,7 @@ static void ghostChase(){
     }
     /**
      *  Animation for the ghost logo expanding in the center of the screen.
-     *  helper function just draw's the XBM strings.   
+     *  helper function just draw's the XBM strings.
      */
     #ifndef TARGET_TX_GHOST_LITE
         helper(38,12,40,elrs40);
@@ -108,26 +110,26 @@ void OLED::displayLogo(){
 /**
  * Displays the ExpressLRS logo
  *
- * @param values power = power level char array (100 mW)
- *               rate = packet rate char array (500 hz) 
- *               ratio = telemetry rate char array (1:128) 
+ * @param values power = PowerLevels_e
+ *               rate = expresslrs_RFrates_e
+ *               ratio = expresslrs_tlm_ratio_e
  * @return void
  */
-void OLED::updateScreen(const char * power, const char * rate, const char * ratio, const char * commitStr){
+void OLED::updateScreen(int power, int rate, int ratio, const char *commitStr){
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, rate);
-        u8g2.drawStr(70,15 , ratio);
-        u8g2.drawStr(0,32, power);
+        u8g2.drawStr(0,15, getRateString(rate));
+        u8g2.drawStr(70,15 , getTLMRatioString(ratio));
+        u8g2.drawStr(0,32, getPowerString(power));
         u8g2.drawStr(70,32, commitStr);
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(0,42, rate);
-        u8g2.drawStr(70,42 , ratio);
-        u8g2.drawStr(0,57, power);
+        u8g2.drawStr(0,42, getRateString(rate));
+        u8g2.drawStr(70,42 , getTLMRatioString(ratio));
+        u8g2.drawStr(0,57, getPowerString(power));
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(70,53, "TLM");
         u8g2.drawStr(0,24, "Ver: ");
@@ -139,7 +141,7 @@ void OLED::updateScreen(const char * power, const char * rate, const char * rati
 /**
  * Returns power level string (Char array)
  *
- * @param values power = int/enum for current power level.  
+ * @param values power = int/enum for current power level.
  * @return const char array for power level Ex: "500 mW\0"
  */
 const char * OLED::getPowerString(int power){
@@ -160,7 +162,7 @@ const char * OLED::getPowerString(int power){
 /**
  * Returns packet rate string (Char array)
  *
- * @param values rate = int/enum for current packet rate.  
+ * @param values rate = int/enum for current packet rate.
  * @return const char array for packet rate Ex: "500 hz\0"
  */
 const char * OLED::getRateString(int rate){
@@ -181,7 +183,7 @@ const char * OLED::getRateString(int rate){
 /**
  * Returns telemetry ratio string (Char array)
  *
- * @param values ratio = int/enum for current power level.  
+ * @param values ratio = int/enum for current power level.
  * @return const char array for telemetry ratio Ex: "1:128\0"
  */
 const char * OLED::getTLMRatioString(int ratio){
@@ -197,21 +199,6 @@ const char * OLED::getTLMRatioString(int ratio){
     case 7: return "1:2";
     default: return "ERR";
     }
-}
-
-/**
- * Sets the commit string by converting unsigned integers to signed char's (Char array)
- *
- * @param values commit = unsigned 8 byte int array for the commit and char array for commit string.
- * @return void
- */
-void OLED::setCommitString(const uint8_t * commit, char * commitStr){
-
-    for(int i = 0; i < 6; i++ ){
-        if (commit[i] < 10) commitStr[i] = commit[i] + 48; // gets us 0 to 9
-        else commitStr[i] = commit[i] + 87; // gets us a to f
-    }
-
 }
 
 #endif

@@ -5,42 +5,40 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
 
 #include "POWERMGNT.h"
-
 #include "OLED.h"
-class OLED OLED;
-
-static const char thisCommit[] = {LATEST_COMMIT, 0};
-static bool startup = false;
 
 static int start()
 {
-    OLED.displayLogo();
-    startup = true;
+    OLED::displayLogo();
     return 1000;    // set callback in 1s
-}
-
-static int event()
-{
-    if (startup)
-    {
-        return DURATION_IGNORE; // we are still displaying the startup message, so don't change the timeout
-    }
-    OLED.updateScreen(OLED.getPowerString((PowerLevels_e)POWERMGNT::currPower()),
-                        OLED.getRateString((expresslrs_RFrates_e)ExpressLRS_currAirRate_Modparams->enum_rate),
-                        OLED.getTLMRatioString((expresslrs_tlm_ratio_e)(ExpressLRS_currAirRate_Modparams->TLMinterval)), thisCommit);
-    return DURATION_NEVER;
 }
 
 static int timeout()
 {
-    startup = false;
-    return event();
+    static PowerLevels_e lastPower;
+    static expresslrs_RFrates_e lastRate;
+    static expresslrs_tlm_ratio_e lastRatio;
+    const char thisCommit[] = {LATEST_COMMIT, 0};
+
+    PowerLevels_e newPower = POWERMGNT::currPower();
+    expresslrs_RFrates_e newRate = ExpressLRS_currAirRate_Modparams->enum_rate;
+    expresslrs_tlm_ratio_e newRatio = ExpressLRS_currAirRate_Modparams->TLMinterval;
+
+    if (lastPower != newPower || lastRate != newRate || lastRatio != newRatio)
+    {
+        OLED::updateScreen(newPower, newRate, newRatio, thisCommit);
+        lastPower = newPower;
+        lastRate = newRate;
+        lastRatio = newRatio;
+    }
+
+    return 300; // check for updates every 300ms
 }
 
 device_t OLED_device = {
-    .initialize = NULL,
+    .initialize = nullptr,
     .start = start,
-    .event = event,
+    .event = nullptr,
     .timeout = timeout
 };
 
