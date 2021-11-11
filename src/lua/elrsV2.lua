@@ -787,6 +787,11 @@ local function runDevicePage(event)
   end
 end
 
+local function popupCompat(t, m, e)
+  -- Only use 2 of 3 arguments for older platforms
+  return popupConfirmation(t, e)
+end
+
 local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then             -- exit script
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 })
@@ -795,11 +800,11 @@ local function runPopupPage(event)
 
   local result
   if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
-      popupConfirmation(fieldPopup.info, "Stopped!", event)
+      popupCompat(fieldPopup.info, "Stopped!", event)
       reloadAllField()
       fieldPopup = nil
   elseif fieldPopup.status == 3 then -- confirmation required
-    result = popupConfirmation(fieldPopup.info, "PRESS [OK] to confirm", event)
+    result = popupCompat(fieldPopup.info, "PRESS [OK] to confirm", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "OK" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 4 })
@@ -812,7 +817,7 @@ local function runPopupPage(event)
     if statusComplete then
       commandRunningIndicator = (commandRunningIndicator % 4) + 1
     end
-    result = popupConfirmation(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
+    result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "CANCEL" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 })
@@ -827,6 +832,13 @@ local function setLCDvar()
   lcd_title = (lcd.RGB ~= nil) and lcd_title_color or lcd_title_bw
   lcd_title_color = nil
   lcd_title_bw = nil
+  -- Determine if popupConfirmation takes 3 arguments or 2
+  --if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
+  -- major 1 is assumed to be FreedomTX
+  local ver, radio, major = getVersion()
+  if major ~= 1 then
+    popupCompat = popupConfirmation
+  end
   if LCD_W == 480 then
     COL2 = 240
     maxLineIndex = 10
