@@ -52,7 +52,7 @@ public:
 
     // The model ID as received from the Transmitter
     static uint8_t modelId;
-
+    static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
 

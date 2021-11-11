@@ -248,12 +248,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     return;
   }
 
-  if (connectionState != connected)
-  {
-    connectionState = connected;
-    DBGLN("got downlink conn");
-  }
-
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
 
@@ -625,12 +619,18 @@ static void UpdateConnectDisconnectStatus()
   const uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
-    connectionState = connected;
+    if (connectionState != connected)
+    {
+      connectionState = connected;
+      crsf.ForwardDevicePings = true;
+      DBGLN("got downlink conn");
+    }
   }
   else
   {
     connectionState = disconnected;
     connectionHasModelMatch = true;
+    crsf.ForwardDevicePings = false;
   }
 }
 

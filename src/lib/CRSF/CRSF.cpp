@@ -57,6 +57,7 @@ uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
 uint8_t CRSF::modelId = 0;
+bool CRSF::ForwardDevicePings = false;
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 volatile bool CRSF::elrsLUAmode = false;
 
@@ -411,8 +412,14 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
             (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
     {
-        const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
-        AddMspMessage(length, SerialInBuffer);
+        // Some types trigger telemburst to attempt a connection even with telm off
+        // but for pings (which are sent when the user loads Lua) do not forward
+        // unless connected
+        if (ForwardDevicePings || packetType != CRSF_FRAMETYPE_DEVICE_PING)
+        {
+            const uint8_t length = CRSF::inBuffer.asRCPacket_t.header.frame_size + 2;
+            AddMspMessage(length, SerialInBuffer);
+        }
         packetReceived = true;
     }
 
