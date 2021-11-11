@@ -98,7 +98,7 @@ typedef enum
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
-    
+
     CRSF_FRAMETYPE_COMMAND = 0x32,
     // KISS frames
     CRSF_FRAMETYPE_KISS_REQ  = 0x78,
@@ -176,8 +176,9 @@ typedef enum
 } crsf_value_type_e;
 
 // These flags are or'ed with the field type above to hide the field from the normal LUA view
-#define CRSF_FIELD_HIDDEN 0x80          // marked as hidden in all LUA responses
-#define CRSF_FIELD_ELRS_HIDDEN 0x40     // marked as hidden when talking to ELRS specific LUA
+#define CRSF_FIELD_HIDDEN       0x80     // marked as hidden in all LUA responses
+#define CRSF_FIELD_ELRS_HIDDEN  0x40     // marked as hidden when talking to ELRS specific LUA
+#define CRSF_FIELD_TYPE_MASK    ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)
 
 /**
  * Define the shape of a standard header

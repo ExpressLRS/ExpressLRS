@@ -363,10 +363,7 @@ end
 
 local function fieldFolderDeviceOpen(field)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA }) --broadcast with standard handset ID to get all node respond correctly
-  lineIndex = 1
-  pageOffset = 0
-  folderAccess = field.id
-  fields[backButtonId].parent = folderAccess
+  return fieldFolderOpen(field)
 end
 
 local function fieldFolderDisplay(field,y ,attr)
@@ -378,7 +375,6 @@ local function fieldCommandLoad(field, data, offset)
   field.timeout = data[offset+1]
   field.info = fieldGetString(data, offset+2)
   if field.status == 0 then
-    field.previousInfo = field.info
     fieldPopup = nil
   end
 end
@@ -398,7 +394,7 @@ local function fieldCommandDisplay(field, y, attr)
     lcd.drawText(10, y, "[" .. field.name .. "]", bit32.bor(attr, BOLD))
 end
 
-local function UIbackExec(field)
+local function UIbackExec()
   folderAccess = nil
   fields[backButtonId].parent = 255
 end
@@ -423,7 +419,7 @@ local function fieldDeviceIdSelect(field)
   crossfireTelemetryPush(0x28, { 0x00, 0xEA })
 end
 
-local function createDeviceField() -- put other device in the field list
+local function createDeviceFields() -- put other devices in the field list
   fields[fields_count + 2 + #devices] = fields[backButtonId]
   backButtonId = fields_count + 2 + #devices  -- move back button to the end of the list, so it will always show up at the bottom.
   for i=1, #devices do
@@ -457,7 +453,7 @@ local function parseDeviceInfoMessage(data)
       if newFieldCount == 0 then
         allParamsLoaded = 1
         fieldId = 1
-        createDeviceField()
+        createDeviceFields()
       end
     end
   end
@@ -536,7 +532,7 @@ local function parseParameterInfoMessage(data)
       if fieldId == fields_count then
         allParamsLoaded = 1
         fieldId = 1
-        createDeviceField()
+        createDeviceFields()
       else
         fieldId = 1 + (fieldId % (#fields-1))
       end
@@ -708,8 +704,7 @@ local function handleDevicePageEvent(event)
         end
         crossfireTelemetryPush(0x28, { 0x00, 0xEA })
       end
-      folderAccess = nil
-      fields[backButtonId].parent = 255
+      UIbackExec()
     end
   elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
@@ -729,15 +724,15 @@ local function handleDevicePageEvent(event)
           edit = not edit
         end
         if not edit then
-          fieldTimeout = getTime() + 200 -- 2s
-          fieldId, fieldChunk = field.id, 0
-          fieldData = {}
-          functions[field.type+1].save(field)
-          if field.type < 11 then
-            -- we need a short time because if the packet rate changes we need time for the module to react
+          if field.type < 11 or field.type == 13 then
+            -- For editable field types and commands, request this field's
+            -- data again, with a short delay to allow the module EEPROM to
+            -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
-            reloadAllField()
+            fieldId, fieldChunk = field.id, 0
+            fieldData = {}
           end
+          functions[field.type+1].save(field)
         end
       end
     end
