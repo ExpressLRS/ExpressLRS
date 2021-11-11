@@ -441,23 +441,20 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     return packetReceived;
 }
 
-uint8_t* ICACHE_RAM_ATTR CRSF::GetMspMessage()
+void CRSF::GetMspMessage(uint8_t **data, uint8_t *len)
 {
-    if (MspDataLength > 0)
-    {
-        return MspData;
-    }
-    return NULL;
+    *len = MspDataLength;
+    *data = (MspDataLength > 0) ? MspData : nullptr;
 }
 
-void ICACHE_RAM_ATTR CRSF::ResetMspQueue()
+void CRSF::ResetMspQueue()
 {
     MspWriteFIFO.flush();
     MspDataLength = 0;
     memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
-void ICACHE_RAM_ATTR CRSF::UnlockMspMessage()
+void CRSF::UnlockMspMessage()
 {
     // current msp message is sent so restore next buffered write
     if (MspWriteFIFO.peek() > 0)

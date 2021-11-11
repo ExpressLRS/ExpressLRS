@@ -94,7 +94,7 @@ public:
 
     static uint8_t getModelID() { return modelId; }
 
-    static uint8_t* GetMspMessage();
+    static void GetMspMessage(uint8_t **data, uint8_t *len);
     static void UnlockMspMessage();
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
