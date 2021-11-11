@@ -1,4 +1,4 @@
-#define DEVICE_NAME "Namimno Flash OLED"
+#define DEVICE_NAME "Nm.Flash OLED"
 
 // Features
 #define USE_TX_BACKPACK
