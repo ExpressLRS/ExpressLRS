@@ -70,8 +70,6 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
 
-  ClearIrqFlags();
-
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, PayloadLength);
   SetSyncWord(currSyncWord);
   hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
@@ -305,7 +303,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   DBGLN("abort RX");
   //   return; // we were already TXing so abort
   // }
-  ClearIrqFlags();
   SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
