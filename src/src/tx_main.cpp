@@ -97,36 +97,36 @@ StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-device_t *ui_devices[] = {
+device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
-  &LED_device,
+  {&LED_device, 1},
 #endif
 #ifdef HAS_RGB
-  &RGB_device,
+  {&RGB_device, 1},
 #endif
-  &LUA_device,
+  {&LUA_device, 1},
 #ifdef HAS_BLE
-  &BLE_device,
+  {&BLE_device, 1},
 #endif
 #ifdef HAS_BUZZER
-  &Buzzer_device,
+  {&Buzzer_device, 1},
 #endif
 #ifdef HAS_WIFI
-  &WIFI_device,
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  &Button_device,
+  {&Button_device, 1},
 #endif
 #if defined HAS_TFT_SCREEN || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
-  &Screen_device,
+  {&Screen_device, 0},
 #endif
 #ifdef HAS_GSENSOR
-  &Gsensor_device,
+  {&Gsensor_device, 0},
 #endif
 #ifdef HAS_THERMAL
-  &Thermal_device,
+  {&Thermal_device, 0},
 #endif
-  &VTX_device
+  {&VTX_device, 1}
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -952,8 +952,10 @@ void setup()
   Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
 
-  // Initialise the UI devices
-  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+  // Register the devices with the framework
+  devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+  // Initialise the devices
+  devicesInit();
 
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
