@@ -828,7 +828,7 @@ local function setLCDvar()
     textXoffset = 3
     textYoffset = 10
     textSize = 22 --textSize is text Height
-  elseif LCD_W == 272 then
+  elseif LCD_W == 320 then
     COL2 = 140
     maxLineIndex = 14
     textXoffset = 3
