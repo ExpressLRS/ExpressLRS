@@ -589,9 +589,7 @@ local function refreshNext()
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
       fieldTimeout = time + 50 -- 0.5s
     end
-  end
-
-  if time > linkstatTimeout then
+  elseif time > linkstatTimeout then
     if not deviceIsELRS_TX and allParamsLoaded == 1 then
       goodBadPkt = ""
       -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
@@ -602,6 +600,7 @@ local function refreshNext()
     end
     linkstatTimeout = time + 100
   end
+
   if time > titleShowWarnTimeout then
     -- if elrsFlags bit set is bit higher than bit 0 and bit 1, it is warning flags
     titleShowWarn = (elrsFlags > 3 and not titleShowWarn) or nil
