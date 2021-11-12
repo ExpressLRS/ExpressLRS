@@ -533,7 +533,8 @@ local function parseParameterInfoMessage(data)
         allParamsLoaded = 1
         fieldId = 1
         createDeviceFields()
-      else
+      elseif allParamsLoaded == 0 then
+        -- advance to the next field if doing a full load
         fieldId = 1 + (fieldId % (#fields-1))
       end
       fieldTimeout = getTime() + 200
@@ -729,7 +730,7 @@ local function handleDevicePageEvent(event)
             -- data again, with a short delay to allow the module EEPROM to
             -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
-            fieldId, fieldChunk = field.id, 0
+            fieldId, fieldChunk, statusComplete = field.id, 0, 0
             fieldData = {}
           end
           functions[field.type+1].save(field)
