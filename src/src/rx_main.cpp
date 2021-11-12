@@ -639,7 +639,9 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     }
     else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
     {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         connectionState = wifiUpdate;
+#endif
     }
     else
     {
