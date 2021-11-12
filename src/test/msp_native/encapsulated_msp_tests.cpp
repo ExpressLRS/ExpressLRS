@@ -38,10 +38,13 @@ void test_encapsulated_msp_send(void)
     // Ask the CRSF class to send the encapsulated packet to the stream
     crsf.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data;
+    uint8_t len;
+    crsf.GetMspMessage(&data, &len);
 
     // Assert that the correct number of total bytes were sent to the stream
     TEST_ASSERT_NOT_EQUAL(NULL, data);
+    TEST_ASSERT_EQUAL(14, len);
 
     // Assert that each byte sent to the stream matches expected
     TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, data[0]);                  // device_addr
@@ -86,7 +89,11 @@ void test_encapsulated_msp_send_too_long(void)
     // Ask the CRSF class to send the encapsulated packet to the stream
     crsf.AddMspMessage(&packet);
 
-    uint8_t* data = crsf.GetMspMessage();
+    uint8_t* data;
+    uint8_t len;
+    crsf.GetMspMessage(&data, &len);
+
     // Assert that nothing was sent to the stream
     TEST_ASSERT_EQUAL(NULL, data);
+    TEST_ASSERT_EQUAL(0, len);
 }

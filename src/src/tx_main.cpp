@@ -248,12 +248,6 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     return;
   }
 
-  if (connectionState != connected)
-  {
-    connectionState = connected;
-    DBGLN("got downlink conn");
-  }
-
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
 
@@ -625,12 +619,18 @@ static void UpdateConnectDisconnectStatus()
   const uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
-    connectionState = connected;
+    if (connectionState != connected)
+    {
+      connectionState = connected;
+      crsf.ForwardDevicePings = true;
+      DBGLN("got downlink conn");
+    }
   }
   else
   {
     connectionState = disconnected;
     connectionHasModelMatch = true;
+    crsf.ForwardDevicePings = false;
   }
 }
 
@@ -1028,11 +1028,13 @@ void loop()
     // we are not sending so look for next msp package
     else
     {
-      uint8_t* currentMspData = crsf.GetMspMessage();
+      uint8_t* mspData;
+      uint8_t mspLen;
+      crsf.GetMspMessage(&mspData, &mspLen);
       // if we have a new msp package start sending
-      if (currentMspData != NULL)
+      if (mspData != nullptr)
       {
-        MspSender.SetDataToTransmit(ELRS_MSP_BUFFER, currentMspData, ELRS_MSP_BYTES_PER_CALL);
+        MspSender.SetDataToTransmit(mspLen, mspData, ELRS_MSP_BYTES_PER_CALL);
         mspTransferActive = true;
       }
     }
