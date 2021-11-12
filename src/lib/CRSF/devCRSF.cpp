@@ -4,6 +4,7 @@
 
 #include "CRSF.h"
 
+#ifdef CRSF_TX_MODULE
 static int start()
 {
     CRSF::Begin();
@@ -22,3 +23,4 @@ device_t CRSF_device = {
     .event = nullptr,
     .timeout = timeout
 };
+#endif
