@@ -25,6 +25,7 @@ SX1280Driver Radio;
 #include "stubborn_sender.h"
 
 #include "helpers.h"
+#include "devCRSF.h"
 #include "devLED.h"
 #include "devOLED.h"
 #include "devBuzzer.h"
@@ -92,6 +93,7 @@ StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
   {&LED_device, 1},
 #endif
@@ -951,7 +953,6 @@ void setup()
     hwTimer.init();
     //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
     connectionState = noCrossfire;
-    crsf.Begin();
   }
 
   devicesStart();
@@ -981,10 +982,6 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
     }
-  #endif
-
-  #if defined(PLATFORM_STM32) || defined(PLATFORM_ESP8266)
-    crsf.handleUARTin();
   #endif
 
   if (connectionState > MODE_STATES)

@@ -149,11 +149,6 @@ private:
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
 
-#ifdef PLATFORM_ESP32
-    static void ESP32uartTask(void *pvParameters);
-    static void ESP32syncPacketTask(void *pvParameters);
-#endif
-
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();
     static void duplex_set_TX();
