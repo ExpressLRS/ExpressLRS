@@ -9,7 +9,6 @@
 
 HardwareSerial CRSF::Port = HardwareSerial(1);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-TaskHandle_t xESP32uartTask = NULL;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port = Serial;
 #elif CRSF_TX_MODULE_STM32
@@ -111,8 +110,14 @@ void CRSF::Begin()
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #if defined(PLATFORM_ESP32)
-    disableCore0WDT();
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
+    // disableCore0WDT(); PAK
+    portDISABLE_INTERRUPTS();
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
+                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
+                     false, 500);
+    CRSF::duplex_set_RX();
+    portENABLE_INTERRUPTS();
+    flush_port_input();
 
 #elif defined(PLATFORM_ESP8266)
     CRSF::Port.flush();
@@ -162,12 +167,6 @@ void CRSF::Begin()
 void CRSF::End()
 {
 #if CRSF_TX_MODULE
-#ifdef PLATFORM_ESP32
-    if (xESP32uartTask != NULL)
-    {
-        vTaskDelete(xESP32uartTask);
-    }
-#endif
     uint32_t startTime = millis();
     while (SerialOutFIFO.peek() > 0)
     {
@@ -813,29 +812,6 @@ bool CRSF::UARTwdt()
     }
     return retval;
 }
-
-#ifdef PLATFORM_ESP32
-//RTOS task to read and write CRSF packets to the serial port
-void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
-{
-    DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    devicesInit();
-    portDISABLE_INTERRUPTS();
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
-                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
-                     false, 500);
-    CRSF::duplex_set_RX();
-    portENABLE_INTERRUPTS();
-    flush_port_input();
-    devicesStart();
-    (void)pvParameters;
-    for (;;)
-    {
-        handleUARTin();
-        devicesUpdate(millis());
-    }
-}
-#endif // PLATFORM_ESP32
 
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
