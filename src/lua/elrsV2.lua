@@ -584,11 +584,6 @@ local function refreshNext()
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-  elseif time > fieldTimeout and fields_count ~= 0 and not edit then
-    if allParamsLoaded < 1 or statusComplete == 0 then
-      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time + 50 -- 0.5s
-    end
   elseif time > linkstatTimeout then
     if not deviceIsELRS_TX and allParamsLoaded == 1 then
       goodBadPkt = ""
@@ -599,6 +594,11 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     end
     linkstatTimeout = time + 100
+  elseif time > fieldTimeout and fields_count ~= 0 and not edit then
+    if allParamsLoaded < 1 or statusComplete == 0 then
+      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
+      fieldTimeout = time + 50 -- 0.5s
+    end
   end
 
   if time > titleShowWarnTimeout then
