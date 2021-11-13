@@ -1,4 +1,3 @@
-
 /**
  ******************************************************************************
  * @file      LinkerScript.ld
@@ -31,8 +30,8 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);	/* end of "RAM" Ram type memory */
 
-_Min_Heap_Size = 0x200;	/* required amount of heap  */
-_Min_Stack_Size = 0x400;	/* required amount of stack */
+_Min_Heap_Size = 0x200 ;	/* required amount of heap  */
+_Min_Stack_Size = 0x400 ;	/* required amount of stack */
 
 /* Memories definition */
 MEMORY
@@ -174,6 +173,3 @@ SECTIONS
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
-
-
-//INCLUDE "variants/ldscript_gen.ld"

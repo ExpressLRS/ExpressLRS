@@ -37,53 +37,61 @@ extern "C" {
 // Pin number
 // This array allows to wrap Arduino pin number(Dx or x)
 // to STM32 PinName (PX_n)
+// Digital PinName array
 const PinName digitalPin[] = {
-//PX_n, //Dx
-	//.with.the.USB.on.the.bottom.and.left-to-right-to-top.naming;
-	// Left.Side
-	PB_13,
-	PB_14,
-	PB_15,
-	PA_8,
-	PA_9,
-	PA_10,
-	PA_11,
-	PA_12,
-	PF_6,
-	PF_7,
-	PA_15,
-	PB_3,
-	PB_4,
-	PB_5,
-	PB_6,
-	PB_7,
-	PB_8,
-	PB_9,
-	// Bottom.side
-//USB
-	// Right.side
-	PC_13,
-	PC_14,
-	PC_15,
-	PA_0,
-	PA_1,
-	PA_2,
-	PA_3,
-	PA_4,
-	PA_5,
-	PA_6,
-	PA_7,
-	PB_0,
-	PB_1,
-	PB_2,
-	PB_10,
-	PB_11,
-	PB_12,
-	// top.side.stlink
-	PA_13,
-	PA_14,
-	// Duplicated pins in order to be aligned with PinMap_ADC
-	// A0 have to be greater than NUM_ANALOG_INPUTS
+  PA_0,   // D0/A0
+  PA_1,   // D1/A1
+  PA_2,   // D2/A2
+  PA_3,   // D3/A3
+  PA_4,   // D4/A4
+  PA_5,   // D5/A5
+  PA_6,   // D6/A6
+  PA_7,   // D7/A7
+  PA_8,   // D8
+  PA_9,   // D9
+  PA_10,  // D10
+  PA_11,  // D11
+  PA_12,  // D12
+  PA_13,  // D13
+  PA_14,  // D14
+  PA_15,  // D15
+  PB_0,   // D16/A8
+  PB_1,   // D17/A9
+  PB_2,   // D18
+  PB_3,   // D19
+  PB_4,   // D20
+  PB_5,   // D21
+  PB_6,   // D22
+  PB_7,   // D23
+  PB_8,   // D24
+  PB_9,   // D25
+  PB_10,  // D26
+  PB_11,  // D27
+  PB_12,  // D28
+  PB_13,  // D29
+  PB_14,  // D30
+  PB_15,  // D31
+  PC_13,  // D32
+  PC_14,  // D33
+  PC_15,  // D34
+  PF_0,   // D35
+  PF_1,   // D36
+  PF_6,   // D37
+  PF_7    // D38
+};
+
+// Analog (Ax) pin number array
+const uint32_t analogInputPin[] = {
+  0,  // A0,  PA0
+  1,  // A1,  PA1
+  2,  // A2,  PA2
+  3,  // A3,  PA3
+  4,  // A4,  PA4
+  5,  // A5,  PA5
+  6,  // A6,  PA6
+  7,  // A7,  PA7
+  16, // A8,  PB0
+  17  // A9,  PB1
 };
 
 #ifdef __cplusplus
