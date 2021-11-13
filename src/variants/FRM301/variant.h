@@ -38,166 +38,128 @@ extern "C"{
 #endif // __cplusplus
 
 /*----------------------------------------------------------------------------
- *        Pins
+ *        STM32 pins number
  *----------------------------------------------------------------------------*/
-//.with.the.USB.on.the.bottom.and.left-to-right-to-top.naming;
-// Left.Side
-#define PB13   0
-#define PB14   1
-#define PB15   2
-#define PA8    3
-#define PA9    4
-#define PA10   5
-#define PA11   6
-#define PA12   7
-#define PF6    8
-#define PF7    9
-#define PA15   10
-#define PB3    11
-#define PB4    12
-#define PB5    13
-#define PB6    14
-#define PB7    15
-#define PB8    16
-#define PB9    17
-// Bottom.side
-//USB
-// Right.side
-#define PC13   18
-#define PC14   19
-#define PC15   20
-#define PA0    21
-#define PA1    22
-#define PA2    23
-#define PA3    24
-#define PA4    25
-#define PA5    26
-#define PA6    27
-#define PA7    28
-#define PB0    29
-#define PB1    30
-#define PB2    31
-#define PB10   32
-#define PB11   33
-#define PB12   34
-// top.side.stlink
-#define PA13   35
-#define PA14   36
+#define PA0                     PIN_A0
+#define PA1                     PIN_A1
+#define PA2                     PIN_A2
+#define PA3                     PIN_A3
+#define PA4                     PIN_A4
+#define PA5                     PIN_A5
+#define PA6                     PIN_A6
+#define PA7                     PIN_A7
+#define PA8                     8
+#define PA9                     9
+#define PA10                    10
+#define PA11                    11
+#define PA12                    12
+#define PA13                    13
+#define PA14                    14
+#define PA15                    15
+#define PB0                     PIN_A8
+#define PB1                     PIN_A9
+#define PB2                     18
+#define PB3                     19
+#define PB4                     20
+#define PB5                     21
+#define PB6                     22
+#define PB7                     23
+#define PB8                     24
+#define PB9                     25
+#define PB10                    26
+#define PB11                    27
+#define PB12                    28
+#define PB13                    29
+#define PB14                    30
+#define PB15                    31
+#define PC13                    32
+#define PC14                    33
+#define PC15                    34
+#define PF0                     35
+#define PF1                     36
+#define PF6                     37
+#define PF7                     38
 
-// Define pin names to match digital pin number --> Dx
-// It could be used with preprocessor tests (e.g. #if PXn == 3)
-// so an enum will not work.
-// !!!
-// !!! Copy the digitalPin[] array from the variant.cpp
-// !!! and remove all '_': PX_n --> PXn
-// !!! For NC, comment the line to warn x pin number is NC
-// !!! // x is NC
-// !!! For duplicated pin name, comment the line to warn x pin number
-// !!! is PXn which is already defined with y pin number
-// !!! // x is PXn (y)
-// !!! Ex:
-// !!! ...
-// !!! #define PA4  20 // A14
-// !!! #define PB4  21
-// !!! #define PB5  22
-// !!! #define PB3  23
-// !!! // 24 is PA4 (20)
-// !!! // 25 is PB4 (21)
-// !!! #define PA2  26 // A15
-// !!! ...
-//#define PXn x
+// Alternate pins number
+#define PA6_ALT1                (PA6  | ALT1)
+#define PA7_ALT1                (PA7  | ALT1)
+#define PA7_ALT2                (PA7  | ALT2)
+#define PA7_ALT3                (PA7  | ALT3)
+#define PB0_ALT1                (PB0  | ALT1)
+#define PB1_ALT1                (PB1  | ALT1)
+#define PB1_ALT2                (PB1  | ALT2)
+#define PB14_ALT1               (PB14 | ALT1)
+#define PB15_ALT1               (PB15 | ALT1)
+#define PB15_ALT2               (PB15 | ALT2)
 
-// This must be a literal
-// It is used with preprocessor tests (e.g. #if NUM_DIGITAL_PINS > 3)
-// so an enum will not work.
-#define NUM_DIGITAL_PINS        47
-
-// Allow to define Arduino style alias for analog input pin number --> Ax
-// All pins are digital, analog inputs are a subset of digital pins
-// and must be contiguous to be able to loop on each value
-// This must be a literal with a value less than or equal to MAX_ANALOG_INPUTS
-// defined in pin_arduino.h
-// It is used with preprocessor tests (e.g. #if NUM_ANALOG_INPUTS > 3)
-// so an enum will not work.
-// !!!
-// !!! It must be aligned with the number of analog PinName
-// !!! defined in digitalPin[] array in variant.cpp
-// !!!
+#define NUM_DIGITAL_PINS        39
 #define NUM_ANALOG_INPUTS       10
 // Define digital pin number of the first analog input  (i.e. which digital pin is A0)
 // First analog pin value (A0) must be greater than or equal to NUM_ANALOG_INPUTS
 #define NUM_ANALOG_FIRST        21
-
-// Below ADC, DAC and PWM definitions already done in the core
-// Could be redefined here if needed
-// ADC resolution is 12bits
-//#define ADC_RESOLUTION          12
-//#define DACC_RESOLUTION         12
-
-// PWM resolution
-//#define PWM_RESOLUTION          8
-//#define PWM_FREQUENCY           1000
-//#define PWM_MAX_DUTY_CYCLE      255
-
 // On-board LED pin number
-#define LED_BUILTIN             PA4
-#define LED_GREEN               LED_BUILTIN
+#ifndef LED_BUILTIN
+  #define LED_BUILTIN           PB12
+#endif
 
 // On-board user button
-#define USER_BTN                x
+#ifndef USER_BTN
+  #define USER_BTN              PB9
+#endif
 
-// Below SPI and I2C definitions already done in the core
-// Could be redefined here if differs from the default one
-// SPI Definitions
-// SPI Definitions
-//#define PIN_SPI_SS              PA4
-//#define PIN_SPI_MOSI            PA7
-//#define PIN_SPI_MISO            PA6
-//#define PIN_SPI_SCK             PA5
+// SPI definitions
+#ifndef PIN_SPI_SS
+  #define PIN_SPI_SS            PA4
+#endif
+#ifndef PIN_SPI_SS1
+  #define PIN_SPI_SS1           PA15
+#endif
+#ifndef PIN_SPI_SS2
+  #define PIN_SPI_SS2           PA15//check
+#endif
+#ifndef PIN_SPI_SS3
+  #define PIN_SPI_SS3           PA15//check
+#endif
+#ifndef PIN_SPI_MOSI
+  #define PIN_SPI_MOSI          PB5
+#endif
+#ifndef PIN_SPI_MISO
+  #define PIN_SPI_MISO          PB4
+#endif
+#ifndef PIN_SPI_SCK
+  #define PIN_SPI_SCK           PB3
+#endif
 
-// I2C Definitions
-#define PIN_WIRE_SDA            PB7 // Default for Arduino connector compatibility
-#define PIN_WIRE_SCL            PB6  // Default for Arduino connector compatibility
+// I2C definitions
+#ifndef PIN_WIRE_SDA
+  #define PIN_WIRE_SDA          PB7
+#endif
+#ifndef PIN_WIRE_SCL
+  #define PIN_WIRE_SCL          PB6
+#endif
 
 // Timer Definitions
-// Do not use timer used by PWM pins when possible. See PinMap_PWM.
-#define TIMER_TONE              TIM17
-
-// Do not use basic timer: OC is required
-#define TIMER_SERVO             TIM16  //TODO: advanced-control timers don't work
+// Use TIM6/TIM7 when possible as servo and tone don't need GPIO output pin
+#ifndef TIMER_TONE
+  #define TIMER_TONE            TIM6
+#endif
+#ifndef TIMER_SERVO
+  #define TIMER_SERVO           TIM14
+#endif
 
 // UART Definitions
-#define SERIAL_UART_INSTANCE    1
-// Default pin used for 'Serial' instance
+#ifndef SERIAL_UART_INSTANCE
+  #define SERIAL_UART_INSTANCE  2
+#endif
+
+// Default pin used for generic 'Serial' instance
 // Mandatory for Firmata
-#define PIN_SERIAL_RX           PA10
-#define PIN_SERIAL_TX           PA9
-
-// UART Definitions
-// Define here Serial instance number to map on Serial generic name
-//#define SERIAL_UART_INSTANCE    x //ex: 2 for Serial2 (USART2)
-// DEBUG_UART could be redefined to print on another instance than 'Serial'
-//#define DEBUG_UART              ((USART_TypeDef *) U(S)ARTX) // ex: USART3
-// DEBUG_UART baudrate, default: 9600 if not defined
-//#define DEBUG_UART_BAUDRATE     x
-// DEBUG_UART Tx pin name, default: the first one found in PinMap_UART_TX for DEBUG_UART
-//#define DEBUG_PINNAME_TX        PX_n // PinName used for TX
-
-
-// Optional PIN_SERIALn_RX and PIN_SERIALn_TX where 'n' is the U(S)ART number
-// Used when user instanciate a hardware Serial using its peripheral name.
-// Example: HardwareSerial mySerial(USART3);
-// will use PIN_SERIAL3_RX and PIN_SERIAL3_TX if defined.
-//#define PIN_SERIALn_RX          x // For U(S)ARTn RX
-//#define PIN_SERIALn_TX          x // For U(S)ARTn TX
-//#define PIN_SERIALLP1_RX        x // For LPUART1 RX
-//#define PIN_SERIALLP1_TX        x // For LPUART1 TX
-
-// SD card slot Definitions
-// SD detect signal can be defined if required
-//#define SD_DETECT_PIN           x
-// SD Read/Write timeout, default value defined in STM32SD library
-//#define SD_DATATIMEOUT          x
+#ifndef PIN_SERIAL_RX
+  #define PIN_SERIAL_RX         PA3
+#endif
+#ifndef PIN_SERIAL_TX
+  #define PIN_SERIAL_TX         PA2
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
