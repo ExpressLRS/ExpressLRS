@@ -52,7 +52,7 @@ public:
 
     // The model ID as received from the Transmitter
     static uint8_t modelId;
-
+    static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
 
@@ -94,7 +94,7 @@ public:
 
     static uint8_t getModelID() { return modelId; }
 
-    static uint8_t* GetMspMessage();
+    static void GetMspMessage(uint8_t **data, uint8_t *len);
     static void UnlockMspMessage();
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);

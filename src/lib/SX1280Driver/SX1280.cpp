@@ -85,7 +85,6 @@ void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSprea
     PayloadLength = PayloadLength;
     IQinverted = InvertIQ;
     SetMode(SX1280_MODE_STDBY_XOSC);
-    ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, PayloadLength, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
     SetFrequencyReg(freq);
@@ -314,7 +313,6 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
         TXnbISR();
         return;
     }
-    ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     hal.TXenable();                      // do first to allow PA stablise
     hal.WriteBuffer(0x00, TXdataBuffer, PayloadLength); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
@@ -336,7 +334,6 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
 void ICACHE_RAM_ATTR SX1280Driver::RXnb()
 {
     hal.RXenable();
-    ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     SetMode(SX1280_MODE_RX);
 }
 
