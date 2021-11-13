@@ -366,7 +366,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     #else
     if (!Update.begin()) { //start with max available size
     #endif
-      Update.printError(Serial);
+      Update.printError(LOGGING_UART);
     }
     target_seen = false;
     target_found.clear();
@@ -412,7 +412,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       if (Update.end(true)) { //true to set the size to the current progress
         DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
       } else {
-        Update.printError(Serial);
+        Update.printError(LOGGING_UART);
       }
     }
   }
@@ -424,7 +424,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     if (Update.end(true)) { //true to set the size to the current progress
       DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn resume blinking before disconnecting power", totalSize);
     } else {
-      Update.printError(Serial);
+      Update.printError(LOGGING_UART);
     }
     WebUploadResponseHandler(request);
   } else {
