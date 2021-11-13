@@ -292,17 +292,21 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   }
 
+  if (syncSpamCounter)
+    --syncSpamCounter;
+  SyncPacketLastSent = millis();
+
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
-    ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_1_2;
-  else
-    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
-  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+  expresslrs_tlm_ratio_e newRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
+  // Delay going into disconnected state when the TLM ratio increases
+  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newRatio)
+    LastTLMpacketRecvMillis = SyncPacketLastSent;
+  ExpressLRS_currAirRate_Modparams->TLMinterval = newRatio;
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
+  Radio.TXdataBuffer[3] = (Index << 6) + (newRatio << 3) + (SwitchEncMode << 1);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -311,10 +315,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   {
     Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
-
-  SyncPacketLastSent = millis();
-  if (syncSpamCounter)
-    --syncSpamCounter;
 }
 
 uint8_t adjustPacketRateForBaud(uint8_t rate)
