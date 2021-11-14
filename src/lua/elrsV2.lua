@@ -533,7 +533,8 @@ local function parseParameterInfoMessage(data)
         allParamsLoaded = 1
         fieldId = 1
         createDeviceFields()
-      else
+      elseif allParamsLoaded == 0 then
+        -- advance to the next field if doing a full load
         fieldId = 1 + (fieldId % (#fields-1))
       end
       fieldTimeout = getTime() + 200
@@ -554,11 +555,11 @@ local function parseElrsInfoMessage(data)
 
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
-  local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
-  goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
-
   elrsFlags = data[6]
   elrsFlagsInfo = fieldGetString(data, 7)
+
+  local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
+  goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
 end
 
 local function refreshNext()
@@ -583,14 +584,7 @@ local function refreshNext()
   elseif time > devicesRefreshTimeout and fields_count < 1  then
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-  elseif time > fieldTimeout and fields_count ~= 0 and not edit then
-    if allParamsLoaded < 1 or statusComplete == 0 then
-      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-      fieldTimeout = time + 50 -- 0.5s
-    end
-  end
-
-  if time > linkstatTimeout then
+  elseif time > linkstatTimeout then
     if not deviceIsELRS_TX and allParamsLoaded == 1 then
       goodBadPkt = ""
       -- enable both line below to do what the legacy lua is doing which is reloading all params in an interval
@@ -600,7 +594,13 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     end
     linkstatTimeout = time + 100
+  elseif time > fieldTimeout and fields_count ~= 0 and not edit then
+    if allParamsLoaded < 1 or statusComplete == 0 then
+      crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
+      fieldTimeout = time + 50 -- 0.5s
+    end
   end
+
   if time > titleShowWarnTimeout then
     -- if elrsFlags bit set is bit higher than bit 0 and bit 1, it is warning flags
     titleShowWarn = (elrsFlags > 3 and not titleShowWarn) or nil
@@ -729,7 +729,7 @@ local function handleDevicePageEvent(event)
             -- data again, with a short delay to allow the module EEPROM to
             -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
-            fieldId, fieldChunk = field.id, 0
+            fieldId, fieldChunk, statusComplete = field.id, 0, 0
             fieldData = {}
           end
           functions[field.type+1].save(field)
