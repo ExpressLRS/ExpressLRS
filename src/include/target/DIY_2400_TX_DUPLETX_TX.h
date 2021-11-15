@@ -16,8 +16,8 @@
 #define GPIO_PIN_TX_ENABLE      26
 #define GPIO_PIN_RCSIGNAL_RX    3
 #define GPIO_PIN_RCSIGNAL_TX    1
-#define GPIO_PIN_DEBUG_RX       16
-#define GPIO_PIN_DEBUG_TX       17
+#define GPIO_PIN_DEBUG_RX       13 // 16 in production hopefully!
+#define GPIO_PIN_DEBUG_TX       12 // 17 in production hopefully!
 //#define GPIO_PIN_LED_WS2812     15
 //#define GPIO_PIN_FAN_EN         17
 
