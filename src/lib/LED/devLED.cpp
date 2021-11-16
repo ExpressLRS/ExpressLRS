@@ -52,7 +52,7 @@ static uint16_t flashLED(uint8_t pin, uint8_t pin_inverted, const uint8_t durati
 static void initialize()
 {
     #if defined(TARGET_TX)
-        #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+        #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_FLYSKY_FRM301)
             pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
         #endif
         #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)

@@ -2,7 +2,7 @@
   "build": {
     "core": "stm32",
     "cpu": "cortex-m0",
-    "extra_flags": "-DSTM32F030x8",
+    "extra_flags": "-DSTM32F0 -DSTM32F0xx -DSTM32F030x8",
     "f_cpu": "48000000L",
     "ldscript": "variants/FRM301/ldscript.ld",
     "mcu": "stm32f030c8t6",

@@ -55,7 +55,7 @@ static void rxWebUpdateReboot()
 
 static void initialize()
 {
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_FLYSKY_FRM301)
         button.OnShortPress = enterBindMode3Click;
         button.OnLongPress = cyclePower;
     #endif
