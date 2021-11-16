@@ -3,6 +3,9 @@ import os
 import re
 import sys
 import subprocess
+import tempfile
+import filecmp
+import shutil
 
 import gzip
 from minify import (html_minifier, rcssmin, rjsmin)
@@ -58,31 +61,26 @@ def build_html(mainfile, var, out, env):
     if mainfile.endswith('.js'):
         data = rjsmin.jsmin(data)
     out.write('static const char PROGMEM %s[] = {\n' % var)
-    out.write(','.join("0x{:02x}".format(c) for c in gzip.compress(data.encode('utf-8'))))
+    out.write(','.join("0x{:02x}".format(c) for c in gzip.compress(data.encode('utf-8'), mtime=0.0)))
     out.write('\n};\n\n')
 
-def build_common(out, env):
-    build_html("scan.js", "SCAN_JS", out, env)
-    build_html("main.css", "CSS", out, env)
-    build_html("flag.svg", "FLAG", out, env)
-
-def build_tx_html(env):
-    out = open("include/WebContent.h", 'w')
-    build_version(out, env)
-    build_html("tx_index.html", "INDEX_HTML", out, env)
-    build_common(out, env)
-    out.close
-
-def build_rx_html(env):
-    out = open("include/WebContent.h", 'w')
-    build_version(out, env)
-    build_html("rx_index.html", "INDEX_HTML", out, env)
-    build_common(out, env)
-    out.close
+def build_common(env, mainfile):
+    fd, path = tempfile.mkstemp()
+    try:
+        with os.fdopen(fd, 'w') as out:
+            build_version(out, env)
+            build_html(mainfile, "INDEX_HTML", out, env)
+            build_html("scan.js", "SCAN_JS", out, env)
+            build_html("main.css", "CSS", out, env)
+            build_html("flag.svg", "FLAG", out, env)
+    finally:
+        if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
+            shutil.copyfile(path, "include/WebContent.h")
+        os.remove(path)
 
 platform = env.get('PIOPLATFORM', '')
 
 if platform in ['espressif8266']:
-    build_rx_html(env)
+    build_common(env, "rx_index.html")
 elif platform in ['espressif32']:
-    build_tx_html(env)
+    build_common(env, "tx_index.html")
