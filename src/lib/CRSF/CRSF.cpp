@@ -165,6 +165,12 @@ void CRSF::Begin()
     USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
     USART2->CR1 |= USART_CR1_UE;
 #endif
+#if defined(TARGET_TX_FLYSKY_FRM301)
+    USART1->CR1 &= ~USART_CR1_UE;
+    USART1->CR3 |= USART_CR3_HDSEL;
+    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+    USART1->CR1 |= USART_CR1_UE;
+#endif
     DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
     CRSF::Port.flush();
     flush_port_input();

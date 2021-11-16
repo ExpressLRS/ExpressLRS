@@ -37,6 +37,8 @@
 extern "C"{
 #endif // __cplusplus
 
+#define UNDEF_PIN (-1)
+
 /*----------------------------------------------------------------------------
  *        STM32 pins number
  *----------------------------------------------------------------------------*/
@@ -109,16 +111,16 @@ extern "C"{
 
 // SPI definitions
 #ifndef PIN_SPI_SS
-  #define PIN_SPI_SS            PA4
+  #define PIN_SPI_SS            PA15
 #endif
 #ifndef PIN_SPI_SS1
-  #define PIN_SPI_SS1           PA15
+  #define PIN_SPI_SS1           UNDEF_PIN
 #endif
 #ifndef PIN_SPI_SS2
-  #define PIN_SPI_SS2           PA15//check
+  #define PIN_SPI_SS2           UNDEF_PIN
 #endif
 #ifndef PIN_SPI_SS3
-  #define PIN_SPI_SS3           PA15//check
+  #define PIN_SPI_SS3           UNDEF_PIN
 #endif
 #ifndef PIN_SPI_MOSI
   #define PIN_SPI_MOSI          PB5
@@ -144,7 +146,7 @@ extern "C"{
   #define TIMER_TONE            TIM6
 #endif
 #ifndef TIMER_SERVO
-  #define TIMER_SERVO           TIM14
+  #define TIMER_SERVO           TIM7
 #endif
 
 // UART Definitions
@@ -160,6 +162,10 @@ extern "C"{
 #ifndef PIN_SERIAL_TX
   #define PIN_SERIAL_TX         PA2
 #endif
+
+// Adjust IRQ priority
+#define TIM_IRQ_PRIO            4
+#define EXTI_IRQ_PRIO           4
 
 #ifdef __cplusplus
 } // extern "C"
