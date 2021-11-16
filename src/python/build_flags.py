@@ -53,6 +53,27 @@ def process_flags(path):
         return
     parse_flags(path)
 
+def escapeChars(x):
+    parts = re.search("(.*)=\w*\"(.*)\"$", x)
+    if parts and parts.group(2):
+        x = parts.group(1) + '="' + parts.group(2).translate(str.maketrans({
+            "!": "\\\\\\\\041",
+            "\"": "\\\\\\\\042",
+            "$": "\\\\\\\\044",
+            "&": "\\\\\\\\046",
+            "'": "\\\\\\\\047",
+            "(": "\\\\\\\\050",
+            ")": "\\\\\\\\051",
+            ",": "\\\\\\\\054",
+            ";": "\\\\\\\\073",
+            "<": "\\\\\\\\074",
+            ">": "\\\\\\\\076",
+            "\\": "\\\\\\\\134",
+            "`": "\\\\\\\\140",
+            "|": "\\\\\\\\174"
+        })) + '"'
+    return x
+
 def condense_flags():
     global build_flags
     for line in build_flags:
@@ -61,6 +82,7 @@ def condense_flags():
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag which will just leave ! in their place
     build_flags = [x.replace("!", "") for x in build_flags]  # remove the !
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
+    build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
 
 def get_git_sha():
     # Don't try to pull the git revision when doing tests, as
