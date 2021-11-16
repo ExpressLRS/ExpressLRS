@@ -42,6 +42,9 @@ const char PROGMEM compile_options[] = {
     #ifdef TLM_REPORT_INTERVAL_MS
         "-DTLM_REPORT_INTERVAL_MS=" STR(TLM_REPORT_INTERVAL_MS) " "
     #endif
+    #ifdef USE_BLE_JOYSTICK
+        "-DUSE_BLE_JOYSTICK "
+    #endif
 #endif
 
 #ifdef TARGET_RX

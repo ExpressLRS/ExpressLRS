@@ -932,6 +932,11 @@ void setup()
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
+  
+  #if defined(USE_BLE_JOYSTICK)
+    init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
+  #endif
+
   if (!init_success)
   {
     connectionState = radioFailed;
@@ -958,6 +963,13 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+
+  #if defined(USE_BLE_JOYSTICK)
+  if (connectionState != bleJoystick && connectionState != noCrossfire) // Wait until the correct crsf baud has been found
+  {
+      connectionState = bleJoystick;
+  }
+  #endif
 
   if (connectionState < MODE_STATES)
   {
