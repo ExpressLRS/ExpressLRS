@@ -1,8 +1,6 @@
 Import("env")
 import os
 import re
-import sys
-import subprocess
 import io
 import tempfile
 import filecmp

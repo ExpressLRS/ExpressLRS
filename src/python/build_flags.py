@@ -1,7 +1,6 @@
 Import("env")
 import os
 import sys
-import subprocess
 import hashlib
 import fnmatch
 import time

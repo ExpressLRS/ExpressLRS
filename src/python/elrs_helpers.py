@@ -1,4 +1,3 @@
-import sys
 import os
 import re
 
@@ -10,6 +9,8 @@ def get_git(env):
     try:
         import git
     except ImportError:
+        import sys
+        import subprocess
         sys.stdout.write("Installing GitPython")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
         try:
