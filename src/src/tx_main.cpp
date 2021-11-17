@@ -984,6 +984,14 @@ void loop()
 
   if (Serial.available())
   {
+    while(Serial.available())
+    {
+      Serial.read();
+    }
+
+    EnterBindingMode();
+    return;
+
     if (msp.processReceivedByte(Serial.read()))
     {
       // Finished processing a complete packet
