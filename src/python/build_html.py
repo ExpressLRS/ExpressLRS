@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import subprocess
+import io
 import tempfile
 import filecmp
 import shutil
@@ -51,6 +52,15 @@ def get_git_version(env):
 def build_version(out, env):
     out.write('const char *VERSION = "%s";\n\n' % get_git_version(env))
 
+def compress(data):
+    """Compress data in one shot and return the compressed string.
+    Optional argument is the compression level, in range of 0-9.
+    """
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode='wb', compresslevel=gzip._COMPRESS_LEVEL_BEST, mtime=0.0) as f:
+        f.write(data)
+    return buf.getvalue()
+
 def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
         data = file.read()
@@ -61,7 +71,7 @@ def build_html(mainfile, var, out, env):
     if mainfile.endswith('.js'):
         data = rjsmin.jsmin(data)
     out.write('static const char PROGMEM %s[] = {\n' % var)
-    out.write(','.join("0x{:02x}".format(c) for c in gzip.compress(data.encode('utf-8'), mtime=0.0)))
+    out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
 def build_common(env, mainfile):
