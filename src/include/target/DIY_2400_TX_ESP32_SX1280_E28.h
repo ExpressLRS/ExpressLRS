@@ -1,7 +1,6 @@
 #define DEVICE_NAME "DIY2400 E28"
 
 // Any device features
-#define USE_OLED_I2C
 #if !defined(USE_OLED_I2C)
 #define USE_OLED_SPI
 #endif
