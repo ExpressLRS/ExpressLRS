@@ -7,6 +7,7 @@ import fnmatch
 import time
 import re
 import melodyparser
+import elrs_helpers
 
 build_flags = env.get('BUILD_FLAGS', [])
 UIDbytes = ""
@@ -85,83 +86,11 @@ def condense_flags():
     build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
 
 def get_git_sha():
-    # Don't try to pull the git revision when doing tests, as
-    # `pio remote test` doesn't copy the entire repository, just the files
-    if env['PIOPLATFORM'] == "native":
-        return "012345"
-
-    try:
-        import git
-    except ImportError:
-        sys.stdout.write("Installing GitPython")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
-        try:
-            import git
-        except ImportError:
-            env.Execute("$PYTHONEXE -m pip install GitPython")
-            try:
-                import git
-            except ImportError:
-                git = None
-
-    sha = None
-    if git:
-        try:
-            git_repo = git.Repo(
-                os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
-                search_parent_directories=False)
-            git_root = git_repo.git.rev_parse("--show-toplevel")
-            ExLRS_Repo = git.Repo(git_root)
-            sha = ExLRS_Repo.head.object.hexsha
-
-        except git.InvalidGitRepositoryError:
-            pass
-    if not sha:
-        if os.path.exists("VERSION"):
-            with open("VERSION") as _f:
-                data = _f.readline()
-                _f.close()
-            sha = data.split()[1].strip()
-        else:
-            sha = "000000"
-    return ",".join(["%s" % ord(x) for x in sha[:6]])
+    sha = elrs_helpers.get_git_version(env)['sha']
+    return ",".join(["%s" % ord(x) for x in sha])
 
 def get_git_version():
-    # Don't try to pull the git revision when doing tests, as
-    # `pio remote test` doesn't copy the entire repository, just the files
-    if env['PIOPLATFORM'] == "native":
-        return "001122334455"
-
-    try:
-        import git
-    except ImportError:
-        sys.stdout.write("Installing GitPython")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
-        try:
-            import git
-        except ImportError:
-            env.Execute("$PYTHONEXE -m pip install GitPython")
-            try:
-                import git
-            except ImportError:
-                git = None
-
-    ver = "ver. unknown"
-    if git:
-        try:
-            git_repo = git.Repo(
-                os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
-                search_parent_directories=False)
-            try:
-                ver = re.sub(r".*/", "", git_repo.git.describe("--all", "--exact-match"))
-            except git.exc.GitCommandError:
-                try:
-                    ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
-                except git.exc.GitCommandError:
-                    ver = "ver. unknown"
-            hash = git_repo.git.rev_parse("--short", "HEAD")
-        except git.InvalidGitRepositoryError:
-            pass
+    ver = elrs_helpers.get_git_version(env)['version']
     return ",".join(["%s" % ord(char) for char in ver])
 
 process_flags("user_defines.txt")

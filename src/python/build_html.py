@@ -7,47 +7,14 @@ import io
 import tempfile
 import filecmp
 import shutil
+import elrs_helpers
 
 import gzip
 from minify import (html_minifier, rcssmin, rjsmin)
 
 def get_git_version(env):
-    # Don't try to pull the git revision when doing tests, as
-    # `pio remote test` doesn't copy the entire repository, just the files
-    if env['PIOPLATFORM'] == "native":
-        return "001122334455"
-
-    try:
-        import git
-    except ImportError:
-        sys.stdout.write("Installing GitPython")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython"])
-        try:
-            import git
-        except ImportError:
-            env.Execute("$PYTHONEXE -m pip install GitPython")
-            try:
-                import git
-            except ImportError:
-                git = None
-
-    ver = None
-    if git:
-        try:
-            git_repo = git.Repo(
-                os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
-                search_parent_directories=False)
-            try:
-                ver = re.sub(r".*/", "", git_repo.git.describe("--all", "--exact-match"))
-            except git.exc.GitCommandError:
-                try:
-                    ver = git_repo.git.symbolic_ref("-q", "--short", "HEAD")
-                except git.exc.GitCommandError:
-                    ver = "ver. unknown"
-            hash = git_repo.git.rev_parse("--short", "HEAD")
-        except git.InvalidGitRepositoryError:
-            pass
-    return '%s (%s)' % (ver, hash)
+    ver = elrs_helpers.get_git_version(env)
+    return '%s (%s)' % (ver['version'], ver['sha'])
 
 def build_version(out, env):
     out.write('const char *VERSION = "%s";\n\n' % get_git_version(env))
