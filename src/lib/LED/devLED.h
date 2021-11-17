@@ -8,7 +8,7 @@ extern device_t RGB_device;
 #endif
 
 #if (defined(GPIO_PIN_LED) && (GPIO_PIN_LED != UNDEF_PIN)) \
-    || (defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_BLUE != UNDEF_PIN)) \
+    || (defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)) \
     || (defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)) \
     || (defined(GPIO_PIN_LED_BLUE) && (GPIO_PIN_LED_BLUE != UNDEF_PIN))
 extern device_t LED_device;
