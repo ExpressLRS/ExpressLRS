@@ -437,11 +437,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       } else {
         Update.printError(Serial);
       }
-    } else {
-      #if defined(PLATFORM_ESP32)
-        Update.abort();
-      #endif
-      DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
   }
 }
