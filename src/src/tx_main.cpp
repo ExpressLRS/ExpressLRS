@@ -930,11 +930,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_GHOST)
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
@@ -962,7 +957,17 @@ static void setupTarget()
 void setup()
 {
   setupTarget();
-  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+  #if defined(PLATFORM_ESP32)
+    LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+  #else
+    #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
+      LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
+    #endif
+    #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+      LoggingBackpack.setTx(GPIO_PIN_DEBUG_TX);
+    #endif
+    LoggingBackpack.begin(BACKPACK_LOGGING_BAUD);
+  #endif
 
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
