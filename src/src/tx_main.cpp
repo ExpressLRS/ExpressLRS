@@ -924,6 +924,40 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
+#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+void startPassthrough()
+{
+  // stop everyhting
+  Radio.End();
+  hwTimer.stop();
+  CRSF::End();
+
+  // get ready for passthrough
+  CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+  LoggingBackpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+  disableLoopWDT();
+
+  // reset 8285
+  digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);
+  delay(100);
+  digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
+
+  // go hard!
+  uint8_t buf[64];
+  for(;;) {
+    int r = CRSF::Port.available();
+    if (r>sizeof(buf)) r=sizeof(buf);
+    r = CRSF::Port.readBytes(buf, r);
+    LoggingBackpack.write(buf, r);
+
+    r = LoggingBackpack.available();
+    if (r>sizeof(buf)) r=sizeof(buf);
+    r = LoggingBackpack.readBytes(buf, r);
+    CRSF::Port.write(buf, r);
+  }
+}
+#endif
+
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -956,6 +990,12 @@ static void setupTarget()
 
 void setup()
 {
+  #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+    pinMode(0, INPUT);
+    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
+    pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+  #endif
+
   setupTarget();
   #if defined(PLATFORM_ESP32)
     LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -1021,6 +1061,13 @@ void setup()
 
 void loop()
 {
+  #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+    if (!digitalRead(0)) {
+      startPassthrough();
+      return;
+    }
+  #endif
+
   uint32_t now = millis();
 
   #if defined(USE_BLE_JOYSTICK)
