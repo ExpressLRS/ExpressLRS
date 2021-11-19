@@ -529,8 +529,9 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
 
   SetRFLinkRate(config.GetRate());
-  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
+  // Dynamic Power starts at MinPower and will boost if switch is set or IsArmed and disconnected
+  POWERMGNT.setPower(config.GetDynamicPower() ? MinPower : (PowerLevels_e)config.GetPower());
   // TLM interval is set on the next SYNC packet
 }
 
