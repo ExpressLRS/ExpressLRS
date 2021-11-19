@@ -856,7 +856,7 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[4] = {
         LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -867,19 +867,17 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-#ifndef DEBUG_CRSF_NO_OUTPUT
     SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
     SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
     SerialOutFIFO.push(crc);
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
-#endif
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -890,19 +888,17 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-#ifndef DEBUG_CRSF_NO_OUTPUT
     //SerialOutFIFO.push(RCframeLength + 4);
     //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
     this->_dev->write(outBuffer, sizeof(outBuffer));
     this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
     this->_dev->write(crc);
-#endif
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
