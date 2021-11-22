@@ -159,7 +159,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
   SetMode(SX127x_OPMODE_STANDBY);
-  #ifdef TARGET_TX_BETAFPV_900_V1
+  #if defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT_900)
     hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER | Power);
   #else
     hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
