@@ -568,7 +568,7 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#if !defined(PLATFORM_STM32) && !defined(TARGET_USE_EEPROM)
+#if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
     hwTimer.callbackTock = &timerCallbackIdle;
 #else
