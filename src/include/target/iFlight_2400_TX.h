@@ -22,7 +22,7 @@
 
 // Output Power
 #define MinPower PWR_10mW
-#define MaxPower PWR_250mW
-#define POWER_OUTPUT_VALUES {-18,-15,-11,-8,-4}
+#define MaxPower PWR_500mW
+#define POWER_OUTPUT_VALUES {-18,-15,-11,-8,-4,3}
 
 #define Regulatory_Domain_ISM_2400 1
