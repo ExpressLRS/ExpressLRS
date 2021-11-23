@@ -83,6 +83,15 @@ local function getField(line)
   end
 end
 
+local function constrain(x, low, high)
+  if x < low then
+    return low
+  elseif x > high then
+    return high
+  end
+  return x
+end
+
 -- Change display attribute to current field
 local function incrField(step)
   local field = getField(lineIndex)
@@ -111,9 +120,7 @@ local function incrField(step)
       min = 0
       max = #field.values - 1
     end
-    if (step < 0 and field.value > min) or (step > 0 and field.value < max) then
-      field.value = field.value + step
-    end
+    field.value = constrain(field.value + step, min, max)
   end
 end
 
