@@ -34,7 +34,11 @@ ELRS_EEPROM::Begin()
         Wire.setSCL(GPIO_PIN_SCL);
         Wire.begin();
         /* Initialize EEPROM */
-        EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);
+        #if defined(TARGET_EEPROM_400K)
+            EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);
+        #else
+            EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
+        #endif
     #endif // STM32_USE_FLASH
 #else /* !PLATFORM_STM32 */
     EEPROM.begin(RESERVED_EEPROM_SIZE);
