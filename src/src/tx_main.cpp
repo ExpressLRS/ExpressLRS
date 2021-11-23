@@ -588,6 +588,15 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    // If telemetry expected in the next interval, the radio is in RX mode
+    // and will skip sending the next packet when the tiemr resumes.
+    // Return to normal send mode because if the skipped packet happened
+    // to be on the last slot of the FHSS the skip will prevent FHSS
+    if (TelemetryRcvPhase == ttrpInReceiveMode)
+    {
+      Radio.SetTxIdleMode();
+      TelemetryRcvPhase = ttrpTransmitting;
+    }
     ConfigChangeCommit();
   }
 }
@@ -603,9 +612,9 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-  busyTransmitting = false;
   HandleFHSS();
   HandlePrepareForTLM();
+  busyTransmitting = false;
 }
 
 static void UpdateConnectDisconnectStatus()
