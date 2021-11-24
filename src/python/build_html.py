@@ -47,7 +47,7 @@ def build_common(env, mainfile):
             build_html(mainfile, "INDEX_HTML", out, env)
             build_html("scan.js", "SCAN_JS", out, env)
             build_html("main.css", "CSS", out, env)
-            build_html("flag.svg", "FLAG", out, env)
+            build_html("logo.svg", "FLAG", out, env)
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")

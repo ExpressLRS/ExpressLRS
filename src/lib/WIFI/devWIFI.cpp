@@ -562,7 +562,7 @@ static void startServices()
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
-  server.on("/flag.svg", WebUpdateSendFlag);
+  server.on("/logo.svg", WebUpdateSendFlag);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
