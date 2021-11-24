@@ -83,6 +83,15 @@ local function getField(line)
   end
 end
 
+local function constrain(x, low, high)
+  if x < low then
+    return low
+  elseif x > high then
+    return high
+  end
+  return x
+end
+
 -- Change display attribute to current field
 local function incrField(step)
   local field = getField(lineIndex)
@@ -111,9 +120,7 @@ local function incrField(step)
       min = 0
       max = #field.values - 1
     end
-    if (step < 0 and field.value > min) or (step > 0 and field.value < max) then
-      field.value = field.value + step
-    end
+    field.value = constrain(field.value + step, min, max)
   end
 end
 
@@ -355,10 +362,15 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
+  folderAccess = field.id
+  local backFld = fields[backButtonId]
+  -- Store the lineIndex and pageOffset to return to in the backFld
+  backFld.li = lineIndex
+  backFld.po = pageOffset
+  backFld.parent = folderAccess
+
   lineIndex = 1
   pageOffset = 0
-  folderAccess = field.id
-  fields[backButtonId].parent = folderAccess
 end
 
 local function fieldFolderDeviceOpen(field)
@@ -395,8 +407,14 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function UIbackExec()
+  local backFld = fields[backButtonId]
+  lineIndex = backFld.li or 1
+  pageOffset = backFld.po or 0
+
+  backFld.parent = 255
+  backFld.li = nil
+  backFld.po = nil
   folderAccess = nil
-  fields[backButtonId].parent = 255
 end
 
 local function changeDeviceId(devId) --change to selected device ID
