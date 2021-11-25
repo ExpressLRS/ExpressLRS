@@ -14,11 +14,13 @@
 #define GPIO_PIN_TX_ENABLE      PA4 
 #define GPIO_PIN_ANT_CTRL_1     PB10 // R Antenna SW
 #define GPIO_PIN_ANT_CTRL_2     PB11 // L Antenna SW
+#define GPIO_PIN_H_POWER        PC15
+#define GPIO_PIN_L_POWER        PA5
 #define GPIO_PIN_BUSY           PC13
-//#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 Ext Module connector FRM301
-//#define GPIO_PIN_RCSIGNAL_TX    PA2  // UART2 Ext Module connector FRM301
-#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1 Sport
-#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1 Sport
+//#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 Ext Module connector FRM301 PA3
+//#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 Ext Module connector FRM301 PA2
+#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1 Sport Ext Module connector FRM301
+#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1 Sport Ext Module connector FRM301
 #define GPIO_PIN_LED_RED        PB12 // Red LED (active low)
 #define GPIO_LED_RED_INVERTED   1
 #define GPIO_PIN_LED_GREEN      PB13 // Green LED (active low)
@@ -26,11 +28,11 @@
 #define GPIO_PIN_LED_BLUE       PB14 // Blue LED (active low)
 #define GPIO_LED_BLUE_INVERTED  1
 #define GPIO_PIN_BUTTON         PB9 // active low
-#define GPIO_BUTTON_INVERTED    1
+//#define GPIO_BUTTON_INVERTED    1
 //#define GPIO_PIN_DEBUG_RX       PB7 // UART1 Data Out FRM301
 //#define GPIO_PIN_DEBUG_TX       PB6 // UART1 Data Out FRM301
-#define GPIO_PIN_DEBUG_RX       PA3 // UART2 FTR10 connector
-#define GPIO_PIN_DEBUG_TX       PA2 // UART2 FTR10 connector
+//#define GPIO_PIN_DEBUG_RX       PA3 // UART2 FTR10 connector
+//#define GPIO_PIN_DEBUG_TX       PA2 // UART2 FTR10 connector
 
 // Power output
 #define MinPower                PWR_10mW

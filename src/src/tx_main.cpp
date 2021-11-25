@@ -898,10 +898,14 @@ static void setupTarget()
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-//#if defined(TARGET_TX_FLYSKY_FRM301)
-//  Serial.setTx(PA2);
-//  Serial.setRx(PA3);
-//#endif
+#if defined(TARGET_TX_FLYSKY_FRM301)
+  //Serial.setTx(PA2);
+  //Serial.setRx(PA3);
+  pinMode(GPIO_PIN_L_POWER,OUTPUT);
+  digitalWrite(GPIO_PIN_L_POWER, HIGH);
+  pinMode(GPIO_PIN_H_POWER,OUTPUT);
+  digitalWrite(GPIO_PIN_H_POWER, LOW);
+#endif
 }
 
 void setup()

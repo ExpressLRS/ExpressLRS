@@ -134,10 +134,10 @@ extern "C"{
 
 // I2C definitions
 #ifndef PIN_WIRE_SDA
-  #define PIN_WIRE_SDA          PB7
+  #define PIN_WIRE_SDA          PF7
 #endif
 #ifndef PIN_WIRE_SCL
-  #define PIN_WIRE_SCL          PB6
+  #define PIN_WIRE_SCL          PF6
 #endif
 
 // Timer Definitions
@@ -191,7 +191,7 @@ extern "C"{
 // SERIAL_PORT_HARDWARE_OPEN  Hardware serial ports which are open for use.  Their RX & TX
 //                            pins are NOT connected to anything by default.
 #define SERIAL_PORT_MONITOR     Serial
-#define SERIAL_PORT_HARDWARE    Serial
+#define SERIAL_PORT_HARDWARE    Serial2
 #endif
 
 #endif /* _VARIANT_ARDUINO_STM32_ */

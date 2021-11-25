@@ -74,7 +74,7 @@
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
 #Comment this to disable diversity function
--DUSE_DIVERSITY
+#-DUSE_DIVERSITY
 
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
