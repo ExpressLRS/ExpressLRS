@@ -113,6 +113,7 @@ Anyone can add an entry to the table, and entries should include the:
 | 20Km | 2.4G | 150HZ | 100mW | Yes | Pairan | https://youtu.be/B9-AItJ9WS0 |
 | 10Km | 2.4G | 500HZ | 10mW | Yes | mrscythe | https://youtu.be/IpiPEZrCGtg |
 | 10Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dJYfWLtXVg8 |
+| 10Km | 900M | 50HZ | 100mW | Yes | Taufik | https://youtu.be/Pi2j17T2dSk |
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
 | 6Km | 2.4G | 500HZ | 250mW | No | Spec | https://www.youtube.com/watch?v=bVJaiqJq8gY |
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |

@@ -64,7 +64,7 @@ def build_html(mainfile, var, out, env):
 def build_common(out, env):
     build_html("scan.js", "SCAN_JS", out, env)
     build_html("main.css", "CSS", out, env)
-    build_html("flag.svg", "FLAG", out, env)
+    build_html("logo.svg", "FLAG", out, env)
 
 def build_tx_html(env):
     out = open("include/WebContent.h", 'w')
