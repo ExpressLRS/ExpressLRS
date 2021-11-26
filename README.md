@@ -72,9 +72,9 @@ More information can be found on the [website](https://www.expresslrs.org/).
 <img src="https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/24Ghardware.jpg" width = "80%">
 
 - **TX**
-    - [DIY JR Bay](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm limited to ~24dBm ELRS high dutycycle, supports WiFi Updates)
-    - [DIY Slim TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm limited to ~24dBm ELRS high dutycycle, supports Wifi Updates, fits Slim Bay)
-    - [DIY Slimmer TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm limited to ~24dBm ELRS high dutycycle, supports Wifi Updates, fits Slim Bay)
+    - [DIY JR Bay](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm limited to ~24dBm measured output, supports WiFi Updates)
+    - [DIY Slim TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm limited to ~24dBm measured output, supports Wifi Updates, fits Slim Bay)
+    - [DIY Slimmer TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm limited to ~24dBm measured output, supports Wifi Updates, fits Slim Bay)
     - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [HappyModel TX](http://www.happymodel.cn/index.php/2021/04/12/happymodel-2-4g-expresslrs-elrs-micro-tx-module-es24tx/) (Full Support, 250 mW output power)
