@@ -175,19 +175,15 @@ void POWERMGNT::init()
 
 PowerLevels_e POWERMGNT::getDefaultPower()
 {
-    if (MinPower > PWR_50mW)
+    if (MinPower > DefaultPower)
     {
         return MinPower;
     }
-    if (MaxPower < PWR_50mW)
+    if (MaxPower < DefaultPower)
     {
         return MaxPower;
     }
-#ifdef TARGET_AXIS_THOR_2400_TX
-    return PWR_10mW;
-#else
-    return PWR_50mW;
-#endif
+    return DefaultPower;
 }
 
 void POWERMGNT::setDefaultPower()

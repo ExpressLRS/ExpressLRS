@@ -25,6 +25,10 @@
     #define MaxPower HighPower
 #endif
 
+#if !defined(DefaultPower)
+    #define DefaultPower PWR_50mW
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,
