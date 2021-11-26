@@ -183,7 +183,11 @@ PowerLevels_e POWERMGNT::getDefaultPower()
     {
         return MaxPower;
     }
+#ifdef TARGET_AXIS_THOR_2400_TX
+    return PWR_10mW;
+#else
     return PWR_50mW;
+#endif
 }
 
 void POWERMGNT::setDefaultPower()
