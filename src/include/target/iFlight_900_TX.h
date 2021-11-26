@@ -1,7 +1,8 @@
 #define DEVICE_NAME "iFlight 900TX"
 
-// There is some special handling for this target
-#define TARGET_TX_IFLIGHT_900
+// Any device features
+#define TARGET_TX_IFLIGHT
+#define USE_SX1276_RFO_HF
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
