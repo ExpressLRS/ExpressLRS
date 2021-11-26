@@ -1,5 +1,7 @@
 #define DEVICE_NAME "iFlight 2400RX"
 
+#define USE_SX1280_DCDC
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS                15
 #define GPIO_PIN_BUSY               4
