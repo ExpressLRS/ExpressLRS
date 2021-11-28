@@ -28,6 +28,7 @@
 #include "devLED.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devVTXSPI.h"
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -48,6 +49,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   {&Button_device, 0},
+#endif
+#ifdef HAS_VTX_SPI
+  &VTxSPI_device
 #endif
 };
 
@@ -650,6 +654,14 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
+#ifdef HAS_VTX_SPI
+    else if (MspData[7] == MSP_SET_VTX_CONFIG)
+    {
+        vtxSPIBandChannelIdx = MspData[8];
+        vtxSPIPowerIdx = MspData[10];
+        vtxSPIPitmode = MspData[11];
+    }
+#endif
     else
     {
         // No MSP data to the FC if no model match
