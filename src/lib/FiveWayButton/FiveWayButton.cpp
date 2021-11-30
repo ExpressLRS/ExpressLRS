@@ -1,5 +1,5 @@
-#ifdef TARGET_AXIS_THOR_2400_TX
-#include "input.h"
+#ifdef HAS_FIVE_WAY_BUTTON
+#include "FiveWayButton.h"
 
 #define KEY_DEBOUNCE_TIME   500
 #define KEY_LONG_RPESS_TIME 1000
@@ -10,22 +10,22 @@ uint32_t key_debounce_start = 0;
 
 int key = INPUT_KEY_NO_PRESS;
 
-void Input::init()
+void FiveWayButton::init()
 { 
-    pinMode(GPIO_PIN_INPUT_KEY1, INPUT|PULLUP );
-    pinMode(GPIO_PIN_INPUT_KEY2, INPUT|PULLUP );
-    pinMode(GPIO_PIN_INPUT_KEY3, INPUT|PULLUP );
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT|PULLUP );
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT|PULLUP );
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT|PULLUP );
 
     key_state = INPUT_KEY_NO_PRESS;
     keyPressed = false;
     isLongPressed = false;
 }
 
-void Input::handle()
+void FiveWayButton::handle()
 {  
     if(keyPressed)
     {
-        int key_down = digitalRead(GPIO_PIN_INPUT_KEY1) << 2 |  digitalRead(GPIO_PIN_INPUT_KEY2) << 1 |  digitalRead(GPIO_PIN_INPUT_KEY3);
+        int key_down = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
         if(key_down == INPUT_KEY_NO_PRESS)
         {
             //key released
@@ -52,7 +52,7 @@ void Input::handle()
     }
     else
     {
-        key = digitalRead(GPIO_PIN_INPUT_KEY1) << 2 |  digitalRead(GPIO_PIN_INPUT_KEY2) << 1 |  digitalRead(GPIO_PIN_INPUT_KEY3);
+        key = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
         if(key != INPUT_KEY_NO_PRESS)
         {
             keyPressed = true;
@@ -62,7 +62,7 @@ void Input::handle()
     }   
 }
 
-void Input::getKeyState(int *keyValue, boolean *keyLongPressed)
+void FiveWayButton::getKeyState(int *keyValue, boolean *keyLongPressed)
 {
     *keyValue = key_state;
     *keyLongPressed = isLongPressed;
@@ -72,7 +72,7 @@ void Input::getKeyState(int *keyValue, boolean *keyLongPressed)
     }
 }
 
-void Input::clearKeyState()
+void FiveWayButton::clearKeyState()
 {
    keyPressed = false;
    isLongPressed = false;

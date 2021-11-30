@@ -25,7 +25,7 @@ float z_average = 0;
 
 static int motion_event_counter = 0;
 
-#ifdef HAS_THERMAL
+#ifdef HAS_SMART_FAN
 extern bool is_smart_fan_control;
 uint32_t smart_fan_start_time = 0;
 #define SMART_FAN_TIME_OUT 5000
@@ -97,7 +97,7 @@ void Gsensor::handle()
 
     float x, y, z;
     getGSensorData(&x, &y, &z);
-#ifdef HAS_THERMAL
+#ifdef HAS_SMART_FAN
     if(z < -0.5f)
     {
         is_smart_fan_control = true;

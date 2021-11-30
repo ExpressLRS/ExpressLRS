@@ -209,10 +209,18 @@ void Screen::doPageBack()
     }
     else if(current_page_index == PAGE_SUB_BINDING_INDEX)
     {
+        current_page_index = PAGE_SUB_BIND_INDEX;
+        updateSubBindConfirmPage();
+        updatecallback(USER_UPDATE_TYPE_EXIT_BINDING);
+
+        current_screen_status = SCREEN_STATUS_WORK;
+    }
+    else if(current_page_index == PAGE_SUB_UPDATEFW_INDEX)
+    {
         current_page_index = PAGE_MAIN_MENU_INDEX;
         updateMainMenuPage(USER_ACTION_NONE);
-        updatecallback(USER_UPDATE_TYPE_EXIT_BINDING);
-    }          
+        updatecallback(USER_UPDATE_TYPE_EXIT_WIFI);
+    }
 }
 
 
@@ -379,7 +387,9 @@ void Screen::updateSubBindingPage()
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
                         "BINDING", TFT_BLACK, TFT_WHITE);
 
-    updatecallback(USER_UPDATE_TYPE_BINDING);                        
+    updatecallback(USER_UPDATE_TYPE_BINDING);
+
+    current_screen_status = SCREEN_STATUS_BINDING;
 }
 
 void Screen::doValueSelection(int action)

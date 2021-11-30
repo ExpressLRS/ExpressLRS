@@ -9,11 +9,13 @@
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 
-
-#include "input.h"
 #include "screen.h"
-Input input;
 Screen screen;
+
+#ifdef HAS_FIVE_WAY_BUTTON
+#include "FiveWayButton.h"
+FiveWayButton fivewaybutton;
+#endif
 
 #ifdef HAS_GSENSOR
 #include "gsensor.h"
@@ -50,6 +52,14 @@ extern TxConfig config;
 extern RxConfig config;
 #endif
 
+#ifdef PLATFORM_ESP32
+extern unsigned long rebootTime;
+#endif
+
+#define BINDING_MODE_TIME_OUT 5000
+uint32_t binding_mode_start_time = 0;
+
+
 void ScreenUpdateCallback(int updateType)
 {
   switch(updateType)
@@ -69,6 +79,7 @@ void ScreenUpdateCallback(int updateType)
     case USER_UPDATE_TYPE_BINDING:
       DBGLN("User request binding!");
       EnterBindingMode();
+      binding_mode_start_time = millis();
       break;
     case USER_UPDATE_TYPE_EXIT_BINDING:
       DBGLN("User request exit binding!");
@@ -77,6 +88,14 @@ void ScreenUpdateCallback(int updateType)
     case USER_UPDATE_TYPE_WIFI:
       DBGLN("User request Wifi Update Mode!");
       connectionState = wifiUpdate;
+      break;
+    case USER_UPDATE_TYPE_EXIT_WIFI:
+      INFOLN("User request exit Wifi Update Mode!");
+#ifdef PLATFORM_ESP32
+      if (connectionState == wifiUpdate) {
+        rebootTime = millis() + 200;
+      }
+#endif
       break;
     case USER_UPDATE_TYPE_SMARTFAN:
       DBGLN("User request SMART FAN Mode!");
@@ -93,13 +112,13 @@ void ScreenUpdateCallback(int updateType)
 
 void handle(void)
 {
-  input.handle();
+  fivewaybutton.handle();
 
-  if(!IsArmed() && !is_screen_flipped && connectionState != wifiUpdate)
+  if(!IsArmed() && !is_screen_flipped)
   {
     int key;
     boolean isLongPressed;
-    input.getKeyState(&key, &isLongPressed);
+    fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL      
@@ -156,6 +175,13 @@ void handle(void)
         }
       }
     }
+    else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
+    {
+      if((millis() - binding_mode_start_time) > BINDING_MODE_TIME_OUT)
+      {
+        screen.doUserAction(USER_ACTION_LEFT);
+      }
+    }
   }
 
 #ifdef HAS_GSENSOR
@@ -178,7 +204,7 @@ static void initialize()
 {
   Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
 
-  input.init();
+  fivewaybutton.init();
   screen.updatecallback = &ScreenUpdateCallback;
   screen.init();
 }

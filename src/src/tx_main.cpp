@@ -768,6 +768,36 @@ void OnTLMRatePacket(mspPacket_t *packet)
   // }
 }
 
+void OnPowerGetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("power get calibration value %d",  values[index]);
+}
+
+void OnPowerSetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t value = packet->readByte();
+
+  if((index < 0) || (index > PWR_COUNT))
+  {
+    DBGLN("calibration error index %d out of range", index);
+    return;
+  }
+  hwTimer.stop();
+  delay(20);
+
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  values[index] = value;
+  POWERMGNT.SetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("axis power calibration done %d, %d", index, value);
+  hwTimer.resume();
+}
+
+
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -865,6 +895,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
       break;
     case MSP_ELRS_TLM_RATE:
       OnTLMRatePacket(packet);
+      break;
+    case MSP_ELRS_POWER_CALI_GET:
+      OnPowerGetCalibration(packet);
+      break;
+    case MSP_ELRS_POWER_CALI_SET:
+      OnPowerSetCalibration(packet);
       break;
     default:
       break;

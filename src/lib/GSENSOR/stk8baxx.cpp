@@ -2,25 +2,6 @@
 #include "stk8baxx.h"
 #include "logging.h"
 
-#define STK8xxx_SLAVE_ADDRESS	0x18
-
-#define	STK_REG_POWMODE		0x11
-#define	STK_SUSPEND_MODE	0x80
-
-#define STK8xxx_REG_RANGESEL	0x0F
-#define STK8xxx_RANGE_2G		0x03
-#define STK8xxx_RANGE_4G		0x05
-#define STK8xxx_RANGE_8G		0x08
-
-#define STK_REG_CHIPID		0x00
-/* STK8321 or STK8323 CHIP ID = 0x23 */
-#define STK8xxx_CHIPID_VAL  0x23
-#define STK8327_CHIPID_VAL  0x26
-/* STK8BAxx */
- /* S or R resolution = 10 bit */
-#define STK8BA50_X_CHIPID_VAL	0x86
-#define STK8BA5X_CHIPID_VAL		0x87
-
 #define PID_SIZE	16
 uint8_t chipid_temp = 0x00;
 uint8_t stk8xxx_pid_list[PID_SIZE] = {STK8xxx_CHIPID_VAL, STK8BA50_X_CHIPID_VAL, STK8BA5X_CHIPID_VAL, STK8327_CHIPID_VAL};
@@ -53,22 +34,22 @@ void STK8xxx::STK8xxx_Anymotion_init()
 	unsigned char ARegAddr, ARegWriteValue;
 	
 	/* Enable X Y Z-axis any-motion (slope) interrupt */
-    ARegAddr       = 0x16;
+    ARegAddr       = STK8xxx_REG_INTEN1;
     ARegWriteValue = 0x07;
     WriteAccRegister(ARegAddr, ARegWriteValue);
 
 	/* Set anymotion Interrupt trigger threshold */
-    ARegAddr       = 0x28;
+    ARegAddr       = STK8xxx_REG_SLOPETHD;
     ARegWriteValue = 0x14; 
     WriteAccRegister(ARegAddr, ARegWriteValue);
 
 	/* Enable any-motion */
-    ARegAddr       = 0x2A;
+    ARegAddr       = STK8xxx_REG_SIGMOT2;
     ARegWriteValue = 0x04; 
     WriteAccRegister(ARegAddr, ARegWriteValue);
 
 	/* Map any-motion (slope) interrupt to INT1 */
-    ARegAddr       = 0x19;
+    ARegAddr       = STK8xxx_REG_INTMAP1;
     ARegWriteValue = 0x04; 
     WriteAccRegister(ARegAddr, ARegWriteValue);
 
@@ -84,22 +65,22 @@ void STK8xxx::STK8xxx_Sigmotion_init()
 	unsigned char SRegAddr, SRegWriteValue;
 	
 	/* Enable X Y Z-axis sig-motion (slope) interrupt */
-    SRegAddr       = 0x16;
+    SRegAddr       = STK8xxx_REG_INTEN1;
     SRegWriteValue = 0x07;
     WriteAccRegister(SRegAddr, SRegWriteValue);
 
 	/* Set sig-motion Interrupt trigger threshold */
-    SRegAddr       = 0x28;
+    SRegAddr       = STK8xxx_REG_SLOPETHD;
     SRegWriteValue = 0x14; 
     WriteAccRegister(SRegAddr, SRegWriteValue);
 
 	/* Enable significant motion */
-    SRegAddr       = 0x2A;
+    SRegAddr       = STK8xxx_REG_SIGMOT2;
     SRegWriteValue = 0x02; 
     WriteAccRegister(SRegAddr, SRegWriteValue);
 
 	/* Map significant motion interrupt to INT1 */
-    SRegAddr       = 0x19;
+    SRegAddr       = STK8xxx_REG_INTMAP1;
     SRegWriteValue = 0x01; 
     WriteAccRegister(SRegAddr, SRegWriteValue);
 
@@ -115,12 +96,12 @@ void STK8xxx::STK8xxx_Disable_Motion()
 	unsigned char ARegAddr, ARegWriteValue;
 	
 	/* Disable X Y Z-axis motion (slope) interrupt */
-    ARegAddr       = 0x16;
+    ARegAddr       = STK8xxx_REG_INTEN1;
     ARegWriteValue = 0x00;
     WriteAccRegister(ARegAddr, ARegWriteValue);
 
 	/* Disable motion */
-    ARegAddr       = 0x2A;
+    ARegAddr       = STK8xxx_REG_SIGMOT2;
     ARegWriteValue = 0x00; 
     WriteAccRegister(ARegAddr, ARegWriteValue);
 }
@@ -132,7 +113,7 @@ void STK8xxx::STK8xxx_Suspend_mode()
 	unsigned char RegAddr, RegWriteValue;
 	
     /* suspend mode enable */
-	RegAddr       = STK_REG_POWMODE;
+	RegAddr       = STK8xxx_REG_POWMODE;
     RegWriteValue = STK_SUSPEND_MODE;
     WriteAccRegister(RegAddr, RegWriteValue);
 }
@@ -171,7 +152,7 @@ int STK8xxx::STK8xxx_Initialization()
     }
 		
     /* soft-reset */
-	RegAddr       = 0x14;
+	RegAddr       = STK8xxx_REG_SWRST;
     RegWriteValue = 0xB6;
     WriteAccRegister(RegAddr, RegWriteValue);
 	delay(50);//unit ms
@@ -182,12 +163,12 @@ int STK8xxx::STK8xxx_Initialization()
     WriteAccRegister(RegAddr, RegWriteValue);
 
 	/* set power mode */
-	RegAddr 	  = 0x11;
+	RegAddr 	  = STK8xxx_REG_POWMODE;
 	RegWriteValue = 0x00;	// active mode
 	WriteAccRegister(RegAddr, RegWriteValue);
 	
 	/* set bandwidth */
-    RegAddr       = 0x10;
+    RegAddr       = STK8xxx_REG_BWSEL;
     RegWriteValue = 0x0F; // bandwidth = 1000Hz
     WriteAccRegister(RegAddr, RegWriteValue);
 	
@@ -195,12 +176,12 @@ int STK8xxx::STK8xxx_Initialization()
 	//STK8xxx_Sigmotion_init();
 
     /* set i2c watch dog */
-    RegAddr       = 0x34;
+    RegAddr       = STK8xxx_REG_INTFCFG;
     RegWriteValue = 0x04; // enable watch dog
     WriteAccRegister(RegAddr, RegWriteValue);
 
     /* int config */
-    RegAddr       = 0x20;
+    RegAddr       = STK8xxx_REG_INTCFG1;
     RegWriteValue = 0x05; // INT1/INT2 push-pull, active high
     WriteAccRegister(RegAddr, RegWriteValue);
 	
@@ -232,26 +213,26 @@ void STK8xxx::STK8xxx_Getregister_data(float *X_DataOut, float *Y_DataOut, float
     uint8_t RegAddr, RegReadValue[2];
     int16_t x, y, z;
 	
-    RegAddr      	= 0x02;
+    RegAddr      	= STK8xxx_REG_XOUT1;
     RegReadValue[0] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[0]);
-    RegAddr      	= 0x03;
+    RegAddr      	= STK8xxx_REG_XOUT2;
     RegReadValue[1] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[1]);
 	x = (short int)(RegReadValue[1] << 8 | RegReadValue[0]); 
 
-	RegAddr      	= 0x04;
+	RegAddr      	= STK8xxx_REG_YOUT1;
     RegReadValue[0] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[0]);
-    RegAddr      	= 0x05;
+    RegAddr      	= STK8xxx_REG_YOUT2;
     RegReadValue[1] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[1]);
 	y = (short int)(RegReadValue[1] << 8 | RegReadValue[0]); 
 	
-	RegAddr      	= 0x06;
+	RegAddr      	= STK8xxx_REG_ZOUT1;
     RegReadValue[0] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[0]);
-    RegAddr      	= 0x07;
+    RegAddr      	= STK8xxx_REG_ZOUT2;
     RegReadValue[1] = 0x00;
 	ReadAccRegister(RegAddr, &RegReadValue[1]);
 	z = (short int)(RegReadValue[1] << 8 | RegReadValue[0]); 

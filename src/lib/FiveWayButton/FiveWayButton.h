@@ -12,7 +12,7 @@ typedef enum
     INPUT_KEY_NO_PRESS = 7
 } Input_Key_Value_t;
 
-class Input
+class FiveWayButton
 {
 private:
     int key_state;

@@ -10,6 +10,8 @@
 #define HAS_THERMAL
 #define HAS_THERMAL_LM75A
 
+#define HAS_FIVE_WAY_BUTTON
+
 #define BACKPACK_LOGGING_BAUD 420000
 
 // GPIO pin definitions
@@ -27,9 +29,9 @@
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 
-#define GPIO_PIN_INPUT_KEY1     39
-#define GPIO_PIN_INPUT_KEY2     35
-#define GPIO_PIN_INPUT_KEY3     34
+#define GPIO_PIN_FIVE_WAY_INPUT1     39
+#define GPIO_PIN_FIVE_WAY_INPUT2     35
+#define GPIO_PIN_FIVE_WAY_INPUT3     34
 
 #define GPIO_PIN_TFT_MOSI       16
 #define GPIO_PIN_TFT_SCLK       17

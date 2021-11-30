@@ -1,7 +1,7 @@
 #pragma once
 
 #include "targets.h"
-#include "axis_logo.h"
+#include "logos.h"
 #include "TFT_eSPI_User_Setup.h"
 #include <SPI.h>
 
@@ -47,7 +47,8 @@ typedef enum
 {
     SCREEN_STATUS_INIT = 0,
     SCREEN_STATUS_IDLE = 1,
-    SCREEN_STATUS_WORK = 2
+    SCREEN_STATUS_WORK = 2,
+    SCREEN_STATUS_BINDING = 3
 } Screen_Status_t;
 
 
@@ -74,7 +75,8 @@ typedef enum
     USER_UPDATE_TYPE_SMARTFAN = 4,
     USER_UPDATE_TYPE_BINDING = 5,
     USER_UPDATE_TYPE_EXIT_BINDING = 6,
-    USER_UPDATE_TYPE_WIFI = 7
+    USER_UPDATE_TYPE_WIFI = 7,
+    USER_UPDATE_TYPE_EXIT_WIFI = 8
 } Screen_Update_Type_t;
 
 typedef enum
