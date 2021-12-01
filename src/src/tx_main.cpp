@@ -218,7 +218,7 @@ void DynamicPower_Update()
     POWERMGNT.incPower();
   }
   if (avg_rssi > rssi_dec_threshold) {
-    DBGLN("Power decrease");
+    DBGVLN("Power decrease");
     POWERMGNT.decPower();
   }
 
@@ -685,7 +685,6 @@ void BackpackBinding()
 static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
-  MspSender.ResetState();
   MspSender.SetDataToTransmit(1, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
 
@@ -770,7 +769,6 @@ void SendUIDOverMSP()
   MSPDataPackage[2] = MasterUID[3];
   MSPDataPackage[3] = MasterUID[4];
   MSPDataPackage[4] = MasterUID[5];
-  MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -835,7 +833,6 @@ void ExitBindingMode()
 
   InBindingMode = false;
 
-  MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
   DBGLN("Exiting binding mode");
