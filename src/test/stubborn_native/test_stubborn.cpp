@@ -284,7 +284,7 @@ void test_stubborn_link_sends_data_until_confirmation(void)
     receiver.ResetState();
     receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
 
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < sender.GetMaxPacketsBeforeResync(); i++)
     {
         sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
         TEST_ASSERT_EQUAL(1, packageIndex);
