@@ -251,7 +251,7 @@ function uploadFile() {
 
 function progressHandler(event) {
     //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-    var percent = Math.round((event.loaded / event.total) * 100);
+    var percent = Math.round((event.loaded / event.total) * 99);
     _("progressBar").value = percent;
     _("status").innerHTML = percent + "% uploaded... please wait";
 }
@@ -261,11 +261,15 @@ function completeHandler(event) {
     _("progressBar").value = 0;
     var data = JSON.parse(event.target.responseText);
     if (data.status === 'ok') {
-        cuteAlert({
-            type: 'success',
-            title: "Update Succeeded",
-            message: data.msg
-        });
+        setTimeout(() => {
+            _("progressBar").value = 100;
+            _("status").innerHTML = "100% uploaded.";
+            cuteAlert({
+                type: 'success',
+                title: "Update Succeeded",
+                message: data.msg
+            });
+        }, 5000);
     } else if (data.status === 'mismatch') {
         cuteAlert({
             type: 'question',
