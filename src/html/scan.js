@@ -257,7 +257,7 @@ function progressHandler(event) {
 }
 
 function completeHandler(event) {
-    _("status").innerHTML = "";
+    _("status").innerHTML = "Processing...";
     _("progressBar").value = 0;
     var data = JSON.parse(event.target.responseText);
     if (data.status === 'ok') {
