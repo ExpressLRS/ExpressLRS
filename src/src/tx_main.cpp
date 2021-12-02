@@ -33,6 +33,12 @@ SX1280Driver Radio;
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
+#include "devGsensor.h"
+#include "devThermal.h"
+
+#ifdef TARGET_AXIS_THOR_2400_TX
+#include "devScreen.h"
+#endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -113,6 +119,15 @@ device_t *ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   &Button_device,
+#endif
+#ifdef HAS_TFT_SCREEN
+  &Screen_device,
+#endif
+#ifdef HAS_GSENSOR
+  &Gsensor_device,
+#endif
+#ifdef HAS_THERMAL
+  &Thermal_device,
 #endif
   &VTX_device
 };
@@ -753,6 +768,36 @@ void OnTLMRatePacket(mspPacket_t *packet)
   // }
 }
 
+void OnPowerGetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("power get calibration value %d",  values[index]);
+}
+
+void OnPowerSetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t value = packet->readByte();
+
+  if((index < 0) || (index > PWR_COUNT))
+  {
+    DBGLN("calibration error index %d out of range", index);
+    return;
+  }
+  hwTimer.stop();
+  delay(20);
+
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  values[index] = value;
+  POWERMGNT.SetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("axis power calibration done %d, %d", index, value);
+  hwTimer.resume();
+}
+
+
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -851,6 +896,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
     case MSP_ELRS_TLM_RATE:
       OnTLMRatePacket(packet);
       break;
+    case MSP_ELRS_POWER_CALI_GET:
+      OnPowerGetCalibration(packet);
+      break;
+    case MSP_ELRS_POWER_CALI_SET:
+      OnPowerSetCalibration(packet);
+      break;
     default:
       break;
     }
@@ -901,7 +952,7 @@ static void setupTarget()
 
 void setup()
 {
-  Serial.begin(460800);
+  Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
 
   // Initialise the UI devices
@@ -927,7 +978,7 @@ void setup()
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
-  
+
   #if defined(USE_BLE_JOYSTICK)
     init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
   #endif
