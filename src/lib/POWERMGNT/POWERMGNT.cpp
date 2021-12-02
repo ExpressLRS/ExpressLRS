@@ -42,12 +42,6 @@ PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #endif
 
-static int8_t powerCaliValues[PWR_COUNT] = {0};
-
-#if defined(PLATFORM_ESP32)
-nvs_handle POWERMGNT::handle = 0;
-#endif
-
 PowerLevels_e POWERMGNT::incPower()
 {
     if (CurrentPower < MaxPower)
@@ -90,64 +84,6 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
     }
 }
 
-void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
-{
-    bool isUpdate = false;
-    for(int i=0;i<size;i++)
-    {
-        if(powerCaliValues[i] != *(values + i))
-        {
-            powerCaliValues[i] = *(values + i);
-            isUpdate = true;
-        }
-    }
-#if defined(PLATFORM_ESP32)
-    if (isUpdate)
-    {
-        nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
-    }
-    nvs_commit(handle);
-#endif
-}
-
-void POWERMGNT::GetPowerCaliValues(int8_t *values, size_t size)
-{
-    for(int i=0;i<size;i++)
-    {
-        *(values + i) =powerCaliValues[i];
-    }
-}
-
-void POWERMGNT::LoadCalibration()
-{
-#if defined(PLATFORM_ESP32)
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( err );
-    ESP_ERROR_CHECK(nvs_open("PWRCALI", NVS_READWRITE, &handle));
-
-    uint32_t version;
-    if(nvs_get_u32(handle, "calversion", &version) != ESP_ERR_NVS_NOT_FOUND
-        && version == (uint32_t)(CALIBRATION_VERSION | CALIBRATION_MAGIC))
-    {
-        size_t size = sizeof(powerCaliValues);
-        nvs_get_blob(handle, "powercali", &powerCaliValues, &size);
-    }
-    else
-    {
-        nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
-        nvs_set_u32(handle, "calversion", CALIBRATION_VERSION | CALIBRATION_MAGIC);
-        nvs_commit(handle);
-    }
-#endif
-}
-
-
 void POWERMGNT::init()
 {
 #if defined(POWER_OUTPUT_DAC)
@@ -169,21 +105,20 @@ void POWERMGNT::init()
 #if defined(GPIO_PIN_FAN_EN)
     pinMode(GPIO_PIN_FAN_EN, OUTPUT);
 #endif
-    LoadCalibration();
     setDefaultPower();
 }
 
 PowerLevels_e POWERMGNT::getDefaultPower()
 {
-    if (MinPower > DefaultPower)
+    if (MinPower > PWR_50mW)
     {
         return MinPower;
     }
-    if (MaxPower < DefaultPower)
+    if (MaxPower < PWR_50mW)
     {
         return MaxPower;
     }
-    return DefaultPower;
+    return PWR_50mW;
 }
 
 void POWERMGNT::setDefaultPower()
@@ -235,7 +170,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_FIXED)
     Radio.SetOutputPower(POWER_OUTPUT_FIXED);
 #elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
-    Radio.SetOutputPower(powerValues[Power - MinPower] + powerCaliValues[Power]);
+    Radio.SetOutputPower(powerValues[Power - MinPower]);
 #elif defined(TARGET_RX)
     // Set to max power for telemetry on the RX if not specified
     Radio.SetOutputPowerMax();
