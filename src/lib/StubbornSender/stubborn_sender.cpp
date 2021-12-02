@@ -129,7 +129,7 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         break;
 
     case SEND_NEXT:
-        nextSenderState = SENDER_IDLE;
+        nextSenderState = SENDING;
         waitUntilTelemetryConfirm = !telemetryConfirmValue;
         break;
 
