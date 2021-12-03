@@ -1,5 +1,7 @@
 // The name of the device in the LUA module
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DIY900 RFM95"
+#endif
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS 5
