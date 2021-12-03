@@ -3,6 +3,7 @@
 // Any device features
 #define USE_TX_BACKPACK
 #define USE_SX1280_DCDC
+#define WS2812_IS_GRB
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
