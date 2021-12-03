@@ -272,12 +272,12 @@ function completeHandler(event) {
         var percent = 0;
         var interval = setInterval(()=>{
             percent = percent + 2;
-            _("progressBar_" + type_suffix).value = percent;
-            _("status_" + type_suffix).innerHTML = percent + "% flashed... please wait";
+            _("progressBar_").value = percent;
+            _("status_").innerHTML = percent + "% flashed... please wait";
             if (percent == 100) {
                 clearInterval(interval);
-                _("status_" + type_suffix).innerHTML = "";
-                _("progressBar_" + type_suffix).value = 0;
+                _("status_").innerHTML = "";
+                _("progressBar_").value = 0;
                 show_message();
             }
         }, 100);
