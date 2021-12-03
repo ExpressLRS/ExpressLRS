@@ -7,6 +7,7 @@ const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
 
 const char PROGMEM compile_options[] = {
+    "-DDEVICE_NAME=\"" STR(DEVICE_NAME) "\" "
 #ifdef MY_BINDING_PHRASE
     "-DMY_BINDING_PHRASE=\"" STR(MY_BINDING_PHRASE) "\" "
 #endif
@@ -27,6 +28,9 @@ const char PROGMEM compile_options[] = {
     #ifdef UART_INVERTED
         "-DUART_INVERTED "
     #endif
+    #ifdef DISABLE_ALL_BEEPS
+        "-DDISABLE_ALL_BEEPS "
+    #endif
     #ifdef JUST_BEEP_ONCE
         "-DJUST_BEEP_ONCE "
     #endif
@@ -42,6 +46,9 @@ const char PROGMEM compile_options[] = {
     #ifdef TLM_REPORT_INTERVAL_MS
         "-DTLM_REPORT_INTERVAL_MS=" STR(TLM_REPORT_INTERVAL_MS) " "
     #endif
+    #ifdef USE_TX_BACKPACK
+        "-DUSE_TX_BACKPACK "
+    #endif
 #endif
 
 #ifdef TARGET_RX
@@ -56,6 +63,15 @@ const char PROGMEM compile_options[] = {
     #endif
     #ifdef USE_DIVERSITY
         "-DUSE_DIVERSITY "
+    #endif
+    #ifdef RCVR_UART_BAUD
+        "-DRCVR_UART_BAUD=" STR(RCVR_UART_BAUD) " "
+    #endif
+    #ifdef RCVR_INVERT_TX
+        "-DRCVR_INVERT_TX "
+    #endif
+    #ifdef USE_R9MM_R9MINI_SBUS
+        "-DUSE_R9MM_R9MINI_SBUS "
     #endif
 #endif
 };
