@@ -8,9 +8,9 @@
 typedef enum {
     SENDER_IDLE = 0,
     SENDING,
-    SEND_NEXT,
     WAIT_UNTIL_NEXT_CONFIRM,
-    RESYNC
+    RESYNC,
+    RESYNC_THEN_SEND, // perform a RESYNC then go to SENDING
 } stubborn_sender_state_s;
 
 class StubbornSender
