@@ -251,25 +251,36 @@ function uploadFile() {
 
 function progressHandler(event) {
     //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-    var percent = Math.round((event.loaded / event.total) * 99);
+    var percent = Math.round((event.loaded / event.total) * 100);
     _("progressBar").value = percent;
     _("status").innerHTML = percent + "% uploaded... please wait";
 }
 
 function completeHandler(event) {
-    _("status").innerHTML = "Processing...";
+    _("status").innerHTML = "";
     _("progressBar").value = 0;
     var data = JSON.parse(event.target.responseText);
     if (data.status === 'ok') {
-        setTimeout(() => {
-            _("progressBar").value = 100;
-            _("status").innerHTML = "100% uploaded.";
+        function show_message() {
             cuteAlert({
                 type: 'success',
                 title: "Update Succeeded",
                 message: data.msg
             });
-        }, 5000);
+        }
+        // This is basically a delayed display of the success dialog with a fake progress
+        var percent = 0;
+        var interval = setInterval(()=>{
+            percent = percent + 2;
+            _("progressBar_" + type_suffix).value = percent;
+            _("status_" + type_suffix).innerHTML = percent + "% flashed... please wait";
+            if (percent == 100) {
+                clearInterval(interval);
+                _("status_" + type_suffix).innerHTML = "";
+                _("progressBar_" + type_suffix).value = 0;
+                show_message();
+            }
+        }, 100);
     } else if (data.status === 'mismatch') {
         cuteAlert({
             type: 'question',
