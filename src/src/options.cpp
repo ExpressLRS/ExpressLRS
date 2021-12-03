@@ -5,9 +5,10 @@
 #define STR(macro) QUOTE(macro)
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
+const char device_name[] = STR(DEVICE_NAME);
+const uint8_t device_name_size = sizeof(device_name);
 
 const char PROGMEM compile_options[] = {
-    "-DDEVICE_NAME=\"" STR(DEVICE_NAME) "\" "
 #ifdef MY_BINDING_PHRASE
     "-DMY_BINDING_PHRASE=\"" STR(MY_BINDING_PHRASE) "\" "
 #endif

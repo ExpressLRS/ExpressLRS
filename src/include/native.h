@@ -75,6 +75,9 @@ inline void delay(int32_t time) {
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
 
+const char device_name[] = "testing";
+const uint8_t device_name_size = sizeof(device_name);
+
 #ifdef _WIN32
 #define random rand
 #define srandom srand
