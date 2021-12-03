@@ -37,7 +37,7 @@ void StubbornSender::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataTo
     currentPackage = 1;
     waitCount = 0;
     this->bytesPerCall = bytesPerCall;
-    senderState = (senderState == SENDER_IDLE) ? SENDING : SEND_NEXT;
+    senderState = (senderState == SENDER_IDLE) ? SENDING : RESYNC_THEN_SEND;
 }
 
 bool StubbornSender::IsActive()
@@ -50,6 +50,7 @@ void StubbornSender::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, ui
     switch (senderState)
     {
     case RESYNC:
+    case RESYNC_THEN_SEND:
         *packageIndex = maxPackageIndex;
         *count = 0;
         *currentData = 0;
@@ -110,10 +111,11 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         break;
 
     case RESYNC:
+    case RESYNC_THEN_SEND:
     case WAIT_UNTIL_NEXT_CONFIRM:
         if (telemetryConfirmValue == waitUntilTelemetryConfirm)
         {
-            nextSenderState = SENDER_IDLE;
+            nextSenderState = (senderState == RESYNC_THEN_SEND) ? SENDING : SENDER_IDLE;
             waitUntilTelemetryConfirm = !telemetryConfirmValue;
         }
         // switch to resync if tx does not confirm value fast enough
@@ -126,11 +128,6 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
                 nextSenderState = RESYNC;
             }
         }
-        break;
-
-    case SEND_NEXT:
-        nextSenderState = SENDING;
-        waitUntilTelemetryConfirm = !telemetryConfirmValue;
         break;
 
     case SENDER_IDLE:
