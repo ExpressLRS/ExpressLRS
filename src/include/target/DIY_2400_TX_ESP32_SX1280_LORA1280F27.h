@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DIY2400 F27"
+#endif
 
 // Output Power
 #define MinPower PWR_10mW

@@ -25,7 +25,6 @@ HardwareSerial CRSF::Port = Serial;
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
-const char deviceName[] = DEVICE_NAME;
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -938,9 +937,9 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 
 void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 {
-    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + sizeof(deviceName));
+    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + device_name_size);
     // Packet starts with device name
-    memcpy(frame + sizeof(crsf_ext_header_t), deviceName, sizeof(deviceName));
+    memcpy(frame + sizeof(crsf_ext_header_t), device_name, device_name_size);
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"

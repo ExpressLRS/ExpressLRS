@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME          "SIYI FM30"
+#endif
 
 // There is some special handling for this target
 #define TARGET_TX_FM30

@@ -37,7 +37,9 @@ https://github.com/jaxxzer
 #else
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
-    #define DEVICE_NAME "R9MM"
+    #ifndef DEVICE_NAME
+        #define DEVICE_NAME "R9MM"
+    #endif
 #endif
 
 #if defined(TARGET_R9MX_RX)

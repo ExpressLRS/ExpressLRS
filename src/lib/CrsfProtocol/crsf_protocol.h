@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include "crc.h"
+#include "options.h"
 
 #if TARGET_TX && PLATFORM_STM32
 #define CRSF_TX_MODULE_STM32 1
@@ -244,7 +245,7 @@ typedef struct deviceInformationPacket_s
     uint8_t parameterVersion;
 } PACKED deviceInformationPacket_t;
 
-#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + sizeof(DEVICE_NAME))
+#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + device_name_size)
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
