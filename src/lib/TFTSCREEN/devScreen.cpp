@@ -8,9 +8,12 @@
 #include "config.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
+// #include "FiveWayButton.h"
+// #include "thermal.h"
+// #include "gsensor.h"
 
-#include "screen.h"
-Screen screen;
+#include "tftscreen.h"
+TFTScreen screen;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"

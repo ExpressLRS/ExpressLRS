@@ -7,7 +7,7 @@
 #include "gsensor.h"
 #include "POWERMGNT.h"
 #include "config.h"
-#include "screen.h"
+#include "tftscreen.h"
 
 #if defined(TARGET_TX)
 extern TxConfig config;

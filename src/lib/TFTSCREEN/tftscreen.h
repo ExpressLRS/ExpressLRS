@@ -137,7 +137,8 @@ public:
     int getUserPowerSavingIndex();
     int getUserSmartFanIndex();
     int getScreenStatus();
-    void doScreenBackLight(int state);
+
+};
 
 #define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D
 
