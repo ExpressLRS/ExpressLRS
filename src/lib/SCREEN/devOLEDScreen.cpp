@@ -1,9 +1,8 @@
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
-
 #include "targets.h"
 #include "common.h"
 #include "device.h"
 
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
 
 #include "logging.h"
 #include "Wire.h"
@@ -11,8 +10,8 @@
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 
-#include "tftscreen.h"
-TFTScreen screen;
+#include "oledscreen.h"
+OLEDScreen screen;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
@@ -22,10 +21,10 @@ FiveWayButton fivewaybutton;
 #define SCREEN_DURATION 20
 
 #define LOGO_DISPLAY_TIMEOUT  5000
-boolean isLogoDisplayed = false;
+bool isLogoDisplayed = false;
 
 uint32_t none_input_start_time = 0;
-boolean isUserInputCheck = false;
+bool isUserInputCheck = false;
 #define SCREEN_IDLE_TIMEOUT  20000
 
 extern bool ICACHE_RAM_ATTR IsArmed();
@@ -97,7 +96,7 @@ void handle(void)
   if(!IsArmed())
   {
     int key;
-    boolean isLongPressed;
+    bool isLongPressed;
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {   

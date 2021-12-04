@@ -41,6 +41,10 @@ U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(OLED_ROTATION, GPIO_PIN_OLED_SCK, GP
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 #endif
 
+#define RATE_MAX_NUMBER 4
+#define POWER_MAX_NUMBER 7
+#define RATIO_MAX_NUMBER 8
+
 #ifdef TARGET_TX_GHOST
 /**
  * helper function is used to draw xbmp on the OLED.
@@ -129,28 +133,28 @@ void displayFontCenter(const char * info)
  *               ratio = expresslrs_tlm_ratio_e
  * @return void
  */
-void updateScreen(int power, int rate, int ratio, const char *commitStr){
-    u8g2.clearBuffer();
+// void updateScreen(int power, int rate, int ratio, const char *commitStr){
+//     u8g2.clearBuffer();
 
-    #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, getRateString(rate));
-        u8g2.drawStr(70,15 , getTLMRatioString(ratio));
-        u8g2.drawStr(0,32, getPowerString(power));
-        u8g2.drawStr(70,32, commitStr);
-    #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(0,42, getRateString(rate));
-        u8g2.drawStr(70,42 , getTLMRatioString(ratio));
-        u8g2.drawStr(0,57, getPowerString(power));
-        u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(70,53, "TLM");
-        u8g2.drawStr(0,24, "Ver: ");
-        u8g2.drawStr(38,24, commitStr);
-    #endif
-    u8g2.sendBuffer();
-}
+//     #ifdef USE_OLED_SPI_SMALL
+//         u8g2.setFont(u8g2_font_courR10_tr);
+//         u8g2.drawStr(0,15, getRateString(rate));
+//         u8g2.drawStr(70,15 , getTLMRatioString(ratio));
+//         u8g2.drawStr(0,32, getPowerString(power));
+//         u8g2.drawStr(70,32, commitStr);
+//     #else
+//         u8g2.setFont(u8g2_font_courR10_tr);
+//         u8g2.drawStr(0,10, "ExpressLRS");
+//         u8g2.drawStr(0,42, getRateString(rate));
+//         u8g2.drawStr(70,42 , getTLMRatioString(ratio));
+//         u8g2.drawStr(0,57, getPowerString(power));
+//         u8g2.setFont(u8g2_font_courR08_tr);
+//         u8g2.drawStr(70,53, "TLM");
+//         u8g2.drawStr(0,24, "Ver: ");
+//         u8g2.drawStr(38,24, commitStr);
+//     #endif
+//     u8g2.sendBuffer();
+// }
 
 /**
  * Returns power level string (Char array)
@@ -217,7 +221,7 @@ const char * getTLMRatioString(int ratio){
 
 #endif
 
-static char thisVersion[] = {LATEST_VERSION, 0};
+// static char thisVersion[] = {LATEST_VERSION, 0};
 
 void OLEDScreen::nullCallback(int updateType) {}
 void (*OLEDScreen::updatecallback)(int updateType) = &nullCallback;
@@ -285,9 +289,7 @@ void OLEDScreen::doPageBack()
     }
     else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
             (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX) ||
-            (current_page_index == PAGE_SUB_POWERSAVING_INDEX) ||
-            (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
+            (current_page_index == PAGE_SUB_RATIO_INDEX)) 
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
         updateMainMenuPage(USER_ACTION_NONE);
@@ -320,9 +322,7 @@ void OLEDScreen::doPageForward()
     {
         if((main_menu_page_index == MAIN_MENU_RATE_INDEX) ||
             (main_menu_page_index == MAIN_MENU_POWER_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_RATIO_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_POWERSAVING_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_SMARTFAN_INDEX))
+            (main_menu_page_index == MAIN_MENU_RATIO_INDEX))
         {
             current_page_index = main_menu_page_index;
             updateSubFunctionPage(USER_ACTION_NONE);
@@ -340,9 +340,7 @@ void OLEDScreen::doPageForward()
     }
     else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
             (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX) ||
-            (current_page_index == PAGE_SUB_POWERSAVING_INDEX) ||
-            (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
+            (current_page_index == PAGE_SUB_RATIO_INDEX))
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
         updateMainMenuPage(USER_ACTION_NONE);
@@ -367,14 +365,6 @@ void OLEDScreen::doValueConfirm()
     else if(current_page_index == PAGE_SUB_RATIO_INDEX)
     {
         updatecallback(USER_UPDATE_TYPE_RATIO);
-    }
-    else if(current_page_index == PAGE_SUB_SMARTFAN_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_SMARTFAN);
-    }
-    else if(current_page_index == PAGE_SUB_POWERSAVING_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_POWERSAVING);
     }
 
     doPageForward();
@@ -484,9 +474,6 @@ void OLEDScreen::updateSubBindConfirmPage()
 }
 
 
-
-}
-
 void OLEDScreen::updateSubBindingPage()
 {
     // TODO: Put bind image? 
@@ -526,14 +513,6 @@ void OLEDScreen::doValueSelection(int action)
     {
         doRatioValueSelect(action);
     }
-    else if(current_page_index == PAGE_SUB_POWERSAVING_INDEX)
-    {
-        doPowerSavingValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_SMARTFAN_INDEX)
-    {
-        doSmartFanValueSelect(action);
-    }
 }
 
 void OLEDScreen::doRateValueSelect(int action)
@@ -565,10 +544,10 @@ void OLEDScreen::doRateValueSelect(int action)
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, rate_string[current_rate_index]);
+        u8g2.drawStr(0,15, getRateString(current_rate_index));
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, rate_string[current_rate_index]);
+        u8g2.drawStr(0,10, getRateString(current_rate_index));
     #endif
     u8g2.sendBuffer();
     

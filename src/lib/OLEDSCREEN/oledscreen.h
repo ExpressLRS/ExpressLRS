@@ -104,8 +104,6 @@ private:
     void doRateValueSelect(int action);
     void doPowerValueSelect(int action); 
     void doRatioValueSelect(int action);
-    void doPowerSavingValueSelect(int action);
-    void doSmartFanValueSelect(int action);
 
     void updateMainMenuPage(int action);
     void updateSubFunctionPage(int action);

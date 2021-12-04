@@ -16,14 +16,14 @@ class FiveWayButton
 {
 private:
     int key_state;
-    boolean keyPressed;
-    boolean isLongPressed;
+    bool keyPressed;
+    bool isLongPressed;
 
 public:
 
     void init();
     void handle();
 
-    void getKeyState(int *keyValue, boolean *keyLongPressed);
+    void getKeyState(int *keyValue, bool *keyLongPressed);
     void clearKeyState();
 };

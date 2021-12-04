@@ -10,11 +10,52 @@ uint32_t key_debounce_start = 0;
 
 int key = INPUT_KEY_NO_PRESS;
 
+
+#ifdef GPIO_PIN_JOYSTICK
+#define UP    0;
+#define DOWN  1;
+#define LEFT  2;
+#define RIGHT 3;
+#define ENTER 4;
+#define IDLE  5;
+
+static int16_t joyAdcValues[] = JOY_ADC_VALUES;
+
+bool checkValue(int direction){ 
+    int value = analogRead(GPIO_PIN_JOYSTICK);
+    if(value < (joyAdcValues[direction] + 50) && value > (joyAdcValues[direction] - 50)){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int checkKey()
+{ 
+    int value = analogRead(GPIO_PIN_JOYSTICK);
+        
+    if(value < (joyAdcValues[0] + 50) && value > (joyAdcValues[0] - 50))
+        return INPUT_KEY_UP_PRESS;
+    else if(value < (joyAdcValues[1] + 50) && value > (joyAdcValues[1] - 50))
+        return INPUT_KEY_DOWN_PRESS;
+    else if(value < (joyAdcValues[2] + 50) && value > (joyAdcValues[2] - 50))
+        return INPUT_KEY_LEFT_PRESS;
+    else if(value < (joyAdcValues[3] + 50) && value > (joyAdcValues[3] - 50))
+        return INPUT_KEY_RIGHT_PRESS;
+    else if(value < (joyAdcValues[4] + 50) && value > (joyAdcValues[4] - 50))
+        return INPUT_KEY_OK_PRESS;
+    else
+        return INPUT_KEY_NO_PRESS;
+}
+#endif
+
 void FiveWayButton::init()
 { 
+    #ifndef JOY_ADC_VALUES
     pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT|PULLUP );
     pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT|PULLUP );
     pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT|PULLUP );
+    #endif
 
     key_state = INPUT_KEY_NO_PRESS;
     keyPressed = false;
@@ -25,7 +66,14 @@ void FiveWayButton::handle()
 {  
     if(keyPressed)
     {
+        #ifndef JOY_ADC_VALUES
         int key_down = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
+        #else 
+        // Hack, we know that INPUT_KEY_NO_PRESS = 7 so for analog we would have to have it equal idle 
+        int key_down = checkKey();
+        #endif
+
+
         if(key_down == INPUT_KEY_NO_PRESS)
         {
             //key released
@@ -52,7 +100,12 @@ void FiveWayButton::handle()
     }
     else
     {
+        #ifndef JOY_ADC_VALUES
         key = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
+        #else 
+        key = checkKey();
+        #endif
+        
         if(key != INPUT_KEY_NO_PRESS)
         {
             keyPressed = true;
@@ -62,7 +115,7 @@ void FiveWayButton::handle()
     }   
 }
 
-void FiveWayButton::getKeyState(int *keyValue, boolean *keyLongPressed)
+void FiveWayButton::getKeyState(int *keyValue, bool *keyLongPressed)
 {
     *keyValue = key_state;
     *keyLongPressed = isLongPressed;

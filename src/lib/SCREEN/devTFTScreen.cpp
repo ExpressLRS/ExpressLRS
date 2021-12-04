@@ -31,17 +31,17 @@ extern Thermal thermal;
 #define SCREEN_DURATION 20
 
 #define LOGO_DISPLAY_TIMEOUT  5000
-boolean isLogoDisplayed = false;
+bool isLogoDisplayed = false;
 
 #define SCREEN_IDLE_TIMEOUT  20000
 uint32_t none_input_start_time = 0;
-boolean isUserInputCheck = false;
+bool isUserInputCheck = false;
 
 #define UPDATE_TEMP_TIMEOUT  5000
 uint32_t update_temp_start_time = 0;
 
-boolean is_screen_flipped = false;
-boolean is_pre_screen_flipped = false;
+bool is_screen_flipped = false;
+bool is_pre_screen_flipped = false;
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
@@ -118,7 +118,7 @@ void handle(void)
   if(!IsArmed() && !is_screen_flipped)
   {
     int key;
-    boolean isLongPressed;
+    bool isLongPressed;
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {

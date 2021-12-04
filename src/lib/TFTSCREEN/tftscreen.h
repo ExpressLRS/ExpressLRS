@@ -108,7 +108,7 @@ class TFTScreen: public Screen
 private:
     int current_powersaving_index;
     int current_smartfan_index;
-    
+
     uint8_t system_temperature;  
 
     void doValueSelection(int action);
@@ -151,8 +151,6 @@ public:
 
     int getUserPowerSavingIndex();
     int getUserSmartFanIndex();
-    int getScreenStatus();
-
 };
 
 #define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D

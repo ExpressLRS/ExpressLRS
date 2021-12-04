@@ -13,7 +13,7 @@ TFT_eSPI tft = TFT_eSPI();
 
 #define VERSION_MAX_LENGTH  6
 
-boolean is_confirmed = false;
+bool is_confirmed = false;
 
 void TFTScreen::nullCallback(int updateType) {}
 void (*TFTScreen::updatecallback)(int updateType) = &nullCallback;
@@ -657,11 +657,6 @@ int TFTScreen::getUserPowerSavingIndex()
 int TFTScreen::getUserSmartFanIndex()
 {
     return current_smartfan_index;
-}
-
-int TFTScreen::getScreenStatus()
-{
-    return current_screen_status;
 }
 
 void TFTScreen::doScreenBackLight(int state)

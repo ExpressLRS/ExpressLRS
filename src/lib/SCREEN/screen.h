@@ -19,8 +19,6 @@ protected:
     virtual void doRateValueSelect(int action) = 0;
     virtual void doPowerValueSelect(int action) = 0; 
     virtual void doRatioValueSelect(int action) = 0;
-    virtual void doPowerSavingValueSelect(int action) = 0;
-    virtual void doSmartFanValueSelect(int action) = 0;
 
     virtual void updateMainMenuPage(int action) = 0;
     virtual void updateSubFunctionPage(int action) = 0;
@@ -43,5 +41,6 @@ public:
     int getUserRateIndex();
     int getUserPowerIndex();
     int getUserRatioIndex();
+    int getScreenStatus();
 
 };
