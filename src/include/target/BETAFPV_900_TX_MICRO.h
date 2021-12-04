@@ -25,7 +25,8 @@
 #define GPIO_PIN_OLED_RST       -1
 #define GPIO_PIN_OLED_SCK       32
 #define GPIO_PIN_OLED_SDA       22
-#define GPIO_PIN_BUTTON         25
+// #define GPIO_PIN_BUTTON         25
+#define GPIO_PIN_JOYSTICK       25
 
 // Output Power
 #define MinPower                PWR_100mW
@@ -33,4 +34,4 @@
 #define POWER_OUTPUT_VALUES     {0,3,8}
 
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
-#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}
+#define JOY_ADC_VALUES          {2839, 2191, 1616, 3511, 0, 4095}

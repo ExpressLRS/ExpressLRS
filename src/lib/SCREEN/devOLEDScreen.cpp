@@ -174,6 +174,7 @@ static int start()
     return LOGO_DISPLAY_TIMEOUT;
 }
 
+  #ifdef HAS_FIVE_WAY_BUTTON
 static int event()
 {
   if(!isLogoDisplayed)
@@ -200,11 +201,14 @@ static int timeout()
   return SCREEN_DURATION;
 
 }
+#endif
 
 device_t Screen_device = {
     .initialize = initialize,
     .start = start,
+    #ifdef HAS_FIVE_WAY_BUTTON
     .event = event,
     .timeout = timeout
+    #endif
 };
 #endif
