@@ -185,7 +185,7 @@ String main_menu_line_2[] = {
 
 
 
-// static char thisVersion[] = {LATEST_VERSION, 0};
+static char thisVersion[] = {LATEST_VERSION, 0};
 
 void OLEDScreen::nullCallback(int updateType) {}
 void (*OLEDScreen::updatecallback)(int updateType) = &nullCallback;
@@ -232,7 +232,7 @@ void OLEDScreen::idleScreen()
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(70,53, "TLM");
         u8g2.drawStr(0,24, "Ver: ");
-        u8g2.drawStr(38,24, "TEST");
+        u8g2.drawStr(38,24, thisVersion);
     #endif
     u8g2.sendBuffer();
     
