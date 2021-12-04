@@ -3,6 +3,7 @@
 // Any device features
 #define USE_OLED_I2C
 #define OLED_REVERSED
+#define HAS_FIVE_WAY_BUTTON
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_MICRO_V1
@@ -31,5 +32,8 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_500mW
 #define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
+
+/* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
+#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}
 
 #define Regulatory_Domain_ISM_2400 1

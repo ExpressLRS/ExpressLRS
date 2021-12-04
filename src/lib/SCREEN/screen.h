@@ -32,9 +32,9 @@ protected:
 
 public:
 
-    virtual void init();
-    virtual void doUserAction(int action);
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index);
+    virtual void init() = 0;
+    virtual void doUserAction(int action) = 0;
+    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index) = 0;
 
     int getUserRateIndex();
     int getUserPowerIndex();

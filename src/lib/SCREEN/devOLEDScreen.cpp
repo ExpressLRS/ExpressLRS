@@ -1,16 +1,15 @@
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+
 #include "targets.h"
 #include "common.h"
 #include "device.h"
 
-#ifdef HAS_TFT_SCREEN
+
 #include "logging.h"
 #include "Wire.h"
 #include "config.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
-// #include "FiveWayButton.h"
-// #include "thermal.h"
-// #include "gsensor.h"
 
 #include "tftscreen.h"
 TFTScreen screen;
@@ -20,30 +19,14 @@ TFTScreen screen;
 FiveWayButton fivewaybutton;
 #endif
 
-#ifdef HAS_GSENSOR
-#include "gsensor.h"
-extern Gsensor gsensor;
-#endif
-
-#ifdef HAS_THERMAL
-#include "thermal.h"
-extern Thermal thermal;
-#endif
-
 #define SCREEN_DURATION 20
 
 #define LOGO_DISPLAY_TIMEOUT  5000
 boolean isLogoDisplayed = false;
 
-#define SCREEN_IDLE_TIMEOUT  20000
 uint32_t none_input_start_time = 0;
 boolean isUserInputCheck = false;
-
-#define UPDATE_TEMP_TIMEOUT  5000
-uint32_t update_temp_start_time = 0;
-
-boolean is_screen_flipped = false;
-boolean is_pre_screen_flipped = false;
+#define SCREEN_IDLE_TIMEOUT  20000
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
@@ -100,37 +83,24 @@ void ScreenUpdateCallback(int updateType)
       }
 #endif
       break;
-    case USER_UPDATE_TYPE_SMARTFAN:
-      DBGLN("User request SMART FAN Mode!");
-      config.SetFanMode(screen.getUserSmartFanIndex());
-      break;
-    case USER_UPDATE_TYPE_POWERSAVING:
-      DBGLN("User request Power Saving Mode!");
-      config.SetMotionMode(screen.getUserPowerSavingIndex());
     default:
       DBGLN("Error handle user request %d", updateType);
       break;
   }
 }
 
+#ifdef HAS_FIVE_WAY_BUTTON
 void handle(void)
 {
   fivewaybutton.handle();
 
-  if(!IsArmed() && !is_screen_flipped)
+  if(!IsArmed())
   {
     int key;
     boolean isLongPressed;
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
-    {
-#ifdef HAS_THERMAL      
-      if(millis() - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
-      {
-        screen.doTemperatureUpdate(thermal.getTempValue());
-        update_temp_start_time = millis();
-      }
-#endif      
+    {   
       if(isLongPressed)
       {
         screen.activeScreen();
@@ -186,28 +156,15 @@ void handle(void)
       }
     }
   }
-
-#ifdef HAS_GSENSOR
-  is_screen_flipped = gsensor.isFlipped();
-
-  if((is_screen_flipped == true) && (is_pre_screen_flipped == false))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
-  }
-  else if((is_screen_flipped == false) && (is_pre_screen_flipped == true))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
-  }
-  is_pre_screen_flipped = is_screen_flipped;
-#endif
-
 }
+#endif
 
 static void initialize()
 {
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-
+//   Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+  #ifdef HAS_FIVE_WAY_BUTTON
   fivewaybutton.init();
+  #endif
   screen.updatecallback = &ScreenUpdateCallback;
   screen.init();
 }

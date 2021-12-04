@@ -6,6 +6,7 @@
 // Any device features
 #define USE_OLED_I2C
 #define OLED_REVERSED
+#define HAS_FIVE_WAY_BUTTON
   
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -30,3 +31,6 @@
 #define MinPower                PWR_100mW
 #define MaxPower                PWR_500mW
 #define POWER_OUTPUT_VALUES     {0,3,8}
+
+/* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
+#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}

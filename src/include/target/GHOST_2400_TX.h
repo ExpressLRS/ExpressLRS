@@ -8,6 +8,7 @@
 #if !defined(USE_OLED_SPI_SMALL)
     #define USE_OLED_SPI
 #endif
+#define HAS_FIVE_WAY_BUTTON
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PA15
@@ -38,5 +39,8 @@
 #define MinPower                    PWR_10mW
 #define MaxPower                    PWR_250mW
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
+
+/* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
+#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}
 
 #define Regulatory_Domain_ISM_2400 1
