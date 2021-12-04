@@ -21,6 +21,23 @@ int key = INPUT_KEY_NO_PRESS;
 
 static int16_t joyAdcValues[] = JOY_ADC_VALUES;
 
+// Returns minimum difference between any pair
+int findMinDiff(int16_t arr[], int n)
+{
+// Initialize difference as infinite
+int diff = 1000;
+ 
+// Find the min diff by comparing difference
+// of all possible pairs in given array
+for (int i=0; i<n-1; i++)
+    for (int j=i+1; j<n; j++)
+        if (abs(arr[i] - arr[j]) < diff)
+                diff = abs(arr[i] - arr[j]);
+ 
+// Return min diff
+return diff;
+}
+
 bool checkValue(int direction){ 
     int value = analogRead(GPIO_PIN_JOYSTICK);
     if(value < (joyAdcValues[direction] + 50) && value > (joyAdcValues[direction] - 50)){
@@ -32,7 +49,7 @@ bool checkValue(int direction){
 
 int checkKey()
 { 
-    int fuzz = 3;
+    int fuzz = (findMinDiff(joyAdcValues, 6) - 10);
     int value = analogRead(GPIO_PIN_JOYSTICK);
         
     if(value < (joyAdcValues[0] + fuzz) && value > (joyAdcValues[0] - fuzz))

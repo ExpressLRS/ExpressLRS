@@ -15,7 +15,6 @@
  */
 
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
-
 // Default header files for Express LRS
 #include "targets.h"
 // OLED specific header files.
@@ -100,6 +99,7 @@ void displayLogo()
 {
     u8g2.begin();
     u8g2.clearBuffer();
+
     #ifdef TARGET_TX_GHOST
         ghostChase();
     #else
@@ -206,6 +206,9 @@ void OLEDScreen::init()
     current_page_index = PAGE_MAIN_MENU_INDEX;
 
     main_menu_page_index = MAIN_MENU_RATE_INDEX;
+
+    u8g2.clearBuffer();
+
     
 }
 
@@ -216,10 +219,10 @@ void OLEDScreen::idleScreen()
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, getRateString(rate));
-        u8g2.drawStr(70,15 , getTLMRatioString(ratio));
-        u8g2.drawStr(0,32, getPowerString(power));
-        u8g2.drawStr(70,32, commitStr);
+        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(70,15 ,&(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,32, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(70,32, "Test");
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
@@ -234,6 +237,21 @@ void OLEDScreen::idleScreen()
     u8g2.sendBuffer();
     
     current_screen_status = SCREEN_STATUS_IDLE;
+
+    // while(1){
+    //     delay(100);
+    //     u8g2.clearBuffer();
+    //     delay(100);
+    //     u8g2.setFont(u8g2_font_courR10_tr);
+    //     int temp = analogRead(GPIO_PIN_JOYSTICK);
+    //     char buf[4];
+    //     itoa(temp, buf, 10);
+
+    //     u8g2.drawStr(0,10,buf);
+    //     delay(100);
+    //     u8g2.sendBuffer();
+    //     delay(100);
+    // }
 }
 
 void OLEDScreen::activeScreen()
@@ -418,9 +436,9 @@ void OLEDScreen::updateSubWIFIModePage()
 #else
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, STRING_WEB_UPDATE_TX_SSID);
-        u8g2.drawStr(70,15 , STRING_WEB_UPDATE_PWD);
-        u8g2.drawStr(0,32, STRING_WEB_UPDATE_IP);
+        u8g2.drawStr(0,15, "ExpressLRS TX");
+        u8g2.drawStr(70,15 , "expresslrs");
+        u8g2.drawStr(0,32, "10.0.0.1");
 #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS TX");
