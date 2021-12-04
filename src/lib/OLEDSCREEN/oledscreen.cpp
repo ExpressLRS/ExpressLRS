@@ -43,6 +43,8 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_
 #define RATE_MAX_NUMBER 4
 #define POWER_MAX_NUMBER 7
 #define RATIO_MAX_NUMBER 8
+#define POWERSAVING_MAX_NUMBER 2
+#define SMARTFAN_MAX_NUMBER 3
 
 #ifdef TARGET_TX_GHOST
 /**
@@ -95,7 +97,7 @@ static void ghostChase(){
  * @param values none
  * @return void
  */
-void displayLogo()
+static void displayLogo()
 {
     u8g2.begin();
     u8g2.clearBuffer();
@@ -112,7 +114,7 @@ void displayLogo()
     u8g2.sendBuffer();
 }
 
-void displayFontCenter(const char * info)
+static void displayFontCenter(const char * info)
 {
 
     u8g2.clearBuffer();
@@ -125,7 +127,6 @@ void displayFontCenter(const char * info)
     u8g2.sendBuffer();
 
 }
-
 
 #ifdef Regulatory_Domain_ISM_2400
 String rate_string[RATE_MAX_NUMBER] = {
@@ -164,8 +165,6 @@ String ratio_string[RATIO_MAX_NUMBER] = {
     "1:2"
 };
 
-
-
 String main_menu_line_1[] = {
     "PACKET",
     "TX",
@@ -182,13 +181,7 @@ String main_menu_line_2[] = {
     "FW"
 };
 
-
-
-
 static char thisVersion[] = {LATEST_VERSION, 0};
-
-void OLEDScreen::nullCallback(int updateType) {}
-void (*OLEDScreen::updatecallback)(int updateType) = &nullCallback;
 
 void OLEDScreen::init()
 {
@@ -239,134 +232,28 @@ void OLEDScreen::idleScreen()
     current_screen_status = SCREEN_STATUS_IDLE;
 }
 
-void OLEDScreen::activeScreen()
-{
-    updateMainMenuPage(USER_ACTION_NONE);
-
-    current_screen_status = SCREEN_STATUS_WORK;
-    current_page_index = PAGE_MAIN_MENU_INDEX;
-
-}
-
-void OLEDScreen::doUserAction(int action)
-{
-    if(action == USER_ACTION_LEFT)
-    {
-        doPageBack();
-    }
-    else if(action == USER_ACTION_RIGHT)
-    {
-        doPageForward();
-    }
-    else if(action == USER_ACTION_CONFIRM)
-    {
-        doValueConfirm();
-    }
-    else
-    {
-        doValueSelection(action);
-    }
-}
-
-void OLEDScreen::doPageBack()
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        idleScreen();
-    }
-    else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
-            (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX))
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BIND_INDEX)
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BINDING_INDEX)
-    {
-        current_page_index = PAGE_SUB_BIND_INDEX;
-        updateSubBindConfirmPage();
-        updatecallback(USER_UPDATE_TYPE_EXIT_BINDING);
-
-        current_screen_status = SCREEN_STATUS_WORK;
-    }
-    else if(current_page_index == PAGE_SUB_UPDATEFW_INDEX)
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-        updatecallback(USER_UPDATE_TYPE_EXIT_WIFI);
-    }
-}
-
-
-void OLEDScreen::doPageForward()
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        if((main_menu_page_index == MAIN_MENU_RATE_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_POWER_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_RATIO_INDEX))
-        {
-            current_page_index = main_menu_page_index;
-            updateSubFunctionPage(USER_ACTION_NONE);
-        }
-        else if(main_menu_page_index == MAIN_MENU_UPDATEFW_INDEX)
-        {
-            current_page_index = PAGE_SUB_UPDATEFW_INDEX;
-            updateSubWIFIModePage();
-        }
-        else if(main_menu_page_index == MAIN_MENU_BIND_INDEX)
-        {
-            current_page_index = PAGE_SUB_BIND_INDEX;
-            updateSubBindConfirmPage();
-        }
-    }
-    else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
-            (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX))
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BIND_INDEX)
-    {
-        current_page_index = PAGE_SUB_BINDING_INDEX;
-        updateSubBindingPage();
-    }
-}
-
-void OLEDScreen::doValueConfirm()
-{
-    if(current_page_index == PAGE_SUB_RATE_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_RATE);
-    }
-    else if(current_page_index == PAGE_SUB_POWER_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_POWER);
-    }
-    else if(current_page_index == PAGE_SUB_RATIO_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_RATIO);
-    }
-
-    doPageForward();
-}
-
 void OLEDScreen::updateMainMenuPage(int action)
 {
     int index = main_menu_page_index;
     if(action == USER_ACTION_UP)
     {
         index--;
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index--;
+        #endif
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index--;
+        #endif
     }
     if(action == USER_ACTION_DOWN)
     {
         index++;
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index++;
+        #endif
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index++;
+        #endif
     }
     if(index < MAIN_MENU_RATE_INDEX)
     {
@@ -394,9 +281,7 @@ void OLEDScreen::updateMainMenuPage(int action)
 
 void OLEDScreen::updateSubFunctionPage(int action)
 {
-
     doValueSelection(action);
-
 }
 
 void OLEDScreen::updateSubWIFIModePage()
@@ -475,26 +360,6 @@ void OLEDScreen::updateSubBindingPage()
 
     current_screen_status = SCREEN_STATUS_BINDING;
 
-}
-
-void OLEDScreen::doValueSelection(int action)
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        updateMainMenuPage(action);
-    }
-    else if(current_page_index == PAGE_SUB_RATE_INDEX)
-    {
-        doRateValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_POWER_INDEX)
-    {
-        doPowerValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_RATIO_INDEX)
-    {
-        doRatioValueSelect(action);
-    }
 }
 
 void OLEDScreen::doRateValueSelect(int action)
@@ -653,6 +518,60 @@ void OLEDScreen::doRatioValueSelect(int action)
 
 }
 
+void OLEDScreen::doPowerSavingValueSelect(int action)
+{
+    int index = current_powersaving_index;
+
+    if(action == USER_ACTION_UP)
+    {
+        index--;
+    }
+    if(action == USER_ACTION_DOWN)
+    {
+        index++;
+    }
+
+    if(index < 0)
+    {
+        index = POWERSAVING_MAX_NUMBER -1;
+    }
+    if(index > POWERSAVING_MAX_NUMBER -1)
+    {
+        index = 0;
+    }
+
+    current_powersaving_index = index;
+
+    // TODO display the value
+}
+
+void OLEDScreen::doSmartFanValueSelect(int action)
+{
+    int index = current_smartfan_index;
+
+    if(action == USER_ACTION_UP)
+    {
+        index--;
+    }
+    if(action == USER_ACTION_DOWN)
+    {
+        index++;
+    }
+
+    if(index < 0)
+    {
+        index = SMARTFAN_MAX_NUMBER -1;
+    }
+    if(index > SMARTFAN_MAX_NUMBER -1)
+    {
+        index = 0;
+    }
+
+    current_smartfan_index = index;
+
+    // TODO display the value
+}
+
 void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index)
 {
     if(current_screen_status == SCREEN_STATUS_IDLE)
@@ -713,6 +632,28 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         current_power_index = power_index;
         current_ratio_index = ratio_index;
     }
+}
+
+void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
+{
+    system_temperature = temperature;
+    if(current_screen_status == SCREEN_STATUS_IDLE)
+    {
+        char buffer[20];
+        sprintf(buffer, "%s %02d", thisVersion, system_temperature);
+        // TODO
+        // displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+        //                     SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
+        //                     String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
+    }
+
+}
+
+void OLEDScreen::doScreenBackLight(int state)
+{
+    #ifdef GPIO_PIN_OLED_BL
+    digitalWrite(GPIO_PIN_OLED_BL, state);
+    #endif
 }
 
 #endif

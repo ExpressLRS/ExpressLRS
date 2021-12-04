@@ -21,6 +21,9 @@ OLEDScreen screen;
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
 FiveWayButton fivewaybutton;
+
+static uint32_t none_input_start_time = 0;
+static bool isUserInputCheck = false;
 #endif
 
 #ifdef HAS_GSENSOR
@@ -43,8 +46,6 @@ uint32_t update_temp_start_time = 0;
 #define LOGO_DISPLAY_TIMEOUT  5000
 static bool isLogoDisplayed = false;
 
-static uint32_t none_input_start_time = 0;
-static bool isUserInputCheck = false;
 #define SCREEN_IDLE_TIMEOUT  20000
 
 extern bool ICACHE_RAM_ATTR IsArmed();

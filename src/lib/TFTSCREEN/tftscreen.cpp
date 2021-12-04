@@ -15,15 +15,21 @@ TFT_eSPI tft = TFT_eSPI();
 
 bool is_confirmed = false;
 
-void TFTScreen::nullCallback(int updateType) {}
-void (*TFTScreen::updatecallback)(int updateType) = &nullCallback;
-
+#ifdef Regulatory_Domain_ISM_2400
 String rate_string[RATE_MAX_NUMBER] = {
     "500HZ",
     "250HZ",
     "150HZ",
     "50HZ"
 };
+#else
+String rate_string[RATE_MAX_NUMBER] = {
+    "200HZ",
+    "100HZ",
+    "50HZ",
+    "25HZ"
+};
+#endif
 
 String power_string[POWER_MAX_NUMBER] = {
     "10mW",
@@ -89,8 +95,82 @@ String main_menu_line_2[] = {
 
 static char thisVersion[] = {LATEST_VERSION, 0};
 
+
+#define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D
+
+#define SCREEN_X    TFT_HEIGHT
+#define SCREEN_Y    TFT_WIDTH
+
+//see #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
+#define SCREEN_SMALL_FONT_SIZE      8
+#define SCREEN_SMALL_FONT           1
+
+//see #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
+#define SCREEN_NORMAL_FONT_SIZE     16
+#define SCREEN_NORMAL_FONT          2
+
+//see #define LOAD_FONT4  // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
+#define SCREEN_LARGE_FONT_SIZE      26
+#define SCREEN_LARGE_FONT           4
+
+//ICON SIZE Definition
+#define SCREEN_LARGE_ICON_SIZE      60
+#define SCREEN_NORAML_ICON_SIZE     20
+#define SCREEN_NARROW_ICON_WEIGHT   14
+
+//GAP Definition
+#define SCREEN_CONTENT_GAP          10
+#define SCREEN_FONT_GAP             5
+
+//INIT LOGO PAGE Definition
+#define INIT_PAGE_LOGO_X            SCREEN_X
+#define INIT_PAGE_LOGO_Y            53
+#define INIT_PAGE_FONT_PADDING      3
+#define INIT_PAGE_FONT_START_X      SCREEN_FONT_GAP
+#define INIT_PAGE_FONT_START_Y      INIT_PAGE_LOGO_Y + (SCREEN_Y - INIT_PAGE_LOGO_Y - SCREEN_NORMAL_FONT_SIZE)/2
+
+//IDLE PAGE Definition
+#define IDLE_PAGE_START_X   SCREEN_CONTENT_GAP
+#define IDLE_PAGE_START_Y   0
+
+#define IDLE_PAGE_STAT_START_X  SCREEN_X/2 + SCREEN_CONTENT_GAP
+#define IDLE_PAGE_STAT_Y_GAP    (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE * 3)/4
+
+#define IDLE_PAGE_RATE_START_Y  IDLE_PAGE_STAT_Y_GAP
+#define IDLE_PAGE_POWER_START_Y IDLE_PAGE_RATE_START_Y + SCREEN_NORMAL_FONT_SIZE + IDLE_PAGE_STAT_Y_GAP
+#define IDLE_PAGE_RATIO_START_Y IDLE_PAGE_POWER_START_Y + SCREEN_NORMAL_FONT_SIZE + IDLE_PAGE_STAT_Y_GAP
+
+//MAIN PAGE Definition
+#define MAIN_PAGE_ICON_START_X  SCREEN_CONTENT_GAP
+#define MAIN_PAGE_ICON_START_Y  (SCREEN_Y -  SCREEN_LARGE_ICON_SIZE)/2
+
+#define MAIN_PAGE_WORD_START_X  MAIN_PAGE_ICON_START_X + SCREEN_LARGE_ICON_SIZE + SCREEN_CONTENT_GAP
+#define MAIN_PAGE_WORD_START_Y  (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE)/2
+#define MAIN_PAGE_WORD_START_Y1 (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE*2 - SCREEN_FONT_GAP)/2
+#define MAIN_PAGE_WORD_START_Y2 MAIN_PAGE_WORD_START_Y1 + SCREEN_NORMAL_FONT_SIZE + SCREEN_FONT_GAP
+
+//Sub Function Definiton
+#define SUB_PAGE_VALUE_START_X  SCREEN_CONTENT_GAP
+#define SUB_PAGE_VALUE_START_Y  (SCREEN_Y - SCREEN_LARGE_FONT_SIZE - SCREEN_NORMAL_FONT_SIZE - SCREEN_CONTENT_GAP)/2
+
+#define SUB_PAGE_TIPS_START_X  SCREEN_CONTENT_GAP
+#define SUB_PAGE_TIPS_START_Y  SCREEN_Y - SCREEN_NORMAL_FONT_SIZE - SCREEN_CONTENT_GAP
+
+//Sub WIFI Mode & Bind Confirm Definiton
+#define SUB_PAGE_ICON_START_X  0
+#define SUB_PAGE_ICON_START_Y  (SCREEN_Y -  SCREEN_LARGE_ICON_SIZE)/2
+
+#define SUB_PAGE_WORD_START_X   SUB_PAGE_ICON_START_X + SCREEN_LARGE_ICON_SIZE
+#define SUB_PAGE_WORD_START_Y1  (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE*3 - SCREEN_FONT_GAP*2)/2
+#define SUB_PAGE_WORD_START_Y2  SUB_PAGE_WORD_START_Y1 + SCREEN_NORMAL_FONT_SIZE + SCREEN_FONT_GAP
+#define SUB_PAGE_WORD_START_Y3  SUB_PAGE_WORD_START_Y2 + SCREEN_NORMAL_FONT_SIZE + SCREEN_FONT_GAP
+
+//Sub Binding Definiton
+#define SUB_PAGE_BINDING_WORD_START_X   0
+#define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
+
 void TFTScreen::init()
-{ 
+{
     tft.init();
     doScreenBackLight(HIGH);
 
@@ -102,7 +182,7 @@ void TFTScreen::init()
 
     tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, axis_logo);
 
-    tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING, 
+    tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
 
     if(strlen(thisVersion) > VERSION_MAX_LENGTH)
@@ -111,8 +191,8 @@ void TFTScreen::init()
     }
     char buffer[50];
     sprintf(buffer, "THOR-%s  ELRS-%s", STRING_THOR_VERSION, thisVersion);
-    displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y, 
-                        SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
+                        SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), TFT_WHITE, TFT_BLACK);
 
     doScreenBackLight(LOW);
@@ -130,7 +210,7 @@ void TFTScreen::init()
     main_menu_page_index = MAIN_MENU_RATE_INDEX;
 
     system_temperature = 25;
-    
+
 }
 
 void TFTScreen::idleScreen()
@@ -142,152 +222,20 @@ void TFTScreen::idleScreen()
 
     char buffer[20];
     sprintf(buffer, "%s %02d", thisVersion, system_temperature);
-    displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2, 
-                                SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT, 
+    displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+                                SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                                 String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
- 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+
+    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         power_string[current_power_index], TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 
     current_screen_status = SCREEN_STATUS_IDLE;
-}
-
-void TFTScreen::activeScreen()
-{
-    updateMainMenuPage(USER_ACTION_NONE);
-
-    current_screen_status = SCREEN_STATUS_WORK;
-    current_page_index = PAGE_MAIN_MENU_INDEX;
-
-}
-
-void TFTScreen::doUserAction(int action)
-{
-    if(action == USER_ACTION_LEFT)
-    {
-        doPageBack();
-    }
-    else if(action == USER_ACTION_RIGHT)
-    {
-        doPageForward();
-    }
-    else if(action == USER_ACTION_CONFIRM)
-    {
-        doValueConfirm();
-    }
-    else
-    {
-        doValueSelection(action);
-    }
-}
-
-void TFTScreen::doPageBack()
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        idleScreen();
-    }
-    else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
-            (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX) ||
-            (current_page_index == PAGE_SUB_POWERSAVING_INDEX) ||
-            (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BIND_INDEX)
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BINDING_INDEX)
-    {
-        current_page_index = PAGE_SUB_BIND_INDEX;
-        updateSubBindConfirmPage();
-        updatecallback(USER_UPDATE_TYPE_EXIT_BINDING);
-
-        current_screen_status = SCREEN_STATUS_WORK;
-    }
-    else if(current_page_index == PAGE_SUB_UPDATEFW_INDEX)
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-        updatecallback(USER_UPDATE_TYPE_EXIT_WIFI);
-    }
-}
-
-
-void TFTScreen::doPageForward()
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        if((main_menu_page_index == MAIN_MENU_RATE_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_POWER_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_RATIO_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_POWERSAVING_INDEX) ||
-            (main_menu_page_index == MAIN_MENU_SMARTFAN_INDEX))
-        {
-            current_page_index = main_menu_page_index;
-            updateSubFunctionPage(USER_ACTION_NONE);
-        }
-        else if(main_menu_page_index == MAIN_MENU_UPDATEFW_INDEX)
-        {
-            current_page_index = PAGE_SUB_UPDATEFW_INDEX;
-            updateSubWIFIModePage();
-        }
-        else if(main_menu_page_index == MAIN_MENU_BIND_INDEX)
-        {
-            current_page_index = PAGE_SUB_BIND_INDEX;
-            updateSubBindConfirmPage();
-        }
-    }
-    else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
-            (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX) ||
-            (current_page_index == PAGE_SUB_POWERSAVING_INDEX) ||
-            (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
-    {
-        current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
-    }
-    else if(current_page_index == PAGE_SUB_BIND_INDEX)
-    {
-        current_page_index = PAGE_SUB_BINDING_INDEX;
-        updateSubBindingPage();
-    }  
-}
-
-void TFTScreen::doValueConfirm()
-{
-    if(current_page_index == PAGE_SUB_RATE_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_RATE);
-    }
-    else if(current_page_index == PAGE_SUB_POWER_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_POWER);
-    }
-    else if(current_page_index == PAGE_SUB_RATIO_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_RATIO);
-    }
-    else if(current_page_index == PAGE_SUB_SMARTFAN_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_SMARTFAN);
-    }
-    else if(current_page_index == PAGE_SUB_POWERSAVING_INDEX)
-    {
-        updatecallback(USER_UPDATE_TYPE_POWERSAVING);
-    }
-
-    doPageForward();
 }
 
 void TFTScreen::updateMainMenuPage(int action)
@@ -296,10 +244,22 @@ void TFTScreen::updateMainMenuPage(int action)
     if(action == USER_ACTION_UP)
     {
         index--;
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index--;
+        #endif
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index--;
+        #endif
     }
     if(action == USER_ACTION_DOWN)
     {
         index++;
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index++;
+        #endif
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index++;
+        #endif
     }
     if(index < MAIN_MENU_RATE_INDEX)
     {
@@ -316,10 +276,10 @@ void TFTScreen::updateMainMenuPage(int action)
     tft.pushImage(MAIN_PAGE_ICON_START_X, MAIN_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, main_menu_icons[main_menu_page_index-1]);
 
 
-    displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         main_menu_line_1[main_menu_page_index - 1], TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         main_menu_line_2[main_menu_page_index - 1], TFT_BLACK, TFT_WHITE);
 }
 
@@ -329,7 +289,7 @@ void TFTScreen::updateSubFunctionPage(int action)
 
     doValueSelection(action);
 
-    displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
 }
 
@@ -349,16 +309,16 @@ void TFTScreen::updateSubWIFIModePage()
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "by browser", TFT_BLACK, TFT_WHITE);
 #else
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         STRING_WEB_UPDATE_TX_SSID, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         STRING_WEB_UPDATE_PWD, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         STRING_WEB_UPDATE_IP, TFT_BLACK, TFT_WHITE);
 #endif
-    updatecallback(USER_UPDATE_TYPE_WIFI);                    
+    updatecallback(USER_UPDATE_TYPE_WIFI);
 
 
 }
@@ -369,13 +329,13 @@ void TFTScreen::updateSubBindConfirmPage()
 
     tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_bind);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO", TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "SEND BIND", TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "REQUEST", TFT_BLACK, TFT_WHITE);
 
 }
@@ -384,40 +344,12 @@ void TFTScreen::updateSubBindingPage()
 {
     tft.fillScreen(TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
+    displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         "BINDING", TFT_BLACK, TFT_WHITE);
 
     updatecallback(USER_UPDATE_TYPE_BINDING);
 
     current_screen_status = SCREEN_STATUS_BINDING;
-}
-
-void TFTScreen::doValueSelection(int action)
-{
-    if(current_page_index == PAGE_MAIN_MENU_INDEX)
-    {
-        updateMainMenuPage(action);
-    }
-    else if(current_page_index == PAGE_SUB_RATE_INDEX)
-    {
-        doRateValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_POWER_INDEX)
-    {
-        doPowerValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_RATIO_INDEX)
-    {
-        doRatioValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_POWERSAVING_INDEX)
-    {
-        doPowerSavingValueSelect(action);
-    }
-    else if(current_page_index == PAGE_SUB_SMARTFAN_INDEX)
-    {
-        doSmartFanValueSelect(action);
-    }
 }
 
 void TFTScreen::doRateValueSelect(int action)
@@ -443,8 +375,8 @@ void TFTScreen::doRateValueSelect(int action)
     }
 
     current_rate_index = index;
-    
-    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
+
+    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 
 }
@@ -473,7 +405,7 @@ void TFTScreen::doPowerValueSelect(int action)
 
     current_power_index = index;
 
-    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
+    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         power_string[current_power_index], TFT_BLACK, TFT_WHITE);
 }
 
@@ -501,7 +433,7 @@ void TFTScreen::doRatioValueSelect(int action)
 
     current_ratio_index = index;
 
-    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
+    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 
 }
@@ -530,8 +462,8 @@ void TFTScreen::doPowerSavingValueSelect(int action)
 
     current_powersaving_index = index;
 
-    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
-                        powersaving_string[current_powersaving_index], TFT_BLACK, TFT_WHITE);    
+    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
+                        powersaving_string[current_powersaving_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doSmartFanValueSelect(int action)
@@ -558,8 +490,8 @@ void TFTScreen::doSmartFanValueSelect(int action)
 
     current_smartfan_index = index;
 
-    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
-                        smartfan_string[current_smartfan_index], TFT_BLACK, TFT_WHITE);    
+    displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
+                        smartfan_string[current_smartfan_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index)
@@ -569,21 +501,21 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
         if(rate_index != current_rate_index)
         {
             current_rate_index = rate_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
         }
-         
+
         if(power_index != current_power_index)
         {
             current_power_index = power_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 power_string[current_power_index], TFT_BLACK, TFT_WHITE);
         }
 
         if(ratio_index != current_ratio_index)
         {
             current_ratio_index = ratio_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
         }
     }
@@ -605,15 +537,15 @@ void TFTScreen::doTemperatureUpdate(uint8_t temperature)
     {
         char buffer[20];
         sprintf(buffer, "%s %02d", thisVersion, system_temperature);
-        displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2, 
-                            SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT, 
+        displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+                            SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                             String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
     }
 
 }
 
-void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y, 
-                                            int font_size, int font_type, String font_string, 
+void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
+                                            int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor)
 {
     tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
@@ -635,8 +567,8 @@ void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t fon
     tft.print("C");
 }
 
-void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y, 
-                                            int font_size, int font_type, String font_string, 
+void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
+                                            int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor)
 {
     tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
@@ -649,18 +581,10 @@ void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, ui
 }
 
 
-int TFTScreen::getUserPowerSavingIndex()
-{
-    return current_powersaving_index;
-}
-
-int TFTScreen::getUserSmartFanIndex()
-{
-    return current_smartfan_index;
-}
-
 void TFTScreen::doScreenBackLight(int state)
 {
-     digitalWrite(TFT_BL, state);
+    #ifdef TFT_BL
+    digitalWrite(TFT_BL, state);
+    #endif
 }
 #endif
