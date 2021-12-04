@@ -26,7 +26,7 @@ SX1280Driver Radio;
 
 #include "helpers.h"
 #include "devLED.h"
-#include "devOLED.h"
+#include "devScreen.h"
 #include "devBuzzer.h"
 #include "devBLE.h"
 #include "devLUA.h"
@@ -36,9 +36,9 @@ SX1280Driver Radio;
 #include "devGsensor.h"
 #include "devThermal.h"
 
-#ifdef TARGET_AXIS_THOR_2400_TX
-#include "devScreen.h"
-#endif
+// #ifdef TARGET_AXIS_THOR_2400_TX
+// #include "devScreen.h"
+// #endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -108,9 +108,6 @@ device_t *ui_devices[] = {
 #ifdef HAS_BLE
   &BLE_device,
 #endif
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
-  &OLED_device,
-#endif
 #ifdef HAS_BUZZER
   &Buzzer_device,
 #endif
@@ -120,7 +117,7 @@ device_t *ui_devices[] = {
 #ifdef HAS_BUTTON
   &Button_device,
 #endif
-#ifdef HAS_TFT_SCREEN
+#if defined HAS_TFT_SCREEN || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
   &Screen_device,
 #endif
 #ifdef HAS_GSENSOR

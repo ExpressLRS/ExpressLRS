@@ -12,6 +12,8 @@ protected:
     int current_rate_index;
     int current_power_index;
     int current_ratio_index;
+    int current_screen_status;
+
 
     virtual void doValueSelection(int action) = 0;
     virtual void doRateValueSelect(int action) = 0;
@@ -33,6 +35,8 @@ protected:
 public:
 
     virtual void init() = 0;
+    virtual void activeScreen() = 0;
+    virtual void idleScreen() = 0;
     virtual void doUserAction(int action) = 0;
     virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index) = 0;
 
