@@ -2,7 +2,7 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
 #include "logging.h"
 #include "Wire.h"
@@ -10,21 +10,41 @@
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 
+#ifdef HAS_TFT_SCREEN
+#include "tftscreen.h"
+TFTScreen screen;
+#else
 #include "oledscreen.h"
 OLEDScreen screen;
+#endif
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
 FiveWayButton fivewaybutton;
 #endif
 
+#ifdef HAS_GSENSOR
+#include "gsensor.h"
+extern Gsensor gsensor;
+static bool is_screen_flipped = false;
+static bool is_pre_screen_flipped = false;
+#endif
+
+#ifdef HAS_THERMAL
+#include "thermal.h"
+extern Thermal thermal;
+
+#define UPDATE_TEMP_TIMEOUT  5000
+uint32_t update_temp_start_time = 0;
+#endif
+
 #define SCREEN_DURATION 20
 
 #define LOGO_DISPLAY_TIMEOUT  5000
-bool isLogoDisplayed = false;
+static bool isLogoDisplayed = false;
 
-uint32_t none_input_start_time = 0;
-bool isUserInputCheck = false;
+static uint32_t none_input_start_time = 0;
+static bool isUserInputCheck = false;
 #define SCREEN_IDLE_TIMEOUT  20000
 
 extern bool ICACHE_RAM_ATTR IsArmed();
@@ -42,10 +62,10 @@ extern unsigned long rebootTime;
 #endif
 
 #define BINDING_MODE_TIME_OUT 5000
-uint32_t binding_mode_start_time = 0;
+static uint32_t binding_mode_start_time = 0;
 
 
-void ScreenUpdateCallback(int updateType)
+static void ScreenUpdateCallback(int updateType)
 {
   switch(updateType)
   {
@@ -82,6 +102,18 @@ void ScreenUpdateCallback(int updateType)
       }
 #endif
       break;
+#ifdef HAS_THERMAL
+    case USER_UPDATE_TYPE_SMARTFAN:
+      DBGLN("User request SMART FAN Mode!");
+      config.SetFanMode(screen.getUserSmartFanIndex());
+      break;
+#endif
+#ifdef HAS_GSENSOR
+    case USER_UPDATE_TYPE_POWERSAVING:
+      DBGLN("User request Power Saving Mode!");
+      config.SetMotionMode(screen.getUserPowerSavingIndex());
+      break;
+#endif
     default:
       DBGLN("Error handle user request %d", updateType);
       break;
@@ -100,6 +132,13 @@ static int handle(void)
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
+#ifdef HAS_THERMAL
+      if(millis() - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
+      {
+        screen.doTemperatureUpdate(thermal.getTempValue());
+        update_temp_start_time = millis();
+      }
+#endif
       if(isLongPressed)
       {
         screen.activeScreen();
@@ -155,6 +194,19 @@ static int handle(void)
       }
     }
   }
+#ifdef HAS_GSENSOR
+  is_screen_flipped = gsensor.isFlipped();
+
+  if((is_screen_flipped == true) && (is_pre_screen_flipped == false))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+  }
+  else if((is_screen_flipped == false) && (is_pre_screen_flipped == true))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
+  }
+  is_pre_screen_flipped = is_screen_flipped;
+#endif
   return SCREEN_DURATION;
 }
 #else
