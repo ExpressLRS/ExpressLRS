@@ -237,21 +237,6 @@ void OLEDScreen::idleScreen()
     u8g2.sendBuffer();
     
     current_screen_status = SCREEN_STATUS_IDLE;
-
-    // while(1){
-    //     delay(100);
-    //     u8g2.clearBuffer();
-    //     delay(100);
-    //     u8g2.setFont(u8g2_font_courR10_tr);
-    //     int temp = analogRead(GPIO_PIN_JOYSTICK);
-    //     char buf[4];
-    //     itoa(temp, buf, 10);
-
-    //     u8g2.drawStr(0,10,buf);
-    //     delay(100);
-    //     u8g2.sendBuffer();
-    //     delay(100);
-    // }
 }
 
 void OLEDScreen::activeScreen()
