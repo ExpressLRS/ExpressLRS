@@ -458,6 +458,22 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
+{
+  if (len > SPI_FLASH_SEC_SIZE)
+    len = SPI_FLASH_SEC_SIZE;
+  // TODO: len and pos must be a multiple of 4!
+  ESP.flashRead(pos, (uint32_t *)data, len);
+  return len;
+}
+
+static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
+  String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
+  response->addHeader("Content-Disposition", filename);
+  request->send(response);
+}
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -571,6 +587,7 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
+  server.on("/firmware.bin", WebUpdateGetFirmware);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
