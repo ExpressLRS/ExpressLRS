@@ -126,85 +126,50 @@ void displayFontCenter(const char * info)
 
 }
 
-/**
- * Displays the ExpressLRS logo
- *
- * @param values power = PowerLevels_e
- *               rate = expresslrs_RFrates_e
- *               ratio = expresslrs_tlm_ratio_e
- * @return void
- */
-// void updateScreen(int power, int rate, int ratio, const char *commitStr){
-//     u8g2.clearBuffer();
 
-//     #ifdef USE_OLED_SPI_SMALL
-//         u8g2.setFont(u8g2_font_courR10_tr);
-//         u8g2.drawStr(0,15, getRateString(rate));
-//         u8g2.drawStr(70,15 , getTLMRatioString(ratio));
-//         u8g2.drawStr(0,32, getPowerString(power));
-//         u8g2.drawStr(70,32, commitStr);
-//     #else
-//         u8g2.setFont(u8g2_font_courR10_tr);
-//         u8g2.drawStr(0,10, "ExpressLRS");
-//         u8g2.drawStr(0,42, getRateString(rate));
-//         u8g2.drawStr(70,42 , getTLMRatioString(ratio));
-//         u8g2.drawStr(0,57, getPowerString(power));
-//         u8g2.setFont(u8g2_font_courR08_tr);
-//         u8g2.drawStr(70,53, "TLM");
-//         u8g2.drawStr(0,24, "Ver: ");
-//         u8g2.drawStr(38,24, commitStr);
-//     #endif
-//     u8g2.sendBuffer();
-// }
+#ifdef Regulatory_Domain_ISM_2400
+String rate_string[RATE_MAX_NUMBER] = {
+    "500HZ",
+    "250HZ",
+    "150HZ",
+    "50HZ"
+};
+#else 
+String rate_string[RATE_MAX_NUMBER] = {
+    "200HZ",
+    "100HZ",
+    "50HZ",
+    "25HZ"
+};
+#endif
 
-/**
- * Returns power level string (Char array)
- *
- * @param values power = int/enum for current power level.
- * @return const char array for power level Ex: "500 mW\0"
- */
-const char * getPowerString(int power){
-    switch (power)
-    {
-    case 0: return "10 mW";
-    case 1: return "25 mW";
-    case 2: return "50 mW";
-    case 3: return "100 mW";
-    case 4: return "250 mW";
-    case 5: return "500 mW";
-    case 6: return "1000 mW";
-    case 7: return "2000 mW";
-    default: return "ERR";
-    }
-}
+String power_string[POWER_MAX_NUMBER] = {
+    "10mW",
+    "25mW",
+    "50mW",
+    "100mW",
+    "250mW",
+    "500mW",
+    "1000mW"
+};
 
-/**
- * Returns packet rate string (Char array)
- *
- * @param values rate = int/enum for current packet rate.
- * @return const char array for packet rate Ex: "500 hz\0"
- */
-const char * getRateString(int rate){
-    switch (rate)
-    {
-    case 0: return "500 Hz";
-    case 1: return "250 Hz";
-    case 2: return "200 Hz";
-    case 3: return "150 Hz";
-    case 4: return "100 Hz";
-    case 5: return "50 Hz";
-    case 6: return "25 Hz";
-    case 7: return "4 Hz";
-    default: return "ERR";
-    }
-}
+String ratio_string[RATIO_MAX_NUMBER] = {
+    "Off",
+    "1:128",
+    "1:64",
+    "1:32",
+    "1:16",
+    "1:8",
+    "1:4",
+    "1:2"
+};
+
+
 
 String main_menu_line_1[] = {
     "PACKET",
     "TX",
     "TELEM",
-    "MOTION",
-    "FAN",
     "BIND",
     "UPDATE"
 };
@@ -213,33 +178,9 @@ String main_menu_line_2[] = {
     "RATE",
     "POWER",
     "RATIO",
-    "DETECT",
-    "CONTROL",
     "MODE",
     "FW"
 };
-
-/**
- * Returns telemetry ratio string (Char array)
- *
- * @param values ratio = int/enum for current power level.
- * @return const char array for telemetry ratio Ex: "1:128\0"
- */
-const char * getTLMRatioString(int ratio){
-    switch (ratio)
-    {
-    case 0: return "OFF";
-    case 1: return "1:128";
-    case 2: return "1:64";
-    case 3: return "1:32";
-    case 4: return "1:16";
-    case 5: return "1:8";
-    case 6: return "1:4";
-    case 7: return "1:2";
-    default: return "ERR";
-    }
-}
-
 
 
 #endif
@@ -282,9 +223,9 @@ void OLEDScreen::idleScreen()
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(0,42, getRateString(current_ratio_index));
-        u8g2.drawStr(70,42 , getTLMRatioString(current_ratio_index));
-        u8g2.drawStr(0,57, getPowerString(current_power_index));
+        u8g2.drawStr(0,42, &(rate_string[current_rate_index])[0]); 
+        u8g2.drawStr(70,42 , &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,57, &(power_string[current_power_index])[0]);
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(70,53, "TLM");
         u8g2.drawStr(0,24, "Ver: ");
@@ -453,7 +394,6 @@ void OLEDScreen::updateSubFunctionPage(int action)
 
     doValueSelection(action);
 
-    displayFontCenter("PRESS TO CONFIRM");
 }
 
 void OLEDScreen::updateSubWIFIModePage()
@@ -563,6 +503,17 @@ void OLEDScreen::doValueSelection(int action)
 
 void OLEDScreen::doRateValueSelect(int action)
 {
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #endif
+    u8g2.sendBuffer();
+
     int index = current_rate_index;
 
     if(action == USER_ACTION_UP)
@@ -589,10 +540,12 @@ void OLEDScreen::doRateValueSelect(int action)
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, getRateString(current_rate_index));
+        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, getRateString(current_rate_index));
+        u8g2.drawStr(0,10, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #endif
     u8g2.sendBuffer();
     
@@ -601,6 +554,18 @@ void OLEDScreen::doRateValueSelect(int action)
 
 void OLEDScreen::doPowerValueSelect(int action)
 {
+
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #endif
+    u8g2.sendBuffer();
+
     int index = current_power_index;
 
     if(action == USER_ACTION_UP)
@@ -628,16 +593,31 @@ void OLEDScreen::doPowerValueSelect(int action)
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, getPowerString(current_power_index));
+        u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, getPowerString(current_power_index));
+        u8g2.drawStr(0,10, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #endif
     u8g2.sendBuffer();
 }
 
 void OLEDScreen::doRatioValueSelect(int action)
 {
+
+    u8g2.clearBuffer();
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
+    #endif
+    u8g2.sendBuffer();
+
     int index = current_ratio_index;
 
     if(action == USER_ACTION_UP)
@@ -666,10 +646,12 @@ void OLEDScreen::doRatioValueSelect(int action)
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, getRateString(current_ratio_index));
+        u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, getRateString(current_ratio_index));
+        u8g2.drawStr(0,10, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #endif
     u8g2.sendBuffer();
 
@@ -687,10 +669,10 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL
                 u8g2.setFont(u8g2_font_courR10_tr);
-                u8g2.drawStr(0,15, getRateString(current_rate_index));
+                u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
             #else
                 u8g2.setFont(u8g2_font_courR10_tr);
-                u8g2.drawStr(0,10, getRateString(current_rate_index));
+                u8g2.drawStr(0,10, &(rate_string[current_rate_index])[0]);
             #endif
             u8g2.sendBuffer();
         }
@@ -703,10 +685,10 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL
                 u8g2.setFont(u8g2_font_courR10_tr);
-                u8g2.drawStr(0,15, getPowerString(current_power_index));
+                u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
             #else
                 u8g2.setFont(u8g2_font_courR10_tr);
-                u8g2.drawStr(0,10, getPowerString(current_power_index));
+                u8g2.drawStr(0,10, &(power_string[current_power_index])[0]);
             #endif
             u8g2.sendBuffer();
 
@@ -720,10 +702,10 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL
             u8g2.setFont(u8g2_font_courR10_tr);
-            u8g2.drawStr(0,15, getRateString(current_ratio_index));
+            u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
             #else
             u8g2.setFont(u8g2_font_courR10_tr);
-            u8g2.drawStr(0,10, getRateString(current_ratio_index));
+            u8g2.drawStr(0,10, &(ratio_string[current_ratio_index])[0]);
             #endif
             u8g2.sendBuffer();
 
