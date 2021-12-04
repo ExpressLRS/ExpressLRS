@@ -116,6 +116,7 @@ void displayFontCenter(const char * info)
 { 
 
     u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_courR08_tr);
 #ifdef USE_OLED_SPI_SMALL
     u8g2.drawStr(32, 32, info);
 #else
@@ -198,6 +199,26 @@ const char * getRateString(int rate){
     }
 }
 
+String main_menu_line_1[] = {
+    "PACKET",
+    "TX",
+    "TELEM",
+    "MOTION",
+    "FAN",
+    "BIND",
+    "UPDATE"
+};
+
+String main_menu_line_2[] = {
+    "RATE",
+    "POWER",
+    "RATIO",
+    "DETECT",
+    "CONTROL",
+    "MODE",
+    "FW"
+};
+
 /**
  * Returns telemetry ratio string (Char array)
  *
@@ -218,6 +239,8 @@ const char * getTLMRatioString(int ratio){
     default: return "ERR";
     }
 }
+
+
 
 #endif
 
@@ -248,7 +271,27 @@ void OLEDScreen::init()
 void OLEDScreen::idleScreen()
 {
 
-    displayLogo();
+    u8g2.clearBuffer();
+
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, getRateString(rate));
+        u8g2.drawStr(70,15 , getTLMRatioString(ratio));
+        u8g2.drawStr(0,32, getPowerString(power));
+        u8g2.drawStr(70,32, commitStr);
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, "ExpressLRS");
+        u8g2.drawStr(0,42, getRateString(current_ratio_index));
+        u8g2.drawStr(70,42 , getTLMRatioString(current_ratio_index));
+        u8g2.drawStr(0,57, getPowerString(current_power_index));
+        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.drawStr(70,53, "TLM");
+        u8g2.drawStr(0,24, "Ver: ");
+        u8g2.drawStr(38,24, "TEST");
+    #endif
+    u8g2.sendBuffer();
+    
     current_screen_status = SCREEN_STATUS_IDLE;
 }
 
@@ -390,16 +433,18 @@ void OLEDScreen::updateMainMenuPage(int action)
         index = MAIN_MENU_RATE_INDEX;
     }
     main_menu_page_index = index;
-
-    // TODO: Add small little ELRS :)
-
-    // displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
-    //                     main_menu_line_1[main_menu_page_index - 1], TFT_BLACK, TFT_WHITE);
-
-    // displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
-    //                     main_menu_line_2[main_menu_page_index - 1], TFT_BLACK, TFT_WHITE);
-
-    displayFontCenter("TEST");
+    
+    u8g2.clearBuffer();
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, &(main_menu_line_1[main_menu_page_index - 1])[0]);
+        u8g2.drawStr(0,32, &(main_menu_line_2[main_menu_page_index - 1])[0]);
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, &(main_menu_line_1[main_menu_page_index - 1])[0]);
+        u8g2.drawStr(0,60, &(main_menu_line_2[main_menu_page_index - 1])[0]);
+    #endif
+    u8g2.sendBuffer();
 
 }
 
@@ -468,7 +513,8 @@ void OLEDScreen::updateSubBindConfirmPage()
         u8g2.drawStr(0,32, "REQUEST");
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "PRESS TO SEND BIND REQUEST");
+        u8g2.drawStr(0,10, "PRESS TO SEND");
+        u8g2.drawStr(32, 10, "BIND REQUEST");
     #endif
     u8g2.sendBuffer();
 }
@@ -541,7 +587,6 @@ void OLEDScreen::doRateValueSelect(int action)
 
     // TODO: Put bind image? 
     u8g2.clearBuffer();
-
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, getRateString(current_rate_index));
@@ -578,7 +623,17 @@ void OLEDScreen::doPowerValueSelect(int action)
 
     current_power_index = index;
 
-    displayFontCenter("POWER STRING TEST");
+    u8g2.clearBuffer();
+
+
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, getPowerString(current_power_index));
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, getPowerString(current_power_index));
+    #endif
+    u8g2.sendBuffer();
 }
 
 void OLEDScreen::doRatioValueSelect(int action)
@@ -608,7 +663,15 @@ void OLEDScreen::doRatioValueSelect(int action)
     // displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
     //                     ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter("RATIO STRING TEST");
+    u8g2.clearBuffer();
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,15, getRateString(current_ratio_index));
+    #else
+        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.drawStr(0,10, getRateString(current_ratio_index));
+    #endif
+    u8g2.sendBuffer();
 
 }
 
@@ -621,7 +684,15 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             current_rate_index = rate_index;
             // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
             //                     rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
-            displayFontCenter("doParamUpdate");
+            u8g2.clearBuffer();
+            #ifdef USE_OLED_SPI_SMALL
+                u8g2.setFont(u8g2_font_courR10_tr);
+                u8g2.drawStr(0,15, getRateString(current_rate_index));
+            #else
+                u8g2.setFont(u8g2_font_courR10_tr);
+                u8g2.drawStr(0,10, getRateString(current_rate_index));
+            #endif
+            u8g2.sendBuffer();
         }
          
         if(power_index != current_power_index)
@@ -629,7 +700,16 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             current_power_index = power_index;
             // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
             //                     power_string[current_power_index], TFT_BLACK, TFT_WHITE);
-            displayFontCenter("doParamUpdate");
+            u8g2.clearBuffer();
+            #ifdef USE_OLED_SPI_SMALL
+                u8g2.setFont(u8g2_font_courR10_tr);
+                u8g2.drawStr(0,15, getPowerString(current_power_index));
+            #else
+                u8g2.setFont(u8g2_font_courR10_tr);
+                u8g2.drawStr(0,10, getPowerString(current_power_index));
+            #endif
+            u8g2.sendBuffer();
+
         }
 
         if(ratio_index != current_ratio_index)
@@ -637,7 +717,15 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             current_ratio_index = ratio_index;
             // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
             //                     ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
-            displayFontCenter("doParamUpdate");
+            u8g2.clearBuffer();
+            #ifdef USE_OLED_SPI_SMALL
+            u8g2.setFont(u8g2_font_courR10_tr);
+            u8g2.drawStr(0,15, getRateString(current_ratio_index));
+            #else
+            u8g2.setFont(u8g2_font_courR10_tr);
+            u8g2.drawStr(0,10, getRateString(current_ratio_index));
+            #endif
+            u8g2.sendBuffer();
 
         }
     }

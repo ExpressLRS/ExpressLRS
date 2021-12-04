@@ -42,6 +42,6 @@
 #define POWER_OUTPUT_VALUES         {-16,-14,-11,-8,-4}
 
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
-#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}
+#define JOY_ADC_VALUES          {459, 509, 326, 182, 91, 1021}
 
 #define Regulatory_Domain_ISM_2400 1

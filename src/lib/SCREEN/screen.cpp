@@ -16,3 +16,8 @@ int Screen::getUserRatioIndex()
 {
     return current_ratio_index;
 }
+
+int Screen::getScreenStatus()
+{
+    return current_screen_status;
+}

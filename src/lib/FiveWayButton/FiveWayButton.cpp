@@ -32,17 +32,18 @@ bool checkValue(int direction){
 
 int checkKey()
 { 
+    int fuzz = 3;
     int value = analogRead(GPIO_PIN_JOYSTICK);
         
-    if(value < (joyAdcValues[0] + 50) && value > (joyAdcValues[0] - 50))
+    if(value < (joyAdcValues[0] + fuzz) && value > (joyAdcValues[0] - fuzz))
         return INPUT_KEY_UP_PRESS;
-    else if(value < (joyAdcValues[1] + 50) && value > (joyAdcValues[1] - 50))
+    else if(value < (joyAdcValues[1] + fuzz) && value > (joyAdcValues[1] - fuzz))
         return INPUT_KEY_DOWN_PRESS;
-    else if(value < (joyAdcValues[2] + 50) && value > (joyAdcValues[2] - 50))
+    else if(value < (joyAdcValues[2] + fuzz) && value > (joyAdcValues[2] - fuzz))
         return INPUT_KEY_LEFT_PRESS;
-    else if(value < (joyAdcValues[3] + 50) && value > (joyAdcValues[3] - 50))
+    else if(value < (joyAdcValues[3] + fuzz) && value > (joyAdcValues[3] - fuzz))
         return INPUT_KEY_RIGHT_PRESS;
-    else if(value < (joyAdcValues[4] + 50) && value > (joyAdcValues[4] - 50))
+    else if(value < (joyAdcValues[4] + fuzz) && value > (joyAdcValues[4] - fuzz))
         return INPUT_KEY_OK_PRESS;
     else
         return INPUT_KEY_NO_PRESS;
