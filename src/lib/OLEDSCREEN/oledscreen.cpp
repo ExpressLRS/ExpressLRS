@@ -183,7 +183,7 @@ String main_menu_line_2[] = {
 };
 
 
-#endif
+
 
 // static char thisVersion[] = {LATEST_VERSION, 0};
 
@@ -404,8 +404,6 @@ void OLEDScreen::updateSubWIFIModePage()
 // TODO: Add a fancy wifi symbol like the cool TFT peeps
 
 #if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
-
-    
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, "open http://");
@@ -417,11 +415,7 @@ void OLEDScreen::updateSubWIFIModePage()
         u8g2.drawStr(0,30, host_msg);
         u8g2.drawStr(0,60, "by browser");
 #endif
-
-
-
 #else
-
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, STRING_WEB_UPDATE_TX_SSID);
@@ -433,7 +427,6 @@ void OLEDScreen::updateSubWIFIModePage()
         u8g2.drawStr(0,30, "expresslrs");
         u8g2.drawStr(0,60, "10.0.0.1");
 #endif
-
 #endif
 u8g2.sendBuffer();
 updatecallback(USER_UPDATE_TYPE_WIFI);                    
@@ -718,3 +711,5 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         current_ratio_index = ratio_index;
     }
 }
+
+#endif
