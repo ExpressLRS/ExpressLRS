@@ -450,7 +450,7 @@ void OLEDScreen::updateSubBindConfirmPage()
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "PRESS TO SEND");
-        u8g2.drawStr(32, 10, "BIND REQUEST");
+        u8g2.drawStr(0, 42, "BIND REQUEST");
     #endif
     u8g2.sendBuffer();
 }
