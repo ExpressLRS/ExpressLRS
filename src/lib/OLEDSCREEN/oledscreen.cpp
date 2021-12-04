@@ -113,7 +113,7 @@ void displayLogo()
 }
 
 void displayFontCenter(const char * info)
-{ 
+{
 
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_courR08_tr);
@@ -134,7 +134,7 @@ String rate_string[RATE_MAX_NUMBER] = {
     "150HZ",
     "50HZ"
 };
-#else 
+#else
 String rate_string[RATE_MAX_NUMBER] = {
     "200HZ",
     "100HZ",
@@ -191,7 +191,7 @@ void OLEDScreen::nullCallback(int updateType) {}
 void (*OLEDScreen::updatecallback)(int updateType) = &nullCallback;
 
 void OLEDScreen::init()
-{ 
+{
     u8g2.begin();
 
     displayLogo();
@@ -209,7 +209,7 @@ void OLEDScreen::init()
 
     u8g2.clearBuffer();
 
-    
+
 }
 
 void OLEDScreen::idleScreen()
@@ -226,7 +226,7 @@ void OLEDScreen::idleScreen()
     #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(0,42, &(rate_string[current_rate_index])[0]); 
+        u8g2.drawStr(0,42, &(rate_string[current_rate_index])[0]);
         u8g2.drawStr(70,42 , &(ratio_string[current_ratio_index])[0]);
         u8g2.drawStr(0,57, &(power_string[current_power_index])[0]);
         u8g2.setFont(u8g2_font_courR08_tr);
@@ -235,7 +235,7 @@ void OLEDScreen::idleScreen()
         u8g2.drawStr(38,24, thisVersion);
     #endif
     u8g2.sendBuffer();
-    
+
     current_screen_status = SCREEN_STATUS_IDLE;
 }
 
@@ -276,7 +276,7 @@ void OLEDScreen::doPageBack()
     }
     else if((current_page_index == PAGE_SUB_RATE_INDEX) ||
             (current_page_index == PAGE_SUB_POWER_INDEX) ||
-            (current_page_index == PAGE_SUB_RATIO_INDEX)) 
+            (current_page_index == PAGE_SUB_RATIO_INDEX))
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
         updateMainMenuPage(USER_ACTION_NONE);
@@ -336,7 +336,7 @@ void OLEDScreen::doPageForward()
     {
         current_page_index = PAGE_SUB_BINDING_INDEX;
         updateSubBindingPage();
-    }  
+    }
 }
 
 void OLEDScreen::doValueConfirm()
@@ -377,7 +377,7 @@ void OLEDScreen::updateMainMenuPage(int action)
         index = MAIN_MENU_RATE_INDEX;
     }
     main_menu_page_index = index;
-    
+
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
@@ -410,12 +410,12 @@ void OLEDScreen::updateSubWIFIModePage()
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, "open http://");
-        u8g2.drawStr(70,15 , host_msg);
+        u8g2.drawStr(70,15 , "elrs_tx.local");
         u8g2.drawStr(0,32, "by browser");
 #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "open http://");
-        u8g2.drawStr(0,30, host_msg);
+        u8g2.drawStr(0,30, "elrs_tx.local");
         u8g2.drawStr(0,60, "by browser");
 #endif
 #else
@@ -432,14 +432,14 @@ void OLEDScreen::updateSubWIFIModePage()
 #endif
 #endif
 u8g2.sendBuffer();
-updatecallback(USER_UPDATE_TYPE_WIFI);                    
+updatecallback(USER_UPDATE_TYPE_WIFI);
 
 
 }
 
 void OLEDScreen::updateSubBindConfirmPage()
 {
-    // TODO: Put bind image? 
+    // TODO: Put bind image?
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
@@ -458,7 +458,7 @@ void OLEDScreen::updateSubBindConfirmPage()
 
 void OLEDScreen::updateSubBindingPage()
 {
-    // TODO: Put bind image? 
+    // TODO: Put bind image?
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
@@ -474,7 +474,7 @@ void OLEDScreen::updateSubBindingPage()
     updatecallback(USER_UPDATE_TYPE_BINDING);
 
     current_screen_status = SCREEN_STATUS_BINDING;
-    
+
 }
 
 void OLEDScreen::doValueSelection(int action)
@@ -532,7 +532,7 @@ void OLEDScreen::doRateValueSelect(int action)
 
     current_rate_index = index;
 
-    // TODO: Put bind image? 
+    // TODO: Put bind image?
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
@@ -544,7 +544,7 @@ void OLEDScreen::doRateValueSelect(int action)
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #endif
     u8g2.sendBuffer();
-    
+
 
 }
 
@@ -636,7 +636,7 @@ void OLEDScreen::doRatioValueSelect(int action)
 
     current_ratio_index = index;
 
-    // displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT, 
+    // displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
     //                     ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 
     u8g2.clearBuffer();
@@ -660,7 +660,7 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         if(rate_index != current_rate_index)
         {
             current_rate_index = rate_index;
-            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
             //                     rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL
@@ -672,11 +672,11 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             #endif
             u8g2.sendBuffer();
         }
-         
+
         if(power_index != current_power_index)
         {
             current_power_index = power_index;
-            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
             //                     power_string[current_power_index], TFT_BLACK, TFT_WHITE);
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL
@@ -693,7 +693,7 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         if(ratio_index != current_ratio_index)
         {
             current_ratio_index = ratio_index;
-            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT, 
+            // displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
             //                     ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
             u8g2.clearBuffer();
             #ifdef USE_OLED_SPI_SMALL

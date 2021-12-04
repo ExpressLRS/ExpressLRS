@@ -69,7 +69,7 @@ void ScreenUpdateCallback(int updateType)
     case USER_UPDATE_TYPE_EXIT_BINDING:
       DBGLN("User request exit binding!");
       ExitBindingMode();
-      break;      
+      break;
     case USER_UPDATE_TYPE_WIFI:
       DBGLN("User request Wifi Update Mode!");
       connectionState = wifiUpdate;
@@ -89,7 +89,7 @@ void ScreenUpdateCallback(int updateType)
 }
 
 #ifdef HAS_FIVE_WAY_BUTTON
-void handle(void)
+static int handle(void)
 {
   fivewaybutton.handle();
 
@@ -99,7 +99,7 @@ void handle(void)
     bool isLongPressed;
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
-    {   
+    {
       if(isLongPressed)
       {
         screen.activeScreen();
@@ -155,6 +155,12 @@ void handle(void)
       }
     }
   }
+  return SCREEN_DURATION;
+}
+#else
+static int handle(void)
+{
+  return DURATION_NEVER;
 }
 #endif
 
@@ -174,19 +180,14 @@ static int start()
     return LOGO_DISPLAY_TIMEOUT;
 }
 
-  #ifdef HAS_FIVE_WAY_BUTTON
 static int event()
 {
-  if(!isLogoDisplayed)
-  {
-    return DURATION_IGNORE; // we are still displaying the startup message, so don't change the timeout
-  }
   if(connectionState != wifiUpdate)
   {
       screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
   }
 
-  return SCREEN_DURATION;
+  return DURATION_IGNORE;
 }
 
 static int timeout()
@@ -197,18 +198,13 @@ static int timeout()
     screen.idleScreen();
   }
 
-  handle();
-  return SCREEN_DURATION;
-
+  return handle();
 }
-#endif
 
 device_t Screen_device = {
     .initialize = initialize,
     .start = start,
-    #ifdef HAS_FIVE_WAY_BUTTON
     .event = event,
     .timeout = timeout
-    #endif
 };
 #endif
