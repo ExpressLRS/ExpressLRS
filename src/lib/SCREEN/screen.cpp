@@ -1,4 +1,5 @@
 #include "screen.h"
+#include "FiveWayButton.h"
 
 
 int Screen::getUserRateIndex()

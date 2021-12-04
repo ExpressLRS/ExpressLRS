@@ -1,10 +1,9 @@
-#ifdef HAS_TFT_SCREEN
-
 #include "targets.h"
 #include "common.h"
 #include "device.h"
 
 #ifdef HAS_TFT_SCREEN
+
 #include "logging.h"
 #include "Wire.h"
 #include "config.h"
@@ -250,5 +249,4 @@ device_t Screen_device = {
     .event = event,
     .timeout = timeout
 };
-#endif
 #endif
