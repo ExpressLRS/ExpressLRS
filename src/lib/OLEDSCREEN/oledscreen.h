@@ -93,7 +93,9 @@ private:
 
     void doPageBack();
     void doPageForward();
-    void doValueConfirm();        
+    void doValueConfirm();      
+
+    void displayMainScreen();  
 
 
 public:
