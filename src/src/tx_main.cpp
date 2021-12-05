@@ -947,6 +947,10 @@ static void setupTarget()
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+
+#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
 }
 
 void setup()

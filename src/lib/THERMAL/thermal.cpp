@@ -20,12 +20,10 @@ int thermal_status = THERMAL_STATUS_FAIL;
 
 void Thermal::init()
 {
-    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-
     int status = -1;
 #ifdef HAS_THERMAL_LM75A
     status = lm75a.init();
-#endif    
+#endif
     if(status == -1)
     {
         ERRLN("Thermal failed!");
@@ -41,19 +39,21 @@ void Thermal::init()
 
 void Thermal::handle()
 {
-    read_temp(&temp_value);
+    temp_value = read_temp();
 }
 
-void Thermal::read_temp(float *temp)
+uint8_t Thermal::read_temp()
 {
     if(thermal_status != THERMAL_STATUS_NORMAL)
     {
         ERRLN("thermal not ready!");
-        return;
+        return 0;
     }
-#ifdef HAS_THERMAL_LM75A    
-    lm75a.read_lm75a(temp);
-#endif    
+#ifdef HAS_THERMAL_LM75A
+    return lm75a.read_lm75a();
+#else
+    return 0;
+#endif
 }
 
 void Thermal::update_threshold(int index)
@@ -71,14 +71,9 @@ void Thermal::update_threshold(int index)
     }
     uint8_t high = thermal_threshold_data[2*index];
     uint8_t low = thermal_threshold_data[2*index+1];
-#ifdef HAS_THERMAL_LM75A    
+#ifdef HAS_THERMAL_LM75A
     lm75a.update_lm75a_threshold(high, low);
-#endif    
-}
-
-float Thermal::getTempValue()
-{
-    return temp_value;
+#endif
 }
 
 #endif

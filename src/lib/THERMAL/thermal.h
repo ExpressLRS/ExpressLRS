@@ -12,14 +12,14 @@ typedef enum
 class Thermal
 {
 private:
-    float temp_value;    
+    uint8_t temp_value;
+
 public:
     void init();
     void handle();
-    void read_temp(float *temp);
+    uint8_t read_temp();
     void update_threshold(int index);
-    float getTempValue();
-
+    uint8_t getTempValue() { return temp_value; }
 };
 
 #define THERMAL_FAN_DEFAULT_LOW_THRESHOLD   35

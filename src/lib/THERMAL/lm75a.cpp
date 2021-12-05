@@ -9,7 +9,7 @@ int LM75A::init()
 
     ReadAccRegister(LM75A_REG_TOS, buffer, 2);
 
-    INFOLN("thermal lma75 read Tos = 0x%x", buffer[0]);
+    DBGLN("thermal lma75 read Tos = 0x%x", buffer[0]);
 
     if(buffer[0] == 0)
     {
@@ -18,23 +18,17 @@ int LM75A::init()
     }
 
     return 0;
-}   
+}
 
-void LM75A::read_lm75a(float *temp)
+uint8_t LM75A::read_lm75a()
 {
      uint8_t buffer[5];
-     float temp_data = 0;
+     uint8_t temp_data = 0;
 
     ReadAccRegister(LM75A_REG_TEMP, buffer, 2);
 
-    temp_data = buffer[0];
-    if((buffer[1] & 0x80) == 0x80)
-    {
-        temp_data += 0.5;
-    }
-
-    *temp = temp_data;
-
+    // ignore the second byte as it's the decimal part of a degree.
+    return buffer[0];
 }
 
 void LM75A::update_lm75a_threshold(uint8_t tos, uint8_t thyst)
@@ -48,7 +42,6 @@ void LM75A::update_lm75a_threshold(uint8_t tos, uint8_t thyst)
     buffer[1] = 0;
     WriteAccRegister(LM75A_REG_TOS, buffer, 2);
 }
-
 
 void LM75A::ReadAccRegister(uint8_t reg, uint8_t *data, int size)
 {
@@ -67,6 +60,4 @@ void LM75A::WriteAccRegister(uint8_t reg, uint8_t *data, int size)
     Wire.write(data, size);
     Wire.endTransmission();
 }
-
-
 #endif

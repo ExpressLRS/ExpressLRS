@@ -219,7 +219,6 @@ static int handle(void)
 
 static void initialize()
 {
-//   Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
   #ifdef HAS_FIVE_WAY_BUTTON
   fivewaybutton.init();
   #endif

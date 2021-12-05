@@ -37,12 +37,10 @@ ICACHE_RAM_ATTR void handleGsensorInterrupt() {
 
 void Gsensor::init()
 {
-    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-
     uint8_t id = -1;
 #ifdef HAS_GSENSOR_STK8xxx
     id = stk8xxx.STK8xxx_Initialization();
-#endif    
+#endif
     if(id == -1)
     {
         ERRLN("Gsensor failed!");
@@ -55,11 +53,11 @@ void Gsensor::init()
 
     if(gensor_status == GSENSOR_STATUS_NORMAL)
     {
-#ifdef HAS_GSENSOR_STK8xxx        
+#ifdef HAS_GSENSOR_STK8xxx
        stk8xxx.STK8xxx_Anymotion_init();
        pinMode(GPIO_PIN_GSENSOR_INT,INPUT_PULLUP);
        attachInterrupt(digitalPinToInterrupt(GPIO_PIN_GSENSOR_INT), handleGsensorInterrupt, FALLING);
-#endif       
+#endif
     }
 
     system_state = GSENSOR_SYSTEM_STATE_MOVING;
@@ -74,7 +72,7 @@ float get_data_average(float *data, int length)
         average += *(data+i);
     }
     average = average / length;
-    return average;  
+    return average;
 }
 
 float get_data_variance(float average, float *data, int length)
@@ -123,11 +121,11 @@ void Gsensor::handle()
         x = abs(x - x_average);
         y = abs(y - y_average);
         z = abs(z - z_average);
-        if((x > QUIET_AVERAGE_THRESHOLD) || (y > QUIET_AVERAGE_THRESHOLD) || 
+        if((x > QUIET_AVERAGE_THRESHOLD) || (y > QUIET_AVERAGE_THRESHOLD) ||
             (z > QUIET_AVERAGE_THRESHOLD))
         {
             system_state = GSENSOR_SYSTEM_STATE_MOVING;
-        } 
+        }
     }
     else
     {
@@ -146,11 +144,11 @@ void Gsensor::handle()
             float y_variance = get_data_variance(y_average, y_buffer, DATA_SAMPLE_LENGTH);
             float z_variance = get_data_variance(z_average, z_buffer, DATA_SAMPLE_LENGTH);
 
-            if((x_variance < QUIET_VARIANCE_THRESHOLD) & (y_variance < QUIET_VARIANCE_THRESHOLD) & 
+            if((x_variance < QUIET_VARIANCE_THRESHOLD) & (y_variance < QUIET_VARIANCE_THRESHOLD) &
                 (z_variance < QUIET_VARIANCE_THRESHOLD))
             {
                 data_check_quiet = true;
-            } 
+            }
 
         }
         else
@@ -180,7 +178,7 @@ void Gsensor::getGSensorData(float *X_DataOut, float *Y_DataOut, float *Z_DataOu
     *Z_DataOut = 0;
     if(gensor_status == GSENSOR_STATUS_NORMAL)
     {
-#ifdef HAS_GSENSOR_STK8xxx        
+#ifdef HAS_GSENSOR_STK8xxx
         stk8xxx.STK8xxx_Getregister_data(X_DataOut, Y_DataOut, Z_DataOut);
 #endif
     }
