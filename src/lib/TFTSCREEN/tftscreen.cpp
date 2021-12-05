@@ -268,140 +268,36 @@ void TFTScreen::updateSubBindingPage()
 
 void TFTScreen::doRateValueSelect(int action)
 {
-    int index = current_rate_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index++;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index--;
-    }
-
-    if(index < 0)
-    {
-        index = RATE_MAX_NUMBER -1;
-    }
-    if(index > RATE_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_rate_index = index;
-
+    nextIndex(current_rate_index, action, RATE_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doPowerValueSelect(int action)
 {
-    int index = current_power_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = POWER_MAX_NUMBER -1;
-    }
-    if(index > POWER_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_power_index = index;
-
+    nextIndex(current_power_index, action, POWER_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         power_string[current_power_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doRatioValueSelect(int action)
 {
-    int index = current_ratio_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index++;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index--;
-    }
-
-    if(index < 0)
-    {
-        index = RATIO_MAX_NUMBER -1;
-    }
-    if(index > RATIO_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_ratio_index = index;
-
+    nextIndex(current_ratio_index, action, RATIO_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 }
 
+
 void TFTScreen::doPowerSavingValueSelect(int action)
 {
-    int index = current_powersaving_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = POWERSAVING_MAX_NUMBER -1;
-    }
-    if(index > POWERSAVING_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_powersaving_index = index;
-
+    nextIndex(current_smartfan_index, action, SMARTFAN_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         powersaving_string[current_powersaving_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doSmartFanValueSelect(int action)
 {
-    int index = current_smartfan_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = SMARTFAN_MAX_NUMBER -1;
-    }
-    if(index > SMARTFAN_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_smartfan_index = index;
-
+    nextIndex(current_powersaving_index, action, POWERSAVING_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         smartfan_string[current_smartfan_index], TFT_BLACK, TFT_WHITE);
 }

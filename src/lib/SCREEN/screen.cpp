@@ -231,3 +231,24 @@ void Screen::doValueSelection(int action)
         doSmartFanValueSelect(action);
     }
 }
+
+void Screen::nextIndex(int &index, int action, int max)
+{
+    if(action == USER_ACTION_UP)
+    {
+        index--;
+    }
+    if(action == USER_ACTION_DOWN)
+    {
+        index++;
+    }
+
+    if(index < 0)
+    {
+        index = max - 1;
+    }
+    if(index > max - 1)
+    {
+        index = 0;
+    }
+}

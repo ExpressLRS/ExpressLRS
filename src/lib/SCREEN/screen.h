@@ -120,6 +120,7 @@ protected:
 
     uint8_t system_temperature;
 
+    void nextIndex(int &index, int action, int max);
     void doValueSelection(int action);
 
     virtual void doRateValueSelect(int action) = 0;

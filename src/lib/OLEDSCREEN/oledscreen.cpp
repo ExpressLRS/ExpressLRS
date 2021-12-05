@@ -367,27 +367,7 @@ void OLEDScreen::updateSubBindingPage()
 
 void OLEDScreen::doRateValueSelect(int action)
 {
-    int index = current_rate_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index++;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index--;
-    }
-
-    if(index < 0)
-    {
-        index = RATE_MAX_NUMBER -1;
-    }
-    if(index > RATE_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_rate_index = index;
+    nextIndex(current_rate_index, action, RATE_MAX_NUMBER);
 
     // TODO: Put bind image?
     u8g2.clearBuffer();
@@ -411,27 +391,7 @@ void OLEDScreen::doRateValueSelect(int action)
 void OLEDScreen::doPowerValueSelect(int action)
 {
 
-    int index = current_power_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = POWER_MAX_NUMBER -1;
-    }
-    if(index > POWER_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_power_index = index;
+    nextIndex(current_power_index, action, POWER_MAX_NUMBER);
 
     u8g2.clearBuffer();
 
@@ -456,27 +416,7 @@ void OLEDScreen::doPowerValueSelect(int action)
 void OLEDScreen::doRatioValueSelect(int action)
 {
 
-    int index = current_ratio_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index++;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index--;
-    }
-
-    if(index < 0)
-    {
-        index = RATIO_MAX_NUMBER -1;
-    }
-    if(index > RATIO_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_ratio_index = index;
+    nextIndex(current_ratio_index, action, RATIO_MAX_NUMBER);
 
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
@@ -499,55 +439,13 @@ void OLEDScreen::doRatioValueSelect(int action)
 
 void OLEDScreen::doPowerSavingValueSelect(int action)
 {
-    int index = current_powersaving_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = POWERSAVING_MAX_NUMBER -1;
-    }
-    if(index > POWERSAVING_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_powersaving_index = index;
-
+    nextIndex(current_smartfan_index, action, SMARTFAN_MAX_NUMBER);
     // TODO display the value
 }
 
 void OLEDScreen::doSmartFanValueSelect(int action)
 {
-    int index = current_smartfan_index;
-
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-    }
-
-    if(index < 0)
-    {
-        index = SMARTFAN_MAX_NUMBER -1;
-    }
-    if(index > SMARTFAN_MAX_NUMBER -1)
-    {
-        index = 0;
-    }
-
-    current_smartfan_index = index;
-
+    nextIndex(current_powersaving_index, action, POWERSAVING_MAX_NUMBER);
     // TODO display the value
 }
 
