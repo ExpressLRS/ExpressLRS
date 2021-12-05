@@ -96,7 +96,7 @@ static void ScreenUpdateCallback(int updateType)
       connectionState = wifiUpdate;
       break;
     case USER_UPDATE_TYPE_EXIT_WIFI:
-      INFOLN("User request exit Wifi Update Mode!");
+      DBGLN("User request exit Wifi Update Mode!");
 #ifdef PLATFORM_ESP32
       if (connectionState == wifiUpdate) {
         rebootTime = millis() + 200;
@@ -155,7 +155,7 @@ static int handle(void)
 
       if(key != INPUT_KEY_NO_PRESS)
       {
-        INFOLN("user key = %d", key);
+        DBGLN("user key = %d", key);
         isUserInputCheck = false;
         if(key == INPUT_KEY_DOWN_PRESS)
         {

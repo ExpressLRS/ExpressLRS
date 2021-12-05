@@ -30,7 +30,7 @@ void Thermal::init()
     }
     else
     {
-        INFOLN("Thermal OK!");
+        DBGLN("Thermal OK!");
         temp_value = 0;
         thermal_status = THERMAL_STATUS_NORMAL;
         update_threshold(0);

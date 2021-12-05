@@ -488,7 +488,7 @@ static void startWiFi(unsigned long now)
   DBGLN("Stopping Radio");
   Radio.End();
 
-  INFOLN("Begin Webupdater");
+  DBGLN("Begin Webupdater");
 
   WiFi.persistent(false);
   WiFi.disconnect();

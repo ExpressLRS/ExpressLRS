@@ -126,7 +126,7 @@ bool STK8xxx::STK8xxx_Check_chipid()
     {
         if (chipid_temp == stk8xxx_pid_list[i])
         {
-        	INFOLN("read stkchip id ok, chip_id = 0x%x", chipid_temp);
+        	DBGLN("read stkchip id ok, chip_id = 0x%x", chipid_temp);
             return true;
         }
     }

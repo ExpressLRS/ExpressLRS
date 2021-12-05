@@ -47,7 +47,7 @@ void Gsensor::init()
     }
     else
     {
-        INFOLN("Gsensor OK with chipid = %x!", id);
+        DBGLN("Gsensor OK with chipid = %x!", id);
         gensor_status = GSENSOR_STATUS_NORMAL;
     }
 
@@ -184,7 +184,7 @@ void Gsensor::getGSensorData(float *X_DataOut, float *Y_DataOut, float *Z_DataOu
     }
     else
     {
-        INFOLN("Gsensor abnormal status = %d", gensor_status);
+        ERRLN("Gsensor abnormal status = %d", gensor_status);
     }
 }
 
