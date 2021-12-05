@@ -5,63 +5,7 @@
 
 TFT_eSPI tft = TFT_eSPI();
 
-#define RATE_MAX_NUMBER 4
-#define POWER_MAX_NUMBER 7
-#define RATIO_MAX_NUMBER 8
-#define POWERSAVING_MAX_NUMBER 2
-#define SMARTFAN_MAX_NUMBER 3
-
-#define VERSION_MAX_LENGTH  6
-
 bool is_confirmed = false;
-
-#ifdef Regulatory_Domain_ISM_2400
-String rate_string[RATE_MAX_NUMBER] = {
-    "500HZ",
-    "250HZ",
-    "150HZ",
-    "50HZ"
-};
-#else
-String rate_string[RATE_MAX_NUMBER] = {
-    "200HZ",
-    "100HZ",
-    "50HZ",
-    "25HZ"
-};
-#endif
-
-String power_string[POWER_MAX_NUMBER] = {
-    "10mW",
-    "25mW",
-    "50mW",
-    "100mW",
-    "250mW",
-    "500mW",
-    "1000mW"
-};
-
-String ratio_string[RATIO_MAX_NUMBER] = {
-    "Off",
-    "1:128",
-    "1:64",
-    "1:32",
-    "1:16",
-    "1:8",
-    "1:4",
-    "1:2"
-};
-
-String powersaving_string[POWERSAVING_MAX_NUMBER] = {
-    "OFF",
-    "ON"
-};
-
-String smartfan_string[SMARTFAN_MAX_NUMBER] = {
-    "AUTO",
-    "ON",
-    "OFF"
-};
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
@@ -72,29 +16,6 @@ const uint16_t *main_menu_icons[] = {
     elrs_bind,
     elrs_updatefw
 };
-
-String main_menu_line_1[] = {
-    "PACKET",
-    "TX",
-    "TELEM",
-    "MOTION",
-    "FAN",
-    "BIND",
-    "UPDATE"
-};
-
-String main_menu_line_2[] = {
-    "RATE",
-    "POWER",
-    "RATIO",
-    "DETECT",
-    "CONTROL",
-    "MODE",
-    "FW"
-};
-
-static char thisVersion[] = {LATEST_VERSION, 0};
-
 
 #define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D
 
@@ -185,12 +106,9 @@ void TFTScreen::init()
     tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
 
-    if(strlen(thisVersion) > VERSION_MAX_LENGTH)
-    {
-        thisVersion[VERSION_MAX_LENGTH] = 0x00;
-    }
     char buffer[50];
-    sprintf(buffer, "THOR-%s  ELRS-%s", STRING_THOR_VERSION, thisVersion);
+    sprintf(buffer, "THOR-%s  ELRS-", STRING_THOR_VERSION);
+    strncat(buffer, thisVersion, 6);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), TFT_WHITE, TFT_BLACK);
@@ -210,7 +128,6 @@ void TFTScreen::init()
     main_menu_page_index = MAIN_MENU_RATE_INDEX;
 
     system_temperature = 25;
-
 }
 
 void TFTScreen::idleScreen()
@@ -319,8 +236,6 @@ void TFTScreen::updateSubWIFIModePage()
                         STRING_WEB_UPDATE_IP, TFT_BLACK, TFT_WHITE);
 #endif
     updatecallback(USER_UPDATE_TYPE_WIFI);
-
-
 }
 
 void TFTScreen::updateSubBindConfirmPage()
@@ -337,7 +252,6 @@ void TFTScreen::updateSubBindConfirmPage()
 
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "REQUEST", TFT_BLACK, TFT_WHITE);
-
 }
 
 void TFTScreen::updateSubBindingPage()
@@ -378,7 +292,6 @@ void TFTScreen::doRateValueSelect(int action)
 
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
-
 }
 
 void TFTScreen::doPowerValueSelect(int action)
@@ -435,7 +348,6 @@ void TFTScreen::doRatioValueSelect(int action)
 
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
-
 }
 
 void TFTScreen::doPowerSavingValueSelect(int action)
@@ -541,7 +453,6 @@ void TFTScreen::doTemperatureUpdate(uint8_t temperature)
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                             String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
     }
-
 }
 
 void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,

@@ -40,12 +40,6 @@ U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(OLED_ROTATION, GPIO_PIN_OLED_SCK, GP
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 #endif
 
-#define RATE_MAX_NUMBER 4
-#define POWER_MAX_NUMBER 7
-#define RATIO_MAX_NUMBER 8
-#define POWERSAVING_MAX_NUMBER 2
-#define SMARTFAN_MAX_NUMBER 3
-
 #ifdef TARGET_TX_GHOST
 /**
  * helper function is used to draw xbmp on the OLED.
@@ -128,61 +122,6 @@ static void displayFontCenter(const char * info)
 
 }
 
-#ifdef Regulatory_Domain_ISM_2400
-String rate_string[RATE_MAX_NUMBER] = {
-    "500HZ",
-    "250HZ",
-    "150HZ",
-    "50HZ"
-};
-#else
-String rate_string[RATE_MAX_NUMBER] = {
-    "200HZ",
-    "100HZ",
-    "50HZ",
-    "25HZ"
-};
-#endif
-
-String power_string[POWER_MAX_NUMBER] = {
-    "10mW",
-    "25mW",
-    "50mW",
-    "100mW",
-    "250mW",
-    "500mW",
-    "1000mW"
-};
-
-String ratio_string[RATIO_MAX_NUMBER] = {
-    "Off",
-    "1:128",
-    "1:64",
-    "1:32",
-    "1:16",
-    "1:8",
-    "1:4",
-    "1:2"
-};
-
-String main_menu_line_1[] = {
-    "PACKET",
-    "TX",
-    "TELEM",
-    "BIND",
-    "UPDATE"
-};
-
-String main_menu_line_2[] = {
-    "RATE",
-    "POWER",
-    "RATIO",
-    "MODE",
-    "FW"
-};
-
-static char thisVersion[] = {LATEST_VERSION, 0};
-
 void OLEDScreen::init()
 {
     u8g2.begin();
@@ -201,8 +140,6 @@ void OLEDScreen::init()
     main_menu_page_index = MAIN_MENU_RATE_INDEX;
 
     u8g2.clearBuffer();
-
-
 }
 
 void OLEDScreen::idleScreen()
@@ -276,7 +213,6 @@ void OLEDScreen::updateMainMenuPage(int action)
         u8g2.drawStr(0,60, &(main_menu_line_2[main_menu_page_index - 1])[0]);
     #endif
     u8g2.sendBuffer();
-
 }
 
 void OLEDScreen::updateSubFunctionPage(int action)
@@ -286,7 +222,6 @@ void OLEDScreen::updateSubFunctionPage(int action)
 
 void OLEDScreen::updateSubWIFIModePage()
 {
-
     u8g2.clearBuffer();
 
 // TODO: Add a fancy wifi symbol like the cool TFT peeps
@@ -316,10 +251,8 @@ void OLEDScreen::updateSubWIFIModePage()
         u8g2.drawStr(0,60, "10.0.0.1");
 #endif
 #endif
-u8g2.sendBuffer();
-updatecallback(USER_UPDATE_TYPE_WIFI);
-
-
+    u8g2.sendBuffer();
+    updatecallback(USER_UPDATE_TYPE_WIFI);
 }
 
 void OLEDScreen::updateSubBindConfirmPage()
@@ -359,7 +292,6 @@ void OLEDScreen::updateSubBindingPage()
     updatecallback(USER_UPDATE_TYPE_BINDING);
 
     current_screen_status = SCREEN_STATUS_BINDING;
-
 }
 
 void OLEDScreen::doRateValueSelect(int action)
@@ -409,13 +341,10 @@ void OLEDScreen::doRateValueSelect(int action)
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #endif
     u8g2.sendBuffer();
-
-
 }
 
 void OLEDScreen::doPowerValueSelect(int action)
 {
-
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
@@ -466,7 +395,6 @@ void OLEDScreen::doPowerValueSelect(int action)
 
 void OLEDScreen::doRatioValueSelect(int action)
 {
-
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
@@ -646,7 +574,6 @@ void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
         //                     SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
         //                     String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
     }
-
 }
 
 void OLEDScreen::doScreenBackLight(int state)

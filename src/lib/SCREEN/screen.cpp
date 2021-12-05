@@ -3,6 +3,77 @@
 void Screen::nullCallback(int updateType) {}
 void (*Screen::updatecallback)(int updateType) = &nullCallback;
 
+
+#ifdef Regulatory_Domain_ISM_2400
+const char *Screen::rate_string[RATE_MAX_NUMBER] = {
+    "500HZ",
+    "250HZ",
+    "150HZ",
+    "50HZ"
+};
+#else
+const char *Screen::rate_string[RATE_MAX_NUMBER] = {
+    "200HZ",
+    "100HZ",
+    "50HZ",
+    "25HZ"
+};
+#endif
+
+const char *Screen::power_string[POWER_MAX_NUMBER] = {
+    "10mW",
+    "25mW",
+    "50mW",
+    "100mW",
+    "250mW",
+    "500mW",
+    "1000mW"
+};
+
+const char *Screen::ratio_string[RATIO_MAX_NUMBER] = {
+    "Off",
+    "1:128",
+    "1:64",
+    "1:32",
+    "1:16",
+    "1:8",
+    "1:4",
+    "1:2"
+};
+
+const char *Screen::powersaving_string[POWERSAVING_MAX_NUMBER] = {
+    "OFF",
+    "ON"
+};
+
+const char *Screen::smartfan_string[SMARTFAN_MAX_NUMBER] = {
+    "AUTO",
+    "ON",
+    "OFF"
+};
+
+const char *Screen::main_menu_line_1[] = {
+    "PACKET",
+    "TX",
+    "TELEM",
+    "MOTION",
+    "FAN",
+    "BIND",
+    "UPDATE"
+};
+
+const char *Screen::main_menu_line_2[] = {
+    "RATE",
+    "POWER",
+    "RATIO",
+    "DETECT",
+    "CONTROL",
+    "MODE",
+    "FW"
+};
+
+const char Screen::thisVersion[] = {LATEST_VERSION, 0};
+
 void Screen::doPageBack()
 {
     if(current_page_index == PAGE_MAIN_MENU_INDEX)

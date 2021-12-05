@@ -2,6 +2,15 @@
 #pragma once
 
 #include "targets.h"
+
+#define RATE_MAX_NUMBER 4
+#define POWER_MAX_NUMBER 7
+#define RATIO_MAX_NUMBER 8
+#define POWERSAVING_MAX_NUMBER 2
+#define SMARTFAN_MAX_NUMBER 3
+
+#define VERSION_MAX_LENGTH  6
+
 typedef enum
 {
     MAIN_MENU_RATE_INDEX = 1,
@@ -115,6 +124,15 @@ protected:
     virtual void updateSubWIFIModePage() = 0;
     virtual void updateSubBindConfirmPage() = 0;
     virtual void updateSubBindingPage() = 0;
+
+    static const char *rate_string[RATE_MAX_NUMBER];
+    static const char *power_string[POWER_MAX_NUMBER];
+    static const char *ratio_string[RATIO_MAX_NUMBER];
+    static const char *powersaving_string[POWERSAVING_MAX_NUMBER];
+    static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
+    static const char *main_menu_line_1[];
+    static const char *main_menu_line_2[];
+    static const char thisVersion[];
 
 public:
     static void nullCallback(int updateType);
