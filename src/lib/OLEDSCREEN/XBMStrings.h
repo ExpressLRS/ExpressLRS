@@ -411,3 +411,13 @@ const unsigned char power_img32[] =
   0x00, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x78, 0x00, 0x00, 0x00, 0xf0, 0x00, 
   0x00, 0x00, 0xc0, 0x01, 0x00, 0x00, 0x80, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 
   0x00, 0x00, 0x00, 0x00};
+
+// TODO: Add these images if we add the gsensor to hardware with OLED screens.
+// Note: (12/4/2021) Only Axis TX has this hardware. 
+const unsigned char powersaving_img64[] = {};
+const unsigned char powersaving_img32[] = {};
+
+// TODO: Add these images if we add smart fan to the hardware with OLED screens. 
+// Note: (12/4/2021) Only Axis TX has this hardware. 
+const unsigned char fan_img64[] = {};
+const unsigned char fan_img32[] = {};

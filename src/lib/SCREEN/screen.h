@@ -11,6 +11,15 @@
 
 #define VERSION_MAX_LENGTH  6
 
+#define IMAGE_RATE 0
+#define IMAGE_POWER 1
+#define IMAGE_RATIO 2
+#define IMAGE_MOTION 3
+#define IMAGE_FAN 4
+#define IMAGE_BIND 5
+#define IMAGE_WIFI 6
+
+
 typedef enum
 {
     MAIN_MENU_RATE_INDEX = 1,

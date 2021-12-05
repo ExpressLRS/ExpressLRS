@@ -40,13 +40,6 @@ U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI u8g2(OLED_ROTATION, GPIO_PIN_OLED_SCK, GP
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(OLED_ROTATION, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 #endif
 
-
-#define IMAGE_RATE 0
-#define IMAGE_POWER 1
-#define IMAGE_RATIO 2
-#define IMAGE_BIND 3
-#define IMAGE_WIFI 4
-
 #ifdef TARGET_TX_GHOST
 /**
  * helper function is used to draw xbmp on the OLED.
@@ -115,6 +108,7 @@ static void displayLogo()
     u8g2.sendBuffer();
 }
 
+
 static void displayFontCenter(const char * info)
 {
 
@@ -155,10 +149,6 @@ void helperDrawImage64(int menu)
     int x_pos = 65;
     int y_pos = 5;
 
-    u8g2.setDrawColor(0x00);
-    u8g2.drawBox(x_pos, y_pos, 64, 64);
-    u8g2.setDrawColor(0xff);
-
     switch(menu){
         case 0: 
             u8g2.drawXBM(x_pos, y_pos, 64, 44, rate_img64);
@@ -170,9 +160,15 @@ void helperDrawImage64(int menu)
             u8g2.drawXBM(x_pos, y_pos, 64, 64, ratio_img64);
             break;
         case 3: 
-            u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
+            u8g2.drawXBM(x_pos, y_pos, 64, 64, powersaving_img64);
             break;
         case 4:
+            u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
+            break;        
+        case 5: 
+            u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
+            break;
+        case 6:
             u8g2.drawXBM(x_pos, y_pos, 44, 44, wifi_img64);
             break;
 
@@ -196,9 +192,15 @@ void helperDrawImage32(int menu)
             u8g2.drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
             break;
         case 3: 
-            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
             break;
         case 4:
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
+            break;
+        case 5: 
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
+            break;
+        case 6:
             u8g2.drawXBM(x_pos, y_pos, 22, 22, wifi_img32);
             break;
 
@@ -475,9 +477,6 @@ void OLEDScreen::doRatioValueSelect(int action)
     }
 
     current_ratio_index = index;
-
-    // displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-    //                     ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
 
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
