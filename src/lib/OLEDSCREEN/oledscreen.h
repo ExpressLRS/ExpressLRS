@@ -27,18 +27,17 @@ private:
     void doPowerSavingValueSelect(int action);
     void doSmartFanValueSelect(int action);
 
-    void updateMainMenuPage(int action);
-    void updateSubFunctionPage(int action);
+    void updateMainMenuPage();
+    void updateSubFunctionPage();
     void updateSubWIFIModePage();
     void updateSubBindConfirmPage();
     void updateSubBindingPage();
 
     void doPageBack();
     void doPageForward();
-    void doValueConfirm();      
+    void doValueConfirm();
 
-    void displayMainScreen();  
-
+    void displayMainScreen();
 
 public:
 

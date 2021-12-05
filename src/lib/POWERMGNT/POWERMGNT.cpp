@@ -93,11 +93,11 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
 void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
 {
     bool isUpdate = false;
-    for(int i=0;i<size;i++)
+    for(size_t i=0 ; i<size ; i++)
     {
-        if(powerCaliValues[i] != *(values + i))
+        if(powerCaliValues[i] != values[i])
         {
-            powerCaliValues[i] = *(values + i);
+            powerCaliValues[i] = values[i];
             isUpdate = true;
         }
     }
@@ -112,9 +112,9 @@ void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
 
 void POWERMGNT::GetPowerCaliValues(int8_t *values, size_t size)
 {
-    for(int i=0;i<size;i++)
+    for(size_t i=0 ; i<size ; i++)
     {
-        *(values + i) =powerCaliValues[i];
+        *(values + i) = powerCaliValues[i];
     }
 }
 
@@ -144,6 +144,8 @@ void POWERMGNT::LoadCalibration()
         nvs_set_u32(handle, "calversion", CALIBRATION_VERSION | CALIBRATION_MAGIC);
         nvs_commit(handle);
     }
+#else
+    memset(powerCaliValues, 0, sizeof(powerCaliValues));
 #endif
 }
 

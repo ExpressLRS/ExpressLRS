@@ -111,7 +111,6 @@ static void displayLogo()
 
 static void displayFontCenter(const char * info)
 {
-
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_courR08_tr);
 #ifdef USE_OLED_SPI_SMALL
@@ -120,7 +119,6 @@ static void displayFontCenter(const char * info)
     u8g2.drawStr(64, 64, info);
 #endif
     u8g2.sendBuffer();
-
 }
 
 void OLEDScreen::init()
@@ -144,60 +142,59 @@ void OLEDScreen::init()
 }
 
 void helperDrawImage64(int menu)
-{ 
+{
     // Adjust these to move them around on the screen
     int x_pos = 65;
     int y_pos = 5;
 
     switch(menu){
-        case 0: 
+        case 0:
             u8g2.drawXBM(x_pos, y_pos, 64, 44, rate_img64);
             break;
         case 1:
-            u8g2.drawXBM(x_pos, y_pos, 50, 50, power_img64); 
+            u8g2.drawXBM(x_pos, y_pos, 50, 50, power_img64);
             break;
-        case 2: 
+        case 2:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, ratio_img64);
             break;
-        case 3: 
+        case 3:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, powersaving_img64);
             break;
         case 4:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
-            break;        
-        case 5: 
+            break;
+        case 5:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
             break;
         case 6:
             u8g2.drawXBM(x_pos, y_pos, 44, 44, wifi_img64);
             break;
-
     }
 }
 
 void helperDrawImage32(int menu)
-{ 
+{
     // Adjust these to move them around on the screen
     int x_pos = 65;
     int y_pos = 5;
 
     switch(menu){
-        case 0: 
+        case 0:
             u8g2.drawXBM(x_pos, y_pos, 32, 22, rate_img32);
             break;
         case 1:
-            u8g2.drawXBM(x_pos, y_pos, 25, 25, power_img32); 
+            u8g2.drawXBM(x_pos, y_pos, 25, 25, power_img32);
             break;
-        case 2: 
+        case 2:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
             break;
-        case 3: 
+        case 3:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
             break;
         case 4:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
             break;
-        case 5: 
+        case 5:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
         case 6:
@@ -207,7 +204,7 @@ void helperDrawImage32(int menu)
     }
 }
 
-void OLEDScreen::displayMainScreen(){ 
+void OLEDScreen::displayMainScreen(){
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
@@ -225,52 +222,23 @@ void OLEDScreen::displayMainScreen(){
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(70,53, "TLM");
         u8g2.drawStr(0,24, "Ver: ");
-        u8g2.drawStr(38,24, thisVersion);
+        char buffer[7];
+        strncpy(buffer, thisVersion, 6);
+        buffer[6] = 0;
+        u8g2.drawStr(38,24, buffer);
     #endif
     u8g2.sendBuffer();
 }
 
 void OLEDScreen::idleScreen()
 {
-
     displayMainScreen();
 
     current_screen_status = SCREEN_STATUS_IDLE;
 }
 
-void OLEDScreen::updateMainMenuPage(int action)
+void OLEDScreen::updateMainMenuPage()
 {
-    int index = main_menu_page_index;
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-        #ifndef HAS_THERMAL
-        if (index == MAIN_MENU_SMARTFAN_INDEX) index--;
-        #endif
-        #ifndef HAS_GSENSOR
-        if (index == MAIN_MENU_POWERSAVING_INDEX) index--;
-        #endif
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-        #ifndef HAS_GSENSOR
-        if (index == MAIN_MENU_POWERSAVING_INDEX) index++;
-        #endif
-        #ifndef HAS_THERMAL
-        if (index == MAIN_MENU_SMARTFAN_INDEX) index++;
-        #endif
-    }
-    if(index < MAIN_MENU_RATE_INDEX)
-    {
-        index = MAIN_MENU_UPDATEFW_INDEX;
-    }
-    if(index > MAIN_MENU_UPDATEFW_INDEX)
-    {
-        index = MAIN_MENU_RATE_INDEX;
-    }
-    main_menu_page_index = index;
-
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
@@ -286,9 +254,9 @@ void OLEDScreen::updateMainMenuPage(int action)
     u8g2.sendBuffer();
 }
 
-void OLEDScreen::updateSubFunctionPage(int action)
+void OLEDScreen::updateSubFunctionPage()
 {
-    doValueSelection(action);
+    doValueSelection(USER_ACTION_NONE);
 }
 
 void OLEDScreen::updateSubWIFIModePage()
@@ -374,13 +342,13 @@ void OLEDScreen::doRateValueSelect(int action)
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);  
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATE);
     #else
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,20, &(rate_string[current_rate_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);        
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_RATE);
@@ -390,7 +358,6 @@ void OLEDScreen::doRateValueSelect(int action)
 
 void OLEDScreen::doPowerValueSelect(int action)
 {
-
     nextIndex(current_power_index, action, POWER_MAX_NUMBER);
 
     u8g2.clearBuffer();
@@ -399,13 +366,13 @@ void OLEDScreen::doPowerValueSelect(int action)
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);  
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_POWER);
     #else
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,20, &(power_string[current_power_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);        
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_POWER);
@@ -422,19 +389,18 @@ void OLEDScreen::doRatioValueSelect(int action)
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);  
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATIO);
     #else
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,20, &(ratio_string[current_ratio_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);        
+        u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_RATIO);
     #endif
     u8g2.sendBuffer();
-
 }
 
 void OLEDScreen::doPowerSavingValueSelect(int action)
@@ -461,7 +427,7 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
 
         if(power_index != current_power_index)
         {
-            current_power_index = power_index;     
+            current_power_index = power_index;
             displayMainScreen();
         }
 
@@ -477,6 +443,9 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         current_power_index = power_index;
         current_ratio_index = ratio_index;
     }
+
+    current_powersaving_index = motion_index;
+    current_smartfan_index = fan_index;
 }
 
 void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
@@ -485,7 +454,8 @@ void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
     if(current_screen_status == SCREEN_STATUS_IDLE)
     {
         char buffer[20];
-        sprintf(buffer, "%s %02d", thisVersion, system_temperature);
+        strncpy(buffer, thisVersion, 6);
+        sprintf(buffer+6, " %02d", system_temperature);
         // TODO
         // displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
         //                     SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,

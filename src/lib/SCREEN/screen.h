@@ -102,6 +102,7 @@ class Screen
 {
 private:
 
+    void doMainMenuPage(int action);
     void doPageBack();
     void doPageForward();
     void doValueConfirm();
@@ -129,11 +130,12 @@ protected:
     virtual void doPowerSavingValueSelect(int action) = 0;
     virtual void doSmartFanValueSelect(int action) = 0;
 
-    virtual void updateMainMenuPage(int action) = 0;
-    virtual void updateSubFunctionPage(int action) = 0;
+    virtual void updateMainMenuPage() = 0;
+    virtual void updateSubFunctionPage() = 0;
     virtual void updateSubWIFIModePage() = 0;
     virtual void updateSubBindConfirmPage() = 0;
     virtual void updateSubBindingPage() = 0;
+
 
     static const char *rate_string[RATE_MAX_NUMBER];
     static const char *power_string[POWER_MAX_NUMBER];

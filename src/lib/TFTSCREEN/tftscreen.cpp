@@ -138,7 +138,8 @@ void TFTScreen::idleScreen()
     tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
 
     char buffer[20];
-    sprintf(buffer, "%s %02d", thisVersion, system_temperature);
+    strncpy(buffer, thisVersion, 6);
+    sprintf(buffer+6, " %02d", system_temperature);
     displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                                 SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                                 String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
@@ -155,39 +156,8 @@ void TFTScreen::idleScreen()
     current_screen_status = SCREEN_STATUS_IDLE;
 }
 
-void TFTScreen::updateMainMenuPage(int action)
+void TFTScreen::updateMainMenuPage()
 {
-    int index = main_menu_page_index;
-    if(action == USER_ACTION_UP)
-    {
-        index--;
-        #ifndef HAS_THERMAL
-        if (index == MAIN_MENU_SMARTFAN_INDEX) index--;
-        #endif
-        #ifndef HAS_GSENSOR
-        if (index == MAIN_MENU_POWERSAVING_INDEX) index--;
-        #endif
-    }
-    if(action == USER_ACTION_DOWN)
-    {
-        index++;
-        #ifndef HAS_GSENSOR
-        if (index == MAIN_MENU_POWERSAVING_INDEX) index++;
-        #endif
-        #ifndef HAS_THERMAL
-        if (index == MAIN_MENU_SMARTFAN_INDEX) index++;
-        #endif
-    }
-    if(index < MAIN_MENU_RATE_INDEX)
-    {
-        index = MAIN_MENU_UPDATEFW_INDEX;
-    }
-    if(index > MAIN_MENU_UPDATEFW_INDEX)
-    {
-        index = MAIN_MENU_RATE_INDEX;
-    }
-    main_menu_page_index = index;
-
     tft.fillScreen(TFT_WHITE);
 
     tft.pushImage(MAIN_PAGE_ICON_START_X, MAIN_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, main_menu_icons[main_menu_page_index-1]);
@@ -200,11 +170,11 @@ void TFTScreen::updateMainMenuPage(int action)
                         main_menu_line_2[main_menu_page_index - 1], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::updateSubFunctionPage(int action)
+void TFTScreen::updateSubFunctionPage()
 {
     tft.fillScreen(TFT_WHITE);
 
-    doValueSelection(action);
+    doValueSelection(USER_ACTION_NONE);
 
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
@@ -340,15 +310,16 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
 
 void TFTScreen::doTemperatureUpdate(uint8_t temperature)
 {
-    system_temperature = temperature;
-    if(current_screen_status == SCREEN_STATUS_IDLE)
+    if(current_screen_status == SCREEN_STATUS_IDLE && system_temperature != temperature)
     {
         char buffer[20];
-        sprintf(buffer, "%s %02d", thisVersion, system_temperature);
+        strncpy(buffer, thisVersion, 6);
+        sprintf(buffer+6, " %02d", temperature);
         displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                             String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
     }
+    system_temperature = temperature;
 }
 
 void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,

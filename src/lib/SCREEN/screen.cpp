@@ -74,6 +74,42 @@ const char *Screen::main_menu_line_2[] = {
 
 const char Screen::thisVersion[] = {LATEST_VERSION, 0};
 
+void Screen::doMainMenuPage(int action)
+{
+    int index = main_menu_page_index;
+    if(action == USER_ACTION_UP)
+    {
+        index--;
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index--;
+        #endif
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index--;
+        #endif
+    }
+    if(action == USER_ACTION_DOWN)
+    {
+        index++;
+        #ifndef HAS_GSENSOR
+        if (index == MAIN_MENU_POWERSAVING_INDEX) index++;
+        #endif
+        #ifndef HAS_THERMAL
+        if (index == MAIN_MENU_SMARTFAN_INDEX) index++;
+        #endif
+    }
+    if(index < MAIN_MENU_RATE_INDEX)
+    {
+        index = MAIN_MENU_UPDATEFW_INDEX;
+    }
+    if(index > MAIN_MENU_UPDATEFW_INDEX)
+    {
+        index = MAIN_MENU_RATE_INDEX;
+    }
+    main_menu_page_index = index;
+
+    updateMainMenuPage();
+}
+
 void Screen::doPageBack()
 {
     if(current_page_index == PAGE_MAIN_MENU_INDEX)
@@ -87,12 +123,12 @@ void Screen::doPageBack()
             (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
+        doMainMenuPage(USER_ACTION_NONE);
     }
     else if(current_page_index == PAGE_SUB_BIND_INDEX)
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
+        doMainMenuPage(USER_ACTION_NONE);
     }
     else if(current_page_index == PAGE_SUB_BINDING_INDEX)
     {
@@ -105,7 +141,7 @@ void Screen::doPageBack()
     else if(current_page_index == PAGE_SUB_UPDATEFW_INDEX)
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
+        doMainMenuPage(USER_ACTION_NONE);
         updatecallback(USER_UPDATE_TYPE_EXIT_WIFI);
     }
 }
@@ -121,7 +157,7 @@ void Screen::doPageForward()
             (main_menu_page_index == MAIN_MENU_SMARTFAN_INDEX))
         {
             current_page_index = main_menu_page_index;
-            updateSubFunctionPage(USER_ACTION_NONE);
+            updateSubFunctionPage();
         }
         else if(main_menu_page_index == MAIN_MENU_UPDATEFW_INDEX)
         {
@@ -141,7 +177,7 @@ void Screen::doPageForward()
             (current_page_index == PAGE_SUB_SMARTFAN_INDEX))
     {
         current_page_index = PAGE_MAIN_MENU_INDEX;
-        updateMainMenuPage(USER_ACTION_NONE);
+        doMainMenuPage(USER_ACTION_NONE);
     }
     else if(current_page_index == PAGE_SUB_BIND_INDEX)
     {
@@ -198,7 +234,7 @@ void Screen::doUserAction(int action)
 
 void Screen::activeScreen()
 {
-    updateMainMenuPage(USER_ACTION_NONE);
+    doMainMenuPage(USER_ACTION_NONE);
 
     current_screen_status = SCREEN_STATUS_WORK;
     current_page_index = PAGE_MAIN_MENU_INDEX;
@@ -208,7 +244,7 @@ void Screen::doValueSelection(int action)
 {
     if(current_page_index == PAGE_MAIN_MENU_INDEX)
     {
-        updateMainMenuPage(action);
+        doMainMenuPage(action);
     }
     else if(current_page_index == PAGE_SUB_RATE_INDEX)
     {
