@@ -22,9 +22,7 @@ int LM75A::init()
 
 uint8_t LM75A::read_lm75a()
 {
-     uint8_t buffer[5];
-     uint8_t temp_data = 0;
-
+    uint8_t buffer[5];
     ReadAccRegister(LM75A_REG_TEMP, buffer, 2);
 
     // ignore the second byte as it's the decimal part of a degree.
