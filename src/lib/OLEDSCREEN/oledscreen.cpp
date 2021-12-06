@@ -17,6 +17,7 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
 // Default header files for Express LRS
 #include "targets.h"
+#include "options.h"
 // OLED specific header files.
 #include "oledscreen.h"
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
@@ -269,25 +270,25 @@ void OLEDScreen::updateSubWIFIModePage()
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,15, "open http://");
-        u8g2.drawStr(70,15 , "elrs_tx.local");
+        u8g2.drawStr(70,15, (String(wifi_hostname)+".local").c_str());
         u8g2.drawStr(0,32, "by browser");
 #else
         u8g2.setFont(u8g2_font_courR10_tr);
         u8g2.drawStr(0,10, "open http://");
-        u8g2.drawStr(0,30, "elrs_tx.local");
+        u8g2.drawStr(0,30, (String(wifi_hostname)+".local").c_str());
         u8g2.drawStr(0,60, "by browser");
 #endif
 #else
 #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,15, "ExpressLRS TX");
-        u8g2.drawStr(70,15 , "expresslrs");
-        u8g2.drawStr(0,32, "10.0.0.1");
+        u8g2.drawStr(0,15, wifi_ap_ssid);
+        u8g2.drawStr(70,15, wifi_ap_password);
+        u8g2.drawStr(0,32, wifi_ap_address);
 #else
         u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "ExpressLRS TX");
-        u8g2.drawStr(0,30, "expresslrs");
-        u8g2.drawStr(0,60, "10.0.0.1");
+        u8g2.drawStr(0,10, wifi_ap_ssid);
+        u8g2.drawStr(0,30, wifi_ap_password);
+        u8g2.drawStr(0,60, wifi_ap_address);
 #endif
 #endif
     u8g2.sendBuffer();

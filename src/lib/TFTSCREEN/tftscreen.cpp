@@ -1,6 +1,8 @@
 #ifdef HAS_TFT_SCREEN
 
 #include "tftscreen.h"
+#include "options.h"
+
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
@@ -189,7 +191,7 @@ void TFTScreen::updateSubWIFIModePage()
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "open http://", TFT_BLACK, TFT_WHITE);
 
-    String host_msg = String(STRING_WEB_UPDATE_TX_HOST) + ".local";
+    String host_msg = String(wifi_hostname) + ".local";
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         host_msg, TFT_BLACK, TFT_WHITE);
 
@@ -197,13 +199,13 @@ void TFTScreen::updateSubWIFIModePage()
                         "by browser", TFT_BLACK, TFT_WHITE);
 #else
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        STRING_WEB_UPDATE_TX_SSID, TFT_BLACK, TFT_WHITE);
+                        wifi_ap_ssid, TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        STRING_WEB_UPDATE_PWD, TFT_BLACK, TFT_WHITE);
+                        wifi_ap_password, TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        STRING_WEB_UPDATE_IP, TFT_BLACK, TFT_WHITE);
+                        wifi_ap_address, TFT_BLACK, TFT_WHITE);
 #endif
     updatecallback(USER_UPDATE_TYPE_WIFI);
 }

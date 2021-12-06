@@ -44,10 +44,6 @@
 #define GPIO_PIN_GSENSOR_INT    37
 #define GPIO_PIN_LED_WS2812     25
 
-#define STRING_WEB_UPDATE_TX_HOST   "elrs_tx"
-#define STRING_WEB_UPDATE_TX_SSID   "ExpressLRS TX"
-#define STRING_WEB_UPDATE_PWD   "expresslrs"
-#define STRING_WEB_UPDATE_IP    "10.0.0.1"
 #define STRING_THOR_VERSION     "2.0"
 
 // Output Power
