@@ -72,9 +72,9 @@ More information can be found on the [website](https://www.expresslrs.org/).
 <img src="https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/24Ghardware.jpg" width = "80%">
 
 - **TX**
-    - [DIY JR Bay](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, 27dBm, supports WiFi Updates)
-    - [DIY Slim TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
-    - [DIY Slimmer TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, 27dBm, supports Wifi Updates, fits Slim Bay)
+    - [DIY JR Bay](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280) (Full Support, ~24dBm measured at 250mw, supports WiFi Updates)
+    - [DIY Slim TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slim) (Full Support, ~24dBm measured at 250mw, supports Wifi Updates, fits Slim Bay)
+    - [DIY Slimmer TX](https://github.com/ExpressLRS/ExpressLRS-Hardware/tree/master/PCB/2400MHz/TX_SX1280_Slimmer) (Full Support, ~24dBm measured at 250mw, supports Wifi Updates, fits Slim Bay)
     - [GHOST TX](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [GHOST TX Lite](https://www.immersionrc.com/fpv-products/ghost/) (Full Support, 250 mW output power, OLED support in ELRS v1.1)
     - [HappyModel TX](http://www.happymodel.cn/index.php/2021/04/12/happymodel-2-4g-expresslrs-elrs-micro-tx-module-es24tx/) (Full Support, 250 mW output power)
@@ -113,6 +113,7 @@ Anyone can add an entry to the table, and entries should include the:
 | 20Km | 2.4G | 150HZ | 100mW | Yes | Pairan | https://youtu.be/B9-AItJ9WS0 |
 | 10Km | 2.4G | 500HZ | 10mW | Yes | mrscythe | https://youtu.be/IpiPEZrCGtg |
 | 10Km | 2.4G | 250HZ | 100mW | No | Snipes | https://youtu.be/dJYfWLtXVg8 |
+| 10Km | 900M | 50HZ | 100mW | Yes | Taufik | https://youtu.be/Pi2j17T2dSk |
 | 6Km | 900M | 100HZ | 50mW | No | Snipes | https://youtu.be/kN89mINbmQc?t=58 |
 | 6Km | 2.4G | 500HZ | 250mW | No | Spec | https://www.youtube.com/watch?v=bVJaiqJq8gY |
 | 4.77Km | 900M | 200HZ | 250mW | No | DaBit | https://www.youtube.com/watch?v=k0lY0XwB6Ko |

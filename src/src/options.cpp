@@ -50,6 +50,9 @@ const char PROGMEM compile_options[] = {
     #ifdef USE_TX_BACKPACK
         "-DUSE_TX_BACKPACK "
     #endif
+    #ifdef USE_BLE_JOYSTICK
+        "-DUSE_BLE_JOYSTICK "
+    #endif
 #endif
 
 #ifdef TARGET_RX
