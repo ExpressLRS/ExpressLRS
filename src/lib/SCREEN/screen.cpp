@@ -29,7 +29,8 @@ const char *Screen::power_string[POWER_MAX_NUMBER] = {
     "100mW",
     "250mW",
     "500mW",
-    "1000mW"
+    "1000mW",
+    "2000mW"
 };
 
 const char *Screen::ratio_string[RATIO_MAX_NUMBER] = {
@@ -270,7 +271,7 @@ void Screen::doValueSelection(int action)
     }
 }
 
-void Screen::nextIndex(int &index, int action, int max)
+void Screen::nextIndex(int &index, int action, int min, int max)
 {
     if(action == USER_ACTION_UP)
     {
@@ -287,7 +288,7 @@ void Screen::nextIndex(int &index, int action, int max)
     }
     if(index > max - 1)
     {
-        index = 0;
+        index = min;
     }
 }
 

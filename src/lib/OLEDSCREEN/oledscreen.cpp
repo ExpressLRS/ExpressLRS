@@ -18,6 +18,7 @@
 // Default header files for Express LRS
 #include "targets.h"
 #include "options.h"
+
 // OLED specific header files.
 #include "oledscreen.h"
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
@@ -362,11 +363,9 @@ void OLEDScreen::doRateValueSelect(int action)
 
 void OLEDScreen::doPowerValueSelect(int action)
 {
-    nextIndex(current_power_index, action, MaxPower);
+    nextIndex(current_power_index, action, MinPower, MaxPower+1);
 
     u8g2.clearBuffer();
-
-
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_courR12_tr);
         u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);

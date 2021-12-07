@@ -2,6 +2,7 @@
 
 #include "tftscreen.h"
 #include "options.h"
+#include "POWERMGNT.h"
 
 #include <TFT_eSPI.h>
 
@@ -247,7 +248,7 @@ void TFTScreen::doRateValueSelect(int action)
 
 void TFTScreen::doPowerValueSelect(int action)
 {
-    nextIndex(current_power_index, action, POWER_MAX_NUMBER);
+    nextIndex(current_power_index, action, MinPower, MaxPower+1);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         power_string[current_power_index], TFT_BLACK, TFT_WHITE);
 }

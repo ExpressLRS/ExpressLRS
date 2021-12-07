@@ -4,7 +4,7 @@
 #include "targets.h"
 
 #define RATE_MAX_NUMBER 4
-#define POWER_MAX_NUMBER 7
+#define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
 #define SMARTFAN_MAX_NUMBER 3
@@ -121,7 +121,8 @@ protected:
 
     uint8_t system_temperature;
 
-    void nextIndex(int &index, int action, int max);
+    void nextIndex(int &index, int action, int min, int max);
+    void nextIndex(int &index, int action, int max) { nextIndex(index, action, 0, max); }
     void doValueSelection(int action);
 
     virtual void doRateValueSelect(int action) = 0;
