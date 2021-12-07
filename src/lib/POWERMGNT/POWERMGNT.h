@@ -20,7 +20,7 @@
     #define MaxPower HighPower
 #endif
 
-#if defined(DRegulatory_Domain_EU_CE_2400)
+#if defined(Regulatory_Domain_EU_CE_2400)
     #undef MaxPower
     #define MaxPower PWR_10mW
 #endif
