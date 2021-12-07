@@ -262,14 +262,14 @@ void TFTScreen::doRatioValueSelect(int action)
 
 void TFTScreen::doPowerSavingValueSelect(int action)
 {
-    nextIndex(current_smartfan_index, action, SMARTFAN_MAX_NUMBER);
+    nextIndex(current_powersaving_index, action, POWERSAVING_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         powersaving_string[current_powersaving_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doSmartFanValueSelect(int action)
 {
-    nextIndex(current_powersaving_index, action, POWERSAVING_MAX_NUMBER);
+    nextIndex(current_smartfan_index, action, SMARTFAN_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         smartfan_string[current_smartfan_index], TFT_BLACK, TFT_WHITE);
 }
