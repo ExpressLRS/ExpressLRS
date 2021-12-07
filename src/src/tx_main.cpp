@@ -797,7 +797,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
   values[index] = value;
   POWERMGNT.SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("axis power calibration done %d, %d", index, value);
+  DBGLN("power calibration done %d, %d", index, value);
   hwTimer.resume();
 }
 

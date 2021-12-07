@@ -104,13 +104,13 @@ void TFTScreen::init()
 
     tft.setSwapBytes(true);
 
-    tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, axis_logo);
+    tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
 
     tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
 
     char buffer[50];
-    sprintf(buffer, "THOR-%s  ELRS-", STRING_THOR_VERSION);
+    sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
     strncat(buffer, thisVersion, 6);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,

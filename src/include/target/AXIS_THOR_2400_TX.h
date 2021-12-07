@@ -44,7 +44,7 @@
 #define GPIO_PIN_GSENSOR_INT    37
 #define GPIO_PIN_LED_WS2812     25
 
-#define STRING_THOR_VERSION     "2.0"
+#define HARDWARE_VERSION        "THOR-2.0"
 
 // Output Power
 #define MinPower            PWR_10mW
