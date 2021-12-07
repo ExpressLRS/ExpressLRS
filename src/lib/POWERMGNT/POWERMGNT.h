@@ -20,6 +20,11 @@
     #define MaxPower HighPower
 #endif
 
+#if defined(Regulatory_Domain_EU_Compliant_2400)
+    #undef MaxPower
+    #define MaxPower PWR_10mW
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,
