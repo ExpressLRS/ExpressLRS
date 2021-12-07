@@ -72,7 +72,7 @@ static struct luaItem_selection luaFanThreshold = {
 };
 #endif
 
-#if defined(Regulatory_Domain_EU_Compliant_2400)
+#if defined(DRegulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
     {"10mW CE LIMIT", CRSF_INFO},
     emptySpace
@@ -316,7 +316,7 @@ static void registerLuaParameters()
       POWERMGNT::setFanEnableTheshold((PowerLevels_e)arg);
   }, luaPowerFolder.common.id);
 #endif
-#if defined(Regulatory_Domain_EU_Compliant_2400)
+#if defined(DRegulatory_Domain_EU_CE_2400)
   registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
 #endif
   // VTX folder
