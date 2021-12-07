@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "Nm.Flash OLED"
+#endif
 
 // Features
 #define USE_TX_BACKPACK

@@ -3,7 +3,7 @@
 #include "logging.h"
 
 #if defined(PLATFORM_STM32)
-    #if TARGET_USE_EEPROM && \
+    #if defined(TARGET_USE_EEPROM) && \
             defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && \
             defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
         #if !defined(TARGET_EEPROM_ADDR)
@@ -15,7 +15,7 @@
         #include <extEEPROM.h>
         extEEPROM EEPROM(kbits_2, 1, 1, TARGET_EEPROM_ADDR);
     #else
-        #define STM32_USE_FLASH 1
+        #define STM32_USE_FLASH
         #include <stm32_eeprom.h>
     #endif
 #else
@@ -26,7 +26,7 @@ void
 ELRS_EEPROM::Begin()
 {
 #if defined(PLATFORM_STM32)
-    #if STM32_USE_FLASH
+    #if defined(STM32_USE_FLASH)
         eeprom_buffer_fill();
     #else // !STM32_USE_FLASH
         /* Initialize I2C */
@@ -34,7 +34,11 @@ ELRS_EEPROM::Begin()
         Wire.setSCL(GPIO_PIN_SCL);
         Wire.begin();
         /* Initialize EEPROM */
-        EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
+        #if defined(TARGET_EEPROM_400K)
+            EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);
+        #else
+            EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
+        #endif
     #endif // STM32_USE_FLASH
 #else /* !PLATFORM_STM32 */
     EEPROM.begin(RESERVED_EEPROM_SIZE);
@@ -50,7 +54,7 @@ ELRS_EEPROM::ReadByte(const uint32_t address)
         ERRLN("EEPROM address is out of bounds");
         return 0;
     }
-#if STM32_USE_FLASH
+#if defined(STM32_USE_FLASH)
     return eeprom_buffered_read_byte(address);
 #else
     return EEPROM.read(address);
@@ -66,8 +70,10 @@ ELRS_EEPROM::WriteByte(const uint32_t address, const uint8_t value)
         ERRLN("EEPROM address is out of bounds");
         return;
     }
-#if STM32_USE_FLASH
+#if defined(STM32_USE_FLASH)
     eeprom_buffered_write_byte(address, value);
+#elif defined(PLATFORM_STM32)
+    EEPROM.update(address, value);
 #else
     EEPROM.write(address, value);
 #endif
@@ -81,7 +87,7 @@ ELRS_EEPROM::Commit()
     {
       ERRLN("EEPROM commit failed");
     }
-#elif STM32_USE_FLASH
+#elif defined(STM32_USE_FLASH)
     eeprom_buffer_flush();
 #endif
 }

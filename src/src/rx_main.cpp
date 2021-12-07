@@ -156,7 +156,8 @@ uint32_t doneProcessing;
 uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 
-uint32_t SendLinkStatstoFCintervalLastSent = 0;
+static uint32_t SendLinkStatstoFCintervalLastSent;
+static uint8_t SendLinkStatstoFCForcedSends;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 #if defined(DEBUG_RX_SCOREBOARD)
@@ -1035,17 +1036,13 @@ static void cycleRfMode(unsigned long now)
     {
         RFmodeLastCycled = now;
         LastSyncPacket = now;           // reset this variable
+        SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
-        SendLinkStatstoFCintervalLastSent = now;
         LQCalc.reset();
         // Display the current air rate to the user as an indicator something is happening
-        INFOLN("%d", ExpressLRS_currAirRate_Modparams->interval);
         scanIndex++;
-        getRFlinkInfo();
-        crsf.sendLinkStatisticsToFC();
-        delay(100);
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
         Radio.RXnb();
+        INFOLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -1136,6 +1133,26 @@ static void updateBindingMode()
 #endif
 }
 
+static void checkSendLinkStatsToFc(uint32_t now)
+{
+    if (now - SendLinkStatstoFCintervalLastSent > SEND_LINK_STATS_TO_FC_INTERVAL)
+    {
+        if (connectionState == disconnected)
+        {
+            getRFlinkInfo();
+        }
+
+        if ((connectionState != disconnected && connectionHasModelMatch) ||
+            SendLinkStatstoFCForcedSends)
+        {
+            crsf.sendLinkStatisticsToFC();
+            SendLinkStatstoFCintervalLastSent = now;
+            if (SendLinkStatstoFCForcedSends)
+                --SendLinkStatstoFCForcedSends;
+        }
+    }
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -1218,8 +1235,8 @@ void loop()
         LostConnection();
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
-        crsf.sendLinkStatisticsToFC();
-        crsf.sendLinkStatisticsToFC(); // need to send twice, not sure why, seems like a BF bug?
+        SendLinkStatstoFCintervalLastSent = 0;
+        SendLinkStatstoFCForcedSends = 2;
     }
 
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
@@ -1245,18 +1262,7 @@ void loop()
         GotConnection(now);
     }
 
-    if (now > (SendLinkStatstoFCintervalLastSent + SEND_LINK_STATS_TO_FC_INTERVAL))
-    {
-        if (connectionState == disconnected)
-        {
-            getRFlinkInfo();
-        }
-        if (connectionState != disconnected && connectionHasModelMatch)
-        {
-            crsf.sendLinkStatisticsToFC();
-            SendLinkStatstoFCintervalLastSent = now;
-        }
-    }
+    checkSendLinkStatsToFc(now);
 
     if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
     {

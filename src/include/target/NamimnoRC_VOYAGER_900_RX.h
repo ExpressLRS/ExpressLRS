@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno 900RX"
+#endif
 // GPIO pin definitions
 #define GPIO_PIN_RST            PC14
 #define GPIO_PIN_DIO0           PA15

@@ -228,7 +228,7 @@ void DynamicPower_Update()
     POWERMGNT.incPower();
   }
   if (avg_rssi > rssi_dec_threshold) {
-    DBGLN("Power decrease");
+    DBGVLN("Power decrease");
     POWERMGNT.decPower();
   }
 
@@ -302,17 +302,21 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
   }
 
+  if (syncSpamCounter)
+    --syncSpamCounter;
+  SyncPacketLastSent = millis();
+
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
-    ExpressLRS_currAirRate_Modparams->TLMinterval = TLM_RATIO_1_2;
-  else
-    ExpressLRS_currAirRate_Modparams->TLMinterval = (expresslrs_tlm_ratio_e)config.GetTlm();
-  uint8_t TLMrate = (ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111);
+  expresslrs_tlm_ratio_e newRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
+  // Delay going into disconnected state when the TLM ratio increases
+  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newRatio)
+    LastTLMpacketRecvMillis = SyncPacketLastSent;
+  ExpressLRS_currAirRate_Modparams->TLMinterval = newRatio;
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (Index << 6) + (TLMrate << 3) + (SwitchEncMode << 1);
+  Radio.TXdataBuffer[3] = (Index << 6) + (newRatio << 3) + (SwitchEncMode << 1);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -321,10 +325,6 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   {
     Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
-
-  SyncPacketLastSent = millis();
-  if (syncSpamCounter)
-    --syncSpamCounter;
 }
 
 uint8_t adjustPacketRateForBaud(uint8_t rate)
@@ -539,8 +539,9 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
 
   SetRFLinkRate(config.GetRate());
-  POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
+  // Dynamic Power starts at MinPower and will boost if switch is set or IsArmed and disconnected
+  POWERMGNT.setPower(config.GetDynamicPower() ? MinPower : (PowerLevels_e)config.GetPower());
   // TLM interval is set on the next SYNC packet
 }
 
@@ -558,12 +559,11 @@ void ICACHE_RAM_ATTR ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
-  ChangeRadioParams();
-
-  // Write the uncommitted eeprom values
+  // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
-  // Resume the timer, will take one hop for the radio to be on the right frequency
-  // if we missed a hop
+  // Change params after the blocking finishes as a rate change will change the radio freq
+  ChangeRadioParams();
+  // Resume the timer, will take one hop for the radio to be on the right frequency if we missed a hop
   hwTimer.callbackTock = &timerCallbackNormal;
   devicesTriggerEvent();
 }
@@ -577,17 +577,18 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#if !defined(PLATFORM_STM32) && !defined(TARGET_USE_EEPROM)
+#if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
     hwTimer.callbackTock = &timerCallbackIdle;
 #else
     // The code expects to enter here shortly after the tock ISR has started sending the last
     // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
     // interrupts, FastForward the timer
-    const uint32_t EEPROM_WRITE_DURATION = 30000; // us, ~27ms is where it starts getting off by one
-    const uint32_t cycleInterval = get_elrs_airRateConfig(config.GetRate())->interval;
+    const uint32_t EEPROM_WRITE_DURATION = 30000; // us, a page write on F103C8 takes ~29.3ms
+    const uint32_t cycleInterval = ExpressLRS_currAirRate_Modparams->interval;
     // Total time needs to be at least DURATION, rounded up to next cycle
-    uint32_t pauseCycles = (EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval;
+    // adding one cycle that will be eaten by busywaiting for the transmit to end
+    uint32_t pauseCycles = ((EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval) + 1;
     // Pause won't return until paused, and has just passed the tick ISR (but not fired)
     hwTimer.pause(pauseCycles * cycleInterval);
 
@@ -597,6 +598,15 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    // If telemetry expected in the next interval, the radio is in RX mode
+    // and will skip sending the next packet when the tiemr resumes.
+    // Return to normal send mode because if the skipped packet happened
+    // to be on the last slot of the FHSS the skip will prevent FHSS
+    if (TelemetryRcvPhase == ttrpInReceiveMode)
+    {
+      Radio.SetTxIdleMode();
+      TelemetryRcvPhase = ttrpTransmitting;
+    }
     ConfigChangeCommit();
   }
 }
@@ -612,9 +622,9 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-  busyTransmitting = false;
   HandleFHSS();
   HandlePrepareForTLM();
+  busyTransmitting = false;
 }
 
 static void UpdateConnectDisconnectStatus()
@@ -685,7 +695,6 @@ void BackpackBinding()
 static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
-  MspSender.ResetState();
   MspSender.SetDataToTransmit(1, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
 
@@ -800,7 +809,6 @@ void SendUIDOverMSP()
   MSPDataPackage[2] = MasterUID[3];
   MSPDataPackage[3] = MasterUID[4];
   MSPDataPackage[4] = MasterUID[5];
-  MspSender.ResetState();
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -865,7 +873,6 @@ void ExitBindingMode()
 
   InBindingMode = false;
 
-  MspSender.ResetState();
   SetRFLinkRate(config.GetRate()); //return to original rate
 
   DBGLN("Exiting binding mode");
@@ -934,6 +941,8 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
+  pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+  digitalWrite(GPIO_PIN_ANT_CTRL, LOW); // LEFT antenna
   HardwareSerial *uart2 = new HardwareSerial(USART2);
   uart2->begin(57600);
   CRSF::PortSecondary = uart2;

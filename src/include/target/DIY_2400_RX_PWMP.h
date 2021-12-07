@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DIY2400 PWMP"
+#endif
 
 #define CRSF_RCVR_NO_SERIAL
 

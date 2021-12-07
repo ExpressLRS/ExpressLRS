@@ -1,5 +1,7 @@
 // The name of the device in the LUA module
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DIY900 TTGO V2"
+#endif
 
 // Any device features
 #define USE_OLED_I2C

@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "R9M Lite Pro"
+#endif
 
 #define TARGET_USE_EEPROM           1
 #define TARGET_EEPROM_ADDR          0x51

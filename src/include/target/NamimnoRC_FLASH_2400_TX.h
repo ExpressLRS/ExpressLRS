@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno Flash"
+#endif
 
 #define USE_TX_BACKPACK
 

@@ -5,6 +5,8 @@
 #define STR(macro) QUOTE(macro)
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
+const char device_name[] = STR(DEVICE_NAME);
+const uint8_t device_name_size = sizeof(device_name);
 
 #if defined(TARGET_TX)
 const char *wifi_hostname = "elrs_tx";
@@ -48,6 +50,9 @@ const char PROGMEM compile_options[] = {
     #ifdef UART_INVERTED
         "-DUART_INVERTED "
     #endif
+    #ifdef DISABLE_ALL_BEEPS
+        "-DDISABLE_ALL_BEEPS "
+    #endif
     #ifdef JUST_BEEP_ONCE
         "-DJUST_BEEP_ONCE "
     #endif
@@ -62,6 +67,9 @@ const char PROGMEM compile_options[] = {
     #endif
     #ifdef TLM_REPORT_INTERVAL_MS
         "-DTLM_REPORT_INTERVAL_MS=" STR(TLM_REPORT_INTERVAL_MS) " "
+    #endif
+    #ifdef USE_TX_BACKPACK
+        "-DUSE_TX_BACKPACK "
     #endif
     #ifdef USE_BLE_JOYSTICK
         "-DUSE_BLE_JOYSTICK "
@@ -80,6 +88,15 @@ const char PROGMEM compile_options[] = {
     #endif
     #ifdef USE_DIVERSITY
         "-DUSE_DIVERSITY "
+    #endif
+    #ifdef RCVR_UART_BAUD
+        "-DRCVR_UART_BAUD=" STR(RCVR_UART_BAUD) " "
+    #endif
+    #ifdef RCVR_INVERT_TX
+        "-DRCVR_INVERT_TX "
+    #endif
+    #ifdef USE_R9MM_R9MINI_SBUS
+        "-DUSE_R9MM_R9MINI_SBUS "
     #endif
 #endif
 };

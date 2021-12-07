@@ -5,6 +5,7 @@
 
 #define TARGET_USE_EEPROM               1
 #define TARGET_EEPROM_ADDR              0x51
+#define TARGET_EEPROM_400K
 
 // GPIO pin definitions
 #define GPIO_PIN_RFamp_APC1             PA6  //APC2 is connected through a I2C dac and is handled elsewhere
