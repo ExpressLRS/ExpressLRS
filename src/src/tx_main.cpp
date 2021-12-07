@@ -36,6 +36,7 @@ SX1280Driver Radio;
 #include "devVTX.h"
 #include "devGsensor.h"
 #include "devThermal.h"
+#include "devPDET.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -124,6 +125,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
+#endif
+#if defined(GPIO_PIN_PA_PDET) && GPIO_PIN_PA_PDET != UNDEF_PIN
+  {&PDET_device, 1},
 #endif
   {&VTX_device, 1}
 };
