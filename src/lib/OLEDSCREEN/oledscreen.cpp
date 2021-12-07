@@ -23,6 +23,9 @@
 #include <U8g2lib.h>    // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 
+// Used for the the max power settings
+#include "POWERMGNT.h"
+
 #ifdef OLED_REVERSED
     #define OLED_ROTATION U8G2_R2
 #else
@@ -359,7 +362,7 @@ void OLEDScreen::doRateValueSelect(int action)
 
 void OLEDScreen::doPowerValueSelect(int action)
 {
-    nextIndex(current_power_index, action, POWER_MAX_NUMBER);
+    nextIndex(current_power_index, action, MaxPower);
 
     u8g2.clearBuffer();
 

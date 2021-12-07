@@ -1,5 +1,7 @@
 #include "screen.h"
 
+#if defined(USE_OLED_SPI) || defined(USE_OLED_I2C) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
+
 void Screen::nullCallback(int updateType) {}
 void (*Screen::updatecallback)(int updateType) = &nullCallback;
 
@@ -288,3 +290,5 @@ void Screen::nextIndex(int &index, int action, int max)
         index = 0;
     }
 }
+
+#endif
