@@ -7,7 +7,6 @@
 #include "gsensor.h"
 #include "POWERMGNT.h"
 #include "config.h"
-#include "tftscreen.h"
 
 #if defined(TARGET_TX)
 extern TxConfig config;
@@ -24,7 +23,6 @@ extern bool ICACHE_RAM_ATTR IsArmed();
 
 #define GSENSOR_DURATION    1000
 
-
 static void initialize()
 {
     gsensor.init();
@@ -36,12 +34,12 @@ static int start()
 }
 
 static int timeout()
-{  
+{
     gsensor.handle();
 
     system_quiet_state = gsensor.getSystemState();
     //When system is idle, set power to minimum
-    if(config.GetMotionMode() == USER_POWERSAVING_ON)
+    if(config.GetMotionMode() == 1)
     {
         if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !IsArmed())
         {

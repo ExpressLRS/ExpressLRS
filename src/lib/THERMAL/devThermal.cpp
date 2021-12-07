@@ -5,10 +5,7 @@
 #ifdef HAS_THERMAL
 
 #include "thermal.h"
-#include "POWERMGNT.h"
 #include "config.h"
-#include "screen.h"
-#include "gsensor.h"
 
 #if defined(TARGET_TX)
 extern TxConfig config;
@@ -37,15 +34,14 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
-
 static int event()
 {
-#ifdef HAS_SMART_FAN    
+#ifdef HAS_SMART_FAN
     if(!is_smart_fan_control)
     {
-#endif        
+#endif
         thermal.update_threshold(config.GetFanMode());
-#ifdef HAS_SMART_FAN        
+#ifdef HAS_SMART_FAN
     }
 #endif
     return DURATION_IGNORE;
@@ -56,18 +52,18 @@ static int timeout()
     if(!IsArmed() && connectionState != wifiUpdate)
     {
         thermal.handle();
- #ifdef HAS_SMART_FAN       
+ #ifdef HAS_SMART_FAN
         if(is_smart_fan_control & !is_smart_fan_working){
             is_smart_fan_working = true;
             thermal.update_threshold(USER_SMARTFAN_OFF);
         }
         if(!is_smart_fan_control & is_smart_fan_working){
             is_smart_fan_working = false;
-#endif            
+#endif
             thermal.update_threshold(config.GetFanMode());
-#ifdef HAS_SMART_FAN            
+#ifdef HAS_SMART_FAN
         }
-#endif        
+#endif
     }
     return THERMAL_DURATION;
 }

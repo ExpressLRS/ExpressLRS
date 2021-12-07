@@ -37,10 +37,6 @@ SX1280Driver Radio;
 #include "devGsensor.h"
 #include "devThermal.h"
 
-// #ifdef TARGET_AXIS_THOR_2400_TX
-// #include "devScreen.h"
-// #endif
-
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
