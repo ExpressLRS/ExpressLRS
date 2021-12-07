@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME          "BETAFPV 2400TX"
+#endif
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_V1

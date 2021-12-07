@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME              "BETAFPV 900TX Micro"
+#endif
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_900_MICRO_V1
@@ -6,7 +8,7 @@
 // Any device features
 #define USE_OLED_I2C
 #define OLED_REVERSED
-  
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_DIO0           4

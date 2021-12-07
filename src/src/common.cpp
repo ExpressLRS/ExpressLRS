@@ -14,8 +14,8 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_200HZ, -112, 4380, 3000, 2500, 600, 5000},
     {1, RATE_100HZ, -117, 8770, 3500, 2500, 600, 5000},
-    {2, RATE_50HZ, -120, 17540, 4000, 2500, 600, 5000},
-    {3, RATE_25HZ, -123, 17540, 6000, 4000, 0, 5000}};
+    {2, RATE_50HZ, -120, 18560, 4000, 2500, 600, 5000},
+    {3, RATE_25HZ, -123, 29950, 6000, 4000, 0, 5000}};
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)

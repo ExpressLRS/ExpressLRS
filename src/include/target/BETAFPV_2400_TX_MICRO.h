@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME              "BETAFPV 2400TX Micro"
+#endif
 
 // Any device features
 #define USE_OLED_I2C

@@ -261,11 +261,26 @@ function completeHandler(event) {
     _("progressBar").value = 0;
     var data = JSON.parse(event.target.responseText);
     if (data.status === 'ok') {
-        cuteAlert({
-            type: 'success',
-            title: "Update Succeeded",
-            message: data.msg
-        });
+        function show_message() {
+            cuteAlert({
+                type: 'success',
+                title: "Update Succeeded",
+                message: data.msg
+            });
+        }
+        // This is basically a delayed display of the success dialog with a fake progress
+        var percent = 0;
+        var interval = setInterval(()=>{
+            percent = percent + 2;
+            _("progressBar").value = percent;
+            _("status").innerHTML = percent + "% flashed... please wait";
+            if (percent == 100) {
+                clearInterval(interval);
+                _("status").innerHTML = "";
+                _("progressBar").value = 0;
+                show_message();
+            }
+        }, 100);
     } else if (data.status === 'mismatch') {
         cuteAlert({
             type: 'question',

@@ -62,7 +62,7 @@ static int event()
         (VtxSendState == VTXSS_UNKNOWN && connectionState == connected))
     {
         VtxSendState = VTXSS_SENDING1;
-        return DURATION_IMMEDIATELY;
+        return 1000;
     }
 
     if (connectionState == disconnected)

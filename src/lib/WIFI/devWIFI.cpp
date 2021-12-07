@@ -437,11 +437,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       } else {
         Update.printError(Serial);
       }
-    } else {
-      #if defined(PLATFORM_ESP32)
-        Update.abort();
-      #endif
-      DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
   }
 }
@@ -548,6 +543,7 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt("http", "tcp", "device", device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
