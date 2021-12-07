@@ -195,12 +195,12 @@
 
 // For ESP32 Dev board (only tested with ILI9341 display)
 // The hardware SPI can be mapped to any pins
-#define TFT_MOSI 16
-#define TFT_SCLK 17
-#define TFT_RST  0
-#define TFT_DC   12
-#define TFT_CS   22
-#define TFT_BL   15
+#define TFT_MOSI GPIO_PIN_TFT_MOSI
+#define TFT_SCLK GPIO_PIN_TFT_SCLK
+#define TFT_RST  GPIO_PIN_TFT_RST
+#define TFT_DC   GPIO_PIN_TFT_DC
+#define TFT_CS   GPIO_PIN_TFT_CS
+#define TFT_BL   GPIO_PIN_TFT_BL
 
 //#define TFT_MISO 19
 //#define TFT_MOSI 23
@@ -311,7 +311,7 @@
 
 // Comment out the #define below to stop the SPIFFS filing system and smooth font code being loaded
 // this will save ~20kbytes of FLASH
-#define SMOOTH_FONT
+// #define SMOOTH_FONT
 
 
 // ##################################################################################
