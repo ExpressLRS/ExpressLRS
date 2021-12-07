@@ -11,15 +11,15 @@
 #include "hwTimer.h"
 
 #ifdef HAS_TFT_SCREEN
-#include "tftscreen.h"
+#include "TFT/tftscreen.h"
 TFTScreen screen;
 #else
-#include "oledscreen.h"
+#include "OLED/oledscreen.h"
 OLEDScreen screen;
 #endif
 
 #ifdef HAS_FIVE_WAY_BUTTON
-#include "FiveWayButton.h"
+#include "FiveWayButton/FiveWayButton.h"
 FiveWayButton fivewaybutton;
 
 static uint32_t none_input_start_time = 0;
