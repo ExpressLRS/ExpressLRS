@@ -1,6 +1,6 @@
 #include "screen.h"
 
-#if defined(USE_OLED_SPI) || defined(USE_OLED_I2C) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
+#if defined(USE_OLED_SPI) || defined(USE_OLED_I2C) || defined(USE_OLED_SPI_SMALL) || defined(HAS_TFT_SCREEN)
 
 void Screen::nullCallback(int updateType) {}
 void (*Screen::updatecallback)(int updateType) = &nullCallback;
