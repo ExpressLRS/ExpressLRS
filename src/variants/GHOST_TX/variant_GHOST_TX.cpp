@@ -35,44 +35,58 @@ extern "C" {
 
 // Pin number
 const PinName digitalPin[] = {
-  /* USB connector on the top, MCU side */
-  /* Left Side */
-  PB_9,  //D0
-  PB_8,  //D1
-  PB_7,  //D2
-  PB_6,  //D3
-  PB_5,  //D4
-  PB_4,  //D5
+  PB_9,  //D0  - CAN_TX
+  PB_8,  //D1  - CAN_RX
+  PB_7,  //D2  - UART1_RX or I2C1_SDC
+  PB_6,  //D3  - UART1_TX or I2C1_SCL
+  PB_5,  //D4  - LED_RED
+  PB_4,  //D5  - LED_BLUE
   PB_3,  //D6
   PA_15, //D7
-  PA_12, //D8 - USB DP
-  PA_11, //D9 - USB DM
-  PA_10, //D10
-  PA_9,  //D11
+  PA_12, //D8  - USB_DP
+  PA_11, //D9  - USB_DM
+  PA_10, //D10 - SDA MPU-9150
+  PA_9,  //D11 - SCL MPU-9150
   PA_8,  //D12
   PB_15, //D13
   PB_14, //D14
   PB_13, //D15
-  PB_12, //D16 - LED Blackpill
-  /* Right side */
-  PC_13, //D17 - LED Bluepill
+  PB_12, //D16
+  PC_13, //D17 - LED on Bluepill Board
   PC_14, //D18
   PC_15, //D19
   PA_0,  //D20/A0
   PA_1,  //D21/A1
   PA_2,  //D22/A2
-  PA_3,  //D23/A3
+  PA_3,  //D23/A3 - RCX
   PA_4,  //D24/A4
   PA_5,  //D25/A5
   PA_6,  //D26/A6
   PA_7,  //D27/A7
   PB_0,  //D28/A8
   PB_1,  //D29/A9
-  PB_10, //D30
-  PB_11, //D31
+  PB_10, //D30 - UART3_TX
+  PB_11, //D31 - UART3_RX
   PB_2,  //D32 - BOOT1
   PA_13, //D33 - SWDI0
   PA_14, //D34 - SWCLK
+};
+
+// If analog pins are not contiguous in the digitalPin array:
+// Add the analogInputPin array without defining NUM_ANALOG_FIRST
+// Analog (Ax) pin number array
+// where x is the index to retrieve the digital pin number
+const uint32_t analogInputPin[] = {
+  20,
+  21,
+  22,
+  23, // Not sure about this one beecasue NUM is 9 in the header, and this is RCX
+  24,
+  25,
+  26,
+  27,
+  28,
+  29
 };
 
 #ifdef __cplusplus
@@ -85,42 +99,29 @@ const PinName digitalPin[] = {
 extern "C" {
 #endif
 
-/**
-  * @brief  System Clock Configuration
-  *         The system Clock is configured as follow :
-  *            System Clock source            = PLL (HSE)
-  *            SYSCLK(Hz)                     = 72000000
-  *            HCLK(Hz)                       = 72000000
-  *            AHB Prescaler                  = 1
-  *            APB1 Prescaler                 = 2
-  *            APB2 Prescaler                 = 1
-  *            PLL_Source                     = HSE
-  *            PLL_Mul                        = 9
-  *            Flash Latency(WS)              = 2
-  *            ADC Prescaler                  = 6
-  *            USB Prescaler                  = 1.5
-  * @param  None
-  * @retval None
-  */
 WEAK void SystemClock_Config(void)
 {
+
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
-  RCC_PeriphCLKInitTypeDef PeriphClkInit;
+  // RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
-  /* Initializes the CPU, AHB and APB busses clocks */
+  /**Initializes the CPU, AHB and APB busses clocks
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV4;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-    while (1);
+    _Error_Handler(__FILE__, __LINE__);
   }
 
-  /* Initializes the CPU, AHB and APB busses clocks */
+  /**Initializes the CPU, AHB and APB busses clocks
+  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                                 | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -129,15 +130,17 @@ WEAK void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
-    while (1);
+    _Error_Handler(__FILE__, __LINE__);
   }
 
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC | RCC_PERIPHCLK_USB;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
-    while (1);
-  }
+  // PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_USART3
+                                       // | RCC_PERIPHCLK_I2C1;
+  // PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  // PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
+  // PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+  // if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+    // _Error_Handler(__FILE__, __LINE__);
+  // }
 }
 
 #ifdef __cplusplus
