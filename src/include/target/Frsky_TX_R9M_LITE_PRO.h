@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "R9M Lite Pro"
+#define DEVICE_NAME "FrSky R9M Lt Pro"
 #endif
 
 #define TARGET_USE_EEPROM           1
