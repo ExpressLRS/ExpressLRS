@@ -228,7 +228,7 @@ void OLEDScreen::displayMainScreen(){
         u8g2.drawStr(70,53, "TLM");
         u8g2.drawStr(0,24, "Ver: ");
         char buffer[7];
-        strncpy(buffer, thisVersion, 6);
+        strncpy(buffer, version, 6);
         buffer[6] = 0;
         u8g2.drawStr(38,24, buffer);
     #endif
@@ -457,7 +457,7 @@ void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
     if(current_screen_status == SCREEN_STATUS_IDLE)
     {
         char buffer[20];
-        strncpy(buffer, thisVersion, 6);
+        strncpy(buffer, version, 6);
         sprintf(buffer+6, " %02d", system_temperature);
         // TODO
         // displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,

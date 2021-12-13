@@ -75,8 +75,6 @@ const char *Screen::main_menu_line_2[] = {
     "FW"
 };
 
-const char Screen::thisVersion[] = {LATEST_VERSION, 0};
-
 void Screen::doMainMenuPage(int action)
 {
     int index = main_menu_page_index;

@@ -111,7 +111,7 @@ void TFTScreen::init()
 
     char buffer[50];
     sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
-    strncat(buffer, thisVersion, 6);
+    strncat(buffer, version, 6);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), TFT_WHITE, TFT_BLACK);
@@ -141,7 +141,7 @@ void TFTScreen::idleScreen()
     tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
 
     char buffer[20];
-    strncpy(buffer, thisVersion, 6);
+    strncpy(buffer, version, 6);
     sprintf(buffer+6, " %02d", system_temperature);
     displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                                 SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
@@ -316,7 +316,7 @@ void TFTScreen::doTemperatureUpdate(uint8_t temperature)
     if(current_screen_status == SCREEN_STATUS_IDLE && system_temperature != temperature)
     {
         char buffer[20];
-        strncpy(buffer, thisVersion, 6);
+        strncpy(buffer, version, 6);
         sprintf(buffer+6, " %02d", temperature);
         displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,

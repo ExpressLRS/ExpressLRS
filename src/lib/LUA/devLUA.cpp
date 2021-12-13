@@ -21,8 +21,6 @@ extern SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-static const char thisCommit[] = {LATEST_COMMIT, 0};
-static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 
@@ -100,8 +98,8 @@ static struct luaItem_string luaInfo = {
 };
 
 static struct luaItem_string luaELRSversion = {
-    {thisVersion, CRSF_INFO},
-    thisCommit
+    {version, CRSF_INFO},
+    commit
 };
 
 //---------------------------- WiFi -----------------------------

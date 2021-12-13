@@ -145,7 +145,6 @@ protected:
     static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
     static const char *main_menu_line_1[];
     static const char *main_menu_line_2[];
-    static const char thisVersion[];
 
 public:
     static void nullCallback(int updateType);
