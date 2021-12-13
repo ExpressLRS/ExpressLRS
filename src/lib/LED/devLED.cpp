@@ -51,10 +51,12 @@ static uint16_t flashLED(uint8_t pin, uint8_t pin_inverted, const uint8_t durati
 
 static void initialize()
 {
+    // TODO for future PR, remove TARGET_TX, TARGET_RX, and TARGET_TX_FM30 defines.
     #if defined(TARGET_TX)
-        #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+        #if defined(GPIO_PIN_LED_BLUE) && (GPIO_PIN_LED_BLUE != UNDEF_PIN)
             pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
-        #endif
+            digitalWrite(GPIO_PIN_LED_BLUE, LOW ^ GPIO_LED_BLUE_INVERTED);
+        #endif // GPIO_PIN_BLUE_GREEN
         #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
             pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
             digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
@@ -115,6 +117,48 @@ static void setPowerLEDs()
         default:
             digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            break;
+        }
+    #endif
+
+    #if defined(TARGET_TX_IFLIGHT)
+        switch (POWERMGNT::currPower())
+        {
+        case PWR_10mW:
+            digitalWrite(GPIO_PIN_LED_RED, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+            break;
+        case PWR_25mW:
+            digitalWrite(GPIO_PIN_LED_RED, LOW);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            digitalWrite(GPIO_PIN_LED_BLUE, LOW);
+            break;
+        case PWR_50mW:
+            digitalWrite(GPIO_PIN_LED_RED, LOW);
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            break;
+        case PWR_250mW:
+            digitalWrite(GPIO_PIN_LED_RED, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            break;
+        case PWR_500mW:
+            digitalWrite(GPIO_PIN_LED_RED, LOW);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            break;
+        case PWR_1000mW:
+            digitalWrite(GPIO_PIN_LED_RED, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            digitalWrite(GPIO_PIN_LED_BLUE, HIGH);
+            break;
+        case PWR_100mW:
+        default:
+            digitalWrite(GPIO_PIN_LED_RED, HIGH);
+            digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+            digitalWrite(GPIO_PIN_LED_BLUE, LOW);
             break;
         }
     #endif

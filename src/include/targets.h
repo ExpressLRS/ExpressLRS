@@ -72,6 +72,9 @@
 #ifndef GPIO_LED_GREEN_INVERTED
 #define GPIO_LED_GREEN_INVERTED 0
 #endif
+#ifndef GPIO_LED_BLUE_INVERTED
+#define GPIO_LED_BLUE_INVERTED 0
+#endif
 
 #if defined(Regulatory_Domain_ISM_2400)
 // ISM 2400 band is use => undefine other requlatory domain defines
