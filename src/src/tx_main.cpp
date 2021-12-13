@@ -25,6 +25,7 @@ SX1280Driver Radio;
 #include "stubborn_sender.h"
 
 #include "helpers.h"
+#include "devCRSF.h"
 #include "devLED.h"
 #include "devOLED.h"
 #include "devBuzzer.h"
@@ -91,30 +92,31 @@ StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-device_t *ui_devices[] = {
+device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
-  &LED_device,
+  {&LED_device, 1},
 #endif
 #ifdef HAS_RGB
-  &RGB_device,
+  {&RGB_device, 1},
 #endif
-  &LUA_device,
+  {&LUA_device, 1},
 #ifdef HAS_BLE
-  &BLE_device,
+  {&BLE_device, 1},
 #endif
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
-  &OLED_device,
+  {&OLED_device, 0},
 #endif
 #ifdef HAS_BUZZER
-  &Buzzer_device,
+  {&Buzzer_device, 1},
 #endif
 #ifdef HAS_WIFI
-  &WIFI_device,
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  &Button_device,
+  {&Button_device, 1},
 #endif
-  &VTX_device
+  {&VTX_device, 1}
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -913,8 +915,10 @@ void setup()
   Serial.begin(460800);
   setupTarget();
 
-  // Initialise the UI devices
-  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+  // Register the devices with the framework
+  devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+  // Initialise the devices
+  devicesInit();
 
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
@@ -958,7 +962,6 @@ void setup()
     hwTimer.init();
     //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
     connectionState = noCrossfire;
-    crsf.Begin();
   }
 
   devicesStart();
@@ -988,10 +991,6 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
     }
-  #endif
-
-  #if defined(PLATFORM_STM32) || defined(PLATFORM_ESP8266)
-    crsf.handleUARTin();
   #endif
 
   if (connectionState > MODE_STATES)
