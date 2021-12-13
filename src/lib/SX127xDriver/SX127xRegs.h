@@ -104,7 +104,7 @@ typedef enum
 #define SX127X_PA_SELECT_RFO 0b00000000    //  7     7     RFO pin output, power limited to +14 dBm
 #define SX127X_PA_SELECT_BOOST 0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
 #define SX127X_OUTPUT_POWER 0b00001111     //  3     0     output power: P_out = 17 - (15 - OUTPUT_POWER) [dBm] for PA_SELECT_BOOST
-#ifdef TARGET_TX_BETAFPV_900_V1
+#if #defined(TARGET_TX_BETAFPV_900_V1) || #defined(TARGET_TX_BETAFPV_900_MICRO_V1)
     #define SX127X_MAX_OUTPUT_POWER 0b00000000 //              Enable max output power
 #else
     #define SX127X_MAX_OUTPUT_POWER 0b01110000 //              Enable max output power
