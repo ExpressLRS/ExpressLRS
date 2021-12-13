@@ -93,32 +93,30 @@ const uint16_t *main_menu_icons[] = {
 #define SUB_PAGE_BINDING_WORD_START_X   0
 #define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
 
-void TFTScreen::init()
+void TFTScreen::init(bool reboot)
 {
     tft.init();
-    doScreenBackLight(HIGH);
-
-    tft.fillScreen(TFT_WHITE);
-
     tft.setRotation(1);
-
     tft.setSwapBytes(true);
 
-    tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
+    if (!reboot) {
+        doScreenBackLight(HIGH);
+        tft.fillScreen(TFT_WHITE);
 
-    tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
-                    SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
+        tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
 
-    char buffer[50];
-    sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
-    strncat(buffer, version, 6);
-    displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
-                        SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        String(buffer), TFT_WHITE, TFT_BLACK);
+        tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
+                        SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
+
+        char buffer[50];
+        sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
+        strncat(buffer, version, 6);
+        displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
+                            SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            String(buffer), TFT_WHITE, TFT_BLACK);
+    }
 
     doScreenBackLight(LOW);
-
-    current_screen_status = SCREEN_STATUS_INIT;
 
     current_rate_index = 0;
     current_power_index = 0;
@@ -126,9 +124,17 @@ void TFTScreen::init()
     current_powersaving_index = 0;
     current_smartfan_index = 0;
 
-    current_page_index = PAGE_MAIN_MENU_INDEX;
-
-    main_menu_page_index = MAIN_MENU_RATE_INDEX;
+    if (!reboot) {
+        current_screen_status = SCREEN_STATUS_INIT;
+        current_page_index = PAGE_MAIN_MENU_INDEX;
+        main_menu_page_index = MAIN_MENU_RATE_INDEX;
+    }
+    else {
+        current_screen_status = SCREEN_STATUS_WORK;
+        current_page_index = PAGE_MAIN_MENU_INDEX;
+        main_menu_page_index = MAIN_MENU_UPDATEFW_INDEX;
+        updateMainMenuPage();
+    }
 
     system_temperature = 25;
 }

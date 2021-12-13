@@ -223,13 +223,21 @@ static void initialize()
   fivewaybutton.init();
   #endif
   screen.updatecallback = &ScreenUpdateCallback;
-  screen.init();
+  #if defined(PLATFORM_ESP32)
+  screen.init(esp_reset_reason() == ESP_RST_SW);
+  #else
+  screen.init(false);
+  #endif
 }
 
 static int start()
 {
+  if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
+  {
     screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
     return LOGO_DISPLAY_TIMEOUT;
+  }
+  return DURATION_IMMEDIATELY;
 }
 
 static int event()

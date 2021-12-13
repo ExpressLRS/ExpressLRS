@@ -126,7 +126,7 @@ static void displayFontCenter(const char * info)
     u8g2.sendBuffer();
 }
 
-void OLEDScreen::init()
+void OLEDScreen::init(bool reboot)
 {
     u8g2.begin();
 

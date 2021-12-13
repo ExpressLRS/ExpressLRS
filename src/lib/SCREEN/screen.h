@@ -150,7 +150,7 @@ public:
     static void nullCallback(int updateType);
     static void (*updatecallback)(int updateType);
 
-    virtual void init() = 0;
+    virtual void init(bool reboot) = 0;
     virtual void idleScreen() = 0;
     virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
