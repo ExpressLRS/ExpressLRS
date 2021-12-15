@@ -76,6 +76,10 @@
 #define GPIO_LED_BLUE_INVERTED 0
 #endif
 
+#if !defined(BACKPACK_LOGGING_BAUD)
+#define BACKPACK_LOGGING_BAUD 460800
+#endif
+
 #if defined(Regulatory_Domain_ISM_2400)
 // ISM 2400 band is use => undefine other requlatory domain defines
 #undef Regulatory_Domain_AU_915

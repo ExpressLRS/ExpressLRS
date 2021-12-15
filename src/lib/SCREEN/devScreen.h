@@ -2,4 +2,4 @@
 
 #include "device.h"
 
-extern device_t OLED_device;
+extern device_t Screen_device;
