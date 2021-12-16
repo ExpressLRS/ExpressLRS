@@ -151,7 +151,9 @@ condense_flags()
 
 if "_2400" not in target_name and \
         not fnmatch.filter(build_flags, '-DRADIO_2400=1') and \
-        not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
+        not fnmatch.filter(build_flags, '*-DRegulatory_Domain*') or \
+        fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
+        fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
     print_error('Please define a Regulatory_Domain in user_defines.txt')
 
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
