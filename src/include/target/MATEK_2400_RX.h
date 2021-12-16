@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "MATEK 2400RX"
+#define DEVICE_NAME "MATEK R24"
 #endif
 // GPIO pin definitions
 #define GPIO_PIN_NSS                15

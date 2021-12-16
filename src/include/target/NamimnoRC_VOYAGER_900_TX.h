@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "Namimno Voyager"
+#define DEVICE_NAME "NM Voyager"
 #endif
 
 #define USE_TX_BACKPACK
