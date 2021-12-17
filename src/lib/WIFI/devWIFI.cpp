@@ -17,7 +17,6 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
-#include <WebSocketsServer.h>
 
 #include "common.h"
 #include "POWERMGNT.h"
