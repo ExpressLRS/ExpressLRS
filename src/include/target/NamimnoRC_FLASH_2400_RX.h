@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "NamimnoRC 2400RX"
+#define DEVICE_NAME "Namimno 2G4RX"
 #endif
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4

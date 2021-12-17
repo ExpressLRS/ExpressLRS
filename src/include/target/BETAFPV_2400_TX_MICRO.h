@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME              "bFPV 2G4TX Micro"
+#define DEVICE_NAME              "BETAFPV 2G4Micro"
 #endif
 
 // Any device features
