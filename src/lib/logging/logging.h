@@ -16,9 +16,9 @@
 
 // DEBUG_LOG_VERBOSE and DEBUG_RX_SCOREBOARD implies DEBUG_LOG
 #if !defined(DEBUG_LOG)
-  #if defined(DEBUG_LOG_VERBOSE) || defined(DEBUG_RX_SCOREBOARD)
-    #define DEBUG_LOG
-  #endif
+#if defined(DEBUG_LOG_VERBOSE) || defined(DEBUG_RX_SCOREBOARD)
+#define DEBUG_LOG
+#endif
 #endif
 
 #ifndef LOGGING_UART
@@ -27,61 +27,99 @@
 
 // #define LOG_USE_PROGMEM
 
-extern void debugPrintf(const char* fmt, ...);
+extern void debugPrintf(const char *fmt, ...);
+
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+extern void WSnotifyAll(const char *msg, int len);
+#else
+#define WSnotifyAll(x) \
+  {                    \
+  }
+#endif
 
 #if defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_LOG)
-  #define INFOLN(msg, ...)
-  #define ERRLN(msg)
+#define INFOLN(msg, ...)
+#define ERRLN(msg)
 #else
-  #define INFOLN(msg, ...) { \
-      debugPrintf(msg, ##__VA_ARGS__); \
-      LOGGING_UART.println(); \
-    }
 
-  #define ERRLN(msg, ...) IFNE(__VA_ARGS__)({ \
-      LOGGING_UART.print("ERROR: "); \
-      debugPrintf(msg, ##__VA_ARGS__); \
-      LOGGING_UART.println(); \
+#define INFOLN(msg, ...)             \
+  {                                  \
+    debugPrintf(msg, ##__VA_ARGS__); \
+    LOGGING_UART.println();          \
+  }
+#define ERRLN(msg, ...)              \
+  IFNE(__VA_ARGS__)                  \
+  ({                                 \
+    LOGGING_UART.print("ERROR: ");   \
+    debugPrintf(msg, ##__VA_ARGS__); \
+    LOGGING_UART.println();          \
   })(LOGGING_UART.println("ERROR: " msg))
 #endif
 
 #if defined(DEBUG_LOG)
-  #define DBGCR   LOGGING_UART.println()
-  #define DBGW(c) LOGGING_UART.write(c)
-  #ifndef LOG_USE_PROGMEM
-    #define DBG(msg, ...)   debugPrintf(msg, ##__VA_ARGS__)
-    #define DBGLN(msg, ...) { \
-      debugPrintf(msg, ##__VA_ARGS__); \
-      LOGGING_UART.println(); \
-    }
-  #else
-    #define DBG(msg, ...)   debugPrintf(PSTR(msg), ##__VA_ARGS__)
-    #define DBGLN(msg, ...) { \
-      debugPrintf(PSTR(msg), ##__VA_ARGS__); \
-      LOGGING_UART.println(); \
-    }
-  #endif
+#define DBGCR LOGGING_UART.println()
+#define DBGW(c) LOGGING_UART.write(c)
+#ifndef LOG_USE_PROGMEM
 
-  // Verbose logging is for spammy stuff
-  #if defined(DEBUG_LOG_VERBOSE)
-    #define DBGVCR DBGCR
-    #define DBGVW(c) DBGW(c)
-    #define DBGV(...) DBG(__VA_ARGS__)
-    #define DBGVLN(...) DBGLN(__VA_ARGS__)
-  #else
-    #define DBGVCR
-    #define DBGVW(c)
-    #define DBGV(...)
-    #define DBGVLN(...)
-  #endif
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+
+#define DBG(msg, ...)                               \
+  {                                                 \
+    debugPrintf(msg, ##__VA_ARGS__);                \
+    char charBuf[256];                              \
+    int len = sprintf(charBuf, msg, ##__VA_ARGS__); \
+    WSnotifyAll(charBuf, len);                      \
+  }
+#define DBGLN(msg, ...)                             \
+  {                                                 \
+    debugPrintf(msg, ##__VA_ARGS__);                \
+    LOGGING_UART.println();                         \
+    char charBuf[256];                              \
+    int len = sprintf(charBuf, msg, ##__VA_ARGS__); \
+    charBuf[len] = '\n';                            \
+    WSnotifyAll(charBuf, len + 1);                  \
+  }
+
 #else
-  #define DBGCR
-  #define DBGW(c)
-  #define DBG(...)
-  #define DBGLN(...)
-  #define DBGVCR
-  #define DBGV(...)
-  #define DBGVLN(...)
+
+#define DBG(msg, ...) debugPrintf(msg, ##__VA_ARGS__);
+#define DBGLN(msg, ...)              \
+  {                                  \
+    debugPrintf(msg, ##__VA_ARGS__); \
+    LOGGING_UART.println();          \
+  }
+
+#endif
+
+#else
+#define DBG(msg, ...) debugPrintf(PSTR(msg), ##__VA_ARGS__)
+#define DBGLN(msg, ...)                    \
+  {                                        \
+    debugPrintf(PSTR(msg), ##__VA_ARGS__); \
+    LOGGING_UART.println();                \
+  }
+#endif
+
+// Verbose logging is for spammy stuff
+#if defined(DEBUG_LOG_VERBOSE)
+#define DBGVCR DBGCR
+#define DBGVW(c) DBGW(c)
+#define DBGV(...) DBG(__VA_ARGS__)
+#define DBGVLN(...) DBGLN(__VA_ARGS__)
+#else
+#define DBGVCR
+#define DBGVW(c)
+#define DBGV(...)
+#define DBGVLN(...)
+#endif
+#else
+#define DBGCR
+#define DBGW(c)
+#define DBG(...)
+#define DBGLN(...)
+#define DBGVCR
+#define DBGV(...)
+#define DBGVLN(...)
 #endif
 
 #endif

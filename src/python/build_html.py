@@ -46,6 +46,7 @@ def build_common(env, mainfile):
             build_version(out, env)
             build_html(mainfile, "INDEX_HTML", out, env)
             build_html("scan.js", "SCAN_JS", out, env)
+            build_html("console.js", "CONSOLE_JS", out, env)
             build_html("main.css", "CSS", out, env)
             build_html("logo.svg", "FLAG", out, env)
     finally:

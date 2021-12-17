@@ -17,6 +17,7 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
 
 #include "common.h"
 #include "POWERMGNT.h"
@@ -60,7 +61,10 @@ static DNSServer dnsServer;
 static IPAddress ipAddress;
 
 static AsyncWebServer server(80);
+AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
+AsyncEventSource events("/events"); // event source (Server-Sent events)
 static bool servicesStarted = false;
+static bool wsConnected = false;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -122,6 +126,13 @@ static void WebUpdateSendJS(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+static void WebUpdateSendConsoleJS(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)CONSOLE_JS, sizeof(CONSOLE_JS));
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
+
 static void WebUpdateSendFlag(AsyncWebServerRequest *request)
 {
   AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
@@ -142,6 +153,39 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   response->addHeader("Expires", "-1");
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
+}
+
+void WSnotifyAll(const char *msg, int len)
+{
+  if (wsConnected)
+  {
+    ws.textAll(msg, len);
+  }
+}
+
+void WSonEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  if (type == WS_EVT_CONNECT)
+  {
+    client->ping(); // client connected
+    DBGLN("ping!: ws[%s][%u]\n", server->url(), client->id());
+  }
+  else if (type == WS_EVT_DISCONNECT)
+  {
+    wsConnected = false;
+  }
+  else if (type == WS_EVT_ERROR)
+  {
+    // error was received from the other end
+    DBGLN("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+  }
+  else if (type == WS_EVT_PONG)
+  {
+    wsConnected = true;
+    // pong message was received (in response to a ping request maybe)
+    Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char *)data : "");
+    DBGLN("WS Client Connected");
+  }
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -540,6 +584,7 @@ static void startServices()
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
+  server.on("/console.js", WebUpdateSendConsoleJS);
   server.on("/logo.svg", WebUpdateSendFlag);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
@@ -567,6 +612,9 @@ static void startServices()
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
   #endif
+
+  ws.onEvent(WSonEvent);
+  server.addHandler(&ws);
 
   server.onNotFound(WebUpdateHandleNotFound);
 
