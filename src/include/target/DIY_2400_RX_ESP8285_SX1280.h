@@ -16,7 +16,7 @@
 #endif
 
 #define GPIO_PIN_SPI_VTX_NSS    16
-// #define GPIO_PIN_RF_AMP_PWM     0
-// #define GPIO_PIN_RF_AMP_VPD     A0
+#define GPIO_PIN_RF_AMP_PWM     0
+#define GPIO_PIN_RF_AMP_VPD     A0
 
 // Output Power - use default SX1280
