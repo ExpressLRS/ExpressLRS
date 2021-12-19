@@ -435,6 +435,42 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
+{
+  uint8_t *dst;
+  uint8_t alignedBuffer[7];
+  if ((uintptr_t)data % 4 != 0)
+  {
+    // If data is not aligned, read aligned byes using the local buffer and hope the next call will be aligned
+    dst = (uint8_t *)((uint32_t)alignedBuffer / 4 * 4);
+    len = 4;
+  }
+  else
+  {
+    // Otherwise just make sure len is a multiple of 4 and smaller than a sector
+    dst = data;
+    len = constrain((len / 4) * 4, 4, SPI_FLASH_SEC_SIZE);
+  }
+
+  ESP.flashRead(pos, (uint32_t *)dst, len);
+
+  // If using local stack buffer, move the 4 bytes into the passed buffer
+  // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
+  if ((void *)dst != (void *)data)
+  {
+    for (unsigned b=len; b>0; --b)
+      *data++ = *dst++;
+  }
+  return len;
+}
+
+static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
+  String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
+  response->addHeader("Content-Disposition", filename);
+  request->send(response);
+}
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -548,6 +584,7 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
+  server.on("/firmware.bin", WebUpdateGetFirmware);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);

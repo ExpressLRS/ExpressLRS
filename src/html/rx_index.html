@@ -14,10 +14,10 @@
 			<img src="logo.svg" height="250" width="250" style="padding:20px;"></a>
 			<h1>Welcome to your <b>ExpressLRS</b><br /> update page<br />
 			</h1>
-			<p>From here you can update your <b>Receiver</b> module with <b>@PLATFORM@</b> firmware<br />
+			<p>From here you can update your <b>Receiver</b> module with <b>@PLATFORM@</b> firmware</p>
 			<p>
-				<b>Firmware Rev. </b><var id="FirmVersion">@VERSION@</var>
-			<p>
+				<b>Firmware Rev. </b><a href="firmware.bin" title="Click to download firmware"><var>@VERSION@</var></a>
+			</p>
 		</div>
 	</section>
 	<br>
@@ -35,9 +35,9 @@
 
 			<div align="left">
 				<fieldset>
-					Here you can update module firmware,
-					be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need
-					to reflash via USB/Serial.
+					Choose a file to update module firmware. Select the correct .bin file for @PLATFORM@ otherwise a bad flash may occur.
+					If this happens you will need to recover via USB/Serial. You may also download the
+					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br><br>
 					<legend>
 						<h2>Firmware Update:</h2>
@@ -58,7 +58,7 @@
 			<div align="left">
 				<fieldset>
 					If you set the 'Model Match' below to a number other than 255, you can specify the 'Receiver' number in OpenTX/EdgeTX
-					model setup page and turn on the 'Model Match' in the ELRS LUA script for that model. 'Model Match' is between 0 and 63 inclusive.
+					model setup page and turn on the 'Model Match' in the ELRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
 					<br><br>
 					<legend>
 						<h2>Model Match:</h2>
