@@ -92,17 +92,23 @@ def get_git_version():
     ver = elrs_helpers.get_git_version(env)['version']
     return ",".join(["%s" % ord(char) for char in ver])
 
+def get_regulatory_domain():
+    regions = ["915", "868", "433"]
+    if "_2400" in target_name or \
+        '-DRADIO_2400=1' in build_flags:
+        return ",".join(["%s" % ord(char) for char in "2G4"])
+    else:
+        for region in regions:
+            if fnmatch.filter(build_flags, '*-DRegulatory_Domain*'+region):
+                return ",".join(["%s" % ord(char) for char in region])
+        print_error('Please define a Regulatory_Domain in user_defines.txt') # moved region define error to here
+
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
-build_flags.append("-DLATEST_VERSION=" + get_git_version())
+build_flags.append("-DLATEST_VERSION=" + get_git_version() + ',32,' + get_regulatory_domain()) # version and domain
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
-
-if "_2400" not in target_name and \
-        not fnmatch.filter(build_flags, '-DRADIO_2400=1') and \
-        not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
-    print_error('Please define a Regulatory_Domain in user_defines.txt')
 
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
