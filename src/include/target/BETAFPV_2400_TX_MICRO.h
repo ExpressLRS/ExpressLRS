@@ -32,9 +32,15 @@
 #define GPIO_PIN_JOYSTICK       25
 
 // Output Power
-#define MinPower PWR_10mW
-#define MaxPower PWR_500mW
-#define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
+#ifdef MICRO_1000MW
+    #define MinPower PWR_25mW
+    #define MaxPower PWR_1000mW
+    #define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
+#else
+    #define MinPower PWR_10mW
+    #define MaxPower PWR_500mW
+    #define POWER_OUTPUT_VALUES {-18,-15,-13,-9,-4,3}
+#endif
 
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {2839, 2191, 1616, 3511, 0, 4095}
