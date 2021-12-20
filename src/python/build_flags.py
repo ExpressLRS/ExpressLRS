@@ -103,7 +103,7 @@ def get_regulatory_domain():
                 if region is "2400":
                     region = "2G4"
                 return ",".join(["%s" % ord(char) for char in region])
-        return ""
+        return "32"                                                             # return a space
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
