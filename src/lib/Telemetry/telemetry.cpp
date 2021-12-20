@@ -245,6 +245,23 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         {
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
+
+            // larger msp resonses are sent in two chunks so special handling is needed so both get sent
+            if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+            {
+                // there is already another response stored
+                if (payloadTypes[targetIndex].updated)
+                {
+                    // use other slot
+                    targetIndex = payloadTypesCount - 1;
+                }
+
+                // if both slots are taked do not overwrite other data since the first chunk would be lost
+                if (payloadTypes[targetIndex].updated)
+                {
+                    targetFound = false;
+                }
+            }
         }
         else
         {
