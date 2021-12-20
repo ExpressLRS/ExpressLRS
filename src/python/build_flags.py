@@ -93,22 +93,23 @@ def get_git_version():
     return ",".join(["%s" % ord(char) for char in ver])
 
 def get_regulatory_domain():
-    regions = ["915", "868", "433", "2400"]
-    if "_2400" in target_name or \
-        '-DRADIO_2400=1' in build_flags:
-        return ",".join(["%s" % ord(char) for char in "2G4"])
+    regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4")]
+    retVal = " UNK"
+    if ("_2400" in target_name or \
+        '-DRADIO_2400=1' in build_flags) and \
+        '-DRegulatory_Domain_EU_CE_2400' not in build_flags:
+        retVal = " ISM2G4"
     else:
-        for region in regions:
-            if fnmatch.filter(build_flags, '*-DRegulatory_Domain*'+region):
-                if region is "2400":
-                    region = "2G4"
-                return ",".join(["%s" % ord(char) for char in region])
-        return "32"                                                             # return a space
+        for k, v in regions:
+            if fnmatch.filter(build_flags, '*-DRegulatory_Domain_'+k):
+                retVal = " " + v
+                break
+    return ","+",".join(["%s" % ord(char) for char in retVal])
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
-build_flags.append("-DLATEST_VERSION=" + get_git_version() + ',32,' + get_regulatory_domain()) # version and domain
+build_flags.append("-DLATEST_VERSION=" + get_git_version() + get_regulatory_domain()) # version and domain
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
