@@ -32,7 +32,7 @@
 #define GPIO_PIN_JOYSTICK       25
 
 // Output Power
-#ifdef MICRO_1000MW
+#ifdef BETAFPV_MICRO_1000MW
     #define MinPower PWR_25mW
     #define MaxPower PWR_1000mW
     #define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
