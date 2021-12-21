@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "HGLRC Hermes 24"
+#define DEVICE_NAME "HGLRC Hermes"
 #endif
 
 // Any device features

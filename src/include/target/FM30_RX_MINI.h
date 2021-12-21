@@ -8,7 +8,7 @@
     // There is some special handling for this target
     #define TARGET_RX_FM30_MINI
     #ifndef DEVICE_NAME
-        #define DEVICE_NAME "FM30 MINI"
+        #define DEVICE_NAME "SIYI FM30 MINI"
     #endif
 #endif
 
