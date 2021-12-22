@@ -92,6 +92,27 @@ const PinName digitalPin[] = {
   PC_5   //D59/A13 = D35
 };
 
+// If analog pins are not contiguous in the digitalPin array:
+// Add the analogInputPin array without defining NUM_ANALOG_FIRST
+// Analog (Ax) pin number array
+// where x is the index to retrieve the digital pin number
+const uint32_t analogInputPin[] = {
+  PA0,
+  PA1,
+  PA4,
+  PB0,
+  PC1,
+  PC0,
+  PA7,
+  PA6,
+  PA5,
+  PC2,
+  PC3,
+  PB1,
+  PC4,
+  PC5
+};
+
 #ifdef __cplusplus
 }
 #endif
@@ -118,8 +139,8 @@ extern "C" {
   * @param  None
   * @retval None
   */
-  
-//64MHZ Internal Clock  
+
+//64MHZ Internal Clock
 // WEAK void SystemClock_Config(void)
 // {
   // RCC_OscInitTypeDef RCC_OscInitStruct;
@@ -162,8 +183,8 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  
-  /** Initializes the CPU, AHB and APB busses clocks 
+
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -176,7 +197,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;

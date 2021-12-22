@@ -16,7 +16,7 @@
         extEEPROM EEPROM(kbits_2, 1, 1, TARGET_EEPROM_ADDR);
     #else
         #define STM32_USE_FLASH
-        #include <stm32_eeprom.h>
+        #include <utility/stm32_eeprom.h>
     #endif
 #else
     #include <EEPROM.h>
