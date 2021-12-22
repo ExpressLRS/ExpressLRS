@@ -19,7 +19,13 @@ typedef struct {
     int (*timeout)();
 } device_t;
 
-void devicesInit(device_t **devices, uint8_t count);
+typedef struct {
+  device_t *device;
+  int8_t core; // 0 = UART core or 1 = loopcore
+} device_affinity_t;
+
+void devicesRegister(device_affinity_t *devices, uint8_t count);
+void devicesInit();
 void devicesStart();
 void devicesUpdate(unsigned long now);
 void devicesTriggerEvent();

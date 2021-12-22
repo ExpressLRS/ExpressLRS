@@ -7,6 +7,29 @@ const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
 const char device_name[] = STR(DEVICE_NAME);
 const uint8_t device_name_size = sizeof(device_name);
+const char commit[] {LATEST_COMMIT, 0};
+const char version[] = {LATEST_VERSION, 0};
+
+#if defined(TARGET_TX)
+const char *wifi_hostname = "elrs_tx";
+const char *wifi_ap_ssid = "ExpressLRS TX";
+#else
+const char *wifi_hostname = "elrs_rx";
+const char *wifi_ap_ssid = "ExpressLRS RX";
+#endif
+const char *wifi_ap_password = "expresslrs";
+const char *wifi_ap_address = "10.0.0.1";
+
+const char *home_wifi_ssid = ""
+#ifdef HOME_WIFI_SSID
+STR(HOME_WIFI_SSID)
+#endif
+;
+const char *home_wifi_password = ""
+#ifdef HOME_WIFI_PASSWORD
+STR(HOME_WIFI_PASSWORD)
+#endif
+;
 
 const char PROGMEM compile_options[] = {
 #ifdef MY_BINDING_PHRASE

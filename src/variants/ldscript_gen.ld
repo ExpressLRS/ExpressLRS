@@ -14,12 +14,31 @@ _Min_BL_Size = 0x80;      /* required amount of bootloader data */
 /* Define output sections */
 SECTIONS
 {
-  /* The startup code goes first into FLASH */
-  .isr_vector :
+  /* Critical program code goes into RAM_CODE */
+  ram_code = LOADADDR(.ram_code);
+  .ram_code :
+  {
+    /* Vectors must be 512 bytes (128 words) aligned */
+    . = ALIGN(512);
+    ram_code_start = .;
+    /* NOTE: Keep vectors first! */
+    KEEP(*(.isr_vector))
+    *(.ram_code)
+    *(.ram_code*)
+    . = ALIGN(4);
+    ram_code_end = .;
+  } >RAM_CODE AT> FLASH
+
+  /* Link vector code here to avoid bootloader update with the
+   * latest (14.x or newer) platfroms */
+  .text_vectors :
   {
     . = ALIGN(4);
-    KEEP(*(.isr_vector)) /* Startup code */
-    . = ALIGN(4);
+    *(*Reset_Handler)
+    *(*NMI_Handler)
+    *(*HardFault_Handler)
+    *(*MemManage_Handler)
+    *(*Default_Handler)
   } >FLASH
 
   /* The program code and other data goes into FLASH */
@@ -75,18 +94,6 @@ SECTIONS
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
-
-  /* Critical program code goes into RAM_CODE */
-  ram_code = LOADADDR(.ram_code);
-  .ram_code :
-  {
-    . = ALIGN(4);
-    ram_code_start = .;
-    *(.ram_code)
-    *(.ram_code*)
-    . = ALIGN(4);
-    ram_code_end = .;
-  } >RAM_CODE AT> FLASH
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);

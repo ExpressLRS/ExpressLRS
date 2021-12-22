@@ -187,13 +187,6 @@ WEAK void SystemClock_Config(void)
 #endif // USE_HSI
 }
 
-void initVariant(void)
-{
-  /* Reset vector location which is set wrongly by SystemInit */
-  extern uint32_t g_pfnVectors;
-  SCB->VTOR = (uint32_t) &g_pfnVectors;
-}
-
 #ifdef __cplusplus
 }
 #endif

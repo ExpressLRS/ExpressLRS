@@ -25,14 +25,17 @@ SX1280Driver Radio;
 #include "stubborn_sender.h"
 
 #include "helpers.h"
+#include "devCRSF.h"
 #include "devLED.h"
-#include "devOLED.h"
+#include "devScreen.h"
 #include "devBuzzer.h"
 #include "devBLE.h"
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
+#include "devGsensor.h"
+#include "devThermal.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -91,30 +94,37 @@ StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-device_t *ui_devices[] = {
+device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
-  &LED_device,
+  {&LED_device, 1},
 #endif
 #ifdef HAS_RGB
-  &RGB_device,
+  {&RGB_device, 1},
 #endif
-  &LUA_device,
+  {&LUA_device, 1},
 #ifdef HAS_BLE
-  &BLE_device,
-#endif
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
-  &OLED_device,
+  {&BLE_device, 1},
 #endif
 #ifdef HAS_BUZZER
-  &Buzzer_device,
+  {&Buzzer_device, 1},
 #endif
 #ifdef HAS_WIFI
-  &WIFI_device,
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  &Button_device,
+  {&Button_device, 1},
 #endif
-  &VTX_device
+#if defined HAS_TFT_SCREEN || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+  {&Screen_device, 0},
+#endif
+#ifdef HAS_GSENSOR
+  {&Gsensor_device, 0},
+#endif
+#ifdef HAS_THERMAL
+  {&Thermal_device, 0},
+#endif
+  {&VTX_device, 1}
 };
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -762,6 +772,36 @@ void OnTLMRatePacket(mspPacket_t *packet)
   // }
 }
 
+void OnPowerGetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("power get calibration value %d",  values[index]);
+}
+
+void OnPowerSetCalibration(mspPacket_t *packet)
+{
+  uint8_t index = packet->readByte();
+  int8_t value = packet->readByte();
+
+  if((index < 0) || (index > PWR_COUNT))
+  {
+    DBGLN("calibration error index %d out of range", index);
+    return;
+  }
+  hwTimer.stop();
+  delay(20);
+
+  int8_t values[PWR_COUNT] = {0};
+  POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
+  values[index] = value;
+  POWERMGNT.SetPowerCaliValues(values, PWR_COUNT);
+  DBGLN("power calibration done %d, %d", index, value);
+  hwTimer.resume();
+}
+
+
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -858,6 +898,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
     case MSP_ELRS_TLM_RATE:
       OnTLMRatePacket(packet);
       break;
+    case MSP_ELRS_POWER_CALI_GET:
+      OnPowerGetCalibration(packet);
+      break;
+    case MSP_ELRS_POWER_CALI_SET:
+      OnPowerSetCalibration(packet);
+      break;
     default:
       break;
     }
@@ -906,15 +952,21 @@ static void setupTarget()
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+
+#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
 }
 
 void setup()
 {
-  Serial.begin(460800);
+  Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
 
-  // Initialise the UI devices
-  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+  // Register the devices with the framework
+  devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+  // Initialise the devices
+  devicesInit();
 
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
@@ -936,7 +988,7 @@ void setup()
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
-  
+
   #if defined(USE_BLE_JOYSTICK)
     init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
   #endif
@@ -958,7 +1010,6 @@ void setup()
     hwTimer.init();
     //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
     connectionState = noCrossfire;
-    crsf.Begin();
   }
 
   devicesStart();
@@ -988,10 +1039,6 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
     }
-  #endif
-
-  #if defined(PLATFORM_STM32) || defined(PLATFORM_ESP8266)
-    crsf.handleUARTin();
   #endif
 
   if (connectionState > MODE_STATES)
