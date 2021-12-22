@@ -35,10 +35,7 @@ FIFO::FIFO()
     head = 0;
     tail = 0;
     numElements = 0;
-}
-
-FIFO::~FIFO()
-{
+    memset(buffer, 0, FIFO_SIZE);
 }
 
 void ICACHE_RAM_ATTR FIFO::push(const uint8_t data)
@@ -71,6 +68,12 @@ void ICACHE_RAM_ATTR FIFO::pushBytes(const uint8_t *data, int len)
         tail = (tail + 1) % FIFO_SIZE;
     }
     numElements += len;
+}
+
+void ICACHE_RAM_ATTR FIFO::pushBuffer(const uint8_t *data, int len)
+{ // pushBuffer simply includes the len of the upcomming buffer as the first element
+    push(len);
+    pushBytes(data, len);
 }
 
 uint8_t ICACHE_RAM_ATTR FIFO::pop()
