@@ -90,15 +90,15 @@ def version_to_env():
 
 def regulatory_domain_to_env():
     regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4")]
-    retVal = " UNK"
+    retVal = "UNK"
     if ("_2400" in target_name or \
         '-DRADIO_2400=1' in build_flags) and \
         '-DRegulatory_Domain_EU_CE_2400' not in build_flags:
-        retVal = " ISM2G4"
+        retVal = "ISM2G4"
     else:
         for k, v in regions:
             if fnmatch.filter(build_flags, '*-DRegulatory_Domain_'+k):
-                retVal = " " + v
+                retVal = v
                 break
     env.Append(REG_DOMAIN = retVal)
 
@@ -109,7 +109,7 @@ def get_git_sha():
     return string_to_ascii(env.get('GIT_SHA'))
 
 def get_ver_and_reg():
-    return string_to_ascii(env.get('GIT_VERSION') + env.get('REG_DOMAIN'))
+    return string_to_ascii(env.get('GIT_VERSION') + " " + env.get('REG_DOMAIN'))
 
 
 process_flags("user_defines.txt")
