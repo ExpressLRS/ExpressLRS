@@ -146,6 +146,7 @@ void CRSF::Begin()
     USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
     USART1->CR1 |= USART_CR1_UE;
 #endif
+
 #if defined(TARGET_TX_FM30_MINI)
     LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
     USART2->CR1 &= ~USART_CR1_UE;
@@ -833,6 +834,152 @@ bool CRSF::RXhandleUARTout()
 #endif // CRSF_RCVR_NO_SERIAL
     return false;
 }
+
+// void CRSF::sendRawFrame(uint8_t addr, uint8_t type, const void *payload, uint8_t length)
+// {
+//     uint8_t outBuffer[CRSF_FRAME_SIZE_MAX + 4] = {0};
+//     outBuffer[0] = addr;
+//     outBuffer[1] = length + 2; // type + payload + crc
+//     outBuffer[2] = type;
+//     memcpy(&outBuffer[3], payload, length);
+
+//     outBuffer[length + 3] = crsf_crc.calc(outBuffer, length + 2);
+
+
+//     char outdatabuf[512] = {0};
+//     int len = 0;
+//     len += sprintf(outdatabuf + len, "UART: ");
+//     for (int i = 0; i < (length + 4); ++i)
+//     {
+//         len += sprintf(outdatabuf + len, "%02X ", outBuffer[i]);
+//     }
+
+//     DBGLN(outdatabuf, len);
+//     this->_dev->write(outBuffer, length + 4);
+
+//     //DBGLN((const char *)outBuffer, length + 4);
+    
+//     //DBGLN("size: %d", length)
+
+//     // DBGLN("CrsfOut:");
+//     // DBGLN(buf, len + 4);
+
+
+//     //SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer) + 3);
+//     //SerialOutFIFO.push(crc);
+
+// }
+
+// uint8_t MSP_STATUS_SEQUENCE_MASK = 0x0f; // 0b00001111,   // sequence number mask
+// uint8_t MSP_STATUS_START_MASK = 0x10;    // 0b00010000,   // bit of starting frame (if 1, the frame is a first/single chunk of msp-frame)
+// uint8_t MSP_STATUS_VERSION_MASK = 0x60;  // 0b01100000,   // MSP version mask
+// uint8_t MSP_STATUS_ERROR_MASK = 0x80;    // 0b10000000,   // Error bit (1 if error)
+// uint8_t MSP_STATUS_VERSION_SHIFT = 5;    // MSP version shift
+
+void CRSF::sendRawMSPFrameToFC(uint8_t *mspPayload, uint8_t mspPayloadSize, uint8_t type, bool hasHeader = true)
+{
+    uint8_t len;
+    uint8_t msgPayloadStartPtr;
+
+    if (hasHeader)
+    { // strip off the header if it has one
+        len = mspPayloadSize - 3;
+        msgPayloadStartPtr = 3;
+    }
+    else
+    {
+        len = mspPayloadSize;
+        msgPayloadStartPtr = 0;
+    }
+
+    uint8_t outBuffer[CRSF_FRAME_SIZE_MAX] = {0}; // reserve space for the buffer
+
+    outBuffer[0] = CRSF_ADDRESS_BROADCAST;
+    outBuffer[1] = len + 6; // type + payload + crc + src + dest
+    outBuffer[2] = type;
+    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_RECEIVER;
+
+    uint8_t MSP_VERSION = 1; // assume MSP 1.0 if no header
+    if (!hasHeader && mspPayload[1] == 'X')
+    {
+        MSP_VERSION = 2;
+    }
+
+    uint8_t statusByte = 0;
+    statusByte |= (1 << 4);                                // start mask
+    statusByte |= MSP_VERSION << 5; // MSP version
+
+    outBuffer[5] = statusByte; // status byte
+
+    memcpy(&outBuffer[6], &mspPayload[msgPayloadStartPtr], mspPayloadSize);
+
+    outBuffer[len + 7] = crsf_crc.calc(&outBuffer[2], len + 4);
+    this->_dev->write(outBuffer, len + 7);
+
+    ///////////////////
+    char outdataformatted[512] = {0};
+    int len_formatted = 0;
+    len_formatted += sprintf(outdataformatted, "RX2FC: ");
+    for (int i = 0; i < (len + 7); ++i)
+    {
+        len_formatted += sprintf(outdataformatted + len_formatted, "%02X ", outBuffer[i]);
+    }
+
+    DBGLN(outdataformatted, len_formatted);
+}
+
+void CRSF::sendRawFrame(uint8_t addr, uint8_t type, const void *payload, uint8_t length)
+{
+    uint8_t outBuffer[CRSF_FRAME_SIZE_MAX + 8] = {0};
+
+    outBuffer[0] = addr;
+    outBuffer[1] = length + 4; // type + payload + crc
+    outBuffer[2] = type;
+    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    outBuffer[4] = CRSF_ADDRESS_CRSF_RECEIVER;
+    outBuffer[5] = 0x30;
+    outBuffer[6] = length;
+
+
+    memcpy(&outBuffer[7], payload, length);
+
+    outBuffer[length + 7] = crsf_crc.calc(&outBuffer[2], length + 5);
+
+
+    char outdataformatted[512] = {0};
+    int len = 0;
+    len += sprintf(outdataformatted + len, "UART: ");
+    for (int i = 0; i < (length + 8); ++i)
+    {
+        len += sprintf(outdataformatted + len, "%02X ", outBuffer[i]);
+    }
+
+    DBGLN(outdataformatted, len);
+
+
+    this->_dev->write(outBuffer, length + 6);
+
+    //DBGLN((const char *)outBuffer, length + 4);
+    
+    //DBGLN("size: %d", length)
+
+    // DBGLN("CrsfOut:");
+    // DBGLN(buf, len + 4);
+
+
+    //SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer) + 3);
+    //SerialOutFIFO.push(crc);
+
+}
+
+    // TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, data[0]);                  // device_addr
+    // TEST_ASSERT_EQUAL(12, data[1]);                                      // frame_size
+    // TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_MSP_WRITE, data[2]);                // type
+    // TEST_ASSERT_EQUAL(CRSF_ADDRESS_FLIGHT_CONTROLLER, (uint8_t)data[3]); // dest_addr
+    // TEST_ASSERT_EQUAL(CRSF_ADDRESS_RADIO_TRANSMITTER, (uint8_t)data[4]); // orig_addr
+
+
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
