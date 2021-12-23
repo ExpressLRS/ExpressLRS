@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME          "BETAFPV 2400TX"
+#define DEVICE_NAME          "BETAFPV 2G4Nano"
 #endif
 
 // There is some special handling for this target

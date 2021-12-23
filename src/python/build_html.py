@@ -21,7 +21,7 @@ def compress(data):
     Optional argument is the compression level, in range of 0-9.
     """
     buf = io.BytesIO()
-    with gzip.GzipFile(fileobj=buf, mode='wb', compresslevel=gzip._COMPRESS_LEVEL_BEST, mtime=0.0) as f:
+    with gzip.GzipFile(fileobj=buf, mode='wb', compresslevel=9, mtime=0.0) as f:
         f.write(data)
     return buf.getvalue()
 

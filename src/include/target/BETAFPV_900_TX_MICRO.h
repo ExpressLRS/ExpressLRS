@@ -1,11 +1,9 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME              "BETAFPV 900TX Micro"
+#define DEVICE_NAME              "BETAFPV 900Micro"
 #endif
 
-// There is some special handling for this target
-#define TARGET_TX_BETAFPV_900_MICRO_V1
-
 // Any device features
+#define USE_SX1276_RFO_HF
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON
