@@ -5,7 +5,7 @@
 #define STR(macro) QUOTE(macro)
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
-const char device_name[] = STR(DEVICE_NAME);
+const char device_name[] = DEVICE_NAME;
 const uint8_t device_name_size = sizeof(device_name);
 const char commit[] {LATEST_COMMIT, 0};
 const char version[] = {LATEST_VERSION, 0};

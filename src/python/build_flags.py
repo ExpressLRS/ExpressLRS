@@ -56,6 +56,8 @@ def process_flags(path):
 def escapeChars(x):
     parts = re.search("(.*)=\w*\"(.*)\"$", x)
     if parts and parts.group(2):
+        if parts.group(1) == "-DMY_STARTUP_MELODY_ARR": # ignoring escape chars for startup melody
+            return x
         x = parts.group(1) + '="' + parts.group(2).translate(str.maketrans({
             "!": "\\\\\\\\041",
             "\"": "\\\\\\\\042",

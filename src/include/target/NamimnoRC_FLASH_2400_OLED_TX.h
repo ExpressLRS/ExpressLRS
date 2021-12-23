@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "Nm.Flash OLED"
+#define DEVICE_NAME "NM Flash OLED"
 #endif
 
 // Features

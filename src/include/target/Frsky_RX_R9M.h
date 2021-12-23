@@ -21,24 +21,24 @@ https://github.com/jaxxzer
 #if defined(USE_R9MM_R9MINI_SBUS)
     #define GPIO_PIN_RCSIGNAL_RX    PA3
     #define GPIO_PIN_RCSIGNAL_TX    PA2
-    #define DEVICE_NAME "R9MM SBUS"
+    #define DEVICE_NAME "FrSky R9MM SBUS"
 #elif defined(TARGET_R9SLIM_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3  // RX1 PIN OF CONNECTOR 1 ON SLIM
     #define GPIO_PIN_RCSIGNAL_TX    PA2  // TX1 PIN OF CONNECTOR 1 ON SLIM
-    #define DEVICE_NAME "R9SLIM RX"
+    #define DEVICE_NAME "FrSky R9SLIM RX"
 #elif defined(TARGET_R9SLIMPLUS_RX)      // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
-    #define DEVICE_NAME "R9SLIM PLUS"
+    #define DEVICE_NAME "FrSky R9SLIM+"
 #elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
-    #define DEVICE_NAME "R900 MINI"
+    #define DEVICE_NAME "Jumper R900 MINI"
 #else
     #define GPIO_PIN_RCSIGNAL_RX    PA10
     #define GPIO_PIN_RCSIGNAL_TX    PA9
     #ifndef DEVICE_NAME
-        #define DEVICE_NAME "R9MM"
+        #define DEVICE_NAME "FrSky R9MM"
     #endif
 #endif
 
