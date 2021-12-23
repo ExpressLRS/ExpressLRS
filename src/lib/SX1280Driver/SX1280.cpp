@@ -378,7 +378,10 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     if ((irqStatus & SX1280_IRQ_TX_DONE))
+    {
+        hal.TXRXdisable();
         instance->TXnbISR();
+    }
     else if ((irqStatus & SX1280_IRQ_RX_DONE))
         instance->RXnbISR();
 }
