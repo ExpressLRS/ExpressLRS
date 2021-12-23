@@ -49,8 +49,10 @@ static void VtxConfigToMSPOut()
     packet.function = MSP_SET_VTX_CONFIG;
     packet.addByte(vtxIdx);
     packet.addByte(0);
-    packet.addByte(config.GetVtxPower());
-    packet.addByte(config.GetVtxPitmode());
+    if (config.GetVtxPower()) {
+        packet.addByte(config.GetVtxPower());
+        packet.addByte(config.GetVtxPitmode());
+    }
 
     crsf.AddMspMessage(&packet);
     msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
