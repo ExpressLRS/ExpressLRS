@@ -117,7 +117,7 @@ static void displayLogo()
 static void displayFontCenter(const char * info)
 {
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_courR08_tr);
+    u8g2.setFont(u8g2_font_profont10_mr);
 #ifdef USE_OLED_SPI_SMALL
     u8g2.drawStr(32, 32, info);
 #else
@@ -172,7 +172,7 @@ void helperDrawImage64(int menu)
             u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
             break;
         case 6:
-            u8g2.drawXBM(x_pos, y_pos, 44, 44, wifi_img64);
+            u8g2.drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
             break;
     }
 }
@@ -203,7 +203,7 @@ void helperDrawImage32(int menu)
             u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
         case 6:
-            u8g2.drawXBM(x_pos, y_pos, 22, 22, wifi_img32);
+            u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
             break;
 
     }
@@ -213,24 +213,24 @@ void OLEDScreen::displayMainScreen(){
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_15_mr);
         u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
         u8g2.drawStr(70,15 ,&(ratio_string[current_ratio_index])[0]);
         u8g2.drawStr(0,32, &(power_string[current_power_index])[0]);
         u8g2.drawStr(70,32, "Test");
     #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "ExpressLRS");
-        u8g2.drawStr(0,42, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,42 , &(ratio_string[current_ratio_index])[0]);
-        u8g2.drawStr(0,57, &(power_string[current_power_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
-        u8g2.drawStr(70,53, "TLM");
-        u8g2.drawStr(0,24, "Ver: ");
+        u8g2.setFont(u8g2_font_t0_15_mr);
+        u8g2.drawStr(0,13, "ExpressLRS");
+        u8g2.drawStr(0,45, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(70,45 , &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, &(power_string[current_power_index])[0]);
+        u8g2.setFont(u8g2_font_profont10_mr);
+        u8g2.drawStr(70,56, "TLM");
+        u8g2.drawStr(0,27, "Ver: ");
         char buffer[7];
         strncpy(buffer, version, 6);
         buffer[6] = 0;
-        u8g2.drawStr(38,24, buffer);
+        u8g2.drawStr(38,27, buffer);
     #endif
     u8g2.sendBuffer();
 }
@@ -246,12 +246,12 @@ void OLEDScreen::updateMainMenuPage()
 {
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, &(main_menu_line_1[main_menu_page_index - 1])[0]);
         u8g2.drawStr(0,32, &(main_menu_line_2[main_menu_page_index - 1])[0]);
         helperDrawImage32(main_menu_page_index - 1 );
     #else
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,20, &(main_menu_line_1[main_menu_page_index - 1])[0]);
         u8g2.drawStr(0,50, &(main_menu_line_2[main_menu_page_index - 1])[0]);
         helperDrawImage64(main_menu_page_index - 1);
@@ -272,27 +272,27 @@ void OLEDScreen::updateSubWIFIModePage()
 
 #if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
 #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "open http://");
         u8g2.drawStr(70,15, (String(wifi_hostname)+".local").c_str());
         u8g2.drawStr(0,32, "by browser");
 #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "open http://");
-        u8g2.drawStr(0,30, (String(wifi_hostname)+".local").c_str());
-        u8g2.drawStr(0,60, "by browser");
+        u8g2.setFont(u8g2_font_t0_17_mr);
+        u8g2.drawStr(0,13, "open http://");
+        u8g2.drawStr(0,33, (String(wifi_hostname)+".local").c_str());
+        u8g2.drawStr(0,63, "by browser");
 #endif
 #else
 #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, wifi_ap_ssid);
         u8g2.drawStr(70,15, wifi_ap_password);
         u8g2.drawStr(0,32, wifi_ap_address);
 #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, wifi_ap_ssid);
-        u8g2.drawStr(0,30, wifi_ap_password);
-        u8g2.drawStr(0,60, wifi_ap_address);
+        u8g2.setFont(u8g2_font_t0_17_mr);
+        u8g2.drawStr(0,13, wifi_ap_ssid);
+        u8g2.drawStr(0,33, wifi_ap_password);
+        u8g2.drawStr(0,63, wifi_ap_address);
 #endif
 #endif
     u8g2.sendBuffer();
@@ -305,14 +305,14 @@ void OLEDScreen::updateSubBindConfirmPage()
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "PRESS TO");
         u8g2.drawStr(70,15 , "SEND BIND");
         u8g2.drawStr(0,32, "REQUEST");
     #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "PRESS TO SEND");
-        u8g2.drawStr(0, 42, "BIND REQUEST");
+        u8g2.setFont(u8g2_font_t0_17_mr);
+        u8g2.drawStr(0,29, "PRESS TO SEND");
+        u8g2.drawStr(0,59, "BIND REQUEST");
     #endif
     u8g2.sendBuffer();
 }
@@ -324,11 +324,11 @@ void OLEDScreen::updateSubBindingPage()
     u8g2.clearBuffer();
 
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR10_tr);
+        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "BINDING");
     #else
-        u8g2.setFont(u8g2_font_courR10_tr);
-        u8g2.drawStr(0,10, "BINDING");
+        u8g2.setFont(u8g2_font_t0_17_mr);
+        u8g2.drawStr(0,29, "BINDING");
     #endif
     u8g2.sendBuffer();
 
@@ -345,15 +345,15 @@ void OLEDScreen::doRateValueSelect(int action)
     // TODO: Put bind image?
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATE);
     #else
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,20, &(rate_string[current_rate_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_RATE);
@@ -367,15 +367,15 @@ void OLEDScreen::doPowerValueSelect(int action)
 
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_POWER);
     #else
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,20, &(power_string[current_power_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_POWER);
@@ -390,15 +390,15 @@ void OLEDScreen::doRatioValueSelect(int action)
 
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATIO);
     #else
-        u8g2.setFont(u8g2_font_courR12_tr);
+        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,20, &(ratio_string[current_ratio_index])[0]);
-        u8g2.setFont(u8g2_font_courR08_tr);
+        u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
         helperDrawImage64(IMAGE_RATIO);
