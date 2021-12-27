@@ -3,6 +3,8 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#include "crsf2msp.h"
+#include "msp2crsf.h"
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
@@ -32,6 +34,9 @@ public:
 
     CRSF(Stream &dev) : _dev(&dev) {}
     #endif
+
+    static CROSSFIRE2MSP crsf2msp;
+    static MSP2CROSSFIRE msp2crsf;
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
@@ -113,6 +118,7 @@ public:
     void ICACHE_RAM_ATTR sendRCFrameToFC();
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
+    void sendRawMSPFrameToFC(uint8_t* data, uint8_t len);
     #endif
 
 
