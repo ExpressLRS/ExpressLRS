@@ -27,6 +27,9 @@ Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
+CROSSFIRE2MSP CRSF::crsf2msp;
+MSP2CROSSFIRE CRSF::msp2crsf;
+
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
@@ -815,6 +818,29 @@ bool CRSF::UARTwdt()
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
+    bool retVal = false;
+    if (msp2crsf.FIFOout.peek() > 0)
+    {
+        //noInterrupts();
+        sendLinkStatisticsToFC();
+        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+        uint8_t OutData[OutPktLen];
+        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+        SerialOutFIFO.push(OutPktLen);
+        SerialOutFIFO.pushBytes(OutData, OutPktLen);
+        //SerialOutFIFO.push(OutPktLen);
+        //SerialOutFIFO.pushBytes(OutData, OutPktLen);
+        //interrupts();
+        //this->_dev->write(OutData, OutPktLen); // write the packet out
+
+        // use sprintf to print the hex representation of the packet
+        //DBGLN("UART->OUT: %d VAL:", OutPktLen);
+        // char buf[OutPktLen*3];
+        // for (size_t i = 0; i < OutPktLen; i++)
+        //     sprintf(&buf[3 * i], " %02hhX", OutData[i]);
+        // DBGLN(buf);
+    }
+    
 #if !defined(CRSF_RCVR_NO_SERIAL)
     uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
     if (peekVal > 0)
@@ -827,11 +853,18 @@ bool CRSF::RXhandleUARTout()
             SerialOutFIFO.popBytes(OutData, OutPktLen);
             interrupts();
             this->_dev->write(OutData, OutPktLen); // write the packet out
-            return true;
+            retVal = true;
         }
     }
+
+    uint8_t lastMSP[512];
+    uint32_t lastMSPLen = 0;
+
+
+
+    
 #endif // CRSF_RCVR_NO_SERIAL
-    return false;
+    return retVal;
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
@@ -941,4 +974,9 @@ void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t fr
     uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
 
     frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}
+
+void CRSF::sendRawMSPFrameToFC(uint8_t *data, uint8_t dataSize)
+{
+    msp2crsf.parse(data, dataSize);
 }

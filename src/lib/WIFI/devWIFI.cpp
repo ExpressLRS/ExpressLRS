@@ -18,6 +18,12 @@
 
 #include <ESPAsyncWebServer.h>
 
+#include <ESPAsyncTCP.h>
+#include "CRSF.h"
+#include "msp.h"
+#include "msptypes.h"
+extern CRSF crsf;
+
 #include "common.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
@@ -60,7 +66,16 @@ static DNSServer dnsServer;
 static IPAddress ipAddress;
 
 static AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");           // access at ws://[esp ip]/ws
+AsyncEventSource events("/events"); // event source (Server-Sent events)
 static bool servicesStarted = false;
+static bool wsConnected = false;
+
+static std::vector<AsyncClient *> clients; // a list to hold all clients for MSP to WIFI bridge
+#define MSP_WIFI_PORT 5761                 // Port number
+#define SERVER_HOST_NAME "elrs_msp"
+AsyncServer *WifiToMspServer;
+AsyncClient *MSPclient = NULL;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -110,21 +125,28 @@ static bool captivePortal(AsyncWebServerRequest *request)
 
 static void WebUpdateSendCSS(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t*)CSS, sizeof(CSS));
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t *)CSS, sizeof(CSS));
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
 
 static void WebUpdateSendJS(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS));
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS));
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
+
+static void WebUpdateSendConsoleJS(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t *)CONSOLE_JS, sizeof(CONSOLE_JS));
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
 
 static void WebUpdateSendFlag(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t *)FLAG, sizeof(FLAG));
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
@@ -136,12 +158,79 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t *)INDEX_HTML, sizeof(INDEX_HTML));
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
+}
+
+void MSP2WIFI(const char *msg, uint32_t len)
+{
+  // if (wsConnected)
+  //{
+  //  reply to client
+  // while (MSPclient->space() < len)
+  // {
+  //   DBGLN("MSP2WIFI: waiting for space");
+  //   delay(500);
+  //   MSP2WIFI(msg, len);
+  // }
+
+  if (MSPclient->space() > len && MSPclient->canSend())
+  {
+    MSPclient->add(msg, len);
+    MSPclient->send();
+  }
+  else
+  {
+    //DBGLN("MSP2WIFI: can't send");
+    delay(50);
+    MSP2WIFI(msg, len);
+  }
+  // WifiToMspServer->textAll(msg, len);
+  // ws.textAll(msg, len);
+  //}
+}
+
+AsyncWebSocketClient *wsClient = NULL;
+
+
+void WSnotifyAll(const char *msg, int len)
+{
+  if (wsConnected)
+  {
+    //ws.textAll(msg, len);
+    wsClient->text(msg, len);
+  }
+}
+
+
+void WSonEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  if (type == WS_EVT_CONNECT)
+  {
+    client->ping(); // client connected
+    DBGLN("ping!: ws[%s][%u]\n", server->url(), client->id());
+  }
+  else if (type == WS_EVT_DISCONNECT)
+  {
+    wsConnected = false;
+  }
+  else if (type == WS_EVT_ERROR)
+  {
+    // error was received from the other end
+    DBGLN("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+  }
+  else if (type == WS_EVT_PONG)
+  {
+    wsConnected = true;
+    wsClient = client;
+    // pong message was received (in response to a ping request maybe)
+    Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char *)data : "");
+    DBGLN("WS Client Connected");
+  }
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -153,7 +242,7 @@ static String WebGetPwmStr()
   // Output is raw integers, the Javascript side needs to parse it
   // ,"pwm":[49664,50688,51200] = 3 channels, 0=512, 1=512, 2=0
   String pwmStr(",\"pwm\":[");
-  for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+  for (uint8_t ch = 0; ch < SERVO_COUNT; ++ch)
   {
     if (ch > 0)
       pwmStr.concat(',');
@@ -193,17 +282,20 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s = String("{\"ssid\":\"") + config.GetSSID() + "\",\"mode\":\"";
-  if (wifiMode == WIFI_STA) {
+  if (wifiMode == WIFI_STA)
+  {
     s += "STA\"";
-  } else {
+  }
+  else
+  {
     s += "AP\"";
   }
-  #if defined(TARGET_RX)
+#if defined(TARGET_RX)
   s += ",\"modelid\":" + String(config.GetModelId());
-  #endif
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
+#endif
+#if defined(GPIO_PIN_PWM_OUTPUTS)
   s += WebGetPwmStr();
-  #endif
+#endif
   s += "}";
   request->send(200, "application/json", s);
 }
@@ -217,27 +309,34 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
   int numNetworks = WiFi.scanComplete();
-  if (numNetworks >= 0) {
+  if (numNetworks >= 0)
+  {
     DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
-    String s="[";
-    for(int i=0 ; i<numNetworks ; i++) {
+    String s = "[";
+    for (int i = 0; i < numNetworks; i++)
+    {
       String w = WiFi.SSID(i);
       DBGLN("found %s", w.c_str());
-      if (vs.find(w)==vs.end() && w.length()>0) {
-        if (!vs.empty()) s += ",";
+      if (vs.find(w) == vs.end() && w.length() > 0)
+      {
+        if (!vs.empty())
+          s += ",";
         s += "\"" + w + "\"";
         vs.insert(w);
       }
     }
-    s+="]";
+    s += "]";
     request->send(200, "application/json", s);
-  } else {
+  }
+  else
+  {
     request->send(204, "application/json", "[]");
   }
 }
 
-static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFiMode_t mode) {
+static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFiMode_t mode)
+{
   AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", msg);
   response->addHeader("Connection", "close");
   request->send(response);
@@ -257,7 +356,7 @@ static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
   String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
-    wifi_hostname + ".local from a browser on that network";
+               wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
 
@@ -287,7 +386,8 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
 static void WebUpdateModelId(AsyncWebServerRequest *request)
 {
   long modelid = request->arg("modelid").toInt();
-  if (modelid < 0 || modelid > 63) modelid = 255;
+  if (modelid < 0 || modelid > 63)
+    modelid = 255;
   DBGLN("Setting model match id %u", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
   config.Commit();
@@ -326,8 +426,10 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (Update.hasError()) {
+static void WebUploadResponseHandler(AsyncWebServerRequest *request)
+{
+  if (Update.hasError())
+  {
     StreamString p = StreamString();
     Update.printError(p);
     p.trim();
@@ -336,17 +438,23 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     response->addHeader("Connection", "close");
     request->send(response);
     request->client()->close();
-  } else {
-    if (target_seen) {
+  }
+  else
+  {
+    if (target_seen)
+    {
       DBGLN("Update complete, rebooting");
       AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to resume blinking before disconnecting power.\"}");
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
       rebootTime = millis() + 200;
-    } else {
+    }
+    else
+    {
       String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
-      if (target_found.length() != 0) {
+      if (target_found.length() != 0)
+      {
         message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
       }
       message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
@@ -355,17 +463,21 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   }
 }
 
-static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
-  if (index == 0) {
+static void WebUploadDataHandler(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+  if (index == 0)
+  {
     DBGLN("Update: %s", filename.c_str());
-    #if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266)
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
-    if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
-    #else
-    if (!Update.begin()) { //start with max available size
-    #endif
+    if (!Update.begin(maxSketchSpace, U_FLASH))
+    { // start with max available size
+#else
+    if (!Update.begin())
+    { // start with max available size
+#endif
       Update.printError(Serial);
     }
     target_seen = false;
@@ -374,31 +486,42 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     target_pos = 0;
     totalSize = 0;
   }
-  if (len) {
+  if (len)
+  {
     DBGVLN("writing %d", len);
-    if (Update.write(data, len) == len) {
+    if (Update.write(data, len) == len)
+    {
       if (force_update || (totalSize == 0 && *data == 0x1F))
         target_seen = true;
-      if (!target_seen) {
-        for (size_t i=0 ; i<len ;i++) {
-          if (!target_complete && (target_pos >= 4 || target_found.length() > 0)) {
-            if (target_pos == 4) {
+      if (!target_seen)
+      {
+        for (size_t i = 0; i < len; i++)
+        {
+          if (!target_complete && (target_pos >= 4 || target_found.length() > 0))
+          {
+            if (target_pos == 4)
+            {
               target_found.clear();
             }
-            if (data[i] == 0 || target_found.length() > 50) {
+            if (data[i] == 0 || target_found.length() > 50)
+            {
               target_complete = true;
             }
-            else {
+            else
+            {
               target_found += (char)data[i];
             }
           }
-          if (data[i] == target_name[target_pos]) {
+          if (data[i] == target_name[target_pos])
+          {
             ++target_pos;
-            if (target_pos >= target_name_size) {
+            if (target_pos >= target_name_size)
+            {
               target_seen = true;
             }
           }
-          else {
+          else
+          {
             target_pos = 0; // Startover
           }
         }
@@ -406,31 +529,43 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       totalSize += len;
     }
   }
-  if (final && !Update.getError()) {
+  if (final && !Update.getError())
+  {
     DBGVLN("finish");
-    if (target_seen) {
-      if (Update.end(true)) { //true to set the size to the current progress
+    if (target_seen)
+    {
+      if (Update.end(true))
+      { // true to set the size to the current progress
         DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
-      } else {
+      }
+      else
+      {
         Update.printError(Serial);
       }
     }
   }
 }
 
-static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
+static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request)
+{
   target_seen = true;
-  if (request->arg("action").equals("confirm")) {
-    if (Update.end(true)) { //true to set the size to the current progress
+  if (request->arg("action").equals("confirm"))
+  {
+    if (Update.end(true))
+    { // true to set the size to the current progress
       DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn resume blinking before disconnecting power", totalSize);
-    } else {
+    }
+    else
+    {
       Update.printError(Serial);
     }
     WebUploadResponseHandler(request);
-  } else {
-    #if defined(PLATFORM_ESP32)
-      Update.abort();
-    #endif
+  }
+  else
+  {
+#if defined(PLATFORM_ESP32)
+    Update.abort();
+#endif
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
 }
@@ -458,13 +593,14 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
   // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
   if ((void *)dst != (void *)data)
   {
-    for (unsigned b=len; b>0; --b)
+    for (unsigned b = len; b > 0; --b)
       *data++ = *dst++;
   }
   return len;
 }
 
-static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
+static void WebUpdateGetFirmware(AsyncWebServerRequest *request)
+{
   AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
   String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
   response->addHeader("Content-Disposition", filename);
@@ -476,20 +612,133 @@ static void wifiOff()
   wifiStarted = false;
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-  #if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
-  #endif
+#endif
+}
+
+/* clients events */
+static void handleError(void *arg, AsyncClient *client, int8_t error)
+{
+  Serial.printf("\n connection error %s from client %s \n", client->errorToString(error), client->remoteIP().toString().c_str());
+}
+
+uint8_t MSPprevCmd[512];
+const uint32_t CompArrayTimeout = 0;
+uint32_t CompArrayTimeMillis;
+
+static bool CompareArrays(uint8_t *a, uint8_t *b, uint8_t len)
+{
+  for (uint8_t i = 0; i < len; i++)
+  {
+    if (a[i] != b[i])
+      return false;
+  }
+  return true;
+}
+
+static void handleData(void *arg, AsyncClient *client, void *data, size_t len)
+{
+  //Serial.printf("\n data received from client %s \n", client->remoteIP().toString().c_str());
+  //Serial.write((uint8_t *)data, len);
+
+
+  // if (millis() - CompArrayTimeMillis > CompArrayTimeout)
+  // {
+  //   CompArrayTimeMillis = millis();
+  //   MSPprevCmd[0] = 0;
+  // }
+
+  // Ask the CRSF class to send the encapsulated packet to the stream
+  // mspPacket_t MSPpacket;
+  // MSPpacket.reset();
+
+  // for (size_t i = 0; i < len; i++) {
+  //    //MSPpacket.addByte(data[i]);
+  // }
+
+  // crsf.AddMspMessage(&MSPpacket);
+  // if (crsf.msp2crsf.FIFOout.size() > 0)
+  // {
+  //   DBGLN("MSP REQ WHILE MSP BUSY");
+  //   return;
+  // }
+
+  //if (millis() - lastMSPmillis > MSPintervalLimit)
+ // {
+   // lastMSPmillis = millis();
+    
+ // }
+
+  if ((CompareArrays((uint8_t *)data, MSPprevCmd, len) == false) || (millis() - CompArrayTimeMillis > CompArrayTimeout)) // don't send the same CMD again, wait a sec.
+  {
+    CompArrayTimeMillis = millis();
+    memcpy(MSPprevCmd, (uint8_t *)data, len);
+    crsf.msp2crsf.parse((uint8_t *)data, len);
+
+    if (crsf.msp2crsf.FIFOout.size() > 0)
+    {
+      MSPclient = client;
+      DBGLN("$Q L: %d", crsf.msp2crsf.FIFOout.size());
+    }
+  }
+  else
+  {
+    DBGLN("Skip MSP CMD");
+  }
+
+    // // int i = 0;
+    // char buf[len * 3];
+    // for (size_t i = 0; i < len; i++)
+    //   sprintf(&buf[3 * i], " %02hhX", localData[i]);
+    // DBGLN(buf);
+  
+
+  // reply to client
+  // if (client->space() > 32 && client->canSend()) {
+  // 	char reply[32];
+  // 	sprintf(reply, "this is from %s", SERVER_HOST_NAME);
+  // 	client->add(reply, strlen(reply));
+  // 	client->send();
+  // }
+}
+
+static void handleDisconnect(void *arg, AsyncClient *client)
+{
+  Serial.printf("\n client %s disconnected \n", client->remoteIP().toString().c_str());
+}
+
+static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
+{
+  Serial.printf("\n client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
+}
+
+/* server events */
+static void handleNewClient(void *arg, AsyncClient *client)
+{
+  Serial.printf("\n new client has been connected to server, ip: %s", client->remoteIP().toString().c_str());
+
+  // add to list
+  clients.push_back(client);
+
+  // register events
+  client->onData(&handleData, NULL);
+  client->onError(&handleError, NULL);
+  client->onDisconnect(&handleDisconnect, NULL);
+  client->onTimeout(&handleTimeOut, NULL);
 }
 
 static void startWiFi(unsigned long now)
 {
-  if (wifiStarted) {
+  if (wifiStarted)
+  {
     return;
   }
   hwTimer::stop();
   // Set transmit power to minimum
   POWERMGNT::setPower(MinPower);
-  if (connectionState < FAILURE_STATES) {
+  if (connectionState < FAILURE_STATES)
+  {
     connectionState = wifiUpdate;
   }
 
@@ -501,26 +750,35 @@ static void startWiFi(unsigned long now)
   WiFi.persistent(false);
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
-  #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(13);
-    WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-  #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_13dBm);
-  #endif
-  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
+#if defined(PLATFORM_ESP8266)
+  WiFi.setOutputPower(13);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+#elif defined(PLATFORM_ESP32)
+  WiFi.setTxPower(WIFI_POWER_13dBm);
+#endif
+  if (config.GetSSID()[0] == 0 && home_wifi_ssid[0] != 0)
+  {
     config.SetSSID(home_wifi_ssid);
     config.SetPassword(home_wifi_password);
     config.Commit();
   }
-  if (config.GetSSID()[0]==0) {
+  if (config.GetSSID()[0] == 0)
+  {
     changeTime = now;
     changeMode = WIFI_AP;
-  } else {
+  }
+  else
+  {
     changeTime = now;
     changeMode = WIFI_STA;
   }
   laststatus = WL_DISCONNECTED;
   wifiStarted = true;
+
+  // WIFIMSP.begin(); // begin WIFI to MSP interface
+  WifiToMspServer = new AsyncServer(MSP_WIFI_PORT);
+  WifiToMspServer->onClient(&handleNewClient, WifiToMspServer);
+  WifiToMspServer->begin();
 }
 
 static void startMDNS()
@@ -533,49 +791,51 @@ static void startMDNS()
 
   String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  #ifdef PLATFORM_ESP8266
-    // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
-    MDNS.setInstanceName(wifi_hostname);
-    MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
-    MDNS.addServiceTxt(service, "vendor", "elrs");
-    MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt(service, "version", VERSION);
-    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt(service, "type", "rx");
-    // If the probe result fails because there is another device on the network with the same name
-    // use our unique instance name as the hostname. A better way to do this would be to use
-    // MDNSResponder::indexDomain and change wifi_hostname as well.
-    MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
+#ifdef PLATFORM_ESP8266
+  // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
+  MDNS.setInstanceName(wifi_hostname);
+  MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+  MDNS.addServiceTxt(service, "vendor", "elrs");
+  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt(service, "version", VERSION);
+  MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+  MDNS.addServiceTxt(service, "type", "rx");
+  // If the probe result fails because there is another device on the network with the same name
+  // use our unique instance name as the hostname. A better way to do this would be to use
+  // MDNSResponder::indexDomain and change wifi_hostname as well.
+  MDNS.setHostProbeResultCallback([instance](const char *p_pcDomainName, bool p_bProbeResult)
+                                  {
       if (!p_bProbeResult) {
         WiFi.hostname(instance);
         MDNS.setInstanceName(instance);
-      }
-    });
-  #else
-    MDNS.setInstanceName(instance);
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt("http", "tcp", "device", device_name);
-    MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
-  #endif
+      } });
+#else
+  MDNS.setInstanceName(instance);
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+  MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt("http", "tcp", "device", device_name);
+  MDNS.addServiceTxt("http", "tcp", "version", VERSION);
+  MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+  MDNS.addServiceTxt("http", "tcp", "type", "tx");
+#endif
 }
 
 static void startServices()
 {
-  if (servicesStarted) {
-    #if defined(PLATFORM_ESP32)
-      MDNS.end();
-      startMDNS();
-    #endif
+  if (servicesStarted)
+  {
+#if defined(PLATFORM_ESP32)
+    MDNS.end();
+    startMDNS();
+#endif
     return;
   }
 
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendCSS);
   server.on("/scan.js", WebUpdateSendJS);
+  server.on("/console.js", WebUpdateSendConsoleJS);
   server.on("/logo.svg", WebUpdateSendFlag);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
@@ -598,12 +858,15 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
 
-  #if defined(TARGET_RX)
-    server.on("/model", WebUpdateModelId);
-  #endif
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
-    server.on("/pwm", WebUpdatePwm);
-  #endif
+#if defined(TARGET_RX)
+  server.on("/model", WebUpdateModelId);
+#endif
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  server.on("/pwm", WebUpdatePwm);
+#endif
+
+  ws.onEvent(WSonEvent);
+  server.addHandler(&ws);
 
   server.onNotFound(WebUpdateHandleNotFound);
 
@@ -622,68 +885,73 @@ static void HandleWebUpdate()
 {
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
-  if (status != laststatus && wifiMode == WIFI_STA) {
+  if (status != laststatus && wifiMode == WIFI_STA)
+  {
     DBGLN("WiFi status %d", status);
-    switch(status) {
-      case WL_NO_SSID_AVAIL:
-      case WL_CONNECT_FAILED:
-      case WL_CONNECTION_LOST:
-        changeTime = now;
-        changeMode = WIFI_AP;
-        break;
-      case WL_DISCONNECTED: // try reconnection
-        changeTime = now;
-        break;
-      default:
-        break;
+    switch (status)
+    {
+    case WL_NO_SSID_AVAIL:
+    case WL_CONNECT_FAILED:
+    case WL_CONNECTION_LOST:
+      changeTime = now;
+      changeMode = WIFI_AP;
+      break;
+    case WL_DISCONNECTED: // try reconnection
+      changeTime = now;
+      break;
+    default:
+      break;
     }
     laststatus = status;
   }
-  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (now - changeTime) > 30000) {
+  if (status != WL_CONNECTED && wifiMode == WIFI_STA && (now - changeTime) > 30000)
+  {
     changeTime = now;
     changeMode = WIFI_AP;
     DBGLN("Connection failed %d", status);
   }
-  if (changeMode != wifiMode && changeMode != WIFI_OFF && (now - changeTime) > 500) {
-    switch(changeMode) {
-      case WIFI_AP:
-        DBGLN("Changing to AP mode");
-        WiFi.disconnect();
-        wifiMode = WIFI_AP;
-        #if defined(PLATFORM_ESP8266)
-          WiFi.mode(WIFI_AP_STA);
-        #else
-          WiFi.mode(WIFI_AP);
-        #endif
-        changeTime = now;
-        WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
-        WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
-        WiFi.scanNetworks(true);
-        startServices();
-        break;
-      case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", config.GetSSID());
-        wifiMode = WIFI_STA;
-        WiFi.mode(wifiMode);
-        WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
-        changeTime = now;
-        WiFi.begin(config.GetSSID(), config.GetPassword());
-        startServices();
-      default:
-        break;
+  if (changeMode != wifiMode && changeMode != WIFI_OFF && (now - changeTime) > 500)
+  {
+    switch (changeMode)
+    {
+    case WIFI_AP:
+      DBGLN("Changing to AP mode");
+      WiFi.disconnect();
+      wifiMode = WIFI_AP;
+#if defined(PLATFORM_ESP8266)
+      WiFi.mode(WIFI_AP_STA);
+#else
+      WiFi.mode(WIFI_AP);
+#endif
+      changeTime = now;
+      WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
+      WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
+      WiFi.scanNetworks(true);
+      startServices();
+      break;
+    case WIFI_STA:
+      DBGLN("Connecting to home network '%s'", config.GetSSID());
+      wifiMode = WIFI_STA;
+      WiFi.mode(wifiMode);
+      WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
+      changeTime = now;
+      WiFi.begin(config.GetSSID(), config.GetPassword());
+      startServices();
+    default:
+      break;
     }
-    #if defined(PLATFORM_ESP8266)
-      MDNS.notifyAPChange();
-    #endif
+#if defined(PLATFORM_ESP8266)
+    MDNS.notifyAPChange();
+#endif
     changeMode = WIFI_OFF;
   }
 
   if (servicesStarted)
   {
     dnsServer.processNextRequest();
-    #if defined(PLATFORM_ESP8266)
-      MDNS.update();
-    #endif
+#if defined(PLATFORM_ESP8266)
+    MDNS.update();
+#endif
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
     if (!Update.isRunning())
@@ -695,18 +963,19 @@ static int start()
 {
   ipAddress.fromString(wifi_ap_address);
 
-  #ifdef AUTO_WIFI_ON_INTERVAL
-    return AUTO_WIFI_ON_INTERVAL * 1000;
-  #else
-    return DURATION_NEVER;
-  #endif
+#ifdef AUTO_WIFI_ON_INTERVAL
+  return AUTO_WIFI_ON_INTERVAL * 1000;
+#else
+  return DURATION_NEVER;
+#endif
 }
 
 static int event()
 {
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
-    if (!wifiStarted) {
+    if (!wifiStarted)
+    {
       startWiFi(millis());
       return DURATION_IMMEDIATELY;
     }
@@ -722,15 +991,16 @@ static int timeout()
     return DURATION_IMMEDIATELY;
   }
 
-  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
+#if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
+  // if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
+  // start webupdate, there might be wrong configuration flashed.
+  if (webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted)
+  {
     DBGLN("No CRSF ever detected, starting WiFi");
     connectionState = wifiUpdate;
     return DURATION_IMMEDIATELY;
   }
-  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
+#elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
   if (!webserverPreventAutoStart && (connectionState == disconnected))
   {
     static bool pastAutoInterval = false;
@@ -747,15 +1017,14 @@ static int timeout()
     pastAutoInterval = true;
     return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
   }
-  #endif
+#endif
   return DURATION_NEVER;
 }
 
 device_t WIFI_device = {
-  .initialize = wifiOff,
-  .start = start,
-  .event = event,
-  .timeout = timeout
-};
+    .initialize = wifiOff,
+    .start = start,
+    .event = event,
+    .timeout = timeout};
 
 #endif

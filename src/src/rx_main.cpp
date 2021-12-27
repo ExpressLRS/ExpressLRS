@@ -1207,6 +1207,9 @@ void setup()
     devicesStart();
 }
 
+const uint32_t keepAliveInterval = 20;
+uint32_t lastKeepAlive = 0; 
+
 void loop()
 {
     unsigned long now = millis();
@@ -1214,6 +1217,13 @@ void loop()
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
+        //checkSendLinkStatsToFc(now);
+        if(now - lastKeepAlive > keepAliveInterval)
+        {
+            lastKeepAlive = millis();
+            //crsf.sendRCFrameToFC();
+            //DBGLN("keepalive");
+        }
     }
 
     devicesUpdate(now);

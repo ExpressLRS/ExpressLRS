@@ -10,6 +10,9 @@ using namespace std;
 #if CRSF_RX_MODULE
 
 #include "CRSF.h"
+#include "devWifi.h"
+
+extern CRSF crsf;
 
 Telemetry::Telemetry()
 {
@@ -198,6 +201,11 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
     const crsf_header_t *header = (crsf_header_t *) package;
 
+    if(header->type != CRSF_FRAMETYPE_BATTERY_SENSOR && header->type != CRSF_FRAMETYPE_FLIGHT_MODE && header->type != CRSF_FRAMETYPE_ATTITUDE)
+    {
+        //DBGLN("TLM HEADER %d", header->type);
+    }
+
     if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'l')
     {
         callBootloader = true;
@@ -218,6 +226,11 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         sendDeviceFrame = true;
         return true;
+    }
+    
+    if (header->type == CRSF_FRAMETYPE_MSP_REQ || header->type == CRSF_FRAMETYPE_MSP_RESP)
+    {
+
     }
 
     uint8_t targetIndex = 0;
@@ -247,8 +260,35 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetFound = true;
 
             // larger msp resonses are sent in two chunks so special handling is needed so both get sent
-            if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+            if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)
             {
+                uint8_t CRSFframeLen = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] +2;
+
+                // DBG("UART->RESP: %d VAL:", CRSFframeLen);
+                // char buf[CRSFframeLen * 3];
+                // for (size_t i = 0; i < CRSFframeLen; i++)
+                //     sprintf(&buf[3 * i], " %02hhX", package[i]);
+                // DBGLN(buf);
+
+                crsf.crsf2msp.parse(package, CRSFframeLen);
+
+                if (crsf.crsf2msp.isFrameReady())
+                {
+                    uint32_t length = crsf.crsf2msp.getFrameLen();
+                    const uint8_t *frame = crsf.crsf2msp.getFrame();
+                    MSP2WIFI((const char *)frame, length);
+
+                    DBGLN("$R L: %d", length);
+                    // char buf[length * 3];
+                    // uint32_t i = 0;
+                    // for (i = 0; i < length; i++)
+                    //     sprintf(&buf[3 * i], " %02hhX", frame[i]);
+                    // DBGLN(buf);
+
+                    
+
+                    //return true;
+                }
                 // there is already another response stored
                 if (payloadTypes[targetIndex].updated)
                 {
