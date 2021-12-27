@@ -3,6 +3,10 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE)
+#include "crsf2msp.h"
+#include "msp2crsf.h"
+#endif
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
@@ -31,7 +35,13 @@ public:
     }
 
     CRSF(Stream &dev) : _dev(&dev) {}
+
+    #if defined(PLATFORM_ESP8266)
+    static CROSSFIRE2MSP crsf2msp;
+    static MSP2CROSSFIRE msp2crsf;
     #endif
+    #endif
+
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from

@@ -31,6 +31,11 @@ Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
+#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
+CROSSFIRE2MSP CRSF::crsf2msp;
+MSP2CROSSFIRE CRSF::msp2crsf;
+#endif
+
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
@@ -828,26 +833,39 @@ bool CRSF::UARTwdt()
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
+    bool retVal = false;
 #if !defined(CRSF_RCVR_NO_SERIAL)
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
-    {
-        if (SerialOutFIFO.size() > (peekVal))
+    // don't write more than 128 bytes at a time to avoid RX buffer overflow
+    #define maxBytesPerCall 128
+    uint32_t bytesWritten = 0;
+    #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+        while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
         {
-            noInterrupts();
-            uint8_t OutPktLen = SerialOutFIFO.pop();
+            uint8_t OutPktLen = msp2crsf.FIFOout.pop();
             uint8_t OutData[OutPktLen];
-            SerialOutFIFO.popBytes(OutData, OutPktLen);
-            interrupts();
+            msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
             this->_dev->write(OutData, OutPktLen); // write the packet out
-            return true;
+            bytesWritten += OutPktLen;
+            retVal = true;
         }
+    #endif
+
+    while (SerialOutFIFO.size() > SerialOutFIFO.peek() && (bytesWritten + SerialOutFIFO.peek()) < maxBytesPerCall)
+    {
+        noInterrupts();
+        uint8_t OutPktLen = SerialOutFIFO.pop();
+        uint8_t OutData[OutPktLen];
+        SerialOutFIFO.popBytes(OutData, OutPktLen);
+        interrupts();
+        this->_dev->write(OutData, OutPktLen); // write the packet out
+        bytesWritten += OutPktLen;
+        retVal = true;
     }
 #endif // CRSF_RCVR_NO_SERIAL
-    return false;
+    return retVal;
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
+void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[4] = {
