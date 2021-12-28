@@ -30,10 +30,6 @@ static void eepromWriteToMSPOut()
     mspPacket_t packet;
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
-    packet.addByte(0);
-    packet.addByte(0);
-    packet.addByte(0);
-    packet.addByte(0);
 
     crsf.AddMspMessage(&packet);
 }
