@@ -158,6 +158,7 @@ public:
 
     void activeScreen();
     void doUserAction(int action);
+    void setInWifiMode();
 
     int getUserRateIndex() { return current_rate_index; }
     int getUserPowerIndex() { return current_power_index; }
