@@ -245,5 +245,6 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
+    devicesTriggerEvent();
     updateFan();
 }
