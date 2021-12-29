@@ -3,6 +3,8 @@
 
 extern GENERIC_CRC8 crsf_crc;
 
+MSP_COMMON MSP;
+
 MSP2CROSSFIRE::MSP2CROSSFIRE() {} // empty constructor
 
 void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, uint8_t seqNumber)
@@ -24,15 +26,15 @@ void MSP2CROSSFIRE::setNewFrame(uint8_t &data, bool isNewFrame)
     }
 }
 
-void MSP2CROSSFIRE::setVersion(uint8_t &data, uint8_t version)
+void MSP2CROSSFIRE::setVersion(uint8_t &data, MSPframeType_e version)
 {
     uint8_t val;
 
-    if (version == 'M')
+    if (version == MSP_FRAME_V1 || version == MSP_FRAME_V1_JUMBO)
     {
         val = 1;
     }
-    else if (version == 'X')
+    else if (version == MSP_FRAME_V2)
     {
         val = 2;
     }
@@ -73,42 +75,99 @@ void MSP2CROSSFIRE::setError(uint8_t &data, bool isError)
     }
 }
 
-uint8_t MSP2CROSSFIRE::getV1payloadLen(const uint8_t *data)
+uint32_t MSP2CROSSFIRE::getFrameLen(uint32_t payloadLen, uint8_t mspVersion)
 {
-    return data[3];
+    uint32_t frameLen = 0;
+    switch (mspVersion)
+    {
+        {
+        case MSP_FRAME_V1:
+            frameLen = MSP_V1_FRAME_LEN_FROM_PAYLOAD_LEN(payloadLen);
+            break;
+
+        case MSP_FRAME_V2:
+            frameLen = MSP_V2_FRAME_LEN_FROM_PAYLOAD_LEN(payloadLen);
+            break;
+
+        case MSP_FRAME_V1_JUMBO:
+            frameLen = MSP_V1_JUMBO_FRAME_LEN_FROM_PAYLOAD_LEN(payloadLen);
+            break;
+
+        default:
+            break;
+        }
+    }
+    return frameLen;
 }
 
-uint16_t MSP2CROSSFIRE::getV2payloadLen(const uint8_t *data)
+uint32_t MSP2CROSSFIRE::getPayloadLen(const uint8_t *data, MSPframeType_e mspVersion)
 {
-    uint8_t lowByte = data[6];
-    uint8_t highByte = data[7];
-    return (highByte << 8) | lowByte;
+    uint32_t packetLen = 0;
+    uint8_t lowByte;
+    uint8_t highByte;
+
+    switch (mspVersion)
+    {
+        {
+        case MSP_FRAME_V1:
+            packetLen = data[3];
+            break;
+
+        case MSP_FRAME_V2:
+            lowByte = data[6];
+            highByte = data[7];
+            packetLen = (highByte << 8) | lowByte;
+            break;
+
+        case MSP_FRAME_V1_JUMBO:
+            lowByte = data[5];
+            highByte = data[6];
+            packetLen = (highByte << 8) | lowByte;
+            break;
+
+        default:
+            break;
+        }
+    }
+    //std::cout << "Packet Length: " << (int)packetLen << std::endl;
+    return packetLen;
+}
+
+MSPframeType_e MSP2CROSSFIRE::getVersion(const uint8_t *data)
+{
+    MSPframeType_e frameType;
+
+    if (data[1] == 'M') // detect if V1 or V2
+    {
+        if (data[3] == 0xFF)
+        {
+            frameType = MSP_FRAME_V1_JUMBO;
+        }
+        else
+        {
+            frameType = MSP_FRAME_V1;
+        }
+    }
+    else if (data[1] == 'X')
+    {
+        frameType = MSP_FRAME_V2;
+    }
+    else
+    {
+        frameType = MSP_FRAME_UNKNOWN;
+    }
+    return frameType;
 }
 
 void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, uint8_t dest)
 {
-    uint8_t MSPpayloadLen; // length of MSP payload
-    uint8_t MSPbodyLen;    // length of MSP body (excludes header and CRC/Checksum)
+    MSPframeType_e mspVersion = getVersion(data);
+    uint32_t MSPpayloadLen = getPayloadLen(data, mspVersion);
+    uint32_t MSPframeLen = getFrameLen(MSPpayloadLen, mspVersion);
 
-    if (data[1] == 'M') // detect if V1 or V2
-    {
-        MSPpayloadLen = getV1payloadLen(data);
-        MSPbodyLen = MSP_V1_BODY_LEN_FROM_PAYLOAD_LEN(MSPpayloadLen);
-    }
-    else if (data[1] == 'X')
-    {
-        MSPpayloadLen = getV2payloadLen(data);
-        MSPbodyLen = MSP_V2_BODY_LEN_FROM_PAYLOAD_LEN(MSPpayloadLen);
-    }
-    else
-    {
-        DBGLN("MSP2CROSSFIRE::parse: invalid MSP version");
-        return;
-    }
-
-    MSPbodyLen--;                                                        // subtract 1 because crc/checksum is not included in encapsulated frame and we don't want to send it
-    uint8_t numChunks = (MSPbodyLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // gotta count the first chunk!
-    uint8_t chunkRemainder = MSPbodyLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
+    MSPframeLen--;                                                        // subtract 1 because crc/checksum is not included in encapsulated frame and we don't want to send it
+    uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // gotta count the first chunk!
+    uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
 
     uint8_t header[7];
     // first element has to be size of the fifo chunk (can't be bigger than CRSF_MAX_PACKET_LEN)
@@ -120,12 +179,12 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
     header[5] = src;
     header[6] = 0;
 
-    setVersion(header[6], data[1]);
+    setVersion(header[6], mspVersion);
 
-    //std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
+    // std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
     for (uint8_t i = 0; i < numChunks; i++)
     {
-        //std::cout << "chunk: " << (int)i;
+        // std::cout << "chunk: " << (int)i;
         setSeqNumber(header[6], i);
         setNewFrame(header[6], (i == 0 ? true : false)); // if first chunk then set to true, else false
         setError(header[6], false);
@@ -135,7 +194,7 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
 
         if (i == (numChunks - 1)) // the last OR the only frame (chunk)
         {
-            //std::cout << "PARTIAL CHUNK" << std::endl;
+            // std::cout << "PARTIAL CHUNK" << std::endl;
             CRSFpktLen = chunkRemainder + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 2; // status byte and CRC
             header[0] = CRSFpktLen;
             header[2] = CRSFpktLen - 2;
@@ -144,11 +203,11 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
             uint8_t crc = crsf_crc.calc(&header[3], sizeof(header) - 3, 0x00); // don't include the MSP header
             crc = crsf_crc.calc(&data[startIdx], chunkRemainder, crc);
             FIFOout.push(crc);
-            //std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
+            // std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
         }
         else
         {
-            //std::cout << "FULL CHUNK" << std::endl;
+            // std::cout << "FULL CHUNK" << std::endl;
             CRSFpktLen = CRSF_MAX_PACKET_LEN;
             header[0] = CRSFpktLen;
             header[2] = CRSFpktLen - 2;
@@ -157,7 +216,7 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
             uint8_t crc = crsf_crc.calc(&header[3], sizeof(header) - 3, 0x00); // don't include the MSP header
             crc = crsf_crc.calc(&data[startIdx], CRSF_MSP_MAX_BYTES_PER_CHUNK, crc);
             FIFOout.push(crc);
-            //std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
+            // std::cout << "FIFO Size: " << (int)FIFOout.size() << std::endl;
         }
     }
 }

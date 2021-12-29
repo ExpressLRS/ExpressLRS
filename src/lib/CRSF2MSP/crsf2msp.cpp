@@ -14,12 +14,9 @@ CROSSFIRE2MSP::CROSSFIRE2MSP()
 
 void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
 {
-    uint8_t statusByte = data[CRSF_MSP_STATUS_BYTE_OFFSET]; // status byte from CRSF MSP frame
-
-    bool error = isError(statusByte);
-    bool newFrame = isNewFrame(statusByte);
-    uint8_t seqNum = getSeqNumber(statusByte);
-    uint8_t MSPvers = getVersion(statusByte);
+    bool error = isError(data);
+    bool newFrame = isNewFrame(data);
+    uint8_t seqNum = getSeqNumber(data);
 
     if (error)
     {
@@ -32,19 +29,21 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
     }
 
     uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 1;
-    //std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
+    // std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
 
     if (newFrame) // single packet or first chunk of series of packets
     {
         memset(outBuffer, 0, sizeof(outBuffer));
+        MSPvers = getVersion(data);
+
         src = data[CRSF_MSP_SRC_OFFSET];
         dest = data[CRSF_MSP_DEST_OFFSET];
         uint8_t header[3];
         header[0] = '$';
-        header[1] = MSPvers == 1 ? 'M' : 'X';
-        header[2] = getHeaderDir(data[CRSF_MSP_TYPE_IDX]);
+        header[1] = (MSPvers == 1 || MSPvers == 3) ? 'M' : 'X';
+        header[2] = getHeaderDir(data);
         memcpy(&outBuffer[0], header, sizeof(header));
-        pktLen = getFrameLen(data, MSPvers) -1; // -1 for checksum which is not needed
+        pktLen = getFrameLen(data, MSPvers) - 1; // -1 for checksum which is not needed
         idx = 3;                                 // offset by 3 bytes for MSP header
 
         if (pktLen > CRSF_MSP_MAX_BYTES_PER_CHUNK)
@@ -79,30 +78,63 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
     }
 }
 
-bool CROSSFIRE2MSP::isNewFrame(uint8_t data)
+bool CROSSFIRE2MSP::isNewFrame(const uint8_t *data)
 {
-    return (bool)((data & 0b10000) >> 4); // bit active if there is a new frame
+    const uint8_t statusByte = data[CRSF_MSP_STATUS_BYTE_OFFSET];
+    return (bool)((statusByte & 0b10000) >> 4); // bit active if there is a new frame
 }
 
-bool CROSSFIRE2MSP::isError(uint8_t data)
+bool CROSSFIRE2MSP::isError(const uint8_t *data)
 {
-    return (bool)((data & 0b10000000) >> 7);
+    const uint8_t statusByte = data[CRSF_MSP_STATUS_BYTE_OFFSET];
+    return (bool)((statusByte & 0b10000000) >> 7);
 }
 
-uint8_t CROSSFIRE2MSP::getSeqNumber(uint8_t data)
+uint8_t CROSSFIRE2MSP::getSeqNumber(const uint8_t *data)
 {
-    return data & 0b1111; // first four bits is seq number
+    const uint8_t statusByte = data[CRSF_MSP_STATUS_BYTE_OFFSET];
+    return statusByte & 0b1111; // first four bits is seq number
 }
 
-uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, uint8_t mspVersion)
+MSPframeType_e CROSSFIRE2MSP::getVersion(const uint8_t *data)
 {
-    const uint8_t startIdx = 3; // skip the $M</> header  in both cases
+    const uint8_t statusByte = data[CRSF_MSP_STATUS_BYTE_OFFSET];
+    const uint8_t payloadLen = data[CRSF_MSP_FRAME_OFFSET]; // first element is the payload length
+    uint8_t headerVersion = ((statusByte & 0b01100000) >> 5);
+    MSPframeType_e MSPvers;
+
+    if (headerVersion == 1)
+    {
+        if (payloadLen == 0xFF)
+        {
+            MSPvers = MSP_FRAME_V1_JUMBO;
+        }
+        else
+        {
+            MSPvers = MSP_FRAME_V1;
+        }
+    }
+    else if (headerVersion == 2)
+    {
+        MSPvers = MSP_FRAME_V2;
+    }
+    else
+    {
+        MSPvers = MSP_FRAME_UNKNOWN;
+    }
+    return MSPvers;
+}
+
+uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, MSPframeType_e mspVersion)
+{
+    const uint8_t startIdx = 3;              // skip the $M</> header  in both cases
+    const uint8_t crcLen = (idx - startIdx); // everuthing except the header is CRC'd
     uint8_t checkSum = 0;
 
-    if (mspVersion == 1)
+    if (mspVersion == 1 || mspVersion == 3)
     {
-        uint8_t len = data[3] + 2;  // payload len plus function
-        for (uint8_t i = 0; i < len; i++)
+        // uint8_t len = data[3] + 2; // payload len plus function
+        for (uint32_t i = 0; i < crcLen; i++)
         {
             checkSum ^= data[i + startIdx];
         }
@@ -110,10 +142,6 @@ uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, uint8_t mspVersion)
     }
     else if (mspVersion == 2)
     {
-        uint8_t lowByte = data[6];
-        uint8_t highByte = data[7];
-        uint32_t len = (highByte << 8) | lowByte;
-        uint32_t crcLen = len + 5; // +5 uin8_t flags, uint16 function, uint16 payloadLen
         checkSum = crsf_crc.calc(&data[startIdx], crcLen, 0x00);
     }
     else
@@ -123,17 +151,26 @@ uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, uint8_t mspVersion)
     return checkSum;
 }
 
-uint32_t CROSSFIRE2MSP::getFrameLen(const uint8_t *data, uint8_t mspVersion)
+uint32_t CROSSFIRE2MSP::getFrameLen(const uint8_t *data, MSPframeType_e mspVersion)
 {
-    if (mspVersion == 1)
+    uint8_t lowByte;
+    uint8_t highByte;
+
+    if (mspVersion == MSP_FRAME_V1)
     {
-        return MSP_V1_BODY_LEN_FROM_PAYLOAD_LEN(data[CRSF_MSP_FRAME_OFFSET]);
+        return (MSP_V1_FRAME_LEN_FROM_PAYLOAD_LEN(data[CRSF_MSP_FRAME_OFFSET]));
     }
-    else if (mspVersion == 2)
+    else if (mspVersion == MSP_FRAME_V1_JUMBO)
     {
-        uint8_t lowByte = data[CRSF_MSP_FRAME_OFFSET + 3];
-        uint8_t highByte = data[CRSF_MSP_FRAME_OFFSET + 4];
-        return MSP_V2_BODY_LEN_FROM_PAYLOAD_LEN((highByte << 8) | lowByte);
+        lowByte = data[CRSF_MSP_FRAME_OFFSET + 2];
+        highByte = data[CRSF_MSP_FRAME_OFFSET + 3];
+        return MSP_V1_JUMBO_FRAME_LEN_FROM_PAYLOAD_LEN((highByte << 8) | lowByte);
+    }
+    else if (mspVersion == MSP_FRAME_V2)
+    {
+        lowByte = data[CRSF_MSP_FRAME_OFFSET + 3];
+        highByte = data[CRSF_MSP_FRAME_OFFSET + 4];
+        return MSP_V2_FRAME_LEN_FROM_PAYLOAD_LEN((highByte << 8) | lowByte);
     }
     else
     {
@@ -141,18 +178,14 @@ uint32_t CROSSFIRE2MSP::getFrameLen(const uint8_t *data, uint8_t mspVersion)
     }
 }
 
-uint8_t CROSSFIRE2MSP::getVersion(uint8_t data)
+uint8_t CROSSFIRE2MSP::getHeaderDir(const uint8_t *data)
 {
-    return ((data & 0b01100000) >> 5);
-}
-
-uint8_t CROSSFIRE2MSP::getHeaderDir(uint8_t data)
-{
-    if (data == 0x7A)
+    const uint8_t statusByte = data[CRSF_MSP_TYPE_IDX];
+    if (statusByte == 0x7A)
     {
         return '<';
     }
-    else if (data == 0x7B)
+    else if (statusByte == 0x7B)
     {
         return '>';
     }

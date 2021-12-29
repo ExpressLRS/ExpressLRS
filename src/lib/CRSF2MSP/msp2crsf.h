@@ -18,12 +18,13 @@ private:
     // bool isBusy;
     void setNewFrame(uint8_t &data, bool isNewFrame);
     void setSeqNumber(uint8_t &data, uint8_t seqNumber);
-    void setVersion(uint8_t &data, uint8_t version);
+    void setVersion(uint8_t &data, MSPframeType_e version);
     uint8_t getHeaderDir(uint8_t headerDir);
     void setError(uint8_t &data, bool isError);
 
-    uint8_t getV1payloadLen(const uint8_t *data);
-    uint16_t getV2payloadLen(const uint8_t *data);
+    uint32_t getFrameLen(uint32_t payloadLen, uint8_t mspVersion);
+    MSPframeType_e getVersion(const uint8_t *data);
+    uint32_t getPayloadLen(const uint8_t *data, MSPframeType_e mspVersion);
 
 public:
     MSP2CROSSFIRE();

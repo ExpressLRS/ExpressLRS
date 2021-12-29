@@ -1,4 +1,6 @@
 
+#pragma once
+
 #define CRSF_MSP_FRAME_OFFSET 6                                             // Start of MSP frame in CRSF packet
 #define CRSF_MSP_STATUS_BYTE_OFFSET 5                                       // Status byte index in CRSF packet
 #define CRSF_MSP_SRC_OFFSET 4                                               // Source ID index in CRSF packet
@@ -13,7 +15,21 @@
 #define CRSF_MSP_LEN_TO_ENCAP_FRAME_OFFSET (CRSF_MAX_PACKET_LEN - CRSF_MSP_MAX_BYTES_PER_CHUNK) // equals 7
 // <sync><crsf_len><crsf_cmd><dst><source><header><msp_len><msp_cmd>
 
+#define MSP_V1_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 3)       // doesn't include $M< header
+#define MSP_V1_JUMBO_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 5) // extra 2 bytes for jumbo frame
+#define MSP_V2_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 6)       // doesn't include $X< header
 
-#define MSP_V1_BODY_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 3) // doesn't include $M< header
-#define MSP_V2_BODY_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 6) // doesn't include $X< header
+typedef enum
+{
+    MSP_FRAME_V1 = 1,
+    MSP_FRAME_V2 = 2,
+    MSP_FRAME_V1_JUMBO = 3,
+    MSP_FRAME_UNKNOWN = 4,
+} MSPframeType_e;
 
+class MSP_COMMON
+{
+private:
+public:
+   
+};
