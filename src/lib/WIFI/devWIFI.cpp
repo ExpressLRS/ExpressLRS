@@ -186,8 +186,8 @@ void MSP2WIFI(const char *msg, uint32_t len)
   else
   {
     //DBGLN("MSP2WIFI: can't send");
-    delay(50);
-    MSP2WIFI(msg, len);
+    //delay(100);
+    //MSP2WIFI(msg, len);
   }
   // WifiToMspServer->textAll(msg, len);
   // ws.textAll(msg, len);
@@ -670,22 +670,22 @@ static void handleData(void *arg, AsyncClient *client, void *data, size_t len)
     
  // }
 
-  if ((CompareArrays((uint8_t *)data, MSPprevCmd, len) == false) || (millis() - CompArrayTimeMillis > CompArrayTimeout)) // don't send the same CMD again, wait a sec.
-  {
-    CompArrayTimeMillis = millis();
-    memcpy(MSPprevCmd, (uint8_t *)data, len);
-    crsf.msp2crsf.parse((uint8_t *)data, len);
+  // if ((CompareArrays((uint8_t *)data, MSPprevCmd, len) == false) || (millis() - CompArrayTimeMillis > CompArrayTimeout)) // don't send the same CMD again, wait a sec.
+  // {
+  //   CompArrayTimeMillis = millis();
+  //   memcpy(MSPprevCmd, (uint8_t *)data, len);
+   crsf.msp2crsf.parse((uint8_t *)data, len);
 
     if (crsf.msp2crsf.FIFOout.size() > 0)
     {
       MSPclient = client;
       DBGLN("$Q L: %d", crsf.msp2crsf.FIFOout.size());
     }
-  }
-  else
-  {
-    DBGLN("Skip MSP CMD");
-  }
+  // }
+  // else
+  // {
+  //   DBGLN("Skip MSP CMD");
+  // }
 
     // // int i = 0;
     // char buf[len * 3];

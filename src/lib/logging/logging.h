@@ -71,7 +71,6 @@ extern void WSnotifyAll(const char *msg, int len);
   }
 #define DBGLN(msg, ...)                             \
   {                                                 \
-    LOGGING_UART.println();                         \
     char charBuf[256];                              \
     int len = sprintf(charBuf, msg, ##__VA_ARGS__); \
     charBuf[len] = '\n';                            \
