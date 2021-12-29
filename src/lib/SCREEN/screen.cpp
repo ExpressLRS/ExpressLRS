@@ -8,17 +8,17 @@ void (*Screen::updatecallback)(int updateType) = &nullCallback;
 
 #ifdef Regulatory_Domain_ISM_2400
 const char *Screen::rate_string[RATE_MAX_NUMBER] = {
-    "500HZ",
-    "250HZ",
-    "150HZ",
-    "50HZ"
+    "500Hz",
+    "250Hz",
+    "150Hz",
+    "50Hz"
 };
 #else
 const char *Screen::rate_string[RATE_MAX_NUMBER] = {
-    "200HZ",
-    "100HZ",
-    "50HZ",
-    "25HZ"
+    "200Hz",
+    "100Hz",
+    "50Hz",
+    "25Hz"
 };
 #endif
 
