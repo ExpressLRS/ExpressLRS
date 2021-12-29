@@ -164,8 +164,7 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
     MSPframeType_e mspVersion = getVersion(data);
     uint32_t MSPpayloadLen = getPayloadLen(data, mspVersion);
     uint32_t MSPframeLen = getFrameLen(MSPpayloadLen, mspVersion);
-
-    MSPframeLen--;                                                        // subtract 1 because crc/checksum is not included in encapsulated frame and we don't want to send it
+                                                         // subtract 1 because crc/checksum is not included in encapsulated frame and we don't want to send it
     uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // gotta count the first chunk!
     uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
 

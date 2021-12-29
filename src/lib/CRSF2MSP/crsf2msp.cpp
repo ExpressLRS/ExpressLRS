@@ -17,21 +17,10 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
     bool error = isError(data);
     bool newFrame = isNewFrame(data);
     uint8_t seqNum = getSeqNumber(data);
-
-    if (error)
-    {
-        pktLen = 0;
-        idx = 0;
-        frameComplete = false;
-        memset(outBuffer, 0, sizeof(outBuffer));
-        // DBGLN("MSP frame error bit set!");
-        return;
-    }
-
-    uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 1;
+    uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     // std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
 
-    if (newFrame && seqNum == 0) // single packet or first chunk of series of packets
+    if (newFrame) // single packet or first chunk of series of packets
     {
         memset(outBuffer, 0, sizeof(outBuffer));
         MSPvers = getVersion(data);
@@ -41,15 +30,15 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         uint8_t header[3];
         header[0] = '$';
         header[1] = (MSPvers == 1 || MSPvers == 3) ? 'M' : 'X';
-        header[2] = getHeaderDir(data);
+        header[2] = error ? '!' : getHeaderDir(data);
         memcpy(&outBuffer[0], header, sizeof(header));
-        pktLen = getFrameLen(data, MSPvers) - 1; // -1 for checksum which is not needed
+        pktLen = getFrameLen(data, MSPvers); // -1 for checksum which is not needed
         idx = 3;                                 // offset by 3 bytes for MSP header
 
         if (pktLen > CRSF_MSP_MAX_BYTES_PER_CHUNK)
         { // we end up here if we have a chunked message
-            memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], CRSFpayloadLen - 1);
-            idx += CRSFpayloadLen - 1;
+            memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], CRSFpayloadLen);
+            idx += CRSFpayloadLen;
         }
         else
         { // fits in a single CRSF frame
@@ -62,7 +51,7 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         // if the last CRSF frame is zero padded we can't use the CRSF payload length
         // but if this isn't the last chunk we can't use the MSP payload length
         // the solution is to use the minimum of the two lengths
-        uint32_t a = (uint32_t)CRSFpayloadLen -1;
+        uint32_t a = (uint32_t)CRSFpayloadLen;
         uint32_t b = pktLen - (idx - 3);
         uint8_t minLen = !(b < a) ? a : b;
         memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], minLen); // next chunk of data
