@@ -87,7 +87,7 @@ def condense_flags():
     build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
 
 def version_to_env():
-    ver = elrs_helpers.get_git_version(env)
+    ver = elrs_helpers.get_git_version()
     env.Append(GIT_SHA = ver['sha'], GIT_VERSION= ver['version'])
 
 def regulatory_domain_to_env():
