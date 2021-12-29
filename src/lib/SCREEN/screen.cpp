@@ -290,4 +290,12 @@ void Screen::nextIndex(int &index, int action, int min, int max)
     }
 }
 
+void Screen::setInWifiMode()
+{
+    current_screen_status = SCREEN_STATUS_WORK;
+    main_menu_page_index = MAIN_MENU_UPDATEFW_INDEX;
+    current_page_index = PAGE_SUB_UPDATEFW_INDEX;
+    updateSubWIFIModePage();
+}
+
 #endif
