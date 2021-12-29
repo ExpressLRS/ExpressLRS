@@ -1,5 +1,5 @@
 #include "crsf2msp.h"
-//#include <iostream> // for test
+#include <iostream> // for test
 
 extern GENERIC_CRC8 crsf_crc; // defined in crsf.cpp reused here
 
@@ -31,7 +31,7 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
     uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 1;
     // std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
 
-    if (newFrame) // single packet or first chunk of series of packets
+    if (newFrame && seqNum == 0) // single packet or first chunk of series of packets
     {
         memset(outBuffer, 0, sizeof(outBuffer));
         MSPvers = getVersion(data);
@@ -62,7 +62,7 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         // if the last CRSF frame is zero padded we can't use the CRSF payload length
         // but if this isn't the last chunk we can't use the MSP payload length
         // the solution is to use the minimum of the two lengths
-        uint32_t a = (uint32_t)CRSFpayloadLen;
+        uint32_t a = (uint32_t)CRSFpayloadLen -1;
         uint32_t b = pktLen - (idx - 3);
         uint8_t minLen = !(b < a) ? a : b;
         memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], minLen); // next chunk of data
@@ -128,7 +128,7 @@ MSPframeType_e CROSSFIRE2MSP::getVersion(const uint8_t *data)
 uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, MSPframeType_e mspVersion)
 {
     const uint8_t startIdx = 3;              // skip the $M</> header  in both cases
-    const uint8_t crcLen = (idx - startIdx); // everuthing except the header is CRC'd
+    const uint32_t crcLen = (idx - startIdx); // everuthing except the header is CRC'd
     uint8_t checkSum = 0;
 
     if (mspVersion == 1 || mspVersion == 3)
