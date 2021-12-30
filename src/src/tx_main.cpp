@@ -500,6 +500,24 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     return;
   }
 
+  // Listen Before Talk - Check instant RSSI reading and abort TX if energy detected
+  // wait necessary listen window (see ETSI EN 300 328) (largest of 18us or 0.2% of tx air time on one freq)
+  // Call getRssiInst while waiting, if any value above threshold, return and wait for next tx window
+  Radio.RXnb();
+  delay(20);
+  uint32_t rxStartTime = micros();
+  int8_t RssiInst;
+  do
+  {
+    RssiInst = Radio.GetRssiInst();
+    if(RssiInst > -88)
+    {
+      Radio.SetTxIdleMode();
+      return;
+    }
+  } while (micros() - rxStartTime < 100); // 100us for testing
+  Radio.SetTxIdleMode();
+
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
   //     this is the case when bench testing and TXing without a handset
