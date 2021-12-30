@@ -26,10 +26,3 @@ typedef enum
     MSP_FRAME_V1_JUMBO = 3,
     MSP_FRAME_UNKNOWN = 4,
 } MSPframeType_e;
-
-class MSP_COMMON
-{
-private:
-public:
-   
-};
