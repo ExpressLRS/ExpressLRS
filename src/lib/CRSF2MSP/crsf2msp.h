@@ -16,10 +16,14 @@ private:
     uint8_t outBuffer[MSP_FRAME_MAX_LEN];
     uint32_t pktLen; // packet length of the incomming msp frame
     uint32_t idx;    // number of bytes received in the current msp frame
+    uint8_t seqNumberPrev;
+    uint8_t seqNumber;
     bool frameComplete;
     uint8_t src;            // source of the msp frame (from CRSF ext header)
     uint8_t dest;           // destination of the msp frame (from CRSF ext header)
     MSPframeType_e MSPvers; // need to store the MSP version since it can only be inferred from the first frame
+
+    void reset();
 
     bool isNewFrame(const uint8_t *data);
     bool isError(const uint8_t *data);
@@ -27,7 +31,7 @@ private:
     uint8_t getSeqNumber(const uint8_t *data);
     MSPframeType_e getVersion(const uint8_t *data);
     uint8_t getHeaderDir(const uint8_t *data);
-    uint8_t getChecksum(const uint8_t *data, MSPframeType_e mspVersion);
+    uint8_t getChecksum(const uint8_t *data, const uint32_t packetLen, MSPframeType_e mspVersion);
     uint32_t getFrameLen(const uint8_t *data, MSPframeType_e mspVersion);
 
 public:

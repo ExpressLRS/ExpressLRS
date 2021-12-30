@@ -30,4 +30,5 @@ public:
     MSP2CROSSFIRE();
     FIFO_GENERIC<MSP_FRAME_MAX_LEN> FIFOout;
     void parse(const uint8_t *data, uint32_t frameLen, uint8_t src = CRSF_ADDRESS_CRSF_RECEIVER, uint8_t dest = CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    
 };

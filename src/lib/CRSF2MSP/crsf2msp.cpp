@@ -5,35 +5,51 @@ extern GENERIC_CRC8 crsf_crc; // defined in crsf.cpp reused here
 
 CROSSFIRE2MSP::CROSSFIRE2MSP()
 {
-    // clean inital state
-    memset(outBuffer, 0x1, MSP_FRAME_MAX_LEN);
+    reset();
+}
+
+void CROSSFIRE2MSP::reset()
+{
+    // clean state
+    memset(outBuffer, 0x0, MSP_FRAME_MAX_LEN);
     pktLen = 0;
     idx = 0;
+    seqNumber = 0;
+    seqNumberPrev = 0;
     frameComplete = false;
+    MSPvers = MSP_FRAME_UNKNOWN;
 }
 
 void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
 {
+    uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     bool error = isError(data);
     bool newFrame = isNewFrame(data);
-    uint8_t seqNum = getSeqNumber(data);
-    uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     // std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
+    bool seqError;
+    seqNumber = getSeqNumber(data);
+    ((seqNumberPrev + 1) % 0b1111) == seqNumber ? seqError = false : seqError = true;
+
+    if ((!newFrame && seqError) || error)
+    {
+        reset();
+        DBGLN("CROSSFIRE2MSP: error or seq error");
+        return;
+    }
 
     if (newFrame) // single packet or first chunk of series of packets
     {
+        idx = 3; // skip the header
         memset(outBuffer, 0, sizeof(outBuffer));
         MSPvers = getVersion(data);
-
         src = data[CRSF_MSP_SRC_OFFSET];
         dest = data[CRSF_MSP_DEST_OFFSET];
         uint8_t header[3];
         header[0] = '$';
-        header[1] = (MSPvers == 1 || MSPvers == 3) ? 'M' : 'X';
+        header[1] = (MSPvers == MSP_FRAME_V1 || MSPvers == MSP_FRAME_V1_JUMBO) ? 'M' : 'X';
         header[2] = error ? '!' : getHeaderDir(data);
         memcpy(&outBuffer[0], header, sizeof(header));
-        pktLen = getFrameLen(data, MSPvers); // -1 for checksum which is not needed
-        idx = 3;                                 // offset by 3 bytes for MSP header
+        pktLen = getFrameLen(data, MSPvers);
 
         if (pktLen > CRSF_MSP_MAX_BYTES_PER_CHUNK)
         { // we end up here if we have a chunked message
@@ -58,11 +74,13 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         idx += minLen;
     }
 
+    seqNumberPrev = seqNumber;
+
     if ((idx - 3) == pktLen) // we have a complete MSP frame, -3 because the header isn't counted
     {
         frameComplete = true;
         // we need to overwrite the CRSF checksum with the MSP checksum
-        uint8_t crc = getChecksum(outBuffer, MSPvers);
+        uint8_t crc = getChecksum(outBuffer, pktLen, MSPvers);
         outBuffer[idx] = crc;
     }
 }
@@ -114,24 +132,22 @@ MSPframeType_e CROSSFIRE2MSP::getVersion(const uint8_t *data)
     return MSPvers;
 }
 
-uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, MSPframeType_e mspVersion)
+uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, const uint32_t len, MSPframeType_e mspVersion)
 {
-    const uint8_t startIdx = 3;              // skip the $M</> header  in both cases
-    const uint32_t crcLen = (idx - startIdx); // everuthing except the header is CRC'd
+    const uint8_t startIdx = 3; // skip the $M</> header  in both cases
     uint8_t checkSum = 0;
 
-    if (mspVersion == 1 || mspVersion == 3)
+    if (mspVersion == MSP_FRAME_V1 || mspVersion == MSP_FRAME_V1_JUMBO)
     {
-        // uint8_t len = data[3] + 2; // payload len plus function
-        for (uint32_t i = 0; i < crcLen; i++)
+        for (uint32_t i = 0; i < len; i++)
         {
             checkSum ^= data[i + startIdx];
         }
         return checkSum;
     }
-    else if (mspVersion == 2)
+    else if (mspVersion == MSP_FRAME_V2)
     {
-        checkSum = crsf_crc.calc(&data[startIdx], crcLen, 0x00);
+        checkSum = crsf_crc.calc(&data[startIdx], len, 0x00);
     }
     else
     {
@@ -196,7 +212,7 @@ const uint8_t *CROSSFIRE2MSP::getFrame()
 
 uint32_t CROSSFIRE2MSP::getFrameLen()
 {
-    return idx + 1;
+    return idx + 1; // include the last byte (crc)
 }
 
 uint8_t CROSSFIRE2MSP::getSrc()

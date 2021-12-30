@@ -15,9 +15,9 @@
 #define CRSF_MSP_LEN_TO_ENCAP_FRAME_OFFSET (CRSF_MAX_PACKET_LEN - CRSF_MSP_MAX_BYTES_PER_CHUNK) // equals 7
 // <sync><crsf_len><crsf_cmd><dst><source><header><msp_len><msp_cmd>
 
-#define MSP_V1_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 3)       // doesn't include $M< header
-#define MSP_V1_JUMBO_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 5) // extra 2 bytes for jumbo frame
-#define MSP_V2_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 6)       // doesn't include $X< header
+#define MSP_V1_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 2)       // doesn't include $M< header
+#define MSP_V1_JUMBO_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 4) // extra 2 bytes for jumbo frame
+#define MSP_V2_FRAME_LEN_FROM_PAYLOAD_LEN(payload_len) ((payload_len) + 5)       // doesn't include $X< header
 
 typedef enum
 {
@@ -26,10 +26,3 @@ typedef enum
     MSP_FRAME_V1_JUMBO = 3,
     MSP_FRAME_UNKNOWN = 4,
 } MSPframeType_e;
-
-class MSP_COMMON
-{
-private:
-public:
-   
-};

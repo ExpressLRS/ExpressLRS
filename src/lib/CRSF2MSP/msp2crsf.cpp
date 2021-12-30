@@ -3,8 +3,6 @@
 
 extern GENERIC_CRC8 crsf_crc;
 
-MSP_COMMON MSP;
-
 MSP2CROSSFIRE::MSP2CROSSFIRE() {} // empty constructor
 
 void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, uint8_t seqNumber)
