@@ -197,6 +197,7 @@ const uint8_t *CROSSFIRE2MSP::getFrame()
 uint32_t CROSSFIRE2MSP::getFrameLen()
 {
     return idx + 1;
+    //return pktLen + 4;
 }
 
 uint8_t CROSSFIRE2MSP::getSrc()
