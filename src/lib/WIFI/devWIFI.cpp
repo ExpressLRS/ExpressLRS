@@ -186,8 +186,8 @@ void MSP2WIFI(const char *msg, uint32_t len)
   else
   {
     //DBGLN("MSP2WIFI: can't send");
-    //delay(100);
-    //MSP2WIFI(msg, len);
+    delay(50);
+    MSP2WIFI(msg, len);
   }
   // WifiToMspServer->textAll(msg, len);
   // ws.textAll(msg, len);
