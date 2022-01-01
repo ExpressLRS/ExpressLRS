@@ -11,36 +11,37 @@ CROSSFIRE2MSP::CROSSFIRE2MSP()
 void CROSSFIRE2MSP::reset()
 {
     // clean state
-    memset(outBuffer, 0x0, MSP_FRAME_MAX_LEN);
+    // memset(outBuffer, 0x0, MSP_FRAME_MAX_LEN);
     pktLen = 0;
     idx = 0;
-    seqNumber = 0;
-    seqNumberPrev = 0;
     frameComplete = false;
     MSPvers = MSP_FRAME_UNKNOWN;
 }
 
-void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
+void CROSSFIRE2MSP::parse(const uint8_t *data)
 {
     uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     bool error = isError(data);
     bool newFrame = isNewFrame(data);
-    // std::cout << "CRSFpayloadLen: " << std::hex << (int)CRSFpayloadLen << std::endl;
+
     bool seqError;
     seqNumber = getSeqNumber(data);
-    ((seqNumberPrev + 1) % 0b1111) == seqNumber ? seqError = false : seqError = true;
+    uint8_t SeqNumberNext;
+
+    SeqNumberNext = (seqNumberPrev + 1) & 0b1111;
+    SeqNumberNext == seqNumber ? seqError = false : seqError = true;
+    seqNumberPrev = seqNumber;
 
     if ((!newFrame && seqError) || error)
     {
+        DBGLN("Seq Error! Len: %d Sgot: %d Sxpt: %d", pktLen, seqNumber, SeqNumberNext);
         reset();
-        DBGLN("CROSSFIRE2MSP: error or seq error");
         return;
     }
 
     if (newFrame) // single packet or first chunk of series of packets
     {
-        idx = 3; // skip the header
-        memset(outBuffer, 0, sizeof(outBuffer));
+        idx = 3; // skip the header start wiring at offset 3.
         MSPvers = getVersion(data);
         src = data[CRSF_MSP_SRC_OFFSET];
         dest = data[CRSF_MSP_DEST_OFFSET];
@@ -51,16 +52,8 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         memcpy(&outBuffer[0], header, sizeof(header));
         pktLen = getFrameLen(data, MSPvers);
 
-        if (pktLen > CRSF_MSP_MAX_BYTES_PER_CHUNK)
-        { // we end up here if we have a chunked message
-            memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], CRSFpayloadLen);
-            idx += CRSFpayloadLen;
-        }
-        else
-        { // fits in a single CRSF frame
-            memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], pktLen);
-            idx += pktLen;
-        }
+        memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], CRSFpayloadLen);
+        idx += CRSFpayloadLen;
     }
     else
     { // process the next chunk of MSP frame
@@ -74,14 +67,20 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, uint8_t len)
         idx += minLen;
     }
 
-    seqNumberPrev = seqNumber;
-
-    if ((idx - 3) == pktLen) // we have a complete MSP frame, -3 because the header isn't counted
+    const uint8_t idxSansHeader = idx - 3;
+    if (idxSansHeader == pktLen) // we have a complete MSP frame, -3 because the header isn't counted
     {
-        frameComplete = true;
         // we need to overwrite the CRSF checksum with the MSP checksum
         uint8_t crc = getChecksum(outBuffer, pktLen, MSPvers);
         outBuffer[idx] = crc;
+        frameComplete = true;
+        FIFOout.push(idx + 1);
+        FIFOout.pushBytes(outBuffer, idx + 1);
+    }
+    else if (idxSansHeader > pktLen)
+    {
+        DBGLN("Got too much data! Len: %d got: %d", pktLen, idxSansHeader);
+        reset();
     }
 }
 

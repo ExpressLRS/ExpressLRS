@@ -166,46 +166,116 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+char MSPOut[300] = {0};
+uint32_t MSPoutLen = 0;
+bool MSPneedsSending = false;
+uint32_t MSPsendTimeout;
+
+// void MSP2WIFIhandleDelayed()
+// {
+//   if (crsf.crsf2msp.FIFOout.size() > 0)
+//   {
+//     uint32_t len = crsf.crsf2msp.FIFOout.peek();
+//     if ((MSPclient->space() > len) && MSPclient->canSend())
+//     {
+//       uint8_t data[len];
+//       crsf.crsf2msp.FIFOout.pop(); // pop off the length byte
+//       crsf.crsf2msp.FIFOout.popBytes(data, len);
+//       MSPclient->add((const char *)data, len);
+//       MSPclient->send();
+//       MSPneedsSending = false;
+//     }
+//   }
+// }
+
+
+void MSP2WIFIhandleDelayed()
+{
+  if (crsf.crsf2msp.FIFOout.size() > 0)
+  {
+    if ((MSPclient->space() > crsf.crsf2msp.FIFOout.peek()) && MSPclient->canSend())
+    {
+      uint32_t len = crsf.crsf2msp.FIFOout.pop();
+      uint8_t data[len];
+      crsf.crsf2msp.FIFOout.popBytes(data, len);
+      MSPclient->add((const char *)data, len);
+      MSPclient->send();
+    }
+  }
+}
+
+                // if (crsf.crsf2msp.isFrameReady())
+                // {
+                //     uint32_t length = crsf.crsf2msp.getFrameLen();
+                //     const uint8_t *frame = crsf.crsf2msp.getFrame();
+                //     uint8_t buffer[length];
+                //     memcpy(buffer, frame, length);
+
+                //     if (crsf.msp2crsf.validate(buffer, length))
+                //     {
+                //         MSP2WIFI((const char *)buffer, length);
+                //         crsf.crsf2msp.reset();
+                //         DBGLN("$MSP RESP L: %d", length);
+                //     }
+                //     else
+                //     {
+                //         DBGLN("Frame Validation Err");
+                //     }
+
+
+
+
+
+
+
+
+
+
+// void MSP2WIFIhandleDelayed()
+// {
+//   if (millis() < MSPsendTimeout && MSPneedsSending)
+//   {
+//     if ((MSPclient->space() > MSPoutLen) && MSPclient->canSend())
+//     {
+//       MSPclient->add(MSPOut, MSPoutLen);
+//       MSPclient->send();
+//       MSPneedsSending = false;
+//       //uint32_t delay = (millis() - (MSPsendTimeout - 750));
+//       //DBGLN("RtrySucces Aft: %d", delay);
+//     }
+//   }
+//   else
+//   {
+//     MSPneedsSending = false;
+//   }
+// }
+
 void MSP2WIFI(const char *msg, uint32_t len)
 {
-  // if (wsConnected)
-  //{
-  //  reply to client
-  // while (MSPclient->space() < len)
-  // {
-  //   DBGLN("MSP2WIFI: waiting for space");
-  //   delay(500);
-  //   MSP2WIFI(msg, len);
-  // }
-
-  if (MSPclient->space() > len && MSPclient->canSend())
+  if ((MSPclient->space() > len) && MSPclient->canSend() && !MSPneedsSending)
   {
     MSPclient->add(msg, len);
     MSPclient->send();
   }
   else
   {
-    //DBGLN("MSP2WIFI: can't send");
-    delay(50);
-    MSP2WIFI(msg, len);
+    MSPsendTimeout = millis() + 750;
+    MSPneedsSending = true;
+    MSPoutLen = len;
+    memcpy(MSPOut, msg, len);
   }
-  // WifiToMspServer->textAll(msg, len);
-  // ws.textAll(msg, len);
-  //}
 }
 
 AsyncWebSocketClient *wsClient = NULL;
-
 
 void WSnotifyAll(const char *msg, int len)
 {
   if (wsConnected)
   {
-    //ws.textAll(msg, len);
+    // ws.textAll(msg, len);
     wsClient->text(msg, len);
   }
 }
-
 
 void WSonEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -639,68 +709,18 @@ static bool CompareArrays(uint8_t *a, uint8_t *b, uint8_t len)
 
 static void handleData(void *arg, AsyncClient *client, void *data, size_t len)
 {
-  //Serial.printf("\n data received from client %s \n", client->remoteIP().toString().c_str());
-  //Serial.write((uint8_t *)data, len);
-
-
-  // if (millis() - CompArrayTimeMillis > CompArrayTimeout)
-  // {
-  //   CompArrayTimeMillis = millis();
-  //   MSPprevCmd[0] = 0;
-  // }
-
-  // Ask the CRSF class to send the encapsulated packet to the stream
-  // mspPacket_t MSPpacket;
-  // MSPpacket.reset();
-
-  // for (size_t i = 0; i < len; i++) {
-  //    //MSPpacket.addByte(data[i]);
-  // }
-
-  // crsf.AddMspMessage(&MSPpacket);
-  // if (crsf.msp2crsf.FIFOout.size() > 0)
-  // {
-  //   DBGLN("MSP REQ WHILE MSP BUSY");
-  //   return;
-  // }
-
-  //if (millis() - lastMSPmillis > MSPintervalLimit)
- // {
-   // lastMSPmillis = millis();
-    
- // }
-
-  // if ((CompareArrays((uint8_t *)data, MSPprevCmd, len) == false) || (millis() - CompArrayTimeMillis > CompArrayTimeout)) // don't send the same CMD again, wait a sec.
-  // {
-  //   CompArrayTimeMillis = millis();
-  //   memcpy(MSPprevCmd, (uint8_t *)data, len);
-   crsf.msp2crsf.parse((uint8_t *)data, len);
-
-    if (crsf.msp2crsf.FIFOout.size() > 0)
-    {
-      MSPclient = client;
-      DBGLN("$Q L: %d", crsf.msp2crsf.FIFOout.size());
-    }
-  // }
-  // else
-  // {
-  //   DBGLN("Skip MSP CMD");
-  // }
-
-    // // int i = 0;
-    // char buf[len * 3];
-    // for (size_t i = 0; i < len; i++)
-    //   sprintf(&buf[3 * i], " %02hhX", localData[i]);
-    // DBGLN(buf);
+  bool validated = crsf.msp2crsf.validate((uint8_t *)data, len);
   
+  if (validated)
+  {
+    crsf.msp2crsf.parse((uint8_t *)data, len);
+  }
 
-  // reply to client
-  // if (client->space() > 32 && client->canSend()) {
-  // 	char reply[32];
-  // 	sprintf(reply, "this is from %s", SERVER_HOST_NAME);
-  // 	client->add(reply, strlen(reply));
-  // 	client->send();
-  // }
+  if ((crsf.msp2crsf.FIFOout.size() > 0) && validated)
+  {
+    MSPclient = client;
+    // DBGLN("$MSP REQ  L: %d", crsf.msp2crsf.FIFOout.size());
+  }
 }
 
 static void handleDisconnect(void *arg, AsyncClient *client)

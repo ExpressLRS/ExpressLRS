@@ -6,5 +6,6 @@
 extern device_t WIFI_device;
 void WSnotifyAll(const char *msg, int len);
 void MSP2WIFI(const char *msg, uint32_t len);
+void MSP2WIFIhandleDelayed();
 #define HAS_WIFI
 #endif

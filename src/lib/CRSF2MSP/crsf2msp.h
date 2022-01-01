@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include "FIFO_GENERIC.h"
 #include "crsfmsp_common.h"
 #include "crc.h"
 #include "logging.h"
@@ -23,8 +24,6 @@ private:
     uint8_t dest;           // destination of the msp frame (from CRSF ext header)
     MSPframeType_e MSPvers; // need to store the MSP version since it can only be inferred from the first frame
 
-    void reset();
-
     bool isNewFrame(const uint8_t *data);
     bool isError(const uint8_t *data);
 
@@ -36,10 +35,12 @@ private:
 
 public:
     CROSSFIRE2MSP();
-    void parse(const uint8_t *data, uint8_t len); // accept crsf frame input
+    FIFO_GENERIC<1024> FIFOout;
+    void parse(const uint8_t *data); // accept crsf frame input
     bool isFrameReady();
     const uint8_t *getFrame();
     uint32_t getFrameLen();
+    void reset();
     uint8_t getSrc();
     uint8_t getDest();
 };

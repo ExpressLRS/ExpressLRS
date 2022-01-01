@@ -270,25 +270,37 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 //     sprintf(&buf[3 * i], " %02hhX", package[i]);
                 // DBGLN(buf);
 
-                crsf.crsf2msp.parse(package, CRSFframeLen);
+                crsf.crsf2msp.parse(package);
 
-                if (crsf.crsf2msp.isFrameReady())
-                {
-                    uint32_t length = crsf.crsf2msp.getFrameLen();
-                    const uint8_t *frame = crsf.crsf2msp.getFrame();
-                    MSP2WIFI((const char *)frame, length);
+                // if (crsf.crsf2msp.isFrameReady())
+                // {
+                //     uint32_t length = crsf.crsf2msp.getFrameLen();
+                //     const uint8_t *frame = crsf.crsf2msp.getFrame();
+                //     uint8_t buffer[length];
+                //     memcpy(buffer, frame, length);
 
-                    DBGLN("$R L: %d", length);
-                    // char buf[length * 3];
-                    // uint32_t i = 0;
-                    // for (i = 0; i < length; i++)
-                    //     sprintf(&buf[3 * i], " %02hhX", frame[i]);
-                    // DBGLN(buf);
+                //     if (crsf.msp2crsf.validate(buffer, length))
+                //     {
+                //         MSP2WIFI((const char *)buffer, length);
+                //         crsf.crsf2msp.reset();
+                //         DBGLN("$MSP RESP L: %d", length);
+                //     }
+                //     else
+                //     {
+                //         DBGLN("Frame Validation Err");
+                //     }
+
+                    
+                //     // char buf[length * 3];
+                //     // uint32_t i = 0;
+                //     // for (i = 0; i < length; i++)
+                //     //     sprintf(&buf[3 * i], " %02hhX", frame[i]);
+                //     // DBGLN(buf);
 
                     
 
-                    //return true;
-                }
+                //     return true;
+                // }
                 // there is already another response stored
                 if (payloadTypes[targetIndex].updated)
                 {

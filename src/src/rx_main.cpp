@@ -1217,13 +1217,7 @@ void loop()
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
-        //checkSendLinkStatsToFc(now);
-        if(now - lastKeepAlive > keepAliveInterval)
-        {
-            lastKeepAlive = millis();
-            //crsf.sendRCFrameToFC();
-            //DBGLN("keepalive");
-        }
+        MSP2WIFIhandleDelayed();
     }
 
     devicesUpdate(now);

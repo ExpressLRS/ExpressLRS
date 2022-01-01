@@ -819,33 +819,25 @@ bool CRSF::UARTwdt()
 bool CRSF::RXhandleUARTout()
 {
     bool retVal = false;
-    if (msp2crsf.FIFOout.peek() > 0)
+    // don't write more than 256 bytes at a time to aviod RX buffer overflow
+    uint32_t bytesWritten = 0;
+    while (msp2crsf.FIFOout.size() > 0 && bytesWritten < 256)
     {
         //noInterrupts();
-        sendLinkStatisticsToFC();
+        //sendLinkStatisticsToFC();
         uint8_t OutPktLen = msp2crsf.FIFOout.pop();
         uint8_t OutData[OutPktLen];
         msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-        SerialOutFIFO.push(OutPktLen);
-        SerialOutFIFO.pushBytes(OutData, OutPktLen);
-        //SerialOutFIFO.push(OutPktLen);
-        //SerialOutFIFO.pushBytes(OutData, OutPktLen);
-        //interrupts();
-        //this->_dev->write(OutData, OutPktLen); // write the packet out
-
-        // use sprintf to print the hex representation of the packet
-        //DBGLN("UART->OUT: %d VAL:", OutPktLen);
-        // char buf[OutPktLen*3];
-        // for (size_t i = 0; i < OutPktLen; i++)
-        //     sprintf(&buf[3 * i], " %02hhX", OutData[i]);
-        // DBGLN(buf);
+        this->_dev->write(OutData, OutPktLen); // write the packet out
+        bytesWritten += OutPktLen;
+        retVal = true;
     }
     
 #if !defined(CRSF_RCVR_NO_SERIAL)
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
+    //peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
+    if (SerialOutFIFO.peek() > 0)
     {
-        if (SerialOutFIFO.size() > (peekVal))
+        if (SerialOutFIFO.size() > SerialOutFIFO.peek())
         {
             noInterrupts();
             uint8_t OutPktLen = SerialOutFIFO.pop();
@@ -856,9 +848,6 @@ bool CRSF::RXhandleUARTout()
             retVal = true;
         }
     }
-
-    uint8_t lastMSP[512];
-    uint32_t lastMSPLen = 0;
 
 
 
