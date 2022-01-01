@@ -10,7 +10,7 @@ using namespace std;
 #if CRSF_RX_MODULE
 
 #include "CRSF.h"
-#include "devWifi.h"
+#include "devWIFI.h"
 
 extern CRSF crsf;
 

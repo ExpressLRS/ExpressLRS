@@ -936,6 +936,11 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
     }
 }
 
+void CRSF::sendRawMSPFrameToFC(uint8_t *data, uint8_t dataSize)
+{
+    msp2crsf.parse(data, dataSize);
+}
+
 #endif // CRSF_RX_MODULE
 
 void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
@@ -963,9 +968,4 @@ void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t fr
     uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
 
     frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
-}
-
-void CRSF::sendRawMSPFrameToFC(uint8_t *data, uint8_t dataSize)
-{
-    msp2crsf.parse(data, dataSize);
 }
