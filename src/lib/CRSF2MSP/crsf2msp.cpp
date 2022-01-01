@@ -67,14 +67,14 @@ void CROSSFIRE2MSP::parse(const uint8_t *data)
         idx += minLen;
     }
 
-    const uint8_t idxSansHeader = idx - 3;
+    const uint16_t idxSansHeader = idx - 3;
     if (idxSansHeader == pktLen) // we have a complete MSP frame, -3 because the header isn't counted
     {
         // we need to overwrite the CRSF checksum with the MSP checksum
         uint8_t crc = getChecksum(outBuffer, pktLen, MSPvers);
         outBuffer[idx] = crc;
         frameComplete = true;
-        FIFOout.push(idx + 1);
+        FIFOout.pushSize(idx + 1);
         FIFOout.pushBytes(outBuffer, idx + 1);
     }
     else if (idxSansHeader > pktLen)

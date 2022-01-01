@@ -144,6 +144,30 @@ public:
         return numElements;
     }
 
+    void pushSize(uint16_t size)
+    {
+        push(size & 0xFF);
+        push((size >> 8) & 0xFF);
+    }
+
+    int32_t peekSize()
+    {
+        if (size()>1)
+        {
+            return (int32_t)buffer[head] + ((int32_t)buffer[(head+1) % FIFO_SIZE] << 8);
+        }
+        return -1;
+    }
+
+    int32_t popSize()
+    {
+        if (size() > 1)
+        {
+            return (int32_t)pop() + ((int32_t)pop() << 8);
+        }
+        return -1;
+    }
+
     void flush()
     {
         head = 0;

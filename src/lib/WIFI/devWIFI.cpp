@@ -190,11 +190,12 @@ uint32_t MSPsendTimeout;
 
 void MSP2WIFIhandleDelayed()
 {
-  if (crsf.crsf2msp.FIFOout.size() > 0)
+  int32_t size = crsf.crsf2msp.FIFOout.peekSize();
+  if (size != -1 && crsf.crsf2msp.FIFOout.size() >= size+2)
   {
-    if ((MSPclient->space() > crsf.crsf2msp.FIFOout.peek()) && MSPclient->canSend())
+    if ((MSPclient->space() > size) && MSPclient->canSend())
     {
-      uint32_t len = crsf.crsf2msp.FIFOout.pop();
+      int32_t len = crsf.crsf2msp.FIFOout.popSize();
       uint8_t data[len];
       crsf.crsf2msp.FIFOout.popBytes(data, len);
       MSPclient->add((const char *)data, len);
