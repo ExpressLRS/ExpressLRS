@@ -403,6 +403,31 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   }
 }
 
+volatile uint32_t RxStartTimeCCA = 0;
+
+void ICACHE_RAM_ATTR BeginClearChannelAssessment()
+{
+  // Listen Before Talk (LBT) aka clear channel assessment (CCA)
+  // Start RX early because it takes about 90us from RX enable to 
+  // valid instant RSSI values are returned.
+  // Not interested in packets or interrupts while measuring RF energy on channel.
+
+  RxStartTimeCCA = micros();
+  Radio.SetDioIrqParams(SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  Radio.RXnb();
+}
+
+bool ICACHE_RAM_ATTR ChannelIsClear()
+{
+  while(micros() - RxStartTimeCCA < 100);
+  int8_t rssiResult = Radio.GetRssiInst();
+
+  Radio.SetTxIdleMode();
+  Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+  Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  return rssiResult < -70;
+}
+
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   uint32_t now = millis();
@@ -473,7 +498,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  Radio.TXnb();
+  if(ChannelIsClear())
+  {
+    Radio.TXnb();
+  }
+  else
+  {
+    // Emulate that TX just happened, even if it didn't because CCA failed
+    Radio.TXdoneCallback();
+  }
 }
 
 /*
@@ -500,23 +533,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     return;
   }
 
-  // Listen Before Talk - Check instant RSSI reading and abort TX if energy detected
-  // wait necessary listen window (see ETSI EN 300 328) (largest of 18us or 0.2% of tx air time on one freq)
-  // Call getRssiInst while waiting, if any value above threshold, return and wait for next tx window
-  Radio.RXnb();
-  delay(20);
-  uint32_t rxStartTime = micros();
-  int8_t RssiInst;
-  do
-  {
-    RssiInst = Radio.GetRssiInst();
-    if(RssiInst > -88)
-    {
-      Radio.SetTxIdleMode();
-      return;
-    }
-  } while (micros() - rxStartTime < 100); // 100us for testing
-  Radio.SetTxIdleMode();
+  BeginClearChannelAssessment();
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
@@ -527,6 +544,12 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     busyTransmitting = true;
     SendRCdataToRF();
   }
+  else
+  {
+  // End clear channel assessment by checking status
+  ChannelIsClear();
+  }
+
 }
 
 /*
