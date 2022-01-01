@@ -199,7 +199,7 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
 
         header[0] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 2;
         header[2] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
-        uint8_t crc = crsf_crc.calc(&header[3], sizeof(header) - 3, 0x00); // don't include the MSP header
+        uint8_t crc = crsf_crc.calc(&header[3], sizeof(header) - 3); // don't include the MSP header
         crc = crsf_crc.calc(&payload[startIdx], CRSFpktLen, crc);
         FIFOout.pushBytes(header, sizeof(header));
         FIFOout.pushBytes(&payload[startIdx], CRSFpktLen);

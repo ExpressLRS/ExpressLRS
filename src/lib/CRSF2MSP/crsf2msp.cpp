@@ -146,7 +146,7 @@ uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, const uint32_t len, MSPf
     }
     else if (mspVersion == MSP_FRAME_V2)
     {
-        checkSum = crsf_crc.calc(&data[startIdx], len, 0x00);
+        checkSum = crsf_crc.calc(&data[startIdx], len);
     }
     else
     {
