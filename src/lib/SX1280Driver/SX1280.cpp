@@ -75,7 +75,7 @@ bool SX1280Driver::Begin()
     SetFIFOaddr(0x00, 0x00);                                                                                                      //Config FIFO addr
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
 #if defined(USE_SX1280_DCDC)
-    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, 0x01);     // Enable DCDC converter instead of LDO
+    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
 #endif
     return true;
 }
