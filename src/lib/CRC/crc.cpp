@@ -20,7 +20,7 @@ uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t data)
     return crc8tab[data];
 }
 
-uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t *data, uint8_t len, uint16_t crc)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t *data, uint16_t len, uint8_t crc)
 {
     while (len--)
     {
