@@ -30,10 +30,6 @@ static void eepromWriteToMSPOut()
     mspPacket_t packet;
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
-    packet.addByte(0);
-    packet.addByte(0);
-    packet.addByte(0);
-    packet.addByte(0);
 
     crsf.AddMspMessage(&packet);
 }
@@ -49,8 +45,10 @@ static void VtxConfigToMSPOut()
     packet.function = MSP_SET_VTX_CONFIG;
     packet.addByte(vtxIdx);
     packet.addByte(0);
-    packet.addByte(config.GetVtxPower());
-    packet.addByte(config.GetVtxPitmode());
+    if (config.GetVtxPower()) {
+        packet.addByte(config.GetVtxPower());
+        packet.addByte(config.GetVtxPitmode());
+    }
 
     crsf.AddMspMessage(&packet);
     msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
