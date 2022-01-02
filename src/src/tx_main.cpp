@@ -78,6 +78,7 @@ volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
 LQCALC<10> LQCalc;
+LQCALC<100> LBTSuccessCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
@@ -498,8 +499,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
+  // Repurposed downlink LQ for LBT success ratio, update before incremented
+  crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
+  LBTSuccessCalc.inc();
   if(ChannelIsClear())
   {
+    LBTSuccessCalc.add();
     Radio.TXnb();
   }
   else
@@ -527,8 +532,9 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   // Skip transmitting on this slot
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
-    TelemetryRcvPhase = ttrpTransmitting;
-    crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    TelemetryRcvPhase = ttrpWindowInProgress;
+    // Repurposed downlink LQ for LBT success ratio
+    //crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }
