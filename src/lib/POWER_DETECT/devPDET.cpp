@@ -12,40 +12,51 @@
 #define PDET_HYSTERESIS        0.7
 #define PDET_SAMPLE_PERIOD     1000
 #define PDET_BUSY_PERIOD       999 // 999 to shift the next measurement time into a transmission period.
-#define PDET_SETTLE_PERIOD     5000
 
 extern bool busyTransmitting;
+float Pdet = 0;
+uint8_t currentPowerdBm = 0;
 
 static int start()
 {
     analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
-    return PDET_SETTLE_PERIOD;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
 {
     if (!busyTransmitting) return PDET_BUSY_PERIOD;
 
-    uint16_t Pdet = analogReadMilliVolts(GPIO_PIN_PA_PDET);
+    float newPdet = analogReadMilliVolts(GPIO_PIN_PA_PDET);
 
     if (!busyTransmitting) return PDET_BUSY_PERIOD; // Check transmission did not stop during Pdet measurement.
 
+    if (!Pdet || currentPowerdBm != POWERMGNT::getPowerIndBm())
+    {
+        Pdet = newPdet;
+        currentPowerdBm = POWERMGNT::getPowerIndBm();
+    }
+    else
+    {
+        Pdet = Pdet * 0.9 + newPdet * 0.1; // IIR filter
+    }
+
     float dBm = SKY85321_PDET_SLOPE * Pdet + SKY85321_PDET_INTERCEPT;
     
-    INFOLN("Pdet = %d mV", Pdet);
+    INFOLN("Pdet = %d mV", (uint16_t)Pdet);
     // INFOLN("%d dBm", dBm); // how do we print floats? :|
-    LOGGING_UART.print(dBm, 2);
-    LOGGING_UART.println(" dBm");
+    // LOGGING_UART.print(dBm, 2);
+    // LOGGING_UART.println(" dBm");
 
     if (dBm < ((float)(POWERMGNT::getPowerIndBm()) - PDET_HYSTERESIS) && POWERMGNT::currentSX1280Ouput() < SKY85321_MAX_DBM_INPUT)
     {
         POWERMGNT::incSX1280Ouput();
-        return PDET_SETTLE_PERIOD; // Settle period
+        Pdet = 0;
     }
     else if (dBm > (POWERMGNT::getPowerIndBm() + PDET_HYSTERESIS))
     {
         POWERMGNT::decSX1280Ouput();
-        return PDET_SETTLE_PERIOD;
+        Pdet = 0;
     }
 
     return PDET_SAMPLE_PERIOD;
