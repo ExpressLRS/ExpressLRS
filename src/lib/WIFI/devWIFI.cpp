@@ -187,49 +187,47 @@ uint32_t MSPsendTimeout;
 //   }
 // }
 
-
 void MSP2WIFIhandleDelayed()
 {
-  int32_t size = crsf.crsf2msp.FIFOout.peekSize();
-  if (size != -1 && crsf.crsf2msp.FIFOout.size() >= size+2)
+  // int32_t size = crsf.crsf2msp.FIFOout.peekSize();
+  if (crsf.crsf2msp.FIFOout.peekSize() > 0)
   {
-    if ((MSPclient->space() > size) && MSPclient->canSend())
+    if ((MSPclient->space() > crsf.crsf2msp.FIFOout.peekSize()))
     {
-      int32_t len = crsf.crsf2msp.FIFOout.popSize();
+      const uint16_t len = crsf.crsf2msp.FIFOout.popSize();
+      // DBGLN("Size: %d", len);
+      // DBGLN(len);
       uint8_t data[len];
       crsf.crsf2msp.FIFOout.popBytes(data, len);
       MSPclient->add((const char *)data, len);
-      MSPclient->send();
+      // if (len > 100)
+      //{
+      if (MSPclient->canSend())
+      {
+        MSPclient->send();
+      }
+      //}
     }
   }
 }
 
-                // if (crsf.crsf2msp.isFrameReady())
-                // {
-                //     uint32_t length = crsf.crsf2msp.getFrameLen();
-                //     const uint8_t *frame = crsf.crsf2msp.getFrame();
-                //     uint8_t buffer[length];
-                //     memcpy(buffer, frame, length);
+// if (crsf.crsf2msp.isFrameReady())
+// {
+//     uint32_t length = crsf.crsf2msp.getFrameLen();
+//     const uint8_t *frame = crsf.crsf2msp.getFrame();
+//     uint8_t buffer[length];
+//     memcpy(buffer, frame, length);
 
-                //     if (crsf.msp2crsf.validate(buffer, length))
-                //     {
-                //         MSP2WIFI((const char *)buffer, length);
-                //         crsf.crsf2msp.reset();
-                //         DBGLN("$MSP RESP L: %d", length);
-                //     }
-                //     else
-                //     {
-                //         DBGLN("Frame Validation Err");
-                //     }
-
-
-
-
-
-
-
-
-
+//     if (crsf.msp2crsf.validate(buffer, length))
+//     {
+//         MSP2WIFI((const char *)buffer, length);
+//         crsf.crsf2msp.reset();
+//         DBGLN("$MSP RESP L: %d", length);
+//     }
+//     else
+//     {
+//         DBGLN("Frame Validation Err");
+//     }
 
 // void MSP2WIFIhandleDelayed()
 // {
@@ -710,17 +708,23 @@ static bool CompareArrays(uint8_t *a, uint8_t *b, uint8_t len)
 static void handleData(void *arg, AsyncClient *client, void *data, size_t len)
 {
   bool validated = crsf.msp2crsf.validate((uint8_t *)data, len);
-  
+
   if (validated)
   {
-    crsf.msp2crsf.parse((uint8_t *)data, len);
+    crsf.msp2crsf.parse((uint8_t *)data, (uint32_t)len);
   }
+  // else
+  // {
+  //   DBGLN("E: %d", (uint32_t)len);
+  // }
 
-  if ((crsf.msp2crsf.FIFOout.size() > 0) && validated)
-  {
-    MSPclient = client;
-    // DBGLN("$MSP REQ  L: %d", crsf.msp2crsf.FIFOout.size());
-  }
+  //DBGLN("S: %d", (uint32_t)len);
+
+  // if ((crsf.msp2crsf.FIFOout.size() > 0) && validated)
+  //{
+  MSPclient = client;
+  // DBGLN("$MSP REQ  L: %d", crsf.msp2crsf.FIFOout.size());
+  //}
 }
 
 static void handleDisconnect(void *arg, AsyncClient *client)

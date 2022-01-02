@@ -27,6 +27,9 @@ const uint8_t MSPV1_JUMBO_289[] = {36, 77, 62, 255, 116, 25, 1, 65, 82, 77, 59, 
 
 const uint8_t MSP_BOARD_INFO_81[] = {36, 77, 62, 75, 4, 83, 52, 48, 53, 0, 0, 2, 55, 9, 83, 84, 77, 51, 50, 70, 52, 48, 53, 9, 79, 77, 78, 73, 66, 85, 83, 70, 52, 4, 65, 73, 82, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+// MSPV2 46b
+const uint8_t MSPV2_SERIAL_SETTINGS[] = {0x24, 0x58, 0x3C, 0x00, 0x0A, 0x10, 0x25, 0x00, 0x04, 0x14, 0x01, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x00, 0x40, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x7B};
+
 void printBufferhex(const uint8_t *buf, int len)
 {
     cout << "len: " << dec << (int)len << " [ ";
@@ -70,7 +73,7 @@ void runTest(const uint8_t *frame, int frameLen)
         uint8_t sizeOut = msp2crsf.FIFOout.pop();
         uint8_t crsfFrame[64];
         msp2crsf.FIFOout.popBytes(crsfFrame, sizeOut);
-        crsf2msp.parse(crsfFrame, sizeOut);
+        crsf2msp.parse(crsfFrame);
     }
 
     // if (crsf2msp.isFrameReady())
@@ -142,6 +145,16 @@ void MSP_BOARD_INFO_81_TEST()
     // cout << endl;
 }
 
+void MSPV2_SERIAL_SETTINGS_TEST()
+{
+    // cout << "Testing MSPV2 within MSPV1 Hello World" << endl;
+    runTest(MSPV2_SERIAL_SETTINGS, sizeof(MSPV2_SERIAL_SETTINGS));
+    // cout << endl;
+}
+
+
+
+
 main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -154,6 +167,7 @@ main(int argc, char **argv)
     RUN_TEST(MSPV1_81_TEST);
     RUN_TEST(MSPV1_JUMBO_289_TEST);
     RUN_TEST(MSP_BOARD_INFO_81_TEST);
+    RUN_TEST(MSPV2_SERIAL_SETTINGS_TEST);
 
     UNITY_END();
 

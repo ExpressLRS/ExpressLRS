@@ -11,7 +11,6 @@ CROSSFIRE2MSP::CROSSFIRE2MSP()
 void CROSSFIRE2MSP::reset()
 {
     // clean state
-    // memset(outBuffer, 0x0, MSP_FRAME_MAX_LEN);
     pktLen = 0;
     idx = 0;
     frameComplete = false;
@@ -62,18 +61,19 @@ void CROSSFIRE2MSP::parse(const uint8_t *data)
         // the solution is to use the minimum of the two lengths
         uint32_t a = (uint32_t)CRSFpayloadLen;
         uint32_t b = pktLen - (idx - 3);
-        uint8_t minLen = !(b < a) ? a : b;
+        uint32_t minLen = !(b < a) ? a : b;
         memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], minLen); // next chunk of data
         idx += minLen;
     }
 
     const uint16_t idxSansHeader = idx - 3;
-    if (idxSansHeader == pktLen) // we have a complete MSP frame, -3 because the header isn't counted
+    if (idxSansHeader >= pktLen) // we have a complete MSP frame, -3 because the header isn't counted
     {
         // we need to overwrite the CRSF checksum with the MSP checksum
         uint8_t crc = getChecksum(outBuffer, pktLen, MSPvers);
         outBuffer[idx] = crc;
         frameComplete = true;
+
         FIFOout.pushSize(idx + 1);
         FIFOout.pushBytes(outBuffer, idx + 1);
     }

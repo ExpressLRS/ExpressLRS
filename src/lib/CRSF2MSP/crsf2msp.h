@@ -35,7 +35,7 @@ private:
 
 public:
     CROSSFIRE2MSP();
-    FIFO_GENERIC<1024> FIFOout;
+    FIFO_GENERIC<MSP_FRAME_MAX_LEN> FIFOout;
     void parse(const uint8_t *data); // accept crsf frame input
     bool isFrameReady();
     const uint8_t *getFrame();

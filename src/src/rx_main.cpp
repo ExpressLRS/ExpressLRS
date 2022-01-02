@@ -880,6 +880,7 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
+    Serial.setRxBufferSize(512);
     Serial.begin(RCVR_UART_BAUD);
     #if defined(RCVR_INVERT_TX)
     USC0(UART0) |= BIT(UCTXI);
@@ -1213,12 +1214,12 @@ uint32_t lastKeepAlive = 0;
 void loop()
 {
     unsigned long now = millis();
-    HandleUARTin();
     if (hwTimer.running == false)
     {
-        crsf.RXhandleUARTout();
         MSP2WIFIhandleDelayed();
+        crsf.RXhandleUARTout();
     }
+    HandleUARTin();
 
     devicesUpdate(now);
 

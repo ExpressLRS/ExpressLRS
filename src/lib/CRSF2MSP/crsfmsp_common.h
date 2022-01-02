@@ -9,7 +9,7 @@
 #define CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET 5                            // For Ext Frame, playload is this much bigger than it says in the crsf frame
 #define CRSF_MSP_MAX_BYTES_PER_CHUNK 57                                     // Max bytes per MSP chunk in CRSF packet
 #define CRSF_MSP_TYPE_IDX 2                                                 // MSP type index in CRSF packet
-#define MSP_FRAME_MAX_LEN 384                                               // Max MSP frame length (increase as needed)
+#define MSP_FRAME_MAX_LEN 512                                               // Max MSP frame length (increase as needed)
 #define CRSF_MSP_OUT_BUFFER_DEPTH (MSP_FRAME_MAX_LEN / CRSF_MAX_PACKET_LEN) // Max number of CRSF frames to buffer
 
 #define CRSF_MSP_LEN_TO_ENCAP_FRAME_OFFSET (CRSF_MAX_PACKET_LEN - CRSF_MSP_MAX_BYTES_PER_CHUNK) // equals 7

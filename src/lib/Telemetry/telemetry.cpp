@@ -262,15 +262,16 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             // larger msp resonses are sent in two chunks so special handling is needed so both get sent
             if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)
             {
-                uint8_t CRSFframeLen = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] +2;
+                //uint8_t CRSFframeLen = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] +2;
 
-                // DBG("UART->RESP: %d VAL:", CRSFframeLen);
+                //DBGLN("UART->RESP: %d VAL:", CRSFframeLen);
                 // char buf[CRSFframeLen * 3];
                 // for (size_t i = 0; i < CRSFframeLen; i++)
                 //     sprintf(&buf[3 * i], " %02hhX", package[i]);
                 // DBGLN(buf);
 
                 crsf.crsf2msp.parse(package);
+                return false;
 
                 // if (crsf.crsf2msp.isFrameReady())
                 // {

@@ -40,7 +40,7 @@ private:
     uint32_t head;
     uint32_t tail;
     uint32_t numElements;
-    uint8_t buffer[FIFO_SIZE] = {0};
+    uint8_t buffer[FIFO_SIZE];
 
 public:
     FIFO_GENERIC()
@@ -144,28 +144,41 @@ public:
         return numElements;
     }
 
+    uint32_t free()
+    {
+        return (FIFO_SIZE - numElements);
+    }
+
     void pushSize(uint16_t size)
     {
         push(size & 0xFF);
         push((size >> 8) & 0xFF);
     }
 
-    int32_t peekSize()
-    {
-        if (size()>1)
-        {
-            return (int32_t)buffer[head] + ((int32_t)buffer[(head+1) % FIFO_SIZE] << 8);
-        }
-        return -1;
-    }
-
-    int32_t popSize()
+    uint16_t peekSize()
     {
         if (size() > 1)
         {
-            return (int32_t)pop() + ((int32_t)pop() << 8);
+            return buffer[head] + (buffer[(head + 1) % FIFO_SIZE] << 8);
         }
-        return -1;
+        else
+        {
+            return 0;
+        }
+    }
+
+    uint16_t popSize()
+    {
+        if (size() > 1)
+        {
+            uint8_t lower = pop();
+            uint8_t upper = pop();
+            return lower + (upper << 8);
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     void flush()
