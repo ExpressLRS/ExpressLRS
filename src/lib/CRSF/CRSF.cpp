@@ -27,6 +27,9 @@ Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
+CROSSFIRE2MSP CRSF::crsf2msp;
+MSP2CROSSFIRE CRSF::msp2crsf;
+
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
@@ -832,11 +835,24 @@ bool CRSF::UARTwdt()
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
+    bool retVal = false;
 #if !defined(CRSF_RCVR_NO_SERIAL)
-    uint8_t peekVal = SerialOutFIFO.peek(); // check if we have data in the output FIFO that needs to be written
-    if (peekVal > 0)
+    // don't write more than 256 bytes at a time to aviod RX buffer overflow
+    #define maxBytesPerCall 256
+    uint32_t bytesWritten = 0;
+    while (msp2crsf.FIFOout.size() > 0 && bytesWritten < maxBytesPerCall)
     {
-        if (SerialOutFIFO.size() > (peekVal))
+        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+        uint8_t OutData[OutPktLen];
+        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+        this->_dev->write(OutData, OutPktLen); // write the packet out
+        bytesWritten += OutPktLen;
+        retVal = true;
+    }
+    
+    if (SerialOutFIFO.peek() > 0 && bytesWritten < maxBytesPerCall)
+    {
+        if (SerialOutFIFO.size() > SerialOutFIFO.peek())
         {
             noInterrupts();
             uint8_t OutPktLen = SerialOutFIFO.pop();
@@ -844,11 +860,12 @@ bool CRSF::RXhandleUARTout()
             SerialOutFIFO.popBytes(OutData, OutPktLen);
             interrupts();
             this->_dev->write(OutData, OutPktLen); // write the packet out
-            return true;
+            bytesWritten += OutPktLen;
+            retVal = true;
         }
     }
 #endif // CRSF_RCVR_NO_SERIAL
-    return false;
+    return retVal;
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
