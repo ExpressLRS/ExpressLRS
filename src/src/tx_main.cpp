@@ -442,7 +442,7 @@ bool ICACHE_RAM_ATTR ChannelIsClear()
   Radio.SetTxIdleMode();
   Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
   Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  return rssiResult < PowerEnumToLBTLimit((PowerLevels_e)config.GetPower());
+  return rssiResult < PowerEnumToLBTLimit((PowerLevels_e)config.currPower());
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
