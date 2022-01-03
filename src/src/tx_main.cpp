@@ -404,6 +404,22 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   }
 }
 
+int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
+{
+    // Calculated from EN 300 328, assuming 800kHz BW for sx1280
+    // TL = -70 dBm/MHz + 10 × log10 (100 mW / Pout) (Pout in mW e.i.r.p.)
+    // Values above 100mW are not relevant, default to 100mW threshold
+    // TODO: This threshold should be modified with a config for antenna gain
+    switch(txPower)
+    {
+    case PWR_10mW: return -78;
+    case PWR_25mW: return -82;
+    case PWR_50mW: return -84;
+    case PWR_100mW: return -88;
+    default: return -88;
+    }
+}
+
 volatile uint32_t RxStartTimeCCA = 0;
 
 void ICACHE_RAM_ATTR BeginClearChannelAssessment()
@@ -413,20 +429,20 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment()
   // valid instant RSSI values are returned.
   // Not interested in packets or interrupts while measuring RF energy on channel.
 
-  RxStartTimeCCA = micros();
   Radio.SetDioIrqParams(SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
   Radio.RXnb();
+  RxStartTimeCCA = micros();
 }
 
 bool ICACHE_RAM_ATTR ChannelIsClear()
 {
-  while(micros() - RxStartTimeCCA < 100);
+  while(micros() - RxStartTimeCCA < ExpressLRS_currAirRate_RFperfParams->InstantRssiValidDelayUs);
   int8_t rssiResult = Radio.GetRssiInst();
 
   Radio.SetTxIdleMode();
   Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
   Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  return rssiResult < -70;
+  return rssiResult < PowerEnumToLBTLimit((PowerLevels_e)config.GetPower());
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
