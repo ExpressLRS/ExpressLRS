@@ -1213,13 +1213,13 @@ uint32_t lastKeepAlive = 0;
 
 void loop()
 {
+    HandleUARTin();
     unsigned long now = millis();
     if (hwTimer.running == false)
     {
         MSP2WIFIhandleDelayed();
         crsf.RXhandleUARTout();
     }
-    HandleUARTin();
 
     devicesUpdate(now);
 

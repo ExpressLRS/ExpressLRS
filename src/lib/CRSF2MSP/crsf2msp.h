@@ -18,7 +18,6 @@ private:
     uint32_t pktLen; // packet length of the incomming msp frame
     uint32_t idx;    // number of bytes received in the current msp frame
     uint8_t seqNumberPrev;
-    uint8_t seqNumber;
     bool frameComplete;
     uint8_t src;            // source of the msp frame (from CRSF ext header)
     uint8_t dest;           // destination of the msp frame (from CRSF ext header)

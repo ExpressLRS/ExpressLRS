@@ -127,7 +127,6 @@ uint32_t MSP2CROSSFIRE::getPayloadLen(const uint8_t *data, MSPframeType_e mspVer
             break;
         }
     }
-    // std::cout << "Packet Length: " << (int)packetLen << std::endl;
     return packetLen;
 }
 
@@ -204,15 +203,5 @@ bool MSP2CROSSFIRE::validate(const uint8_t *data, uint32_t expectLen)
     MSPframeType_e version = getVersion(data);
     uint32_t FrameLen = getFrameLen(getPayloadLen(data, version), version);
     FrameLen += 4; // +3 header, +1 crc;
-
-    //DBGLN("Expected: %d Got; %d", expectLen, FrameLen);
-
-    if (expectLen == FrameLen)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (expectLen == FrameLen) ? true : false;
 }

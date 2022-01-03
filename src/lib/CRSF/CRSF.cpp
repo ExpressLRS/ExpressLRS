@@ -821,8 +821,9 @@ bool CRSF::RXhandleUARTout()
     bool retVal = false;
 #if !defined(CRSF_RCVR_NO_SERIAL)
     // don't write more than 256 bytes at a time to aviod RX buffer overflow
+    #define maxBytesPerCall 256
     uint32_t bytesWritten = 0;
-    while (msp2crsf.FIFOout.size() > 0 && bytesWritten < 256)
+    while (msp2crsf.FIFOout.size() > 0 && bytesWritten < maxBytesPerCall)
     {
         uint8_t OutPktLen = msp2crsf.FIFOout.pop();
         uint8_t OutData[OutPktLen];
@@ -832,7 +833,7 @@ bool CRSF::RXhandleUARTout()
         retVal = true;
     }
     
-    if (SerialOutFIFO.peek() > 0 && bytesWritten < 256)
+    if (SerialOutFIFO.peek() > 0 && bytesWritten < maxBytesPerCall)
     {
         if (SerialOutFIFO.size() > SerialOutFIFO.peek())
         {
