@@ -280,7 +280,7 @@ void Screen::nextIndex(int &index, int action, int min, int max)
         index++;
     }
 
-    if(index < 0)
+    if(index < min)
     {
         index = max - 1;
     }
