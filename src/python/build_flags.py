@@ -61,6 +61,7 @@ def escapeChars(x):
         x = parts.group(1) + '="' + parts.group(2).translate(str.maketrans({
             "!": "\\\\\\\\041",
             "\"": "\\\\\\\\042",
+            "#": "\\\\\\\\043",
             "$": "\\\\\\\\044",
             "&": "\\\\\\\\046",
             "'": "\\\\\\\\047",
@@ -82,12 +83,12 @@ def condense_flags():
         # Some lines have multiple flags so this will split them and remove them all
         for flag in re.findall("!-D\s*[^\s]+", line):
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag which will just leave ! in their place
+    build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
     build_flags = [x.replace("!", "") for x in build_flags]  # remove the !
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
-    build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
 
 def version_to_env():
-    ver = elrs_helpers.get_git_version(env)
+    ver = elrs_helpers.get_git_version()
     env.Append(GIT_SHA = ver['sha'], GIT_VERSION= ver['version'])
 
 def regulatory_domain_to_env():
