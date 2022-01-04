@@ -8,7 +8,7 @@
 ## Support ExpressLRS
 If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate.
 
-![Open Collective backers](https://img.shields.io/opencollective/backers/expresslrs?label=Open%20Collective%20backers)
+[![Open Collective backers](https://img.shields.io/opencollective/all/expresslrs?label=Open%20Collective%20backers)](https://opencollective.com/expresslrs)
 
 ## Quick Start Guide
 If you have hardware that you want to flash, please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
