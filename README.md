@@ -6,8 +6,9 @@
  * [<img src="https://camo.githubusercontent.com/b079fe922f00c4b86f1b724fbc2e8141c468794ce8adbc9b7456e5e1ad09c622/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f6769746875622e737667" width="15" height="15"> Wiki](https://github.com/ExpressLRS/ExpressLRS/wiki)
 
 ## Support ExpressLRS
-If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate<br/><br/>
-[![Donate](https://img.shields.io/badge/Donate-PayPal-253B80.svg)](https://www.paypal.com/donate?hosted_button_id=FLHGG9DAFYQZU)
+If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate.
+
+![Open Collective backers](https://img.shields.io/opencollective/backers/expresslrs?label=Open%20Collective%20backers)
 
 ## Quick Start Guide
 If you have hardware that you want to flash, please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
