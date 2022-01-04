@@ -6,9 +6,11 @@
  * [<img src="https://camo.githubusercontent.com/b079fe922f00c4b86f1b724fbc2e8141c468794ce8adbc9b7456e5e1ad09c622/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f6769746875622e737667" width="15" height="15"> Wiki](https://github.com/ExpressLRS/ExpressLRS/wiki)
 
 ## Support ExpressLRS
-If you would like to support the development of ExpressLRS please feel free to make a small donation. This helps us buy hardware for porting, development and prototyping. Show your support for which new features you want added by leaving a message when you donate.
+Supporting ExpressLRS is as easy as contributing a feature, either code or just a fleshed out idea. Coding not your thing? Testing a Pull Request using the convenient Configurator tab and providing feedback is essential as well. We're all working together.
 
-[![Open Collective backers](https://img.shields.io/opencollective/all/expresslrs?label=Open%20Collective%20backers)](https://opencollective.com/expresslrs)
+If you don't have the time to contribute in that way, consider making a small donation. Donations are used to buy test equipment, software licenses, and certificates needed to further the project and make it securely accessible. ExpressLRS accepts donations through Open Collective, which provides recognition of donors and transparency on how that support is utilized.
+
+[![Open Collective backers](https://img.shields.io/opencollective/backers/expresslrs?label=Open%20Collective%20backers)](https://opencollective.com/expresslrs)
 
 ## Quick Start Guide
 If you have hardware that you want to flash, please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
