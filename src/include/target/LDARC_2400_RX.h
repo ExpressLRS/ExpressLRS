@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "BETAFPV 2G4RX"
+#define DEVICE_NAME "LDARC 2G4RX"
 #endif
 
 // GPIO pin definitions
