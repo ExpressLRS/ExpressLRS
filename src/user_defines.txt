@@ -36,6 +36,12 @@
 
 -DLOCK_ON_FIRST_CONNECTION
 
+# For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
+# dropped below the configured Fan Threshold. This prevents the fan from turning on and off every
+# few seconds if the power level is constantly changing.
+# Default is 60 seconds if not defined, value can be 0-254.
+#-DFAN_MIN_RUNTIME=60
+
 ### COMPATIBILITY OPTIONS: ###
 
 # Invert the TX/RX half-duplex pin in the transmitter code. Handset external
