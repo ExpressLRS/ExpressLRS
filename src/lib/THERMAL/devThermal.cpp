@@ -66,24 +66,50 @@ static void timeoutThermal()
 #endif // HAS_THERMAL
 }
 
+/***
+ * Checks the PowerFanThreshold vs CurrPower and enables the fan if at or above the threshold
+ * using a hysteresis. To turn on it must be at/above the threshold for a small time
+ * and then to turn off it must be below the threshold for FAN_MIN_RUNTIME intervals
+ ***/
 static void timeoutFan()
 {
 #if defined(HAS_FAN)
-    static uint8_t fanOnDuration;
+    static uint8_t fanStateDuration;
+    static bool fanIsOn;
+    bool fanShouldBeOn = POWERMGNT::currPower() >= (PowerLevels_e)config.GetPowerFanThreshold();
 
-    // Enable the fan if at or above the threshold
-    if (POWERMGNT::currPower() >= (PowerLevels_e)config.GetPowerFanThreshold())
+    if (fanIsOn)
     {
-        digitalWrite(GPIO_PIN_FAN_EN, HIGH);
-        fanOnDuration = 0;
-    }
-    // Disable the fan if it has been below the threshold for long enough
-    else
-    {
-        if (fanOnDuration < FAN_MIN_RUNTIME)
-            ++fanOnDuration;
+        if (fanShouldBeOn)
+        {
+            fanStateDuration = 0; // reset the timeout
+        }
+        else if (fanStateDuration < FAN_MIN_RUNTIME)
+        {
+            ++fanStateDuration; // counting to turn off
+        }
         else
+        {
+            // turn off expired
             digitalWrite(GPIO_PIN_FAN_EN, LOW);
+            fanStateDuration = 0;
+            fanIsOn = false;
+        }
+    }
+
+    else if (fanShouldBeOn)
+    {
+        // Delay turning the fan on for 4 cycles to be sure it really should be on
+        if (fanStateDuration < 3)
+        {
+            ++fanStateDuration; // counting to turn on
+        }
+        else
+        {
+            digitalWrite(GPIO_PIN_FAN_EN, HIGH);
+            fanStateDuration = 0;
+            fanIsOn = true;
+        }
     }
 #endif // HAS_FAN
 }
