@@ -115,13 +115,13 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_BUTTON
   {&Button_device, 1},
 #endif
-#if defined HAS_TFT_SCREEN || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+#if defined(HAS_TFT_SCREEN) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
   {&Screen_device, 0},
 #endif
 #ifdef HAS_GSENSOR
   {&Gsensor_device, 0},
 #endif
-#ifdef HAS_THERMAL
+#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
   {&VTX_device, 1}
@@ -1002,7 +1002,6 @@ void setup()
     TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
 
     POWERMGNT.init();
-    POWERMGNT.setFanEnableTheshold((PowerLevels_e)config.GetPowerFanThreshold());
 
     // Set the pkt rate, TLM ratio, and power from the stored eeprom values
     ChangeRadioParams();
