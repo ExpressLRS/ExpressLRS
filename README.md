@@ -3,7 +3,7 @@
 ## Need help? Confused? Join the Community!
  * [<img src="https://camo.githubusercontent.com/79fcdc7c43f1a1d7c175827976ffee8177814a016fb1b9578ff70f1aef759578/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f646973636f72642e737667" width="15" height="15"> Community Discord](https://discord.gg/dS6ReFY)
  * [<img src="https://camo.githubusercontent.com/8f245234577766478eaf3ee72b0615e99bb9ef3eaa56e1c37f75692811181d5c/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f66616365626f6f6b2e737667" width="15" height="15"> Facebook Group](https://www.facebook.com/groups/636441730280366)
- * [<img src="https://camo.githubusercontent.com/b079fe922f00c4b86f1b724fbc2e8141c468794ce8adbc9b7456e5e1ad09c622/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f6769746875622e737667" width="15" height="15"> Wiki](https://github.com/ExpressLRS/ExpressLRS/wiki)
+ * [<img src="https://camo.githubusercontent.com/b079fe922f00c4b86f1b724fbc2e8141c468794ce8adbc9b7456e5e1ad09c622/68747470733a2f2f6564656e742e6769746875622e696f2f537570657254696e7949636f6e732f696d616765732f7376672f6769746875622e737667" width="15" height="15"> Documentation](https://www.expresslrs.org/)
 
 ## Support ExpressLRS
 Supporting ExpressLRS is as easy as contributing a feature, either code or just a fleshed out idea. Coding not your thing? Testing a Pull Request using the convenient Configurator tab and providing feedback is essential as well. We're all working together.
@@ -17,11 +17,11 @@ If you have hardware that you want to flash, please refer to our guides on the [
 
 ## High Performance LoRa Radio Link
 
-![Build Status](https://github.com/ExpressLRS/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)
-![Release](https://img.shields.io/github/v/release/ExpressLRS/ExpressLRS?include_prereleases)
-![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS)
-![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS)
-![Chat](https://img.shields.io/discord/596350022191415318)
+[![Build Status](https://github.com/ExpressLRS/ExpressLRS/workflows/Build%20ExpressLRS/badge.svg)](https://github.com/ExpressLRS/ExpressLRS/actions)
+[![Release](https://img.shields.io/github/v/release/ExpressLRS/ExpressLRS?include_prereleases)](https://github.com/ExpressLRS/ExpressLRS/releases)
+[![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS)](https://github.com/ExpressLRS/ExpressLRS/blob/master/LICENSE)
+[![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS)](https://github.com/ExpressLRS/ExpressLRS/stargazers)
+[![Chat](https://img.shields.io/discord/596350022191415318)](https://discord.gg/dS6ReFY)
 
 ExpressLRS is an open source RC link for RC applications. It is based on the fantastic semtech **SX127x**/**SX1280** hardware combined with an **ESP8285**, **ESP32** or **STM32**. ExpressLRS supports a wide range of hardware platforms as well as both `900 MHz` and `2.4 GHz` frequency options. ExpressLRS uses **LoRa** modulation as well as reduced packet size to achieve **best in class range and latency** compared to current commercial offerings.
 
