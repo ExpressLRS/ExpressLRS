@@ -48,30 +48,14 @@ ExpressLRS has the following features:
 - Oled & TFT Displays
 - 2.4 GHz or 900 MHz RC Link
 - Ceramic Antenna - allows for easier installation into micros
-- VTX and VRX Frequency adjustments from the LUA
+- VTX and VRX Frequency adjustments from the Lua
 - Bind Phrases - no need for button binding
 
 with many more features on the way!
 
 ## Supported Hardware
 
-ExpressLRS currently supports hardware from the following manufacturers. Any hardware with a check next to it has been sent to and tested by developers:
-
-- AxisFlying :white_check_mark:
-- BETAFPV
-- Flywoo
-- FrSky
-- HappyModel :white_check_mark:
-- HiYounger
-- HGLRC
-- ImmersionRC
-- iFlight
-- JHEMCU
-- Jumper
-- Matek :white_check_mark:
-- NamimnoRC :white_check_mark:
-- QuadKopters
-- SiYi
+ExpressLRS currently supports hardware from the following manufacturers: AxisFlying, BETAFPV, Flywoo, FrSky, HappyModel, HiYounger, HGLRC, ImmersionRC, iFlight, JHEMCU, Jumper, Matek, NamimnoRC, QuadKopters and SIYI.
 
 For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Reciever Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
 
