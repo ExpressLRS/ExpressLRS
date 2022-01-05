@@ -12,8 +12,8 @@ extern TxConfig config;
 #define THERMAL_DURATION 1000
 
 #if defined(HAS_THERMAL)
-//#include "targets.h"
-//#include "common.h"
+#include "common.h"
+#include "thermal.h"
 extern bool IsArmed();
 
 Thermal thermal;
@@ -32,7 +32,7 @@ bool is_smart_fan_working = false;
     #define FAN_MIN_RUNTIME 30U // seconds
 #endif
 
-#endif
+#endif // HAS_FAN
 
 static void initialize()
 {
