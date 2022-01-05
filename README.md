@@ -11,11 +11,13 @@
 </center>
 
 ## Support ExpressLRS
-Supporting ExpressLRS is as easy as contributing a feature, either code or just a fleshed out idea. Coding not your thing? Testing a Pull Request using the convenient Configurator tab and providing feedback is essential as well. We're all working together.
+You can support ExpressLRS by contributing code, testing new features, sharing your ideas, or helping others get started. We are exceptionally grateful for those who donate their time to our passion.
 
-If you don't have the time to contribute in that way, consider making a small donation. Donations are used to buy test equipment, software licenses, and certificates needed to further the project and make it securely accessible. ExpressLRS accepts donations through [Open Collective](https://opencollective.com/), which provides recognition of donors and transparency on how that support is utilized.
+If you don't have time to lend a hand in that way but still want to have an impact, consider donating. Donations are used for infrastructure costs and to buy test equipment needed to further the project and make it securely accessible. ExpressLRS accepts donations through Open Collective, which provides recognition of donors and transparency on how that support is utilized.
 
 [![Open Collective backers](https://img.shields.io/opencollective/backers/expresslrs?label=Open%20Collective%20backers&style=flat-square)](https://opencollective.com/expresslrs)
+
+We appreciate all forms of contribution and hope you will join us on Discord!
 
 ## Website
 For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
