@@ -96,7 +96,7 @@ static void timeoutFan()
             fanIsOn = false;
         }
     }
-
+    // vv else fan is off currently vv
     else if (fanShouldBeOn)
     {
         // Delay turning the fan on for 4 cycles to be sure it really should be on
