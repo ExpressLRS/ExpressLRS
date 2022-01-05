@@ -29,7 +29,7 @@ bool is_smart_fan_working = false;
 #include "POWERMGNT.h"
 
 #if !defined(FAN_MIN_RUNTIME)
-    #define FAN_MIN_RUNTIME 60U // seconds
+    #define FAN_MIN_RUNTIME 30U // seconds
 #endif
 
 #endif
