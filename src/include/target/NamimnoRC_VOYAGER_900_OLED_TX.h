@@ -1,4 +1,6 @@
-#define DEVICE_NAME "Nm.Voyager OLED"
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "NM Voyager OLED"
+#endif
 
 // Features
 #define USE_TX_BACKPACK
@@ -44,3 +46,6 @@
 #define MinPower                PWR_25mW
 #define MaxPower                PWR_2000mW
 #define POWER_OUTPUT_VALUES     {57,67,76,90,112,132,167,201}
+
+/* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
+#define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}

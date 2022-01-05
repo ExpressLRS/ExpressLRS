@@ -51,6 +51,20 @@ const PinName digitalPin[] = {
   PA_15  //D22 - STLink Rx
 };
 
+// If analog pins are not contiguous in the digitalPin array:
+// Add the analogInputPin array without defining NUM_ANALOG_FIRST
+// Analog (Ax) pin number array
+// where x is the index to retrieve the digital pin number
+const uint32_t analogInputPin[] = {
+  PA0,
+  PA1,
+  PA3,
+  PA4,
+  PA5,
+  PA6,
+  PA7
+};
+
 #ifdef __cplusplus
 }
 #endif
@@ -171,13 +185,6 @@ WEAK void SystemClock_Config(void)
   }
 
 #endif // USE_HSI
-}
-
-void initVariant(void)
-{
-  /* Reset vector location which is set wrongly by SystemInit */
-  extern uint32_t g_pfnVectors;
-  SCB->VTOR = (uint32_t) &g_pfnVectors;
 }
 
 #ifdef __cplusplus

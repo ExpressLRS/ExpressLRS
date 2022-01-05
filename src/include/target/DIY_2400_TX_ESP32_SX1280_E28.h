@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DIY2400 E28"
+#endif
 
 // Any device features
 #if !defined(USE_OLED_I2C)

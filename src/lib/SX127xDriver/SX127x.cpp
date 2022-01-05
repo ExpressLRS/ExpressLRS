@@ -64,8 +64,6 @@ void SX127xDriver::End()
 
 void SX127xDriver::ConfigLoraDefaults()
 {
-  DBGLN("Setting ExpressLRS LoRa reg defaults");
-
   hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP);
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY);
@@ -159,7 +157,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
   SetMode(SX127x_OPMODE_STANDBY);
-  #ifdef TARGET_TX_BETAFPV_900_V1
+  #if defined(USE_SX1276_RFO_HF)
     hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER | Power);
   #else
     hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);

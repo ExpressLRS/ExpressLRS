@@ -1,4 +1,6 @@
-#define DEVICE_NAME "HGLRC Hermes 24"
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "HGLRC Hermes"
+#endif
 
 // Any device features
 #define USE_SX1280_DCDC

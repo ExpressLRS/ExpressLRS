@@ -87,10 +87,10 @@ extern "C" {
 // Extra HAL modules
 //#define HAL_DAC_MODULE_ENABLED
 
-#define ALT1 (1 << (STM_PIN_AFNUM_SHIFT+0))
-#define ALT2 (1 << (STM_PIN_AFNUM_SHIFT+1))
-#define ALT3 (1 << (STM_PIN_AFNUM_SHIFT+2))
-#define ALT4 (1 << (STM_PIN_AFNUM_SHIFT+3))
+// #define ALT1 (1 << (STM_PIN_AFNUM_SHIFT+0))
+// #define ALT2 (1 << (STM_PIN_AFNUM_SHIFT+1))
+// #define ALT3 (1 << (STM_PIN_AFNUM_SHIFT+2))
+// #define ALT4 (1 << (STM_PIN_AFNUM_SHIFT+3))
 
 // Adjust IRQ priority
 #define TIM_IRQ_PRIO            4

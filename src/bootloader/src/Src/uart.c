@@ -179,7 +179,7 @@ void USARTx_IRQ_handler(USART_TypeDef * uart)
     uint8_t data = (uint8_t)LL_USART_ReceiveData8(uart);
     // If RX is in interrupt mode, the RX not-empty bit is set, and the received byte
     // has no framing errors (framing errors still generate RXNE), add to the RX fifo
-    if ((CR & USART_CR1_RXNEIE) && (SR & USART_SR_RXNE) && !(SR & USART_ISR_FE)) {
+    if ((CR & USART_CR1_RXNEIE) && (SR & USART_SR_RXNE) && !(SR & USART_SR_FE)) {
       uint8_t next = rx_head;
       if ((next + 1) != rx_tail) {
         rx_buffer[rx_head++] = data;

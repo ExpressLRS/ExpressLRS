@@ -5,9 +5,10 @@
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
+#include "device.h"
+
 HardwareSerial CRSF::Port = HardwareSerial(1);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-TaskHandle_t xESP32uartTask = NULL;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port = Serial;
 #elif CRSF_TX_MODULE_STM32
@@ -25,7 +26,6 @@ HardwareSerial CRSF::Port = Serial;
 Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
-const char deviceName[] = DEVICE_NAME;
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -85,7 +85,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 921600, 1870000, 3750000};
+uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
 bool CRSF::CRSFstate = false;
@@ -109,8 +109,14 @@ void CRSF::Begin()
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #if defined(PLATFORM_ESP32)
-    disableCore0WDT();
-    xTaskCreatePinnedToCore(ESP32uartTask, "ESP32uartTask", 3000, NULL, 0, &xESP32uartTask, 0);
+    // disableCore0WDT(); PAK
+    portDISABLE_INTERRUPTS();
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
+                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
+                     false, 500);
+    CRSF::duplex_set_RX();
+    portENABLE_INTERRUPTS();
+    flush_port_input();
 
 #elif defined(PLATFORM_ESP8266)
     CRSF::Port.flush();
@@ -160,12 +166,6 @@ void CRSF::Begin()
 void CRSF::End()
 {
 #if CRSF_TX_MODULE
-#ifdef PLATFORM_ESP32
-    if (xESP32uartTask != NULL)
-    {
-        vTaskDelete(xESP32uartTask);
-    }
-#endif
     uint32_t startTime = millis();
     while (SerialOutFIFO.peek() > 0)
     {
@@ -480,17 +480,17 @@ void CRSF::UnlockMspMessage()
 
 void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
 {
-    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE)
+    if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
     {
         return;
     }
 
-    const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[totalBufferLen];
+    const uint8_t totalBufferLen = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
+    uint8_t outBuffer[ENCAPSULATED_MSP_MAX_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES];
 
     // CRSF extended frame header
     outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
-    outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
+    outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
     outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
     outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;                              // destination
     outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER;                              // origin
@@ -499,16 +499,16 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     outBuffer[5] = 0x30;                // header
     outBuffer[6] = packet->payloadSize; // mspPayloadSize
     outBuffer[7] = packet->function;    // packet->cmd
-    for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i)
+    for (uint8_t i = 0; i < packet->payloadSize; ++i)
     {
-        // copy packet payload into outBuffer and pad with zeros where required
-        outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
+        // copy packet payload into outBuffer
+        outBuffer[8 + i] = packet->payload[i];
     }
     // Encapsulated MSP crc
-    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
+    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], packet->payloadSize + 2);
 
     // CRSF frame crc
-    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
     AddMspMessage(totalBufferLen, outBuffer);
 }
 
@@ -812,26 +812,6 @@ bool CRSF::UARTwdt()
     return retval;
 }
 
-#ifdef PLATFORM_ESP32
-//RTOS task to read and write CRSF packets to the serial port
-void ICACHE_RAM_ATTR CRSF::ESP32uartTask(void *pvParameters)
-{
-    DBGLN("ESP32 CRSF UART LISTEN TASK STARTED");
-    portDISABLE_INTERRUPTS();
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
-                     GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
-                     false, 500);
-    CRSF::duplex_set_RX();
-    portENABLE_INTERRUPTS();
-    flush_port_input();
-    (void)pvParameters;
-    for (;;)
-    {
-        handleUARTin();
-    }
-}
-#endif // PLATFORM_ESP32
-
 #elif CRSF_RX_MODULE // !CRSF_TX_MODULE
 bool CRSF::RXhandleUARTout()
 {
@@ -856,7 +836,7 @@ bool CRSF::RXhandleUARTout()
 
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[4] = {
         LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -867,19 +847,17 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-#ifndef DEBUG_CRSF_NO_OUTPUT
     SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
     SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
     SerialOutFIFO.push(crc);
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
-#endif
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -890,19 +868,17 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-#ifndef DEBUG_CRSF_NO_OUTPUT
     //SerialOutFIFO.push(RCframeLength + 4);
     //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
     this->_dev->write(outBuffer, sizeof(outBuffer));
     this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
     this->_dev->write(crc);
-#endif
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
@@ -942,9 +918,9 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 
 void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 {
-    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + sizeof(deviceName));
+    deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + device_name_size);
     // Packet starts with device name
-    memcpy(frame + sizeof(crsf_ext_header_t), deviceName, sizeof(deviceName));
+    memcpy(frame + sizeof(crsf_ext_header_t), device_name, device_name_size);
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"

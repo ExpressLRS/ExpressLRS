@@ -5,6 +5,7 @@
 #include <unity.h>
 #include <iostream>
 #include <bitset>
+#include "helpers.h"
 
 StubbornSender sender(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornReceiver receiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -284,7 +285,7 @@ void test_stubborn_link_sends_data_until_confirmation(void)
     receiver.ResetState();
     receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
 
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < sender.GetMaxPacketsBeforeResync(); i++)
     {
         sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
         TEST_ASSERT_EQUAL(1, packageIndex);
@@ -328,6 +329,54 @@ void test_stubborn_link_multiple_packages(void)
 
 }
 
+static void test_stubborn_link_resync_then_send(void)
+{
+    uint8_t testSequence1[] = {1,2,3,4,5,6,7,8,9,10};
+    uint8_t testSequence2[] = {11,12,13,14,15,16,17,18,19,20};
+    uint8_t buffer[100];
+    uint8_t *data;
+    uint8_t maxLength;
+    uint8_t packageIndex;
+
+    receiver.ResetState();
+    receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
+
+    sender.ResetState();
+    sender.SetDataToTransmit(sizeof(testSequence1), testSequence1, 1);
+
+    // send and confirm two packages
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    receiver.ReceiveData(packageIndex, data);
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    receiver.ReceiveData(packageIndex, data);
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+
+    // Abort the transfer by changing the payload
+    sender.SetDataToTransmit(sizeof(testSequence2), testSequence2, 1);
+
+    // Send next packet, which should be a RESYNC
+    sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+    TEST_ASSERT_EQUAL(ELRS_TELEMETRY_MAX_PACKAGES, packageIndex);
+    receiver.ReceiveData(packageIndex, data);
+    sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+
+    // Complete the transfer
+    int maxSends = ELRS_TELEMETRY_MAX_PACKAGES + 1;
+    while (!receiver.HasFinishedData() && maxSends)
+    {
+        sender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+        receiver.ReceiveData(packageIndex, data);
+        sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    }
+
+    // Should not have exhausted all the sends to get the package to go
+    TEST_ASSERT_NOT_EQUAL(0, maxSends);
+    // Make sure the second package was received, not the first
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(testSequence2, buffer, ARRAY_SIZE(testSequence2));
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -341,6 +390,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_stubborn_link_sends_data_until_confirmation);
     RUN_TEST(test_stubborn_link_multiple_packages);
     RUN_TEST(test_stubborn_link_resyncs_during_last_confirm);
+    RUN_TEST(test_stubborn_link_resync_then_send);
     UNITY_END();
 
     return 0;

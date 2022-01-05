@@ -1,4 +1,6 @@
-#define DEVICE_NAME "QuadKopters 24"
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "QuadKopters 2G4"
+#endif
 
 // Any device features
 #define USE_TX_BACKPACK

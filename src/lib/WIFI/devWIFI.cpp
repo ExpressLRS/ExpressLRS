@@ -45,29 +45,6 @@ extern RxConfig config;
 #endif
 extern unsigned long rebootTime;
 
-#define QUOTE(arg) #arg
-#define STR(macro) QUOTE(macro)
-
-#if defined(TARGET_TX)
-static const char *myHostname = "elrs_tx";
-static const char *ssid = "ExpressLRS TX";
-#else
-static const char *myHostname = "elrs_rx";
-static const char *ssid = "ExpressLRS RX";
-#endif
-static const char *password = "expresslrs";
-
-static const char *home_wifi_ssid = ""
-#ifdef HOME_WIFI_SSID
-STR(HOME_WIFI_SSID)
-#endif
-;
-static const char *home_wifi_password = ""
-#ifdef HOME_WIFI_PASSWORD
-STR(HOME_WIFI_PASSWORD)
-#endif
-;
-
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
@@ -78,9 +55,9 @@ static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
 
 static const byte DNS_PORT = 53;
-static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
+static IPAddress ipAddress;
 
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
@@ -120,9 +97,9 @@ static String toStringIp(IPAddress ip)
 
 static bool captivePortal(AsyncWebServerRequest *request)
 {
-  extern const char *myHostname;
+  extern const char *wifi_hostname;
 
-  if (!isIp(request->host()) && request->host() != (String(myHostname) + ".local"))
+  if (!isIp(request->host()) && request->host() != (String(wifi_hostname) + ".local"))
   {
     DBGLN("Request redirected to captive portal");
     request->redirect(String("http://") + toStringIp(request->client()->localIP()));
@@ -272,7 +249,7 @@ static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFi
 static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 {
   DBGLN("Starting Access Point");
-  String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+  String msg = String("Access Point starting, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
 
@@ -280,7 +257,7 @@ static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
   String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
-    myHostname + ".local from a browser on that network";
+    wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
 
@@ -302,7 +279,7 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetSSID("");
   config.SetPassword("");
   config.Commit();
-  String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
+  String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
 
@@ -437,11 +414,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       } else {
         Update.printError(Serial);
       }
-    } else {
-      #if defined(PLATFORM_ESP32)
-        Update.abort();
-      #endif
-      DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
   }
 }
@@ -461,6 +433,42 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     #endif
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
+}
+
+static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
+{
+  uint8_t *dst;
+  uint8_t alignedBuffer[7];
+  if ((uintptr_t)data % 4 != 0)
+  {
+    // If data is not aligned, read aligned byes using the local buffer and hope the next call will be aligned
+    dst = (uint8_t *)((uint32_t)alignedBuffer / 4 * 4);
+    len = 4;
+  }
+  else
+  {
+    // Otherwise just make sure len is a multiple of 4 and smaller than a sector
+    dst = data;
+    len = constrain((len / 4) * 4, 4, SPI_FLASH_SEC_SIZE);
+  }
+
+  ESP.flashRead(pos, (uint32_t *)dst, len);
+
+  // If using local stack buffer, move the 4 bytes into the passed buffer
+  // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
+  if ((void *)dst != (void *)data)
+  {
+    for (unsigned b=len; b>0; --b)
+      *data++ = *dst++;
+  }
+  return len;
+}
+
+static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
+  String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
+  response->addHeader("Content-Disposition", filename);
+  request->send(response);
 }
 
 static void wifiOff()
@@ -488,7 +496,7 @@ static void startWiFi(unsigned long now)
   DBGLN("Stopping Radio");
   Radio.End();
 
-  INFOLN("Begin Webupdater");
+  DBGLN("Begin Webupdater");
 
   WiFi.persistent(false);
   WiFi.disconnect();
@@ -517,17 +525,17 @@ static void startWiFi(unsigned long now)
 
 static void startMDNS()
 {
-  if (!MDNS.begin(myHostname))
+  if (!MDNS.begin(wifi_hostname))
   {
     DBGLN("Error starting mDNS");
     return;
   }
 
-  String instance = String(myHostname) + "_" + WiFi.macAddress();
+  String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
   #ifdef PLATFORM_ESP8266
     // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
-    MDNS.setInstanceName(myHostname);
+    MDNS.setInstanceName(wifi_hostname);
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
@@ -536,7 +544,7 @@ static void startMDNS()
     MDNS.addServiceTxt(service, "type", "rx");
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
-    // MDNSResponder::indexDomain and change myHostname as well.
+    // MDNSResponder::indexDomain and change wifi_hostname as well.
     MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
       if (!p_bProbeResult) {
         WiFi.hostname(instance);
@@ -548,6 +556,7 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt("http", "tcp", "device", device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
@@ -575,6 +584,7 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
+  server.on("/firmware.bin", WebUpdateGetFirmware);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
@@ -599,13 +609,13 @@ static void startServices()
 
   server.begin();
 
-  dnsServer.start(DNS_PORT, "*", apIP);
+  dnsServer.start(DNS_PORT, "*", ipAddress);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
 
   servicesStarted = true;
-  DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
+  DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
 }
 
 static void HandleWebUpdate()
@@ -646,8 +656,8 @@ static void HandleWebUpdate()
           WiFi.mode(WIFI_AP);
         #endif
         changeTime = now;
-        WiFi.softAPConfig(apIP, apIP, netMsk);
-        WiFi.softAP(ssid, password);
+        WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
+        WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
         startServices();
         break;
@@ -655,7 +665,7 @@ static void HandleWebUpdate()
         DBGLN("Connecting to home network '%s'", config.GetSSID());
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
-        WiFi.setHostname(myHostname); // hostname must be set after the mode is set to STA
+        WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
         changeTime = now;
         WiFi.begin(config.GetSSID(), config.GetPassword());
         startServices();
@@ -683,6 +693,8 @@ static void HandleWebUpdate()
 
 static int start()
 {
+  ipAddress.fromString(wifi_ap_address);
+
   #ifdef AUTO_WIFI_ON_INTERVAL
     return AUTO_WIFI_ON_INTERVAL * 1000;
   #else
