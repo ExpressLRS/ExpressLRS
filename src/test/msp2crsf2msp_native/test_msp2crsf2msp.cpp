@@ -152,10 +152,7 @@ void MSPV2_SERIAL_SETTINGS_TEST()
     // cout << endl;
 }
 
-
-
-
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     UNITY_BEGIN();
 

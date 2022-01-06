@@ -27,8 +27,10 @@ Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
+#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE)
 CROSSFIRE2MSP CRSF::crsf2msp;
 MSP2CROSSFIRE CRSF::msp2crsf;
+#endif
 
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
@@ -840,15 +842,17 @@ bool CRSF::RXhandleUARTout()
     // don't write more than 256 bytes at a time to aviod RX buffer overflow
     #define maxBytesPerCall 256
     uint32_t bytesWritten = 0;
-    while (msp2crsf.FIFOout.size() > 0 && bytesWritten < maxBytesPerCall)
-    {
-        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
-        uint8_t OutData[OutPktLen];
-        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-        this->_dev->write(OutData, OutPktLen); // write the packet out
-        bytesWritten += OutPktLen;
-        retVal = true;
-    }
+    #if defined(PLATFORM_ESP8266)
+        while (msp2crsf.FIFOout.size() > 0 && bytesWritten < maxBytesPerCall)
+        {
+            uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+            uint8_t OutData[OutPktLen];
+            msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+            this->_dev->write(OutData, OutPktLen); // write the packet out
+            bytesWritten += OutPktLen;
+            retVal = true;
+        }
+    #endif
     
     while (SerialOutFIFO.peek() > 0 && bytesWritten < maxBytesPerCall)
     {
