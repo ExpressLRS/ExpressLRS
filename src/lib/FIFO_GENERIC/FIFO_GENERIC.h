@@ -69,79 +69,95 @@ public:
 
     void pushBytes(const uint8_t *data, uint32_t len)
     {
+        if (numElements + len > FIFO_SIZE)
         {
-            if (numElements + len > FIFO_SIZE)
-            {
-                ERRLN("Buffer full, will flush");
-                flush();
-                return;
-            }
-            for (uint32_t i = 0; i < len; i++)
-            {
-                buffer[tail] = data[i];
-                tail = (tail + 1) % FIFO_SIZE;
-            }
-            numElements += len;
+            ERRLN("Buffer full, will flush");
+            flush();
+            return;
         }
+        for (uint32_t i = 0; i < len; i++)
+        {
+            buffer[tail] = data[i];
+            tail = (tail + 1) % FIFO_SIZE;
+        }
+        numElements += len;
     }
 
     uint8_t pop()
     {
+        if (numElements == 0)
         {
-            if (numElements == 0)
-            {
-                // DBGLN(F("Buffer empty"));
-                return 0;
-            }
-            else
-            {
-                numElements--;
-                uint8_t data = buffer[head];
-                head = (head + 1) % FIFO_SIZE;
-                return data;
-            }
+            // DBGLN(F("Buffer empty"));
+            return 0;
+        }
+        else
+        {
+            numElements--;
+            uint8_t data = buffer[head];
+            head = (head + 1) % FIFO_SIZE;
+            return data;
         }
     }
 
     void popBytes(uint8_t *data, uint32_t len)
     {
+        if (numElements < len)
         {
-            if (numElements < len)
+            // DBGLN(F("Buffer underrun"));
+            flush();
+        }
+        else
+        {
+            numElements -= len;
+            for (uint32_t i = 0; i < len; i++)
             {
-                // DBGLN(F("Buffer underrun"));
-                flush();
-            }
-            else
-            {
-                numElements -= len;
-                for (uint32_t i = 0; i < len; i++)
-                {
-                    data[i] = buffer[head];
-                    head = (head + 1) % FIFO_SIZE;
-                }
+                data[i] = buffer[head];
+                head = (head + 1) % FIFO_SIZE;
             }
         }
     }
 
     uint8_t peek()
     {
+        if (numElements == 0)
         {
-            if (numElements == 0)
-            {
-                // DBGLN(F("Buffer empty"));
-                return 0;
-            }
-            else
-            {
-                uint8_t data = buffer[head];
-                return data;
-            }
+            // DBGLN(F("Buffer empty"));
+            return 0;
+        }
+        else
+        {
+            uint8_t data = buffer[head];
+            return data;
         }
     }
 
     uint32_t size()
     {
         return numElements;
+    }
+
+    void pushSize(uint16_t size)
+    {
+        push(size & 0xFF);
+        push((size >> 8) & 0xFF);
+    }
+
+    int32_t peekSize()
+    {
+        if (size() > 1)
+        {
+            return (int32_t)buffer[head] + ((int32_t)buffer[(head + 1) % FIFO_SIZE] << 8);
+        }
+        return -1;
+    }
+
+    int32_t popSize()
+    {
+        if (size() > 1)
+        {
+            return (int32_t)pop() + ((int32_t)pop() << 8);
+        }
+        return -1;
     }
 
     void flush()
