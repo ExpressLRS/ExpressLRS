@@ -96,9 +96,7 @@ typedef struct expresslrs_rf_pref_params_s
     uint32_t RxLockTimeoutMs;       // Max time to go from tentative -> connected state on receiver (ms)
     uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
     uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
-#if defined(Regulatory_Domain_ISM_2400)
-    uint32_t InstantRssiValidDelayUs;     // How long to wait for valid GetRssiInst() reading after enabling RX, worst case mode switch from TX to RX
-#endif
+
 } expresslrs_rf_pref_params_s;
 
 #ifndef UNIT_TEST
