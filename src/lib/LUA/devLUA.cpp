@@ -304,7 +304,6 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_FAN_EN)
   registerLUAParameter(&luaFanThreshold, [](uint8_t id, uint8_t arg){
       config.SetPowerFanThreshold(arg);
-      POWERMGNT::setFanEnableTheshold((PowerLevels_e)arg);
   }, luaPowerFolder.common.id);
 #endif
   // VTX folder
