@@ -509,8 +509,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  // Repurposed downlink LQ for LBT success ratio, update before incremented
-  crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
   LBTSuccessCalc.inc();
   if(ChannelIsClear())
   {
@@ -545,8 +543,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
     TelemetryRcvPhase = ttrpWindowInProgress;
-    // Repurposed downlink LQ for LBT success ratio
-    //crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }
