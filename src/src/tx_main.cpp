@@ -399,6 +399,8 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
+    // Go to idle and back to rx, to prevent packet reception during LBT filling the RX buffer
+    Radio.SetTxIdleMode();
     Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     Radio.SetDioIrqParams(SX1280_IRQ_RX_DONE, SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
     Radio.RXnb();
