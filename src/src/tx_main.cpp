@@ -11,7 +11,7 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "lua.h"
-
+#include "LBT.h"
 #include "FHSS.h"
 #include "logging.h"
 #include "POWERMGNT.h"
@@ -78,7 +78,6 @@ volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
 LQCALC<10> LQCalc;
-LQCALC<100> LBTSuccessCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
@@ -399,44 +398,10 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
-    // Go to idle and back to rx, to prevent packet reception during LBT filling the RX buffer
-    Radio.SetTxIdleMode();
-    Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    Radio.SetDioIrqParams(SX1280_IRQ_RX_DONE, SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+    PrepareRXafterClearChannelAssessment();
     Radio.RXnb();
     TelemetryRcvPhase = ttrpInReceiveMode;
   }
-}
-
-int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
-{
-    // Calculated from EN 300 328, assuming 800kHz BW for sx1280
-    // TL = -70 dBm/MHz + 10 × log10 (100 mW / Pout) (Pout in mW e.i.r.p.)
-    // Values above 100mW are not relevant, default to 100mW threshold
-    // TODO: This threshold should be modified with a config for antenna gain
-    switch(txPower)
-    {
-    case PWR_10mW: return -60;
-    case PWR_25mW: return -64;
-    case PWR_50mW: return -67;
-    case PWR_100mW: return -70;
-    default: return -70;
-    }
-}
-
-volatile uint32_t RxStartTimeCCA = 0;
-
-void ICACHE_RAM_ATTR BeginClearChannelAssessment()
-{
-  // Listen Before Talk (LBT) aka clear channel assessment (CCA)
-  // Not interested in packets or interrupts while measuring RF energy on channel.
-  Radio.SetDioIrqParams(SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  Radio.RXnb();
-}
-
-bool ICACHE_RAM_ATTR ChannelIsClear()
-{ 
-  return Radio.GetRssiInst() < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
@@ -509,17 +474,20 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  LBTSuccessCalc.inc();
+  crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
   if(ChannelIsClear())
   {
-    LBTSuccessCalc.add();
-    Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    Radio.SetDioIrqParams(SX1280_IRQ_TX_DONE, SX1280_IRQ_TX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+    PrepareTXafterClearChannelAssessment();
     Radio.TXnb();
   }
   else
   {
     // Emulate that TX just happened, even if it didn't because CCA failed
+    // TODO: Check if it is safe to call this way too early, compared to having 
+    // an actual transmission first. Alternative could be a timer callback set
+    // for tx on the air time.
+    // idea: maybe better to start telemetry RX in normal timer callback in the
+    // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
     Radio.TXdoneCallback();
   }
 }
@@ -543,7 +511,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
     TelemetryRcvPhase = ttrpWindowInProgress;
-    crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    //crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }

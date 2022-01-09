@@ -14,6 +14,7 @@ SX1280Driver Radio;
 
 #include "crc.h"
 #include "CRSF.h"
+#include "LBT.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
@@ -283,6 +284,10 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.RXnb();
     }
+    else
+    {
+        BeginClearChannelAssessment();
+    }
     return true;
 }
 
@@ -295,6 +300,8 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
     {
+        PrepareRXafterClearChannelAssessment();
+        Radio.RXnb();
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
@@ -342,7 +349,21 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
-    Radio.TXnb();
+    if(ChannelIsClear())
+    {
+        PrepareTXafterClearChannelAssessment();
+        Radio.TXnb();
+    }
+    else
+    {
+        // Emulate that TX just happened, even if it didn't because CCA failed
+        // TODO: Check if it is safe to call this way too early, compared to having 
+        // an actual transmission first. Alternative would be a timer callback set
+        // for tx on the air time.
+        // idea: maybe better to start telemetry RX in normal timer callback in the
+        // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
+        Radio.TXdoneCallback();
+    }
     return true;
 }
 
@@ -831,6 +852,7 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+    PrepareRXafterClearChannelAssessment();
     Radio.RXnb();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
