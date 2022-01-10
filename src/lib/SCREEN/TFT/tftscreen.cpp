@@ -156,10 +156,10 @@ void TFTScreen::idleScreen()
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 
-    String power = power_string[last_power_index];
+    String power = power_string[current_power_index];
     if (current_dynamic)
     {
-        power += " *";
+        power = String(power_string[last_power_index]) + " *";
     }
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         power, TFT_BLACK, TFT_WHITE);
@@ -301,10 +301,10 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
         {
             last_power_index = running_power_index;
             current_dynamic = dynamic;
-            String power = power_string[last_power_index];
+            String power = power_string[current_power_index];
             if (current_dynamic)
             {
-                power += " *";
+                power = String(power_string[last_power_index]) + " *";
             }
             displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 power, TFT_BLACK, TFT_WHITE);

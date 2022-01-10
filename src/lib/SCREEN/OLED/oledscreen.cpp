@@ -211,10 +211,10 @@ void helperDrawImage32(int menu)
 
 void OLEDScreen::displayMainScreen(){
     u8g2.clearBuffer();
-    String power = power_string[last_power_index];
+    String power = power_string[current_power_index];
     if (current_dynamic)
     {
-        power += " *";
+        power = String(power_string[last_power_index]) + " *";
     }
 
     #ifdef USE_OLED_SPI_SMALL
@@ -453,7 +453,7 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
         current_rate_index = rate_index;
         current_ratio_index = ratio_index;
     }
-    
+
     current_power_index = power_index;
     current_powersaving_index = motion_index;
     current_smartfan_index = fan_index;
