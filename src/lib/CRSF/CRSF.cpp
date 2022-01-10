@@ -550,10 +550,9 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
     while (CRSF::Port.available())
     {
-        unsigned char const inChar = CRSF::Port.read();
-
         if (CRSFframeActive == false)
         {
+            unsigned char const inChar = CRSF::Port.read();
             // stage 1 wait for sync byte //
             if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
                 inChar == CRSF_SYNC_BYTE)
@@ -581,9 +580,12 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             // special case where we save the expected pkt len to buffer //
             if (SerialInPacketPtr == 1)
             {
+                unsigned char const inChar = CRSF::Port.read();
                 if (inChar <= CRSF_MAX_PACKET_LEN)
                 {
                     SerialInPacketLen = inChar;
+                    SerialInBuffer[SerialInPacketPtr] = inChar;
+                    SerialInPacketPtr++;
                 }
                 else
                 {
@@ -594,14 +596,16 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 }
             }
 
-            SerialInBuffer[SerialInPacketPtr] = inChar;
-            SerialInPacketPtr++;
+            int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
+            int count = CRSF::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
+
+            SerialInPacketPtr += count;
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
                 char CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
 
-                if (CalculatedCRC == inChar)
+                if (CalculatedCRC == SerialInBuffer[SerialInPacketPtr-1])
                 {
                     GoodPktsCount++;
                     if (ProcessPacket())
@@ -687,7 +691,6 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
 #if defined(PLATFORM_ESP32)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     #ifdef UART_INVERTED
     gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
