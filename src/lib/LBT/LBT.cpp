@@ -1,4 +1,3 @@
-#include "logging.h"
 #include "LBT.h"
 #include "SX1280Driver.h"
 
@@ -36,13 +35,19 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   LBTSuccessCalc.inc(); // Increment count for every channel check
 
   // Read rssi until sensible reading. If this function 
-  // is called long enough after RX enable, this will always be ok on first try.
-  int8_t instantRssi;
+  // is called long enough after RX enable, this will always be ok on first try, as is the case for TX.
+
+  // TODO: Better way than busypolling this for RX?
+  // this loop should only run for RX, where listen before talk RX is started right after FHSS hop
+  // so there is no dead-time to run RX before telemetry TX is supposed to happen.
+  // if flipping the logic, so telemetry TX happens right before FHSS hop, then TX-side ends up with polling here instead?
+  
+  uint8_t timeout = 0;
+  int8_t instantRssi;  
   do
   {
     instantRssi = Radio.GetRssiInst();
-    DBGLN("%d", instantRssi);
-  } while (instantRssi == -127);
+  } while (instantRssi == -127 && timeout++ < 10);
   
   return instantRssi < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
 }

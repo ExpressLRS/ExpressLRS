@@ -474,7 +474,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
-  crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
   if(ChannelIsClear())
   {
     PrepareTXafterClearChannelAssessment();
@@ -511,7 +510,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
     TelemetryRcvPhase = ttrpWindowInProgress;
-    //crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }
@@ -1006,6 +1005,8 @@ void setup()
 
     // Set the pkt rate, TLM ratio, and power from the stored eeprom values
     ChangeRadioParams();
+
+    BeginClearChannelAssessment();
 
     hwTimer.init();
     connectionState = noCrossfire;
