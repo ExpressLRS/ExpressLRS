@@ -25,6 +25,7 @@
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
+#-DRegulatory_Domain_EU_CE_LBT_2400
 
 ### PERFORMANCE OPTIONS: ###
 

@@ -12,9 +12,12 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+#include "LBT.h"
+#endif
+
 #include "crc.h"
 #include "CRSF.h"
-#include "LBT.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
@@ -284,10 +287,12 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.RXnb();
     }
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
     else
     {
         BeginClearChannelAssessment();
     }
+#endif
     return true;
 }
 
@@ -300,8 +305,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
     {
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
         PrepareRXafterClearChannelAssessment();
         Radio.RXnb();
+#endif
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
@@ -349,6 +356,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
     if(ChannelIsClear())
     {
         PrepareTXafterClearChannelAssessment();
@@ -364,6 +372,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
         Radio.TXdoneCallback();
     }
+#else // not LBT
+    Radio.TXnb();
+#endif
     return true;
 }
 
@@ -852,7 +863,9 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
     PrepareRXafterClearChannelAssessment();
+#endif
     Radio.RXnb();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');

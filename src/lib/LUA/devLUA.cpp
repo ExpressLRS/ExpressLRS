@@ -77,6 +77,13 @@ static struct luaItem_string luaCELimit = {
 };
 #endif
 
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+static struct luaItem_string luaCELimit = {
+    {"100mW CE LBT LIMIT", CRSF_INFO},
+    emptySpace
+};
+#endif
+
 //----------------------------POWER------------------
 
 static struct luaItem_selection luaSwitch = {
@@ -313,9 +320,10 @@ static void registerLuaParameters()
       config.SetPowerFanThreshold(arg);
   }, luaPowerFolder.common.id);
 #endif
-#if defined(Regulatory_Domain_EU_CE_2400)
+#if defined(Regulatory_Domain_EU_CE_2400) || defined(Regulatory_Domain_EU_CE_LBT_2400)
   registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
 #endif
+
   // VTX folder
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){

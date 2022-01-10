@@ -43,6 +43,19 @@
     #endif
 #endif
 
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+    #undef MinPower
+    #define MinPower PWR_10mW
+
+    #undef MaxPower
+    #define MaxPower PWR_100mW
+
+    #if defined(HighPower)
+        #undef HighPower
+        #define HighPower PWR_100mW
+    #endif
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,

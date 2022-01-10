@@ -92,11 +92,11 @@ def version_to_env():
     env.Append(GIT_SHA = ver['sha'], GIT_VERSION= ver['version'])
 
 def regulatory_domain_to_env():
-    regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4")]
+    regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4"), ("EU_CE_LBT_2400", "LBT2G4")]
     retVal = "UNK"
-    if ("_2400" in target_name or \
-        '-DRADIO_2400=1' in build_flags) and \
-        '-DRegulatory_Domain_EU_CE_2400' not in build_flags:
+    if ("_2400" in target_name or '-DRADIO_2400=1' in build_flags) and \
+        ('-DRegulatory_Domain_EU_CE_2400' not in build_flags) and \
+        ('-DRegulatory_Domain_EU_CE_LBT_2400' not in build_flags):
         retVal = "ISM2G4"
     else:
         for k, v in regions:
@@ -127,7 +127,8 @@ condense_flags()
 if '-DRADIO_900=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
-        fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
+        fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400') or \
+        fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_LBT_2400'):
         print_error('Regulatory_Domain 2400 not compatible with RADIO_900')
 
     # require a domain be set for 900
