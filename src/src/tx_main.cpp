@@ -15,6 +15,7 @@ SX1280Driver Radio;
 
 #include "CRSF.h"
 #include "lua.h"
+
 #include "FHSS.h"
 #include "logging.h"
 #include "POWERMGNT.h"
@@ -1025,6 +1026,7 @@ void setup()
 
     // Set the pkt rate, TLM ratio, and power from the stored eeprom values
     ChangeRadioParams();
+
 #if defined(Regulatory_Domain_EU_CE_LBT_2400)
     BeginClearChannelAssessment();
 #endif

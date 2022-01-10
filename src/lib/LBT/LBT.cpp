@@ -5,21 +5,28 @@ extern SX1280Driver Radio;
 
 LQCALC<100> LBTSuccessCalc;
 
+#if !defined(LBT_RSSI_THRESHOLD_OFFSET_DB)
+  #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
+#endif
+
 int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
 {
     // Calculated from EN 300 328, adjusted for 800kHz BW for sx1280
     // TL = -70 dBm/MHz + 10*log10(0.8MHz) + 10 × log10 (100 mW / Pout) (Pout in mW e.i.r.p.)
-    // TODO: This threshold should be modified with a config for each HW with antenna gain,
-    // different RF frontends and also individual adjustment offset for differences in 
-    // rssi between bandwidth setting.
+    // This threshold should be offset with a #define config for each HW that corrects for antenna gain,
+    // different RF frontends.
+    // TODO: Maybe individual adjustment offset for differences in
+    // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
+    int8_t lbtLimit = -71;
     switch(txPower)
     {
-      case PWR_10mW: return -61;
-      case PWR_25mW: return -65;
-      case PWR_50mW: return -68;
-      case PWR_100mW: return -71;
-      default: return -71; // Values above 100mW are not relevant, default to 100mW threshold
+      case PWR_10mW: lbtLimit = -61;
+      case PWR_25mW: lbtLimit = -65;
+      case PWR_50mW: lbtLimit = -68;
+      case PWR_100mW: lbtLimit = -71;
+      default: lbtLimit = -71; // Values above 100mW are not relevant, default to 100mW threshold
     }
+    return lbtLimit + LBT_RSSI_THRESHOLD_OFFSET_DB;
 }
 
 void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
