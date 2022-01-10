@@ -597,8 +597,17 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             }
 
             int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
+            #if defined(PLATFORM_ESP32)
             int count = CRSF::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
-
+            #else
+            int count = 0;
+            int avail = CRSF::Port.available();
+            while (count < toRead && count < avail)
+            {
+                SerialInBuffer[SerialInPacketPtr + count] = CRSF::Port.read();
+                count++;
+            }
+            #endif
             SerialInPacketPtr += count;
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
