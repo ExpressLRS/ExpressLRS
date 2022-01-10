@@ -3,6 +3,7 @@
 #define USE_TX_BACKPACK
 
 #define HAS_TFT_SCREEN
+#define WS2812_IS_GRB
 
 #define HAS_GSENSOR
 #define HAS_GSENSOR_STK8xxx
