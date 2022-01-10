@@ -215,15 +215,15 @@ void OLEDScreen::displayMainScreen(){
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_15_mr);
         u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,15 ,&(ratio_string[current_ratio_index])[0]);
-        u8g2.drawStr(0,32, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(70,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,32, &(power_string[last_power_index])[0]);
         u8g2.drawStr(70,32, "Test");
     #else
         u8g2.setFont(u8g2_font_t0_15_mr);
         u8g2.drawStr(0,13, "ExpressLRS");
         u8g2.drawStr(0,45, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,45 , &(ratio_string[current_ratio_index])[0]);
-        u8g2.drawStr(0,60, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(70,45, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,60, &(power_string[last_power_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(70,56, "TLM");
         u8g2.drawStr(0,27, "Ver: ");
@@ -346,13 +346,13 @@ void OLEDScreen::doRateValueSelect(int action)
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,15, &(rate_string[current_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATE);
     #else
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,20, &(rate_string[current_rate_index])[0]);
+        u8g2.drawStr(0,20, &(rate_string[current_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
@@ -368,13 +368,13 @@ void OLEDScreen::doPowerValueSelect(int action)
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,15, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,15, &(power_string[current_index])[0]);
         u8g2.setFont(u8g2_font_courR08_tr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_POWER);
     #else
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,20, &(power_string[current_power_index])[0]);
+        u8g2.drawStr(0,20, &(power_string[current_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
@@ -385,19 +385,18 @@ void OLEDScreen::doPowerValueSelect(int action)
 
 void OLEDScreen::doRatioValueSelect(int action)
 {
-
     nextIndex(current_ratio_index, action, RATIO_MAX_NUMBER);
 
     u8g2.clearBuffer();
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,15, &(ratio_string[current_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
         helperDrawImage32(IMAGE_RATIO);
     #else
         u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,20, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,20, &(ratio_string[current_index])[0]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
@@ -418,7 +417,7 @@ void OLEDScreen::doSmartFanValueSelect(int action)
     // TODO display the value
 }
 
-void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index)
+void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, uint8_t running_power_index)
 {
     if(current_screen_status == SCREEN_STATUS_IDLE)
     {
@@ -428,9 +427,9 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
             displayMainScreen();
         }
 
-        if(power_index != current_power_index)
+        if(last_power_index != running_power_index)
         {
-            current_power_index = power_index;
+            last_power_index = running_power_index;
             displayMainScreen();
         }
 
@@ -443,10 +442,10 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
     else
     {
         current_rate_index = rate_index;
-        current_power_index = power_index;
         current_ratio_index = ratio_index;
     }
 
+    current_power_index = power_index;
     current_powersaving_index = motion_index;
     current_smartfan_index = fan_index;
 }

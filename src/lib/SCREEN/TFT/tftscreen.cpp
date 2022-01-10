@@ -157,7 +157,7 @@ void TFTScreen::idleScreen()
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        power_string[current_power_index], TFT_BLACK, TFT_WHITE);
+                        power_string[last_power_index], TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
@@ -249,21 +249,21 @@ void TFTScreen::doRateValueSelect(int action)
 {
     nextIndex(current_rate_index, action, RATE_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
+                        rate_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doPowerValueSelect(int action)
 {
     nextIndex(current_power_index, action, MinPower, MaxPower+1);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        power_string[current_power_index], TFT_BLACK, TFT_WHITE);
+                        power_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doRatioValueSelect(int action)
 {
     nextIndex(current_ratio_index, action, RATIO_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
+                        ratio_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
 
@@ -271,32 +271,32 @@ void TFTScreen::doPowerSavingValueSelect(int action)
 {
     nextIndex(current_powersaving_index, action, POWERSAVING_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        powersaving_string[current_powersaving_index], TFT_BLACK, TFT_WHITE);
+                        powersaving_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::doSmartFanValueSelect(int action)
 {
     nextIndex(current_smartfan_index, action, SMARTFAN_MAX_NUMBER);
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        smartfan_string[current_smartfan_index], TFT_BLACK, TFT_WHITE);
+                        smartfan_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index)
+void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, uint8_t running_power_index)
 {
     if(current_screen_status == SCREEN_STATUS_IDLE)
     {
         if(rate_index != current_rate_index)
         {
             current_rate_index = rate_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
         }
 
-        if(power_index != current_power_index)
+        if(last_power_index != running_power_index)
         {
-            current_power_index = power_index;
+            last_power_index = running_power_index;
             displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                power_string[current_power_index], TFT_BLACK, TFT_WHITE);
+                                power_string[last_power_index], TFT_BLACK, TFT_WHITE);
         }
 
         if(ratio_index != current_ratio_index)
@@ -309,10 +309,10 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
     else
     {
         current_rate_index = rate_index;
-        current_power_index = power_index;
         current_ratio_index = ratio_index;
     }
 
+    current_power_index = power_index;
     current_powersaving_index = motion_index;
     current_smartfan_index = fan_index;
 }

@@ -243,7 +243,7 @@ static int start()
 {
   if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
   {
-    screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), (uint8_t)(POWERMGNT::currPower()));
     return LOGO_DISPLAY_TIMEOUT;
   }
   return DURATION_IMMEDIATELY;
@@ -257,7 +257,7 @@ static int event()
   }
   else
   {
-    screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), (uint8_t)(POWERMGNT::currPower()));
   }
 
   return DURATION_IGNORE;
