@@ -288,11 +288,6 @@ void TFTScreen::doSmartFanValueSelect(int action)
 
 void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index)
 {
-    current_dynamic = dynamic;
-    current_power_index = power_index;
-    current_powersaving_index = motion_index;
-    current_smartfan_index = fan_index;
-
     if (current_screen_status == SCREEN_STATUS_IDLE)
     {
         if(rate_index != current_rate_index)
@@ -302,9 +297,10 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
                                 rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
         }
 
-        if(last_power_index != running_power_index)
+        if(last_power_index != running_power_index || current_dynamic != dynamic)
         {
             last_power_index = running_power_index;
+            current_dynamic = dynamic;
             String power = power_string[last_power_index];
             if (current_dynamic)
             {
@@ -323,9 +319,15 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
     }
     else
     {
+        last_power_index = running_power_index;
+        current_dynamic = dynamic;
         current_rate_index = rate_index;
         current_ratio_index = ratio_index;
     }
+
+    current_power_index = power_index;
+    current_powersaving_index = motion_index;
+    current_smartfan_index = fan_index;
 }
 
 void TFTScreen::doTemperatureUpdate(uint8_t temperature)
