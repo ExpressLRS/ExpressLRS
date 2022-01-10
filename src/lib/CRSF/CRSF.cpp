@@ -227,19 +227,14 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     if (!CRSF::CRSFstate)
         return;
 
-    static uint8_t buf[6] = {
-        0, // length
+    uint8_t buf[6] = {
+        (uint8_t)(len + 6),
         CRSF_ADDRESS_RADIO_TRANSMITTER,
-        0,
-        0,
+        (uint8_t)(len + 4),
+        type,
         CRSF_ADDRESS_RADIO_TRANSMITTER,
         CRSF_ADDRESS_CRSF_TRANSMITTER
     };
-
-    // Header info
-    buf[0] = len + 6;
-    buf[2] = len + 4; // Type + DST + SRC + CRC
-    buf[3] = type;
 
     // CRC - Starts at type, ends before CRC
     uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
