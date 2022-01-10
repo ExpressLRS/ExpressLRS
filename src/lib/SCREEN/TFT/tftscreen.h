@@ -50,7 +50,7 @@ public:
 
     void init(bool reboot);
     void idleScreen();
-    void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, uint8_t running_power_index);
+    void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index);
     void doTemperatureUpdate(uint8_t temperature);
     void doScreenBackLight(int state);
 

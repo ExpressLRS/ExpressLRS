@@ -156,8 +156,13 @@ void TFTScreen::idleScreen()
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        power_string[last_power_index], TFT_BLACK, TFT_WHITE);
+    String power = power_string[last_power_index];
+    if (current_dynamic)
+    {
+        power += " *";
+    }
+    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        power, TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
@@ -281,9 +286,14 @@ void TFTScreen::doSmartFanValueSelect(int action)
                         smartfan_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, uint8_t running_power_index)
+void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index)
 {
-    if(current_screen_status == SCREEN_STATUS_IDLE)
+    current_dynamic = dynamic;
+    current_power_index = power_index;
+    current_powersaving_index = motion_index;
+    current_smartfan_index = fan_index;
+
+    if (current_screen_status == SCREEN_STATUS_IDLE)
     {
         if(rate_index != current_rate_index)
         {
@@ -295,8 +305,13 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
         if(last_power_index != running_power_index)
         {
             last_power_index = running_power_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                power_string[last_power_index], TFT_BLACK, TFT_WHITE);
+            String power = power_string[last_power_index];
+            if (current_dynamic)
+            {
+                power += " *";
+            }
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                                power, TFT_BLACK, TFT_WHITE);
         }
 
         if(ratio_index != current_ratio_index)
@@ -311,10 +326,6 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
         current_rate_index = rate_index;
         current_ratio_index = ratio_index;
     }
-
-    current_power_index = power_index;
-    current_powersaving_index = motion_index;
-    current_smartfan_index = fan_index;
 }
 
 void TFTScreen::doTemperatureUpdate(uint8_t temperature)
