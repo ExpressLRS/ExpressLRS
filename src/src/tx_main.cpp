@@ -641,7 +641,7 @@ static void CheckConfigChangePending()
 #endif
     hwTimer.callbackTock = &timerCallbackIdle;
     // If telemetry expected in the next interval, the radio is in RX mode
-    // and will skip sending the next packet when the tiemr resumes.
+    // and will skip sending the next packet when the timer resumes.
     // Return to normal send mode because if the skipped packet happened
     // to be on the last slot of the FHSS the skip will prevent FHSS
     if (TelemetryRcvPhase == ttrpInReceiveMode)
