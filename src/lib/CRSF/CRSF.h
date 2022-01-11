@@ -100,7 +100,7 @@ public:
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
     static volatile uint32_t OpenTXsyncLastSent;
-    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
+    static uint8_t GetMaxPacketBytes() { return maxSendBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSendBytes; }
     static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
 
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
@@ -142,7 +142,7 @@ private:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
-    static uint8_t maxPacketBytes;
+    static uint8_t maxSendBytes;
     static uint32_t TxToHandsetBauds[6];
     static uint8_t UARTcurrentBaudIdx;
     static bool CRSFstate;
