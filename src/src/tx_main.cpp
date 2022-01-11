@@ -579,7 +579,6 @@ static void CheckConfigChangePending()
 
 #if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
-    hwTimer.callbackTock = &timerCallbackIdle;
 #else
     // The code expects to enter here shortly after the tock ISR has started sending the last
     // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
@@ -598,6 +597,7 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    hwTimer.callbackTock = &timerCallbackIdle;
     // If telemetry expected in the next interval, the radio is in RX mode
     // and will skip sending the next packet when the tiemr resumes.
     // Return to normal send mode because if the skipped packet happened
