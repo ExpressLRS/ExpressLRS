@@ -287,12 +287,6 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         Radio.RXnb();
     }
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
-    else
-    {
-        BeginClearChannelAssessment();
-    }
-#endif
     return true;
 }
 
@@ -305,13 +299,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
     {
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
-        PrepareRXafterClearChannelAssessment();
-        Radio.RXnb();
-#endif
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
+#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+    BeginClearChannelAssessment();
+#endif
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = TLM_PACKET;
 
