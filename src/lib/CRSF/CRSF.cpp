@@ -37,6 +37,8 @@ inBuffer_U CRSF::inBuffer;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
 #if CRSF_TX_MODULE
+#define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
+
 static FIFO MspWriteFIFO;
 
 void inline CRSF::nullCallback(void) {}
@@ -750,7 +752,7 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
     int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxSize = maxSize > 255 ? 255 : maxSize;
+    maxSize = maxSize > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxSize;
     // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
     maxSendBytes = maxSize < 10 ? 10 : maxSize;
     DBGLN("Adjusted max sending size %u", maxSendBytes);
