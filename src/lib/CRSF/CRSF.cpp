@@ -640,59 +640,59 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
 {
     // both static to split up larger packages
-    static uint8_t packageLength = 0;
+    static uint8_t packageLengthRemaining = 0;
     static uint8_t sendingOffset = 0;
-    uint8_t writeLength = 0;
 
     if (OpentxSyncActive)
     {
         sendSyncPacketToTX(); // calculate mixer sync packet if needed
     }
 
-    // check if we have data in the output FIFO that needs to be written
-    if (sendingOffset > 0 || SerialOutFIFO.size() > 0) {
+    // if partial package remaining, or data in the output FIFO that needs to be written
+    if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
-        uint32_t bytesSent = 0;
-        while (bytesSent < maxPeriodBytes && (sendingOffset > 0 || SerialOutFIFO.size() > 0))
+        uint32_t periodBytesRemaining = maxPeriodBytes;
+        while (periodBytesRemaining)
         {
 #ifdef PLATFORM_ESP32
             portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
             // no package is in transit so get new data from the fifo
-            if (sendingOffset == 0) {
-                packageLength = SerialOutFIFO.pop();
-                SerialOutFIFO.popBytes(CRSFoutBuffer, packageLength);
+            if (packageLengthRemaining == 0) {
+                packageLengthRemaining = SerialOutFIFO.pop();
+                SerialOutFIFO.popBytes(CRSFoutBuffer, packageLengthRemaining);
+                sendingOffset = 0;
             }
 #ifdef PLATFORM_ESP32
             portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
 
             // if the package is long we need to split it up so it fits in the sending interval
-            if (packageLength > maxPeriodBytes - bytesSent) {
-                if (bytesSent > 0 && sendingOffset == 0) {  // only start to send a split packet as the first packet
+            uint8_t writeLength;
+            if (packageLengthRemaining > periodBytesRemaining) {
+                if (periodBytesRemaining < maxPeriodBytes) {  // only start to send a split packet as the first packet
                     break;
                 }
-                writeLength = maxPeriodBytes - bytesSent;
+                writeLength = periodBytesRemaining;
             } else {
-                writeLength = packageLength;
+                writeLength = packageLengthRemaining;
             }
 
             // write the packet out, if it's a large package the offset holds the starting position
             CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
             if (CRSF::PortSecondary)
                 CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
-            CRSF::Port.flush();
 
             sendingOffset += writeLength;
-            packageLength -= writeLength;
-            bytesSent += writeLength;
+            packageLengthRemaining -= writeLength;
+            periodBytesRemaining -= writeLength;
 
-            // after everything was writen reset the offset so a new package can be fetched from the fifo
-            if (packageLength == 0) {
-                sendingOffset = 0;
-            }
+            // No bytes left to send, exit
+            if (SerialOutFIFO.size() == 0)
+                break;
         }
+        CRSF::Port.flush();
         duplex_set_RX();
 
         // make sure there is no garbage on the UART left over
