@@ -932,6 +932,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 void startPassthrough()
 {
   // stop everyhting
+  devicesStop();
   Radio.End();
   hwTimer.stop();
   CRSF::End();
