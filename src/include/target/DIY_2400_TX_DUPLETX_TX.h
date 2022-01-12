@@ -24,12 +24,10 @@
 #define GPIO_PIN_PA_PDET        35
 
 // Backpack pins
-#define GPIO_PIN_DEBUG_RX       16 // 16 in production hopefully!
-#define GPIO_PIN_DEBUG_TX       17 // 17 in production hopefully!
+#define GPIO_PIN_DEBUG_RX       16
+#define GPIO_PIN_DEBUG_TX       17
 #define GPIO_PIN_BACKPACK_EN    25
-
-//#define GPIO_PIN_LED_WS2812     15
-//#define GPIO_PIN_FAN_EN         17
+#define GPIO_PIN_BACKPACK_BOOT  15
 
 // Output Power
 #define MinPower PWR_10mW

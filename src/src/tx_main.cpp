@@ -941,10 +941,14 @@ void startPassthrough()
   LoggingBackpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
   disableLoopWDT();
 
-  // reset 8285
+  // reset ESP8285 into bootloader mode
+  digitalWrite(GPIO_PIN_BACKPACK_BOOT, HIGH);
+  delay(100);
   digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);
   delay(100);
   digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
+  delay(50);
+  digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
   // go hard!
   uint8_t buf[64];
@@ -995,9 +999,14 @@ static void setupTarget()
 void setup()
 {
   #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    pinMode(0, INPUT);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
+    pinMode(0, INPUT);                          // setup so we can detect pinchange for passthrough mode
+    // reset the ESP8285 so we know it's running
+    pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
     pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+    digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);    // enable low
+    digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);  // bootloader pin high
+    delay(50);
+    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);   // enable high
   #endif
 
   setupTarget();
