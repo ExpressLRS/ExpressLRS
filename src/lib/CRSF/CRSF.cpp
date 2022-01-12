@@ -86,7 +86,8 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
-uint8_t CRSF::maxSendBytes = CRSF_MAX_PACKET_LEN;
+uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
+uint32_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -648,18 +649,16 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         sendSyncPacketToTX(); // calculate mixer sync packet if needed
     }
 
-    int maxSend = maxSendBytes;
-
     // check if we have data in the output FIFO that needs to be written or a large package was split up and we need to send the second part
-    if (sendingOffset > 0 || SerialOutFIFO.size() > 0)
-    {
+    if (sendingOffset > 0 || SerialOutFIFO.peek() > 0) {
         duplex_set_TX();
-        int sentBytes = 0;
-        do
+
+        uint32_t bytesSent = 0;
+        while (bytesSent < maxPeriodBytes)
         {
-            #ifdef PLATFORM_ESP32
-                portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-            #endif
+#ifdef PLATFORM_ESP32
+            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+#endif
             // no package is in transit so get new data from the fifo
             if (sendingOffset == 0) {
                 packageLength = SerialOutFIFO.pop();
@@ -667,17 +666,15 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
             }
 
             // if the package is long we need to split it up so it fits in the sending interval
-            if (packageLength > maxSend - sentBytes) {
-                if (sentBytes != 0) { // only send a split packet as the first packet
-                    break;
-                }
-                writeLength = maxSend - sentBytes;
+            if (packageLength > maxPacketBytes) {
+                writeLength = maxPacketBytes;
             } else {
                 writeLength = packageLength;
             }
-            #ifdef PLATFORM_ESP32
-                portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-            #endif
+
+#ifdef PLATFORM_ESP32
+            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+#endif
 
             // write the packet out, if it's a large package the offset holds the starting position
             CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
@@ -687,13 +684,17 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 
             sendingOffset += writeLength;
             packageLength -= writeLength;
-            sentBytes += writeLength;
+            bytesSent += writeLength;
 
             // after everything was writen reset the offset so a new package can be fetched from the fifo
             if (packageLength == 0) {
                 sendingOffset = 0;
             }
-        } while (sendingOffset == 0 && SerialOutFIFO.size() > 0 && sentBytes < maxSend);
+
+            // No bytes left to send, exit
+            if (SerialOutFIFO.size() == 0)
+                break;
+        } // while bytes < maxPeriodBytes
         duplex_set_RX();
 
         // make sure there is no garbage on the UART left over
@@ -751,11 +752,15 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxSize = maxSize > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxSize;
+    maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
+    maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
+    maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
     // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxSendBytes = maxSize < 10 ? 10 : maxSize;
-    DBGLN("Adjusted max sending size %u", maxSendBytes);
+    maxPacketBytes = maxPacketBytes < 10 ? 10 : maxPacketBytes;
+#if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
+    maxPeriodBytes = 2 * maxPacketBytes;
+#endif
+    DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
 bool CRSF::UARTwdt()
