@@ -950,8 +950,13 @@ void startPassthrough()
   delay(50);
   digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
-  // go hard!
+  CRSF::Port.flush();
+  LoggingBackpack.flush();
+
   uint8_t buf[64];
+  while(LoggingBackpack.available()) LoggingBackpack.read(buf, sizeof(buf));
+
+  // go hard!
   for(;;) {
     int r = CRSF::Port.available();
     if (r>sizeof(buf)) r=sizeof(buf);
