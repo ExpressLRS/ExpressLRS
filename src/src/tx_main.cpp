@@ -960,8 +960,8 @@ static void setupTarget()
 
 void setup()
 {
-  Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
+  Serial.begin(BACKPACK_LOGGING_BAUD);
 
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
