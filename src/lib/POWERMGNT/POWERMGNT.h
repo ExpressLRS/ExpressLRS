@@ -31,22 +31,21 @@
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    #undef MinPower
-    #define MinPower PWR_10mW
+    #if MinPower > PWR_10mW
+        #undef Regulatory_Domain_EU_CE_2400
+        #define Regulatory_Domain_EU_CE_LBT_2400
+    #else
+        #undef MaxPower
+        #define MaxPower PWR_10mW
 
-    #undef MaxPower
-    #define MaxPower PWR_10mW
-
-    #if defined(HighPower)
-        #undef HighPower
-        #define HighPower PWR_10mW
+        #if defined(HighPower)
+            #undef HighPower
+            #define HighPower PWR_10mW
+        #endif
     #endif
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_LBT_2400)
-    #undef MinPower
-    #define MinPower PWR_10mW
-
     #undef MaxPower
     #define MaxPower PWR_100mW
 
