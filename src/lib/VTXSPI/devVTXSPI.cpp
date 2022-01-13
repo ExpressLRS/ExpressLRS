@@ -2,6 +2,8 @@
 #include "common.h"
 #include "device.h"
 #include "devVTXSPI.h"
+#include "helpers.h"
+#include "ESP8266_hwTimer.h"
 
 #if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
 #include "logging.h"
@@ -21,23 +23,32 @@
 
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
-#define MAX_PWM                                 4095
+#define MIN_PWM                                 1000 // Testing required.
+#define MAX_PWM                                 3500 // Absolute max is 4095.  But above 3500 does nothing.
+#define VPD_BUFFER                              5
 
 #define READ_BIT                                0x00
 #define WRITE_BIT                               0x01
 
 #define RTC6705_BOOT_DELAY                      350
 #define RTC6705_PLL_SETTLE_TIME_MS              500 // ms - after changing frequency turn amps back on after this time for clean switching
-#define VTX_POWER_INTERVAL_MS                   100
+#define VTX_POWER_INTERVAL_MS                   20
 
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
+void VTxOutputMinimum(void);
+
+bool isTick;
+
 uint8_t vtxSPIBandChannelIdx = 255;
 uint8_t vtxSPIBandChannelIdxCurrent = 255;
-uint8_t vtxSPIPowerIdx = 0;
+uint8_t vtxSPIPowerIdx = 0; 
 uint8_t vtxSPIPitmode = 1;
 uint8_t rtc6705PowerAmpState = 0;
 uint16_t vtxSPIPWM = MAX_PWM;
+uint16_t VpdSetPoint = 0;
+constexpr uint16_t VpdSetPointArray[] = VPD_VALUES;
+constexpr uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdSetPointArray);
 
 const uint16_t freqTable[48] = {
     5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A
@@ -94,6 +105,8 @@ void rtc6705PowerAmpOff(void)
         rtc6705WriteRegister(regData);
         rtc6705PowerAmpState = 0;
     }
+
+    digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 }
 
 void rtc6705PowerAmpOn(void)
@@ -104,25 +117,29 @@ void rtc6705PowerAmpOn(void)
         rtc6705WriteRegister(regData);
         rtc6705PowerAmpState = 1;
     }
+
+    digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
 }
 
 void VTxOutputMinimum(void)
 {
-    // vtxSPIPWM = MAX_PWM;
-    // analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    vtxSPIPWM = MAX_PWM;
+    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
     rtc6705PowerAmpOff();
 }
 
 void VTxOutputIncrease(void)
 {
-    // if (vtxSPIPWM > 0) vtxSPIPWM--;
-    // analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    // if (vtxSPIPWM > MIN_PWM) vtxSPIPWM--;
+    if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 5;
+    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
 void VTxOutputDecrease(void)
 {
     // if (vtxSPIPWM < MAX_PWM) vtxSPIPWM++;
-    // analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 5;
+    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
 static void checkOutputPower()
@@ -139,18 +156,19 @@ static void checkOutputPower()
 
         rtc6705PowerAmpOn();
     
-        // uint16_t Vpd = analogRead(GPIO_PIN_RF_AMP_VPD); // 0 - 1023 and max input 1.0V
+        uint16_t Vpd = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
 
-        // uint16_t VpdSetPoint = 500; // made up number
+        if (Vpd < (VpdSetPoint - VPD_BUFFER))
+        {
+            VTxOutputIncrease();
+        }
+        else if (Vpd > (VpdSetPoint + VPD_BUFFER))
+        {
+            VTxOutputDecrease();
+        }
 
-        // if (Vpd < VpdSetPoint)
-        // {
-        //     VTxOutputIncrease();
-        // }
-        // else if (Vpd > VpdSetPoint)
-        // {
-        //     VTxOutputDecrease();
-        // }
+        LOGGING_UART.println(Vpd);
+        LOGGING_UART.println(vtxSPIPWM);
     }
 }
 
@@ -159,10 +177,13 @@ static void initialize()
     pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
     
-    // pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-    // analogWriteFreq(10000); // 10kHz
-    // analogWriteResolution(14); // 0 - 4095
-    // analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
+    digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+
+    pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+    analogWriteFreq(10000); // 10kHz
+    analogWriteResolution(12); // 0 - 4095
+    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 
     delay(RTC6705_BOOT_DELAY);
 }
@@ -184,6 +205,11 @@ static int event()
 
 static int timeout()
 {
+    if (isTick) // Only run spi and analog reads during rx free time.
+    {
+        return DURATION_IMMEDIATELY;
+    }
+
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
     {        
         rtc6705ResetSynthRegA();
@@ -196,7 +222,13 @@ static int timeout()
     }
     else
     {
+        if (vtxSPIPowerIdx > VpdSetPointCount) vtxSPIPowerIdx = VpdSetPointCount;
+        VpdSetPoint = VpdSetPointArray[vtxSPIPowerIdx - 1];
+
         checkOutputPower();
+        
+        LOGGING_UART.println(vtxSPIPowerIdx);
+        LOGGING_UART.println(VpdSetPoint);
         
         INFOLN("VTx check output...");
 

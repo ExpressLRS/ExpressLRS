@@ -12,9 +12,5 @@ extern uint8_t vtxSPIBandChannelIdx;
 extern uint8_t vtxSPIBandChannelIdxCurrent;
 extern uint8_t vtxSPIPowerIdx;
 extern uint8_t vtxSPIPitmode;
-extern uint8_t rtc6705PowerAmpState;
-extern uint16_t vtxSPIPWM;
-
-void VTxOutputMinimum(void);
 
 #endif

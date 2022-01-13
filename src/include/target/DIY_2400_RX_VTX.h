@@ -1,7 +1,4 @@
-#ifndef DEVICE_NAME
 #define DEVICE_NAME "ELRS 2400RX"
-#endif
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5
@@ -15,4 +12,11 @@
 #define GPIO_PIN_ANTENNA_SELECT 0 // Low = Ant1, High = Ant2, pulled high by external resistor
 #endif
 
-// Output Power - use default SX1280
+#define Regulatory_Domain_ISM_2400 1
+
+// VTx pins and Vpd setpoints
+#define GPIO_PIN_SPI_VTX_NSS    9
+#define GPIO_PIN_RF_AMP_VREF    10
+#define GPIO_PIN_RF_AMP_PWM     0
+#define GPIO_PIN_RF_AMP_VPD     A0
+#define VPD_VALUES              {200, 350, 400, 430, 700} // {0, 10, 25, 100,  YOLO} mW.  To be calibrated per target.
