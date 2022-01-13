@@ -1,4 +1,4 @@
-#define DEVICE_NAME "ELRS 2400RX"
+#define DEVICE_NAME "2.4G + VTx"
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5

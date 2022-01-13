@@ -64,13 +64,11 @@ static void rtc6705WriteRegister(uint32_t regData)
     uint8_t buf[BUF_PACKET_SIZE];
     memcpy (buf, (byte *) &regData, BUF_PACKET_SIZE);
 
-    SPI.setFrequency(1000000); // Only for testing
     SPI.setBitOrder(LSBFIRST);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
     SPI.transfer(buf, BUF_PACKET_SIZE);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
     SPI.setBitOrder(MSBFIRST);
-    SPI.setFrequency(10000000); // Only for testing
 }
 
 static void rtc6705ResetSynthRegA()
@@ -130,14 +128,12 @@ void VTxOutputMinimum(void)
 
 void VTxOutputIncrease(void)
 {
-    // if (vtxSPIPWM > MIN_PWM) vtxSPIPWM--;
     if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 5;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
 void VTxOutputDecrease(void)
 {
-    // if (vtxSPIPWM < MAX_PWM) vtxSPIPWM++;
     if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 5;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
