@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
 #include "FIFO_GENERIC.h"
 #include "crsfmsp_common.h"
 #include "crc.h"

@@ -1,5 +1,4 @@
 #include "msp2crsf.h"
-#include <iostream>
 
 extern GENERIC_CRC8 crsf_crc;
 
