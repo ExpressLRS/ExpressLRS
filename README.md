@@ -6,7 +6,7 @@
 [![Build Status](https://img.shields.io/github/workflow/status/ExpressLRS/ExpressLRS/Build%20ExpressLRS?logo=github&style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/actions)
 [![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/blob/master/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/stargazers)
-[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/dS6ReFY)
+[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/ExpressLRS)
 
 </center>
 
@@ -32,7 +32,7 @@ To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, 
 https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/
 
 ## Community
-We have both a [Discord Server](https://discord.gg/dS6ReFY) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
+We have both a [Discord Server](https://discord.gg/ExpressLRS) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
 
 ## Features
 
@@ -58,6 +58,6 @@ For an exhaustive list of hardware targets and their user guides, check out the 
 
 ## Developers
 
-If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/dS6ReFY) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to a submit a Pull Request to the GitHub Repository. 
+If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/ExpressLRS) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to a submit a Pull Request to the GitHub Repository. 
 
 ![](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/community.png?raw=true)
