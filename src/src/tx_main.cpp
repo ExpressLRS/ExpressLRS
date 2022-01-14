@@ -37,6 +37,7 @@ SX1280Driver Radio;
 #include "devGsensor.h"
 #include "devThermal.h"
 #include "devPDET.h"
+#include "devBackpack.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -86,10 +87,6 @@ bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
-#if defined(USE_TX_BACKPACK)
-bool TxBackpackWiFiReadyToSend = false;
-bool VRxBackpackWiFiReadyToSend = false;
-#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -105,6 +102,9 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 1},
 #endif
   {&LUA_device, 1},
+#if defined(USE_TX_BACKPACK)
+  {&Backpack_device, 1},
+#endif
 #ifdef HAS_BLE
   {&BLE_device, 1},
 #endif
@@ -668,35 +668,6 @@ void SetSyncSpam()
   }
 }
 
-#if defined(USE_TX_BACKPACK)
-static void BackpackWiFiToMSPOut(uint16_t command)
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = command;
-  packet.addByte(0);
-
-  msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
-}
-
-void BackpackBinding()
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = MSP_ELRS_BIND;
-  packet.addByte(MasterUID[0]);
-  packet.addByte(MasterUID[1]);
-  packet.addByte(MasterUID[2]);
-  packet.addByte(MasterUID[3]);
-  packet.addByte(MasterUID[4]);
-  packet.addByte(MasterUID[5]);
-
-  msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
-}
-#endif // USE_TX_BACKPACK
-
 static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
@@ -713,20 +684,6 @@ static void CheckReadyToSend()
       SendRxWiFiOverMSP();
     }
   }
-
-#if defined(USE_TX_BACKPACK)
-  if (TxBackpackWiFiReadyToSend)
-  {
-    TxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
-  }
-
-  if (VRxBackpackWiFiReadyToSend)
-  {
-    VRxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
-  }
-#endif
 }
 
 void OnRFModePacket(mspPacket_t *packet)
@@ -852,10 +809,6 @@ void EnterBindingMode()
   hwTimer.resume();
 
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-
-#if defined(USE_TX_BACKPACK)
-  BackpackBinding();
-#endif // USE_TX_BACKPACK
 }
 
 void ExitBindingMode()
@@ -928,50 +881,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-void startPassthrough()
-{
-  // stop everyhting
-  devicesStop();
-  Radio.End();
-  hwTimer.stop();
-  CRSF::End();
-
-  // get ready for passthrough
-  CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-  LoggingBackpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
-  disableLoopWDT();
-
-  // reset ESP8285 into bootloader mode
-  digitalWrite(GPIO_PIN_BACKPACK_BOOT, HIGH);
-  delay(100);
-  digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);
-  delay(100);
-  digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
-  delay(50);
-  digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
-
-  CRSF::Port.flush();
-  LoggingBackpack.flush();
-
-  uint8_t buf[64];
-  while(LoggingBackpack.available()) LoggingBackpack.read(buf, sizeof(buf));
-
-  // go hard!
-  for(;;) {
-    int r = CRSF::Port.available();
-    if (r>sizeof(buf)) r=sizeof(buf);
-    r = CRSF::Port.readBytes(buf, r);
-    LoggingBackpack.write(buf, r);
-
-    r = LoggingBackpack.available();
-    if (r>sizeof(buf)) r=sizeof(buf);
-    r = LoggingBackpack.readBytes(buf, r);
-    CRSF::Port.write(buf, r);
-  }
-}
-#endif
-
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -993,41 +902,34 @@ static void setupTarget()
 #endif
 
 #if defined(TARGET_TX_FM30_MINI)
-    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
+  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
 #if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
+
+  /*
+   * Setup the logging/backpack serial port.
+   * This is done here because we need it even if there is no backpack!
+   */ 
+#if defined(PLATFORM_ESP32)
+  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+#else
+#if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
+  LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
+#endif
+#if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+  LoggingBackpack.setTx(GPIO_PIN_DEBUG_TX);
+#endif
+  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD);
 #endif
 }
 
 void setup()
 {
-  #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    pinMode(0, INPUT);                          // setup so we can detect pinchange for passthrough mode
-    // reset the ESP8285 so we know it's running
-    pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-    pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);    // enable low
-    digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);  // bootloader pin high
-    delay(50);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);   // enable high
-  #endif
-
   setupTarget();
-  #if defined(PLATFORM_ESP32)
-    LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
-  #else
-    #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-      LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
-    #endif
-    #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-      LoggingBackpack.setTx(GPIO_PIN_DEBUG_TX);
-    #endif
-    LoggingBackpack.begin(BACKPACK_LOGGING_BAUD);
-  #endif
-
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
   // Initialise the devices
@@ -1080,13 +982,6 @@ void setup()
 
 void loop()
 {
-  #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    if (!digitalRead(0)) {
-      startPassthrough();
-      return;
-    }
-  #endif
-
   uint32_t now = millis();
 
   #if defined(USE_BLE_JOYSTICK)
