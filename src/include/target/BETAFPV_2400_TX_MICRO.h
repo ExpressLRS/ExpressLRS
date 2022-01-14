@@ -6,6 +6,7 @@
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON
+#define WS2812_IS_GRB
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_MICRO_V1

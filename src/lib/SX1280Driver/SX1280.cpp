@@ -371,6 +371,10 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
     LastPacketRSSI = -(int8_t)(status[0] / 2);
     LastPacketSNR = (int8_t)status[1] / 4;
+    // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf
+    // need to subtract SNR from RSSI when SNR <= 0;
+    int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0; 
+    LastPacketRSSI += negOffset;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()

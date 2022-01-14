@@ -37,6 +37,8 @@ inBuffer_U CRSF::inBuffer;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
 #if CRSF_TX_MODULE
+#define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
+
 static FIFO MspWriteFIFO;
 
 void inline CRSF::nullCallback(void) {}
@@ -85,6 +87,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
+uint32_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -227,19 +230,14 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     if (!CRSF::CRSFstate)
         return;
 
-    static uint8_t buf[6] = {
-        0, // length
+    uint8_t buf[6] = {
+        (uint8_t)(len + 6),
         CRSF_ADDRESS_RADIO_TRANSMITTER,
-        0,
-        0,
+        (uint8_t)(len + 4),
+        type,
         CRSF_ADDRESS_RADIO_TRANSMITTER,
         CRSF_ADDRESS_CRSF_TRANSMITTER
     };
-
-    // Header info
-    buf[0] = len + 6;
-    buf[2] = len + 4; // Type + DST + SRC + CRC
-    buf[3] = type;
 
     // CRC - Starts at type, ends before CRC
     uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
@@ -550,10 +548,9 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
     while (CRSF::Port.available())
     {
-        unsigned char const inChar = CRSF::Port.read();
-
         if (CRSFframeActive == false)
         {
+            unsigned char const inChar = CRSF::Port.read();
             // stage 1 wait for sync byte //
             if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
                 inChar == CRSF_SYNC_BYTE)
@@ -581,9 +578,12 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             // special case where we save the expected pkt len to buffer //
             if (SerialInPacketPtr == 1)
             {
+                unsigned char const inChar = CRSF::Port.read();
                 if (inChar <= CRSF_MAX_PACKET_LEN)
                 {
                     SerialInPacketLen = inChar;
+                    SerialInBuffer[SerialInPacketPtr] = inChar;
+                    SerialInPacketPtr++;
                 }
                 else
                 {
@@ -594,14 +594,25 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 }
             }
 
-            SerialInBuffer[SerialInPacketPtr] = inChar;
-            SerialInPacketPtr++;
+            int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
+            #if defined(PLATFORM_ESP32)
+            int count = CRSF::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
+            #else
+            int count = 0;
+            int avail = CRSF::Port.available();
+            while (count < toRead && count < avail)
+            {
+                SerialInBuffer[SerialInPacketPtr + count] = CRSF::Port.read();
+                count++;
+            }
+            #endif
+            SerialInPacketPtr += count;
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
                 char CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
 
-                if (CalculatedCRC == inChar)
+                if (CalculatedCRC == SerialInBuffer[SerialInPacketPtr-1])
                 {
                     GoodPktsCount++;
                     if (ProcessPacket())
@@ -629,53 +640,59 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
 {
     // both static to split up larger packages
-    static uint8_t packageLength = 0;
+    static uint8_t packageLengthRemaining = 0;
     static uint8_t sendingOffset = 0;
-    uint8_t writeLength = 0;
 
     if (OpentxSyncActive)
     {
         sendSyncPacketToTX(); // calculate mixer sync packet if needed
     }
 
-    // check if we have data in the output FIFO that needs to be written or a large package was split up and we need to send the second part
-    if (sendingOffset > 0 || SerialOutFIFO.peek() > 0) {
+    // if partial package remaining, or data in the output FIFO that needs to be written
+    if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
+        uint32_t periodBytesRemaining = maxPeriodBytes;
+        while (periodBytesRemaining)
+        {
 #ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
-        // no package is in transit so get new data from the fifo
-        if (sendingOffset == 0) {
-            packageLength = SerialOutFIFO.pop();
-            SerialOutFIFO.popBytes(CRSFoutBuffer, packageLength);
-        }
-
-        // if the package is long we need to split it up so it fits in the sending interval
-        if (packageLength > maxPacketBytes) {
-            writeLength = maxPacketBytes;
-        } else {
-            writeLength = packageLength;
-        }
-
-
+            // no package is in transit so get new data from the fifo
+            if (packageLengthRemaining == 0) {
+                packageLengthRemaining = SerialOutFIFO.pop();
+                SerialOutFIFO.popBytes(CRSFoutBuffer, packageLengthRemaining);
+                sendingOffset = 0;
+            }
 #ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
 
-        // write the packet out, if it's a large package the offset holds the starting position
-        CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
-        if (CRSF::PortSecondary)
-            CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+            // if the package is long we need to split it up so it fits in the sending interval
+            uint8_t writeLength;
+            if (packageLengthRemaining > periodBytesRemaining) {
+                if (periodBytesRemaining < maxPeriodBytes) {  // only start to send a split packet as the first packet
+                    break;
+                }
+                writeLength = periodBytesRemaining;
+            } else {
+                writeLength = packageLengthRemaining;
+            }
+
+            // write the packet out, if it's a large package the offset holds the starting position
+            CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+            if (CRSF::PortSecondary)
+                CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+
+            sendingOffset += writeLength;
+            packageLengthRemaining -= writeLength;
+            periodBytesRemaining -= writeLength;
+
+            // No bytes left to send, exit
+            if (SerialOutFIFO.size() == 0)
+                break;
+        }
         CRSF::Port.flush();
-
-        sendingOffset += writeLength;
-        packageLength -= writeLength;
-
-        // after everything was writen reset the offset so a new package can be fetched from the fifo
-        if (packageLength == 0) {
-            sendingOffset = 0;
-        }
         duplex_set_RX();
 
         // make sure there is no garbage on the UART left over
@@ -687,7 +704,6 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
 #if defined(PLATFORM_ESP32)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     #ifdef UART_INVERTED
     gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
@@ -734,11 +750,12 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
+    maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
+    maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
     // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxPacketBytes = maxPacketBytes < 10 ? 10 : maxPacketBytes;
-    DBGLN("Adjusted max packet size %u", maxPacketBytes);
+    maxPeriodBytes = maxPeriodBytes < 10 ? 10 : maxPeriodBytes;
+    maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
+    DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
 bool CRSF::UARTwdt()

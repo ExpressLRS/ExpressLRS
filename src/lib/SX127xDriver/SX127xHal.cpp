@@ -65,15 +65,18 @@ void SX127xHal::init()
 #endif
 
   pinMode(GPIO_PIN_NSS, OUTPUT);
-  pinMode(GPIO_PIN_RST, OUTPUT);
   pinMode(GPIO_PIN_DIO0, INPUT);
 
   digitalWrite(GPIO_PIN_NSS, HIGH);
+
+#if defined(GPIO_PIN_RST)
+  pinMode(GPIO_PIN_RST, OUTPUT);
 
   delay(100);
   digitalWrite(GPIO_PIN_RST, 0);
   delay(100);
   pinMode(GPIO_PIN_RST, INPUT); // leave floating
+#endif
 
   attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }

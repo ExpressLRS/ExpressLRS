@@ -48,7 +48,6 @@ class POWERMGNT
 
 private:
     static PowerLevels_e CurrentPower;
-    static PowerLevels_e FanEnableThreshold;
     static void updateFan();
 #if defined(PLATFORM_ESP32)
     static nvs_handle  handle;
@@ -63,7 +62,6 @@ public:
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static PowerLevels_e getDefaultPower();
     static void setDefaultPower();
-    static void setFanEnableTheshold(PowerLevels_e Power);
     static void init();
     static void SetPowerCaliValues(int8_t *values, size_t size);
     static void GetPowerCaliValues(int8_t *values, size_t size);

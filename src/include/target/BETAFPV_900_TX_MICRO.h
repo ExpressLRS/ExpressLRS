@@ -7,7 +7,8 @@
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON
-  
+#define WS2812_IS_GRB
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_DIO0           4

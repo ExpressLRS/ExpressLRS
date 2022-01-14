@@ -846,7 +846,7 @@ local function setLCDvar()
   lcd_title_color = nil
   lcd_title_bw = nil
   -- Determine if popupConfirmation takes 3 arguments or 2
-  --if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
+  -- if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
   -- major 1 is assumed to be FreedomTX
   local ver, radio, major = getVersion()
   if major ~= 1 then

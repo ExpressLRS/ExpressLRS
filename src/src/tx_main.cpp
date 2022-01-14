@@ -115,13 +115,13 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_BUTTON
   {&Button_device, 1},
 #endif
-#if defined HAS_TFT_SCREEN || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+#if defined(HAS_TFT_SCREEN) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
   {&Screen_device, 0},
 #endif
 #ifdef HAS_GSENSOR
   {&Gsensor_device, 0},
 #endif
-#ifdef HAS_THERMAL
+#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
   {&VTX_device, 1}
@@ -579,7 +579,6 @@ static void CheckConfigChangePending()
 
 #if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
-    hwTimer.callbackTock = &timerCallbackIdle;
 #else
     // The code expects to enter here shortly after the tock ISR has started sending the last
     // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
@@ -598,6 +597,7 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    hwTimer.callbackTock = &timerCallbackIdle;
     // If telemetry expected in the next interval, the radio is in RX mode
     // and will skip sending the next packet when the tiemr resumes.
     // Return to normal send mode because if the skipped packet happened
@@ -960,8 +960,8 @@ static void setupTarget()
 
 void setup()
 {
-  Serial.begin(BACKPACK_LOGGING_BAUD);
   setupTarget();
+  Serial.begin(BACKPACK_LOGGING_BAUD);
 
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
@@ -1002,7 +1002,6 @@ void setup()
     TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
 
     POWERMGNT.init();
-    POWERMGNT.setFanEnableTheshold((PowerLevels_e)config.GetPowerFanThreshold());
 
     // Set the pkt rate, TLM ratio, and power from the stored eeprom values
     ChangeRadioParams();

@@ -291,6 +291,10 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   hal.readRegisterFIFO(RXdataBuffer, PayloadLength);
   LastPacketRSSI = GetLastPacketRSSI();
   LastPacketSNR = GetLastPacketSNR();
+  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
+  // page 87 (note we already do /4 in GetLastPacketSNR())
+  int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
+  LastPacketRSSI += negOffset;
   RXdoneCallback();
 }
 

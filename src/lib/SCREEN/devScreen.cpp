@@ -132,12 +132,29 @@ static int handle(void)
   }
 #endif
 
-  fivewaybutton.handle();
+#ifdef HAS_GSENSOR
+  is_screen_flipped = gsensor.isFlipped();
+
+  if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+  }
+  else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
+  }
+  is_pre_screen_flipped = is_screen_flipped;
+  if (is_screen_flipped)
+  {
+    return 100; // no need to check as often if the screen is off!
+  }
+#endif
 
   if(!IsArmed())
   {
     int key;
     bool isLongPressed;
+    fivewaybutton.handle();
     fivewaybutton.getKeyState(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
@@ -200,19 +217,6 @@ static int handle(void)
       }
     }
   }
-#ifdef HAS_GSENSOR
-  is_screen_flipped = gsensor.isFlipped();
-
-  if((is_screen_flipped == true) && (is_pre_screen_flipped == false))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
-  }
-  else if((is_screen_flipped == false) && (is_pre_screen_flipped == true))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
-  }
-  is_pre_screen_flipped = is_screen_flipped;
-#endif
   return SCREEN_DURATION;
 }
 #else
@@ -239,7 +243,7 @@ static int start()
 {
   if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
   {
-    screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
     return LOGO_DISPLAY_TIMEOUT;
   }
   return DURATION_IMMEDIATELY;
@@ -253,7 +257,7 @@ static int event()
   }
   else
   {
-    screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
   }
 
   return DURATION_IGNORE;

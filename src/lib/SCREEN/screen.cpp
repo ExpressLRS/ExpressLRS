@@ -191,22 +191,27 @@ void Screen::doValueConfirm()
 {
     if(current_page_index == PAGE_SUB_RATE_INDEX)
     {
+        current_rate_index = current_index;
         updatecallback(USER_UPDATE_TYPE_RATE);
     }
     else if(current_page_index == PAGE_SUB_POWER_INDEX)
     {
+        current_power_index = current_index;
         updatecallback(USER_UPDATE_TYPE_POWER);
     }
     else if(current_page_index == PAGE_SUB_RATIO_INDEX)
     {
+        current_ratio_index = current_index;
         updatecallback(USER_UPDATE_TYPE_RATIO);
     }
     else if(current_page_index == PAGE_SUB_SMARTFAN_INDEX)
     {
+        current_smartfan_index = current_index;
         updatecallback(USER_UPDATE_TYPE_SMARTFAN);
     }
     else if(current_page_index == PAGE_SUB_POWERSAVING_INDEX)
     {
+        current_powersaving_index = current_index;
         updatecallback(USER_UPDATE_TYPE_POWERSAVING);
     }
 
@@ -271,22 +276,26 @@ void Screen::doValueSelection(int action)
 
 void Screen::nextIndex(int &index, int action, int min, int max)
 {
-    if(action == USER_ACTION_UP)
+    if (action == USER_ACTION_NONE) // set current index to the value being processed
     {
-        index--;
+        current_index = index;
     }
-    if(action == USER_ACTION_DOWN)
+    else if (action == USER_ACTION_UP)
     {
-        index++;
+        current_index--;
+    }
+    else if (action == USER_ACTION_DOWN)
+    {
+        current_index++;
     }
 
-    if(index < 0)
+    if (current_index < min)
     {
-        index = max - 1;
+        current_index = max - 1;
     }
-    if(index > max - 1)
+    else if (current_index > max - 1)
     {
-        index = min;
+        current_index = min;
     }
 }
 
