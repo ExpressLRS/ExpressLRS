@@ -44,7 +44,7 @@ uint8_t vtxSPIBandChannelIdx = 255;
 uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0; 
 uint8_t vtxSPIPitmode = 1;
-uint8_t rtc6705PowerAmpState = 0;
+uint8_t rtc6705PowerAmpState = 1;
 uint16_t vtxSPIPWM = MAX_PWM;
 uint16_t VpdSetPoint = 0;
 constexpr uint16_t VpdSetPointArray[] = VPD_VALUES;
@@ -121,9 +121,10 @@ void rtc6705PowerAmpOn(void)
 
 void VTxOutputMinimum(void)
 {
+    rtc6705PowerAmpOff();
+
     vtxSPIPWM = MAX_PWM;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
-    rtc6705PowerAmpOff();
 }
 
 void VTxOutputIncrease(void)
