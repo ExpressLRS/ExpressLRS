@@ -7,13 +7,10 @@
 SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
+#include "LBT.h"
 SX1280Driver Radio;
 #else
 #error "Radio configuration is not valid!"
-#endif
-
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
-#include "LBT.h"
 #endif
 
 #include "crc.h"
@@ -302,7 +299,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+#if defined(LBT_ACTIVE)
     BeginClearChannelAssessment();
 #endif
     alreadyTLMresp = true;
@@ -349,7 +346,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+#if defined(LBT_ACTIVE)
     if(ChannelIsClear())
     {
         PrepareTXafterClearChannelAssessment();
@@ -856,7 +853,7 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_LBT_2400)
+#if defined(LBT_ACTIVE)
     PrepareRXafterClearChannelAssessment();
 #endif
     Radio.RXnb();

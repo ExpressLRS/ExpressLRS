@@ -88,11 +88,8 @@
 #define BACKPACK_LOGGING_BAUD 460800
 #endif
 
-#ifndef GPIO_PIN_DEBUG_RX
-#define GPIO_PIN_DEBUG_RX       UNDEF_PIN // use default
-#endif
-#ifndef GPIO_PIN_DEBUG_TX
-#define GPIO_PIN_DEBUG_TX       UNDEF_PIN // use default
+#if defined(Regulatory_Domain_EU_CE_2400) && !defined(Regulatory_Domain_ISM_2400)
+#define Regulatory_Domain_ISM_2400
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)
