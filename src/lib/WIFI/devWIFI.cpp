@@ -618,6 +618,30 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
 }
 
+static void wifiSetApSsidAndPassword()
+{
+  const char *ap_ssid;
+  const char *ap_pass;
+  char ssid[CONFIG_SSID_LEN + 5];
+
+  // If an SSID is set in the config, use that as the AP name, except with TX/RX appended
+  if (config.GetSSID()[0] != 0)
+  {
+    strlcpy(ssid, config.GetSSID(), sizeof(ssid) - 5);
+    strlcat(ssid, " ELRS", sizeof(ssid));
+    ap_ssid = ssid;
+    ap_pass = config.GetPassword();
+  }
+  else
+  {
+    // else use our default "ExpressLRS TX" and such
+    ap_ssid = wifi_ap_ssid;
+    ap_pass = wifi_ap_password;
+  }
+
+  WiFi.softAP(ap_ssid, ap_pass);
+}
+
 static void HandleWebUpdate()
 {
   unsigned long now = millis();
@@ -657,7 +681,7 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
-        WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
+        wifiSetApSsidAndPassword();
         WiFi.scanNetworks(true);
         startServices();
         break;

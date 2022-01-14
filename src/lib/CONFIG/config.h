@@ -15,6 +15,7 @@
 #define TX_CONFIG_VERSION   5
 #define RX_CONFIG_VERSION   4
 #define UID_LEN             6
+#define CONFIG_SSID_LEN     33 // including trailing null
 
 #if defined(TARGET_TX)
 typedef struct {
@@ -29,8 +30,8 @@ typedef struct {
 
 typedef struct {
     uint32_t        version;
-    char            ssid[33];
-    char            password[33];
+    char            ssid[CONFIG_SSID_LEN];
+    char            password[CONFIG_SSID_LEN];
     uint8_t         vtxBand;
     uint8_t         vtxChannel;
     uint8_t         vtxPower;
@@ -128,8 +129,8 @@ typedef struct {
     uint8_t     uid[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
-    char        ssid[33];
-    char        password[33];
+    char        ssid[CONFIG_SSID_LEN];
+    char        password[CONFIG_SSID_LEN];
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
