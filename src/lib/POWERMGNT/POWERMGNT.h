@@ -43,7 +43,6 @@
     #if MaxPower > PWR_100mW
         #error "Regulatory_Domain_EU_CE_2400 only valid up to 100mW"
     #elif MaxPower > PWR_10mW
-        #warning "LBT active"
         #define LBT_ACTIVE
     #endif
 
