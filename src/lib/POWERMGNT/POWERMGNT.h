@@ -31,29 +31,13 @@
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    #define PWR_10mW (0)
-    #define PWR_25mW (1)
-    #define PWR_50mW (2)
-    #define PWR_100mW (3)
-    #define PWR_250mW (4)
-    #define PWR_500mW (5)
-    #define PWR_1000mW (6)
-    #define PWR_2000mW (7)
+    #undef MaxPower
+    #define MaxPower PWR_100mW
 
-    #if MaxPower > PWR_100mW
-        #error "Regulatory_Domain_EU_CE_2400 only valid up to 100mW"
-    #elif MaxPower > PWR_10mW
-        #define LBT_ACTIVE
+    #if defined(HighPower)
+        #undef HighPower
+        #define HighPower MaxPower
     #endif
-
-    #undef PWR_10mW
-    #undef PWR_25mW
-    #undef PWR_50mW
-    #undef PWR_100mW
-    #undef PWR_250mW
-    #undef PWR_500mW
-    #undef PWR_1000mW
-    #undef PWR_2000mW
 #endif
 
 typedef enum

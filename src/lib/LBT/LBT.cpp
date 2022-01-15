@@ -10,6 +10,8 @@ volatile uint32_t rxStartTime;
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
 #endif
 
+bool LBTEnabled;
+
 int ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
 {
   // The necessary wait time from RX start to valid instant RSSI reading

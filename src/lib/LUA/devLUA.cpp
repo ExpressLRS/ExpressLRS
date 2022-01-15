@@ -70,14 +70,9 @@ static struct luaItem_selection luaFanThreshold = {
 };
 #endif
 
-#if defined(Regulatory_Domain_EU_CE_2400) && defined(LBT_ACTIVE)
+#if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
-    {"100mW CE LBT LIMIT", CRSF_INFO},
-    emptySpace
-};
-#elif defined(Regulatory_Domain_EU_CE_2400)
-static struct luaItem_string luaCELimit = {
-    {"10mW CE LIMIT", CRSF_INFO},
+    {"100mW CE LIMIT", CRSF_INFO},
     emptySpace
 };
 #endif

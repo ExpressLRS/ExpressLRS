@@ -299,9 +299,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
-#if defined(LBT_ACTIVE)
+#if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment();
 #endif
+
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = TLM_PACKET;
 
@@ -346,7 +347,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
-#if defined(LBT_ACTIVE)
+#if defined(Regulatory_Domain_EU_CE_2400)
     if(ChannelIsClear())
     {
         PrepareTXafterClearChannelAssessment();
@@ -362,7 +363,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
         Radio.TXdoneCallback();
     }
-#else // not LBT
+#else // non-CE
     Radio.TXnb();
 #endif
     return true;
@@ -853,7 +854,7 @@ void ICACHE_RAM_ATTR RXdoneISR()
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-#if defined(LBT_ACTIVE)
+#if defined(Regulatory_Domain_EU_CE_2400)
     PrepareRXafterClearChannelAssessment();
 #endif
     Radio.RXnb();
