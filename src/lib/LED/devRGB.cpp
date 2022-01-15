@@ -2,13 +2,20 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+#if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
 #include <NeoPixelBus.h>
-static constexpr uint16_t PixelCount = 2;
-#ifdef WS2812_IS_GRB
-static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
+#if !defined(WS2812_PIXEL_COUNT)
+    #define WS2812_PIXEL_COUNT 1
+#endif
+#if defined(PLATFORM_ESP8266)
+    #define METHOD  NeoEsp8266BitBangWs2812Method
 #else
-static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
+    #define METHOD Neo800KbpsMethod
+#endif
+#ifdef WS2812_IS_GRB
+static NeoPixelBus<NeoGrbFeature, METHOD> strip(WS2812_PIXEL_COUNT, GPIO_PIN_LED_WS2812);
+#else
+static NeoPixelBus<NeoRgbFeature, METHOD> strip(WS2812_PIXEL_COUNT, GPIO_PIN_LED_WS2812);
 #endif
 
 void WS281Binit()
