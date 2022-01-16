@@ -54,4 +54,5 @@ public:
     uint8_t ICACHE_RAM_ATTR peek();
     uint16_t ICACHE_RAM_ATTR size();
     void ICACHE_RAM_ATTR flush();
+    bool ICACHE_RAM_ATTR ensure(int requiredSize) { return (numElements + requiredSize) < FIFO_SIZE; }
 };

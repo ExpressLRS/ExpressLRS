@@ -213,9 +213,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -246,9 +249,12 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(buf, sizeof(buf));
-    SerialOutFIFO.pushBytes((byte *)data, len);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(buf[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(buf, sizeof(buf));
+        SerialOutFIFO.pushBytes((byte *)data, len);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -268,8 +274,12 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 #ifdef PLATFORM_ESP32
         portENTER_CRITICAL(&FIFOmux);
 #endif
-        SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
-        SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (SerialOutFIFO.ensure(size + 1))
+        {
+            SerialOutFIFO.push(size); // length
+            SerialOutFIFO.pushBytes(data, (int)size);
+        }
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -529,10 +539,10 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
     // store all write requests since an update does send multiple writes
     else
     {
-        MspWriteFIFO.push(length);
-        for (uint8_t i = 0; i < length; i++)
+        if (MspWriteFIFO.ensure(length + 1))
         {
-            MspWriteFIFO.push(data[i]);
+            MspWriteFIFO.push(length);
+            MspWriteFIFO.pushBytes((const uint8_t *)data, (int)length);
         }
     }
 }
@@ -864,9 +874,11 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif // CRSF_RCVR_NO_SERIAL
