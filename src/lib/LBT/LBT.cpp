@@ -115,7 +115,9 @@ void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
     LBTEnabled = false;
     LBTScheduleDisable = false;
     Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  } else {
+  }
+  else
+  {
     Radio.SetDioIrqParams(SX1280_IRQ_TX_DONE, SX1280_IRQ_TX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
   }
 }
