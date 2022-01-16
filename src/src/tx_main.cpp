@@ -591,7 +591,17 @@ static void ChangeRadioParams()
   POWERMGNT.setPower(config.GetDynamicPower() ? MinPower : (PowerLevels_e)config.GetPower());
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
-  LBTEnabled = config.GetPower() > PWR_10mW;
+  if(config.GetPower() > PWR_10mW)
+  {
+    // It is safe to switch on LBT from outside interrupts because both TXdone, RXdone and timerCallback
+    // start with beginClearChannelAssessment, which is first entry point for LBT.
+    LBTEnabled = true;
+  } else if(LBTEnabled)
+  {
+    // It is NOT safe to switch off LBT from outside LBT routines because LBT fiddles with
+    // interrupt enable flags. Instead we schedule LBT to be disabled and let LBT routines handle it safely.
+    LBTScheduleDisable = true;
+  }
 #endif
 }
 

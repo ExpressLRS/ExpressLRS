@@ -10,7 +10,8 @@ volatile uint32_t rxStartTime;
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
 #endif
 
-bool LBTEnabled;
+volatile bool LBTEnabled = false;
+volatile bool LBTScheduleDisable = false;
 
 int ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
 {
@@ -109,7 +110,14 @@ void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
 {
   LBTSuccessCalc.add(); // Add success only when actually preparing for TX
   Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-  Radio.SetDioIrqParams(SX1280_IRQ_TX_DONE, SX1280_IRQ_TX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  if(LBTScheduleDisable)
+  {
+    LBTEnabled = false;
+    LBTScheduleDisable = false;
+    Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  } else {
+    Radio.SetDioIrqParams(SX1280_IRQ_TX_DONE, SX1280_IRQ_TX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  }
 }
 
 void ICACHE_RAM_ATTR PrepareRXafterClearChannelAssessment(void)
