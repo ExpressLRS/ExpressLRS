@@ -662,7 +662,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
     if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
-        uint32_t periodBytesRemaining = maxPeriodBytes;
+        uint32_t periodBytesRemaining = std::min((int)maxPeriodBytes, CRSF::Port.availableForWrite());
         while (periodBytesRemaining)
         {
 #ifdef PLATFORM_ESP32
