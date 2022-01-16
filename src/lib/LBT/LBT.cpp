@@ -13,6 +13,22 @@ volatile uint32_t rxStartTime;
 volatile bool LBTEnabled = false;
 volatile bool LBTScheduleDisable = false;
 
+void enableLBT(bool useLBT)
+{
+  if (useLBT)
+  {
+    // It is safe to switch on LBT from outside interrupts because both TXdone, RXdone and timerCallback
+    // start with beginClearChannelAssessment, which is first entry point for LBT.
+    LBTEnabled = true;
+  }
+  else if(LBTEnabled)
+  {
+    // It is NOT safe to switch off LBT from outside LBT routines because LBT fiddles with
+    // interrupt enable flags. Instead we schedule LBT to be disabled and let LBT routines handle it safely.
+    LBTScheduleDisable = true;
+  }
+}
+
 int ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
 {
   // The necessary wait time from RX start to valid instant RSSI reading
@@ -64,6 +80,11 @@ int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
 
 void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
 {
+  if (!LBTEnabled)
+  {
+    Radio.SetTxIdleMode();
+    return;
+  }
   // Listen Before Talk (LBT) aka clear channel assessment (CCA)
   // Not interested in packets or interrupts while measuring RF energy on channel.
   Radio.SetDioIrqParams(SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
@@ -76,6 +97,10 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
 { 
+  if (!LBTEnabled)
+  {
+    return true;
+  }
   LBTSuccessCalc.inc(); // Increment count for every channel check
 
   // Read rssi after waiting the minimum RSSI valid delay.
@@ -108,6 +133,10 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
 
 void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
 {
+  if (!LBTEnabled)
+  {
+    return;
+  }
   LBTSuccessCalc.add(); // Add success only when actually preparing for TX
   Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
   if(LBTScheduleDisable)
@@ -124,6 +153,10 @@ void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
 
 void ICACHE_RAM_ATTR PrepareRXafterClearChannelAssessment(void)
 {
+  if (!LBTEnabled)
+  {
+    return;
+  }
   // Go to idle and back to rx, to prevent packet reception during LBT filling the RX buffer
   Radio.SetTxIdleMode();
   Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
