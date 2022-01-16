@@ -44,7 +44,7 @@ uint8_t vtxSPIBandChannelIdx = 255;
 uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0; 
 uint8_t vtxSPIPitmode = 1;
-uint8_t rtc6705PowerAmpState = 1;
+uint8_t RfAmpVrefState = 0;
 uint16_t vtxSPIPWM = MAX_PWM;
 uint16_t VpdSetPoint = 0;
 constexpr uint16_t VpdSetPointArray[] = VPD_VALUES;
@@ -63,7 +63,6 @@ static void rtc6705WriteRegister(uint32_t regData)
 {
     uint8_t buf[BUF_PACKET_SIZE];
     memcpy (buf, (byte *) &regData, BUF_PACKET_SIZE);
-
     SPI.setBitOrder(LSBFIRST);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
     SPI.transfer(buf, BUF_PACKET_SIZE);
@@ -86,7 +85,6 @@ static void rtc6705SetFrequency(uint32_t freq)
     uint32_t SYN_RF_A_REG = f % 64;
 
     uint32_t regData = SYNTHESIZER_REGISTER_B | (WRITE_BIT << 4) | (SYN_RF_A_REG << 5) | (SYN_RF_N_REG << 12);
-
     rtc6705WriteRegister(regData);
 }
 
@@ -95,33 +93,29 @@ static void rtc6705SetFrequencyByIdx(uint8_t idx)
     rtc6705SetFrequency((uint32_t)freqTable[idx]);
 }
 
-void rtc6705PowerAmpOff(void)
-{
-    if (rtc6705PowerAmpState)
-    {
-        uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_OFF << 5);
-        rtc6705WriteRegister(regData);
-        rtc6705PowerAmpState = 0;
-    }
-
-    digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
-}
-
 void rtc6705PowerAmpOn(void)
 {
-    if (!rtc6705PowerAmpState)
-    {
-        uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_ON << 5);
-        rtc6705WriteRegister(regData);
-        rtc6705PowerAmpState = 1;
-    }
+    uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_ON << 5);
+    rtc6705WriteRegister(regData);
+}
 
-    digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+void RfAmpVrefOn(void)
+{
+    if (!RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+
+    RfAmpVrefState = 1;
+}
+
+void RfAmpVrefOff(void)
+{
+    if (RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+
+    RfAmpVrefState = 0;
 }
 
 void VTxOutputMinimum(void)
 {
-    rtc6705PowerAmpOff();
+    RfAmpVrefOff();
 
     vtxSPIPWM = MAX_PWM;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
@@ -143,15 +137,14 @@ static void checkOutputPower()
 {
     if (vtxSPIPitmode)
     {
-        INFOLN("Pitmode On...");
-
         VTxOutputMinimum();
     }
     else
-    {
-        INFOLN("Pitmode Off...");
+    {        
+        RfAmpVrefOn();
 
-        rtc6705PowerAmpOn();
+        if (vtxSPIPowerIdx > VpdSetPointCount) vtxSPIPowerIdx = VpdSetPointCount;
+        VpdSetPoint = VpdSetPointArray[vtxSPIPowerIdx - 1];
     
         uint16_t Vpd = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
 
@@ -163,9 +156,6 @@ static void checkOutputPower()
         {
             VTxOutputDecrease();
         }
-
-        LOGGING_UART.println(Vpd);
-        LOGGING_UART.println(vtxSPIPWM);
     }
 }
 
@@ -187,6 +177,9 @@ static void initialize()
 
 static int start()
 {
+    rtc6705ResetSynthRegA();
+    rtc6705PowerAmpOn();
+
     return VTX_POWER_INTERVAL_MS;
 }
 
@@ -209,7 +202,6 @@ static int timeout()
 
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
     {        
-        rtc6705ResetSynthRegA();
         rtc6705SetFrequencyByIdx(vtxSPIBandChannelIdx);
         vtxSPIBandChannelIdxCurrent = vtxSPIBandChannelIdx;
 
@@ -219,15 +211,7 @@ static int timeout()
     }
     else
     {
-        if (vtxSPIPowerIdx > VpdSetPointCount) vtxSPIPowerIdx = VpdSetPointCount;
-        VpdSetPoint = VpdSetPointArray[vtxSPIPowerIdx - 1];
-
         checkOutputPower();
-        
-        LOGGING_UART.println(vtxSPIPowerIdx);
-        LOGGING_UART.println(VpdSetPoint);
-        
-        INFOLN("VTx check output...");
 
         return VTX_POWER_INTERVAL_MS;
     }
