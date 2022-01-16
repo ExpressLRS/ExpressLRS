@@ -1,11 +1,11 @@
+#if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+
 #include "targets.h"
 #include "common.h"
 #include "device.h"
 #include "devVTXSPI.h"
 #include "helpers.h"
-#include "ESP8266_hwTimer.h"
-
-#if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+#include "hwTimer.h"
 #include "logging.h"
 #include <SPI.h>
 
