@@ -7,7 +7,6 @@
 #include "msp.h"
 #include "logging.h"
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern CRSF crsf;
 extern Stream *LoggingBackpack;
 
