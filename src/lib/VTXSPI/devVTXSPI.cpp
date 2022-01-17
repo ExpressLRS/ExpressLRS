@@ -46,6 +46,7 @@ uint8_t vtxSPIPitmode = 1;
 uint8_t RfAmpVrefState = 0;
 uint16_t vtxSPIPWM = MAX_PWM;
 uint16_t VpdSetPoint = 0;
+uint16_t Vpd = 0;
 constexpr uint16_t VpdSetPointArray[] = VPD_VALUES;
 constexpr uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdSetPointArray);
 
@@ -122,13 +123,13 @@ void VTxOutputMinimum(void)
 
 void VTxOutputIncrease(void)
 {
-    if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 5;
+    if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 1;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
 void VTxOutputDecrease(void)
 {
-    if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 5;
+    if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 1;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
@@ -145,7 +146,9 @@ static void checkOutputPower()
         if (vtxSPIPowerIdx > VpdSetPointCount) vtxSPIPowerIdx = VpdSetPointCount;
         VpdSetPoint = VpdSetPointArray[vtxSPIPowerIdx - 1];
     
-        uint16_t Vpd = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
+        uint16_t VpdReading = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
+
+        Vpd = 0.8 * Vpd + 0.2 * VpdReading;
 
         if (Vpd < (VpdSetPoint - VPD_BUFFER))
         {
