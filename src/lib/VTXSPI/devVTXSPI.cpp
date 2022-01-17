@@ -36,6 +36,7 @@
 
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
+extern bool ICACHE_RAM_ATTR IsArmed();
 void VTxOutputMinimum(void);
 
 uint8_t vtxSPIBandChannelIdx = 255;
@@ -183,6 +184,11 @@ static int start()
 
 static int event()
 {
+    if (IsArmed())
+    {
+        vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
+    }
+
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
     {
         return DURATION_IMMEDIATELY;

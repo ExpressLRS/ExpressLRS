@@ -185,6 +185,11 @@ void ExitBindingMode();
 void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
 
+bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.GetChannelOutput(AUX1));
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
