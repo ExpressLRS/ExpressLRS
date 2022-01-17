@@ -237,7 +237,7 @@ void DynamicPower_Update()
   }
   if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
     DBGVLN("Power decrease");
-    dynamic_power_avg_lq = 90<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
+    dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
     POWERMGNT.decPower();
   }
 
