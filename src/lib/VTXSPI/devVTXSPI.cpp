@@ -38,8 +38,6 @@
 
 void VTxOutputMinimum(void);
 
-bool isTick;
-
 uint8_t vtxSPIBandChannelIdx = 255;
 uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0; 
@@ -195,7 +193,7 @@ static int event()
 
 static int timeout()
 {
-    if (isTick) // Only run spi and analog reads during rx free time.
+    if (!hwTimer::isTick) // Only run spi and analog reads during rx free time.
     {
         return DURATION_IMMEDIATELY;
     }
