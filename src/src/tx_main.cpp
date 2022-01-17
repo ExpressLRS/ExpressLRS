@@ -1061,6 +1061,7 @@ void loop()
   CheckReadyToSend();
   CheckConfigChangePending();
   DynamicPower_Update();
+  VtxPitmodeSwitchUpdate();
 
   if (LoggingBackpack->available())
   {

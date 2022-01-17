@@ -173,7 +173,7 @@ static struct luaItem_selection luaVtxPwr = {
 static struct luaItem_selection luaVtxPit = {
     {"Pitmode", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    "Off;On;+AUX1;-AUX1;+AUX2;-AUX2;+AUX3;-AUX3;+AUX4;-AUX4;+AUX5;-AUX5;+AUX6;-AUX6",
     emptySpace
 };
 

@@ -9,6 +9,7 @@
 
 extern CRSF crsf;
 extern Stream *LoggingBackpack;
+uint8_t pitmodeAuxState = 0;
 
 static enum VtxSendState_e
 {
@@ -22,6 +23,22 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     devicesTriggerEvent();
+}
+
+void VtxPitmodeSwitchUpdate()
+{
+  if (config.GetVtxPitmode() > 1)
+  {
+      uint8_t auxInverted = config.GetVtxPitmode() % 2;
+      uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
+      uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelDataIn[auxNumber]) ^ auxInverted;
+
+      if (pitmodeAuxState != currentPitmodeAuxState)
+      {
+        pitmodeAuxState = currentPitmodeAuxState;
+        VtxTriggerSend();
+      }
+  }
 }
 
 static void eepromWriteToMSPOut()
@@ -46,7 +63,15 @@ static void VtxConfigToMSPOut()
     packet.addByte(0);
     if (config.GetVtxPower()) {
         packet.addByte(config.GetVtxPower());
-        packet.addByte(config.GetVtxPitmode());
+
+        if (config.GetVtxPitmode() < 2)
+        {
+            packet.addByte(config.GetVtxPitmode());
+        }
+        else
+        {
+            packet.addByte(pitmodeAuxState);
+        }
     }
 
     crsf.AddMspMessage(&packet);
