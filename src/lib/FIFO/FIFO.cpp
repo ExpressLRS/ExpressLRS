@@ -132,3 +132,15 @@ void ICACHE_RAM_ATTR FIFO::flush()
     tail = 0;
     numElements = 0;
 }
+
+bool ICACHE_RAM_ATTR FIFO::ensure(int requiredSize)
+{
+    if(requiredSize > FIFO_SIZE)
+        return false;
+    while(!available(requiredSize)) {
+        uint8_t len = pop();
+        head = (head + len) % FIFO_SIZE;
+        numElements -= len;
+    }
+    return true;
+}
