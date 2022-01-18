@@ -223,6 +223,11 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
+void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeout(uint16_t timeout)
+{
+    hal.setRegValue(SX127X_REG_SYMB_TIMEOUT_LSB, timeout);
+}
+
 bool SX127xDriver::DetectChip()
 {
   uint8_t i = 0;
@@ -308,7 +313,14 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   SetMode(SX127x_OPMODE_STANDBY);
   hal.RXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
-  SetMode(SX127x_OPMODE_RXCONTINUOUS);
+  if (timeoutSymbols)
+  {
+    SetMode(SX127x_OPMODE_RXSINGLE);
+  }
+  else
+  {
+    SetMode(SX127x_OPMODE_RXCONTINUOUS);
+  }
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
@@ -320,12 +332,12 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength, interval);
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength)
+void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
   PayloadLength = PayloadLength;
   IQinverted = InvertIQ;
@@ -335,6 +347,39 @@ void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x
   SetSpreadingFactor(sf);
   SetBandwidthCodingRate(bw, cr);
   SetFrequencyReg(freq);
+
+  timeoutSymbols = 0; // no timeout i.e. use continuous mode
+  if (interval)
+  {
+    int spread;
+    switch(sf)
+    {
+      case SX127x_SF_6:
+        spread = 6;
+        break;
+      case SX127x_SF_7:
+        spread = 7;
+        break;
+      case SX127x_SF_8:
+        spread = 8;
+        break;
+      case SX127x_SF_9:
+        spread = 9;
+        break;
+      case SX127x_SF_10:
+        spread = 10;
+        break;
+      case SX127x_SF_11:
+        spread = 11;
+        break;
+      case SX127x_SF_12:
+        spread = 12;
+        break;
+    }
+    double symbolTimeUs = ((double)(1<<spread)) / GetCurrBandwidth();
+    timeoutSymbols = interval / symbolTimeUs;
+  }
+  SetRxTimeout(timeoutSymbols);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()

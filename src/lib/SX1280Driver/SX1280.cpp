@@ -80,10 +80,15 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength)
+void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
     PayloadLength = PayloadLength;
     IQinverted = InvertIQ;
+    timeout = 0xFFFF;
+    if (interval)
+    {
+        timeout = interval * 1000 / 15625; // number of ticks for the sx1280 to timeout
+    }
     SetMode(SX1280_MODE_STDBY_XOSC);
     ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, PayloadLength, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
@@ -152,9 +157,9 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         break;
 
     case SX1280_MODE_RX:
-        buf[0] = 0x00; // periodBase = 1ms, page 71 datasheet, set to FF for cont RX
-        buf[1] = 0xFF;
-        buf[2] = 0xFF;
+        buf[0] = 0x00; // periodBase = 15.625us, page 71 datasheet
+        buf[1] = timeout >> 0xFF;
+        buf[2] = timeout & 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
         switchDelay = 100;
         break;

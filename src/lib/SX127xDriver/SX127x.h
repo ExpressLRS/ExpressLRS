@@ -45,6 +45,7 @@ public:
     uint8_t currPWR = 0b0000;
     SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
     bool IQinverted = false;
+    uint16_t timeoutSymbols = 0;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
@@ -62,8 +63,8 @@ public:
     bool Begin();
     void End();
     bool DetectChip();
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
+    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
     void SetMode(SX127x_RadioOPmodes mode);
     void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();
@@ -74,6 +75,7 @@ public:
     void SetOutputPowerMax() { SetOutputPower(0b1111); };
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
+    void SetRxTimeout(uint16_t timeout);
 
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
