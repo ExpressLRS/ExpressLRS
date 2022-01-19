@@ -158,7 +158,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 
     case SX1280_MODE_RX:
         buf[0] = 0x00; // periodBase = 15.625us, page 71 datasheet
-        buf[1] = timeout >> 0xFF;
+        buf[1] = timeout >> 8;
         buf[2] = timeout & 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
         switchDelay = 100;
