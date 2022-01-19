@@ -480,16 +480,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   // Skip transmitting on this slot
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
-    TelemetryRcvPhase = ttrpWindowInProgress;
+    TelemetryRcvPhase = ttrpTransmitting;
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
-  }
-  // TLM packet reception was the previous slot, transmit this slot (below)
-  if (TelemetryRcvPhase == ttrpWindowInProgress)
-  {
-    // Stop Receive mode if it is still active
-    TelemetryRcvPhase = ttrpTransmitting;
   }
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
