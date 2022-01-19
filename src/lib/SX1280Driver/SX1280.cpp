@@ -34,6 +34,16 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
+/*
+ * Period Base from table 11-24, page 79 datasheet rev 3.2
+ * SX1280_RADIO_TICK_SIZE_0015_US = 15625 nanos
+ * SX1280_RADIO_TICK_SIZE_0062_US = 62500 nanos
+ * SX1280_RADIO_TICK_SIZE_1000_US = 1000000 nanos
+ * SX1280_RADIO_TICK_SIZE_4000_US = 4000000 nanos
+ */
+#define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
+#define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
+
 void ICACHE_RAM_ATTR SX1280Driver::nullCallback(void) {}
 
 SX1280Driver::SX1280Driver()
@@ -95,7 +105,7 @@ void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
 {
     if (interval)
     {
-        timeout = interval * 1000 / 15625; // number of ticks for the sx1280 to timeout
+        timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS; // number of periods for the SX1280 to timeout
     }
     else
     {
@@ -165,7 +175,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         break;
 
     case SX1280_MODE_RX:
-        buf[0] = 0x00; // periodBase = 15.625us, page 71 datasheet
+        buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = timeout >> 8;
         buf[2] = timeout & 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
@@ -174,7 +184,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
 
     case SX1280_MODE_TX:
         //uses timeout Time-out duration = periodBase * periodBaseCount
-        buf[0] = 0x00; // periodBase = 1ms, page 71 datasheet
+        buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = 0xFF; // no timeout set for now
         buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
         hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf));

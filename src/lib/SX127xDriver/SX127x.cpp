@@ -228,7 +228,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
   timeoutSymbols = 0; // no timeout i.e. use continuous mode
   if (interval)
   {
-    int spread = 0;
+    unsigned int spread = 0;
     switch (currSF)
     {
     case SX127x_SF_6:
@@ -253,12 +253,10 @@ void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
       spread = 12;
       break;
     }
-    double symbolTimeUs = ((double)(1 << spread)) / GetCurrBandwidth() * 1000000;
+    uint32_t symbolTimeUs = ((uint32_t)(1 << spread)) * 1000000 / GetCurrBandwidth();
     timeoutSymbols = interval / symbolTimeUs;
     hal.setRegValue(SX127X_REG_SYMB_TIMEOUT_LSB, timeoutSymbols);
-    DBGLN("Interval: %d", interval);
-    DBGLN("symbolTimeUs: %d", (uint32_t)symbolTimeUs);
-    DBGLN("Timeout: %d symbols", timeoutSymbols);
+    DBGLN("SetRxTimeout(%u), symbolTime=%uus symbols=%u", interval, (uint32_t)symbolTimeUs, timeoutSymbols)
   }
 }
 
