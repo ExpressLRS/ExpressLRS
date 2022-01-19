@@ -222,7 +222,10 @@ void OLEDScreen::displayMainScreen(){
         u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
         u8g2.drawStr(70,15, &(ratio_string[current_ratio_index])[0]);
         u8g2.drawStr(0,32, power.c_str());
-        u8g2.drawStr(70,32, "Test");
+        char buffer[7];
+        strncpy(buffer, version, 6);
+        buffer[6] = 0;
+        u8g2.drawStr(70,32, buffer);
     #else
         u8g2.setFont(u8g2_font_t0_15_mr);
         u8g2.drawStr(0,13, "ExpressLRS");
