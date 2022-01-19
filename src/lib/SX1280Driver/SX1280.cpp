@@ -84,15 +84,23 @@ void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSprea
 {
     PayloadLength = PayloadLength;
     IQinverted = InvertIQ;
-    timeout = 0xFFFF;
-    if (interval)
-    {
-        timeout = interval * 1000 / 15625; // number of ticks for the sx1280 to timeout
-    }
     SetMode(SX1280_MODE_STDBY_XOSC);
     ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, PayloadLength, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
     SetFrequencyReg(freq);
+    SetRxTimeoutUs(interval);
+}
+
+void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
+{
+    if (interval)
+    {
+        timeout = interval * 1000 / 15625; // number of ticks for the sx1280 to timeout
+    }
+    else
+    {
+        timeout = 0xFFFF;   // no timeout, continuous mode
+    }
 }
 
 void SX1280Driver::SetOutputPower(int8_t power)
