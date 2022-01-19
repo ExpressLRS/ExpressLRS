@@ -376,7 +376,7 @@ void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x
         spread = 12;
         break;
     }
-    double symbolTimeUs = ((double)(1<<spread)) / GetCurrBandwidth();
+    double symbolTimeUs = ((double)(1<<spread)) / GetCurrBandwidth() * 1000000;
     timeoutSymbols = interval / symbolTimeUs;
   }
   SetRxTimeout(timeoutSymbols);
