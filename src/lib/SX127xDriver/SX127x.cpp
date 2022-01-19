@@ -563,8 +563,8 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback()
 {
     uint8_t irqStatus = instance->GetIrqFlags();
     instance->ClearIrqFlags();
-    if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_TX_DONE))
+    if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_TX_DONE) && (instance->currOpmode == SX127x_OPMODE_TX))
         instance->TXnbISR();
-    else if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE))
+    if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE) && ((instance->currOpmode == SX127x_OPMODE_RXSINGLE)) || (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS))
         instance->RXnbISR();
 }
