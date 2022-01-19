@@ -87,7 +87,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
+uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -278,7 +278,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
         if (SerialOutFIFO.ensure(size + 1))
         {
             SerialOutFIFO.push(size); // length
-            SerialOutFIFO.pushBytes(data, (int)size);
+            SerialOutFIFO.pushBytes(data, size);
         }
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux);
@@ -542,7 +542,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
         if (MspWriteFIFO.ensure(length + 1))
         {
             MspWriteFIFO.push(length);
-            MspWriteFIFO.pushBytes((const uint8_t *)data, (int)length);
+            MspWriteFIFO.pushBytes((const uint8_t *)data, length);
         }
     }
 }
@@ -662,7 +662,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
     if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
-        uint32_t periodBytesRemaining = std::min((int)maxPeriodBytes, CRSF::Port.availableForWrite());
+        uint8_t periodBytesRemaining = std::min((int)maxPeriodBytes, CRSF::Port.availableForWrite());
         while (periodBytesRemaining)
         {
 #ifdef PLATFORM_ESP32
