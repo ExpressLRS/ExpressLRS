@@ -326,6 +326,12 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
 {
   hal.readRegisterFIFO(RXdataBuffer, PayloadLength);
+  if (timeoutSymbols)
+  {
+    // From page 42 of the datasheet rev 7
+    // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
+    currOpmode = SX127x_OPMODE_STANDBY;
+  }
   LastPacketRSSI = GetLastPacketRSSI();
   LastPacketSNR = GetLastPacketSNR();
   // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf

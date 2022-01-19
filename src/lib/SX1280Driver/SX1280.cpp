@@ -347,7 +347,12 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
 {
     // In continuous receive mode, the device stays in Rx mode
-    //currOpmode = SX1280_MODE_FS;
+    if (timeout != 0xFFFF)
+    {
+        // From table 11-28, pg 81 datasheet rev 3.2
+        // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
+        currOpmode = SX1280_MODE_STDBY_RC;
+    }
     uint8_t FIFOaddr = GetRxBufferAddr();
     hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
     GetLastPacketStats();
