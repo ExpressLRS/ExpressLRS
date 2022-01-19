@@ -12,7 +12,7 @@
 #define GPIO_PIN_RST            2
 #define GPIO_PIN_LED            16
 #define GPIO_PIN_BUTTON         0
-#define GPIO_PIN_RX_ENABLE      9 //enable pa
+#define GPIO_PIN_RX_ENABLE      9
 #define GPIO_PIN_TX_ENABLE      10
 
 // Output Power
