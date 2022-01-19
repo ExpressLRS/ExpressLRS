@@ -52,14 +52,14 @@ public:
     void ICACHE_RAM_ATTR push(const uint8_t data);
 
     // Push all bytes to FIFO, if all the bytes will not fit then the FIFO is flushed and no bytes are pushed
-    void ICACHE_RAM_ATTR pushBytes(const uint8_t *data, int len);
+    void ICACHE_RAM_ATTR pushBytes(const uint8_t *data, uint8_t len);
 
     // Pop a single byte (returns 0 if no bytes left)
     uint8_t ICACHE_RAM_ATTR pop();
 
     // Pops 'len' bytes into the buffer pointed to by 'data'. If there are not enough bytes in the FIFO
     // then the FIFO is flush and the bytes are not read
-    void ICACHE_RAM_ATTR popBytes(uint8_t *data, int len);
+    void ICACHE_RAM_ATTR popBytes(uint8_t *data, uint8_t len);
 
     // return the first byte in the FIFO without removing it
     uint8_t ICACHE_RAM_ATTR peek();
@@ -71,10 +71,10 @@ public:
     void ICACHE_RAM_ATTR flush();
     
     // returns true if the number of bytes requested is available in the FIFO
-    bool ICACHE_RAM_ATTR available(int requiredSize) { return (numElements + requiredSize) < FIFO_SIZE; }
-    
+    bool ICACHE_RAM_ATTR available(uint8_t requiredSize) { return (numElements + requiredSize) < FIFO_SIZE; }
+
     // Ensure that there is enough room in the FIFO for the requestedSize in bytes.
     // "packets" are popped from the head of the FIFO until there is enough room available.
     // This method assumes that on the FIFO contains length-prefixed data packets.
-    bool ICACHE_RAM_ATTR ensure(int requiredSize);
+    bool ICACHE_RAM_ATTR ensure(uint8_t requiredSize);
 };
