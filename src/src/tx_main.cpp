@@ -489,7 +489,6 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   if (TelemetryRcvPhase == ttrpWindowInProgress)
   {
     // Stop Receive mode if it is still active
-    Radio.SetTxIdleMode();
     TelemetryRcvPhase = ttrpTransmitting;
   }
 
@@ -604,7 +603,6 @@ static void CheckConfigChangePending()
     // to be on the last slot of the FHSS the skip will prevent FHSS
     if (TelemetryRcvPhase == ttrpInReceiveMode)
     {
-      Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
@@ -613,9 +611,6 @@ static void CheckConfigChangePending()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-  // There isn't enough time to receive two packets during one telemetry slot
-  // Stop receiving to prevent a second packet preamble from starting a second receive
-  Radio.SetTxIdleMode();
   ProcessTLMpacket();
   busyTransmitting = false;
 }
