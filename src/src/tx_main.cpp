@@ -139,9 +139,9 @@ device_affinity_t ui_devices[] = {
   #define DYNPOWER_THRESH_LQ_UP           85
 #endif
 #if !defined(DYNPOWER_THRESH_LQ_DN)
-  #define DYNPOWER_THRESH_LQ_DN           97
+  #define DYNPOWER_THRESH_LQ_DN           95
 #endif
-#define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
+#define DYNAMIC_POWER_MIN_RECORD_NUM       4 // Average this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
@@ -210,8 +210,8 @@ void DynamicPower_Update()
   // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
   dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
-  // =============  RSSI-based power adjustment ==============
-  // It is working slowly, suitable for a general long-range flights.
+  // =============  RSSI and LQ-based power adjustment ==============
+  // It is working slowly, suitable for a general flying.
 
   // Get the RSSI from the selected antenna.
   int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
@@ -226,18 +226,16 @@ void DynamicPower_Update()
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
   int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
 
-  int32_t lq_adjust = (100-lq_avg)/3;
-  int32_t rssi_inc_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_UP;  // thresholds are adjusted according to LQ fluctuation
-  int32_t rssi_dec_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_DN;
+  int32_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_THRESH_UP;
+  int32_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_THRESH_DN;
 
   // increase power only up to the set power from the LUA script
-  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
+  if ((avg_rssi < rssi_inc_threshold || lq_current < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
     DBGLN("Power increase");
     POWERMGNT.incPower();
   }
-  if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
+  if (avg_rssi > rssi_dec_threshold && lq_current > DYNPOWER_THRESH_LQ_DN) {
     DBGVLN("Power decrease"); // Note: Verbose debug only - to prevent spamming when on a high telemetry ratio.
-    dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
     POWERMGNT.decPower();
   }
 
