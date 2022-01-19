@@ -69,6 +69,7 @@ public:
     void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
     void ICACHE_RAM_ATTR SetFrequencyReg(uint32_t freq);
     void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
+    void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
     void SetOutputPowerMax() { SetOutputPower(13); };
 

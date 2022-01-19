@@ -75,7 +75,7 @@ public:
     void SetOutputPowerMax() { SetOutputPower(0b1111); };
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
-    void SetRxTimeout(uint16_t timeout);
+    void SetRxTimeoutUs(uint32_t interval);
 
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();
