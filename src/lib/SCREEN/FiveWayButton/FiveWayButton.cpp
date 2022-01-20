@@ -10,17 +10,10 @@ uint32_t key_debounce_start = 0;
 int key = INPUT_KEY_NO_PRESS;
 
 #ifdef GPIO_PIN_JOYSTICK
-#define UP 0;
-#define DOWN 1;
-#define LEFT 2;
-#define RIGHT 3;
-#define ENTER 4;
-#define IDLE 5;
 
 static int16_t joyAdcValues[] = JOY_ADC_VALUES;
-
 int16_t fuzzValues[] = {0, 0, 0, 0, 0, 0};
-int16_t sortedJoyAdcValues[] =
+static int16_t sortedJoyAdcValues[] =
     JOY_ADC_VALUES; // We are going to sort these at in init()
 
 void swap(int16_t *xp, int16_t *yp)
@@ -55,8 +48,25 @@ void selectionSort()
     }
 }
 
-void findMinDiff()
+/**
+ * @brief calcFuzzValues is used to calculate half the distance to the next 
+ * nearest neighbor for each joystick position. The goal is to avoid collisions 
+ * between joystick positions.
+ * 
+ * Example: {10,50,800,1000,300,1600}
+ * If we just choose the minimum difference for this array the value would 
+ * be 40/2 = 20. 
+ * 
+ * 20 does not leave enough room for the joystick position using 1600 which 
+ * could have a +-100 offset. 
+ * 
+ * Example Fuzz values: {20, 20, 100, 100, 125, 300} now the fuzz for the 1600 
+ * position is 300 instead of 20
+ */
+void calcFuzzValues()
 {
+    selectionSort();
+
     int n = 6; // Number of positions up, down, left, right, enter, idle
 
     // First for loop is stepping through the the real JOY_ADC_VALUES
@@ -141,8 +151,7 @@ void FiveWayButton::init()
     pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT | PULLUP);
     pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT | PULLUP);
 #else
-    selectionSort();
-    findMinDiff();
+    calcFuzzValues();
 #endif
 
     key_state = INPUT_KEY_NO_PRESS;
