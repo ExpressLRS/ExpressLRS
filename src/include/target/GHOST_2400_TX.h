@@ -34,7 +34,7 @@
 #define GPIO_PIN_OLED_DC            PC15
 #define GPIO_PIN_OLED_MOSI          PB5
 #define GPIO_PIN_OLED_SCK           PB3
-#define GPIO_PIN_JOYSTICK           PA0
+#define GPIO_PIN_JOYSTICK           A0
 
 // Output Power
 #define MinPower                    PWR_10mW
