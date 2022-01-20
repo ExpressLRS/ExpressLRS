@@ -236,7 +236,7 @@ void DynamicPower_Update()
     POWERMGNT.incPower();
   }
   if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
-    DBGVLN("Power decrease"); // Note: Verbose debug only - to prevent spamming when on a high telemetry ratio.
+    DBGVLN("Power decrease");  // Print this on verbose only, to prevent spamming when on a high telemetry ratio
     dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
     POWERMGNT.decPower();
   }
