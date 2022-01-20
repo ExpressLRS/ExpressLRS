@@ -354,7 +354,8 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
         // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
         currOpmode = SX1280_MODE_FS;
     }
-    hal.ReadBuffer(0x00, RXdataBuffer, PayloadLength);
+    uint8_t FIFOaddr = GetRxBufferAddr();
+    hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
     GetLastPacketStats();
     RXdoneCallback();
 }
