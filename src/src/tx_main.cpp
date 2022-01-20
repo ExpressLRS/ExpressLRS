@@ -135,6 +135,12 @@ device_affinity_t ui_devices[] = {
 #if !defined(DYNPOWER_THRESH_DN)
   #define DYNPOWER_THRESH_DN              21
 #endif
+#if !defined(DYNPOWER_THRESH_LQ_UP)
+  #define DYNPOWER_THRESH_LQ_UP           85
+#endif
+#if !defined(DYNPOWER_THRESH_LQ_DN)
+  #define DYNPOWER_THRESH_LQ_DN           97
+#endif
 #define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
@@ -191,7 +197,8 @@ void DynamicPower_Update()
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   int32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
-  int32_t lq_diff = (dynamic_power_avg_lq>>16) - lq_current;
+  int32_t lq_avg = dynamic_power_avg_lq>>16;
+  int32_t lq_diff = lq_avg - lq_current;
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
@@ -219,16 +226,18 @@ void DynamicPower_Update()
   int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
   int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
 
-  int32_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_THRESH_UP;
-  int32_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_THRESH_DN;
+  int32_t lq_adjust = (100-lq_avg)/3;
+  int32_t rssi_inc_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_UP;  // thresholds are adjusted according to LQ fluctuation
+  int32_t rssi_dec_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_DN;
 
   // increase power only up to the set power from the LUA script
-  if (avg_rssi < rssi_inc_threshold && POWERMGNT.currPower() < (PowerLevels_e)config.GetPower()) {
+  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
     DBGLN("Power increase");
     POWERMGNT.incPower();
   }
-  if (avg_rssi > rssi_dec_threshold) {
+  if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
     DBGVLN("Power decrease");
+    dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
     POWERMGNT.decPower();
   }
 
