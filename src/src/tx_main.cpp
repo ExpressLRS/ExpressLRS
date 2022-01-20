@@ -784,6 +784,7 @@ void OnTLMRatePacket(mspPacket_t *packet)
 void OnPowerGetCalibration(mspPacket_t *packet)
 {
   uint8_t index = packet->readByte();
+  UNUSED(index);
   int8_t values[PWR_COUNT] = {0};
   POWERMGNT.GetPowerCaliValues(values, PWR_COUNT);
   DBGLN("power get calibration value %d",  values[index]);

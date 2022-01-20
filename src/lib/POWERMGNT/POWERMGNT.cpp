@@ -106,6 +106,8 @@ void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
         nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
     }
     nvs_commit(handle);
+#else
+    UNUSED(isUpdate);
 #endif
 }
 
