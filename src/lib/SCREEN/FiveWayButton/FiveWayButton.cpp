@@ -21,21 +21,70 @@ int key = INPUT_KEY_NO_PRESS;
 
 static int16_t joyAdcValues[] = JOY_ADC_VALUES;
 
-// Returns minimum difference between any pair
-int findMinDiff(int16_t arr[], int n)
+int16_t fuzzValues[] = {0,0,0,0,0,0};
+int16_t sortedJoyAdcValues[] = JOY_ADC_VALUES; //We are going to sort these at in init()
+
+
+void swap(int16_t* xp, int16_t* yp)
 {
-// Initialize difference as infinite
-int diff = 1000;
+    int16_t temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
  
-// Find the min diff by comparing difference
-// of all possible pairs in given array
-for (int i=0; i<n-1; i++)
-    for (int j=i+1; j<n; j++)
-        if (abs(arr[i] - arr[j]) < diff)
-                diff = abs(arr[i] - arr[j]);
+
+//  Thanks alot Jumper for making this whole process more complicated than it has to be.
+// Function to perform Selection Sort
+void selectionSort()
+{
+    int i, j, min_idx;
  
-// Return min diff
-return diff;
+    int n = 6;
+
+    // One by one move boundary of unsorted subarray
+    for (i = 0; i < n - 1; i++) {
+ 
+        // Find the minimum element in unsorted array
+        min_idx = i;
+        for (j = i + 1; j < n; j++)
+            if (sortedJoyAdcValues[j] < sortedJoyAdcValues[min_idx])
+                min_idx = j;
+ 
+        // Swap the found minimum element
+        // with the first element
+        swap(&sortedJoyAdcValues[min_idx], &sortedJoyAdcValues[i]);
+    }
+}
+
+void findMinDiff()
+{
+    int n = 6; //Number of positions up, down, left, right, enter, idle
+    
+    // First for loop is stepping through the the real JOY_ADC_VALUES
+    for (int i=0; i < n; i++)
+        // Second for loop is stepping through the sorted values to find its min
+        // distance between (curr - 1) and (curr + 1)
+        for (int j = 0; j < n; j++)
+            if(joyAdcValues[i] == sortedJoyAdcValues [j] ){
+                // If the value is the lowest sorted value
+                if(j == 0 ){
+                    fuzzValues[i] = (sortedJoyAdcValues[1] - sortedJoyAdcValues[0])/2;
+                // Else if the value is the largest sorted value
+                } else if (j == (n - 1)){
+                    fuzzValues[i] = (sortedJoyAdcValues[n - 1] - sortedJoyAdcValues[n -2])/2;
+                // else the value is in between two other values
+                } else {
+                    int16_t beforeValueFuzz = (sortedJoyAdcValues[j] - sortedJoyAdcValues[j -1]);
+                    int16_t afterValueFuzz = (sortedJoyAdcValues[j + 1] - sortedJoyAdcValues[j]);
+                    if (beforeValueFuzz < afterValueFuzz){
+                        fuzzValues[i] = beforeValueFuzz / 2;
+                    } else {
+                        fuzzValues[i] = afterValueFuzz / 2;
+                    }
+                    
+                }
+            }
+    int test = 0;
 }
 
 bool checkValue(int direction){ 
@@ -49,18 +98,18 @@ bool checkValue(int direction){
 
 int checkKey()
 { 
-    int fuzz = (findMinDiff(joyAdcValues, 6) /2 );
+    // int fuzz = (findMinDiff(joyAdcValues, 6) /2 );
     int value = analogRead(GPIO_PIN_JOYSTICK);
         
-    if(value < (joyAdcValues[0] + fuzz) && value > (joyAdcValues[0] - fuzz))
+    if(value < (joyAdcValues[0] + fuzzValues[0]) && value > (joyAdcValues[0] - fuzzValues[0]))
         return INPUT_KEY_UP_PRESS;
-    else if(value < (joyAdcValues[1] + fuzz) && value > (joyAdcValues[1] - fuzz))
+    else if(value < (joyAdcValues[1] + fuzzValues[1]) && value > (joyAdcValues[1] - fuzzValues[1]))
         return INPUT_KEY_DOWN_PRESS;
-    else if(value < (joyAdcValues[2] + fuzz) && value > (joyAdcValues[2] - fuzz))
+    else if(value < (joyAdcValues[2] + fuzzValues[2]) && value > (joyAdcValues[2] - fuzzValues[2]))
         return INPUT_KEY_LEFT_PRESS;
-    else if(value < (joyAdcValues[3] + fuzz) && value > (joyAdcValues[3] - fuzz))
+    else if(value < (joyAdcValues[3] + fuzzValues[3]) && value > (joyAdcValues[3] - fuzzValues[3]))
         return INPUT_KEY_RIGHT_PRESS;
-    else if(value < (joyAdcValues[4] + fuzz) && value > (joyAdcValues[4] - fuzz))
+    else if(value < (joyAdcValues[4] + fuzzValues[4]) && value > (joyAdcValues[4] - fuzzValues[4]))
         return INPUT_KEY_OK_PRESS;
     else
         return INPUT_KEY_NO_PRESS;
@@ -73,6 +122,9 @@ void FiveWayButton::init()
     pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT|PULLUP );
     pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT|PULLUP );
     pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT|PULLUP );
+    #else 
+    selectionSort();
+    findMinDiff();
     #endif
 
     key_state = INPUT_KEY_NO_PRESS;
