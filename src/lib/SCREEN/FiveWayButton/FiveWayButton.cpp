@@ -98,7 +98,6 @@ bool checkValue(int direction){
 
 int checkKey()
 { 
-    // int fuzz = (findMinDiff(joyAdcValues, 6) /2 );
     int value = analogRead(GPIO_PIN_JOYSTICK);
         
     if(value < (joyAdcValues[0] + fuzzValues[0]) && value > (joyAdcValues[0] - fuzzValues[0]))
