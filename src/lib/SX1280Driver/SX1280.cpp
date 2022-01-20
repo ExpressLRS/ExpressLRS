@@ -351,10 +351,10 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
     {
         // From table 11-28, pg 81 datasheet rev 3.2
         // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
-        currOpmode = SX1280_MODE_STDBY_RC;
+        // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
+        currOpmode = SX1280_MODE_FS;
     }
-    uint8_t FIFOaddr = GetRxBufferAddr();
-    hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
+    hal.ReadBuffer(0x00, RXdataBuffer, PayloadLength);
     GetLastPacketStats();
     RXdoneCallback();
 }
@@ -409,8 +409,8 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
 {
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    if ((irqStatus & SX1280_IRQ_TX_DONE) && (instance->currOpmode == SX1280_MODE_TX))
+    if (irqStatus & SX1280_IRQ_TX_DONE)
         instance->TXnbISR();
-    if ((irqStatus & SX1280_IRQ_RX_DONE) && (instance->currOpmode == SX1280_MODE_RX))
+    if (irqStatus & SX1280_IRQ_RX_DONE)
         instance->RXnbISR();
 }
