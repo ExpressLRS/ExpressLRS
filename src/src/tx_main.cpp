@@ -366,7 +366,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   DBGLN("set rate %u", index);
   hwTimer.updateInterval(ModParams->interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -489,17 +489,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   // Skip transmitting on this slot
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
-    TelemetryRcvPhase = ttrpWindowInProgress;
+    TelemetryRcvPhase = ttrpTransmitting;
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
-  }
-  // TLM packet reception was the previous slot, transmit this slot (below)
-  if (TelemetryRcvPhase == ttrpWindowInProgress)
-  {
-    // Stop Receive mode if it is still active
-    Radio.SetTxIdleMode();
-    TelemetryRcvPhase = ttrpTransmitting;
   }
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
@@ -613,7 +606,6 @@ static void CheckConfigChangePending()
     // to be on the last slot of the FHSS the skip will prevent FHSS
     if (TelemetryRcvPhase == ttrpInReceiveMode)
     {
-      Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
@@ -622,9 +614,6 @@ static void CheckConfigChangePending()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-  // There isn't enough time to receive two packets during one telemetry slot
-  // Stop receiving to prevent a second packet preamble from starting a second receive
-  Radio.SetTxIdleMode();
   ProcessTLMpacket();
   busyTransmitting = false;
 }
