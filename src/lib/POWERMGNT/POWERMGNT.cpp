@@ -1,3 +1,4 @@
+#include "common.h"
 #include "POWERMGNT.h"
 #include "DAC.h"
 
