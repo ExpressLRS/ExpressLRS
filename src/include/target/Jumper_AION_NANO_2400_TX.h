@@ -6,6 +6,7 @@
 #define USE_OLED_I2C
 #define USE_SX1280_DCDC
 #define HAS_FIVE_WAY_BUTTON
+#define WS2812_IS_GRB
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -23,7 +24,7 @@
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15
-#define GPIO_PIN_FAN_EN         17
+//#define GPIO_PIN_FAN_EN         17
 #define GPIO_PIN_JOYSTICK       35
 
 // Output Power
