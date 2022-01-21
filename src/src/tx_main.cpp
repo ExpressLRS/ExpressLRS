@@ -36,6 +36,8 @@ SX1280Driver Radio;
 #include "devVTX.h"
 #include "devGsensor.h"
 #include "devThermal.h"
+#include "devPDET.h"
+#include "devBackpack.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -52,6 +54,7 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+HardwareSerial LoggingBackpack(2);
 
 volatile uint8_t NonceTX;
 
@@ -84,10 +87,6 @@ bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
-#if defined(USE_TX_BACKPACK)
-bool TxBackpackWiFiReadyToSend = false;
-bool VRxBackpackWiFiReadyToSend = false;
-#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
@@ -103,6 +102,9 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 1},
 #endif
   {&LUA_device, 1},
+#if defined(USE_TX_BACKPACK)
+  {&Backpack_device, 1},
+#endif
 #ifdef HAS_BLE
   {&BLE_device, 1},
 #endif
@@ -123,6 +125,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
+#endif
+#if defined(GPIO_PIN_PA_PDET) && GPIO_PIN_PA_PDET != UNDEF_PIN
+  {&PDET_device, 1},
 #endif
   {&VTX_device, 1}
 };
@@ -661,35 +666,6 @@ void SetSyncSpam()
   }
 }
 
-#if defined(USE_TX_BACKPACK)
-static void BackpackWiFiToMSPOut(uint16_t command)
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = command;
-  packet.addByte(0);
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
-}
-
-void BackpackBinding()
-{
-  mspPacket_t packet;
-  packet.reset();
-  packet.makeCommand();
-  packet.function = MSP_ELRS_BIND;
-  packet.addByte(MasterUID[0]);
-  packet.addByte(MasterUID[1]);
-  packet.addByte(MasterUID[2]);
-  packet.addByte(MasterUID[3]);
-  packet.addByte(MasterUID[4]);
-  packet.addByte(MasterUID[5]);
-
-  msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
-}
-#endif // USE_TX_BACKPACK
-
 static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
@@ -706,20 +682,6 @@ static void CheckReadyToSend()
       SendRxWiFiOverMSP();
     }
   }
-
-#if defined(USE_TX_BACKPACK)
-  if (TxBackpackWiFiReadyToSend)
-  {
-    TxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
-  }
-
-  if (VRxBackpackWiFiReadyToSend)
-  {
-    VRxBackpackWiFiReadyToSend = false;
-    BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
-  }
-#endif
 }
 
 void OnRFModePacket(mspPacket_t *packet)
@@ -845,10 +807,6 @@ void EnterBindingMode()
   hwTimer.resume();
 
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-
-#if defined(USE_TX_BACKPACK)
-  BackpackBinding();
-#endif // USE_TX_BACKPACK
 }
 
 void ExitBindingMode()
@@ -927,11 +885,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_GHOST)
-  Serial.setTx(PA2);
-  Serial.setRx(PA3);
-#endif
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
@@ -947,20 +900,34 @@ static void setupTarget()
 #endif
 
 #if defined(TARGET_TX_FM30_MINI)
-    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
+  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
 #if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
+
+  /*
+   * Setup the logging/backpack serial port.
+   * This is done here because we need it even if there is no backpack!
+   */ 
+#if defined(PLATFORM_ESP32)
+  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+#else
+#if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
+  LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
+#endif
+#if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+  LoggingBackpack.setTx(GPIO_PIN_DEBUG_TX);
+#endif
+  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD);
 #endif
 }
 
 void setup()
 {
   setupTarget();
-  Serial.begin(BACKPACK_LOGGING_BAUD);
-
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
   // Initialise the devices
@@ -1005,7 +972,6 @@ void setup()
     ChangeRadioParams();
 
     hwTimer.init();
-    //hwTimer.resume();  //uncomment to automatically start the RX timer and leave it running
     connectionState = noCrossfire;
   }
 
@@ -1047,9 +1013,9 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update();
 
-  if (Serial.available())
+  if (LoggingBackpack.available())
   {
-    if (msp.processReceivedByte(Serial.read()))
+    if (msp.processReceivedByte(LoggingBackpack.read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());

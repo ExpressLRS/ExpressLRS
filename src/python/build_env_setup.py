@@ -4,6 +4,7 @@ import UARTupload
 import opentx
 import upload_via_esp8266_backpack
 import esp_compress
+import ETXinitPassthrough
 
 platform = env.get('PIOPLATFORM', '')
 stm = platform in ['ststm32']
@@ -67,6 +68,8 @@ elif platform in ['espressif32']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+    if "_ETX" in target_name:
+        env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
 
 if "_WIFI" in target_name:
     if "_TX_" in target_name:
