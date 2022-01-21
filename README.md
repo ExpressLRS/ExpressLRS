@@ -20,7 +20,7 @@ If you don't have time to lend a hand in that way but still want to have an impa
 We appreciate all forms of contribution and hope you will join us on Discord!
 
 ## Website
-For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
+For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/2.0/faq/)
 
 ## About
 
