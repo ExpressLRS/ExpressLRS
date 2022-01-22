@@ -175,3 +175,7 @@ uint32_t uidMacSeedGet(void);
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
+
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
