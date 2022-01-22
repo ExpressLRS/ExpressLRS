@@ -69,11 +69,11 @@ void SX127xHal::init()
 
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
-#if defined(GPIO_PIN_RST)
+#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
   pinMode(GPIO_PIN_RST, OUTPUT);
 
   delay(100);
-  digitalWrite(GPIO_PIN_RST, 0);
+  digitalWrite(GPIO_PIN_RST, LOW);
   delay(100);
   pinMode(GPIO_PIN_RST, INPUT); // leave floating
 #endif
