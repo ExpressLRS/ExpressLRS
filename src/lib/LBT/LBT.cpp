@@ -96,7 +96,7 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
 }
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
-{ 
+{
   if (!LBTEnabled)
   {
     return true;
@@ -123,7 +123,7 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
     // delayMicroseconds() only valid up to ~16ms per arduino spec. limit to max wait time we need just in case.
     delayRemaining = validRSSIdelayUs;
   }
-  if(delayRemaining > 0) 
+  if(delayRemaining > 0)
   {
     delayMicroseconds(delayRemaining);
   }

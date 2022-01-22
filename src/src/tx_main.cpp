@@ -516,22 +516,15 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   // Skip transmitting on this slot
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
-    TelemetryRcvPhase = ttrpWindowInProgress;
+    TelemetryRcvPhase = ttrpTransmitting;
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }
-  // TLM packet reception was the previous slot, transmit this slot (below)
-  if (TelemetryRcvPhase == ttrpWindowInProgress)
-  {
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment(); // Stop Receive mode and start LBT
-#else // non-CE
-    Radio.SetTxIdleMode(); // Stop Receive mode if it is still active
 #endif
-    TelemetryRcvPhase = ttrpTransmitting;
-  }
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running

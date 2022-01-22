@@ -316,7 +316,6 @@ static void registerLuaParameters()
 #if defined(Regulatory_Domain_EU_CE_2400)
   registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
 #endif
-
   // VTX folder
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
