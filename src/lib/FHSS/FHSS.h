@@ -8,8 +8,6 @@
 #include "SX1280Driver.h"
 #endif
 
-#include "random.h"
-
 #ifdef Regulatory_Domain_AU_915
 #define Regulatory_Domain_Index 1
 #elif defined Regulatory_Domain_FCC_915
@@ -41,7 +39,7 @@ extern uint_fast8_t sync_channel;
 extern const uint8_t FHSS_SEQUENCE_CNT;
 
 // create and randomise an FHSS sequence
-void FHSSrandomiseFHSSsequence(uint32_t seed);
+void FHSSrandomiseFHSSsequence(uint8_t UID[6]);
 // The number of frequencies for this regulatory domain
 uint32_t FHSSgetChannelCount(void);
 

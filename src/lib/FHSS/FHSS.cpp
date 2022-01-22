@@ -1,6 +1,7 @@
 #include "FHSS.h"
 #include "logging.h"
 #include <string.h>
+#include "pcg_basic.h"
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433
@@ -259,7 +260,7 @@ Approach:
   another random entry, excluding the sync channel.
 
 */
-void FHSSrandomiseFHSSsequence(const uint32_t seed)
+void FHSSrandomiseFHSSsequence(uint8_t UID[6])
 {
 #ifdef Regulatory_Domain_AU_915
     INFOLN("Setting 915MHz AU Mode");
@@ -286,7 +287,14 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
-    rngSeed(seed);
+
+    // setup random number generator
+    pcg32_random_t rng;
+    uint64_t seeds[2];
+
+	seeds[0] = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
+	seeds[1] = ((long)UID[0] << 24) + ((long)UID[1] << 16) + ((long)UID[2] << 8) + UID[3];
+	pcg32_srandom_r(&rng, seeds[0], seeds[1]);
 
     // initialize the sequence array
     for (uint8_t i = 0; i < FHSS_SEQUENCE_CNT; i++)
@@ -306,7 +314,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         if (i % FHSS_FREQ_CNT != 0)
         {
             uint8_t offset = (i / FHSS_FREQ_CNT) * FHSS_FREQ_CNT; // offset to start of current block
-            uint8_t rand = rngN(FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
+            uint8_t rand = pcg32_boundedrand_r(&rng, FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
             uint8_t temp = FHSSsequence[i];

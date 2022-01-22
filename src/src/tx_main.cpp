@@ -34,6 +34,10 @@ SX1280Driver Radio;
 #include "devButton.h"
 #include "devVTX.h"
 
+#if defined(HMAC) || defined(UIDHASH)
+#include "hmac.h"
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -133,6 +137,10 @@ static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
+
+#if defined(UIDHASH)
+byte UIDHash[3];
+#endif
 
 #ifdef TARGET_TX_GHOST
 extern "C"
@@ -307,9 +315,16 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
   Radio.TXdataBuffer[3] = (Index << 6) + (newRatio << 3) + (SwitchEncMode << 1);
+  #if defined(UIDHASH)
+  Radio.TXdataBuffer[4] = UIDHash[0];
+  Radio.TXdataBuffer[5] = UIDHash[1];
+  Radio.TXdataBuffer[6] = UIDHash[2];
+  #else
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
+  #endif
+
   // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
   if (!InBindingMode && config.GetModelMatch())
   {
@@ -445,7 +460,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
 
   ///// Next, Calculate the CRC and put it into the buffer /////
+  #if defined(HMAC)
+  uint32_t crcstart = micros();
+  uint16_t crc = getHMAC((byte *)Radio.TXdataBuffer,7);
+  DBGV("Hmac took: "); DBGVLNln(micros()-crcstart);
+  #else
+  uint32_t crcstart = micros();
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
+  DBGV("CRC took: "); DBGVLN(micros()-crcstart);
+  #endif
+
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
@@ -911,12 +935,27 @@ static void setupTarget()
 void setup()
 {
   Serial.begin(460800);
+
+  #if defined(UIDHASH)
+  getUIDHash(UIDHash,3);
+  DBG("UID Hash: ");
+
+  for(int i= 0; i< 3; i++){
+      char str[3];
+
+      sprintf(str, "%02x", (int)UIDHash[i]);
+      DBG(str);
+  }
+  DBGLN();
+
+  #endif
+
   setupTarget();
 
   // Initialise the UI devices
   devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
-  FHSSrandomiseFHSSsequence(uidMacSeedGet());
+  FHSSrandomiseFHSSsequence(UID);
 
   Radio.RXdoneCallback = &RXdoneISR;
   Radio.TXdoneCallback = &TXdoneISR;
