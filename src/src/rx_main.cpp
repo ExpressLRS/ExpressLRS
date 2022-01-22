@@ -796,20 +796,18 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     }
 
     #if defined(HMAC)
-    uint32_t crcstart = micros();
+    //uint32_t crcstart = micros();
     uint16_t calculatedCRC = getHMAC((byte *)Radio.RXdataBuffer,7);
-    DBGV(", Hmac took: "); DBGVLN(micros()-crcstart);
-
-
+    //DBGV(", Hmac took: "); DBGVLN(micros()-crcstart);
     uint8_t HMACCalc[2];
     HMACCalc[0] = (Radio.TXdataBuffer[0] & 0b11) | ((calculatedCRC >> 6) & 0b11111100);;
     HMACCalc[1] = calculatedCRC & 0xFF;;
     calculatedCRC = (((uint16_t)(HMACCalc[0] & 0b11111100)) << 6) | HMACCalc[1];
 
     #else
-    uint32_t crcstart = micros();
+    //uint32_t crcstart = micros();
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-    DBGV("CRC took: "); DBGVLN(micros()-crcstart);
+    //DBGV("CRC took: "); DBGVLN(micros()-crcstart);
 
     #endif
 
@@ -1257,7 +1255,7 @@ void setup()
         DBG(str);
     }
 
-    DBGLN();
+    DBGLN("");
     #endif
 
     devicesStart();

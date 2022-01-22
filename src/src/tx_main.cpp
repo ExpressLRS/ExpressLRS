@@ -461,13 +461,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   #if defined(HMAC)
-  uint32_t crcstart = micros();
+  // uint32_t crcstart = micros();
   uint16_t crc = getHMAC((byte *)Radio.TXdataBuffer,7);
-  DBGV("Hmac took: "); DBGVLNln(micros()-crcstart);
+  // DBGV("Hmac took: "); DBGVLNln(micros()-crcstart);
   #else
-  uint32_t crcstart = micros();
+  // uint32_t crcstart = micros();
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  DBGV("CRC took: "); DBGVLN(micros()-crcstart);
+  // DBGV("CRC took: "); DBGVLN(micros()-crcstart);
   #endif
 
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
@@ -946,7 +946,7 @@ void setup()
       sprintf(str, "%02x", (int)UIDHash[i]);
       DBG(str);
   }
-  DBGLN();
+  DBGLN("");
 
   #endif
 
