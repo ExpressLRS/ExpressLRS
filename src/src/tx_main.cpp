@@ -642,8 +642,6 @@ static void CheckConfigChangePending()
     {
 #if defined(Regulatory_Domain_EU_CE_2400)
       BeginClearChannelAssessment();
-#else // non-CE
-      Radio.SetTxIdleMode();
 #endif
       TelemetryRcvPhase = ttrpTransmitting;
     }
@@ -653,12 +651,14 @@ static void CheckConfigChangePending()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-  // There isn't enough time to receive two packets during one telemetry slot
-  // Stop receiving to prevent a second packet preamble from starting a second receive
 #if defined(Regulatory_Domain_EU_CE_2400)
+  // LBT sets radio in receive mode to do listen before talk.
+  // If this flag is set by LBT, rx interrupt should be ignored.
+  if(LBTIgnoreRxISR)
+  {
+    return;
+  }
   BeginClearChannelAssessment(); // Stop Receive mode and start LBT
-#else // non-CE
-  Radio.SetTxIdleMode(); // Stop Receive mode if it is still active
 #endif
   ProcessTLMpacket();
   busyTransmitting = false;

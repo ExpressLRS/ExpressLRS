@@ -849,6 +849,14 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    // LBT sets radio in receive mode to do listen before talk.
+    // If this flag is set by LBT, rx interrupt should be ignored.
+    if(LBTIgnoreRxISR)
+    {
+        return;
+    }
+#endif
     ProcessRFPacket();
 }
 

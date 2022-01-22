@@ -12,6 +12,7 @@ volatile uint32_t rxStartTime;
 
 volatile bool LBTEnabled = false;
 volatile bool LBTScheduleDisable = false;
+volatile bool LBTIgnoreRxISR = false;
 
 void enableLBT(bool useLBT)
 {
@@ -87,7 +88,8 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
   }
   // Listen Before Talk (LBT) aka clear channel assessment (CCA)
   // Not interested in packets or interrupts while measuring RF energy on channel.
-  Radio.SetDioIrqParams(SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  LBTIgnoreRxISR = true;
+
   if(Radio.GetMode() != SX1280_MODE_RX)
   {
     Radio.RXnb();
@@ -138,16 +140,12 @@ void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
     return;
   }
   LBTSuccessCalc.add(); // Add success only when actually preparing for TX
-  Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+
   if(LBTScheduleDisable)
   {
     LBTEnabled = false;
     LBTScheduleDisable = false;
-    Radio.SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  }
-  else
-  {
-    Radio.SetDioIrqParams(SX1280_IRQ_TX_DONE, SX1280_IRQ_TX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+    LBTIgnoreRxISR = false;
   }
 }
 
@@ -159,6 +157,5 @@ void ICACHE_RAM_ATTR PrepareRXafterClearChannelAssessment(void)
   }
   // Go to idle and back to rx, to prevent packet reception during LBT filling the RX buffer
   Radio.SetTxIdleMode();
-  Radio.ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-  Radio.SetDioIrqParams(SX1280_IRQ_RX_DONE, SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
+  LBTIgnoreRxISR = false;
 }
