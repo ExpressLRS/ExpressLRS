@@ -3,7 +3,9 @@
 #endif
 
 // Any device features
+#if !defined(USE_OLED_I2C)
 #define USE_OLED_SPI
+#endif
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -16,11 +18,17 @@
 #define GPIO_PIN_RST            14
 #define GPIO_PIN_RX_ENABLE      27
 #define GPIO_PIN_TX_ENABLE      26
+#ifdef USE_OLED_SPI
 #define GPIO_PIN_OLED_CS        2
 #define GPIO_PIN_OLED_RST       16
 #define GPIO_PIN_OLED_DC        22
 #define GPIO_PIN_OLED_MOSI      32
 #define GPIO_PIN_OLED_SCK       33
+#elif defined(USE_OLED_I2C)
+#define GPIO_PIN_OLED_SDA       32
+#define GPIO_PIN_OLED_SCK       33
+#define GPIO_PIN_OLED_RST       U8X8_PIN_NONE
+#endif
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15

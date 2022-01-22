@@ -262,6 +262,6 @@ WEAK const PinMap PinMap_USB[] = {
 //*** No SD ***
 
 //*** PWM ***
-WEAK const PinMap PinMap_PWM[] = {
-  {NC,    NP,    0}
-};
+// WEAK const PinMap PinMap_PWM[] = {
+//   {NC,    NP,    0}
+// };

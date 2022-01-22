@@ -49,18 +49,18 @@ SX1280Driver Radio;
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
-device_t *ui_devices[] = {
+device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
-  &LED_device,
+  {&LED_device, 0},
 #endif
 #ifdef HAS_RGB
-  &RGB_device,
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  &WIFI_device,
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  &Button_device
+  {&Button_device, 0},
 #endif
 };
 
@@ -262,7 +262,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     bool invertIQ = UID[5] & 0x01;
 
     hwTimer.updateInterval(ModParams->interval);
-    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength);
+    Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
@@ -1222,7 +1222,9 @@ void setup()
 
     INFOLN("ExpressLRS Module Booting...");
 
-    devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+    devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+    devicesInit();
+
     setupBindingFromConfig();
 
     FHSSrandomiseFHSSsequence(UID);
@@ -1295,8 +1297,8 @@ void loop()
 
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
     {
-        LostConnection();
         DBGLN("Bad sync, aborting");
+        LostConnection();
         RFmodeLastCycled = now;
         LastSyncPacket = now;
     }

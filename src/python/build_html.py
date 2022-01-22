@@ -10,12 +10,11 @@ import elrs_helpers
 import gzip
 from minify import (html_minifier, rcssmin, rjsmin)
 
-def get_git_version(env):
-    ver = elrs_helpers.get_git_version(env)
-    return '%s (%s)' % (ver['version'], ver['sha'])
+def get_version(env):
+    return '%s (%s) %s' % (env.get('GIT_VERSION'), env.get('GIT_SHA'), env.get('REG_DOMAIN'))
 
 def build_version(out, env):
-    out.write('const char *VERSION = "%s";\n\n' % get_git_version(env))
+    out.write('const char *VERSION = "%s";\n\n' % get_version(env))
 
 def compress(data):
     """Compress data in one shot and return the compressed string.
@@ -30,7 +29,7 @@ def build_html(mainfile, var, out, env):
     with open('html/%s' % mainfile, 'r') as file:
         data = file.read()
     if mainfile.endswith('.html'):
-        data = html_minifier.html_minify(data).replace('@VERSION@', get_git_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
+        data = html_minifier.html_minify(data).replace('@VERSION@', get_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
     if mainfile.endswith('.css'):
         data = rcssmin.cssmin(data)
     if mainfile.endswith('.js'):

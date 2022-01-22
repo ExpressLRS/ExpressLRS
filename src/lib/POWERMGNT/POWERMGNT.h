@@ -2,11 +2,17 @@
 
 #include "targets.h"
 #include "DAC.h"
+#include "device.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280Driver.h"
+#endif
+
+#if defined(PLATFORM_ESP32)
+#include <nvs_flash.h>
+#include <nvs.h>
 #endif
 
 #if defined(TARGET_RX)
@@ -18,6 +24,10 @@
 #if defined(HighPower) && !defined(UNLOCK_HIGHER_POWER)
     #undef MaxPower
     #define MaxPower HighPower
+#endif
+
+#if !defined(DefaultPower)
+    #define DefaultPower PWR_50mW
 #endif
 
 typedef enum
@@ -38,8 +48,11 @@ class POWERMGNT
 
 private:
     static PowerLevels_e CurrentPower;
-    static PowerLevels_e FanEnableThreshold;
     static void updateFan();
+#if defined(PLATFORM_ESP32)
+    static nvs_handle  handle;
+#endif
+    static void LoadCalibration();
 
 public:
     static void setPower(PowerLevels_e Power);
@@ -49,6 +62,11 @@ public:
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static PowerLevels_e getDefaultPower();
     static void setDefaultPower();
-    static void setFanEnableTheshold(PowerLevels_e Power);
     static void init();
+    static void SetPowerCaliValues(int8_t *values, size_t size);
+    static void GetPowerCaliValues(int8_t *values, size_t size);
 };
+
+
+#define CALIBRATION_MAGIC    0x43414C << 8   //['C', 'A', 'L']
+#define CALIBRATION_VERSION   1
