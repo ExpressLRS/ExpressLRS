@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "DupleTX"
+#endif
 
 // Any device features
 #define USE_TX_BACKPACK
