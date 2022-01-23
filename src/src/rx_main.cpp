@@ -350,7 +350,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 #if defined(Regulatory_Domain_EU_CE_2400)
     if(ChannelIsClear())
     {
-        PrepareTXafterClearChannelAssessment();
         Radio.TXnb();
     }
     else
@@ -849,22 +848,11 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    // LBT sets radio in receive mode to do listen before talk.
-    // If this flag is set by LBT, rx interrupt should be ignored.
-    if(LBTIgnoreRxISR)
-    {
-        return;
-    }
-#endif
     ProcessRFPacket();
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    PrepareRXafterClearChannelAssessment();
-#endif
     Radio.RXnb();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');

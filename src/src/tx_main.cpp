@@ -399,9 +399,6 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    PrepareRXafterClearChannelAssessment();
-#endif
     Radio.RXnb();
     TelemetryRcvPhase = ttrpInReceiveMode;
   }
@@ -480,7 +477,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (ChannelIsClear())
   {
-    PrepareTXafterClearChannelAssessment();
     Radio.TXnb();
   }
   else
@@ -640,9 +636,6 @@ static void CheckConfigChangePending()
     // to be on the last slot of the FHSS the skip will prevent FHSS
     if (TelemetryRcvPhase == ttrpInReceiveMode)
     {
-#if defined(Regulatory_Domain_EU_CE_2400)
-      BeginClearChannelAssessment();
-#endif
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
@@ -651,15 +644,6 @@ static void CheckConfigChangePending()
 
 void ICACHE_RAM_ATTR RXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-  // LBT sets radio in receive mode to do listen before talk.
-  // If this flag is set by LBT, rx interrupt should be ignored.
-  if(LBTIgnoreRxISR)
-  {
-    return;
-  }
-  BeginClearChannelAssessment(); // Stop Receive mode and start LBT
-#endif
   ProcessTLMpacket();
   busyTransmitting = false;
 }

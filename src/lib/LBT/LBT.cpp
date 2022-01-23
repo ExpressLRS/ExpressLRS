@@ -12,7 +12,6 @@ volatile uint32_t rxStartTime;
 
 volatile bool LBTEnabled = false;
 volatile bool LBTScheduleDisable = false;
-volatile bool LBTIgnoreRxISR = false;
 
 void enableLBT(bool useLBT)
 {
@@ -86,15 +85,9 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
     Radio.SetTxIdleMode();
     return;
   }
-  // Listen Before Talk (LBT) aka clear channel assessment (CCA)
-  // Not interested in packets or interrupts while measuring RF energy on channel.
-  LBTIgnoreRxISR = true;
 
-  if(Radio.GetMode() != SX1280_MODE_RX)
-  {
-    Radio.RXnb();
-    rxStartTime = micros();
-  }
+  Radio.RXnb();
+  rxStartTime = micros();
 }
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
@@ -130,32 +123,17 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
     delayMicroseconds(delayRemaining);
   }
 
-  return Radio.GetRssiInst() < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
-}
+  bool channelClear = Radio.GetRssiInst() < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
+  Radio.SetTxIdleMode(); // stop RX mode right after to not get rx interrupts.
 
-void ICACHE_RAM_ATTR PrepareTXafterClearChannelAssessment(void)
-{
-  if (!LBTEnabled)
+  if(channelClear)
   {
-    return;
+    LBTSuccessCalc.add(); // Add success only when actually preparing for TX
   }
-  LBTSuccessCalc.add(); // Add success only when actually preparing for TX
-
   if(LBTScheduleDisable)
   {
     LBTEnabled = false;
     LBTScheduleDisable = false;
-    LBTIgnoreRxISR = false;
   }
-}
-
-void ICACHE_RAM_ATTR PrepareRXafterClearChannelAssessment(void)
-{
-  if (!LBTEnabled)
-  {
-    return;
-  }
-  // Go to idle and back to rx, to prevent packet reception during LBT filling the RX buffer
-  Radio.SetTxIdleMode();
-  LBTIgnoreRxISR = false;
+  return channelClear;
 }
