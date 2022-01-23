@@ -9,6 +9,8 @@
 
 HardwareSerial CRSF::Port(0);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
+
+RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port = Serial;
 #elif CRSF_TX_MODULE_STM32
@@ -120,7 +122,11 @@ void CRSF::Begin()
     CRSF::duplex_set_RX();
     portENABLE_INTERRUPTS();
     flush_port_input();
-
+    if (esp_reset_reason() != ESP_RST_POWERON)
+    {
+        modelId = rtcModelId;
+        RecvModelUpdate();
+    }
 #elif defined(PLATFORM_ESP8266)
     CRSF::Port.flush();
     CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
@@ -440,6 +446,9 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
         {
             modelId = SerialInBuffer[7];
+            #if defined(PLATFORM_ESP32)
+            rtcModelId = modelId;
+            #endif
             RecvModelUpdate();
         }
         else
