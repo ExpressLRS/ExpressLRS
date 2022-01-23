@@ -124,14 +124,19 @@ build_flags.append("-DLATEST_VERSION=" + get_ver_and_reg()) # version and domain
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-if "_2400" not in target_name and \
-        not fnmatch.filter(build_flags, '-DRADIO_2400=1') and \
-        not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
-    print_error('Please define a Regulatory_Domain in user_defines.txt')
+if '-DRADIO_900=1' in build_flags:
+    # disallow setting 2400s for 900
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
+        fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
+        print_error('Regulatory_Domain 2400 not compatible with RADIO_900')
 
+    # require a domain be set for 900
+    if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
+        print_error('Please define a Regulatory_Domain in user_defines.txt')
+
+# Remove ISM_2400 domain flag if not unit test, it is defined per target config
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
-    # Remove ISM_2400 domain flag if not unit test, it is defined per target config
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
 
 env['BUILD_FLAGS'] = build_flags

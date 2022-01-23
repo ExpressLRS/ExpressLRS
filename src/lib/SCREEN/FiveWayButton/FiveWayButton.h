@@ -12,18 +12,27 @@ typedef enum
     INPUT_KEY_NO_PRESS = 7
 } Input_Key_Value_t;
 
+// Number of values in JOY_ADC_VALUES, if defined
+// These must be ADC readings for {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}
+constexpr size_t N_JOY_ADC_VALUES = 6;
+
 class FiveWayButton
 {
 private:
-    int key_state;
-    bool keyPressed;
+    int keyInProcess;
+    uint32_t keyDownStart;
     bool isLongPressed;
+#if defined(JOY_ADC_VALUES)
+    static const uint16_t joyAdcValues[N_JOY_ADC_VALUES];
+    uint16_t fuzzValues[N_JOY_ADC_VALUES];
+    void calcFuzzValues();
+#endif
 
+    int readKey();
 public:
+    static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
+    static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;
 
     void init();
-    void handle();
-
-    void getKeyState(int *keyValue, bool *keyLongPressed);
-    void clearKeyState();
+    void update(int *keyValue, bool *keyLongPressed);
 };

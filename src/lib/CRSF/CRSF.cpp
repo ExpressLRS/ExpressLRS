@@ -7,7 +7,7 @@
 #if defined(PLATFORM_ESP32)
 #include "device.h"
 
-HardwareSerial CRSF::Port = HardwareSerial(1);
+HardwareSerial CRSF::Port(0);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port = Serial;
@@ -87,7 +87,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
+uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -213,9 +213,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -246,9 +249,12 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(buf, sizeof(buf));
-    SerialOutFIFO.pushBytes((byte *)data, len);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(buf[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(buf, sizeof(buf));
+        SerialOutFIFO.pushBytes((byte *)data, len);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -268,8 +274,12 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 #ifdef PLATFORM_ESP32
         portENTER_CRITICAL(&FIFOmux);
 #endif
-        SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
-        SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (SerialOutFIFO.ensure(size + 1))
+        {
+            SerialOutFIFO.push(size); // length
+            SerialOutFIFO.pushBytes(data, size);
+        }
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -529,10 +539,10 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
     // store all write requests since an update does send multiple writes
     else
     {
-        MspWriteFIFO.push(length);
-        for (uint8_t i = 0; i < length; i++)
+        if (MspWriteFIFO.ensure(length + 1))
         {
-            MspWriteFIFO.push(data[i]);
+            MspWriteFIFO.push(length);
+            MspWriteFIFO.pushBytes((const uint8_t *)data, length);
         }
     }
 }
@@ -652,7 +662,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
     if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
-        uint32_t periodBytesRemaining = maxPeriodBytes;
+        uint8_t periodBytesRemaining = maxPeriodBytes;
         while (periodBytesRemaining)
         {
 #ifdef PLATFORM_ESP32
@@ -703,6 +713,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
 #if defined(PLATFORM_ESP32)
+  #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
     #ifdef UART_INVERTED
     gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
@@ -713,6 +724,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
+  #endif
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin
     //USC0(UART0) |= BIT(UCLBE);
@@ -726,6 +738,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 {
 #if defined(PLATFORM_ESP32)
+  #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
@@ -736,6 +749,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #else
     gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
     #endif
+  #endif
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin
     //USC0(UART0) &= ~BIT(UCLBE);
@@ -864,9 +878,11 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif // CRSF_RCVR_NO_SERIAL
