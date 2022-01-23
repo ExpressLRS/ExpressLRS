@@ -1,4 +1,5 @@
 #include "common.h"
+#include "logging.h"
 #include "LBT.h"
 
 extern SX1280Driver Radio;
@@ -12,6 +13,7 @@ volatile uint32_t rxStartTime;
 
 volatile bool LBTEnabled = false;
 volatile bool LBTScheduleDisable = false;
+volatile bool LBTStarted = false;
 
 void enableLBT(bool useLBT)
 {
@@ -86,8 +88,14 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
     return;
   }
 
-  Radio.RXnb();
-  rxStartTime = micros();
+  if(!LBTStarted)
+  {
+    // Toggle rx off and on to reset rx timeout
+    Radio.SetTxIdleMode();
+    Radio.RXnb();
+    rxStartTime = micros();
+    LBTStarted = true;
+  }
 }
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
@@ -97,6 +105,8 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
     return true;
   }
   LBTSuccessCalc.inc(); // Increment count for every channel check
+
+  LBTStarted = false;
 
   // Read rssi after waiting the minimum RSSI valid delay.
   // If this function is called long enough after RX enable,
@@ -123,8 +133,12 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
     delayMicroseconds(delayRemaining);
   }
 
-  bool channelClear = Radio.GetRssiInst() < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
+  int8_t rssiInst = Radio.GetRssiInst();
+  bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
   Radio.SetTxIdleMode(); // stop RX mode right after to not get rx interrupts.
+
+  // Useful to debug if and how long the rssi wait is, and rssi threshold level
+  // DBGLN("wait: %d, rssi: %d", delayRemaining, rssiInst);
 
   if(channelClear)
   {
