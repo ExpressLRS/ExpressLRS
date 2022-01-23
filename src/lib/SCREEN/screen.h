@@ -170,4 +170,7 @@ public:
     int getScreenStatus() { return current_screen_status; }
     int getUserPowerSavingIndex() { return current_powersaving_index; }
     int getUserSmartFanIndex() { return current_smartfan_index; }
+
+    void doPressProcess(); 
+    void doLongPressProcess(); 
 };

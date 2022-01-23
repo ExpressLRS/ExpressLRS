@@ -26,6 +26,11 @@ static uint32_t none_input_start_time = 0;
 static bool isUserInputCheck = false;
 #endif
 
+#include "key_button/key_button.h"
+KeyButton keybtn;
+static uint32_t none_input_start_time = 0;
+static bool isUserInputCheck = false;
+
 #ifdef HAS_GSENSOR
 #include "gsensor.h"
 extern Gsensor gsensor;
@@ -221,8 +226,59 @@ static int handle(void)
 }
 #else
 static int handle(void)
-{
-  return DURATION_NEVER;
+{ 
+    if(!IsArmed())
+    {
+    Key_Value_t key_val;
+    keybtn.handle();
+    keybtn.getKeyState(&key_val);
+    if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
+    {
+#ifdef HAS_THERMAL
+      if(millis() - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
+      {
+        screen.doTemperatureUpdate(thermal.getTempValue());
+        update_temp_start_time = millis();
+      }
+#endif
+      if(key_val == LONG_PRESS)
+      {
+        screen.activeScreen();
+      }
+    }
+    else if(screen.getScreenStatus() == SCREEN_STATUS_WORK)
+    {
+      if(!isUserInputCheck)
+      {
+        none_input_start_time = millis();
+        isUserInputCheck = true;
+      }
+
+      if (key_val != NO_PRESS)
+      {
+            DBGLN("user key = %d", key);
+            isUserInputCheck = false;
+            //screen.doUserAction(USER_ACTION_RIGHT);  
+            if(key_val == SINGLE_PRESS)
+                screen.doPressProcess();    
+            else
+                screen.doLongPressProcess();    
+      }
+      else if((millis() - none_input_start_time) > SCREEN_IDLE_TIMEOUT)
+      {
+        isUserInputCheck = false;
+        screen.idleScreen();
+      }
+    }
+    else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
+    {
+      if((millis() - binding_mode_start_time) > BINDING_MODE_TIME_OUT)
+      {
+        screen.doUserAction(USER_ACTION_LEFT);
+      }
+    }
+  }
+  return SCREEN_DURATION;
 }
 #endif
 
@@ -231,6 +287,7 @@ static void initialize()
   #ifdef HAS_FIVE_WAY_BUTTON
   fivewaybutton.init();
   #endif
+  keybtn.init();
   screen.updatecallback = &ScreenUpdateCallback;
   #if defined(PLATFORM_ESP32)
   screen.init(esp_reset_reason() == ESP_RST_SW);

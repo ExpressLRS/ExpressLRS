@@ -4,10 +4,11 @@
 
 // Any device features
 #if !defined(USE_OLED_I2C)
-#define USE_OLED_SPI
+//#define USE_OLED_SPI
 #endif
 #define USE_SX1280_DCDC
 
+#define HAS_TFT_SCREEN
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21
@@ -40,3 +41,5 @@
 #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 
 #define Regulatory_Domain_ISM_2400 1
+#define TARGET_DIY_2400_TX_ESP32_SX1280_E28
+#define HARDWARE_VERSION        "DIY2400-1.0"

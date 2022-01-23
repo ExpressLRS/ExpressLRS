@@ -3,7 +3,7 @@
 #include "tftscreen.h"
 #include "options.h"
 #include "POWERMGNT.h"
-
+#include "Free_Fonts.h"
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
@@ -30,11 +30,11 @@ const uint16_t *main_menu_icons[] = {
 #define SCREEN_SMALL_FONT           1
 
 //see #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
-#define SCREEN_NORMAL_FONT_SIZE     16
+#define SCREEN_NORMAL_FONT_SIZE     18
 #define SCREEN_NORMAL_FONT          2
 
 //see #define LOAD_FONT4  // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
-#define SCREEN_LARGE_FONT_SIZE      26
+#define SCREEN_LARGE_FONT_SIZE      35
 #define SCREEN_LARGE_FONT           4
 
 //ICON SIZE Definition
@@ -75,10 +75,10 @@ const uint16_t *main_menu_icons[] = {
 
 //Sub Function Definiton
 #define SUB_PAGE_VALUE_START_X  SCREEN_CONTENT_GAP
-#define SUB_PAGE_VALUE_START_Y  (SCREEN_Y - SCREEN_LARGE_FONT_SIZE - SCREEN_NORMAL_FONT_SIZE - SCREEN_CONTENT_GAP)/2
+#define SUB_PAGE_VALUE_START_Y  (SCREEN_Y - SCREEN_LARGE_FONT_SIZE - SCREEN_NORMAL_FONT_SIZE*2 - SCREEN_CONTENT_GAP)/2
 
 #define SUB_PAGE_TIPS_START_X  SCREEN_CONTENT_GAP
-#define SUB_PAGE_TIPS_START_Y  SCREEN_Y - SCREEN_NORMAL_FONT_SIZE - SCREEN_CONTENT_GAP
+#define SUB_PAGE_TIPS_START_Y  SCREEN_Y - SCREEN_NORMAL_FONT_SIZE 
 
 //Sub WIFI Mode & Bind Confirm Definiton
 #define SUB_PAGE_ICON_START_X  0
@@ -95,29 +95,32 @@ const uint16_t *main_menu_icons[] = {
 
 void TFTScreen::init(bool reboot)
 {
+    ledcSetup(0,2000,10);
+    ledcAttachPin(25,0);
+    
     tft.init();
-    tft.setRotation(1);
+    tft.setRotation(3);
     tft.setSwapBytes(true);
 
     if (!reboot) {
-        doScreenBackLight(HIGH);
+        ledcWrite(0,0);
         tft.fillScreen(TFT_WHITE);
 
-        tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
+       // tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
+        tft.pushImage(0, 0, 160, 80, vendor_logo);
 
-        tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
-                        SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
+        // tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
+        //                 SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
 
-        char buffer[50];
-        sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
-        strncat(buffer, version, 6);
-        displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
-                            SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            String(buffer), TFT_WHITE, TFT_BLACK);
+        // char buffer[50];
+        // sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
+        // strncat(buffer, version, 6);
+        // displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
+        //                     SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+        //                     String(buffer), TFT_WHITE, TFT_BLACK);
     }
-
-    doScreenBackLight(LOW);
-
+   // doScreenBackLight(HIGH);
+   ledcWrite(0,256);
     current_rate_index = 0;
     current_power_index = 0;
     current_ratio_index = 0;
@@ -190,8 +193,10 @@ void TFTScreen::updateSubFunctionPage()
 
     doValueSelection(USER_ACTION_NONE);
 
+    displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y-SCREEN_NORMAL_FONT_SIZE,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "LONG PRESS", TFT_BLACK, TFT_WHITE);
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
+                        "TO CONFIRM", TFT_BLACK, TFT_WHITE);
 }
 
 void TFTScreen::updateSubWIFIModePage()
@@ -371,14 +376,45 @@ void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, ui
                                             int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor)
 {
-    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
-
-    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
-    tft.setCursor(start_pos, font_start_y, font_type);
-
+     const GFXfont *font;
+     int start_pos;
+    if(font_size == SCREEN_SMALL_FONT_SIZE)
+        font = NULL;
+    else if(font_size == SCREEN_NORMAL_FONT_SIZE)
+        font = FF5;
+    else 
+        font = FF7;
+    tft.setFreeFont(font);
+    if(!font)
+    {
+        tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor); 
+        start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
+        tft.setCursor(start_pos, font_start_y, font_type);
+    }  
+    else
+    {
+        tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, tft.fontHeight(), bgColor);
+        font_start_y = font_start_y + tft.fontHeight()-3;
+        start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string))/2;
+              
+        tft.setCursor(start_pos, font_start_y);
+    }               
     tft.setTextColor(fgColor, bgColor);
     tft.print(font_string);
+    tft.setFreeFont(NULL);
 }
+
+// void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
+//                                             int font_size, int font_type, String font_string,
+//                                             uint16_t fgColor, uint16_t bgColor)
+// {
+//     tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
+
+//     int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
+//     tft.setCursor(font_start_x, font_start_y, font_type);
+//     tft.setTextColor(fgColor, bgColor);
+//     tft.print(font_string);
+// }
 
 
 void TFTScreen::doScreenBackLight(int state)

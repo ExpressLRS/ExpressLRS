@@ -307,4 +307,21 @@ void Screen::setInWifiMode()
     updateSubWIFIModePage();
 }
 
+
+void Screen::doPressProcess()
+{
+    doValueSelection(USER_ACTION_DOWN);
+}
+void Screen::doLongPressProcess()
+{
+    if(current_page_index == PAGE_MAIN_MENU_INDEX)
+    {
+        doPageForward();
+    }
+    else
+    {
+        doValueConfirm();
+        doPageBack();
+    }
+}
 #endif
