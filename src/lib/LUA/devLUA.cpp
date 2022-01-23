@@ -344,7 +344,7 @@ static void registerLuaParameters()
       }
       else if (arg > 0 && arg < 4)
       {
-        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update Mode?");
+        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update?");
       }
       else if (arg == 5)
       {
