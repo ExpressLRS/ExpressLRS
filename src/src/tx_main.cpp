@@ -54,7 +54,13 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
+#if defined(PLATFORM_ESP8266)
+HardwareSerial LoggingBackpack(0);
+#elif defined(GPIO_PIN_DEBUG_TX)
 HardwareSerial LoggingBackpack(2);
+#else
+HardwareSerial LoggingBackpack = NullSerial();
+#endif
 
 volatile uint8_t NonceTX;
 
@@ -912,9 +918,15 @@ static void setupTarget()
   /*
    * Setup the logging/backpack serial port.
    * This is done here because we need it even if there is no backpack!
-   */ 
+   */
 #if defined(PLATFORM_ESP32)
+#if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
   LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+#endif
+#elif defined(PLATFORM_ESP8266)
+#if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+#endif
 #else
 #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
   LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
