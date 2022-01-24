@@ -82,9 +82,9 @@ def condense_flags():
     for line in build_flags:
         # Some lines have multiple flags so this will split them and remove them all
         for flag in re.findall("!-D\s*[^\s]+", line):
-            build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag which will just leave ! in their place
+            build_flags = [x.replace(flag,"") for x in build_flags] # remove the removal flag
+            build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag if it matches the removal flag
     build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
-    build_flags = [x.replace("!", "") for x in build_flags]  # remove the !
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
 
 def version_to_env():
