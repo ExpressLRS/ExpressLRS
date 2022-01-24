@@ -34,6 +34,16 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
+/*
+ * Period Base from table 11-24, page 79 datasheet rev 3.2
+ * SX1280_RADIO_TICK_SIZE_0015_US = 15625 nanos
+ * SX1280_RADIO_TICK_SIZE_0062_US = 62500 nanos
+ * SX1280_RADIO_TICK_SIZE_1000_US = 1000000 nanos
+ * SX1280_RADIO_TICK_SIZE_4000_US = 4000000 nanos
+ */
+#define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
+#define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
+
 void ICACHE_RAM_ATTR SX1280Driver::nullCallback(void) {}
 
 SX1280Driver::SX1280Driver()
@@ -75,12 +85,12 @@ bool SX1280Driver::Begin()
     SetFIFOaddr(0x00, 0x00);                                                                                                      //Config FIFO addr
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE); //set IRQ to both RXdone/TXdone on DIO1
 #if defined(USE_SX1280_DCDC)
-    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, 0x01);     // Enable DCDC converter instead of LDO
+    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
 #endif
     return true;
 }
 
-void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength)
+void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
     PayloadLength = PayloadLength;
     IQinverted = InvertIQ;
@@ -88,6 +98,19 @@ void SX1280Driver::Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSprea
     ConfigLoRaModParams(bw, sf, cr);
     SetPacketParams(PreambleLength, SX1280_LORA_PACKET_IMPLICIT, PayloadLength, SX1280_LORA_CRC_OFF, (SX1280_RadioLoRaIQModes_t)((uint8_t)!IQinverted << 6)); // TODO don't make static etc. LORA_IQ_STD = 0x40, LORA_IQ_INVERTED = 0x00
     SetFrequencyReg(freq);
+    SetRxTimeoutUs(interval);
+}
+
+void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
+{
+    if (interval)
+    {
+        timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS; // number of periods for the SX1280 to timeout
+    }
+    else
+    {
+        timeout = 0xFFFF;   // no timeout, continuous mode
+    }
 }
 
 void SX1280Driver::SetOutputPower(int8_t power)
@@ -152,16 +175,16 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         break;
 
     case SX1280_MODE_RX:
-        buf[0] = 0x00; // periodBase = 1ms, page 71 datasheet, set to FF for cont RX
-        buf[1] = 0xFF;
-        buf[2] = 0xFF;
+        buf[0] = RX_TIMEOUT_PERIOD_BASE;
+        buf[1] = timeout >> 8;
+        buf[2] = timeout & 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
         switchDelay = 100;
         break;
 
     case SX1280_MODE_TX:
         //uses timeout Time-out duration = periodBase * periodBaseCount
-        buf[0] = 0x00; // periodBase = 1ms, page 71 datasheet
+        buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = 0xFF; // no timeout set for now
         buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
         hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf));
@@ -324,7 +347,13 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
 {
     // In continuous receive mode, the device stays in Rx mode
-    //currOpmode = SX1280_MODE_FS;
+    if (timeout != 0xFFFF)
+    {
+        // From table 11-28, pg 81 datasheet rev 3.2
+        // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
+        // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
+        currOpmode = SX1280_MODE_FS;
+    }
     uint8_t FIFOaddr = GetRxBufferAddr();
     hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
     GetLastPacketStats();
@@ -371,14 +400,18 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
     LastPacketRSSI = -(int8_t)(status[0] / 2);
     LastPacketSNR = (int8_t)status[1] / 4;
+    // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf
+    // need to subtract SNR from RSSI when SNR <= 0;
+    int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0; 
+    LastPacketRSSI += negOffset;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
 {
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-    if ((irqStatus & SX1280_IRQ_TX_DONE))
+    if (irqStatus & SX1280_IRQ_TX_DONE)
         instance->TXnbISR();
-    else if ((irqStatus & SX1280_IRQ_RX_DONE))
+    if (irqStatus & SX1280_IRQ_RX_DONE)
         instance->RXnbISR();
 }

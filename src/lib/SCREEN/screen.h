@@ -116,6 +116,10 @@ protected:
     int current_ratio_index;
     int current_powersaving_index;
     int current_smartfan_index;
+    bool current_dynamic;
+    
+    int current_index;
+    int last_power_index;
 
     int current_screen_status;
 
@@ -152,12 +156,13 @@ public:
 
     virtual void init(bool reboot) = 0;
     virtual void idleScreen() = 0;
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index) = 0;
+    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
     virtual void doScreenBackLight(int state) = 0;
 
     void activeScreen();
     void doUserAction(int action);
+    void setInWifiMode();
 
     int getUserRateIndex() { return current_rate_index; }
     int getUserPowerIndex() { return current_power_index; }

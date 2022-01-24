@@ -44,7 +44,6 @@ void SX1280Hal::init()
     pinMode(GPIO_PIN_BUSY, INPUT);
 #endif
     pinMode(GPIO_PIN_DIO1, INPUT);
-    pinMode(GPIO_PIN_RST, OUTPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
@@ -114,10 +113,15 @@ void SX1280Hal::init()
 void SX1280Hal::reset(void)
 {
     DBGLN("SX1280 Reset");
+
+#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
+    pinMode(GPIO_PIN_RST, OUTPUT);
+
     delay(50);
     digitalWrite(GPIO_PIN_RST, LOW);
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
+#endif
 
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy

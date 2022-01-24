@@ -1,3 +1,4 @@
+#include "common.h"
 #include "POWERMGNT.h"
 #include "DAC.h"
 
@@ -38,6 +39,8 @@ extern SX1280Driver Radio;
 
 PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
+int8_t POWERMGNT::CurrentSX1280Power = 0;
+
 #if defined(POWER_OUTPUT_VALUES)
 static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #endif
@@ -71,6 +74,29 @@ PowerLevels_e POWERMGNT::currPower()
     return CurrentPower;
 }
 
+void POWERMGNT::incSX1280Ouput()
+{
+    if (CurrentSX1280Power < 13)
+    {
+        CurrentSX1280Power++;
+        Radio.SetOutputPower(CurrentSX1280Power);
+    }
+}
+
+void POWERMGNT::decSX1280Ouput()
+{
+    if (CurrentSX1280Power > -18)
+    {
+        CurrentSX1280Power--;
+        Radio.SetOutputPower(CurrentSX1280Power);
+    }
+}
+
+int8_t POWERMGNT::currentSX1280Ouput()
+{
+    return CurrentSX1280Power;
+}
+
 uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
 {
     // Crossfire's power levels as defined in opentx:radio/src/telemetry/crossfire.cpp
@@ -85,6 +111,23 @@ uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
     case PWR_500mW: return 4;
     case PWR_1000mW: return 5;
     case PWR_2000mW: return 6;
+    default:
+        return 0;
+    }
+}
+
+uint8_t POWERMGNT::getPowerIndBm()
+{
+    switch (CurrentPower)
+    {
+    case PWR_10mW: return 10;
+    case PWR_25mW: return 14;
+    case PWR_50mW: return 17;
+    case PWR_100mW: return 20;
+    case PWR_250mW: return 24;
+    case PWR_500mW: return 27;
+    case PWR_1000mW: return 30;
+    case PWR_2000mW: return 33;
     default:
         return 0;
     }
@@ -107,6 +150,8 @@ void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
         nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
     }
     nvs_commit(handle);
+#else
+    UNUSED(isUpdate);
 #endif
 }
 
@@ -193,21 +238,6 @@ void POWERMGNT::setDefaultPower()
     setPower(getDefaultPower());
 }
 
-void POWERMGNT::updateFan()
-{
-#if defined(GPIO_PIN_FAN_EN)
-    digitalWrite(GPIO_PIN_FAN_EN, (CurrentPower >= FanEnableThreshold) ? HIGH : LOW);
-#endif
-}
-
-void POWERMGNT::setFanEnableTheshold(PowerLevels_e Power)
-{
-#if defined(GPIO_PIN_FAN_EN)
-    FanEnableThreshold = Power;
-    updateFan();
-#endif
-}
-
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
     if (Power == CurrentPower)
@@ -237,7 +267,8 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_FIXED)
     Radio.SetOutputPower(POWER_OUTPUT_FIXED);
 #elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
-    Radio.SetOutputPower(powerValues[Power - MinPower] + powerCaliValues[Power]);
+    CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
+    Radio.SetOutputPower(CurrentSX1280Power);
 #elif defined(TARGET_RX)
     // Set to max power for telemetry on the RX if not specified
     Radio.SetOutputPowerMax();
@@ -245,5 +276,5 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
-    updateFan();
+    devicesTriggerEvent();
 }

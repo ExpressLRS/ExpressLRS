@@ -124,13 +124,37 @@ static void ScreenUpdateCallback(int updateType)
 #ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
 {
-  fivewaybutton.handle();
+#if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
+  // if we are using analog joystick then we can't cancel because WiFi is using the ADC2 (i.e. channel >= 8)!
+  if (connectionState == wifiUpdate && digitalPinToAnalogChannel(GPIO_PIN_JOYSTICK) >= 8)
+  {
+    return DURATION_NEVER;
+  }
+#endif
+
+#ifdef HAS_GSENSOR
+  is_screen_flipped = gsensor.isFlipped();
+
+  if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+  }
+  else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
+  {
+    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
+  }
+  is_pre_screen_flipped = is_screen_flipped;
+  if (is_screen_flipped)
+  {
+    return 100; // no need to check as often if the screen is off!
+  }
+#endif
 
   if(!IsArmed())
   {
     int key;
     bool isLongPressed;
-    fivewaybutton.getKeyState(&key, &isLongPressed);
+    fivewaybutton.update(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL
@@ -153,7 +177,7 @@ static int handle(void)
         isUserInputCheck = true;
       }
 
-      if(key != INPUT_KEY_NO_PRESS)
+      if (key != INPUT_KEY_NO_PRESS)
       {
         DBGLN("user key = %d", key);
         isUserInputCheck = false;
@@ -178,13 +202,10 @@ static int handle(void)
           screen.doUserAction(USER_ACTION_CONFIRM);
         }
       }
-      else
+      else if((millis() - none_input_start_time) > SCREEN_IDLE_TIMEOUT)
       {
-        if((millis() - none_input_start_time) > SCREEN_IDLE_TIMEOUT)
-        {
-          isUserInputCheck = false;
-          screen.idleScreen();
-        }
+        isUserInputCheck = false;
+        screen.idleScreen();
       }
     }
     else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
@@ -195,19 +216,6 @@ static int handle(void)
       }
     }
   }
-#ifdef HAS_GSENSOR
-  is_screen_flipped = gsensor.isFlipped();
-
-  if((is_screen_flipped == true) && (is_pre_screen_flipped == false))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
-  }
-  else if((is_screen_flipped == false) && (is_pre_screen_flipped == true))
-  {
-    screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
-  }
-  is_pre_screen_flipped = is_screen_flipped;
-#endif
   return SCREEN_DURATION;
 }
 #else
@@ -234,7 +242,7 @@ static int start()
 {
   if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
   {
-    screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
     return LOGO_DISPLAY_TIMEOUT;
   }
   return DURATION_IMMEDIATELY;
@@ -242,9 +250,13 @@ static int start()
 
 static int event()
 {
-  if(connectionState != wifiUpdate)
+  if (connectionState == wifiUpdate)
   {
-      screen.doParamUpdate(config.GetRate(), (uint8_t)(POWERMGNT::currPower()), config.GetTlm(), config.GetMotionMode(), config.GetFanMode());
+    screen.setInWifiMode();
+  }
+  else
+  {
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
   }
 
   return DURATION_IGNORE;

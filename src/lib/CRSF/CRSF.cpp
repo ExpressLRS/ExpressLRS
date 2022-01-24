@@ -7,8 +7,12 @@
 #if defined(PLATFORM_ESP32)
 #include "device.h"
 
-HardwareSerial CRSF::Port = HardwareSerial(1);
+// UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
+// for better performance, and on other targets (mostly using pin 13), it always uses Matrix
+HardwareSerial CRSF::Port(0);
 portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
+
+RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port = Serial;
 #elif CRSF_TX_MODULE_STM32
@@ -37,6 +41,8 @@ inBuffer_U CRSF::inBuffer;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
 #if CRSF_TX_MODULE
+#define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
+
 static FIFO MspWriteFIFO;
 
 void inline CRSF::nullCallback(void) {}
@@ -85,6 +91,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
+uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -117,7 +124,11 @@ void CRSF::Begin()
     CRSF::duplex_set_RX();
     portENABLE_INTERRUPTS();
     flush_port_input();
-
+    if (esp_reset_reason() != ESP_RST_POWERON)
+    {
+        modelId = rtcModelId;
+        RecvModelUpdate();
+    }
 #elif defined(PLATFORM_ESP8266)
     CRSF::Port.flush();
     CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
@@ -210,9 +221,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -227,19 +241,14 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     if (!CRSF::CRSFstate)
         return;
 
-    static uint8_t buf[6] = {
-        0, // length
+    uint8_t buf[6] = {
+        (uint8_t)(len + 6),
         CRSF_ADDRESS_RADIO_TRANSMITTER,
-        0,
-        0,
+        (uint8_t)(len + 4),
+        type,
         CRSF_ADDRESS_RADIO_TRANSMITTER,
         CRSF_ADDRESS_CRSF_TRANSMITTER
     };
-
-    // Header info
-    buf[0] = len + 6;
-    buf[2] = len + 4; // Type + DST + SRC + CRC
-    buf[3] = type;
 
     // CRC - Starts at type, ends before CRC
     uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
@@ -248,9 +257,12 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 #ifdef PLATFORM_ESP32
     portENTER_CRITICAL(&FIFOmux);
 #endif
-    SerialOutFIFO.pushBytes(buf, sizeof(buf));
-    SerialOutFIFO.pushBytes((byte *)data, len);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(buf[0] + 1))
+    {
+        SerialOutFIFO.pushBytes(buf, sizeof(buf));
+        SerialOutFIFO.pushBytes((byte *)data, len);
+        SerialOutFIFO.push(crc);
+    }
 #ifdef PLATFORM_ESP32
     portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -270,8 +282,12 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 #ifdef PLATFORM_ESP32
         portENTER_CRITICAL(&FIFOmux);
 #endif
-        SerialOutFIFO.push(CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX])); // length
-        SerialOutFIFO.pushBytes(data, CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]));
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (SerialOutFIFO.ensure(size + 1))
+        {
+            SerialOutFIFO.push(size); // length
+            SerialOutFIFO.pushBytes(data, size);
+        }
 #ifdef PLATFORM_ESP32
         portEXIT_CRITICAL(&FIFOmux);
 #endif
@@ -432,6 +448,9 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
         {
             modelId = SerialInBuffer[7];
+            #if defined(PLATFORM_ESP32)
+            rtcModelId = modelId;
+            #endif
             RecvModelUpdate();
         }
         else
@@ -480,17 +499,17 @@ void CRSF::UnlockMspMessage()
 
 void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
 {
-    if (packet->payloadSize > ENCAPSULATED_MSP_PAYLOAD_SIZE)
+    if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
     {
         return;
     }
 
-    const uint8_t totalBufferLen = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[totalBufferLen];
+    const uint8_t totalBufferLen = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
+    uint8_t outBuffer[ENCAPSULATED_MSP_MAX_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES];
 
     // CRSF extended frame header
     outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
-    outBuffer[1] = ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
+    outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
     outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
     outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;                              // destination
     outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER;                              // origin
@@ -499,16 +518,16 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     outBuffer[5] = 0x30;                // header
     outBuffer[6] = packet->payloadSize; // mspPayloadSize
     outBuffer[7] = packet->function;    // packet->cmd
-    for (uint8_t i = 0; i < ENCAPSULATED_MSP_PAYLOAD_SIZE; ++i)
+    for (uint8_t i = 0; i < packet->payloadSize; ++i)
     {
-        // copy packet payload into outBuffer and pad with zeros where required
-        outBuffer[8 + i] = i < packet->payloadSize ? packet->payload[i] : 0;
+        // copy packet payload into outBuffer
+        outBuffer[8 + i] = packet->payload[i];
     }
     // Encapsulated MSP crc
-    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], ENCAPSULATED_MSP_FRAME_LEN - 2);
+    outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], packet->payloadSize + 2);
 
     // CRSF frame crc
-    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], ENCAPSULATED_MSP_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
+    outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
     AddMspMessage(totalBufferLen, outBuffer);
 }
 
@@ -531,10 +550,10 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t*
     // store all write requests since an update does send multiple writes
     else
     {
-        MspWriteFIFO.push(length);
-        for (uint8_t i = 0; i < length; i++)
+        if (MspWriteFIFO.ensure(length + 1))
         {
-            MspWriteFIFO.push(data[i]);
+            MspWriteFIFO.push(length);
+            MspWriteFIFO.pushBytes((const uint8_t *)data, length);
         }
     }
 }
@@ -550,10 +569,9 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 
     while (CRSF::Port.available())
     {
-        unsigned char const inChar = CRSF::Port.read();
-
         if (CRSFframeActive == false)
         {
+            unsigned char const inChar = CRSF::Port.read();
             // stage 1 wait for sync byte //
             if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
                 inChar == CRSF_SYNC_BYTE)
@@ -581,9 +599,12 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
             // special case where we save the expected pkt len to buffer //
             if (SerialInPacketPtr == 1)
             {
+                unsigned char const inChar = CRSF::Port.read();
                 if (inChar <= CRSF_MAX_PACKET_LEN)
                 {
                     SerialInPacketLen = inChar;
+                    SerialInBuffer[SerialInPacketPtr] = inChar;
+                    SerialInPacketPtr++;
                 }
                 else
                 {
@@ -594,14 +615,25 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                 }
             }
 
-            SerialInBuffer[SerialInPacketPtr] = inChar;
-            SerialInPacketPtr++;
+            int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
+            #if defined(PLATFORM_ESP32)
+            int count = CRSF::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
+            #else
+            int count = 0;
+            int avail = CRSF::Port.available();
+            while (count < toRead && count < avail)
+            {
+                SerialInBuffer[SerialInPacketPtr + count] = CRSF::Port.read();
+                count++;
+            }
+            #endif
+            SerialInPacketPtr += count;
 
             if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
             {
                 char CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
 
-                if (CalculatedCRC == inChar)
+                if (CalculatedCRC == SerialInBuffer[SerialInPacketPtr-1])
                 {
                     GoodPktsCount++;
                     if (ProcessPacket())
@@ -629,53 +661,59 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
 void ICACHE_RAM_ATTR CRSF::handleUARTout()
 {
     // both static to split up larger packages
-    static uint8_t packageLength = 0;
+    static uint8_t packageLengthRemaining = 0;
     static uint8_t sendingOffset = 0;
-    uint8_t writeLength = 0;
 
     if (OpentxSyncActive)
     {
         sendSyncPacketToTX(); // calculate mixer sync packet if needed
     }
 
-    // check if we have data in the output FIFO that needs to be written or a large package was split up and we need to send the second part
-    if (sendingOffset > 0 || SerialOutFIFO.peek() > 0) {
+    // if partial package remaining, or data in the output FIFO that needs to be written
+    if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
         duplex_set_TX();
 
+        uint8_t periodBytesRemaining = maxPeriodBytes;
+        while (periodBytesRemaining)
+        {
 #ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
-        // no package is in transit so get new data from the fifo
-        if (sendingOffset == 0) {
-            packageLength = SerialOutFIFO.pop();
-            SerialOutFIFO.popBytes(CRSFoutBuffer, packageLength);
-        }
-
-        // if the package is long we need to split it up so it fits in the sending interval
-        if (packageLength > maxPacketBytes) {
-            writeLength = maxPacketBytes;
-        } else {
-            writeLength = packageLength;
-        }
-
-
+            // no package is in transit so get new data from the fifo
+            if (packageLengthRemaining == 0) {
+                packageLengthRemaining = SerialOutFIFO.pop();
+                SerialOutFIFO.popBytes(CRSFoutBuffer, packageLengthRemaining);
+                sendingOffset = 0;
+            }
 #ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
+            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
 #endif
 
-        // write the packet out, if it's a large package the offset holds the starting position
-        CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
-        if (CRSF::PortSecondary)
-            CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+            // if the package is long we need to split it up so it fits in the sending interval
+            uint8_t writeLength;
+            if (packageLengthRemaining > periodBytesRemaining) {
+                if (periodBytesRemaining < maxPeriodBytes) {  // only start to send a split packet as the first packet
+                    break;
+                }
+                writeLength = periodBytesRemaining;
+            } else {
+                writeLength = packageLengthRemaining;
+            }
+
+            // write the packet out, if it's a large package the offset holds the starting position
+            CRSF::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+            if (CRSF::PortSecondary)
+                CRSF::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+
+            sendingOffset += writeLength;
+            packageLengthRemaining -= writeLength;
+            periodBytesRemaining -= writeLength;
+
+            // No bytes left to send, exit
+            if (SerialOutFIFO.size() == 0)
+                break;
+        }
         CRSF::Port.flush();
-
-        sendingOffset += writeLength;
-        packageLength -= writeLength;
-
-        // after everything was writen reset the offset so a new package can be fetched from the fifo
-        if (packageLength == 0) {
-            sendingOffset = 0;
-        }
         duplex_set_RX();
 
         // make sure there is no garbage on the UART left over
@@ -686,17 +724,18 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
 void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 {
 #if defined(PLATFORM_ESP32)
+  #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
     #ifdef UART_INVERTED
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, true);
+    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
     gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #else
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U1RXD_IN_IDX, false);
+    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
     gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     #endif
+  #endif
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin
     //USC0(UART0) |= BIT(UCLBE);
@@ -710,16 +749,21 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 {
 #if defined(PLATFORM_ESP32)
-    gpio_matrix_in((gpio_num_t)-1, U1RXD_IN_IDX, false);
+  #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
     #ifdef UART_INVERTED
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, true, false);
+    constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
+    gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
     #else
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U1TXD_OUT_IDX, false, false);
+    constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
+    gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
     #endif
+  #endif
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin
     //USC0(UART0) &= ~BIT(UCLBE);
@@ -734,11 +778,12 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    int maxSize = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
+    maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
+    maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
     // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxPacketBytes = maxPacketBytes < 10 ? 10 : maxPacketBytes;
-    DBGLN("Adjusted max packet size %u", maxPacketBytes);
+    maxPeriodBytes = maxPeriodBytes < 10 ? 10 : maxPeriodBytes;
+    maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
+    DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
 bool CRSF::UARTwdt()
@@ -847,9 +892,11 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-    SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-    SerialOutFIFO.push(crc);
+    if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
+        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+        SerialOutFIFO.push(crc);
+    }
 
     //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
 #endif // CRSF_RCVR_NO_SERIAL

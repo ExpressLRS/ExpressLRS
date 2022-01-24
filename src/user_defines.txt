@@ -23,6 +23,8 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
+#-DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_EU_CE_2400
 
 ### PERFORMANCE OPTIONS: ###
 
@@ -35,6 +37,12 @@
 #-DFEATURE_OPENTX_SYNC_AUTOTUNE
 
 -DLOCK_ON_FIRST_CONNECTION
+
+# For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
+# dropped below the configured Fan Threshold. This prevents the fan from turning on and off every
+# few seconds if the power level is constantly changing.
+# Default is 30 seconds if not defined, value can be 0-254.
+#-DFAN_MIN_RUNTIME=30
 
 ### COMPATIBILITY OPTIONS: ###
 
