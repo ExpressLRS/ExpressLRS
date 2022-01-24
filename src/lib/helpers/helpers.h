@@ -6,7 +6,7 @@
 #define UNUSED(x) (void)(x)
 #endif
 
-class NullSerial : public HardwareSerial
+class NullStream : public Stream
 {
   public:
     int available(void)

@@ -10,7 +10,7 @@
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern CRSF crsf;
 extern MSP msp;
-extern HardwareSerial LoggingBackpack;
+extern Stream *LoggingBackpack;
 
 static enum VtxSendState_e
 {
@@ -52,7 +52,7 @@ static void VtxConfigToMSPOut()
     }
 
     crsf.AddMspMessage(&packet);
-    msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
+    msp.sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 static int event()
