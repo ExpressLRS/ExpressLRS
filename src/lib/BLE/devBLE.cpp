@@ -1,6 +1,5 @@
-#include "targets.h"
 #include "common.h"
-#include "device.h"
+#include "devBLE.h"
 
 #if defined(PLATFORM_ESP32)
 
@@ -33,11 +32,11 @@ extern SX1280Driver Radio;
 #define enableBrake false
 #define enableSteering false
 
-BleGamepad bleGamepad("ExpressLRS Joystick", "ELRS", 100);
+static BleGamepad *bleGamepad;
 
 void BluetoothJoystickUpdateValues()
 {
-    if (bleGamepad.isConnected())
+    if (bleGamepad->isConnected())
     {
         int16_t data[8];
 
@@ -46,21 +45,31 @@ void BluetoothJoystickUpdateValues()
             data[i] = map(CRSF::ChannelDataIn[i], CRSF_CHANNEL_VALUE_MIN - 1, CRSF_CHANNEL_VALUE_MAX + 1, -32768, 32768);
         }
 
-        bleGamepad.setX(data[0]);
-        bleGamepad.setY(data[1]);
-        bleGamepad.setRX(data[2]);
-        bleGamepad.setRY(data[3]);
-        bleGamepad.setRudder(data[4]);
-        bleGamepad.setThrottle(data[5]);
-        bleGamepad.setSlider1(data[6]);
-        bleGamepad.setSlider2(data[7]);
+        bleGamepad->setX(data[0]);
+        bleGamepad->setY(data[1]);
+        bleGamepad->setRX(data[2]);
+        bleGamepad->setRY(data[3]);
+        bleGamepad->setRudder(data[4]);
+        bleGamepad->setThrottle(data[5]);
+        bleGamepad->setSlider1(data[6]);
+        bleGamepad->setSlider2(data[7]);
 
-        bleGamepad.sendReport();
+        bleGamepad->sendReport();
     }
 }
 
 void BluetoothJoystickBegin()
 {
+    // bleGamepad is null if it hasn't been started yet
+    if (bleGamepad != nullptr)
+        return;
+
+    // construct the BLE immediately to prevent reentry from events/timeout
+    bleGamepad = new BleGamepad("ExpressLRS Joystick", "ELRS", 100);
+    bleGamepad->setAutoReport(false);
+    bleGamepad->setControllerType(CONTROLLER_TYPE_GAMEPAD);
+
+    hwTimer::updateInterval(5000);
     CRSF::setSyncParams(5000); // 200hz
     CRSF::disableOpentxSync();
     POWERMGNT::setPower(MinPower);
@@ -68,9 +77,7 @@ void BluetoothJoystickBegin()
     CRSF::RCdataCallback = BluetoothJoystickUpdateValues;
 
     DBGLN("Starting BLE Joystick!");
-    bleGamepad.setAutoReport(false);
-    bleGamepad.setControllerType(CONTROLLER_TYPE_GAMEPAD);
-    bleGamepad.begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
+    bleGamepad->begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
 }
 
 static int timeout()
@@ -83,7 +90,6 @@ static int event()
 {
     if (connectionState == bleJoystick) {
         hwTimer::stop();
-        hwTimer::updateInterval(5000);
         return 200;
     }
     return DURATION_NEVER;
