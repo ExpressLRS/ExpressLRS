@@ -487,7 +487,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     // for tx on the air time.
     // idea: maybe better to start telemetry RX in normal timer callback in the
     // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
-    Radio.TXdoneCallback();
+    LBTFakeTXdoneISR = true;
   }
 #else // non-CE
   Radio.TXnb();
@@ -499,6 +499,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+  if(LBTFakeTXdoneISR)
+  {
+    Radio.TXdoneCallback();
+    LBTFakeTXdoneISR = false;
+  }
+#endif
+
   #ifdef FEATURE_OPENTX_SYNC
   // Sync OpenTX to this point
   crsf.JustSentRFpacket();
@@ -519,7 +527,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment(); // Stop Receive mode and start LBT
+    BeginClearChannelAssessment(); // Get RSSI reading here, used also for next TX if in receiveMode.
 #endif
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
@@ -653,10 +661,12 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleFHSS();
   HandlePrepareForTLM();
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if (TelemetryRcvPhase != ttrpInReceiveMode)
+  if(TelemetryRcvPhase != ttrpInReceiveMode)
   {
     // Start RX for Listen Before Talk early because it takes about 100us
     // from RX enable to valid instant RSSI values are returned.
+    // If rx was already started by TLM prepare above, this call will let RX 
+    // continue as normal.
     BeginClearChannelAssessment();
   }
 #endif // non-CE

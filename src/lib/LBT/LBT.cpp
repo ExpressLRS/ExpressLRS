@@ -6,6 +6,7 @@ extern SX1280Driver Radio;
 
 LQCALC<100> LBTSuccessCalc;
 volatile uint32_t rxStartTime;
+volatile bool LBTFakeTXdoneISR = false;
 
 #if !defined(LBT_RSSI_THRESHOLD_OFFSET_DB)
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
@@ -84,14 +85,11 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
 {
   if (!LBTEnabled)
   {
-    Radio.SetTxIdleMode();
     return;
   }
 
   if(!LBTStarted)
   {
-    // Toggle rx off and on to reset rx timeout
-    Radio.SetTxIdleMode();
     Radio.RXnb();
     rxStartTime = micros();
     LBTStarted = true;
@@ -134,9 +132,9 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   }
 
   int8_t rssiInst = Radio.GetRssiInst();
+  Radio.SetTxIdleMode();
   bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
-  Radio.SetTxIdleMode(); // stop RX mode right after to not get rx interrupts.
-
+  
   // Useful to debug if and how long the rssi wait is, and rssi threshold level
   // DBGLN("wait: %d, rssi: %d", delayRemaining, rssiInst);
 
@@ -144,10 +142,12 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   {
     LBTSuccessCalc.add(); // Add success only when actually preparing for TX
   }
+
   if(LBTScheduleDisable)
   {
     LBTEnabled = false;
     LBTScheduleDisable = false;
   }
+
   return channelClear;
 }

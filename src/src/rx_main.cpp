@@ -348,7 +348,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    if(ChannelIsClear())
+    if (ChannelIsClear())
     {
         Radio.TXnb();
     }
@@ -360,7 +360,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // for tx on the air time.
         // idea: maybe better to start telemetry RX in normal timer callback in the
         // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
-        Radio.TXdoneCallback();
+        LBTFakeTXdoneISR = true;
     }
 #else // non-CE
     Radio.TXnb();
@@ -529,6 +529,14 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    if(LBTFakeTXdoneISR)
+    {
+        Radio.TXdoneCallback();
+        LBTFakeTXdoneISR = false;
+    }
+#endif
+
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     updateDiversity();
