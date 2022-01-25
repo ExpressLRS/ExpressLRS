@@ -54,7 +54,7 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-HardwareSerial LoggingBackpack(2);
+Stream *LoggingBackpack;
 
 volatile uint8_t NonceTX;
 
@@ -880,6 +880,35 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
+static void setupLoggingBackpack()
+{  /*
+   * Setup the logging/backpack serial port.
+   * This is always done because we need a place to send data even if there is no backpack!
+   */
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+  HardwareSerial *serialPort = new HardwareSerial(2);
+  serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+#elif defined(PLATFORM_ESP8266) && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+  HardwareSerial *serialPort = new HardwareSerial(0);
+  serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+#elif defined(TARGET_TX_FM30)
+  USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
+  serialPort->begin();
+#elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  HardwareSerial *serialPort = new HardwareSerial(2);
+  #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
+    serialPort->setRx(GPIO_PIN_DEBUG_RX);
+  #endif
+  #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+    serialPort->setTx(GPIO_PIN_DEBUG_TX);
+  #endif
+  serialPort->begin(BACKPACK_LOGGING_BAUD);
+#else
+  Stream *serialPort = new NullStream();
+#endif
+  LoggingBackpack = serialPort;
+}
+
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -909,21 +938,7 @@ static void setupTarget()
   Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
 #endif
 
-  /*
-   * Setup the logging/backpack serial port.
-   * This is done here because we need it even if there is no backpack!
-   */ 
-#if defined(PLATFORM_ESP32)
-  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
-#else
-#if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-  LoggingBackpack.setRx(GPIO_PIN_DEBUG_RX);
-#endif
-#if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-  LoggingBackpack.setTx(GPIO_PIN_DEBUG_TX);
-#endif
-  LoggingBackpack.begin(BACKPACK_LOGGING_BAUD);
-#endif
+  setupLoggingBackpack();
 }
 
 void setup()
@@ -1014,9 +1029,9 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update();
 
-  if (LoggingBackpack.available())
+  if (LoggingBackpack->available())
   {
-    if (msp.processReceivedByte(LoggingBackpack.read()))
+    if (msp.processReceivedByte(LoggingBackpack->read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
