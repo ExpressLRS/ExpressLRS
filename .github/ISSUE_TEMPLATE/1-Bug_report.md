@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: Bug Report
 about: You found a bug in ExpressLRS. 🐞
 labels: 'bug'
 ---

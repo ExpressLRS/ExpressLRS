@@ -1,11 +1,14 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Feature Requests
+    url: https://github.com/ExpressLRS/ExpressLRS/discussions/new
+    about: Request features in the ideas section of the disscussion
   - name: Community Discord
     url: https://discord.gg/dS6ReFY
     about: Please ask and answer questions here
   - name: Facebook Group
     url: https://www.facebook.com/groups/636441730280366
     about: Please ask and answer questions here
-  - name: Wiki
-    url: https://github.com/ExpressLRS/ExpressLRS/wiki
-    about: If you look for information regarding ELRS, you will find them here
+  - name: Website
+    url: https://www.expresslrs.org/
+    about: If you look for information regarding ELRS, you will find it here
