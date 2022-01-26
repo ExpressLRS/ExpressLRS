@@ -4,10 +4,6 @@
 #include "msp.h"
 #include "msptypes.h"
 
-#if BACKPACK_LOGGING_BAUD != 460800
-#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800
-#endif
-
 #define BACKPACK_TIMEOUT 20    // How often to chech for backpack commands
 
 extern bool InBindingMode;
@@ -17,6 +13,10 @@ bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 
 #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+
+#if BACKPACK_LOGGING_BAUD != 460800
+#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800
+#endif
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
