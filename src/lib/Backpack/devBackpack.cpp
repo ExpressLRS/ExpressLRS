@@ -4,6 +4,10 @@
 #include "msp.h"
 #include "msptypes.h"
 
+#if BACKPACK_LOGGING_BAUD != 460800
+#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800
+#endif
+
 #define BACKPACK_TIMEOUT 20    // How often to chech for backpack commands
 
 extern bool InBindingMode;
@@ -35,8 +39,6 @@ void startPassthrough()
 
     // get ready for passthrough
     CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-    HardwareSerial &backpack = *((HardwareSerial*)LoggingBackpack);
-    backpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
     disableLoopWDT();
 
     // reset ESP8285 into bootloader mode
@@ -49,11 +51,11 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
-    backpack.flush();
+    LoggingBackpack->flush();
 
     uint8_t buf[64];
-    while (backpack.available())
-        backpack.read(buf, sizeof(buf));
+    while (LoggingBackpack->available())
+        LoggingBackpack->readBytes(buf, sizeof(buf));
 
     // go hard!
     for (;;)
@@ -62,12 +64,12 @@ void startPassthrough()
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = CRSF::Port.readBytes(buf, r);
-        backpack.write(buf, r);
+        LoggingBackpack->write(buf, r);
 
-        r = backpack.available();
+        r = LoggingBackpack->available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = backpack.readBytes(buf, r);
+        r = LoggingBackpack->readBytes(buf, r);
         CRSF::Port.write(buf, r);
     }
 }
