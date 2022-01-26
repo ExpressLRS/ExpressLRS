@@ -38,7 +38,7 @@ void startPassthrough()
     CRSF::End();
 
     // get ready for passthrough
-    CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+    CRSF::Port.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     disableLoopWDT();
 
     // reset ESP8285 into bootloader mode
