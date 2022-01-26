@@ -6,9 +6,8 @@
 
 #define BACKPACK_TIMEOUT 20    // How often to chech for backpack commands
 
-extern MSP msp;
 extern bool InBindingMode;
-extern HardwareSerial LoggingBackpack;
+extern Stream *LoggingBackpack;
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
@@ -36,7 +35,8 @@ void startPassthrough()
 
     // get ready for passthrough
     CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-    LoggingBackpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+    HardwareSerial &backpack = *((HardwareSerial*)LoggingBackpack);
+    backpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
     disableLoopWDT();
 
     // reset ESP8285 into bootloader mode
@@ -49,11 +49,11 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
-    LoggingBackpack.flush();
+    backpack.flush();
 
     uint8_t buf[64];
-    while (LoggingBackpack.available())
-        LoggingBackpack.read(buf, sizeof(buf));
+    while (backpack.available())
+        backpack.read(buf, sizeof(buf));
 
     // go hard!
     for (;;)
@@ -62,12 +62,12 @@ void startPassthrough()
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = CRSF::Port.readBytes(buf, r);
-        LoggingBackpack.write(buf, r);
+        backpack.write(buf, r);
 
-        r = LoggingBackpack.available();
+        r = backpack.available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = LoggingBackpack.readBytes(buf, r);
+        r = backpack.readBytes(buf, r);
         CRSF::Port.write(buf, r);
     }
 }
@@ -81,7 +81,7 @@ static void BackpackWiFiToMSPOut(uint16_t command)
     packet.function = command;
     packet.addByte(0);
 
-    msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 void BackpackBinding()
@@ -97,7 +97,7 @@ void BackpackBinding()
     packet.addByte(MasterUID[4]);
     packet.addByte(MasterUID[5]);
 
-    msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 static void initialize()
