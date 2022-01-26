@@ -50,6 +50,9 @@ public:
 
     /////Variables/////
 
+    
+    static volatile uint8_t ParameterUpdateData[3];
+
     #ifdef CRSF_TX_MODULE
     static void inline nullCallback(void);
 
@@ -63,7 +66,6 @@ public:
     // The model ID as received from the Transmitter
     static uint8_t modelId;
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
-    static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
 
     /// UART Handling ///
@@ -110,7 +112,6 @@ public:
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
     static volatile uint32_t OpenTXsyncLastSent;
-    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
 
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
@@ -125,6 +126,7 @@ public:
     void sendLinkStatisticsToFC();
     #endif
 
+    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
@@ -150,14 +152,11 @@ private:
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
-    static uint8_t maxPacketBytes;
-    static uint8_t maxPeriodBytes;
     static uint32_t TxToHandsetBauds[6];
     static uint8_t UARTcurrentBaudIdx;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
 
-    static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();
     static void duplex_set_TX();
     static bool ProcessPacket();
@@ -165,6 +164,9 @@ private:
     static bool UARTwdt();
 #endif
 
+    static uint8_t maxPacketBytes;
+    static uint8_t maxPeriodBytes;
+    static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void flush_port_input(void);
 };
 

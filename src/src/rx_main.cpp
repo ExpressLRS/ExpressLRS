@@ -7,15 +7,21 @@
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
+#include "lua.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "PFD.h"
 #include "options.h"
 
 #include "devLED.h"
+#include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTXSPI.h"
+
+///LUA///
+#define LUA_MAX_PARAMS 32
+////
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -28,6 +34,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
   {&LED_device, 0},
 #endif
+  &LUA_device,
 #ifdef HAS_RGB
   {&RGB_device, 0},
 #endif
@@ -671,13 +678,16 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
 
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {
-                if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
-                {
-                    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-                    crsf.GetDeviceInformation(deviceInformation, 0);
-                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
-                    telemetry.AppendTelemetryPackage(deviceInformation);
-                }
+                crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
+                crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
+                crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
+                Serial.println(" ");
+                Serial.println(MspData[CRSF_TELEMETRY_TYPE_INDEX]);
+                Serial.print(",");
+                Serial.print(MspData[CRSF_TELEMETRY_FIELD_ID_INDEX]);
+                Serial.print(",");
+                Serial.print(MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]);
+                luaParamUpdateReq();
             }
         }
     }

@@ -1,6 +1,5 @@
 #pragma once
 
-#ifdef TARGET_TX
 
 #include "targets.h"
 #include "crsf_protocol.h"
