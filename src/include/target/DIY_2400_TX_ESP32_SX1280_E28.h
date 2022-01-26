@@ -2,8 +2,10 @@
 #define DEVICE_NAME "DIY2400 E28"
 #endif
 
+//#define HAS_TFT_SCREEN
+//#define HAS_FIVE_WAY_BUTTON
 // Any device features
-#if !defined(USE_OLED_I2C)
+#if !defined(USE_OLED_I2C)&&!defined(HAS_TFT_SCREEN)
 #define USE_OLED_SPI
 #endif
 #define USE_SX1280_DCDC
@@ -28,15 +30,29 @@
 #define GPIO_PIN_OLED_SDA       32
 #define GPIO_PIN_OLED_SCK       33
 #define GPIO_PIN_OLED_RST       U8X8_PIN_NONE
+#elif defined(HAS_TFT_SCREEN)
+#define  GPIO_PIN_TFT_MOSI      32
+#define  GPIO_PIN_TFT_SCLK      33
+#define  GPIO_PIN_TFT_RST       16
+#define  GPIO_PIN_TFT_DC        22
+#define  GPIO_PIN_TFT_CS        2
+#define  GPIO_PIN_TFT_BL        25
 #endif
 #define GPIO_PIN_RCSIGNAL_RX    13
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_LED_WS2812     15
 #define GPIO_PIN_FAN_EN         17
 
+#ifdef HAS_FIVE_WAY_BUTTON
+#define GPIO_PIN_FIVE_WAY_INPUT1     39
+#define GPIO_PIN_FIVE_WAY_INPUT2     35
+#define GPIO_PIN_FIVE_WAY_INPUT3     34
+#endif
 // Output Power
 #define MinPower            PWR_10mW
 #define MaxPower            PWR_250mW
 #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
 
 #define Regulatory_Domain_ISM_2400 1
+#define TARGET_DIY_2400_TX_ESP32_SX1280_E28
+#define HARDWARE_VERSION  "DIY2400_E28"
