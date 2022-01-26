@@ -128,7 +128,7 @@ def reset_to_bootloader(args):
         dbg_print("  * Using full duplex (CRSF)")
         #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
         rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
-        time.sleep(0.5)
+        time.sleep(0.2)
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip()
