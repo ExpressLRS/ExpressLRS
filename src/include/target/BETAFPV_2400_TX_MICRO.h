@@ -1,5 +1,9 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME              "BETAFPV 2G4Micro"
+#ifdef BETAFPV_MICRO_1000MW
+#define DEVICE_NAME              "BFPV 2G4Micro1W"
+#else
+#define DEVICE_NAME              "BETAFPV2G4Micro"
+#endif
 #endif
 
 // Any device features
@@ -37,6 +41,8 @@
     #define MinPower PWR_25mW
     #define MaxPower PWR_1000mW
     #define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
+    // Backpack on standard pins 1/3
+    #define USE_TX_BACKPACK
 #else
     #define MinPower PWR_10mW
     #define MaxPower PWR_500mW
