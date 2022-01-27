@@ -7,6 +7,7 @@
 #endif
 
 // Any device features
+#define USE_TX_BACKPACK
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON
@@ -41,8 +42,6 @@
     #define MinPower PWR_25mW
     #define MaxPower PWR_1000mW
     #define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
-    // Backpack on standard pins 1/3
-    #define USE_TX_BACKPACK
 #else
     #define MinPower PWR_10mW
     #define MaxPower PWR_500mW
