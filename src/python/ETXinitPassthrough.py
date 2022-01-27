@@ -40,7 +40,6 @@ def etx_passthrough_init(port, requestedBaudrate):
         rl.expect_bytes(b"> ", timeout=1.0)
         time.sleep(.5)
         rl.write(b"set rfmod 0 bootpin 1\n")
-        rl.expect_bytes(b"set: ", timeout=1.0)
         rl.expect_bytes(b"> ", timeout=1.0)
         time.sleep(.1)
         rl.write(b"set rfmod 0 power on\n")
@@ -48,7 +47,6 @@ def etx_passthrough_init(port, requestedBaudrate):
         rl.expect_bytes(b"> ", timeout=1.0)
         time.sleep(.1)
         rl.write(b"set rfmod 0 bootpin 0\n")
-        rl.expect_bytes(b"set: ", timeout=1.0)
         rl.expect_bytes(b"> ", timeout=1.0)
 
         cmd = "serialpassthrough rfmod 0 %s" % requestedBaudrate
