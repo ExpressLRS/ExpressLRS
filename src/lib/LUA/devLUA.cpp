@@ -346,12 +346,12 @@ static void registerLuaParameters()
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
+        sendLuaCommandResponse(&luaWebUpdate, 2, "WiFi Running...");
         connectionState = wifiUpdate;
       }
       else if (arg > 0 && arg < 4)
       {
-        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update Mode?");
+        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update?");
       }
       else if (arg == 5)
       {
