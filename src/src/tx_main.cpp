@@ -152,7 +152,7 @@ device_affinity_t ui_devices[] = {
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
-static int32_t dynamic_power_avg_lq;
+static int32_t dynamic_power_avg_lq = DYNPOWER_THRESH_LQ_DN << 16;
 static bool dynamic_power_updated;
 
 #ifdef TARGET_TX_GHOST
@@ -224,6 +224,7 @@ void DynamicPower_Update()
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
 
+  //DBGLN("LQ=%d LQA=%d RSSI=%d", lq_current, lq_avg, rssi);
   // Dynamic power needs at least DYNAMIC_POWER_MIN_RECORD_NUM amount of telemetry records to update.
   if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
     return;
