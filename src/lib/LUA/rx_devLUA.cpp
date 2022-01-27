@@ -218,8 +218,6 @@ static void registerLuaParameters()
 {
   registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
   });
-  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
-  });
   #if defined(TARGET_TX_FM30)
   registerLUAParameter(&luaBluetoothTelem, [](uint8_t id, uint8_t arg) {
     digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
@@ -233,8 +231,6 @@ static void registerLuaParameters()
       POWERMGNT::setFanEnableTheshold((PowerLevels_e)arg);
   }, luaPowerFolder.common.id);
 #endif
-  registerLUAParameter(&luaInfo);
-  registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
 

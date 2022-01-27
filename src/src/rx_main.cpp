@@ -34,7 +34,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
   {&LED_device, 0},
 #endif
-  &LUA_device,
+  {&LUA_device,0},
 #ifdef HAS_RGB
   {&RGB_device, 0},
 #endif
@@ -681,12 +681,6 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
                 crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
                 crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
                 crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
-                Serial.println(" ");
-                Serial.println(MspData[CRSF_TELEMETRY_TYPE_INDEX]);
-                Serial.print(",");
-                Serial.print(MspData[CRSF_TELEMETRY_FIELD_ID_INDEX]);
-                Serial.print(",");
-                Serial.print(MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]);
                 luaParamUpdateReq();
             }
         }

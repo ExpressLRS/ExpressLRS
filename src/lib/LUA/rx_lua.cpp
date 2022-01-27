@@ -136,9 +136,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // +1 for the null on the last string
   uint8_t dataSize = (dataEnd - chunkBuffer) - 2 + 1;
   // Maximum number of chunked bytes that can be sent in one response
-  // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
+  // use device info payload length for now, as im not sure how the telemetry packet chunking yet.
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
-  uint8_t chunkMax = DEVICE_INFORMATION_FRAME_SIZE - 6 - 2;
+  uint8_t chunkMax = DEVICE_INFORMATION_PAYLOAD_LENGTH - 2;
   // How many chunks needed to send this field (rounded up)
   uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
@@ -148,16 +148,10 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
-  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,DEVICE_INFORMATION_LENGTH);
+  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
   
-  crsf.SetExtendedHeaderAndCrc(paramInformation, frameType, DEVICE_INFORMATION_LENGTH, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
-  
-                Serial.println(" ");
-                Serial.print(paramInformation[0]);
-                Serial.print("x");
-                Serial.print(paramInformation[1]);
-                Serial.print("x");
-                Serial.println(paramInformation[2]);
+  crsf.SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+
   telemetry.AppendTelemetryPackage(paramInformation);
   
   //#CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
@@ -305,17 +299,14 @@ bool luaHandleUpdateParameter()
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        
-        Serial.println(" aboutto send");
         sendLuaDevicePacket();
-        Serial.println("done send");
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
       {
         uint8_t fieldId = crsf.ParameterUpdateData[1];
         uint8_t fieldChunk = crsf.ParameterUpdateData[2];
-        //Serial.println("Read lua param %u %u", fieldId, fieldChunk);
+        DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
         if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
         {
           struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[fieldId];

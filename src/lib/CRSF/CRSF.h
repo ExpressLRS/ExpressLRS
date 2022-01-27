@@ -85,6 +85,7 @@ public:
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
 
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -126,8 +127,6 @@ public:
     void sendLinkStatisticsToFC();
     #endif
 
-    static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
-
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
 
@@ -135,6 +134,9 @@ private:
     Stream *_dev;
 
     static inBuffer_U inBuffer;
+
+    static uint8_t maxPacketBytes;
+    static uint8_t maxPeriodBytes;
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
@@ -164,8 +166,6 @@ private:
     static bool UARTwdt();
 #endif
 
-    static uint8_t maxPacketBytes;
-    static uint8_t maxPeriodBytes;
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void flush_port_input(void);
 };

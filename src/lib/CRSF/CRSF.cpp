@@ -985,6 +985,5 @@ void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t fr
     header->frame_size = frameSize;
 
     uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
-
     frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
