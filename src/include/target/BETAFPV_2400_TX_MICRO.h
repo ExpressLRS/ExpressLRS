@@ -1,8 +1,13 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME              "BETAFPV 2G4Micro"
+#ifdef BETAFPV_MICRO_1000MW
+#define DEVICE_NAME              "BFPV 2G4Micro1W"
+#else
+#define DEVICE_NAME              "BETAFPV2G4Micro"
+#endif
 #endif
 
 // Any device features
+#define USE_TX_BACKPACK
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON
