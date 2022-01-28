@@ -7,7 +7,11 @@
 
 #if defined(USE_SKY85321)
 #define SKY85321_MAX_DBM_INPUT 5
+
+#if !defined(SKY85321_PDET_SLOPE) || !defined(SKY85321_PDET_INTERCEPT)
+  #error "SKY85321 requires SKY85321_PDET_SLOPE and SKY85321_PDET_INTERCEPT"
 #endif
+#endif // USE_SKY85321
 
 #define PDET_HYSTERESIS        0.7
 #define PDET_SAMPLE_PERIOD     1000
@@ -42,7 +46,7 @@ static int timeout()
     }
 
     float dBm = SKY85321_PDET_SLOPE * Pdet + SKY85321_PDET_INTERCEPT;
-    
+
     INFOLN("Pdet = %d mV", (uint16_t)Pdet);
     // INFOLN("%d dBm", dBm); // how do we print floats? :|
     // LOGGING_UART.print(dBm, 2);
