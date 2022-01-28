@@ -147,10 +147,8 @@ static int timeout()
         startPassthrough();
         return DURATION_NEVER;
     }
-    return BACKPACK_TIMEOUT;
-#else
-    return BACKPACK_TIMEOUT;
 #endif
+    return BACKPACK_TIMEOUT;
 }
 
 device_t Backpack_device = {
