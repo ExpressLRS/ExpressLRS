@@ -25,15 +25,11 @@ static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
-static struct luaItem_selection luaAirRate = {
-    {"Packet Rate", CRSF_TEXT_SELECTION},
+static struct luaItem_selection luaAntennaMode = {
+    {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-    "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
-#elif defined(Regulatory_Domain_ISM_2400)
-    "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
-#endif
-    "Hz"
+    "Antenna B;Antenna A;Diversity",
+    " "
 };
 
 //----------------------------Info-----------------------------------
@@ -70,8 +66,14 @@ extern void beginWebsever();
 
 static void registerLuaParameters()
 {
-  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
+
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+  registerLUAParameter(&luaAntennaMode, [](uint8_t id, uint8_t arg){
+      config.SetAntennaMode(arg);
+      config.Commit();
+      devicesTriggerEvent();
   });
+#endif
   registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
@@ -80,13 +82,17 @@ static void registerLuaParameters()
     }
     sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   });
-  registerLUAParameter(&luaInfo);
-  registerLUAParameter(&luaELRSversion);
+  //registerLUAParameter(&luaInfo);
+  //registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
 
 static int event()
 {
+
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+  setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+#endif
   return DURATION_IMMEDIATELY;
 }
 

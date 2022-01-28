@@ -505,12 +505,27 @@ RxConfig::SetModelId(uint8_t modelId)
 }
 
 void
+RxConfig::SetAntennaMode(uint8_t antennaMode)
+{
+    if (m_config.antennaMode != antennaMode)
+    {
+        m_config.antennaMode = antennaMode;
+        m_modified = true;
+    }
+}
+
+void
 RxConfig::SetDefaults()
 {
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     SetIsBound(false);
     SetPowerOnCounter(0);
     SetModelId(0xFF);
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    SetAntennaMode(2);
+#else
+    SetAntennaMode(1);
+#endif
     SetSSID("");
     SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)
