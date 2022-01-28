@@ -54,7 +54,7 @@ with many more features on the way!
 
 ExpressLRS currently supports hardware from the following manufacturers: AxisFlying, BETAFPV, Flywoo, FrSky, HappyModel, HiYounger, HGLRC, ImmersionRC, iFlight, JHEMCU, Jumper, Matek, NamimnoRC, QuadKopters and SIYI.
 
-For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Reciever Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
+For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Receiver Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
 
 ## Developers
 
