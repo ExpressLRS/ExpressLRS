@@ -15,7 +15,7 @@ bool VRxBackpackWiFiReadyToSend = false;
 #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
 
 #if BACKPACK_LOGGING_BAUD != 460800
-#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800
+#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
 #endif
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
@@ -149,7 +149,7 @@ static int timeout()
     }
     return BACKPACK_TIMEOUT;
 #else
-    return DURATION_NEVER;
+    return BACKPACK_TIMEOUT;
 #endif
 }
 
