@@ -18,7 +18,6 @@ static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. 
 #define LUA_MAX_PARAMS 32
 static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
-static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
