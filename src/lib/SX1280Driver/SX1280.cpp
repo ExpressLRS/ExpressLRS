@@ -402,7 +402,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     LastPacketSNR = (int8_t)status[1] / 4;
     // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf
     // need to subtract SNR from RSSI when SNR <= 0;
-    int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0; 
+    int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
     LastPacketRSSI += negOffset;
 }
 
@@ -411,7 +411,10 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     if (irqStatus & SX1280_IRQ_TX_DONE)
+    {
+        hal.TXRXdisable();
         instance->TXnbISR();
+    }
     if (irqStatus & SX1280_IRQ_RX_DONE)
         instance->RXnbISR();
 }

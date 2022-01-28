@@ -12,7 +12,7 @@ SX127xHal::SX127xHal()
 
 void SX127xHal::end()
 {
-  RXenable(); // make sure the TX amp pin is disabled
+  TXRXdisable(); // make sure the RX/TX amp pins are disabled
   detachInterrupt(GPIO_PIN_DIO0);
   SPI.end();
   IsrCallback = nullptr; // remove callbacks
