@@ -1,7 +1,7 @@
 import subprocess, os
 import opentx
 
-def process_http_result(output_json_file: str) -> bool:
+def process_http_result(output_json_file: str) -> int:
     import json
     # Print the HTTP result that was saved to the json file
     # Returns: true if the result was OK
@@ -10,21 +10,22 @@ def process_http_result(output_json_file: str) -> bool:
 
     result = output_json['status']
     msg = output_json['msg']
-    retval = False
 
     if result == 'ok':
         # Update complete. Please wait for LED to resume blinking before disconnecting power.
         msg = f'UPLOAD SUCCESS\n\033[32m{msg}\033[0m'  # green
         # 'ok' is the only acceptable result
-        retval = True
+        retval = 0
     elif result == 'mismatch':
         # <b>Current target:</b> LONG_ASS_NAME.<br><b>Uploaded image:</b> OTHER_NAME.<br/><br/>Flashing the wrong firmware may lock or damage your device.
         msg = msg.replace('<br>', '\n').replace('<br/>', '\n') # convert breaks to newline
         msg = msg.replace('<b>', '\033[34m').replace('</b>', '\033[0m') # bold to blue
         msg = '\033[33mTARGET MISMATCH\033[0m\n' + msg # yellow warning
+        retval = -2
     else:
         # Not enough space.
         msg = f'UPLOAD ERROR\n\033[31m{msg}\033[0m' # red
+        retval = -1
 
     print()
     print(msg, flush=True)
@@ -109,8 +110,8 @@ def on_upload(source, target, env):
 
             # Flash main application binary
             subprocess.check_call(cmd + [addr])
-            success = process_http_result(bin_upload_output)
-            if success:
+            returncode = process_http_result(bin_upload_output)
+            if returncode == 0:
                 # process_http_result should have printed whatever message
                 # the target returned if it was successful
                 return 0
