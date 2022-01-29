@@ -21,7 +21,7 @@ def dbg_print(line=''):
     return
 
 
-def uart_upload(port, filename, baudrate, ghst=False, key=None, target=""):
+def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target=""):
     half_duplex = False
 
     dbg_print("=================== FIRMWARE UPLOAD ===================\n")
@@ -76,7 +76,6 @@ def uart_upload(port, filename, baudrate, ghst=False, key=None, target=""):
         gotBootloader = 'CCC' in rl.read_line()
 
         # Init bootloader
-        ignore_incorrect_target = False
         if not gotBootloader:
             # legacy bootloader requires a 500ms delay
             delay_seq2 = .5
@@ -218,6 +217,7 @@ def on_upload(source, target, env):
     envkey = None
     ghst = False
     firmware_path = str(source[0])
+    upload_force = target[0].name == 'uploadforce' # 'in' operator doesn't work on Alias list
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is None:
@@ -236,7 +236,7 @@ def on_upload(source, target, env):
                 envkey = flag.split("=")[1]
 
     try:
-        uart_upload(upload_port, firmware_path, upload_speed, ghst, key=envkey, target=env['PIOENV'])
+        uart_upload(upload_port, firmware_path, upload_speed, ghst, upload_force, key=envkey, target=env['PIOENV'])
     except Exception as e:
         dbg_print("{0}\n".format(e))
         return -1

@@ -68,16 +68,27 @@ def on_upload(source, target, env):
 
     cmd = ["curl", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",
-           "-F", "data=@%s" % (elrs_bin_target),
            "-o", "%s" % (bin_upload_output)]
 
-    if  bootloader_target is not None and isstm:
+    pio_target = target[0].name
+    uri = 'update'
+    do_bin_upload = True
+
+    if pio_target == 'uploadconfirm':
+        uri = 'forceupdate?action=confirm'
+        do_bin_upload = False
+    if pio_target == 'uploadforce':
+        cmd += ["-F", "force=1"]
+    if do_bin_upload:
+        cmd += "-F", "data=@%s" % (elrs_bin_target),
+    if isstm:
+        uri = 'upload'
+        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
+
+    if bootloader_target is not None and isstm:
         cmd_bootloader = ["curl", "--max-time", "60",
             "--retry", "2", "--retry-delay", "1",
             "-F", "data=@%s" % (bootloader_target,), "-F", "flash_address=0x0000"]
-
-    if isstm:
-        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is not None:
@@ -85,7 +96,7 @@ def on_upload(source, target, env):
 
     returncode = -1
     for addr in upload_addr:
-        addr = "http://%s/%s" % (addr, ['update', 'upload'][isstm])
+        addr = "http://%s/%s" % (addr, uri)
         print(" ** UPLOADING TO: %s" % addr)
         try:
             # Flash bootloader first if set
