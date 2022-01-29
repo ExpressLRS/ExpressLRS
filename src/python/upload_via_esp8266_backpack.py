@@ -2,6 +2,7 @@ import subprocess, os
 import opentx
 from elrs_helpers import ElrsUploadResult
 
+
 def process_http_result(output_json_file: str) -> int:
     import json
     # Print the HTTP result that was saved to the json file
@@ -31,6 +32,7 @@ def process_http_result(output_json_file: str) -> int:
     print()
     print(msg, flush=True)
     return retval
+
 
 def on_upload(source, target, env):
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']

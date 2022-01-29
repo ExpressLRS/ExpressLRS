@@ -18,6 +18,7 @@ def dbg_print(line=''):
     print(line, flush=True)
     return
 
+
 def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target="") -> int:
     SCRIPT_DEBUG = False
     half_duplex = False
@@ -211,6 +212,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
     dbg_print("[FAILED] Upload failed!\n\n")
     return ElrsUploadResult.ErrorGeneral
 
+
 def on_upload(source, target, env):
     envkey = None
     ghst = False
@@ -239,6 +241,7 @@ def on_upload(source, target, env):
         dbg_print("{0}\n".format(e))
         return ElrsUploadResult.ErrorGeneral
     return returncode
+
 
 if __name__ == '__main__':
     filename = 'firmware.bin'

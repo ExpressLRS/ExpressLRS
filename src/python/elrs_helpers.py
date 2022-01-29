@@ -35,6 +35,7 @@ def get_git_version():
 
     return dict(version=ver, sha=sha[:6])
 
+
 class ElrsUploadResult:
         # SUCCESS
         Success = 0

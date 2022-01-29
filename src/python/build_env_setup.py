@@ -17,6 +17,7 @@ def add_target_uploadoption(name: str, desc: str) -> None:
         actions=env['UPLOADCMD']
     )
 
+
 platform = env.get('PIOPLATFORM', '')
 stm = platform in ['ststm32']
 
