@@ -359,20 +359,38 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
         int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // + 400us offset that that opentx always has some headroom
 
         struct otxSyncData {
+            uint8_t push_len;
+            crsf_ext_header_t header;
             uint8_t extendedType; // CRSF_FRAMETYPE_OPENTX_SYNC
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
-        } PACKED;
+            uint8_t crc;
+        } PACKED sync = {
+            (uint8_t)sizeof(sync)-1,
+            {
+                CRSF_ADDRESS_RADIO_TRANSMITTER,
+                (uint8_t)(sizeof(sync)-3),
+                CRSF_FRAMETYPE_RADIO_ID,
+                CRSF_ADDRESS_RADIO_TRANSMITTER,
+                CRSF_ADDRESS_CRSF_TRANSMITTER
+            },
+            CRSF_FRAMETYPE_OPENTX_SYNC,
+            htobe32(packetRate),
+            htobe32(offset),
+            // CRC - Starts at type, ends before CRC
+            crsf_crc.calc(&sync.header.type, sizeof(sync)-4)    // ignoring: push_len, device_addr, frame_size & crc
+        };
 
-        uint8_t buffer[sizeof(otxSyncData)];
-        struct otxSyncData * const sync = (struct otxSyncData * const)buffer;
-
-        sync->extendedType = CRSF_FRAMETYPE_OPENTX_SYNC;
-        sync->rate = htobe32(packetRate);
-        sync->offset = htobe32(offset);
-
-        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer));
-
+#ifdef PLATFORM_ESP32
+        portENTER_CRITICAL(&FIFOmux);
+#endif
+        if (SerialOutFIFO.ensure(sizeof(sync)))
+        {
+            SerialOutFIFO.pushBytesFront((uint8_t*)&sync, sizeof(sync));
+        }
+#ifdef PLATFORM_ESP32
+        portEXIT_CRITICAL(&FIFOmux);
+#endif
         OpenTXsyncLastSent = now;
     }
 }

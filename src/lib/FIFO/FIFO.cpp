@@ -73,6 +73,22 @@ void ICACHE_RAM_ATTR FIFO::pushBytes(const uint8_t *data, uint8_t len)
     numElements += len;
 }
 
+void ICACHE_RAM_ATTR FIFO::pushBytesFront(const uint8_t *data, uint8_t len)
+{
+    if (numElements + len > FIFO_SIZE)
+    {
+        ERRLN("Buffer full, will flush");
+        flush();
+        return;
+    }
+    head -= len;
+    numElements += len;
+    for (int i = 0; i < len; i++)
+    {
+        buffer[(head+i) % FIFO_SIZE] = data[i];
+    }
+}
+
 uint8_t ICACHE_RAM_ATTR FIFO::pop()
 {
     if (numElements == 0)

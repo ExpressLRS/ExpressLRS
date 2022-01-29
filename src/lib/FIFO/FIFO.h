@@ -54,6 +54,9 @@ public:
     // Push all bytes to FIFO, if all the bytes will not fit then the FIFO is flushed and no bytes are pushed
     void ICACHE_RAM_ATTR pushBytes(const uint8_t *data, uint8_t len);
 
+    // Push all bytes to the head of the FIFO, if all the bytes will not fit then the FIFO is flushed and no bytes are pushed
+    void ICACHE_RAM_ATTR pushBytesFront(const uint8_t *data, uint8_t len);
+
     // Pop a single byte (returns 0 if no bytes left)
     uint8_t ICACHE_RAM_ATTR pop();
 
@@ -69,7 +72,7 @@ public:
 
     // reset the FIFO back to empty
     void ICACHE_RAM_ATTR flush();
-    
+
     // returns true if the number of bytes requested is available in the FIFO
     bool ICACHE_RAM_ATTR available(uint8_t requiredSize) { return (numElements + requiredSize) < FIFO_SIZE; }
 
