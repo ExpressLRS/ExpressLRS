@@ -100,15 +100,17 @@ struct tagLuaElrsParams {
     char msg[1]; // null-terminated string
 } PACKED;
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
-
+#ifdef TARGET_TX
 void suppressCurrentLuaWarning(void);
 void setLuaWarningFlag(lua_Flags flag, bool value);
 uint8_t getLuaWarningFlags(void);
+#endif
+
+void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
+
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
 
-void registerLUAPopulateParams(void (*populate)());
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);

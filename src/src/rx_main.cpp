@@ -449,11 +449,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 // no-op if GPIO_PIN_ANTENNA_SELECT not defined
 static inline void switchAntenna()
 {
-    
-        Serial.print("ANTENNA");
-        Serial.print(antenna);
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     if(config.GetAntennaMode() == 2){
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
@@ -466,6 +465,8 @@ static void ICACHE_RAM_ATTR updateDiversity()
     
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     if(config.GetAntennaMode() == 2){
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
         static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
         static int32_t antennaLQDropTrigger;
         static int32_t antennaRSSIDropTrigger;
@@ -1436,7 +1437,7 @@ void UpdateModelMatch(uint8_t model)
     DBGLN("Set ModelId=%u", model);
 
     config.SetModelId(model);
-    if (config.IsModified())
+    if (config.IsModified()) //config commit already check for m_modified, do we need this?
     {
         config.Commit();
         // This will be called from ProcessRFPacket(), schedule a disconnect

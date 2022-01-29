@@ -12,8 +12,6 @@ extern Telemetry telemetry;
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
-static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
 static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
@@ -137,7 +135,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // Maximum number of chunked bytes that can be sent in one response
   // use device info payload length for now, as im not sure how the telemetry packet chunking yet.
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
-  uint8_t chunkMax = DEVICE_INFORMATION_PAYLOAD_LENGTH - 2;
+  uint8_t chunkMax = CRSF_MAX_PACKET_LEN - 6 - 2;
   // How many chunks needed to send this field (rounded up)
   uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
@@ -172,60 +170,6 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
   cmd->info = message;
   nextStatusChunk = 0;
   pushResponseChunk(cmd);
-}
-
-void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
-                                      //only flip 3 Most significant bit, they are the critical warning that blocks lua
-  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
-}
-
-void setLuaWarningFlag(lua_Flags flag, bool value){
-  if (value)
-  {
-    luaWarningFlags |= 1 << (uint8_t)flag;
-  }
-  else
-  {
-    luaWarningFlags &= ~(1 << (uint8_t)flag);
-  }
-}
-
-uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
-  return luaWarningFlags & suppressedLuaWarningFlags;
-}
-
-void sendELRSstatus()
-{
-  constexpr const char *messages[] = { //higher order = higher priority
-    "",                   //status2 = connected status
-    "",                   //status1, reserved for future use
-    "Model Mismatch",     //warning3, model mismatch
-    "",           //warning2, reserved for future use
-    "",           //warning1, reserved for future use
-    "",  //critical warning3, reserved for future use
-    "",  //critical warning2, reserved for future use
-    ""   //critical warning1, reserved for future use
-  };
-  const char * warningInfo = "";
-
-  for (int i=7 ; i>=0 ; i--)
-  {
-      if(getLuaWarningFlags() & (1<<i))
-      {
-          warningInfo = messages[i];
-          break;
-      }
-  }
-  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1];
-  struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
-
-  //#params->pktsBad = crsf.BadPktsCountResult;
-  //#params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarningFlags();
-  // to support sending a params.msg, buffer should be extended by the strlen of the message
-  // and copied into params->msg (with trailing null)
-  strcpy(params->msg, warningInfo);
-  //#crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()
@@ -274,14 +218,7 @@ bool luaHandleUpdateParameter()
   switch(crsf.ParameterUpdateData[0])
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-      if (crsf.ParameterUpdateData[1] == 0)
       {
-        // special case for elrs linkstat request
-        DBGVLN("ELRS status request");
-        sendELRSstatus();
-      } else if (crsf.ParameterUpdateData[1] == 0x2E) {
-        suppressCurrentLuaWarning();
-      } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
         // All paramDefinitions are not luaItem_command but the common part is the same
@@ -298,8 +235,10 @@ bool luaHandleUpdateParameter()
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
+      {
         sendLuaDevicePacket();
-        break;
+      }  
+      break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
       {
@@ -322,7 +261,9 @@ bool luaHandleUpdateParameter()
       break;
 
     default:
+    {
       DBGLN("Unknown LUA %x", crsf.ParameterUpdateData[0]);
+    }
   }
 
   UpdateParamReq = false;
@@ -335,8 +276,6 @@ void sendLuaDevicePacket(void)
   crsf.GetDeviceInformation(deviceInformation, lastLuaField);
   crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
   telemetry.AppendTelemetryPackage(deviceInformation);
-  // does append header + crc again so substract size from length
-  //#crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
 }
 
 #endif

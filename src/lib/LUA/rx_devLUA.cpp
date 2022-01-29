@@ -4,40 +4,27 @@
 #include "device.h"
 
 #include "CRSF.h"
-#include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
 #include "lua.h"
 #include "OTA.h"
 #include "hwTimer.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-#include "SX127xDriver.h"
-extern SX127xDriver Radio;
-#elif defined(Regulatory_Domain_ISM_2400)
-#include "SX1280Driver.h"
-extern SX1280Driver Radio;
-#else
-#error "Radio configuration is not valid!"
-#endif
-
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
+
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna B;Antenna A;Diversity",
     " "
 };
+#endif
 
 //----------------------------Info-----------------------------------
-
-static struct luaItem_string luaInfo = {
-    {"Bad/Good", (crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
-    emptySpace
-};
 
 static struct luaItem_string luaELRSversion = {
     {thisVersion, CRSF_INFO},
@@ -58,7 +45,6 @@ static struct luaItem_command luaRxWebUpdate = {
 
 
 extern RxConfig config;
-extern bool RxWiFiReadyToSend;
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void beginWebsever();
@@ -74,16 +60,16 @@ static void registerLuaParameters()
       devicesTriggerEvent();
   });
 #endif
+
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         connectionState = wifiUpdate;
-#endif
     }
     sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   });
-  //registerLUAParameter(&luaInfo);
-  //registerLUAParameter(&luaELRSversion);
+#endif
+  registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
 

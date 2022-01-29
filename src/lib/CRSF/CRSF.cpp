@@ -46,8 +46,6 @@ inBuffer_U CRSF::inBuffer;
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
 volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
-uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
-uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
@@ -89,6 +87,8 @@ uint32_t CRSF::BadPktsCount = 0;
 uint32_t CRSF::UARTwdtLastChecked;
 
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
+uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
+uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 
@@ -752,7 +752,6 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 #endif
 }
 
-#ifdef TARGET_TX
 void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
     uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
@@ -764,17 +763,6 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
-#else
-void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
-{
-    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    int maxSize = RCVR_UART_BAUD / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxPacketBytes = maxSize > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxSize;
-    // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxPacketBytes = maxPacketBytes < 10 ? 10 : maxPacketBytes;
-    DBGLN("Adjusted max packet size %u", maxPacketBytes);
-}
-#endif
 
 bool CRSF::UARTwdt()
 {

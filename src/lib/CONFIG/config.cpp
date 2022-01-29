@@ -505,8 +505,10 @@ RxConfig::SetModelId(uint8_t modelId)
 }
 
 void
-RxConfig::SetAntennaMode(uint8_t antennaMode)
+RxConfig::SetAntennaMode(uint8_t antennaMode) 
 {
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
     if (m_config.antennaMode != antennaMode)
     {
         m_config.antennaMode = antennaMode;
@@ -522,9 +524,9 @@ RxConfig::SetDefaults()
     SetPowerOnCounter(0);
     SetModelId(0xFF);
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    SetAntennaMode(2);
+    SetAntennaMode(2); //2 is diversity
 #else
-    SetAntennaMode(1);
+    SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
 #endif
     SetSSID("");
     SetPassword("");
