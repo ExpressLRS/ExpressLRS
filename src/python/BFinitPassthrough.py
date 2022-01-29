@@ -133,8 +133,11 @@ def reset_to_bootloader(args):
     s.flush()
     rx_target = rl.read_line().strip()
     flash_target = re.sub("_VIA_.*", "", args.target.upper())
+    ignore_incorrect_target = args.action == "uploadforce"
     if rx_target == "":
         dbg_print("Cannot detect RX target, blindly flashing!")
+    elif ignore_incorrect_target:
+        dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
     elif rx_target != flash_target:
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
@@ -161,6 +164,9 @@ if __name__ == '__main__':
         dest="half_duplex", help="Use half duplex mode")
     parser.add_argument("-t", "--type", type=str, default="ESP82",
         help="Defines flash target type which is sent to target in reboot command")
+    parser.add_argument("-a", "--action", type=str, default="upload",
+        help="Upload action: upload (default), or uploadforce to flash even on target mismatch")
+
     args = parser.parse_args()
 
     if (args.port == None):
