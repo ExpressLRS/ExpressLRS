@@ -89,4 +89,5 @@ if "_WIFI" in target_name:
     else:
         env.SetDefault(UPLOAD_PORT="elrs_rx.local")
 
-add_target_uploadoption("uploadforce", "Upload even if target mismatch")
+if platform != 'native':
+    add_target_uploadoption("uploadforce", "Upload even if target mismatch")
