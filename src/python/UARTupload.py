@@ -10,18 +10,16 @@ import SerialHelper
 import re
 import bootloader
 from query_yes_no import query_yes_no
+from elrs_helpers import ElrsUploadResult
 
-SCRIPT_DEBUG = 0
 BAUDRATE_DEFAULT = 420000
 
-
 def dbg_print(line=''):
-    sys.stdout.write(line)
-    sys.stdout.flush()
+    print(line, flush=True)
     return
 
-
-def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target=""):
+def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target="") -> int:
+    SCRIPT_DEBUG = False
     half_duplex = False
 
     dbg_print("=================== FIRMWARE UPLOAD ===================\n")
@@ -42,7 +40,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
     if not os.path.exists(filename):
         msg = "[FAILED] file '%s' does not exist\n" % filename
         dbg_print(msg)
-        raise Exception(msg)
+        return ElrsUploadResult.ErrorGeneral
 
     s = serial.Serial(port=port, baudrate=baudrate,
         bytesize=8, parity='N', stopbits=1,
@@ -91,11 +89,10 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
                 if 10 < currAttempt:
                     msg = "[FAILED] to get to BL in reasonable time\n"
                     dbg_print(msg)
-                    raise Exception(msg)
+                    return ElrsUploadResult.ErrorGeneral
 
                 if 5 < currAttempt:
                     # Enable debug logs after 5 retries
-                    global SCRIPT_DEBUG
                     SCRIPT_DEBUG = True
 
                 dbg_print("[%1u] retry...\n" % currAttempt)
@@ -147,7 +144,8 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
                                 ignore_incorrect_target = True
                                 continue
                             else:
-                                raise Exception("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
+                                dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
+                                return ElrsUploadResult.ErrorMismatch
                         elif flash_target != "":
                             dbg_print("Verified RX target '%s'" % flash_target)
 
@@ -159,7 +157,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
             if "CCC" not in rl.read_line(15.):
                 msg = "[FAILED] Unable to communicate with bootloader...\n"
                 dbg_print(msg)
-                raise Exception(msg)
+                return ElrsUploadResult.ErrorGeneral
             dbg_print(" sync OK\n")
         else:
             dbg_print("\nWe were already in bootloader\n")
@@ -208,10 +206,10 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
 
     if (status):
         dbg_print("Success!!!!\n\n")
-    else:
-        dbg_print("[FAILED] Upload failed!\n\n")
-        raise Exception('Failed to Upload')
+        return ElrsUploadResult.Success
 
+    dbg_print("[FAILED] Upload failed!\n\n")
+    return ElrsUploadResult.ErrorGeneral
 
 def on_upload(source, target, env):
     envkey = None
@@ -236,12 +234,11 @@ def on_upload(source, target, env):
                 envkey = flag.split("=")[1]
 
     try:
-        uart_upload(upload_port, firmware_path, upload_speed, ghst, upload_force, key=envkey, target=env['PIOENV'])
+        returncode = uart_upload(upload_port, firmware_path, upload_speed, ghst, upload_force, key=envkey, target=env['PIOENV'])
     except Exception as e:
         dbg_print("{0}\n".format(e))
-        return -1
-    return 0
-
+        return ElrsUploadResult.ErrorGeneral
+    return returncode
 
 if __name__ == '__main__':
     filename = 'firmware.bin'
@@ -259,4 +256,5 @@ if __name__ == '__main__':
     if 3 < len(sys.argv):
         baudrate = sys.argv[3]
 
-    uart_upload(port, filename, baudrate)
+    returncode = uart_upload(port, filename, baudrate)
+    exit(returncode)

@@ -2,7 +2,6 @@ import os
 import re
 import subprocess
 
-
 def git_cmd(*args):
     return subprocess.check_output(["git"] + list(args)).decode("utf-8").rstrip('\r\n')
 
@@ -35,3 +34,11 @@ def get_git_version():
             sha = data.split()[1].strip()
 
     return dict(version=ver, sha=sha[:6])
+
+class ElrsUploadResult:
+        # SUCCESS
+        Success = 0
+        # ERROR: Unspecified
+        ErrorGeneral = -1
+        # ERROR: target mismatch
+        ErrorMismatch = -2

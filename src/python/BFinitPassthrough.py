@@ -4,17 +4,12 @@ import serials_find
 import SerialHelper
 import bootloader
 from query_yes_no import query_yes_no
-
-SCRIPT_DEBUG = 0
-
+from elrs_helpers import ElrsUploadResult
 
 class PassthroughEnabled(Exception):
     pass
 
 class PassthroughFailed(Exception):
-    pass
-
-class WrongTargetSelected(Exception):
     pass
 
 def dbg_print(line=''):
@@ -39,8 +34,6 @@ def _validate_serialrx(rl, config, expected):
 
 
 def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
-    debug = SCRIPT_DEBUG
-
     sys.stdout.flush()
     dbg_print("======== PASSTHROUGH INIT ========")
     dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
@@ -113,7 +106,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     dbg_print("======== PASSTHROUGH DONE ========")
 
 
-def reset_to_bootloader(args):
+def reset_to_bootloader(args) -> int:
     dbg_print("======== RESET TO BOOTLOADER ========")
     s = serial.Serial(port=args.port, baudrate=args.baud,
         bytesize=8, parity='N', stopbits=1,
@@ -142,11 +135,14 @@ def reset_to_bootloader(args):
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
         else:
-            raise WrongTargetSelected("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+            dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+            return ElrsUploadResult.ErrorMismatch
     elif flash_target != "":
         dbg_print("Verified RX target '%s'" % (flash_target))
     time.sleep(.5)
     s.close()
+
+    return ElrsUploadResult.Success
 
 
 if __name__ == '__main__':
@@ -172,14 +168,13 @@ if __name__ == '__main__':
     if (args.port == None):
         args.port = serials_find.get_serial_port()
 
+    returncode = ElrsUploadResult.Success
     try:
         bf_passthrough_init(args.port, args.baud)
     except PassthroughEnabled as err:
         dbg_print(str(err))
 
     if args.reset_to_bl:
-        try:
-            reset_to_bootloader(args)
-        except WrongTargetSelected as err:
-            dbg_print(str(err))
-            exit(-1)
+        returncode = reset_to_bootloader(args)
+
+    exit(returncode)
