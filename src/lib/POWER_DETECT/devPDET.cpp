@@ -8,18 +8,23 @@
 #if defined(USE_SKY85321)
 #define SKY85321_MAX_DBM_INPUT 5
 
+// SKY85321_PDET_SLOPE/INTERCEPT convert mV from analogRead() to dBm
 #if !defined(SKY85321_PDET_SLOPE) || !defined(SKY85321_PDET_INTERCEPT)
   #error "SKY85321 requires SKY85321_PDET_SLOPE and SKY85321_PDET_INTERCEPT"
 #endif
 #endif // USE_SKY85321
 
-#define PDET_HYSTERESIS        0.7
-#define PDET_SAMPLE_PERIOD     1000
-#define PDET_BUSY_PERIOD       999 // 999 to shift the next measurement time into a transmission period.
+typedef uint32_t pdet_storage_t;
+#define PDET_DBM_SCALE(x)         ((pdet_storage_t)((x) * 1000U))
+#define PDET_MV_SCALE(x)          ((pdet_storage_t)((x) * 10U))
+#define PDET_MV_DESCALE(x)        ((pdet_storage_t)((x) / 10U))
+#define PDET_HYSTERESIS_DBMSCALED PDET_DBM_SCALE(0.7)
+#define PDET_SAMPLE_PERIODMS      1000
+#define PDET_BUSY_PERIODMS        999 // 999 to shift the next measurement time into a transmission period.
 
 extern bool busyTransmitting;
-float Pdet = 0;
-uint8_t currentPowerdBm = 0;
+static pdet_storage_t PdetMvScaled;
+static uint8_t lastTargetPowerdBm;
 
 static int start()
 {
@@ -29,41 +34,39 @@ static int start()
 
 static int timeout()
 {
-    if (!busyTransmitting) return PDET_BUSY_PERIOD;
+    if (!busyTransmitting) return PDET_BUSY_PERIODMS;
 
-    float newPdet = analogReadMilliVolts(GPIO_PIN_PA_PDET);
+    pdet_storage_t newPdetScaled = PDET_MV_SCALE(analogReadMilliVolts(GPIO_PIN_PA_PDET));
 
-    if (!busyTransmitting) return PDET_BUSY_PERIOD; // Check transmission did not stop during Pdet measurement.
+    if (!busyTransmitting) return PDET_BUSY_PERIODMS; // Check transmission did not stop during Pdet measurement.
 
-    if (!Pdet || currentPowerdBm != POWERMGNT::getPowerIndBm())
+    uint8_t targetPowerDbm = POWERMGNT::getPowerIndBm();
+    if (PdetMvScaled == 0 || lastTargetPowerdBm != targetPowerDbm)
     {
-        Pdet = newPdet;
-        currentPowerdBm = POWERMGNT::getPowerIndBm();
+        PdetMvScaled = newPdetScaled;
+        lastTargetPowerdBm = targetPowerDbm;
     }
     else
     {
-        Pdet = Pdet * 0.9 + newPdet * 0.1; // IIR filter
+        PdetMvScaled = (PdetMvScaled * 9 + newPdetScaled) / 10; // IIR filter
     }
 
-    float dBm = SKY85321_PDET_SLOPE * Pdet + SKY85321_PDET_INTERCEPT;
+    pdet_storage_t dBmScaled = PDET_MV_DESCALE(PDET_DBM_SCALE(SKY85321_PDET_SLOPE) * PdetMvScaled) + PDET_DBM_SCALE(SKY85321_PDET_INTERCEPT);
+    pdet_storage_t targetPowerDbmScaled = PDET_DBM_SCALE(targetPowerDbm);
+    DBGVLN("PdetMv=%u dBm=%u", PdetMvScaled, dBmScaled);
 
-    INFOLN("Pdet = %d mV", (uint16_t)Pdet);
-    // INFOLN("%d dBm", dBm); // how do we print floats? :|
-    // LOGGING_UART.print(dBm, 2);
-    // LOGGING_UART.println(" dBm");
-
-    if (dBm < ((float)(POWERMGNT::getPowerIndBm()) - PDET_HYSTERESIS) && POWERMGNT::currentSX1280Ouput() < SKY85321_MAX_DBM_INPUT)
+    if (dBmScaled < (targetPowerDbmScaled - PDET_HYSTERESIS_DBMSCALED) && POWERMGNT::currentSX1280Ouput() < SKY85321_MAX_DBM_INPUT)
     {
         POWERMGNT::incSX1280Ouput();
-        Pdet = 0;
+        PdetMvScaled = 0;
     }
-    else if (dBm > (POWERMGNT::getPowerIndBm() + PDET_HYSTERESIS))
+    else if (dBmScaled > (targetPowerDbmScaled + PDET_HYSTERESIS_DBMSCALED))
     {
         POWERMGNT::decSX1280Ouput();
-        Pdet = 0;
+        PdetMvScaled = 0;
     }
 
-    return PDET_SAMPLE_PERIOD;
+    return PDET_SAMPLE_PERIODMS;
 }
 
 device_t PDET_device = {
