@@ -6,7 +6,7 @@ extern SX1280Driver Radio;
 
 LQCALC<100> LBTSuccessCalc;
 volatile uint32_t rxStartTime;
-volatile bool LBTFakeTXdoneISR = false;
+volatile bool LBTChannelBusy = false;
 
 #if !defined(LBT_RSSI_THRESHOLD_OFFSET_DB)
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0

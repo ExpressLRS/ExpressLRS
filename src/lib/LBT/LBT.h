@@ -5,7 +5,7 @@
 #include "SX1280Driver.h"
 
 extern LQCALC<100> LBTSuccessCalc;
-extern volatile bool LBTFakeTXdoneISR;
+extern volatile bool LBTChannelBusy;
 
 void enableLBT(bool useLBT);
 int SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF);

@@ -475,19 +475,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
+  // Emulate that TX just happened, even if it didn't because channel is not clear
   if (ChannelIsClear())
   {
     Radio.TXnb();
   }
   else
   {
-    // Emulate that TX just happened, even if it didn't because CCA failed
-    // TODO: Check if it is safe to call this way too early, compared to having
-    // an actual transmission first. Alternative could be a timer callback set
-    // for tx on the air time.
-    // idea: maybe better to start telemetry RX in normal timer callback in the
-    // if (TelemetryRcvPhase == ttrpInReceiveMode) - clause?
-    LBTFakeTXdoneISR = true;
+    LBTChannelBusy = true;
   }
 #else // non-CE
   Radio.TXnb();
@@ -500,10 +495,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if(LBTFakeTXdoneISR)
+  if(LBTChannelBusy)
   {
     Radio.TXdoneCallback();
-    LBTFakeTXdoneISR = false;
+    LBTChannelBusy = false;
   }
 #endif
 
