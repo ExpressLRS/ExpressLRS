@@ -128,6 +128,7 @@ typedef struct {
     uint8_t     uid[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
+    uint8_t     power;
     uint8_t     antennaMode;
     char        ssid[33];
     char        password[33];
@@ -151,6 +152,7 @@ public:
     const uint8_t* GetUID() const { return m_config.uid; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
+    uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
@@ -164,6 +166,7 @@ public:
     void SetUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
+    void SetPower(uint8_t power);
     void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);

@@ -15,12 +15,19 @@ static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 
 
+static struct luaItem_selection luaTlmPower = {
+    {"Tlm Power", CRSF_TEXT_SELECTION},
+    0, // value
+    "Standard;Max Power",
+    emptySpace
+};
+
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna B;Antenna A;Diversity",
-    " "
+    emptySpace
 };
 #endif
 
@@ -60,6 +67,12 @@ static void registerLuaParameters()
       devicesTriggerEvent();
   });
 #endif
+
+registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
+    config.SetPower(arg);
+      config.Commit();
+      devicesTriggerEvent();
+  });
 
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
