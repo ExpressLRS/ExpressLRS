@@ -65,7 +65,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .lock_on_first_connection = true,
 #endif
 #if defined(TARGET_TX)
-    .tlm_report_interval = 320,
+#if defined(TLM_REPORT_INTERVAL_MS)
+    .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
+#else
+    .tlm_report_interval = 320U,
+#endif
     .no_sync_on_arm = false,
     .uart_inverted = true,
     .unlock_higher_power = false,

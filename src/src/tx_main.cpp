@@ -23,10 +23,6 @@
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
-#ifndef TLM_REPORT_INTERVAL_MS
-#define TLM_REPORT_INTERVAL_MS 320LU // Default to 320ms
-#endif
-
 /// define some libs to use ///
 hwTimer hwTimer;
 GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
@@ -1077,7 +1073,7 @@ void loop()
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
-      (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
+      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
