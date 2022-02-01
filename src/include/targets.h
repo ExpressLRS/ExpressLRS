@@ -43,6 +43,10 @@
 #endif
 #endif
 
+#ifndef DMA_ATTR
+#define DMA_ATTR
+#endif
+
 /* Set red led to default */
 #ifndef GPIO_PIN_LED
 #ifdef GPIO_PIN_LED_RED

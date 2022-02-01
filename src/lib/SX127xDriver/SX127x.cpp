@@ -3,17 +3,10 @@
 
 SX127xHal hal;
 
-void inline SX127xDriver::nullCallback(void) {}
+void ICACHE_RAM_ATTR nullCallback(void) {}
+
 SX127xDriver *SX127xDriver::instance = NULL;
 
-void (*SX127xDriver::RXdoneCallback)() = &nullCallback;
-void (*SX127xDriver::TXdoneCallback)() = &nullCallback;
-
-void (*SX127xDriver::TXtimeout)() = &nullCallback;
-void (*SX127xDriver::RXtimeout)() = &nullCallback;
-
-volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::TXdataBuffer[TXRXBuffSize] = {0};
-volatile WORD_ALIGNED_ATTR uint8_t SX127xDriver::RXdataBuffer[TXRXBuffSize] = {0};
 
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
@@ -35,6 +28,10 @@ const uint8_t SX127x_AllowedSyncwords[105] =
 SX127xDriver::SX127xDriver()
 {
   instance = this;
+  TXdoneCallback = &nullCallback; // remove callbacks
+  RXdoneCallback = &nullCallback;
+  PayloadLength = 8; // Dummy default value which is overwritten during setup.
+  currFreq = 0; // leave as 0 to ensure that it gets set
 }
 
 bool SX127xDriver::Begin()
@@ -311,11 +308,8 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
   SetMode(SX127x_OPMODE_STANDBY);
+
   hal.TXenable();
-
-  //TXstartMicros = micros();
-  //HeadRoom = TXstartMicros - TXdoneMicros;
-
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegisterFIFO(TXdataBuffer, PayloadLength);
 
@@ -371,20 +365,20 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
   Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength, interval);
 }
 
-void SX127xDriver::Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
 {
   PayloadLength = PayloadLength;
   IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetOutputPower(currPWR);
-  SetSpreadingFactor(sf);
-  SetBandwidthCodingRate(bw, cr);
+  SetSpreadingFactor((SX127x_SpreadingFactor)sf);
+  SetBandwidthCodingRate((SX127x_Bandwidth)bw, (SX127x_CodingRate)cr);
   SetFrequencyReg(freq);
   SetRxTimeoutUs(interval);
 }

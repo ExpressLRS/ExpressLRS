@@ -5,10 +5,10 @@
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
-#endif
-
-#if defined(Regulatory_Domain_ISM_2400)
+#elif defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
+#else
+#error "Radio configuration is not valid!"
 #endif
 
 #endif // UNIT_TEST
@@ -86,73 +86,75 @@ typedef enum
     RATE_ENUM_MAX = 8
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
+enum {
+    RADIO_TYPE_SX127x_LORA,
+    RADIO_TYPE_SX128x_LORA,
+    RADIO_TYPE_SX128x_FLRC,
+};
+
 typedef struct expresslrs_rf_pref_params_s
 {
-    int8_t index;
-    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-    int32_t RXsensitivity;          // expected RF sensitivity based on
-    uint32_t TOA;                   // time on air in microseconds
-    uint32_t DisconnectTimeoutMs;   // Time without a packet before receiver goes to disconnected (ms)
-    uint32_t RxLockTimeoutMs;       // Max time to go from tentative -> connected state on receiver (ms)
+    uint8_t index;
+    uint8_t enum_rate;                    // Max value of 4 since only 2 bits have been assigned in the sync package.
+    int32_t RXsensitivity;                // expected RF sensitivity based on
+    uint32_t TOA;                         // time on air in microseconds
+    uint32_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
+    uint32_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
     uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
     uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
+
+typedef struct expresslrs_mod_settings_s
+{
+    uint8_t index;
+    uint8_t radio_type;
+    uint8_t enum_rate;          // Max value of 4 since only 2 bits have been assigned in the sync package.
+    uint8_t bw;
+    uint8_t sf;
+    uint8_t cr;
+    uint32_t interval;          // interval in us seconds that corresponds to that frequency
+    uint8_t TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
+    uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint8_t PreambleLen;
+    uint8_t PayloadLength;      // Number of OTA bytes to be sent.
+} expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
 #define RATE_BINDING 2 // 50Hz bind mode
-typedef struct expresslrs_mod_settings_s
-{
-    int8_t index;
-    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-    SX127x_Bandwidth bw;
-    SX127x_SpreadingFactor sf;
-    SX127x_CodingRate cr;
-    uint32_t interval;                  // interval in us seconds that corresponds to that frequency
-    expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint8_t PreambleLen;
-    uint8_t PayloadLength;            // Number of OTA bytes to be sent.
-} expresslrs_mod_settings_t;
 
-#endif
+extern SX127xDriver Radio;
 
-#if defined(Regulatory_Domain_ISM_2400)
+#elif defined(Regulatory_Domain_ISM_2400)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
-#define RATE_BINDING 3 // 50Hz bind mode
-typedef struct expresslrs_mod_settings_s
-{
-    int8_t index;
-    expresslrs_RFrates_e enum_rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-    SX1280_RadioLoRaBandwidths_t bw;
-    SX1280_RadioLoRaSpreadingFactors_t sf;
-    SX1280_RadioLoRaCodingRates_t cr;
-    uint32_t interval;                  // interval in us seconds that corresponds to that frequency
-    expresslrs_tlm_ratio_e TLMinterval; // every X packets is a response TLM packet, should be a power of 2
-    uint8_t FHSShopInterval;            // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint8_t PreambleLen;
-    uint8_t PayloadLength;            // Number of OTA bytes to be sent.
-} expresslrs_mod_settings_t;
+#define RATE_BINDING 2  // 50Hz bind mode
 
+extern SX1280Driver Radio;
 #endif
 
 
-expresslrs_mod_settings_s *get_elrs_airRateConfig(int8_t index);
-expresslrs_rf_pref_params_s *get_elrs_RFperfParams(int8_t index);
+#define SYNC_PACKET_SWITCH_OFFSET   1   // Switch encoding mode
+#define SYNC_PACKET_TLM_OFFSET      3   // Telemetry ratio
+#define SYNC_PACKET_RATE_OFFSET     6   // Rate index
+#define SYNC_PACKET_SWITCH_MASK     0b11
+#define SYNC_PACKET_TLM_MASK        0b111
+#define SYNC_PACKET_RATE_MASK       0b111
 
-uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval);
-uint16_t RateEnumToHz(expresslrs_RFrates_e eRate);
+
+expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
+expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
+
+uint8_t TLMratioEnumToValue(uint8_t enumval);
+uint16_t RateEnumToHz(uint8_t eRate);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
-extern uint8_t ExpressLRS_nextAirRateIndex;
-//extern expresslrs_mod_settings_s *ExpressLRS_nextAirRate;
-//extern expresslrs_mod_settings_s *ExpressLRS_prevAirRate;
-uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
+
+uint8_t enumRatetoIndex(expresslrs_RFrates_e rate);
 
 #endif // UNIT_TEST
 

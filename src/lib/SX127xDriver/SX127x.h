@@ -12,59 +12,38 @@ class SX127xDriver
 
 public:
     static SX127xDriver *instance;
-    SX127xDriver();
+
     ///////Callback Function Pointers/////
-    static void inline nullCallback(void);
+    void (*RXdoneCallback)(); //function pointer for callback
+    void (*TXdoneCallback)(); //function pointer for callback
 
-    static void (*RXdoneCallback)(); //function pointer for callback
-    static void (*TXdoneCallback)(); //function pointer for callback
-
-    static void (*TXtimeout)(); //function pointer for callback
-    static void (*RXtimeout)(); //function pointer for callback
-
-///////////Radio Variables////////
+    ///////////Radio Variables////////
     #define TXRXBuffSize 16
-    const uint8_t TXbuffLen = TXRXBuffSize;
-    const uint8_t RXbuffLen = TXRXBuffSize;
-
-    static volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    static volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
+    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
+    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     bool headerExplMode = false;
     bool crcEnabled = false;
 
     //// Parameters ////
-    uint8_t PayloadLength = 8; // Dummy default value which is overwritten during setup.
-    uint32_t currFreq = 0; // leave as 0 to ensure that it gets set
-    uint8_t currSyncWord = SX127X_SYNC_WORD;
-    uint8_t currPreambleLen = 0;
-    SX127x_Bandwidth currBW = SX127x_BW_125_00_KHZ; //default values from datasheet
-    SX127x_SpreadingFactor currSF = SX127x_SF_7;
-    SX127x_CodingRate currCR = SX127x_CR_4_5;
-    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
-    uint8_t currPWR = 0b0000;
-    SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
-    bool IQinverted = false;
-    uint16_t timeoutSymbols = 0;
+    uint32_t currFreq;
+    uint8_t PayloadLength;
+    bool IQinverted;
+    uint16_t timeoutSymbols;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
     int8_t LastPacketRSSI;
     int8_t LastPacketSNR;
-    uint32_t TimeOnAir;
-    uint32_t TXstartMicros;
-    uint32_t TXspiTime;
-    uint32_t HeadRoom;
-    uint32_t LastTXdoneMicros;
-    uint32_t TXdoneMicros;
     /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
+    SX127xDriver();
     bool Begin();
     void End();
     bool DetectChip();
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
-    void Config(SX127x_Bandwidth bw, SX127x_SpreadingFactor sf, SX127x_CodingRate cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
     void SetMode(SX127x_RadioOPmodes mode);
     void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();
@@ -108,7 +87,16 @@ public:
     void RXnb();
 
 private:
-    static void ICACHE_RAM_ATTR IsrCallback();
+    uint8_t currSyncWord = SX127X_SYNC_WORD;
+    uint8_t currPreambleLen = 0;
+    SX127x_Bandwidth currBW = SX127x_BW_125_00_KHZ; //default values from datasheet
+    SX127x_SpreadingFactor currSF = SX127x_SF_7;
+    SX127x_CodingRate currCR = SX127x_CR_4_5;
+    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
+    uint8_t currPWR = 0b0000;
+    SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
+
+    static void IsrCallback();
     void RXnbISR(); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
 };
