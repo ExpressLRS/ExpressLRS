@@ -75,7 +75,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .no_sync_on_arm = false,
 #endif
+#if defined(UART_INVERTED) // Only on ESP32
     .uart_inverted = true,
+#else
+    .uart_inverted = false,
+#endif
     .unlock_higher_power = false,
 #if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
     .buzzer_mode = 3,
