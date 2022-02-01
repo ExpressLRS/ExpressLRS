@@ -26,9 +26,9 @@ static void cyclePower()
     if (connectionState < MODE_STATES)
     {
         PowerLevels_e curr = POWERMGNT::currPower();
-        if (curr == MaxPower)
+        if (curr == POWERMGNT::getMaxPower())
         {
-            POWERMGNT::setPower(MinPower);
+            POWERMGNT::setPower(POWERMGNT::getMinPower());
         }
         else
         {

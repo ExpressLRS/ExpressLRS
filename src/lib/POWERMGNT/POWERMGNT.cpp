@@ -50,7 +50,7 @@ nvs_handle POWERMGNT::handle = 0;
 
 PowerLevels_e POWERMGNT::incPower()
 {
-    if (CurrentPower < MaxPower)
+    if (CurrentPower < getMaxPower())
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
@@ -199,9 +199,9 @@ PowerLevels_e POWERMGNT::getDefaultPower()
     {
         return MinPower;
     }
-    if (MaxPower < DefaultPower)
+    if (getMaxPower() < DefaultPower)
     {
-        return MaxPower;
+        return getMaxPower();
     }
     return DefaultPower;
 }
@@ -220,9 +220,9 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MinPower;
     }
-    else if (Power > MaxPower)
+    else if (Power > getMaxPower())
     {
-        Power = MaxPower;
+        Power = getMaxPower();
     }
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager

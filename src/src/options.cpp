@@ -80,7 +80,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .uart_inverted = false,
 #endif
+#if defined(UNLOCK_HIGHER_POWER)
+    .unlock_higher_power = true,
+#else
     .unlock_higher_power = false,
+#endif
 #if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
     .buzzer_mode = 3,
     .buzzer_melody = {}

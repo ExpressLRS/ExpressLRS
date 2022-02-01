@@ -183,7 +183,7 @@ void DynamicPower_Update()
     (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
   {
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-    // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
+    // POWERMGNT.setPower(POWERMGNT::getMaxPower());    // if you want to make the power to the aboslute maximum of a module, use this line.
     return;
   }
 

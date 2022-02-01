@@ -295,7 +295,7 @@ static void luadevGeneratePowerOpts()
 
   // Continue until after than MAXth item and drop a null in the orginal
   // string on the semicolon (not after like the previous loop)
-  while (pwr <= MaxPower)
+  while (pwr <= POWERMGNT::getMaxPower())
   {
     // If out still points to a semicolon from the last loop move past it
     if (*out)
@@ -499,7 +499,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaPowerFolder);
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
+    config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
     updateFolderName();
   }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
