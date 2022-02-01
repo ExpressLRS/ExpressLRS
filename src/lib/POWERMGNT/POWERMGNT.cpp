@@ -213,6 +213,7 @@ void POWERMGNT::setDefaultPower()
 
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
+#ifdef TARGET_TX
     if (Power == CurrentPower)
         return;
 
@@ -224,7 +225,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MaxPower;
     }
-
+#endif
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
@@ -237,14 +238,26 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_FIXED)
+#elif defined(POWER_OUTPUT_FIXED) && defined(TARGET_TX)
     Radio.SetOutputPower(POWER_OUTPUT_FIXED);
 #elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
     CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
     Radio.SetOutputPower(CurrentSX1280Power);
 #elif defined(TARGET_RX)
     // Set to max power for telemetry on the RX if not specified
-    Radio.SetOutputPowerMax();
+    if (Power == CurrentPower)
+        return;
+
+    if (Power <= MinPower)
+    {
+        Power = MinPower;
+        Radio.SetOutputPowerMin();
+    }
+    else if (Power >= MaxPower)
+    {
+        Power = MaxPower;
+        Radio.SetOutputPowerMax();
+    }
 #else
 #error "[ERROR] Unknown power management!"
 #endif

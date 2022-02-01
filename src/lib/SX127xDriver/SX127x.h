@@ -52,6 +52,7 @@ public:
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
     void SetOutputPowerMax() { SetOutputPower(0b1111); };
+    void SetOutputPowerMin() { SetOutputPower(0b0111); };   //all rx has no RFO, this should value get around 10dbm
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
     void SetRxTimeoutUs(uint32_t interval);

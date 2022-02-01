@@ -13,4 +13,7 @@
 #define GPIO_PIN_ANTENNA_SELECT 0 // Low = Ant1, High = Ant2, pulled high by external resistor
 #endif
 
-// Output Power - use default SX1280
+#define POWER_OUTPUT_MAX      13 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+#define POWER_OUTPUT_MIN      -10 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+
+#define Regulatory_Domain_ISM_2400 1

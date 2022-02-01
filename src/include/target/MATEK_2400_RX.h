@@ -18,4 +18,7 @@
 #endif
 
 // Output Power
-#define POWER_OUTPUT_FIXED          3
+#define POWER_OUTPUT_MAX          3
+#define POWER_OUTPUT_MIN          -10
+
+#define Regulatory_Domain_ISM_2400 1

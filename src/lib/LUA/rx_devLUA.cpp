@@ -4,6 +4,7 @@
 #include "device.h"
 
 #include "CRSF.h"
+#include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
 #include "lua.h"
@@ -51,6 +52,7 @@ static struct luaItem_command luaRxWebUpdate = {
 //---------------------------- WiFi -----------------------------
 
 
+extern POWERMGNT POWERMGNT;
 extern RxConfig config;
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
@@ -70,6 +72,11 @@ static void registerLuaParameters()
 
 registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
     config.SetPower(arg);
+    if(arg == 0){
+      POWERMGNT.setPower(MinPower);
+    } else {
+      POWERMGNT.setPower(MaxPower);
+    }
       config.Commit();
       devicesTriggerEvent();
   });

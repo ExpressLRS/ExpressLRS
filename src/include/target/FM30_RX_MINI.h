@@ -47,9 +47,6 @@
     #define MaxPower                PWR_250mW
     #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
 #else
-    #ifdef UNLOCK_HIGHER_POWER
-        #define POWER_OUTPUT_FIXED 6  // 250mW (uses values as above)
-    #else
-        #define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
-    #endif
+        #define POWER_OUTPUT_MAX 6  // 250mW (uses values as above)
+        #define POWER_OUTPUT_MIN -15 // 100mW (uses values as above)
 #endif
