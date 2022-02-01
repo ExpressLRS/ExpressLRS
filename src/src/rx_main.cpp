@@ -940,10 +940,7 @@ static void setupConfigAndPocCheck()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
-    bool doPowerCount = config.GetOnLoan();
-#ifndef MY_UID
-    doPowerCount |= true;
-#endif
+    bool doPowerCount = config.GetOnLoan() || !firmwareOptions.hasUID;
     if (doPowerCount)
     {
         DBGLN("Doing power-up check for loan revocation and/or re-binding")
@@ -1003,9 +1000,8 @@ static void setupBindingFromConfig()
         CRCInitializer = (UID[4] << 8) | UID[5];
         return;
     }
-#if !defined(MY_UID)
     // Check the byte that indicates if RX has been bound
-    if (config.GetIsBound())
+    if (!firmwareOptions.hasUID && config.GetIsBound())
     {
         DBGLN("RX has been bound previously, reading the UID from eeprom...");
         const uint8_t* storedUID = config.GetUID();
@@ -1016,7 +1012,6 @@ static void setupBindingFromConfig()
         DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
         CRCInitializer = (UID[4] << 8) | UID[5];
     }
-#endif
 }
 
 static void HandleUARTin()
@@ -1216,9 +1211,8 @@ static void updateBindingMode()
         ExitBindingMode();
     }
 
-#ifndef MY_UID
     // If the power on counter is >=3, enter binding and clear counter
-    if (config.GetPowerOnCounter() >= 3)
+    if (!firmwareOptions.hasUID && config.GetPowerOnCounter() >= 3)
     {
         config.SetPowerOnCounter(0);
         config.Commit();
@@ -1226,7 +1220,6 @@ static void updateBindingMode()
         INFOLN("Power on counter >=3, enter binding mode...");
         EnterBindingMode();
     }
-#endif
 }
 
 static void checkSendLinkStatsToFc(uint32_t now)
@@ -1296,6 +1289,7 @@ RF_PRE_INIT()
 
 void setup()
 {
+    initUID();
     setupTarget();
     // serial setup must be done before anything as some libs write
     // to the serial port and they'll block if the buffer fills

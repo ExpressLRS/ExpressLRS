@@ -20,9 +20,11 @@ def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
 
 def patch_uid(mm, pos, args):
-    bindingPhraseHash = hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()
-    mm[pos:pos + 6] = bindingPhraseHash[0:6]
-    pos += 6
+    if (args.phrase):
+        mm[pos] = 1
+        bindingPhraseHash = hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()
+        mm[pos+1:pos + 7] = bindingPhraseHash[0:6]
+    pos += 7
     return pos
 
 def patch_wifi(mm, pos, args):
@@ -113,7 +115,7 @@ def length_check(l, f):
 
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
-    parser.add_argument('--phrase', type=str, required=True, help='Your personal binding phrase')
+    parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
     parser.add_argument('--ssid', type=length_check(32, "ssid"), required=False, default="", help='Home network SSID')
     parser.add_argument('--password', type=length_check(64, "password"), required=False, default="", help='Home network password')

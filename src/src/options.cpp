@@ -35,7 +35,13 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #endif
 #endif
         ,
+#if defined(MY_UID)
+    .hasUID = true,
+    .uid = { MY_UID },
+#else
+    .hasUID = false,
     .uid = {},
+#endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
         .wifi_auto_on_interval = AUTO_WIFI_ON_INTERVAL * 1000,

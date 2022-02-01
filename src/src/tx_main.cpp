@@ -973,6 +973,7 @@ static void setupTarget()
 
 void setup()
 {
+  initUID();
   setupTarget();
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));

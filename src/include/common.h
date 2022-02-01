@@ -158,6 +158,8 @@ extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 uint8_t enumRatetoIndex(uint8_t rate);
 
+void initUID();
+
 #endif // UNIT_TEST
 
 uint32_t uidMacSeedGet(void);
