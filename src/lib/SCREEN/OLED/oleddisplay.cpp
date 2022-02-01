@@ -8,6 +8,11 @@
 #include "options.h"
 #include "logging.h"
 
+#if defined(PLATFORM_ESP32)
+#include "WiFi.h"
+extern WiFiMode_t wifiMode;
+#endif
+
 // OLED specific header files.
 
 #ifdef OLED_REVERSED
@@ -232,11 +237,11 @@ void Display::displayWiFiConfirm()
 void Display::displayWiFiStatus()
 {
     u8g2.clearBuffer();
-
+#if defined(PLATFORM_ESP32)
     // TODO: Add a fancy wifi symbol like the cool TFT peeps
 
     u8g2.setFont(u8g2_font_t0_17_mr);
-    #if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
+    if (wifiMode == WIFI_STA) {
         #ifdef USE_OLED_SPI_SMALL
             u8g2.drawStr(0,15, "open http://");
             u8g2.drawStr(70,15, (String(wifi_hostname)+".local").c_str());
@@ -246,7 +251,10 @@ void Display::displayWiFiStatus()
             u8g2.drawStr(0,33, (String(wifi_hostname)+".local").c_str());
             u8g2.drawStr(0,63, "by browser");
         #endif
-    #else
+    }
+    else
+    {
+
         #ifdef USE_OLED_SPI_SMALL
             u8g2.drawStr(0,15, wifi_ap_ssid);
             u8g2.drawStr(70,15, wifi_ap_password);
@@ -256,7 +264,8 @@ void Display::displayWiFiStatus()
             u8g2.drawStr(0,33, wifi_ap_password);
             u8g2.drawStr(0,63, wifi_ap_address);
         #endif
-    #endif
+    }
+#endif
     u8g2.sendBuffer();
 }
 

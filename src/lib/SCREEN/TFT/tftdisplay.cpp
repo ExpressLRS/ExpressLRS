@@ -8,6 +8,9 @@
 #include "options.h"
 #include "logging.h"
 
+#include "WiFi.h"
+extern WiFiMode_t wifiMode;
+
 TFT_eSPI tft = TFT_eSPI();
 
 const uint16_t *main_menu_icons[] = {
@@ -293,26 +296,28 @@ void Display::displayWiFiStatus()
     tft.fillScreen(TFT_WHITE);
 
     tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_wifimode);
-#if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "open http://", TFT_BLACK, TFT_WHITE);
+    if (wifiMode == WIFI_STA) {
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            "open http://", TFT_BLACK, TFT_WHITE);
 
-    String host_msg = String(wifi_hostname) + ".local";
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        host_msg, TFT_BLACK, TFT_WHITE);
+        String host_msg = String(wifi_hostname) + ".local";
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            host_msg, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "by browser", TFT_BLACK, TFT_WHITE);
-#else
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_ssid, TFT_BLACK, TFT_WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            "by browser", TFT_BLACK, TFT_WHITE);
+    }
+    else
+    {
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_ssid, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_password, TFT_BLACK, TFT_WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_password, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_address, TFT_BLACK, TFT_WHITE);
-#endif
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_address, TFT_BLACK, TFT_WHITE);
+    }
 }
 
 void Display::displayBindConfirm()

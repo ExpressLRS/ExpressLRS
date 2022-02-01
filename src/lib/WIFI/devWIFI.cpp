@@ -43,7 +43,7 @@ bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
 
 static wl_status_t laststatus = WL_IDLE_STATUS;
-static volatile WiFiMode_t wifiMode = WIFI_OFF;
+volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
 
@@ -270,7 +270,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
   // Only save to config if we don't have a flashed wifi network
-  if (home_wifi_ssid[0] == 0) {
+  if (firmwareOptions.home_wifi_ssid[0] == 0) {
     config.SetSSID(ssid.c_str());
     config.SetPassword(password.c_str());
     config.Commit();
@@ -285,9 +285,9 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetPassword("");
   config.Commit();
   // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
     String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
     sendResponse(request, msg, WIFI_STA);
   }
@@ -530,9 +530,9 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
   }
   else {
     strcpy(station_ssid, config.GetSSID());
@@ -749,12 +749,7 @@ void HandleMSP2WIFI()
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
-
-  #ifdef AUTO_WIFI_ON_INTERVAL
-    return AUTO_WIFI_ON_INTERVAL * 1000;
-  #else
-    return DURATION_NEVER;
-  #endif
+  return firmwareOptions.wifi_auto_on_interval;
 }
 
 static int event()
@@ -778,21 +773,21 @@ static int timeout()
     return DURATION_IMMEDIATELY;
   }
 
-  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
+  #if defined(TARGET_TX)
+  // if webupdate was requested before or .wifi_auto_on_interval has elapsed but uart is not detected
+  // start webupdate, there might be wrong configuration flashed.
+  if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
     DBGLN("No CRSF ever detected, starting WiFi");
     connectionState = wifiUpdate;
     return DURATION_IMMEDIATELY;
   }
-  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
-  if (!webserverPreventAutoStart && (connectionState == disconnected))
+  #elif defined(TARGET_RX)
+  if (firmwareOptions.wifi_auto_on_interval != -1 && !webserverPreventAutoStart && (connectionState == disconnected))
   {
     static bool pastAutoInterval = false;
     // If InBindingMode then wait at least 60 seconds before going into wifi,
-    // regardless of if AUTO_WIFI_ON_INTERVAL is set to less
-    if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
+    // regardless of if .wifi_auto_on_interval is set to less
+    if (!InBindingMode || firmwareOptions.wifi_auto_on_interval >= 60000 || pastAutoInterval)
     {
       // No need to ExitBindingMode(), the radio is about to be stopped. Need
       // to change this before the mode change event so the LED is updated
@@ -801,7 +796,7 @@ static int timeout()
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
-    return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
+    return (60000 - firmwareOptions.wifi_auto_on_interval);
   }
   #endif
   return DURATION_NEVER;

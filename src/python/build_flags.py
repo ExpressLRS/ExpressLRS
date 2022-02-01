@@ -42,6 +42,14 @@ def parse_flags(path):
                     if "MY_STARTUP_MELODY=" in define:
                         parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
                         define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
+                    if "HOME_WIFI_SSID=" in define:
+                        parts = re.search("(.*)=\w*\"(.*)\"$", define)
+                        if parts and parts.group(2):
+                            define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
+                    if "HOME_WIFI_PASSWORD=" in define:
+                        parts = re.search("(.*)=\w*\"(.*)\"$", define)
+                        if parts and parts.group(2):
+                            define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
                     if not define in build_flags:
                         build_flags.append(define)
     except IOError:
@@ -53,30 +61,6 @@ def process_flags(path):
         return
     parse_flags(path)
 
-def escapeChars(x):
-    parts = re.search("(.*)=\w*\"(.*)\"$", x)
-    if parts and parts.group(2):
-        if parts.group(1) == "-DMY_STARTUP_MELODY_ARR": # ignoring escape chars for startup melody
-            return x
-        x = parts.group(1) + '="' + parts.group(2).translate(str.maketrans({
-            "!": "\\\\\\\\041",
-            "\"": "\\\\\\\\042",
-            "#": "\\\\\\\\043",
-            "$": "\\\\\\\\044",
-            "&": "\\\\\\\\046",
-            "'": "\\\\\\\\047",
-            "(": "\\\\\\\\050",
-            ")": "\\\\\\\\051",
-            ",": "\\\\\\\\054",
-            ";": "\\\\\\\\073",
-            "<": "\\\\\\\\074",
-            ">": "\\\\\\\\076",
-            "\\": "\\\\\\\\134",
-            "`": "\\\\\\\\140",
-            "|": "\\\\\\\\174"
-        })) + '"'
-    return x
-
 def condense_flags():
     global build_flags
     for line in build_flags:
@@ -84,7 +68,6 @@ def condense_flags():
         for flag in re.findall("!-D\s*[^\s]+", line):
             build_flags = [x.replace(flag,"") for x in build_flags] # remove the removal flag
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag if it matches the removal flag
-    build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
 
 def version_to_env():
