@@ -72,13 +72,13 @@ static void registerLuaParameters()
 
 registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
     config.SetPower(arg);
+    //config.Commit();
     if(arg == 0){
       POWERMGNT.setPower(MinPower);
     } else {
       POWERMGNT.setPower(MaxPower);
     }
-      config.Commit();
-      devicesTriggerEvent();
+    devicesTriggerEvent();
   });
 
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
@@ -99,6 +99,7 @@ static int event()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
 #endif
+  setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
   return DURATION_IMMEDIATELY;
 }
 
