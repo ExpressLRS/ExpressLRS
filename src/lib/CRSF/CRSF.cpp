@@ -73,16 +73,7 @@ uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'nor
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
-
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-#define AutoSyncWaitPeriod 2000
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-static LPF LPF_OPENTX_SYNC_MARGIN(3);
-static LPF LPF_OPENTX_SYNC_OFFSET(3);
-uint32_t CRSF::SyncWaitPeriodCounter = 0;
-#else
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
-#endif
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
@@ -297,12 +288,6 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
 {
     CRSF::RequestedRCpacketInterval = PacketInterval;
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    CRSF::SyncWaitPeriodCounter = millis();
-    CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-    LPF_OPENTX_SYNC_OFFSET.init(0);
-    LPF_OPENTX_SYNC_MARGIN.init(0);
-#endif
     adjustMaxPacketSize();
 }
 
@@ -318,25 +303,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     if (CRSF::OpenTXsyncOffset > (int32_t)CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
     {
         CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        // wait until we stablize after changing pkt rate
-        if (millis() > (CRSF::SyncWaitPeriodCounter + AutoSyncWaitPeriod))
-        {
-            CRSF::OpenTXsyncOffsetSafeMargin = LPF_OPENTX_SYNC_MARGIN.update((CRSF::OpenTXsyncOffsetSafeMargin - OpenTXsyncOffset) + 100); // take worst case plus 50us
-        }
-#endif
     }
-
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    if (CRSF::OpenTXsyncOffsetSafeMargin > 4000)
-    {
-        CRSF::OpenTXsyncOffsetSafeMargin = 4000; // hard limit at no tune default
-    }
-    else if (CRSF::OpenTXsyncOffsetSafeMargin < 1000)
-    {
-        CRSF::OpenTXsyncOffsetSafeMargin = 1000; // hard limit at no tune default
-    }
-#endif
     //DBGLN("%d, %d", CRSF::OpenTXsyncOffset, CRSF::OpenTXsyncOffsetSafeMargin / 10);
 }
 
@@ -406,12 +373,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         DBGLN("CRSF UART Connected");
-
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        SyncWaitPeriodCounter = millis(); // set to begin wait for auto sync offset calculation
-        LPF_OPENTX_SYNC_MARGIN.init(0);
-        LPF_OPENTX_SYNC_OFFSET.init(0);
-#endif // FEATURE_OPENTX_SYNC_AUTOTUNE
         connected();
     }
 
@@ -801,12 +762,6 @@ bool CRSF::UARTwdt()
             if (CRSFstate == true)
             {
                 DBGLN("CRSF UART Disconnected");
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-                SyncWaitPeriodCounter = now; // set to begin wait for auto sync offset calculation
-                CRSF::OpenTXsyncOffsetSafeMargin = 1000;
-                CRSF::OpenTXsyncOffset = 0;
-                CRSF::OpenTXsyncLastSent = 0;
-#endif
                 disconnected();
                 CRSFstate = false;
             }

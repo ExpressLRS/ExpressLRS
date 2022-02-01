@@ -33,8 +33,6 @@
 
 #-DNO_SYNC_ON_ARM
 
-#-DFEATURE_OPENTX_SYNC_AUTOTUNE
-
 -DLOCK_ON_FIRST_CONNECTION
 
 # For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has

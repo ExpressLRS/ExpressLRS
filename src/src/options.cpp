@@ -43,9 +43,6 @@ const char PROGMEM compile_options[] = {
     #ifdef NO_SYNC_ON_ARM
         "-DNO_SYNC_ON_ARM "
     #endif
-    #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-        "-DFEATURE_OPENTX_SYNC_AUTOTUNE "
-    #endif
     #ifdef UART_INVERTED
         "-DUART_INVERTED "
     #endif
