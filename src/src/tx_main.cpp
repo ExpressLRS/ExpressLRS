@@ -482,10 +482,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-  #ifdef FEATURE_OPENTX_SYNC
   // Sync OpenTX to this point
   crsf.JustSentRFpacket();
-  #endif
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
