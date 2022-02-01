@@ -70,7 +70,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .tlm_report_interval = 320U,
 #endif
+#if defined(NO_SYNC_ON_ARM)
+    .no_sync_on_arm = true,
+#else
     .no_sync_on_arm = false,
+#endif
     .uart_inverted = true,
     .unlock_higher_power = false,
 #if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN

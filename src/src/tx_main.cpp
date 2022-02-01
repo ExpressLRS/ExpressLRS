@@ -413,13 +413,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   uint32_t now = millis();
   static uint8_t syncSlot;
-#if defined(NO_SYNC_ON_ARM)
-  uint32_t SyncInterval = 250;
-  bool skipSync = IsArmed() || InBindingMode;
-#else
-  uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-  bool skipSync = InBindingMode;
-#endif
+  uint32_t SyncInterval;
+  bool skipSync;
+
+  if (firmwareOptions.no_sync_on_arm)
+  {
+    SyncInterval = 250;
+    skipSync = IsArmed() || InBindingMode;
+  }
+  else
+  {
+    SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+    skipSync = InBindingMode;
+  }
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
   bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
