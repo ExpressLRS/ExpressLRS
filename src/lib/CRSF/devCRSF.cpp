@@ -9,7 +9,8 @@ static int start()
 {
     CRSF::Begin();
 #if defined(DEBUG_FREERUN_TX)
-    crsf.CRSFstate = true;
+    CRSF::CRSFstate = true;
+    extern void UARTconnected();
     UARTconnected();
 #endif
     return DURATION_IMMEDIATELY;
