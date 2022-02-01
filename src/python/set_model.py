@@ -1,10 +1,9 @@
-import serial, time, sys, re
+import serial, time
 import argparse
 import serials_find
 import bootloader
 from BFinitPassthrough import *
 
-SCRIPT_DEBUG = 0
 
 def send_model_command(args):
     dbg_print("======== SEND SET MODEL COMMAND ========")

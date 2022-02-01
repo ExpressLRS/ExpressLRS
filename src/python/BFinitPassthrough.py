@@ -6,6 +6,10 @@ import bootloader
 from query_yes_no import query_yes_no
 from elrs_helpers import ElrsUploadResult
 
+
+SCRIPT_DEBUG = False
+
+
 class PassthroughEnabled(Exception):
     pass
 
@@ -84,13 +88,13 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
             break
 
         if line.startswith("serial"):
-            if debug:
+            if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
             config = re.search('serial ([0-9]+) ([0-9]+) ', line)
             if config and config.group(2) == "64":
                 dbg_print("    ** Serial RX config detected: '%s'" % line)
                 SerialRXindex = config.group(1)
-                if not debug:
+                if not SCRIPT_DEBUG:
                     break
 
     if not SerialRXindex:
