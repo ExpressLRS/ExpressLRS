@@ -8,7 +8,7 @@
 static int start()
 {
     CRSF::Begin();
-#if defined(DEBUG_FREERUN_TX)
+#if defined(DEBUG_TX_FREERUN)
     CRSF::CRSFstate = true;
     extern void UARTconnected();
     UARTconnected();

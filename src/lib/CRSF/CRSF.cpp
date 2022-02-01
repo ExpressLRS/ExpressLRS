@@ -751,8 +751,9 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 
 bool CRSF::UARTwdt()
 {
-    uint32_t now = millis();
     bool retval = false;
+#if !defined(DEBUG_TX_FREERUN)
+    uint32_t now = millis();
     if (now >= (UARTwdtLastChecked + UARTwdtInterval))
     {
         if (BadPktsCount >= GoodPktsCount)
@@ -811,6 +812,7 @@ bool CRSF::UARTwdt()
         BadPktsCount = 0;
         GoodPktsCount = 0;
     }
+#endif
     return retval;
 }
 
