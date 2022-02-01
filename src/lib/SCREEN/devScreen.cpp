@@ -154,8 +154,7 @@ static int handle(void)
   {
     int key;
     bool isLongPressed;
-    fivewaybutton.handle();
-    fivewaybutton.getKeyState(&key, &isLongPressed);
+    fivewaybutton.update(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL

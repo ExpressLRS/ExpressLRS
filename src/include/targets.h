@@ -88,6 +88,34 @@
 #define BACKPACK_LOGGING_BAUD 460800
 #endif
 
+#if defined(TARGET_TX)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+#ifndef GPIO_PIN_DEBUG_RX
+#define GPIO_PIN_DEBUG_RX       3
+#endif
+#ifndef GPIO_PIN_DEBUG_TX
+#define GPIO_PIN_DEBUG_TX       1
+#endif
+#endif
+#if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE) || defined(USE_TX_BACKPACK)
+#if GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_TX || GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_RX
+#error "Cannot debug out the RC signal port!"
+#endif
+#if !defined(GPIO_PIN_DEBUG_RX) || !defined(GPIO_PIN_DEBUG_TX) || GPIO_PIN_DEBUG_RX == UNDEF_PIN || GPIO_PIN_DEBUG_TX == UNDEF_PIN
+#error "When using DEBUG_LOG, DEBUG_LOG_VERBOSE or USE_TX_BACKPACK you must define both GPIO_PIN_DEBUG_RX and GPIO_PIN_DEBUG_TX"
+#endif
+#endif
+#else // TARGET_RX
+#if defined(PLATFORM_ESP8266)
+#ifndef GPIO_PIN_DEBUG_RX
+#define GPIO_PIN_DEBUG_RX       3
+#endif
+#ifndef GPIO_PIN_DEBUG_TX
+#define GPIO_PIN_DEBUG_TX       1
+#endif
+#endif
+#endif
+
 #if defined(Regulatory_Domain_ISM_2400)
 // ISM 2400 band is use => undefine other requlatory domain defines
 #undef Regulatory_Domain_AU_915

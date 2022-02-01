@@ -30,6 +30,19 @@
     #define DefaultPower PWR_50mW
 #endif
 
+#if defined(Regulatory_Domain_EU_CE_2400)
+    #undef MinPower
+    #define MinPower PWR_10mW
+
+    #undef MaxPower
+    #define MaxPower PWR_10mW
+
+    #if defined(HighPower)
+        #undef HighPower
+        #define HighPower PWR_10mW
+    #endif
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,
@@ -48,6 +61,8 @@ class POWERMGNT
 
 private:
     static PowerLevels_e CurrentPower;
+    static int8_t CurrentSX1280Power;
+    static PowerLevels_e FanEnableThreshold;
     static void updateFan();
 #if defined(PLATFORM_ESP32)
     static nvs_handle  handle;
@@ -59,8 +74,12 @@ public:
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
     static PowerLevels_e currPower();
+    static void incSX1280Ouput();
+    static void decSX1280Ouput();
+    static int8_t currentSX1280Ouput();
     static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static PowerLevels_e getDefaultPower();
+    static uint8_t getPowerIndBm();
     static void setDefaultPower();
     static void init();
     static void SetPowerCaliValues(int8_t *values, size_t size);

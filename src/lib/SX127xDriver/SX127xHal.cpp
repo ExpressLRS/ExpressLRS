@@ -12,7 +12,7 @@ SX127xHal::SX127xHal()
 
 void SX127xHal::end()
 {
-  RXenable(); // make sure the TX amp pin is disabled
+  TXRXdisable(); // make sure the RX/TX amp pins are disabled
   detachInterrupt(GPIO_PIN_DIO0);
   SPI.end();
   IsrCallback = nullptr; // remove callbacks
@@ -69,11 +69,11 @@ void SX127xHal::init()
 
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
-#if defined(GPIO_PIN_RST)
+#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
   pinMode(GPIO_PIN_RST, OUTPUT);
 
   delay(100);
-  digitalWrite(GPIO_PIN_RST, 0);
+  digitalWrite(GPIO_PIN_RST, LOW);
   delay(100);
   pinMode(GPIO_PIN_RST, INPUT); // leave floating
 #endif
