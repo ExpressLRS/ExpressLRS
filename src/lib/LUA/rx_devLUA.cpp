@@ -65,14 +65,14 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   registerLUAParameter(&luaAntennaMode, [](uint8_t id, uint8_t arg){
       config.SetAntennaMode(arg);
-      config.Commit();
+      config.Commit();// this commit doesn't trigger restart
       devicesTriggerEvent();
   });
 #endif
 
 registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
     config.SetPower(arg);
-    //config.Commit();
+    //config.Commit(); this commit trigger restart
     if(arg == 0){
       POWERMGNT.setPower(MinPower);
     } else {

@@ -129,7 +129,8 @@ typedef struct {
     uint8_t     powerOnCounter;
     uint8_t     modelId;
     uint8_t     power;
-    uint8_t     antennaMode;
+    uint8_t     antennaMode;    //keep antenna mode in struct even in non diversity RX,
+                                // because turning feature diversity on and off would require change of RX config version.
     char        ssid[33];
     char        password[33];
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
