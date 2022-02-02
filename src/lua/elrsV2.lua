@@ -580,6 +580,18 @@ local function parseElrsInfoMessage(data)
   goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
 end
 
+local function parseElrsV1Message(data)
+  if (data[1] ~= 0xEA) or (data[2] ~= 0xEE) then
+    return
+  end
+
+  -- local badPkt = data[9]
+  -- local goodPkt = (data[10]*256) + data[11]
+  -- goodBadPkt = string.format("%u/%u   X", badPkt, goodPkt)
+  fieldPopup = {id = 0, status = 2, timeout = 0xFF, info = "ERROR: V1.0 module"}
+  fieldTimeout = getTime() + 0xFFFF
+end
+
 local function refreshNext()
   local command, data = crossfireTelemetryPop()
   if command == 0x29 then
@@ -589,6 +601,8 @@ local function refreshNext()
     if allParamsLoaded < 1 or statusComplete == 0 then
       fieldTimeout = 0 -- go fast until we have complete status record
     end
+  elseif command == 0x2D then
+    parseElrsV1Message(data)
   elseif command == 0x2E then
     parseElrsInfoMessage(data)
   end
