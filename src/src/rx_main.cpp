@@ -456,13 +456,13 @@ static inline void switchAntenna()
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
-    } 
+    }
 #endif
 }
 
 static void ICACHE_RAM_ATTR updateDiversity()
 {
-    
+
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     if(config.GetAntennaMode() == 2){
     //0 and 1 is use for gpio_antenna_select
@@ -1260,6 +1260,30 @@ void loop()
         ESP.restart();
     }
     #endif
+
+    if (config.IsModified())
+    {
+        uint32_t start = micros();
+        hwTimer.stop();
+        Radio.Pause();
+        config.Commit();
+        Radio.Resume();
+        /*
+        // Currently this code is not aligining the FHSSptr correctly so it times out and get LostConnection
+        while((micros() - start) % ExpressLRS_currAirRate_Modparams->interval > 50) ;
+        uint32_t offset = micros() - start;
+        int intervals = offset / ExpressLRS_currAirRate_Modparams->interval - 1;
+        NonceRX = (NonceRX + intervals) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+        FHSSptr = (FHSSptr + (intervals / ExpressLRS_currAirRate_Modparams->FHSShopInterval)) % FHSS_SEQUENCE_CNT;
+        Radio.SetFrequencyReg(FHSSgetNextFreq());
+        */
+        Radio.RXnb();
+        PFDloop.reset();
+        hwTimer.resume();
+        // vvv Temporary till the above ^^^ is fixed
+        PFDloop.intEvent(micros());
+        LostConnection();
+    }
 
     if (connectionState > MODE_STATES)
     {

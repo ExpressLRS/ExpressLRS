@@ -53,7 +53,6 @@ static struct luaItem_command luaRxWebUpdate = {
 //---------------------------- WiFi -----------------------------
 
 
-extern POWERMGNT POWERMGNT;
 extern RxConfig config;
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
@@ -97,7 +96,7 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   registerLUAParameter(&luaAntennaMode, [](uint8_t id, uint8_t arg){
       config.SetAntennaMode(arg);
-      config.Commit();// this commit doesn't trigger restart
+      // config.Commit();  // this commit doesn't trigger restart
       devicesTriggerEvent();
   });
 #endif
@@ -135,7 +134,7 @@ static int event()
 static int timeout()
 {
   luaHandleUpdateParameter();
-  
+
   return DURATION_IMMEDIATELY;
 }
 
