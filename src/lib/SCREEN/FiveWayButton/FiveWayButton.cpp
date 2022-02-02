@@ -1,152 +1,145 @@
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
 
-#define KEY_DEBOUNCE_TIME   500
-#define KEY_LONG_RPESS_TIME 1000
-#define KEY_CHECK_OVER_TIME 2000
+#if defined(GPIO_PIN_JOYSTICK)
+#if !defined(JOY_ADC_VALUES)
+    #error "GPIO_PIN_JOYSTICK requires JOY_ADC_VALUES defined too"
+#endif
+#endif
 
+#if defined(JOY_ADC_VALUES)
+#if !defined(GPIO_PIN_JOYSTICK)
+    #error "JOY_ADC_VALUES requires GPIO_PIN_JOYSTICK defined too"
+#endif
 
-uint32_t key_debounce_start = 0;
+constexpr uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
 
-int key = INPUT_KEY_NO_PRESS;
-
-
-#ifdef GPIO_PIN_JOYSTICK
-#define UP    0;
-#define DOWN  1;
-#define LEFT  2;
-#define RIGHT 3;
-#define ENTER 4;
-#define IDLE  5;
-
-static int16_t joyAdcValues[] = JOY_ADC_VALUES;
-
-// Returns minimum difference between any pair
-int findMinDiff(int16_t arr[], int n)
+/**
+ * @brief Calculate fuzz: half the distance to the next nearest neighbor for each joystick position.
+ *
+ * The goal is to avoid collisions between joystick positions while still maintaining
+ * the widest tolerance for the analog value.
+ *
+ * Example: {10,50,800,1000,300,1600}
+ * If we just choose the minimum difference for this array the value would
+ * be 40/2 = 20.
+ *
+ * 20 does not leave enough room for the joystick position using 1600 which
+ * could have a +-100 offset.
+ *
+ * Example Fuzz values: {20, 20, 100, 100, 125, 300} now the fuzz for the 1600
+ * position is 300 instead of 20
+ */
+void FiveWayButton::calcFuzzValues()
 {
-// Initialize difference as infinite
-int diff = 1000;
- 
-// Find the min diff by comparing difference
-// of all possible pairs in given array
-for (int i=0; i<n-1; i++)
-    for (int j=i+1; j<n; j++)
-        if (abs(arr[i] - arr[j]) < diff)
-                diff = abs(arr[i] - arr[j]);
- 
-// Return min diff
-return diff;
-}
+    for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
+    {
+        uint16_t closestDist = 0xffff;
+        uint16_t ival = joyAdcValues[i];
+        // Find the closest value to ival
+        for (unsigned int j = 0; j < N_JOY_ADC_VALUES; j++)
+        {
+            // Don't compare value with itself
+            if (j == i)
+                continue;
+            uint16_t jval = joyAdcValues[j];
+            if (jval < ival && (ival - jval < closestDist))
+                closestDist = ival - jval;
+            if (jval > ival && (jval - ival < closestDist))
+                closestDist = jval - ival;
+        } // for j
 
-bool checkValue(int direction){ 
-    int value = analogRead(GPIO_PIN_JOYSTICK);
-    if(value < (joyAdcValues[direction] + 50) && value > (joyAdcValues[direction] - 50)){
-        return true;
-    } else {
-        return false;
-    }
-}
-
-int checkKey()
-{ 
-    int fuzz = (findMinDiff(joyAdcValues, 6) /2 );
-    int value = analogRead(GPIO_PIN_JOYSTICK);
-        
-    if(value < (joyAdcValues[0] + fuzz) && value > (joyAdcValues[0] - fuzz))
-        return INPUT_KEY_UP_PRESS;
-    else if(value < (joyAdcValues[1] + fuzz) && value > (joyAdcValues[1] - fuzz))
-        return INPUT_KEY_DOWN_PRESS;
-    else if(value < (joyAdcValues[2] + fuzz) && value > (joyAdcValues[2] - fuzz))
-        return INPUT_KEY_LEFT_PRESS;
-    else if(value < (joyAdcValues[3] + fuzz) && value > (joyAdcValues[3] - fuzz))
-        return INPUT_KEY_RIGHT_PRESS;
-    else if(value < (joyAdcValues[4] + fuzz) && value > (joyAdcValues[4] - fuzz))
-        return INPUT_KEY_OK_PRESS;
-    else
-        return INPUT_KEY_NO_PRESS;
+        // And the fuzz is half the distance to the closest value
+        fuzzValues[i] = closestDist / 2;
+        //DBG("joy%u=%u f=%u, ", i, ival, fuzzValues[i]);
+    } // for i
 }
 #endif
 
-void FiveWayButton::init()
-{ 
-    #ifndef JOY_ADC_VALUES
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT|PULLUP );
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT|PULLUP );
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT|PULLUP );
-    #endif
+int FiveWayButton::readKey()
+{
+#if defined(JOY_ADC_VALUES)
+    uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
 
-    key_state = INPUT_KEY_NO_PRESS;
-    keyPressed = false;
-    isLongPressed = false;
+    constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
+        {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};
+    for (unsigned int i=0; i<N_JOY_ADC_VALUES - 1; ++i)
+    {
+        if (value < (joyAdcValues[i] + fuzzValues[i]) &&
+            value > (joyAdcValues[i] - fuzzValues[i]))
+        return IDX_TO_INPUT[i];
+    }
+    return INPUT_KEY_NO_PRESS;
+#else
+    return digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |
+        digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |
+        digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
+#endif
 }
 
-void FiveWayButton::handle()
-{  
-    if(keyPressed)
+void FiveWayButton::init()
+{
+    isLongPressed = false;
+    keyInProcess = INPUT_KEY_NO_PRESS;
+
+#if defined(JOY_ADC_VALUES)
+    calcFuzzValues();
+#else
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT | PULLUP);
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT | PULLUP);
+    pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT | PULLUP);
+#endif
+}
+
+void FiveWayButton::update(int *keyValue, bool *keyLongPressed)
+{
+    *keyValue = INPUT_KEY_NO_PRESS;
+
+    int newKey = readKey();
+    uint32_t now = millis();
+    if (keyInProcess == INPUT_KEY_NO_PRESS)
     {
-        #ifndef JOY_ADC_VALUES
-        int key_down = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
-        #else 
-        // Hack, we know that INPUT_KEY_NO_PRESS = 7 so for analog we would have to have it equal idle 
-        int key_down = checkKey();
-        #endif
-
-
-        if(key_down == INPUT_KEY_NO_PRESS)
+        // New key down
+        if (newKey != INPUT_KEY_NO_PRESS)
         {
-            //key released
-            if(isLongPressed)
-            {
-                clearKeyState();
-            }
-            else
-            {
-                key_state = key;
-                if((millis() - key_debounce_start) > KEY_DEBOUNCE_TIME)
-                {
-                    keyPressed = false;        
-                }
-            }
-        }
-        else
-        {
-            if((millis() - key_debounce_start) > KEY_LONG_RPESS_TIME)
-            {
-                isLongPressed = true;
-            }
+            keyDownStart = now;
+            //DBGLN("down=%u", newKey);
         }
     }
     else
     {
-        #ifndef JOY_ADC_VALUES
-        key = digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |  digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
-        #else 
-        key = checkKey();
-        #endif
-        
-        if(key != INPUT_KEY_NO_PRESS)
+        // if key released
+        if (newKey == INPUT_KEY_NO_PRESS)
         {
-            keyPressed = true;
+            //DBGLN("up=%u", keyInProcess);
+            if (!isLongPressed)
+            {
+                if ((now - keyDownStart) > KEY_DEBOUNCE_MS)
+                {
+                    *keyValue = keyInProcess;
+                    *keyLongPressed = false;
+                }
+            }
             isLongPressed = false;
-            key_debounce_start = millis();
         }
-    }   
+        // else if the key has changed while down, reset state for next go-around
+        else if (newKey != keyInProcess)
+        {
+            newKey = INPUT_KEY_NO_PRESS;
+        }
+        // else still pressing, waiting for long if not already signaled
+        else if (!isLongPressed)
+        {
+            if ((now - keyDownStart) > KEY_LONG_PRESS_MS)
+            {
+                *keyValue = keyInProcess;
+                *keyLongPressed = true;
+                isLongPressed = true;
+            }
+        }
+    } // if keyInProcess != INPUT_KEY_NO_PRESS
+
+    keyInProcess = newKey;
 }
 
-void FiveWayButton::getKeyState(int *keyValue, bool *keyLongPressed)
-{
-    *keyValue = key_state;
-    *keyLongPressed = isLongPressed;
-    if(key_state != INPUT_KEY_NO_PRESS)
-    {
-        clearKeyState();
-    }
-}
-
-void FiveWayButton::clearKeyState()
-{
-   keyPressed = false;
-   isLongPressed = false;
-   key_state = INPUT_KEY_NO_PRESS;
-}
 #endif

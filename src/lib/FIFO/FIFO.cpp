@@ -57,7 +57,7 @@ void ICACHE_RAM_ATTR FIFO::push(const uint8_t data)
     }
 }
 
-void ICACHE_RAM_ATTR FIFO::pushBytes(const uint8_t *data, int len)
+void ICACHE_RAM_ATTR FIFO::pushBytes(const uint8_t *data, uint8_t len)
 {
     if (numElements + len > FIFO_SIZE)
     {
@@ -89,7 +89,7 @@ uint8_t ICACHE_RAM_ATTR FIFO::pop()
     }
 }
 
-void ICACHE_RAM_ATTR FIFO::popBytes(uint8_t *data, int len)
+void ICACHE_RAM_ATTR FIFO::popBytes(uint8_t *data, uint8_t len)
 {
     if (numElements < len)
     {
@@ -131,4 +131,16 @@ void ICACHE_RAM_ATTR FIFO::flush()
     head = 0;
     tail = 0;
     numElements = 0;
+}
+
+bool ICACHE_RAM_ATTR FIFO::ensure(uint8_t requiredSize)
+{
+    if(requiredSize > FIFO_SIZE)
+        return false;
+    while(!available(requiredSize)) {
+        uint8_t len = pop();
+        head = (head + len) % FIFO_SIZE;
+        numElements -= len;
+    }
+    return true;
 }

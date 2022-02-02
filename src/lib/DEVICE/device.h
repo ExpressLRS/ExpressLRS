@@ -29,3 +29,4 @@ void devicesInit();
 void devicesStart();
 void devicesUpdate(unsigned long now);
 void devicesTriggerEvent();
+void devicesStop();

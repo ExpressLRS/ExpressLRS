@@ -1,0 +1,3 @@
+BasedOnStyle: Microsoft
+ColumnLimit: 0
+IndentWidth: 4

@@ -117,6 +117,7 @@ public:
 
 
     /////////////////////////////////////////////////////////////
+    static bool CRSFstate;
 
 private:
     Stream *_dev;
@@ -131,9 +132,6 @@ private:
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    static uint32_t SyncWaitPeriodCounter;
-#endif
 
     /// UART Handling ///
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
@@ -143,10 +141,9 @@ private:
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;
     static uint8_t maxPacketBytes;
-    static uint32_t maxPeriodBytes;
+    static uint8_t maxPeriodBytes;
     static uint32_t TxToHandsetBauds[6];
     static uint8_t UARTcurrentBaudIdx;
-    static bool CRSFstate;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
 

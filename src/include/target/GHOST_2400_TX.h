@@ -34,7 +34,10 @@
 #define GPIO_PIN_OLED_DC            PC15
 #define GPIO_PIN_OLED_MOSI          PB5
 #define GPIO_PIN_OLED_SCK           PB3
-#define GPIO_PIN_JOYSTICK           PA0
+#define GPIO_PIN_JOYSTICK           A0
+
+#define GPIO_PIN_DEBUG_RX           PA3 // WTF! It's used for AMP_DET
+#define GPIO_PIN_DEBUG_TX           PA2
 
 // Output Power
 #define MinPower                    PWR_10mW

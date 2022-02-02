@@ -31,7 +31,7 @@ SX1280Hal::SX1280Hal()
 
 void SX1280Hal::end()
 {
-    RXenable(); // make sure the TX amp pin is disabled
+    TXRXdisable(); // make sure the RX/TX amp pins are disabled
     detachInterrupt(GPIO_PIN_DIO1);
     SPI.end();
     IsrCallback = nullptr; // remove callbacks
@@ -114,9 +114,9 @@ void SX1280Hal::reset(void)
 {
     DBGLN("SX1280 Reset");
 
-#if defined(GPIO_PIN_RST)
+#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
     pinMode(GPIO_PIN_RST, OUTPUT);
-    
+
     delay(50);
     digitalWrite(GPIO_PIN_RST, LOW);
     delay(50);

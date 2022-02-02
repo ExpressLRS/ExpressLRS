@@ -6,7 +6,7 @@
 [![Build Status](https://img.shields.io/github/workflow/status/ExpressLRS/ExpressLRS/Build%20ExpressLRS?logo=github&style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/actions)
 [![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/blob/master/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/stargazers)
-[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/ExpressLRS)
+[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/dS6ReFY)
 
 </center>
 
@@ -20,7 +20,7 @@ If you don't have time to lend a hand in that way but still want to have an impa
 We appreciate all forms of contribution and hope you will join us on Discord!
 
 ## Website
-For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/faq/)
+For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/2.0/faq/)
 
 ## About
 
@@ -32,7 +32,7 @@ To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, 
 https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/
 
 ## Community
-We have both a [Discord Server](https://discord.gg/ExpressLRS) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
+We have both a [Discord Server](https://discord.gg/dS6ReFY) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
 
 ## Features
 
@@ -54,7 +54,7 @@ with many more features on the way!
 
 ExpressLRS currently supports hardware from the following manufacturers: AxisFlying, BETAFPV, Flywoo, FrSky, HappyModel, HiYounger, HGLRC, ImmersionRC, iFlight, JHEMCU, Jumper, Matek, NamimnoRC, QuadKopters and SIYI.
 
-For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Reciever Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
+For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Receiver Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
 
 ## Developers
 

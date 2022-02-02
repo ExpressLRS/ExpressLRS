@@ -5,6 +5,7 @@
 #include <unity.h>
 #include <iostream>
 #include <bitset>
+#include "targets.h"
 #include "helpers.h"
 
 StubbornSender sender(ELRS_TELEMETRY_MAX_PACKAGES);

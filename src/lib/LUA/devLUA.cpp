@@ -70,6 +70,13 @@ static struct luaItem_selection luaFanThreshold = {
 };
 #endif
 
+#if defined(Regulatory_Domain_EU_CE_2400)
+static struct luaItem_string luaCELimit = {
+    {"10mW CE LIMIT", CRSF_INFO},
+    emptySpace
+};
+#endif
+
 //----------------------------POWER------------------
 
 static struct luaItem_selection luaSwitch = {
@@ -306,6 +313,9 @@ static void registerLuaParameters()
       config.SetPowerFanThreshold(arg);
   }, luaPowerFolder.common.id);
 #endif
+#if defined(Regulatory_Domain_EU_CE_2400)
+  registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
+#endif
   // VTX folder
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
@@ -336,12 +346,12 @@ static void registerLuaParameters()
         //confirm run on ELRSv2.lua or start command from CRSF configurator,
         //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
         //unintentional button press.
-        sendLuaCommandResponse(&luaWebUpdate, 2, "Wifi Running...");
+        sendLuaCommandResponse(&luaWebUpdate, 2, "WiFi Running...");
         connectionState = wifiUpdate;
       }
       else if (arg > 0 && arg < 4)
       {
-        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update Mode?");
+        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update?");
       }
       else if (arg == 5)
       {

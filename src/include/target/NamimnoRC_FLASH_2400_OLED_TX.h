@@ -36,10 +36,6 @@
 #define GPIO_PIN_RCSIGNAL_TX    13
 #define GPIO_PIN_FAN_EN         2
 
-/* Backpack logger connection */
-#define GPIO_PIN_DEBUG_RX       3
-#define GPIO_PIN_DEBUG_TX       1
-
 /* WS2812 led */
 #define GPIO_PIN_LED_WS2812     4
 

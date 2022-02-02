@@ -4,17 +4,12 @@ import serials_find
 import SerialHelper
 import bootloader
 from query_yes_no import query_yes_no
-
-SCRIPT_DEBUG = 0
-
+from elrs_helpers import ElrsUploadResult
 
 class PassthroughEnabled(Exception):
     pass
 
 class PassthroughFailed(Exception):
-    pass
-
-class WrongTargetSelected(Exception):
     pass
 
 def dbg_print(line=''):
@@ -39,8 +34,6 @@ def _validate_serialrx(rl, config, expected):
 
 
 def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
-    debug = SCRIPT_DEBUG
-
     sys.stdout.flush()
     dbg_print("======== PASSTHROUGH INIT ========")
     dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
@@ -113,7 +106,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     dbg_print("======== PASSTHROUGH DONE ========")
 
 
-def reset_to_bootloader(args):
+def reset_to_bootloader(args) -> int:
     dbg_print("======== RESET TO BOOTLOADER ========")
     s = serial.Serial(port=args.port, baudrate=args.baud,
         bytesize=8, parity='N', stopbits=1,
@@ -126,21 +119,30 @@ def reset_to_bootloader(args):
     else:
         BootloaderInitSeq = bootloader.get_init_seq('CRSF', args.type)
         dbg_print("  * Using full duplex (CRSF)")
+        #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
+        rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
+        time.sleep(0.2)
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip()
     flash_target = re.sub("_VIA_.*", "", args.target.upper())
+    ignore_incorrect_target = args.action == "uploadforce"
     if rx_target == "":
         dbg_print("Cannot detect RX target, blindly flashing!")
+    elif ignore_incorrect_target:
+        dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
     elif rx_target != flash_target:
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
         else:
-            raise WrongTargetSelected("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+            dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+            return ElrsUploadResult.ErrorMismatch
     elif flash_target != "":
         dbg_print("Verified RX target '%s'" % (flash_target))
     time.sleep(.5)
     s.close()
+
+    return ElrsUploadResult.Success
 
 
 if __name__ == '__main__':
@@ -158,19 +160,21 @@ if __name__ == '__main__':
         dest="half_duplex", help="Use half duplex mode")
     parser.add_argument("-t", "--type", type=str, default="ESP82",
         help="Defines flash target type which is sent to target in reboot command")
+    parser.add_argument("-a", "--action", type=str, default="upload",
+        help="Upload action: upload (default), or uploadforce to flash even on target mismatch")
+
     args = parser.parse_args()
 
     if (args.port == None):
         args.port = serials_find.get_serial_port()
 
+    returncode = ElrsUploadResult.Success
     try:
         bf_passthrough_init(args.port, args.baud)
     except PassthroughEnabled as err:
         dbg_print(str(err))
 
     if args.reset_to_bl:
-        try:
-            reset_to_bootloader(args)
-        except WrongTargetSelected as err:
-            dbg_print(str(err))
-            exit(-1)
+        returncode = reset_to_bootloader(args)
+
+    exit(returncode)

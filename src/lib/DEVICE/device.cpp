@@ -93,6 +93,13 @@ void devicesStart()
     #endif
 }
 
+void devicesStop()
+{
+    #if defined(PLATFORM_ESP32)
+    vTaskDelete(xDeviceTask);
+    #endif
+}
+
 void devicesTriggerEvent()
 {
     eventFired[0] = true;
