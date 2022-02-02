@@ -588,7 +588,7 @@ local function parseElrsV1Message(data)
   -- local badPkt = data[9]
   -- local goodPkt = (data[10]*256) + data[11]
   -- goodBadPkt = string.format("%u/%u   X", badPkt, goodPkt)
-  fieldPopup = {id = 0, status = 2, timeout = 0xFF, info = "ERROR: V1.0 module"}
+  fieldPopup = {id = 0, status = 2, timeout = 0xFF, info = "ERROR: 1.x firmware"}
   fieldTimeout = getTime() + 0xFFFF
 end
 
