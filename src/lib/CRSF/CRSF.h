@@ -132,9 +132,6 @@ private:
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
-#ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
-    static uint32_t SyncWaitPeriodCounter;
-#endif
 
     /// UART Handling ///
     static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured

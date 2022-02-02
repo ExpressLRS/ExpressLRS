@@ -96,7 +96,7 @@ private:
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     uint8_t     m_modified;
-    volatile model_config_t *m_model;
+    model_config_t *m_model;
     uint8_t     m_modelId;
 #if defined(PLATFORM_ESP32)
     nvs_handle  handle;

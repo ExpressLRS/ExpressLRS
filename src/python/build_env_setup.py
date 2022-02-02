@@ -6,6 +6,18 @@ import upload_via_esp8266_backpack
 import esp_compress
 import ETXinitPassthrough
 
+def add_target_uploadoption(name: str, desc: str) -> None:
+    # Add an upload target 'uploadforce' that forces update if target mismatch
+    # This must be called after UPLOADCMD is set
+    env.AddCustomTarget(
+        name=name,
+        dependencies="${BUILD_DIR}/${PROGNAME}.bin",
+        title=name,
+        description=desc,
+        actions=env['UPLOADCMD']
+    )
+
+
 platform = env.get('PIOPLATFORM', '')
 stm = platform in ['ststm32']
 
@@ -72,7 +84,11 @@ elif platform in ['espressif32']:
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
 
 if "_WIFI" in target_name:
+    add_target_uploadoption("uploadconfirm", "Do not upload, just send confirm")
     if "_TX_" in target_name:
         env.SetDefault(UPLOAD_PORT="elrs_tx.local")
     else:
         env.SetDefault(UPLOAD_PORT="elrs_rx.local")
+
+if platform != 'native':
+    add_target_uploadoption("uploadforce", "Upload even if target mismatch")

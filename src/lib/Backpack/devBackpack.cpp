@@ -6,14 +6,17 @@
 
 #define BACKPACK_TIMEOUT 20    // How often to chech for backpack commands
 
-extern MSP msp;
 extern bool InBindingMode;
-extern HardwareSerial LoggingBackpack;
+extern Stream *LoggingBackpack;
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 
 #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+
+#if BACKPACK_LOGGING_BAUD != 460800
+#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
+#endif
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -35,8 +38,7 @@ void startPassthrough()
     CRSF::End();
 
     // get ready for passthrough
-    CRSF::Port.begin(460800, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-    LoggingBackpack.begin(460800, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+    CRSF::Port.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     disableLoopWDT();
 
     // reset ESP8285 into bootloader mode
@@ -49,11 +51,11 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
-    LoggingBackpack.flush();
+    LoggingBackpack->flush();
 
     uint8_t buf[64];
-    while (LoggingBackpack.available())
-        LoggingBackpack.read(buf, sizeof(buf));
+    while (LoggingBackpack->available())
+        LoggingBackpack->readBytes(buf, sizeof(buf));
 
     // go hard!
     for (;;)
@@ -62,12 +64,12 @@ void startPassthrough()
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = CRSF::Port.readBytes(buf, r);
-        LoggingBackpack.write(buf, r);
+        LoggingBackpack->write(buf, r);
 
-        r = LoggingBackpack.available();
+        r = LoggingBackpack->available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = LoggingBackpack.readBytes(buf, r);
+        r = LoggingBackpack->readBytes(buf, r);
         CRSF::Port.write(buf, r);
     }
 }
@@ -81,7 +83,7 @@ static void BackpackWiFiToMSPOut(uint16_t command)
     packet.function = command;
     packet.addByte(0);
 
-    msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 void BackpackBinding()
@@ -97,7 +99,7 @@ void BackpackBinding()
     packet.addByte(MasterUID[4]);
     packet.addByte(MasterUID[5]);
 
-    msp.sendPacket(&packet, &LoggingBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 static void initialize()
@@ -145,10 +147,8 @@ static int timeout()
         startPassthrough();
         return DURATION_NEVER;
     }
-    return BACKPACK_TIMEOUT;
-#else
-    return DURATION_NEVER;
 #endif
+    return BACKPACK_TIMEOUT;
 }
 
 device_t Backpack_device = {

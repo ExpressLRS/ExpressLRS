@@ -1,6 +1,7 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DupleTX"
+#define DEVICE_NAME "RadioMstr Zorro"
 #endif
+// Copied from DupleTX
 
 // Any device features
 #define USE_TX_BACKPACK
