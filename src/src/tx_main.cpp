@@ -603,7 +603,6 @@ static void CheckConfigChangePending()
       timerCallbackIdle();
 #endif
     // Prevent any other RF SPI traffic during the commit from RX or scheduled TX
-    Radio.SetTxIdleMode();
     hwTimer.callbackTock = &timerCallbackIdle;
     // If telemetry expected in the next interval, the radio was in RX mode
     // and will skip sending the next packet when the timer resumes.
@@ -611,6 +610,7 @@ static void CheckConfigChangePending()
     // to be on the last slot of the FHSS the skip will prevent FHSS
     if (TelemetryRcvPhase == ttrpInReceiveMode)
     {
+      Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
