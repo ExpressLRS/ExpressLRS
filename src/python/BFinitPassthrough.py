@@ -62,11 +62,11 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         serial_check.append("ExpressLRS SPI RX detected\n\nUpdate via betaflight to flash your RX\nhttps://www.expresslrs.org/2.0/hardware/spi-receivers/")
     else:
         if not _validate_serialrx(rl, "serialrx_provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
-            serial_check.append("serialrx_provider != CRSF")
+            serial_check.append("Serial Receiver Protocol is not set to CRSF! Hint: set serialrx_provider = CRSF")
         if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
-            serial_check.append("serialrx_inverted != OFF")
+            serial_check.append("Serial Receiver Protocol is inverted! Hint: set serialrx_inverted = OFF")
         if not _validate_serialrx(rl, "serialrx_halfduplex", ["OFF", "AUTO"]):
-            serial_check.append("serialrx_halfduplex != OFF/AUTO")
+            serial_check.append("Serial Receiver Protocol is not full duplex! Hint: set serialrx_halfduplex = OFF")
 
     if serial_check:
         error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
