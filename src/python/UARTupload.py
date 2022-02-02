@@ -1,5 +1,5 @@
 import serial
-from xmodem import XMODEM
+from external.xmodem import XMODEM
 import time
 import sys
 import logging
