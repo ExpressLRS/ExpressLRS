@@ -1,16 +1,7 @@
 import serial, time, sys
-import subprocess
 import argparse
 import serials_find
-try:
-    import streamexpect
-except ImportError:
-    sys.stdout.write("Installing streamexpect")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "streamexpect"])
-    try:
-        import streamexpect
-    except ImportError:
-        raise SystemExit("Please, install 'streamexpect' and try again.")
+import external.streamexpect as streamexpect
 
 
 def dbg_print(line=''):
