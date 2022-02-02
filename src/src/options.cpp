@@ -86,8 +86,22 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .unlock_higher_power = false,
 #endif
 #if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
-    .buzzer_mode = 3,
-    .buzzer_melody = {}
+    #if defined(DISABLE_ALL_BEEPS)
+    .buzzer_mode = buzzerQuiet,
+    .buzzer_melody = {},
+    #elif defined(JUST_BEEP_ONCE)
+    .buzzer_mode = buzzerOne,
+    .buzzer_melody = {},
+    #elif defined(DISABLE_STARTUP_BEEP)
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = {{400, 200}, {480, 200}},
+    #elif defined(MY_STARTUP_MELODY)
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = MY_STARTUP_MELODY_ARR,
+    #else
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = {{659, 300}, {659, 300}, {523, 100}, {659, 300}, {783, 550}, {392, 575}},
+    #endif
 #endif
 #endif
 };

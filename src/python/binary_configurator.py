@@ -9,7 +9,7 @@ import melodyparser
 class BuzzerMode(Enum):
     quiet = 'quiet'
     one = 'one-beep'
-    none = 'no-tune'
+    beep = 'beep-tune'
     default = 'default-tune'
     custom = 'custom-tune'
 
@@ -64,21 +64,22 @@ def patch_tx_params(mm, pos, args):
 def patch_buzzer(mm, pos, args):
     if args.buzzer_mode == BuzzerMode.quiet:
         mm[pos] = 0
-    if args.buzzer_mode == BuzzerMode.quiet:
+    if args.buzzer_mode == BuzzerMode.one:
         mm[pos] = 1
-    if args.buzzer_mode == BuzzerMode.quiet:
+    if args.buzzer_mode == BuzzerMode.beep:
         mm[pos] = 2
-    if args.buzzer_mode == BuzzerMode.quiet:
-        mm[pos] = 3
+        melody = 'A4 20 B4 20|60|0'
+    if args.buzzer_mode == BuzzerMode.default:
+        mm[pos] = 2
+        melody = 'E5 40 E5 40 C5 120 E5 40 G5 22 G4 21|20|0'
     if args.buzzer_mode == BuzzerMode.custom:
-        mm[pos] = 4
+        mm[pos] = 2
+        melody = args.buzzer_melody
     pos += 1
 
-    melody = melodyparser.parse(args.buzzer_melody)
-    print(melody)
-    melody = melodyparser.parseToArray(args.buzzer_melody)
+    melodyArray = melodyparser.parseToArray(melody)
     mpos = 0
-    for element in melody:
+    for element in melodyArray:
         if mpos == 32*4:
             print("Melody truncated at 32 tones")
             break
@@ -87,7 +88,13 @@ def patch_buzzer(mm, pos, args):
         mm[pos+mpos+2] = (int(element[1]) >> 8) & 0xFF
         mm[pos+mpos+3] = (int(element[1]) >> 0) & 0xFF
         mpos += 4
-    pos += 32*4     # 32 notes 2 bytes tone, 2 bytes duration
+
+    # If we are short, then add a terminating 0's
+    while(mpos < 32*4):
+        mm[pos+mpos] = 0
+        mpos += 1
+
+    pos += 32*4     # 32 notes x (2 bytes tone, 2 bytes duration)
     return pos
 
 def patch_firmware(mm, pos, args):

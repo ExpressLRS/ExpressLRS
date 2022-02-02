@@ -13,6 +13,12 @@ extern const char *wifi_ap_ssid;
 extern const char *wifi_ap_password;
 extern const char *wifi_ap_address;
 
+enum BuzzerMode {
+    buzzerQuiet,
+    buzzerOne,
+    buzzerTune
+};
+
 typedef struct _options {
     uint8_t     _magic_[8];     // this is the magic constant so the configurator can find this options block
     uint16_t    _version_;      // the version of this structure

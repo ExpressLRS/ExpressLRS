@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 #include "logging.h"
+#include "options.h"
 
 // Even though we aren't using anything this keeps the PIO dependency analyzer happy!
 #include "POWERMGNT.h"
@@ -18,14 +19,6 @@ static void initializeBuzzer()
 static const uint16_t failedTune[][2] = {{480, 200},{400, 200}};
 static const uint16_t crossfireTune[][2] = {{520, 150},{676, 300},{0,1000}}; // we have a dead-time to stop spamming
 static const uint16_t noCrossfireTune[][2] = {{676, 300},{520, 150}};
-#if defined(MY_STARTUP_MELODY_ARR)
-// It's silly but I couldn't help myself. See: BLHeli32 startup tones.
-static const uint16_t melody[][2] = MY_STARTUP_MELODY_ARR;
-#elif defined(JUST_BEEP_ONCE)
-static const uint16_t melody[][2] = {{400,200},{480,200}};
-#else
-static const uint16_t melody[][2] = {{659,300},{659,300},{523,100},{659,300},{783,550},{392,575}};
-#endif
 
 static uint8_t tunepos = 0;
 static bool callAfterComplete = false;
@@ -35,7 +28,7 @@ static int _numTones;
 
 static int playTune()
 {
-    if (tunepos >= _numTones)
+    if (tunepos >= _numTones || (_tune[tunepos][0] == 0 && _tune[tunepos][1] == 0))
     {
         noTone(GPIO_PIN_BUZZER);
         pinMode(GPIO_PIN_BUZZER, INPUT);
@@ -67,38 +60,40 @@ static int startTune(const uint16_t tune[][2], int numTones)
 
 static int updateBuzzer()
 {
-    if (connectionState == radioFailed)
+    if (connectionState == radioFailed && firmwareOptions.buzzer_mode > buzzerOne)
     {
         DBGVLN(">> start failed tune");
         return startTune(failedTune, ARRAY_SIZE(failedTune));
     }
-    else if (connectionState == noCrossfire)
+    else if (connectionState == noCrossfire && firmwareOptions.buzzer_mode > buzzerOne)
     {
         DBGVLN(">> start no-xfire tune");
         return startTune(noCrossfireTune, ARRAY_SIZE(noCrossfireTune));
     }
-#if !defined(DISABLE_STARTUP_BEEP)
-    else if (connectionState == connected || connectionState == disconnected)
+    else if ((connectionState == connected || connectionState == disconnected))
     {
         DBGVLN(">> start conn/disconn tune");
         return startTune(crossfireTune, ARRAY_SIZE(crossfireTune));
     }
-#endif
     return DURATION_NEVER;
 }
 
 static int start()
 {
-#if !defined(DISABLE_STARTUP_BEEP)
-    DBGVLN(">> start startup tune");
-    return startTune(melody, ARRAY_SIZE(melody));
-#else
+    if(firmwareOptions.buzzer_mode == buzzerTune)
+    {
+        DBGVLN(">> start startup tune");
+        return startTune(firmwareOptions.buzzer_melody, ARRAY_SIZE(firmwareOptions.buzzer_melody));
+    }
     return DURATION_NEVER;
-#endif
 }
 
 static int event()
 {
+    if (firmwareOptions.buzzer_mode == buzzerQuiet)
+    {
+        return DURATION_NEVER;
+    }
     static connectionState_e lastConnectionState = MODE_STATES;
     if (tunepos == 0)
     {
@@ -126,6 +121,11 @@ static int event()
 
 static int timeout()
 {
+    if (firmwareOptions.buzzer_mode == buzzerQuiet)
+    {
+        return DURATION_NEVER;
+    }
+
     int duration = playTune();
     DBGVLN(">> timeout %d", duration);
     if (duration == DURATION_NEVER && !startComplete)
