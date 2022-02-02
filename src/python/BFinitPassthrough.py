@@ -27,7 +27,7 @@ def _validate_serialrx(rl, config, expected):
         expected = [expected]
     rl.set_delimiters(["# "])
     rl.clear()
-    rl.write_str("get serialrx_%s" % config)
+    rl.write_str("get %s" % config)
     line = rl.read_line(1.).strip()
     for key in expected:
         key = " = %s" % key
@@ -58,12 +58,15 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?, If this fails reboot FC and try again!")
 
     serial_check = []
-    if not _validate_serialrx(rl, "provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
-        serial_check.append("serialrx_provider != CRSF")
-    if not _validate_serialrx(rl, "inverted", "OFF"):
-        serial_check.append("serialrx_inverted != OFF")
-    if not _validate_serialrx(rl, "halfduplex", ["OFF", "AUTO"]):
-        serial_check.append("serialrx_halfduplex != OFF/AUTO")
+    if _validate_serialrx(rl, "expresslrs_model_id", [str(x) for x in range(0,255)] ):
+        serial_check.append("ExpressLRS SPI RX detected\n\nUpdate via betaflight to flash your RX\nhttps://www.expresslrs.org/2.0/hardware/spi-receivers/")
+    else:
+        if not _validate_serialrx(rl, "serialrx_provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
+            serial_check.append("serialrx_provider != CRSF")
+        if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
+            serial_check.append("serialrx_inverted != OFF")
+        if not _validate_serialrx(rl, "serialrx_halfduplex", ["OFF", "AUTO"]):
+            serial_check.append("serialrx_halfduplex != OFF/AUTO")
 
     if serial_check:
         error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
