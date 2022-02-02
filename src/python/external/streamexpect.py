@@ -9,7 +9,7 @@
 
 import collections
 import re
-import six
+from . import six
 import socket
 import sys
 import time
