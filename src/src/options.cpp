@@ -60,9 +60,21 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     #endif
 #endif
 #if defined(TARGET_RX)
+#if defined(RCVR_UART_BAUD)
+    .uart_baud = RCVR_UART_BAUD,
+#else
     .uart_baud = 420000,
+#endif
+#if defined(RCVR_INVERT_TX)
+    .invert_tx = true,
+#else
     .invert_tx = false,
+#endif
+#if defined(LOCK_ON_FIRST_CONNECTION)
     .lock_on_first_connection = true,
+#else
+    .lock_on_first_connection = false,
+#endif
 #endif
 #if defined(TARGET_TX)
 #if defined(TLM_REPORT_INTERVAL_MS)

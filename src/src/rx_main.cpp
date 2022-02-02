@@ -623,9 +623,7 @@ void GotConnection(unsigned long now)
         return; // Already connected
     }
 
-#ifdef LOCK_ON_FIRST_CONNECTION
-    LockRFmode = true;
-#endif
+    LockRFmode = firmwareOptions.lock_on_first_connection;
 
     connectionState = connected; //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
@@ -888,7 +886,7 @@ static void setupSerial()
 #if defined(CRSF_RCVR_NO_SERIAL)
     // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
     #if defined(DEBUG_LOG)
-    Serial.begin(RCVR_UART_BAUD);
+    Serial.begin(firmwareOptions.uart_baud);
     #endif
     return;
 #endif
@@ -896,7 +894,7 @@ static void setupSerial()
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
+    CRSF_RX_SERIAL.begin(firmwareOptions.uart_baud);
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
@@ -907,7 +905,7 @@ static void setupSerial()
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(RCVR_UART_BAUD);
+    CRSF_RX_SERIAL.begin(firmwareOptions.uart_baud);
     CRSF_RX_SERIAL.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
@@ -916,20 +914,21 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(RCVR_UART_BAUD);
+    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(RCVR_UART_BAUD); // Same baud as CRSF for simplicity
+    Serial.begin(firmwareOptions.uart_baud); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    Serial.begin(RCVR_UART_BAUD);
-    #if defined(RCVR_INVERT_TX)
-    USC0(UART0) |= BIT(UCTXI);
-    #endif
+    Serial.begin(firmwareOptions.uart_baud);
+    if (firmwareOptions.invert_tx)
+    {
+        USC0(UART0) |= BIT(UCTXI);
+    }
 #endif
 
 }
