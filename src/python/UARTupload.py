@@ -61,7 +61,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
         except BFinitPassthrough.PassthroughEnabled as info:
             dbg_print("  Warning: '%s'\n" % info)
         except BFinitPassthrough.PassthroughFailed as failed:
-            raise
+            SystemExit(failed)
 
         # Prepare to upload
         s = serial.Serial(port=port, baudrate=baudrate,

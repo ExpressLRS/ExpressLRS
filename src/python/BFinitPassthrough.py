@@ -64,16 +64,15 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         if not _validate_serialrx(rl, "serialrx_provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
             serial_check.append("Serial Receiver Protocol is not set to CRSF! Hint: set serialrx_provider = CRSF")
         if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
-            serial_check.append("Serial Receiver Protocol is inverted! Hint: set serialrx_inverted = OFF")
+            serial_check.append("Serial Receiver UART is inverted! Hint: set serialrx_inverted = OFF")
         if not _validate_serialrx(rl, "serialrx_halfduplex", ["OFF", "AUTO"]):
-            serial_check.append("Serial Receiver Protocol is not full duplex! Hint: set serialrx_halfduplex = OFF")
+            serial_check.append("Serial Receiver UART is not in full duplex! Hint: set serialrx_halfduplex = OFF")
 
     if serial_check:
         error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
         for err in serial_check:
             error += "    !!! %s !!!\n" % err
         error += "\n    Please change the configuration and try again!\n"
-        dbg_print(error)
         raise PassthroughFailed(error)
 
     SerialRXindex = ""
