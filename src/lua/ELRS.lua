@@ -268,6 +268,10 @@ local function refreshLCD()
         end
         lcd.drawText(lOffset, (radio_data.yOffset*4), "LUA v0."..version..", TX "..tx_lua_version.list[tx_lua_version.selected], INVERS)
         lcd.drawText(lOffset, (radio_data.yOffset*5), "[force use]", INVERS + BLINK)
+    elseif version == -1 then
+        lcd.drawText(lOffset, (radio_data.yOffset*2), "!!! VERSION MISMATCH !!!", INVERS)
+        lcd.drawText(lOffset, (radio_data.yOffset*3), "Module is not ELRS v1", INVERS)
+        lcd.drawText(lOffset, (radio_data.yOffset*5), "Use the elrsV2.lua", INVERS)
     else
         lcd.drawText(lOffset, (radio_data.yOffset*5), "Connecting...", INVERS + BLINK)
     end
@@ -341,6 +345,12 @@ local function loadViewFunctions()
     TLMinterval.view = viewTlmInterval
 end
 
+local function processElrsV2(data)
+    UartBadPkts = data[3]
+    UartGoodPkts = (data[4]*256) + data[5]
+    version = -1 -- Indicate this is ELRS a 2.0 system, wrong script
+end
+
 local function processResp()
     local command, data = crossfireTelemetryPop()
     if (data == nil) then return end
@@ -384,6 +394,8 @@ local function processResp()
         end
 
         needResp = false
+    elseif (command == 0x2E) and (data[1] == 0xEA) and (data[2] == 0xEE) then
+        processElrsV2(data)
     end
 end
 
