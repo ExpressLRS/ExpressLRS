@@ -19,7 +19,4 @@
 
 #define Regulatory_Domain_ISM_2400 1
 
-#define MinPower            PWR_10mW
-#define MaxPower            PWR_100mW
-#define DefaultPower        PWR_100mW
-#define POWER_OUTPUT_VALUES {-10,-6,0,10}
+#define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm

@@ -50,6 +50,5 @@
     #define MinPower            PWR_10mW
     #define MaxPower            PWR_100mW
     #define DefaultPower        PWR_100mW
-    #define POWER_OUTPUT_VALUES {-10,-6,0,10}
-
+    #define POWER_OUTPUT_VALUES {-10,-6,-3,1} //has PA, use Power array
 #endif

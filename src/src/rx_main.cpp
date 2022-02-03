@@ -1021,13 +1021,12 @@ static void setupRadio()
         return;
     }
 
-    // Set transmit power to maximum
-    POWERMGNT.setPower(MaxPower);
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (MaxPower > PWR_10mW);
 #endif
-
+    
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
@@ -1283,6 +1282,7 @@ void loop()
         // vvv Temporary till the above ^^^ is fixed
         PFDloop.intEvent(micros());
         LostConnection();
+        devicesTriggerEvent();
     }
 
     if (connectionState > MODE_STATES)

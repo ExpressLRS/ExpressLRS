@@ -10,6 +10,13 @@
     #define MaxPower HighPower
 #endif
 
+#ifndef POWER_OUTPUT_VALUES
+    // These are "fake" values as the power on the RX is not user selectable
+    #define MinPower PWR_10mW
+    #define MaxPower PWR_10mW
+#endif
+
+
 #if !defined(DefaultPower)
     #define DefaultPower PWR_50mW
 #endif

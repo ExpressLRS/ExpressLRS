@@ -13,9 +13,6 @@
 #define GPIO_PIN_ANTENNA_SELECT 0 // Low = Ant1, High = Ant2, pulled high by external resistor
 #endif
 
-#define MinPower            PWR_10mW
-#define MaxPower            PWR_100mW
-#define DefaultPower        PWR_100mW
-#define POWER_OUTPUT_VALUES {-10,-6,0,10}
+#define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm
 
 #define Regulatory_Domain_ISM_2400 1

@@ -14,15 +14,20 @@
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
+
+#ifdef POWER_OUTPUT_VALUES
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
+#endif
 
 
+#ifdef POWER_OUTPUT_VALUES
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
     emptySpace
 };
+#endif
 
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
 static struct luaItem_selection luaAntennaMode = {
@@ -60,6 +65,7 @@ extern void beginWebsever();
 #endif
 
 
+#ifdef POWER_OUTPUT_VALUES
 static void luadevGeneratePowerOpts()
 {
   // This function modifies the strPowerLevels in place and must not
@@ -89,6 +95,7 @@ static void luadevGeneratePowerOpts()
   }
   *out = '\0';
 }
+#endif
 
 static void registerLuaParameters()
 {
@@ -96,18 +103,15 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   registerLUAParameter(&luaAntennaMode, [](uint8_t id, uint8_t arg){
       config.SetAntennaMode(arg);
-      // config.Commit();  // this commit doesn't trigger restart
-      devicesTriggerEvent();
-  });
+     });
 #endif
-
-registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
+#ifdef POWER_OUTPUT_VALUES
+  luadevGeneratePowerOpts();
+  registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
     config.SetPower(arg);
-    //config.Commit(); this commit trigger restart
-      POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
-    devicesTriggerEvent();
-  });
-
+    POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
+    });
+#endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
     if (arg < 5) {
@@ -126,8 +130,10 @@ static int event()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
 #endif
-  luadevGeneratePowerOpts();
+
+#ifdef POWER_OUTPUT_VALUES
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
+#endif
   return DURATION_IMMEDIATELY;
 }
 

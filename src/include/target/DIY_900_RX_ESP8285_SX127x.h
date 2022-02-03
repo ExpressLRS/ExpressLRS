@@ -16,3 +16,4 @@
 #define GPIO_PIN_BUTTON 0
 
 // Output Power - default for SX127x
+#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes

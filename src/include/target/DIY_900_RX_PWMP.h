@@ -20,3 +20,5 @@
 #else
 #define GPIO_PIN_PWM_OUTPUTS    {0, 1, 3, 5, 9, 10}
 #endif
+
+#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
