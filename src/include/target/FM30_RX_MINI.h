@@ -47,6 +47,9 @@
     #define MaxPower                PWR_250mW
     #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
 #else
-        #define POWER_OUTPUT_MAX 6  // 250mW (uses values as above)
-        #define POWER_OUTPUT_MIN -15 // 100mW (uses values as above)
+    #define MinPower            PWR_10mW
+    #define MaxPower            PWR_100mW
+    #define DefaultPower        PWR_100mW
+    #define POWER_OUTPUT_VALUES {-10,-6,0,10}
+
 #endif

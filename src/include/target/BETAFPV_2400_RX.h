@@ -19,7 +19,10 @@
 #define GPIO_PIN_TX_ENABLE      10
 
 // Output Power
-#define POWER_OUTPUT_MAX      1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
-#define POWER_OUTPUT_MIN      -10 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_100mW
+#define DefaultPower        PWR_100mW
+#define POWER_OUTPUT_VALUES {-10,-6,0,10}
+
 
 #define Regulatory_Domain_ISM_2400 1

@@ -534,7 +534,7 @@ RxConfig::SetDefaults()
     SetIsBound(false);
     SetPowerOnCounter(0);
     SetModelId(0xFF);
-    SetPower(MaxPower);
+    SetPower(POWERMGNT::getDefaultPower());
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
     SetAntennaMode(2); //2 is diversity
 #else

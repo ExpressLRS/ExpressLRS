@@ -13,7 +13,9 @@
 #define GPIO_PIN_ANTENNA_SELECT 0 // Low = Ant1, High = Ant2, pulled high by external resistor
 #endif
 
-#define POWER_OUTPUT_MAX      13 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
-#define POWER_OUTPUT_MIN      -10 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_100mW
+#define DefaultPower        PWR_100mW
+#define POWER_OUTPUT_VALUES {-10,-6,0,10}
 
 #define Regulatory_Domain_ISM_2400 1

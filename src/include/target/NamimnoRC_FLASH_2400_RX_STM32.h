@@ -17,3 +17,11 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 
 // Output Power - default for SX120
+
+#define Regulatory_Domain_ISM_2400 1
+
+
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_100mW
+#define DefaultPower        PWR_100mW
+#define POWER_OUTPUT_VALUES {-10,-6,0,10}

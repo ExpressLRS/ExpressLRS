@@ -18,3 +18,11 @@
 #define GPIO_PIN_LED_RED     PB5
 
 // Output Power - use default SX1280
+
+#define Regulatory_Domain_ISM_2400 1
+
+
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_100mW
+#define DefaultPower        PWR_100mW
+#define POWER_OUTPUT_VALUES {-10,-6,0,10}

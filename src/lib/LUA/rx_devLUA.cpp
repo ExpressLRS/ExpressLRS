@@ -14,12 +14,13 @@
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
+static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 
 
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
-    "Standard;Max Power",
+    strPowerLevels,
     emptySpace
 };
 
@@ -59,6 +60,37 @@ extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
+
+static void luadevGeneratePowerOpts()
+{
+  // This function modifies the strPowerLevels in place and must not
+  // be called more than once!
+  char *out = strPowerLevels;
+  PowerLevels_e pwr = PWR_10mW;
+  // Count the semicolons to move `out` to point to the MINth item
+  while (pwr < MinPower)
+  {
+    while (*out++ != ';') ;
+    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
+  }
+  // There is no min field, compensate by shifting the index when sending/receiving
+  // luaPower.min = (uint8_t)MinPower;
+  luaTlmPower.options = (const char *)out;
+
+  // Continue until after than MAXth item and drop a null in the orginal
+  // string on the semicolon (not after like the previous loop)
+  while (pwr <= MaxPower)
+  {
+    // If out still points to a semicolon from the last loop move past it
+    if (*out)
+      ++out;
+    while (*out && *out != ';')
+      ++out;
+    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
+  }
+  *out = '\0';
+}
+
 static void registerLuaParameters()
 {
 
@@ -73,11 +105,7 @@ static void registerLuaParameters()
 registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
     config.SetPower(arg);
     //config.Commit(); this commit trigger restart
-    if(arg == 0){
-      POWERMGNT.setPower(MinPower);
-    } else {
-      POWERMGNT.setPower(MaxPower);
-    }
+      POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
     devicesTriggerEvent();
   });
 
@@ -99,6 +127,7 @@ static int event()
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
 #endif
+  luadevGeneratePowerOpts();
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
   return DURATION_IMMEDIATELY;
 }

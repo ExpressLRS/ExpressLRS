@@ -5,12 +5,6 @@
 #include <nvs.h>
 #endif
 
-#if defined(TARGET_RX)
-    // These are "fake" values as the power on the RX is not user selectable
-    #define MinPower PWR_10mW
-    #define MaxPower PWR_25mW
-#endif
-
 #if defined(HighPower) && !defined(UNLOCK_HIGHER_POWER)
     #undef MaxPower
     #define MaxPower HighPower

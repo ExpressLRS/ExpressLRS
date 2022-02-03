@@ -5,13 +5,6 @@
 #include "SX1280_hal.h"
 
 
-#ifndef POWER_OUTPUT_MIN
-#define POWER_OUTPUT_MIN -10
-#endif
-#ifndef POWER_OUTPUT_MAX
-#define POWER_OUTPUT_MAX 13
-#endif
-
 
 class SX1280Driver
 {
@@ -51,8 +44,6 @@ public:
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
 
-    void SetOutputPowerMin() { SetOutputPower(POWER_OUTPUT_MIN); };
-    void SetOutputPowerMax() { SetOutputPower(POWER_OUTPUT_MAX); };
 
     int32_t GetFrequencyError();
 
