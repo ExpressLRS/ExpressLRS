@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sha256.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 
@@ -170,4 +171,16 @@ uint32_t uidMacSeedGet(void)
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
                              ((uint32_t)UID[4] << 8) + UID[5];
     return macSeed;
+}
+
+void getUIDHash(byte *hash, uint8_t len)
+{
+
+    SHA256_HASH digest;
+    Sha256Calculate(UID,len,&digest);
+
+    if (len < sizeof(digest.bytes)) {
+        for (int i=0;i<len;i++)
+        hash[i] = digest.bytes[i];
+    }
 }

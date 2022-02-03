@@ -38,10 +38,6 @@ SX1280Driver Radio;
 #include "devWIFI.h"
 #include "devButton.h"
 
-#if defined(HMAC) || defined(UIDHASH)
-#include "hmac.h"
-#endif
-
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
@@ -188,9 +184,7 @@ int8_t debug4 = 0;
 
 bool InBindingMode = false;
 
-#if defined(UIDHASH)
 byte UIDHash[3];
-#endif
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -708,7 +702,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
 
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 {
-    #if defined(UIDHASH)
     // Verify the first two of three bytes of the binding ID hash, which should always match
     if (Radio.RXdataBuffer[4] != UIDHash[0] || Radio.RXdataBuffer[5] != UIDHash[1])
         return false;
@@ -719,19 +712,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UIDHash[2] & ~MODELMATCH_MASK))
         return false;
 
-    #else
-    // Verify the first two of three bytes of the binding ID, which should always match
-    if (Radio.RXdataBuffer[4] != UID[3] || Radio.RXdataBuffer[5] != UID[4])
-        return false;
-
-    // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
-    // Only require the first 18 bits of the UID to match to establish a connection
-    // but the last 6 bits must modelmatch before sending any data to the FC
-    if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
-        return false;
-    #endif
-
-    LastSyncPacket = now;
+     LastSyncPacket = now;
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('s');
 #endif
@@ -751,13 +732,8 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 
     // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
     uint8_t modelXor = (~config.GetModelId()) & MODELMATCH_MASK;
-    #if defined(UIDHASH)
     bool modelMatched = Radio.RXdataBuffer[6] == (UIDHash[2] ^ modelXor);
     DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], (UIDHash[2] ^ modelXor), modelMatched);
-    #else
-    bool modelMatched = Radio.RXdataBuffer[6] == (UID[5] ^ modelXor);
-    DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], UID[5], modelMatched);
-    #endif
 
     if (connectionState == disconnected
         || NonceRX != Radio.RXdataBuffer[2]
@@ -795,21 +771,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         Radio.RXdataBuffer[0] = type | (NonceFHSSresult << 2);
     }
 
-    #if defined(HMAC)
-    //uint32_t crcstart = micros();
-    uint16_t calculatedCRC = getHMAC((byte *)Radio.RXdataBuffer,7);
-    //DBGV(", Hmac took: "); DBGVLN(micros()-crcstart);
-    uint8_t HMACCalc[2];
-    HMACCalc[0] = (Radio.TXdataBuffer[0] & 0b11) | ((calculatedCRC >> 6) & 0b11111100);;
-    HMACCalc[1] = calculatedCRC & 0xFF;;
-    calculatedCRC = (((uint16_t)(HMACCalc[0] & 0b11111100)) << 6) | HMACCalc[1];
-
-    #else
-    //uint32_t crcstart = micros();
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-    //DBGV("CRC took: "); DBGVLN(micros()-crcstart);
-
-    #endif
 
     if (inCRC != calculatedCRC)
     {
@@ -1245,20 +1207,15 @@ void setup()
         hwTimer.init();
     }
 
-    #if defined(UIDHASH)
     getUIDHash(UIDHash,3);
-
     DBG("UID Hash: ");
-
     for(int i= 0; i< 3; i++){
         char str[3];
 
         sprintf(str, "%02x", (int)UIDHash[i]);
         DBG(str);
     }
-
     DBGLN("");
-    #endif
 
     devicesStart();
 }
