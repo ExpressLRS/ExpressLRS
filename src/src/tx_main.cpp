@@ -400,7 +400,7 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
     Radio.RXnb();
-    TelemetryRcvPhase = ttrpInReceiveMode;
+    TelemetryRcvPhase = ttrpPreReceiveGap;
   }
 }
 
@@ -491,13 +491,14 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 
   // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
   // Skip transmitting on this slot
-  if (TelemetryRcvPhase == ttrpInReceiveMode)
+  if (TelemetryRcvPhase == ttrpPreReceiveGap)
   {
-    TelemetryRcvPhase = ttrpTransmitting;
+    TelemetryRcvPhase = ttrpExpectingTelem;
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
     LQCalc.inc();
     return;
   }
+  TelemetryRcvPhase = ttrpTransmitting;
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
@@ -608,7 +609,7 @@ static void CheckConfigChangePending()
     // and will skip sending the next packet when the timer resumes.
     // Return to normal send mode because if the skipped packet happened
     // to be on the last slot of the FHSS the skip will prevent FHSS
-    if (TelemetryRcvPhase == ttrpInReceiveMode)
+    if (TelemetryRcvPhase != ttrpTransmitting)
     {
       Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
