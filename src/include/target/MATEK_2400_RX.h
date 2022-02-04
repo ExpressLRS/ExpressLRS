@@ -23,5 +23,4 @@
 #define DefaultPower        PWR_100mW
 #define POWER_OUTPUT_VALUES {-10,-6,-3,1} //has PA, use Power array
 
-
 #define Regulatory_Domain_ISM_2400 1

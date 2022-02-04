@@ -145,7 +145,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     default:
       return 0;
   }
- 
+
   // dataEnd points to the end of the last string
   // -2 bytes Lua chunk header: FieldId, ChunksRemain
   // +1 for the null on the last string

@@ -73,7 +73,6 @@ https://github.com/jaxxzer
     #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
 #endif
 
-
 #define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
 // External pads
 // #define R9m_Ch1    PA8
