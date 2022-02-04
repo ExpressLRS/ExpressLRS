@@ -1461,11 +1461,8 @@ void UpdateModelMatch(uint8_t model)
     DBGLN("Set ModelId=%u", model);
 
     config.SetModelId(model);
-    if (config.IsModified()) //config commit already check for m_modified, do we need this?
-    {
-        config.Commit();
-        // This will be called from ProcessRFPacket(), schedule a disconnect
-        // in the main loop once the ISR has exited
-        connectionState = disconnectPending;
-    }
+    config.Commit();
+    // This will be called from ProcessRFPacket(), schedule a disconnect
+    // in the main loop once the ISR has exited
+    connectionState = disconnectPending;
 }
