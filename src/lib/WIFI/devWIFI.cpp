@@ -343,7 +343,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       #ifdef PLATFORM_ESP8266
         success += "Please wait for LED to resume blinking before disconnecting power.\"}";
       #else
-        success += "Please wait for the Lua script to terminate WiFi mode.\"}";
+        success += "Please wait for the module to terminate WiFi mode.\"}";
       #endif
       AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
       response->addHeader("Connection", "close");
