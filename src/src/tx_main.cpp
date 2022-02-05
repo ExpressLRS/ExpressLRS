@@ -507,7 +507,12 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   if (TelemetryRcvPhase == ttrpInReceiveMode)
   {
     TelemetryRcvPhase = ttrpTransmitting;
+#if defined(Regulatory_Domain_EU_CE_2400)
+    // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
+    crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
+#else
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+#endif
     LQCalc.inc();
     return;
   }
