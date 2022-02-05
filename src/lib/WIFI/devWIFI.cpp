@@ -340,7 +340,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
       String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
-      #ifdef PLATFORM_ESP8266
+      #if defined(TARGET_RX)
         success += "Please wait for LED to resume blinking before disconnecting power.\"}";
       #else
         success += "Please wait for the module to terminate WiFi mode.\"}";
