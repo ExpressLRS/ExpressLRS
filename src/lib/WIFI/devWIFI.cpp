@@ -339,7 +339,13 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to resume blinking before disconnecting power.\"}");
+      String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
+      #ifdef PLATFORM_ESP8266
+        success += "Please wait for LED to resume blinking before disconnecting power.\"}";
+      #else
+        success += "Please wait for the Lua script to terminate WiFi mode.\"}";
+      #endif
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
@@ -423,7 +429,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
     if (Update.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn resume blinking before disconnecting power", totalSize);
+      DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
     } else {
       Update.printError(LOGGING_UART);
     }
