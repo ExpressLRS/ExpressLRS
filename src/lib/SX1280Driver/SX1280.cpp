@@ -228,6 +228,8 @@ void SX1280Driver::ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_R
     default:
         hal.WriteRegister(0x925, 0x32); // for SF9, SF10, SF11, SF12
     }
+    // Enable frequency compensation
+    hal.WriteRegister(0x93c, 0x1);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
