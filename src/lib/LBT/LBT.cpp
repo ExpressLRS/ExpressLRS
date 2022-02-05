@@ -32,7 +32,7 @@ void enableLBT(bool useLBT)
   }
 }
 
-int ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
+uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
 {
   // The necessary wait time from RX start to valid instant RSSI reading
   // changes with the spreading factor setting.
@@ -120,16 +120,11 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  int validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf);
-  int delayRemaining = validRSSIdelayUs - (micros() - rxStartTime);
-  if(delayRemaining > validRSSIdelayUs)
+  uint32_t validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf);
+  uint32_t elapsed = micros() - rxStartTime;
+  if(elapsed < validRSSIdelayUs)
   {
-    // delayMicroseconds() only valid up to ~16ms per arduino spec. limit to max wait time we need just in case.
-    delayRemaining = validRSSIdelayUs;
-  }
-  if(delayRemaining > 0)
-  {
-    delayMicroseconds(delayRemaining);
+    delayMicroseconds(validRSSIdelayUs - elapsed);
   }
 
   int8_t rssiInst = Radio.GetRssiInst();
