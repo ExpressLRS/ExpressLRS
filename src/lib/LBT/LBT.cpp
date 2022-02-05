@@ -1,3 +1,4 @@
+#if defined(Regulatory_Domain_EU_CE_2400)
 #include "common.h"
 #include "logging.h"
 #include "LBT.h"
@@ -5,8 +6,7 @@
 extern SX1280Driver Radio;
 
 LQCALC<100> LBTSuccessCalc;
-volatile uint32_t rxStartTime;
-volatile bool LBTChannelBusy = false;
+static uint32_t rxStartTime;
 
 #if !defined(LBT_RSSI_THRESHOLD_OFFSET_DB)
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
@@ -14,7 +14,7 @@ volatile bool LBTChannelBusy = false;
 
 volatile bool LBTEnabled = false;
 volatile bool LBTScheduleDisable = false;
-volatile bool LBTStarted = false;
+static bool LBTStarted = false;
 
 void enableLBT(bool useLBT)
 {
@@ -98,11 +98,12 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
 {
+  LBTSuccessCalc.inc(); // Increment count for every channel check
   if (!LBTEnabled)
   {
+    LBTSuccessCalc.add();
     return true;
   }
-  LBTSuccessCalc.inc(); // Increment count for every channel check
 
   LBTStarted = false;
 
@@ -151,3 +152,4 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
 
   return channelClear;
 }
+#endif

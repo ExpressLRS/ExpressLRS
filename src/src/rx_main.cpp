@@ -349,16 +349,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     if (ChannelIsClear())
+#endif
     {
         Radio.TXnb();
     }
-    else
-    {
-        LBTChannelBusy = true;
-    }
-#else // non-CE
-    Radio.TXnb();
-#endif
     return true;
 }
 
@@ -525,10 +519,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Emulate that TX just happened, even if it didn't because channel is not clear
-    if(LBTChannelBusy)
+    if(!LBTSuccessCalc.currentIsSet())
     {
         Radio.TXdoneCallback();
-        LBTChannelBusy = false;
     }
 #endif
 

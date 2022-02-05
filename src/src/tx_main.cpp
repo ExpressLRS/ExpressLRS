@@ -476,18 +476,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXdataBuffer[7] = crc & 0xFF;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-  // Emulate that TX just happened, even if it didn't because channel is not clear
   if (ChannelIsClear())
+#endif
   {
     Radio.TXnb();
   }
-  else
-  {
-    LBTChannelBusy = true;
-  }
-#else // non-CE
-  Radio.TXnb();
-#endif
 }
 
 /*
@@ -496,10 +489,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if(LBTChannelBusy)
+  if(!LBTSuccessCalc.currentIsSet())
   {
     Radio.TXdoneCallback();
-    LBTChannelBusy = false;
   }
 #endif
 
