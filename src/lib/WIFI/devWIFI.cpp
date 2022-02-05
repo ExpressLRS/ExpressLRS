@@ -341,9 +341,9 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       DBGLN("Update complete, rebooting");
       String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
-        success += "Please wait for LED to resume blinking before disconnecting power.\"}";
+        success += "Please wait for the LED to resume blinking before disconnecting power.\"}";
       #else
-        success += "Please wait for the module to terminate WiFi mode.\"}";
+        success += "Please wait for a few seconds while the device reboots.\"}";
       #endif
       AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
       response->addHeader("Connection", "close");
