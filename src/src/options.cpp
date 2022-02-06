@@ -24,8 +24,12 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
     ._version_ = 0,
     ._hardware_ = 0
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        | 1
+#if defined(PLATFORM_ESP32)
+        | 1 | (1 << 4)
+#elif defined(PLATFORM_ESP8266)
+        | 1 | (2 << 4)
+#elif defined(PLATFORM_STM32)
+        | 0 | (0 << 4)
 #endif
 #if defined(TARGET_RX)
         | 2

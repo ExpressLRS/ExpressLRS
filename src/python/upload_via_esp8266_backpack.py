@@ -33,8 +33,7 @@ def process_http_result(output_json_file: str) -> int:
     return retval
 
 
-def on_upload(source, target, env):
-    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
+def do_upload(elrs_bin_target, pio_target, isstm, env):
     bootloader_target = None
 
     upload_addr = ['elrs_tx', 'elrs_tx.local']
@@ -56,15 +55,6 @@ def on_upload(source, target, env):
                 bootloader_file = flag.split("=")[1]
                 bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
 
-
-    firmware_path = str(source[0])
-    bin_path = os.path.dirname(firmware_path)
-    elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
-    if not os.path.exists(elrs_bin_target):
-        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
-        if not os.path.exists(elrs_bin_target):
-            raise Exception("No valid binary found!")
-
     bin_upload_output = os.path.splitext(elrs_bin_target)[0] + '-output.json'
     if os.path.exists(bin_upload_output):
         os.remove(bin_upload_output)
@@ -73,7 +63,6 @@ def on_upload(source, target, env):
            "--retry", "2", "--retry-delay", "1",
            "-o", "%s" % (bin_upload_output)]
 
-    pio_target = target[0].name
     uri = 'update'
     do_bin_upload = True
 
@@ -115,7 +104,22 @@ def on_upload(source, target, env):
             returncode = process_http_result(bin_upload_output)
         except subprocess.CalledProcessError as e:
             returncode = e.returncode
+        if returncode == ElrsUploadResult.Success:
+            return returncode
 
     if returncode != ElrsUploadResult.Success:
         print("WIFI upload FAILED!")
     return returncode
+
+def on_upload(source, target, env):
+    firmware_path = str(source[0])
+    bin_path = os.path.dirname(firmware_path)
+    elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
+    if not os.path.exists(elrs_bin_target):
+        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+        if not os.path.exists(elrs_bin_target):
+            raise Exception("No valid binary found!")
+
+    pio_target = target[0].name
+    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
+    do_upload(elrs_bin_target, pio_target, isstm, env)
