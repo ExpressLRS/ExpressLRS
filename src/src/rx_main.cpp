@@ -1011,7 +1011,7 @@ static void setupRadio()
     POWERMGNT.setPower(MaxPower);
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    enableLBT(MaxPower > PWR_10mW);
+    LBTEnabled = (MaxPower > PWR_10mW);
 #endif
 
     Radio.RXdoneCallback = &RXdoneISR;

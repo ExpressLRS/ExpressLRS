@@ -12,25 +12,8 @@ static uint32_t rxStartTime;
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
 #endif
 
-volatile bool LBTEnabled = false;
-volatile bool LBTScheduleDisable = false;
+bool LBTEnabled = false;
 static bool LBTStarted = false;
-
-void enableLBT(bool useLBT)
-{
-  if (useLBT)
-  {
-    // It is safe to switch on LBT from outside interrupts because both TXdone, RXdone and timerCallback
-    // start with beginClearChannelAssessment, which is first entry point for LBT.
-    LBTEnabled = true;
-  }
-  else if(LBTEnabled)
-  {
-    // It is NOT safe to switch off LBT from outside LBT routines because LBT fiddles with
-    // interrupt enable flags. Instead we schedule LBT to be disabled and let LBT routines handle it safely.
-    LBTScheduleDisable = true;
-  }
-}
 
 uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
 {
@@ -137,12 +120,6 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   if(channelClear)
   {
     LBTSuccessCalc.add(); // Add success only when actually preparing for TX
-  }
-
-  if(LBTScheduleDisable)
-  {
-    LBTEnabled = false;
-    LBTScheduleDisable = false;
   }
 
   return channelClear;
