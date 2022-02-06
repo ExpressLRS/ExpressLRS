@@ -7,6 +7,7 @@
 SX127xDriver Radio;
 #elif defined(Regulatory_Domain_ISM_2400)
 #include "SX1280Driver.h"
+#include "LBT.h"
 SX1280Driver Radio;
 #else
 #error "Radio configuration is not valid!"
@@ -298,6 +299,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
+#if defined(Regulatory_Domain_EU_CE_2400)
+    BeginClearChannelAssessment();
+#endif
+
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = TLM_PACKET;
 
@@ -342,7 +347,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
     Radio.TXdataBuffer[7] = crc & 0xFF;
 
-    Radio.TXnb();
+#if defined(Regulatory_Domain_EU_CE_2400)
+    if (ChannelIsClear())
+#endif
+    {
+        Radio.TXnb();
+    }
     return true;
 }
 
@@ -507,6 +517,14 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    // Emulate that TX just happened, even if it didn't because channel is not clear
+    if(!LBTSuccessCalc.currentIsSet())
+    {
+        Radio.TXdoneCallback();
+    }
+#endif
+
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     updateDiversity();
@@ -991,6 +1009,10 @@ static void setupRadio()
 
     // Set transmit power to maximum
     POWERMGNT.setPower(MaxPower);
+
+#if defined(Regulatory_Domain_EU_CE_2400)
+    LBTEnabled = (MaxPower > PWR_10mW);
+#endif
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
