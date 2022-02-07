@@ -53,7 +53,8 @@ typedef enum
 typedef enum
 {
     ttrpTransmitting,     // Transmitting RC channels as normal
-    ttrpInReceiveMode     // Has switched to Receive mode for telemetry on the next slot (set on TX done)
+    ttrpPreReceiveGap,    // Has switched to Receive mode for telemetry, but in the gap between TX done and Tock
+    ttrpExpectingTelem    // Still in Receive mode, Tock has fired, receiving telem as far as we know
 } TxTlmRcvPhase_e;
 
 typedef enum

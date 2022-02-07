@@ -401,7 +401,7 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
     Radio.RXnb();
-    TelemetryRcvPhase = ttrpInReceiveMode;
+    TelemetryRcvPhase = ttrpPreReceiveGap;
   }
 }
 
@@ -504,9 +504,9 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 
   // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
   // Skip transmitting on this slot
-  if (TelemetryRcvPhase == ttrpInReceiveMode)
+  if (TelemetryRcvPhase == ttrpPreReceiveGap)
   {
-    TelemetryRcvPhase = ttrpTransmitting;
+    TelemetryRcvPhase = ttrpExpectingTelem;
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
     crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
@@ -516,6 +516,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     LQCalc.inc();
     return;
   }
+  TelemetryRcvPhase = ttrpTransmitting;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment(); // Get RSSI reading here, used also for next TX if in receiveMode.
@@ -599,7 +600,6 @@ static void ConfigChangeCommit()
   devicesTriggerEvent();
 }
 
-
 static void CheckConfigChangePending()
 {
   if (config.IsModified() || ModelUpdatePending)
@@ -628,13 +628,15 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    // Prevent any other RF SPI traffic during the commit from RX or scheduled TX
     hwTimer.callbackTock = &timerCallbackIdle;
-    // If telemetry expected in the next interval, the radio is in RX mode
+    // If telemetry expected in the next interval, the radio was in RX mode
     // and will skip sending the next packet when the timer resumes.
     // Return to normal send mode because if the skipped packet happened
     // to be on the last slot of the FHSS the skip will prevent FHSS
-    if (TelemetryRcvPhase == ttrpInReceiveMode)
+    if (TelemetryRcvPhase != ttrpTransmitting)
     {
+      Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
