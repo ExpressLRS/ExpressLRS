@@ -33,10 +33,8 @@ def process_http_result(output_json_file: str) -> int:
     return retval
 
 
-def do_upload(elrs_bin_target, pio_target, isstm, env):
+def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
     bootloader_target = None
-
-    upload_addr = ['elrs_tx', 'elrs_tx.local']
     app_start = 0 # eka bootloader offset
 
     # Parse upload flags:
@@ -114,6 +112,7 @@ def do_upload(elrs_bin_target, pio_target, isstm, env):
 def on_upload(source, target, env):
     firmware_path = str(source[0])
     bin_path = os.path.dirname(firmware_path)
+    upload_addr = ['elrs_tx', 'elrs_tx.local']
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
     if not os.path.exists(elrs_bin_target):
         elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
@@ -122,4 +121,4 @@ def on_upload(source, target, env):
 
     pio_target = target[0].name
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
-    do_upload(elrs_bin_target, pio_target, isstm, env)
+    do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)
