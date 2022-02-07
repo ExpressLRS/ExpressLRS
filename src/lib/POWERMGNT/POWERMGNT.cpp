@@ -70,11 +70,6 @@ PowerLevels_e POWERMGNT::decPower()
     return CurrentPower;
 }
 
-PowerLevels_e POWERMGNT::currPower()
-{
-    return CurrentPower;
-}
-
 void POWERMGNT::incSX1280Ouput()
 {
     if (CurrentSX1280Power < 13)
