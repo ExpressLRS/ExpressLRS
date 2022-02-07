@@ -654,11 +654,11 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleFHSS();
   HandlePrepareForTLM();
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if(TelemetryRcvPhase != ttrpInReceiveMode)
+  if (TelemetryRcvPhase != ttrpPreReceiveGap)
   {
     // Start RX for Listen Before Talk early because it takes about 100us
     // from RX enable to valid instant RSSI values are returned.
-    // If rx was already started by TLM prepare above, this call will let RX 
+    // If rx was already started by TLM prepare above, this call will let RX
     // continue as normal.
     BeginClearChannelAssessment();
   }
