@@ -55,6 +55,7 @@ public:
 
     bool GetFrequencyErrorbool();
     uint8_t GetRxBufferAddr();
+    int8_t GetRssiInst();
     void GetLastPacketStats();
 
 private:
