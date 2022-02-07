@@ -104,13 +104,11 @@ def upload_esp32_etx(args):
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
 
-def upload(target_rx, mcu_type, target, args):
+def upload(target_rx, mcu_type, args):
     if args.baud == 0:
-        if target_rx == True:
+        args.baud = 460800
+        if args.method == UploadMethod.betaflight:
             args.baud = 420000
-        else:
-            args.baud = 460800
-    args.target = target
 
     if target_rx == True:
         if mcu_type == MCUType.ESP8266.value:
@@ -166,7 +164,8 @@ def main():
         mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         target_rx, mcu_type, target = get_hardware(mm)
 
-    return upload(target_rx, mcu_type, target, args)
+    args.target = target
+    return upload(target_rx, mcu_type, args)
 
 if __name__ == '__main__':
     try:
