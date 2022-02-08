@@ -69,11 +69,11 @@ def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
         do_bin_upload = False
     if pio_target == 'uploadforce':
         cmd += ["-F", "force=1"]
+    if isstm:
+        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
+        cmd += ["-F", "type=tx"]
     if do_bin_upload:
         cmd += "-F", "data=@%s" % (elrs_bin_target),
-    if isstm:
-        uri = 'upload'
-        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
 
     if bootloader_target is not None and isstm:
         cmd_bootloader = ["curl", "--max-time", "60",

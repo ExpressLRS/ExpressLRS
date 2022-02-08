@@ -136,8 +136,8 @@ def upload(target_rx, mcu_type, args):
         elif mcu_type == MCUType.STM32.value:
             if args.method == UploadMethod.stlink:      # test
                 return upload_stm32_stlink(args)
-            elif args.method == UploadMethod.wifi:      # test
-                return upload_wifi(args, ['elrs_tx', 'elrs_tx.local'], True)
+            elif args.method == UploadMethod.wifi:
+                return upload_wifi(args, ['elrs_txbp', 'elrs_txbp.local'], True)
     print("Invalid upload method for firmware")
     return ElrsUploadResult.ErrorGeneral
 
