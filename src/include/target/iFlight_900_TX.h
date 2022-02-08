@@ -2,6 +2,7 @@
 
 // Any device features
 #define TARGET_TX_IFLIGHT
+#define RADIO_SX127X
 #define USE_SX1276_RFO_HF
 
 // GPIO pin definitions

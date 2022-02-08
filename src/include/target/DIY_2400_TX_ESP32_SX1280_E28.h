@@ -3,10 +3,11 @@
 #endif
 
 // Any device features
+#define RADIO_SX1280
+#define USE_SX1280_DCDC
 #if !defined(USE_OLED_I2C)
 #define USE_OLED_SPI
 #endif
-#define USE_SX1280_DCDC
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -38,5 +39,3 @@
 #define MinPower            PWR_10mW
 #define MaxPower            PWR_250mW
 #define POWER_OUTPUT_VALUES {-15,-11,-8,-5,-1}
-
-#define Regulatory_Domain_ISM_2400 1

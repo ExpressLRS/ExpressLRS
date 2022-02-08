@@ -1,6 +1,7 @@
 #define DEVICE_NAME "AION T-Pro TX"
 
 // Any device features
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -20,11 +21,9 @@
 
 // Backpack pins
 #define GPIO_PIN_DEBUG_RX       13
-#define GPIO_PIN_DEBUG_TX       12 
+#define GPIO_PIN_DEBUG_TX       12
 
 // Output Power
 #define MinPower                PWR_25mW
 #define MaxPower                PWR_1000mW
 #define POWER_OUTPUT_VALUES     {-18,-13,-10,-5,-2,3}
-
-#define Regulatory_Domain_ISM_2400 1

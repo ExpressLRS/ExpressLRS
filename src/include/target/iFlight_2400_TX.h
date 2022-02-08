@@ -2,6 +2,7 @@
 
 // Any device features
 #define TARGET_TX_IFLIGHT
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -25,5 +26,3 @@
 #define MinPower                PWR_10mW
 #define MaxPower                PWR_500mW
 #define POWER_OUTPUT_VALUES     {-18,-15,-13,-9,-4,3}
-
-#define Regulatory_Domain_ISM_2400 1

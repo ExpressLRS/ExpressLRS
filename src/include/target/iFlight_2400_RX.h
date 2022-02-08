@@ -1,5 +1,6 @@
 #define DEVICE_NAME "iFlight 2400RX"
 
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -17,5 +18,3 @@
 
 // Output Power
 #define POWER_OUTPUT_FIXED          3
-
-#define Regulatory_Domain_ISM_2400  1

@@ -1,6 +1,9 @@
 #ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno 2G4RX"
 #endif
+
+#define RADIO_SX1280
+
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4
 #define GPIO_PIN_BUSY           PB5
@@ -16,5 +19,3 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 
 // Output Power - default for SX120
-
-#define Regulatory_Domain_ISM_2400 1

@@ -3,6 +3,7 @@
 #endif
 // There is some special handling for this target
 #define TARGET_TX_GHOST
+#define RADIO_SX1280
 
 // Any device features
 #if !defined(USE_OLED_SPI_SMALL)
@@ -48,5 +49,3 @@
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {459, 509, 326, 182, 91, 1021}
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

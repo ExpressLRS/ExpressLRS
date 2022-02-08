@@ -3,6 +3,7 @@
 #endif
 
 // Any device features
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -22,5 +23,3 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
 #define POWER_OUTPUT_VALUES {-18,-15,-11,-8,-4}
-
-#define Regulatory_Domain_ISM_2400 1

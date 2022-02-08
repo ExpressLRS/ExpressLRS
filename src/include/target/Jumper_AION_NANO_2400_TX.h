@@ -3,8 +3,9 @@
 #endif
 
 // Any device features
-#define USE_OLED_I2C
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
+#define USE_OLED_I2C
 #define HAS_FIVE_WAY_BUTTON
 #define WS2812_IS_GRB
 
@@ -36,5 +37,3 @@
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {870, 600, 230, 35, 0, 4095}
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

@@ -1,5 +1,6 @@
 #define DEVICE_NAME "AXIS THOR 2400TX"
 
+#define RADIO_SX1280
 #define USE_TX_BACKPACK
 
 #define HAS_TFT_SCREEN
@@ -52,5 +53,3 @@
 #define MaxPower            PWR_1000mW
 #define DefaultPower        PWR_10mW
 #define POWER_OUTPUT_VALUES {-16,-12,-9,-6,-2,0,7}
-
-#define Regulatory_Domain_ISM_2400 1

@@ -7,6 +7,8 @@ https://github.com/jaxxzer
     #define TARGET_EEPROM_ADDR              0x50
 #endif
 
+#define RADIO_SX127X
+
 #define GPIO_PIN_NSS            PB12 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_DIO0           PA15 //confirmed on SLIMPLUS, R900MINI
 #define GPIO_PIN_DIO1           PA1  // NOT CORRECT!!! PIN STILL NEEDS TO BE FOUND BUT IS CURRENTLY UNUSED

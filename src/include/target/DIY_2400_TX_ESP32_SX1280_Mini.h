@@ -2,6 +2,8 @@
 #define DEVICE_NAME "DIY2400 Mini"
 #endif
 
+#define RADIO_SX1280
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS          5
 #define GPIO_PIN_BUSY         21
@@ -17,5 +19,3 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_25mW
 #define POWER_OUTPUT_VALUES {8, 13}
-
-#define Regulatory_Domain_ISM_2400 1

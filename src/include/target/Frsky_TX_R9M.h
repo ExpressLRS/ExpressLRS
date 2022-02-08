@@ -3,6 +3,7 @@
     #define DEVICE_NAME "FrSky R9M"
 #endif
 
+#define RADIO_SX127X
 #define TARGET_USE_EEPROM               1
 #define TARGET_EEPROM_ADDR              0x51
 #define TARGET_EEPROM_400K

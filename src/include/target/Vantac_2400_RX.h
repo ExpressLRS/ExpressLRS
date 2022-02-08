@@ -2,6 +2,8 @@
 #define DEVICE_NAME "Vantac 2400 RX"
 #endif
 
+#define RADIO_SX1280
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5
@@ -17,5 +19,3 @@
 
 // Output Power
 #define POWER_OUTPUT_FIXED      1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
-
-#define Regulatory_Domain_ISM_2400 1

@@ -2,6 +2,7 @@
 #define DEVICE_NAME "Namimno Flash"
 #endif
 
+#define RADIO_SX1280
 #define USE_TX_BACKPACK
 
 // GPIO pin definitions
@@ -40,5 +41,3 @@
 #define MinPower PWR_25mW
 #define MaxPower PWR_1000mW
 #define POWER_OUTPUT_VALUES {-18,-15,-12,-8,-5,3}
-
-#define Regulatory_Domain_ISM_2400 1

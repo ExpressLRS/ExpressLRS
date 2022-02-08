@@ -95,7 +95,7 @@ def regulatory_domain_to_env():
     regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4")]
     retVal = "UNK"
     if ("_2400" in target_name or \
-        '-DRADIO_2400=1' in build_flags) and \
+        '-DRADIO_SX1280=1' in build_flags) and \
         '-DRegulatory_Domain_EU_CE_2400' not in build_flags:
         retVal = "ISM2G4"
     else:
@@ -124,11 +124,11 @@ build_flags.append("-DLATEST_VERSION=" + get_ver_and_reg()) # version and domain
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-if '-DRADIO_900=1' in build_flags:
+if '-DRADIO_SX127X=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
         fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
-        print_error('Regulatory_Domain 2400 not compatible with RADIO_900')
+        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X')
 
     # require a domain be set for 900
     if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):

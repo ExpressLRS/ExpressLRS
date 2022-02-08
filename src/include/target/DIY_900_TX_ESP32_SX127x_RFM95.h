@@ -3,6 +3,8 @@
 #define DEVICE_NAME "DIY900 RFM95"
 #endif
 
+#define RADIO_SX127X
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS 5
 #define GPIO_PIN_DIO0 26

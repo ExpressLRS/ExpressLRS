@@ -12,6 +12,8 @@
 #include <math.h>
 #include <sys/time.h>
 
+#define RADIO_SX1280 1
+
 typedef uint8_t byte;
 
 #define HEX 16

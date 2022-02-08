@@ -12,6 +12,7 @@
     #endif
 #endif
 
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions
@@ -53,5 +54,3 @@
         #define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
     #endif
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

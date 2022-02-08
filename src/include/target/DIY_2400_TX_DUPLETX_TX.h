@@ -3,8 +3,9 @@
 #endif
 
 // Any device features
-#define USE_TX_BACKPACK
+#define RADIO_SX1280
 #define USE_SX1280_DCDC
+#define USE_TX_BACKPACK
 #define USE_SKY85321
 #define SKY85321_PDET_SLOPE     0.035
 #define SKY85321_PDET_INTERCEPT 2.4
@@ -35,5 +36,3 @@
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
 #define POWER_OUTPUT_VALUES {-17,-13,-9,-6,-2}
-
-#define Regulatory_Domain_ISM_2400 1
