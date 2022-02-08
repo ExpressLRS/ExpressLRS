@@ -5,10 +5,9 @@ import io
 import tempfile
 import filecmp
 import shutil
-import elrs_helpers
-
 import gzip
-from minify import (html_minifier, rcssmin, rjsmin)
+from external.minify import (html_minifier, rcssmin, rjsmin)
+
 
 def get_version(env):
     return '%s (%s) %s' % (env.get('GIT_VERSION'), env.get('GIT_SHA'), env.get('REG_DOMAIN'))

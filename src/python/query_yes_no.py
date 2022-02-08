@@ -1,5 +1,6 @@
 import sys
-from inputimeout import inputimeout, TimeoutOccurred
+from external.inputimeout import inputimeout, TimeoutOccurred
+
 
 def query_yes_no(question='') -> bool: #https://code.activestate.com/recipes/577058/
     """Ask a yes/no question via raw_input() and return their answer.

@@ -60,7 +60,7 @@ def parse(melodyOrRTTTL):
 		return parseMelody(defineValue[0].strip(), int(defineValue[1]), transposeBySemitones)
 	# Else assume RTTL
 	else:
-		from rtttl import RTTTL
+		from external.rtttl import RTTTL
 		retVal = ""
 		tune = RTTTL(melodyOrRTTTL)
 		for freq, msec in tune.notes():
