@@ -7,73 +7,43 @@
 class SX1280Driver
 {
 public:
+    static SX1280Driver *instance;
+
     ///////Callback Function Pointers/////
-    static void ICACHE_RAM_ATTR nullCallback(void);
-
-    void (*RXdoneCallback)() = &nullCallback; //function pointer for callback
-    void (*TXdoneCallback)() = &nullCallback; //function pointer for callback
-
-    static void (*TXtimeout)(); //function pointer for callback
-    static void (*RXtimeout)(); //function pointer for callback
+    void (*RXdoneCallback)(); //function pointer for callback
+    void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////
     #define TXRXBuffSize 16
-    volatile uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile uint8_t RXdataBuffer[TXRXBuffSize];
+    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
+    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
-    uint8_t PayloadLength = 8; // Dummy default value which is overwritten during setup.
-
-    static uint8_t _syncWord;
-
-    SX1280_RadioLoRaBandwidths_t currBW = SX1280_LORA_BW_0800;
-    SX1280_RadioLoRaSpreadingFactors_t currSF = SX1280_LORA_SF6;
-    SX1280_RadioLoRaCodingRates_t currCR = SX1280_LORA_CR_4_7;
-    uint32_t currFreq = 2400000000;
-    SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
-    bool IQinverted = false;
     uint16_t timeout = 0xFFFF;
 
-    // static uint8_t currPWR;
-    // static uint8_t maxPWR;
-
+    uint32_t currFreq;
+    uint8_t PayloadLength;
+    bool IQinverted;
     ///////////////////////////////////
 
     /////////////Packet Stats//////////
-    int8_t LastPacketRSSI = 0;
-    int8_t LastPacketSNR = 0;
-    volatile uint8_t NonceTX = 0;
-    volatile uint8_t NonceRX = 0;
-    static uint32_t TotalTime;
-    static uint32_t TimeOnAir;
-    static uint32_t TXstartMicros;
-    static uint32_t TXspiTime;
-    static uint32_t HeadRoom;
-    static uint32_t TXdoneMicros;
-    /////////////////////////////////
-
-    //// Local Variables //// Copy of values for SPI speed optimisation
-    static uint8_t CURR_REG_PAYLOAD_LENGTH;
-    static uint8_t CURR_REG_DIO_MAPPING_1;
-    static uint8_t CURR_REG_FIFO_ADDR_PTR;
+    int8_t LastPacketRSSI;
+    int8_t LastPacketSNR;
 
     ////////////////Configuration Functions/////////////
     SX1280Driver();
-    static SX1280Driver *instance;
     bool Begin();
     void End();
-    void SetMode(SX1280_RadioOperatingModes_t OPmode);
     void SetTxIdleMode() { SetMode(SX1280_MODE_FS); }; // set Idle mode used when switching from RX to TX
-    void Config(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr, uint32_t freq, uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval);
-    void ConfigLoRaModParams(SX1280_RadioLoRaBandwidths_t bw, SX1280_RadioLoRaSpreadingFactors_t sf, SX1280_RadioLoRaCodingRates_t cr);
-    void SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc, SX1280_RadioLoRaIQModes_t InvertIQ);
-    void ICACHE_RAM_ATTR SetFrequencyHz(uint32_t freq);
-    void ICACHE_RAM_ATTR SetFrequencyReg(uint32_t freq);
-    void ICACHE_RAM_ATTR SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,
+                uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0);
+    void SetFrequencyHz(uint32_t freq);
+    void SetFrequencyReg(uint32_t freq);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
     void SetOutputPowerMax() { SetOutputPower(13); };
 
-    int32_t ICACHE_RAM_ATTR GetFrequencyError();
+    int32_t GetFrequencyError();
 
     void TXnb();
     void RXnb();
@@ -83,15 +53,38 @@ public:
 
     void GetStatus();
 
-    void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
-    
     bool GetFrequencyErrorbool();
     uint8_t GetRxBufferAddr();
     int8_t GetRssiInst();
     void GetLastPacketStats();
 
 private:
-    static void ICACHE_RAM_ATTR IsrCallback();
+    SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+
+    void SetMode(SX1280_RadioOperatingModes_t OPmode);
+    void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
+
+    // LoRa functions
+    void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr);
+    void SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
+                             uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc,
+                             uint8_t InvertIQ);
+    // FLRC functions
+    void ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt=SX1280_FLRC_BT_0_5);
+    void SetPacketParamsFLRC(uint8_t HeaderType,
+                             uint8_t crc,
+                             uint8_t PreambleLength,
+                             uint8_t PayloadLength,
+                             uint32_t syncWord,
+                             uint16_t crcSeed);
+
+    void SetDioIrqParams(uint16_t irqMask,
+                         uint16_t dio1Mask=SX1280_IRQ_RADIO_NONE,
+                         uint16_t dio2Mask=SX1280_IRQ_RADIO_NONE,
+                         uint16_t dio3Mask=SX1280_IRQ_RADIO_NONE);
+
+
+    static void IsrCallback();
     void RXnbISR(); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
 };

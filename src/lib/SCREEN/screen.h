@@ -2,8 +2,9 @@
 #pragma once
 
 #include "targets.h"
+#include "common.h"
 
-#define RATE_MAX_NUMBER 4
+#define RATE_MAX_NUMBER RATE_MAX
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2

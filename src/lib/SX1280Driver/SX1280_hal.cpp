@@ -48,7 +48,7 @@ void SX1280Hal::init()
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
 #if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-    DBGLN("Use PA ctrl pin: %d", GPIO_PIN_PA_ENABLE);
+    DBGLN("Use PA enable pin: %d", GPIO_PIN_PA_ENABLE);
     pinMode(GPIO_PIN_PA_ENABLE, OUTPUT);
     digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
 #endif
@@ -85,17 +85,13 @@ void SX1280Hal::init()
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
     SPI.setFrequency(10000000);
-#endif
-
-#ifdef PLATFORM_ESP8266
+#elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     SPI.setFrequency(10000000);
-#endif
-
-#ifdef PLATFORM_STM32
+#elif defined(PLATFORM_STM32)
     DBGLN("Config SPI");
     SPI.setMOSI(GPIO_PIN_MOSI);
     SPI.setMISO(GPIO_PIN_MISO);
