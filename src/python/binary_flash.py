@@ -58,6 +58,8 @@ def upload_wifi(args, upload_addr, isstm: bool):
     return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
 
 def upload_stm32_uart(args):
+    if args.port == None:
+        args.port = serials_find.get_serial_port()
     return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target)
 
 def upload_stm32_stlink(args):
@@ -119,9 +121,9 @@ def upload(target_rx, mcu_type, args):
             elif args.method == UploadMethod.wifi:
                 return upload_wifi(args, ['elrs_rx', 'elrs_rx.local'], False)
         elif mcu_type == MCUType.STM32.value:
-            if args.method == UploadMethod.betaflight or args.method == UploadMethod.uart:      # test
+            if args.method == UploadMethod.betaflight or args.method == UploadMethod.uart:
                 return upload_stm32_uart(args)
-            elif args.method == UploadMethod.stlink:      # test
+            elif args.method == UploadMethod.stlink:      # untested
                 return upload_stm32_stlink(args)
     else:
         if mcu_type == MCUType.ESP32.value:
@@ -132,9 +134,7 @@ def upload(target_rx, mcu_type, args):
             elif args.method == UploadMethod.wifi:
                 return upload_wifi(args, ['elrs_tx', 'elrs_tx.local'], False)
         elif mcu_type == MCUType.STM32.value:
-            if args.method == UploadMethod.uart:      # test
-                return upload_stm32_uart(args)
-            elif args.method == UploadMethod.stlink:      # test
+            if args.method == UploadMethod.stlink:      # test
                 return upload_stm32_stlink(args)
             elif args.method == UploadMethod.wifi:      # test
                 return upload_wifi(args, ['elrs_tx', 'elrs_tx.local'], True)
