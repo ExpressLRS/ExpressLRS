@@ -148,7 +148,7 @@ static void checkOutputPower()
     
         uint16_t VpdReading = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
 
-        Vpd = 0.8 * Vpd + 0.2 * VpdReading;
+        Vpd = (8 * Vpd + 2 * VpdReading) / 10; // IIR filter
 
         if (Vpd < (VpdSetPoint - VPD_BUFFER))
         {
