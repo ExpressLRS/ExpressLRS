@@ -35,11 +35,11 @@ void WS281BsetLED(uint32_t color)
     strip.Show();
 }
 
-void WS281BsetStripColour(RgbColor color)
+void WS281BsetStripColour(uint32_t color)
 {
     if (WS2812_PIXEL_COUNT > 1)
     {
-        strip.ClearTo(color, 1, WS2812_PIXEL_COUNT - 1);
+        strip.ClearTo(RgbColor(HtmlColor(color)), 1, WS2812_PIXEL_COUNT - 1);
         strip.Show();
     }
 }
