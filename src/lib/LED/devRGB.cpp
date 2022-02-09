@@ -14,9 +14,7 @@
 
 #if defined(PLATFORM_ESP32)
     #define METHOD Neo800KbpsMethod 
-#endif
-
-#if defined(PLATFORM_ESP8266)
+#elif defined(PLATFORM_ESP8266)
     #define METHOD NeoEsp8266Uart1800KbpsMethod 
 #endif
 
@@ -37,7 +35,7 @@ void WS281BsetLED(uint32_t color)
     strip.Show();
 }
 
-void setStripColour(RgbColor color)
+void WS281BsetStripColour(RgbColor color)
 {
     if (WS2812_PIXEL_COUNT > 1)
     {
