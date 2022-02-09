@@ -5,6 +5,7 @@
 #include "logging.h"
 
 extern CRSF crsf;
+extern void devicesTriggerEvent();
 
 static volatile bool UpdateParamReq = false;
 
@@ -277,6 +278,7 @@ bool luaHandleUpdateParameter()
       {
         // special case for elrs linkstat request
         DBGVLN("ELRS status request");
+        devicesTriggerEvent();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
