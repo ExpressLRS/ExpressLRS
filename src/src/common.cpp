@@ -1,6 +1,12 @@
 #include "common.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+// Sanity checks
+static_assert(RATE_DEFAULT < RATE_MAX, "Default rate must be below RATE_MAX");
+static_assert(RATE_BINDING < RATE_MAX, "Binding rate must be below RATE_MAX");
+
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) \
+    || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 
 #include "SX127xDriver.h"
 SX127xDriver DMA_ATTR Radio;
@@ -56,7 +62,7 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index)
     return &ExpressLRS_AirRateRFperf[index];
 }
 
-ICACHE_RAM_ATTR uint8_t enumRatetoIndex(expresslrs_RFrates_e rate)
+ICACHE_RAM_ATTR uint8_t enumRatetoIndex(uint8_t const rate)
 { // convert enum_rate to index
     expresslrs_mod_settings_s const * ModParams;
     for (uint8_t i = 0; i < RATE_MAX; i++)
@@ -98,10 +104,7 @@ uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Spec
 
 uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
 
-#define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
-#define MEDIAN_SIZE 20
-
-uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
+uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
 {
     switch (enumval)
     {
@@ -126,10 +129,11 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t enumval)
     }
 }
 
-uint16_t RateEnumToHz(uint8_t eRate)
+uint16_t RateEnumToHz(uint8_t const eRate)
 {
     switch(eRate)
     {
+    case RATE_1000HZ: return 1000;
     case RATE_500HZ: return 500;
     case RATE_250HZ: return 250;
     case RATE_200HZ: return 200;
