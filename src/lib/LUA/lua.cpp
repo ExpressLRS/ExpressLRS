@@ -193,7 +193,7 @@ void sendELRSstatus()
     "",                   //status2 = connected status
     "",                   //status1, reserved for future use
     "Model Mismatch",     //warning3, model mismatch
-    "",           //warning2, reserved for future use
+    "Aux1 is HIGH",           //warning2, reserved for future use
     "",           //warning1, reserved for future use
     "",  //critical warning3, reserved for future use
     "",  //critical warning2, reserved for future use
