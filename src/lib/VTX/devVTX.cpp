@@ -96,7 +96,6 @@ static int event()
 static int timeout()
 {
     // 0 = off in the lua Band field
-    // Do not send while armed
     if (config.GetVtxBand() == 0)
     {
         VtxSendState = VTXSS_CONFIRMED;
