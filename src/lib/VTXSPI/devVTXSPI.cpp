@@ -24,7 +24,7 @@
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
 #define MIN_PWM                                 1000 // Testing required.
-#define MAX_PWM                                 3500 // Absolute max is 4095.  But above 3500 does nothing.
+#define MAX_PWM                                 3600 // Absolute max is 4095.  But above 3500 does nothing.
 #define VPD_BUFFER                              5
 
 #define READ_BIT                                0x00
@@ -42,13 +42,19 @@ void VTxOutputMinimum(void);
 uint8_t vtxSPIBandChannelIdx = 255;
 uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0; 
+uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
 uint8_t RfAmpVrefState = 0;
 uint16_t vtxSPIPWM = MAX_PWM;
 uint16_t VpdSetPoint = 0;
 uint16_t Vpd = 0;
-constexpr uint16_t VpdSetPointArray[] = VPD_VALUES;
-constexpr uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdSetPointArray);
+
+#define VPD_SETPOINT_0_MW                       0
+#define VPD_SETPOINT_YOLO_MW                    1500
+uint16_t VpdSetPointArray25mW[] = VPD_VALUES_25MW;
+uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
+uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
+uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
 const uint16_t freqTable[48] = {
     5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A
@@ -133,6 +139,55 @@ void VTxOutputDecrease(void)
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
+uint16_t LinearInterpVpdSetPointArray(uint16_t VpdSetPointArray[])
+{
+    uint16_t newVpd = 0;
+    uint16_t f = freqTable[vtxSPIBandChannelIdxCurrent];
+
+    if (f <= VpdFreqArray[0])
+    {
+        newVpd = VpdSetPointArray[0];
+    }
+    else if (f >= VpdFreqArray[VpdSetPointCount - 1])
+    {
+        newVpd = VpdSetPointArray[VpdSetPointCount - 1];
+    }
+    else
+    {
+        for (uint8_t i = 0; i < (VpdSetPointCount - 1); i++)
+        {
+            if (f < VpdFreqArray[i + 1])
+            {
+                newVpd = VpdSetPointArray[i] + ((VpdSetPointArray[i + 1]-VpdSetPointArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (f - VpdFreqArray[i]);
+            }
+        }
+    }
+
+    return newVpd;
+}
+
+static void SetVpdSetPoint()
+{
+    switch (vtxSPIPowerIdx)
+    {
+    case 1: // 0 mW
+        VpdSetPoint = VPD_SETPOINT_0_MW;
+        return;
+
+    case 2: // 25 mW
+        VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray25mW);
+        return;
+
+    case 3: // 100 mW
+        VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray100mW);
+        return;
+
+    default: // YOLO mW
+        VpdSetPoint = VPD_SETPOINT_YOLO_MW;
+        return;
+    }
+}
+
 static void checkOutputPower()
 {
     if (vtxSPIPitmode)
@@ -143,9 +198,6 @@ static void checkOutputPower()
     {        
         RfAmpVrefOn();
 
-        if (vtxSPIPowerIdx > VpdSetPointCount) vtxSPIPowerIdx = VpdSetPointCount;
-        VpdSetPoint = VpdSetPointArray[vtxSPIPowerIdx - 1];
-    
         uint16_t VpdReading = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
 
         Vpd = (8 * Vpd + 2 * VpdReading) / 10; // IIR filter
@@ -218,6 +270,12 @@ static int timeout()
     }
     else
     {
+        if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
+        {
+            SetVpdSetPoint();
+            vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
+        }
+
         checkOutputPower();
 
         return VTX_POWER_INTERVAL_MS;

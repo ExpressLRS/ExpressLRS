@@ -17,4 +17,5 @@
 #define GPIO_PIN_RF_AMP_VREF    10
 #define GPIO_PIN_RF_AMP_PWM     0
 #define GPIO_PIN_RF_AMP_VPD     A0
-#define VPD_VALUES              {200, 350, 400, 430, 700} // {0, 10, 25, 100,  YOLO} mW.  To be calibrated per target.
+#define VPD_VALUES_25MW         {460, 470, 505, 505} // To be calibrated per target.
+#define VPD_VALUES_100MW        {830, 840, 890, 895} // To be calibrated per target.
