@@ -1,25 +1,13 @@
 import serial, time, sys
-import subprocess
 import argparse
 import serials_find
+import external.streamexpect as streamexpect
+
 
 def dbg_print(line=''):
     sys.stdout.write(line + '\n')
     sys.stdout.flush()
 
-try:
-    import streamexpect
-except ImportError:
-    sys.stdout.write("Installing pexpect")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "streamexpect"])
-    try:
-        import streamexpect
-    except ImportError:
-        env.Execute("$PYTHONEXE -m pip install streamexpect")
-        try:
-            import streamexpect
-        except ImportError:
-            streamexpect = None
 
 def etx_passthrough_init(port, requestedBaudrate):
     sys.stdout.flush()

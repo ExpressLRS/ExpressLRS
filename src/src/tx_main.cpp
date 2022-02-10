@@ -1,15 +1,7 @@
 #include "targets.h"
 #include "common.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-#include "SX127xDriver.h"
-SX127xDriver Radio;
-#elif defined(Regulatory_Domain_ISM_2400)
-#include "SX1280Driver.h"
 #include "LBT.h"
-SX1280Driver Radio;
-#endif
-
 #include "CRSF.h"
 #include "lua.h"
 
@@ -307,15 +299,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
-  const uint8_t SwitchEncMode = config.GetSwitchMode() & 0b11;
+  const uint8_t SwitchEncMode = config.GetSwitchMode();
   uint8_t Index;
   if (syncSpamCounter)
   {
-    Index = (config.GetRate() & 0b11);
+    Index = config.GetRate();
   }
   else
   {
-    Index = (ExpressLRS_currAirRate_Modparams->index & 0b11);
+    Index = ExpressLRS_currAirRate_Modparams->index;
   }
 
   if (syncSpamCounter)
@@ -323,16 +315,18 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   SyncPacketLastSent = millis();
 
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  expresslrs_tlm_ratio_e newRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
+  expresslrs_tlm_ratio_e newTlmRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
   // Delay going into disconnected state when the TLM ratio increases
-  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newRatio)
+  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newTlmRatio)
     LastTLMpacketRecvMillis = SyncPacketLastSent;
-  ExpressLRS_currAirRate_Modparams->TLMinterval = newRatio;
+  ExpressLRS_currAirRate_Modparams->TLMinterval = newTlmRatio;
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = (Index << 6) + (newRatio << 3) + (SwitchEncMode << 1);
+  Radio.TXdataBuffer[3] = ((Index & SYNC_PACKET_RATE_MASK) << SYNC_PACKET_RATE_OFFSET) +
+                          ((newTlmRatio & SYNC_PACKET_TLM_MASK) << SYNC_PACKET_TLM_OFFSET) +
+                          ((SwitchEncMode & SYNC_PACKET_SWITCH_MASK) << SYNC_PACKET_SWITCH_OFFSET);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];
   Radio.TXdataBuffer[6] = UID[5];
@@ -373,7 +367,8 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   DBGLN("set rate %u", index);
   hwTimer.updateInterval(ModParams->interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -401,7 +396,7 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
   {
     Radio.RXnb();
-    TelemetryRcvPhase = ttrpInReceiveMode;
+    TelemetryRcvPhase = ttrpPreReceiveGap;
   }
 }
 
@@ -504,9 +499,9 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 
   // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
   // Skip transmitting on this slot
-  if (TelemetryRcvPhase == ttrpInReceiveMode)
+  if (TelemetryRcvPhase == ttrpPreReceiveGap)
   {
-    TelemetryRcvPhase = ttrpTransmitting;
+    TelemetryRcvPhase = ttrpExpectingTelem;
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
     crsf.LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
@@ -516,6 +511,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     LQCalc.inc();
     return;
   }
+  TelemetryRcvPhase = ttrpTransmitting;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment(); // Get RSSI reading here, used also for next TX if in receiveMode.
@@ -599,7 +595,6 @@ static void ConfigChangeCommit()
   devicesTriggerEvent();
 }
 
-
 static void CheckConfigChangePending()
 {
   if (config.IsModified() || ModelUpdatePending)
@@ -628,13 +623,15 @@ static void CheckConfigChangePending()
     while (pauseCycles--)
       timerCallbackIdle();
 #endif
+    // Prevent any other RF SPI traffic during the commit from RX or scheduled TX
     hwTimer.callbackTock = &timerCallbackIdle;
-    // If telemetry expected in the next interval, the radio is in RX mode
+    // If telemetry expected in the next interval, the radio was in RX mode
     // and will skip sending the next packet when the timer resumes.
     // Return to normal send mode because if the skipped packet happened
     // to be on the last slot of the FHSS the skip will prevent FHSS
-    if (TelemetryRcvPhase == ttrpInReceiveMode)
+    if (TelemetryRcvPhase != ttrpTransmitting)
     {
+      Radio.SetTxIdleMode();
       TelemetryRcvPhase = ttrpTransmitting;
     }
     ConfigChangeCommit();
@@ -652,11 +649,11 @@ void ICACHE_RAM_ATTR TXdoneISR()
   HandleFHSS();
   HandlePrepareForTLM();
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if(TelemetryRcvPhase != ttrpInReceiveMode)
+  if (TelemetryRcvPhase != ttrpPreReceiveGap)
   {
     // Start RX for Listen Before Talk early because it takes about 100us
     // from RX enable to valid instant RSSI values are returned.
-    // If rx was already started by TLM prepare above, this call will let RX 
+    // If rx was already started by TLM prepare above, this call will let RX
     // continue as normal.
     BeginClearChannelAssessment();
   }
