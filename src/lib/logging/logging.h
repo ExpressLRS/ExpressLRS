@@ -16,7 +16,7 @@
 
 // DEBUG_LOG_VERBOSE and DEBUG_RX_SCOREBOARD implies DEBUG_LOG
 #if !defined(DEBUG_LOG)
-  #if defined(DEBUG_LOG_VERBOSE) || defined(DEBUG_RX_SCOREBOARD)
+  #if defined(DEBUG_LOG_VERBOSE) || (defined(DEBUG_RX_SCOREBOARD) && TARGET_RX)
     #define DEBUG_LOG
   #endif
 #endif

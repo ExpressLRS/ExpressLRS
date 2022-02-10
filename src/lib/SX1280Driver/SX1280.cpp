@@ -391,7 +391,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 
 uint8_t FIFOaddr = 0;
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb()
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
@@ -401,7 +401,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
         return;
     }
     hal.TXenable();                      // do first to allow PA stablise
-    hal.WriteBuffer(0x00, TXdataBuffer, PayloadLength); //todo fix offset to equal fifo addr
+    hal.WriteBuffer(0x00, data, size);   //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX);
 #ifdef DEBUG_SX1280_OTA_TIMING
     beginTX = micros();

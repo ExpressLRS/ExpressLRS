@@ -67,7 +67,8 @@ void test_encodingHybrid8(bool highResChannel)
     constexpr uint8_t N_SWITCHES = 8;
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t expected;
-    uint8_t TXdataBuffer[8];
+    uint8_t TXdataBuffer[8] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
 
     // Define the input data
     // 4 channels of analog data
@@ -91,7 +92,7 @@ void test_encodingHybrid8(bool highResChannel)
 
     // encode it
     OtaSetSwitchMode(smHybrid);
-    PackChannelData(TXdataBuffer, &crsf, false, 0, 0);
+    PackChannelData(otaPktPtr, &crsf, false, 0, 0);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -145,7 +146,8 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 {
     constexpr uint8_t N_SWITCHES = 8;
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t TXdataBuffer[8];
+    uint8_t TXdataBuffer[8] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     // uint8_t expected;
 
     // Define the input data
@@ -176,10 +178,10 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
 
     // use the encoding method to pack it into TXdataBuffer
     OtaSetSwitchMode(smHybrid);
-    PackChannelData(TXdataBuffer, &crsf, false, 0, 0);
+    PackChannelData(otaPktPtr, &crsf, false, 0, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData(TXdataBuffer, &crsf, 0, 0);
+    UnpackChannelData(otaPktPtr, &crsf, 0, 0);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
@@ -229,7 +231,8 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
     uint8_t expected;
-    uint8_t TXdataBuffer[8];
+    uint8_t TXdataBuffer[8] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
 
     // Define the input data
     // 4 channels of analog data
@@ -252,7 +255,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaSetSwitchMode(smHybridWide);
-    PackChannelData(TXdataBuffer, &crsf, nonce % 2, nonce, tlmDenom);
+    PackChannelData(otaPktPtr, &crsf, nonce % 2, nonce, tlmDenom);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -314,7 +317,8 @@ void test_encodingHybridWide_low()
 void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, uint16_t forceVal)
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t TXdataBuffer[8];
+    uint8_t TXdataBuffer[8] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     // uint8_t expected;
 
     // Define the input data
@@ -341,13 +345,13 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaSetSwitchMode(smHybridWide);
-    PackChannelData(TXdataBuffer, &crsf, nonce % 2, nonce, tlmDenom);
+    PackChannelData(otaPktPtr, &crsf, nonce % 2, nonce, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
     crsf.LinkStatistics.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
-    bool telemResult = UnpackChannelData(TXdataBuffer, &crsf, nonce, tlmDenom);
+    bool telemResult = UnpackChannelData(otaPktPtr, &crsf, nonce, tlmDenom);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits

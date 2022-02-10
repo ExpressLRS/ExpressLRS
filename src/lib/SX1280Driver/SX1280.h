@@ -15,7 +15,6 @@ public:
 
     ///////////Radio Variables////////
     #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
     volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     uint16_t timeout = 0xFFFF;
@@ -45,7 +44,7 @@ public:
 
     int32_t GetFrequencyError();
 
-    void TXnb();
+    void TXnb(uint8_t * data, uint8_t size);
     void RXnb();
 
     uint16_t GetIrqStatus();

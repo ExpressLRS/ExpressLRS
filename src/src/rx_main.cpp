@@ -281,9 +281,11 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
+    // ESP requires word aligned buffer
+    uint32_t __tx_buffer[(sizeof(OTA_Packet_s) + sizeof(uint32_t) - 1) / sizeof(uint32_t)] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s*)__tx_buffer;
     uint8_t *data;
-    uint8_t maxLength;
-    uint8_t packageIndex;
+    uint8_t maxLength, iter;
     uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
 
     if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
@@ -296,19 +298,21 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 #endif
 
     alreadyTLMresp = true;
-    Radio.TXdataBuffer[0] = TLM_PACKET;
+    otaPktPtr->type = TLM_PACKET;
 
     if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
     {
-        Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
+        otaPktPtr->tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
         // The value in linkstatistics is "positivized" (inverted polarity)
         // and must be inverted on the TX side. Positive values are used
         // so save a bit to encode which antenna is in use
-        Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
-        Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
-        Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
-        Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
-        Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+        otaPktPtr->tlm_dl.ul_link_stats.uplink_RSSI_1 = crsf.LinkStatistics.uplink_RSSI_1;
+        otaPktPtr->tlm_dl.ul_link_stats.uplink_RSSI_2 = crsf.LinkStatistics.uplink_RSSI_2;
+        otaPktPtr->tlm_dl.ul_link_stats.antenna = antenna;
+        otaPktPtr->tlm_dl.ul_link_stats.modelMatch = connectionHasModelMatch;
+        otaPktPtr->tlm_dl.ul_link_stats.SNR = crsf.LinkStatistics.uplink_SNR;
+        otaPktPtr->tlm_dl.ul_link_stats.lq = crsf.LinkStatistics.uplink_Link_quality;
+        otaPktPtr->tlm_dl.ul_link_stats.mspConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
         NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
         // Start the count at 1 because the next will be DATA and doing +1 before checking
@@ -326,24 +330,23 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-        Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
-        Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
-        Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
-        Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-        Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-        Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+        TelemetrySender.GetCurrentPayload(&iter, &maxLength, &data);
+        otaPktPtr->tlm_dl.packageIndex = iter;
+        otaPktPtr->tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+        for (iter = 0; iter < sizeof(otaPktPtr->tlm_dl.payload) && iter < maxLength; iter++)
+            otaPktPtr->tlm_dl.payload[iter] = *data++;
     }
 
-    uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-    Radio.TXdataBuffer[0] |= (crc >> 6) & 0b11111100;
-    Radio.TXdataBuffer[7] = crc & 0xFF;
+    uint16_t crc = ota_crc.calc(
+        (uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
+    otaPktPtr->crcHigh = (crc >> 8);
+    otaPktPtr->crcLow  = crc;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     if (ChannelIsClear())
 #endif
     {
-        Radio.TXnb();
+        Radio.TXnb((uint8_t*)otaPktPtr, sizeof(*otaPktPtr));
     }
     return true;
 }
@@ -617,14 +620,14 @@ void GotConnection(unsigned long now)
     DBGLN("got conn");
 }
 
-static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
+static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPktPtr)
 {
     // Must be fully connected to process RC packets, prevents processing RC
     // during sync, where packets can be received before connection
     if (connectionState != connected)
         return;
 
-    bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
+    bool telemetryConfirmValue = UnpackChannelData(otaPktPtr, &crsf,
         NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
@@ -681,13 +684,13 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     MspReceiver.Unlock();
 }
 
-static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
+static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPktPtr)
 {
     // Always examine MSP packets for bind information if in bind mode
     // [1] is the package index, first packet of the MSP
-    if (InBindingMode && Radio.RXdataBuffer[1] == 1 && Radio.RXdataBuffer[2] == MSP_ELRS_BIND)
+    if (InBindingMode && otaPktPtr->msp_ul.packageIndex == 1 && otaPktPtr->msp_ul.payload[0] == MSP_ELRS_BIND)
     {
-        OnELRSBindMSP((uint8_t *)&Radio.RXdataBuffer[2]);
+        OnELRSBindMSP((uint8_t *)&otaPktPtr->msp_ul.payload[1]);
         return;
     }
 
@@ -697,7 +700,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
         return;
 
     bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
-    MspReceiver.ReceiveData(Radio.RXdataBuffer[1], Radio.RXdataBuffer + 2);
+    MspReceiver.ReceiveData(otaPktPtr->msp_ul.packageIndex, otaPktPtr->msp_ul.payload);
     if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
     {
         NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
@@ -708,16 +711,16 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
     }
 }
 
-static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
+static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Packet_s const * const otaPktPtr)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
-    if (Radio.RXdataBuffer[4] != UID[3] || Radio.RXdataBuffer[5] != UID[4])
+    if (otaPktPtr->sync.UID3 != UID[3] || otaPktPtr->sync.UID4 != UID[4])
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
     // Only require the first 18 bits of the UID to match to establish a connection
     // but the last 6 bits must modelmatch before sending any data to the FC
-    if ((Radio.RXdataBuffer[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
+    if ((otaPktPtr->sync.UID5 & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
         return false;
 
     LastSyncPacket = now;
@@ -726,31 +729,30 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 #endif
 
     // Will change the packet air rate in loop() if this changes
-    ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] >> SYNC_PACKET_RATE_OFFSET) & SYNC_PACKET_RATE_MASK;
+    ExpressLRS_nextAirRateIndex = otaPktPtr->sync.rateIndex;
     // Update switch mode encoding immediately
-    OtaSetSwitchMode((OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK));
+    OtaSetSwitchMode((OtaSwitchMode_e)otaPktPtr->sync.switchEncMode);
     // Update TLM ratio
-    expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_TLM_OFFSET) & SYNC_PACKET_TLM_MASK);
-    if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLMrateIn)
+    if (ExpressLRS_currAirRate_Modparams->TLMinterval != otaPktPtr->sync.newTlmRatio)
     {
-        DBGLN("New TLMrate: %d", TLMrateIn);
-        ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
+        DBGLN("New TLMrate: %d", otaPktPtr->sync.newTlmRatio);
+        ExpressLRS_currAirRate_Modparams->TLMinterval = otaPktPtr->sync.newTlmRatio;
         telemBurstValid = false;
     }
 
     // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
     uint8_t modelXor = (~config.GetModelId()) & MODELMATCH_MASK;
-    bool modelMatched = Radio.RXdataBuffer[6] == (UID[5] ^ modelXor);
-    DBGVLN("MM %u=%u %d", Radio.RXdataBuffer[6], UID[5], modelMatched);
+    bool modelMatched = otaPktPtr->sync.UID5 == (UID[5] ^ modelXor);
+    DBGVLN("MM %u=%u %d", otaPktPtr->sync.UID5, UID[5], modelMatched);
 
     if (connectionState == disconnected
-        || NonceRX != Radio.RXdataBuffer[2]
-        || FHSSgetCurrIndex() != Radio.RXdataBuffer[1]
+        || NonceRX != otaPktPtr->sync.nonce
+        || FHSSgetCurrIndex() != otaPktPtr->sync.fhssIndex
         || connectionHasModelMatch != modelMatched)
     {
-        //DBGLN("\r\n%ux%ux%u", NonceRX, Radio.RXdataBuffer[2], Radio.RXdataBuffer[1]);
-        FHSSsetCurrIndex(Radio.RXdataBuffer[1]);
-        NonceRX = Radio.RXdataBuffer[2];
+        //DBGLN("\r\n%ux%ux%u", NonceRX, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
+        FHSSsetCurrIndex(otaPktPtr->sync.fhssIndex);
+        NonceRX = otaPktPtr->sync.nonce;
         TentativeConnection(now);
         // connectionHasModelMatch must come after TentativeConnection, which resets it
         connectionHasModelMatch = modelMatched;
@@ -763,22 +765,18 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
 void ICACHE_RAM_ATTR ProcessRFPacket()
 {
     beginProcessing = micros();
-
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint16_t inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s*)&Radio.RXdataBuffer[0];
+    uint16_t const inCRC = ((uint16_t)otaPktPtr->crcHigh << 8) + otaPktPtr->crcLow;
 
     // For smHybrid the CRC only has the packet type in byte 0
     // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
-    if (type != RC_DATA_PACKET || OtaSwitchModeCurrent != smHybridWide)
+    if (otaPktPtr->type == RC_DATA_PACKET && OtaSwitchModeCurrent == smHybridWide)
     {
-        Radio.RXdataBuffer[0] = type;
+        otaPktPtr->crcHigh = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
     }
-    else
-    {
-        uint8_t NonceFHSSresult = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-        Radio.RXdataBuffer[0] = type | (NonceFHSSresult << 2);
-    }
-    uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+    otaPktPtr->crcHigh = 0; // Clear received CRC
+    uint16_t const calculatedCRC =
+        ota_crc.calc((uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
 
     if (inCRC != calculatedCRC)
     {
@@ -800,19 +798,19 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     LastValidPacket = now;
 
-    switch (type)
+    switch (otaPktPtr->type)
     {
     case RC_DATA_PACKET: //Standard RC Data Packet
-        ProcessRfPacket_RC();
+        ProcessRfPacket_RC(otaPktPtr);
         break;
     case MSP_DATA_PACKET:
-        ProcessRfPacket_MSP();
+        ProcessRfPacket_MSP(otaPktPtr);
         break;
     case TLM_PACKET: //telemetry packet from master
         // not implimented yet
         break;
     case SYNC_PACKET: //sync packet from master
-        doStartTimer = ProcessRfPacket_SYNC(now) && !InBindingMode;
+        doStartTimer = ProcessRfPacket_SYNC(now, otaPktPtr) && !InBindingMode;
         break;
     default: // code to be executed if n doesn't match any cases
         break;
@@ -828,7 +826,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
 
     doneProcessing = micros();
 #if defined(DEBUG_RX_SCOREBOARD)
-    if (type != SYNC_PACKET) DBGW(connectionHasModelMatch ? 'R' : 'r');
+    if (otaPktPtr->type != SYNC_PACKET) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately

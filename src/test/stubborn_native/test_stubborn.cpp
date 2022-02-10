@@ -118,7 +118,7 @@ void test_stubborn_link_sends_data_larger_frame_size(void)
 
 void test_stubborn_link_receives_data(void)
 {
-    volatile uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
     uint8_t buffer[100];
     receiver.ResetState();
     receiver.SetDataToReceive(sizeof(buffer), buffer, 1);
@@ -139,7 +139,7 @@ void test_stubborn_link_receives_data(void)
 
 void test_stubborn_link_receives_data_with_multiple_bytes(void)
 {
-    volatile uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109,0,0,0};
+    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109,0,0,0};
     uint8_t buffer[100];
     receiver.ResetState();
     receiver.SetDataToReceive(sizeof(buffer), buffer, 5);

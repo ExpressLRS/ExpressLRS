@@ -138,14 +138,6 @@ extern SX1280Driver Radio;
 #endif
 
 
-#define SYNC_PACKET_SWITCH_OFFSET   1   // Switch encoding mode
-#define SYNC_PACKET_TLM_OFFSET      3   // Telemetry ratio
-#define SYNC_PACKET_RATE_OFFSET     6   // Rate index
-#define SYNC_PACKET_SWITCH_MASK     0b11
-#define SYNC_PACKET_TLM_MASK        0b111
-#define SYNC_PACKET_RATE_MASK       0b11
-
-
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 

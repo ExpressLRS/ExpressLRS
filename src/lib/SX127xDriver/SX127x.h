@@ -19,7 +19,6 @@ public:
 
     ///////////Radio Variables////////
     #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
     volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     bool headerExplMode = false;
@@ -82,7 +81,7 @@ public:
     int8_t GetCurrRSSI();
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb();
+    void TXnb(uint8_t * data, uint8_t size);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 

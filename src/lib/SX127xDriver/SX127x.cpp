@@ -300,7 +300,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb()
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -311,7 +311,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 
   hal.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegisterFIFO(TXdataBuffer, PayloadLength);
+  hal.writeRegisterFIFO(data, size);
 
   SetMode(SX127x_OPMODE_TX);
 }

@@ -32,7 +32,7 @@ void StubbornReceiver::SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceiv
     this->bytesPerCall = bytesPerCall;
 }
 
-void StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* receiveData)
+void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData)
 {
     if  (packageIndex == 0 && currentPackage > 1)
     {

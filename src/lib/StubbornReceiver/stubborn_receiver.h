@@ -8,7 +8,7 @@ public:
     StubbornReceiver(uint8_t maxPackageIndex);
     void ResetState();
     void SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive, uint8_t bytesPerCall);
-    void ReceiveData(uint8_t packageIndex, volatile uint8_t* data);
+    void ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData);
     bool HasFinishedData();
     void Unlock();
     bool GetCurrentConfirm();

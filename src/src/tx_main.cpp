@@ -246,13 +246,12 @@ void DynamicPower_Update()
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()
 {
-  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
+  OTA_Packet_s * const otaPktPtr = (OTA_Packet_s*)&Radio.RXdataBuffer[0];
+  uint16_t const inCRC = ((uint16_t)otaPktPtr->crcHigh << 8) + otaPktPtr->crcLow;
 
-  Radio.RXdataBuffer[0] &= 0b11;
-  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
-
-  uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-  uint8_t TLMheader = Radio.RXdataBuffer[1];
+  otaPktPtr->crcHigh = 0;
+  uint16_t const calculatedCRC =
+      ota_crc.calc((uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
 
   if ((inCRC != calculatedCRC))
   {
@@ -260,80 +259,74 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
     return;
   }
 
-  if (type != TLM_PACKET)
+  if (otaPktPtr->type != TLM_PACKET)
   {
-    DBGLN("TLM type error %d", type);
+    DBGLN("TLM type error %d", otaPktPtr->type);
     return;
   }
 
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
 
-    switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
-    {
-        case ELRS_TELEMETRY_TYPE_LINK:
-            // Antenna is the high bit in the RSSI_1 value
-            // RSSI received is signed, inverted polarity (positive value = -dBm)
-            // OpenTX's value is signed and will display +dBm and -dBm properly
-            crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
-            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3] & 0x7f);
-            crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-            crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
-            crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
-            connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
-            // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
-            // -- rf_mode is updated when we change rates
-            // -- downlink_Link_quality is updated before the LQ period is incremented
-            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
+  switch (otaPktPtr->tlm_dl.type)
+  {
+    case ELRS_TELEMETRY_TYPE_LINK:
+      // Antenna is the high bit in the RSSI_1 value
+      // RSSI received is signed, inverted polarity (positive value = -dBm)
+      // OpenTX's value is signed and will display +dBm and -dBm properly
+      crsf.LinkStatistics.uplink_RSSI_1 = -(otaPktPtr->tlm_dl.ul_link_stats.uplink_RSSI_1);
+      crsf.LinkStatistics.uplink_RSSI_2 = -(otaPktPtr->tlm_dl.ul_link_stats.uplink_RSSI_2);
+      crsf.LinkStatistics.uplink_SNR = otaPktPtr->tlm_dl.ul_link_stats.SNR;
+      crsf.LinkStatistics.uplink_Link_quality = otaPktPtr->tlm_dl.ul_link_stats.lq;
+      crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
+      crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+      crsf.LinkStatistics.active_antenna = otaPktPtr->tlm_dl.ul_link_stats.antenna;
+      connectionHasModelMatch = otaPktPtr->tlm_dl.ul_link_stats.modelMatch;
+      // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
+      // -- rf_mode is updated when we change rates
+      // -- downlink_Link_quality is updated before the LQ period is incremented
+      MspSender.ConfirmCurrentPayload(otaPktPtr->tlm_dl.ul_link_stats.mspConfirm);
 
-            dynamic_power_updated = true;
-            break;
+      dynamic_power_updated = true;
+      break;
 
-        case ELRS_TELEMETRY_TYPE_DATA:
-            TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
-            break;
-    }
+    case ELRS_TELEMETRY_TYPE_DATA:
+      TelemetryReceiver.ReceiveData(otaPktPtr->tlm_dl.packageIndex, otaPktPtr->tlm_dl.payload);
+      break;
+  }
 }
 
-void ICACHE_RAM_ATTR GenerateSyncPacketData()
+void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Packet_s * const syncPktPtr)
 {
   const uint8_t SwitchEncMode = config.GetSwitchMode();
-  uint8_t Index;
-  if (syncSpamCounter)
-  {
-    Index = config.GetRate();
-  }
-  else
-  {
-    Index = ExpressLRS_currAirRate_Modparams->index;
-  }
+  const uint8_t Index = (syncSpamCounter) ? config.GetRate() : ExpressLRS_currAirRate_Modparams->index;
 
   if (syncSpamCounter)
     --syncSpamCounter;
   SyncPacketLastSent = millis();
 
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  expresslrs_tlm_ratio_e newTlmRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
+  const expresslrs_tlm_ratio_e newTlmRatio =
+    (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
   // Delay going into disconnected state when the TLM ratio increases
   if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newTlmRatio)
     LastTLMpacketRecvMillis = SyncPacketLastSent;
   ExpressLRS_currAirRate_Modparams->TLMinterval = newTlmRatio;
 
-  Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
-  Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
-  Radio.TXdataBuffer[2] = NonceTX;
-  Radio.TXdataBuffer[3] = ((Index & SYNC_PACKET_RATE_MASK) << SYNC_PACKET_RATE_OFFSET) +
-                          ((newTlmRatio & SYNC_PACKET_TLM_MASK) << SYNC_PACKET_TLM_OFFSET) +
-                          ((SwitchEncMode & SYNC_PACKET_SWITCH_MASK) << SYNC_PACKET_SWITCH_OFFSET);
-  Radio.TXdataBuffer[4] = UID[3];
-  Radio.TXdataBuffer[5] = UID[4];
-  Radio.TXdataBuffer[6] = UID[5];
+  syncPktPtr->type = SYNC_PACKET;
+  syncPktPtr->sync.fhssIndex = FHSSgetCurrIndex();
+  syncPktPtr->sync.nonce = NonceTX;
+  syncPktPtr->sync.rateIndex = Index;
+  syncPktPtr->sync.newTlmRatio = newTlmRatio;
+  syncPktPtr->sync.switchEncMode = SwitchEncMode;
+  syncPktPtr->sync.UID3 = UID[3];
+  syncPktPtr->sync.UID4 = UID[4];
+  syncPktPtr->sync.UID5 = UID[5];
+
   // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
   if (!InBindingMode && config.GetModelMatch())
   {
-    Radio.TXdataBuffer[6] ^= (~crsf.getModelID()) & MODELMATCH_MASK;
+    syncPktPtr->sync.UID5 ^= (~crsf.getModelID()) & MODELMATCH_MASK;
   }
 }
 
@@ -402,7 +395,10 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
-  uint32_t now = millis();
+  uint32_t const now = millis();
+  // ESP requires word aligned buffer
+  uint32_t __tx_buffer[(sizeof(OTA_Packet_s) + sizeof(uint32_t) - 1) / sizeof(uint32_t)] = {0};
+  OTA_Packet_s * const otaPktPtr = (OTA_Packet_s*)__tx_buffer;
   static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
   uint32_t SyncInterval = 250;
@@ -418,31 +414,28 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   // Sync spam only happens on slot 1 and 2 and can't be disabled
   if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
-    GenerateSyncPacketData();
+    GenerateSyncPacketData(otaPktPtr);
     syncSlot = 0; // reset the sync slot in case the new rate (after the syncspam) has a lower FHSShopInterval
   }
   // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
   // But only on the sync FHSS channel and with a timed delay between them
   else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
   {
-    GenerateSyncPacketData();
+    GenerateSyncPacketData(otaPktPtr);
     syncSlot = (syncSlot + 1) % (ExpressLRS_currAirRate_Modparams->FHSShopInterval * 2);
   }
   else
   {
     if (NextPacketIsMspData && MspSender.IsActive())
     {
-      uint8_t *data;
-      uint8_t maxLength;
-      uint8_t packageIndex;
-      MspSender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-      Radio.TXdataBuffer[0] = MSP_DATA_PACKET & 0b11;
-      Radio.TXdataBuffer[1] = packageIndex;
-      Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
-      Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
-      Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-      Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-      Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+      uint8_t *data = NULL;
+      uint8_t maxLength, iter;
+      MspSender.GetCurrentPayload(&otaPktPtr->msp_ul.packageIndex, &maxLength, &data);
+
+      otaPktPtr->type = MSP_DATA_PACKET;
+      for (iter = 0; iter < sizeof(otaPktPtr->msp_ul.payload) && iter < maxLength; iter++)
+        otaPktPtr->msp_ul.payload[iter] = *data++;
+
       // send channel data next so the channel messages also get sent during msp transmissions
       NextPacketIsMspData = false;
       // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
@@ -456,25 +449,26 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
-        NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+      PackChannelData(otaPktPtr, &crsf, TelemetryReceiver.GetCurrentConfirm(),
+                      NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
     }
   }
 
   // artificially inject the low bits of the nonce on data packets, this will be overwritten with the CRC after it's calculated
-  if (Radio.TXdataBuffer[0] == RC_DATA_PACKET && OtaSwitchModeCurrent == smHybridWide)
-    Radio.TXdataBuffer[0] |= NonceFHSSresult << 2;
+  if (otaPktPtr->type == RC_DATA_PACKET && OtaSwitchModeCurrent == smHybridWide)
+    otaPktPtr->crcHigh = NonceFHSSresult;
 
   ///// Next, Calculate the CRC and put it into the buffer /////
-  uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
-  Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
-  Radio.TXdataBuffer[7] = crc & 0xFF;
+  uint16_t const crc = ota_crc.calc(
+    (uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
+  otaPktPtr->crcHigh = (crc >> 8);
+  otaPktPtr->crcLow  = crc;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (ChannelIsClear())
 #endif
   {
-    Radio.TXnb();
+    Radio.TXnb((uint8_t*)otaPktPtr, sizeof(*otaPktPtr));
   }
 }
 
