@@ -6,6 +6,10 @@ import bootloader
 from query_yes_no import query_yes_no
 from elrs_helpers import ElrsUploadResult
 
+
+SCRIPT_DEBUG = False
+
+
 class PassthroughEnabled(Exception):
     pass
 
@@ -23,7 +27,7 @@ def _validate_serialrx(rl, config, expected):
         expected = [expected]
     rl.set_delimiters(["# "])
     rl.clear()
-    rl.write_str("get serialrx_%s" % config)
+    rl.write_str("get %s" % config)
     line = rl.read_line(1.).strip()
     for key in expected:
         key = " = %s" % key
@@ -54,19 +58,20 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?, If this fails reboot FC and try again!")
 
     serial_check = []
-    if not _validate_serialrx(rl, "provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
-        serial_check.append("serialrx_provider != CRSF")
-    if not _validate_serialrx(rl, "inverted", "OFF"):
-        serial_check.append("serialrx_inverted != OFF")
-    if not _validate_serialrx(rl, "halfduplex", ["OFF", "AUTO"]):
-        serial_check.append("serialrx_halfduplex != OFF/AUTO")
+    if not _validate_serialrx(rl, "serialrx_provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
+        serial_check.append("Serial Receiver Protocol is not set to CRSF! Hint: set serialrx_provider = CRSF")
+    if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
+        serial_check.append("Serial Receiver UART is inverted! Hint: set serialrx_inverted = OFF")
+    if not _validate_serialrx(rl, "serialrx_halfduplex", ["OFF", "AUTO"]):
+        serial_check.append("Serial Receiver UART is not in full duplex! Hint: set serialrx_halfduplex = OFF")
+    if _validate_serialrx(rl, "rx_spi_protocol", "EXPRESSLRS" ) and serial_check:
+        serial_check = [ "ExpressLRS SPI RX detected\n\nUpdate via betaflight to flash your RX\nhttps://www.expresslrs.org/2.0/hardware/spi-receivers/" ]
 
     if serial_check:
         error = "\n\n [ERROR] Invalid serial RX configuration detected:\n"
         for err in serial_check:
             error += "    !!! %s !!!\n" % err
         error += "\n    Please change the configuration and try again!\n"
-        dbg_print(error)
         raise PassthroughFailed(error)
 
     SerialRXindex = ""
@@ -84,13 +89,13 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
             break
 
         if line.startswith("serial"):
-            if debug:
+            if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
             config = re.search('serial ([0-9]+) ([0-9]+) ', line)
             if config and config.group(2) == "64":
                 dbg_print("    ** Serial RX config detected: '%s'" % line)
                 SerialRXindex = config.group(1)
-                if not debug:
+                if not SCRIPT_DEBUG:
                     break
 
     if not SerialRXindex:

@@ -4,12 +4,6 @@
 #include "DAC.h"
 #include "device.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-#include "SX127xDriver.h"
-#elif Regulatory_Domain_ISM_2400
-#include "SX1280Driver.h"
-#endif
-
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
 #include <nvs.h>
@@ -31,15 +25,12 @@
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    #undef MinPower
-    #define MinPower PWR_10mW
-
     #undef MaxPower
-    #define MaxPower PWR_10mW
+    #define MaxPower PWR_100mW
 
     #if defined(HighPower)
         #undef HighPower
-        #define HighPower PWR_10mW
+        #define HighPower MaxPower
     #endif
 #endif
 
@@ -73,7 +64,7 @@ public:
     static void setPower(PowerLevels_e Power);
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
-    static PowerLevels_e currPower();
+    static PowerLevels_e currPower() { return CurrentPower; }
     static void incSX1280Ouput();
     static void decSX1280Ouput();
     static int8_t currentSX1280Ouput();

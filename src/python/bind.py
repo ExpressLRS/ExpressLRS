@@ -5,7 +5,6 @@ import SerialHelper
 import bootloader
 from BFinitPassthrough import *
 
-SCRIPT_DEBUG = 0
 
 def send_bind_command(args):
     dbg_print("======== SEND BIND COMMAND ========")

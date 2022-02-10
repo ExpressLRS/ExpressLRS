@@ -1,5 +1,4 @@
 import subprocess, os
-import opentx
 from elrs_helpers import ElrsUploadResult
 
 

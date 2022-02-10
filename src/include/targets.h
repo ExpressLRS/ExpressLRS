@@ -43,6 +43,10 @@
 #endif
 #endif
 
+#ifndef DMA_ATTR
+#define DMA_ATTR
+#endif
+
 /* Set red led to default */
 #ifndef GPIO_PIN_LED
 #ifdef GPIO_PIN_LED_RED
@@ -114,6 +118,10 @@
 #define GPIO_PIN_DEBUG_TX       1
 #endif
 #endif
+#endif
+
+#if defined(Regulatory_Domain_EU_CE_2400) && !defined(Regulatory_Domain_ISM_2400)
+#define Regulatory_Domain_ISM_2400
 #endif
 
 #if defined(Regulatory_Domain_ISM_2400)

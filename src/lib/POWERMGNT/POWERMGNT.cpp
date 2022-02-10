@@ -2,6 +2,7 @@
 #include "POWERMGNT.h"
 #include "DAC.h"
 #include "helpers.h"
+#include "common.h"
 
 /*
  * Moves the power management values and special cases out of the main code and into `targets.h`.
@@ -32,12 +33,6 @@
  * 13 on SX1280 (~12.5dBm) or 15 on SX127x (~17dBm)
  */
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-extern SX127xDriver Radio;
-#elif Regulatory_Domain_ISM_2400
-extern SX1280Driver Radio;
-#endif
-
 PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
@@ -67,11 +62,6 @@ PowerLevels_e POWERMGNT::decPower()
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower - 1));
     }
-    return CurrentPower;
-}
-
-PowerLevels_e POWERMGNT::currPower()
-{
     return CurrentPower;
 }
 
