@@ -8,6 +8,7 @@
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
+#define CONNECTION_MAX_NUMBER 2
 #define SMARTFAN_MAX_NUMBER 3
 
 #define VERSION_MAX_LENGTH  6
@@ -148,6 +149,7 @@ protected:
     static const char *power_string[POWER_MAX_NUMBER];
     static const char *ratio_string[RATIO_MAX_NUMBER];
     static const char *powersaving_string[POWERSAVING_MAX_NUMBER];
+    static const char *connection_string[CONNECTION_MAX_NUMBER];
     static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
     static const char *main_menu_line_1[];
     static const char *main_menu_line_2[];

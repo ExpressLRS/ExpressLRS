@@ -676,18 +676,13 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       connectionState = connected;
-      devicesTriggerEvent();
       crsf.ForwardDevicePings = true;
       DBGLN("got downlink conn");
     }
   }
   else
   {
-    if (connectionState != disconnected) 
-    {
-      connectionState = disconnected;
-      devicesTriggerEvent();
-    }
+    connectionState = disconnected;
     connectionHasModelMatch = true;
     crsf.ForwardDevicePings = false;
   }

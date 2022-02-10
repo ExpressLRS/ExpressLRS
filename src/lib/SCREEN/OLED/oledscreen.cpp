@@ -219,8 +219,8 @@ void OLEDScreen::displayMainScreen(){
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_15_mr);
-        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,15, rate_string[current_rate_index]);
+        u8g2.drawStr(70,15, ratio_string[current_ratio_index]);
         u8g2.drawStr(0,32, power.c_str());
         char buffer[7];
         strncpy(buffer, version, 6);
@@ -229,12 +229,9 @@ void OLEDScreen::displayMainScreen(){
     #else
         u8g2.setFont(u8g2_font_t0_15_mr);
         u8g2.drawStr(0,13, "ExpressLRS");
-        if(current_connection)
-            u8g2.drawStr(100,13, "[C]");
-        else
-            u8g2.drawStr(100,13, "[-]");
-        u8g2.drawStr(0,45, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,45, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(100,13, connection_string[current_connection?1:0]);
+        u8g2.drawStr(0,45, rate_string[current_rate_index]);
+        u8g2.drawStr(70,45, ratio_string[current_ratio_index]);
         u8g2.drawStr(0,60, power.c_str());
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(70,56, "TLM");
@@ -437,28 +434,35 @@ void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t 
     current_smartfan_index = fan_index;
     if(current_screen_status == SCREEN_STATUS_IDLE)
     {
+        bool changed = false;
+
         if(rate_index != current_rate_index)
         {
             current_rate_index = rate_index;
-            displayMainScreen();
+            changed = true;
         }
 
         if(last_power_index != running_power_index || current_dynamic != dynamic)
         {
             current_dynamic = dynamic;
             last_power_index = running_power_index;
-            displayMainScreen();
+            changed = true;
         }
 
         if(ratio_index != current_ratio_index)
         {
             current_ratio_index = ratio_index;
-            displayMainScreen();
+            changed = true;
         }
 
         if(current_connection != connection)
         {
             current_connection = connection;
+            changed = true;
+        }
+
+        if (changed)
+        {
             displayMainScreen();
         }
     }
