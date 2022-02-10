@@ -136,6 +136,7 @@ void SX1280Driver::SetPacketParams(uint8_t PreambleLength, SX1280_RadioLoRaPacke
     buf[6] = 0x00;
 
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+    currHeaderMode = HeaderType;
 }
 
 void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
@@ -257,23 +258,6 @@ void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t freq)
     currFreq = freq;
 }
 
-int32_t ICACHE_RAM_ATTR SX1280Driver::GetFrequencyError()
-{
-    WORD_ALIGNED_ATTR uint8_t efeRaw[3] = {0};
-    uint32_t efe = 0;
-    double efeHz = 0.0;
-
-    efeRaw[0] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
-    efeRaw[1] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB + 1);
-    efeRaw[2] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB + 2);
-    efe = (efeRaw[0] << 16) | (efeRaw[1] << 8) | efeRaw[2];
-
-    efe &= SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK;
-
-    //efeHz = 1.55 * (double)complement2(efe, 20) / (1600.0 / (double)GetLoRaBandwidth() * 1000.0);
-    return efeHz;
-}
-
 void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
 {
     uint8_t buf[2];
@@ -384,15 +368,10 @@ void ICACHE_RAM_ATTR SX1280Driver::GetStatus()
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
 {
-    uint8_t regEFI[3];
-
-    hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, regEFI, sizeof(regEFI));
-
-    DBGLN("%d %d %d", regEFI[0], regEFI[1], regEFI[2]);
-
-    //bool result = (val & 0b00001000) >> 3;
-    //return result; // returns true if pos freq error, neg if false
-    return 0;
+    // Only need the highest bit of the 20-bit FEI to determine the direction
+    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
+    // fei & (1 << 19)
+    return (feiMsb & 0x08);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()

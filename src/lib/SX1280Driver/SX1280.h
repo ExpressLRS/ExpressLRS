@@ -28,6 +28,7 @@ public:
     SX1280_RadioLoRaBandwidths_t currBW = SX1280_LORA_BW_0800;
     SX1280_RadioLoRaSpreadingFactors_t currSF = SX1280_LORA_SF6;
     SX1280_RadioLoRaCodingRates_t currCR = SX1280_LORA_CR_4_7;
+    SX1280_RadioLoRaPacketLengthsModes_t currHeaderMode;
     uint32_t currFreq = 2400000000;
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
     bool IQinverted = false;
@@ -73,7 +74,9 @@ public:
     void SetOutputPower(int8_t power);
     void SetOutputPowerMax() { SetOutputPower(13); };
 
-    int32_t ICACHE_RAM_ATTR GetFrequencyError();
+    bool ICACHE_RAM_ATTR GetFrequencyErrorbool();
+    bool FrequencyErrorAvailable() const
+        { return (currHeaderMode == SX1280_LORA_PACKET_VARIABLE_LENGTH) && (LastPacketSNR > 0); }
 
     void TXnb();
     void RXnb();
@@ -84,8 +87,7 @@ public:
     void GetStatus();
 
     void SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask);
-    
-    bool GetFrequencyErrorbool();
+
     uint8_t GetRxBufferAddr();
     void GetLastPacketStats();
 

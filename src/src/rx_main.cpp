@@ -349,20 +349,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
     //DBGVLN(FreqCorrection);
-    if (!value)
-    {
-        if (FreqCorrection < FreqCorrectionMax)
-        {
-            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
-        }
-        else
-        {
-            FreqCorrection = FreqCorrectionMax;
-            FreqCorrection = 0; //reset because something went wrong
-            DBGLN("Max +FreqCorrection reached!");
-        }
-    }
-    else
+    if (value)
     {
         if (FreqCorrection > FreqCorrectionMin)
         {
@@ -373,6 +360,19 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
             FreqCorrection = FreqCorrectionMin;
             FreqCorrection = 0; //reset because something went wrong
             DBGLN("Max -FreqCorrection reached!");
+        }
+    }
+    else
+    {
+        if (FreqCorrection < FreqCorrectionMax)
+        {
+            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
+        }
+        else
+        {
+            FreqCorrection = FreqCorrectionMax;
+            FreqCorrection = 0; //reset because something went wrong
+            DBGLN("Max +FreqCorrection reached!");
         }
     }
 }
@@ -513,16 +513,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
-    #if !defined(Regulatory_Domain_ISM_2400)
-    if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
+    if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+    #if !defined(Regulatory_Domain_ISM_2400)
+        // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(FreqCorrection);
+    #endif /* !Regulatory_Domain_ISM_2400 */
     }
-    #else
-        (void)didFHSS;
-        (void)tlmSent;
-    #endif /* Regulatory_Domain_ISM_2400 */
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
