@@ -242,7 +242,7 @@ static int start()
 {
   if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
   {
-    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), connectionState == connected);
     return LOGO_DISPLAY_TIMEOUT;
   }
   return DURATION_IMMEDIATELY;
@@ -256,7 +256,7 @@ static int event()
   }
   else
   {
-    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
+    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), connectionState == connected);
   }
 
   return DURATION_IGNORE;

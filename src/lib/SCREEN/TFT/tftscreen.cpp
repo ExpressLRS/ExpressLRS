@@ -286,7 +286,7 @@ void TFTScreen::doSmartFanValueSelect(int action)
                         smartfan_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index)
+void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, bool connection)
 {
     current_power_index = power_index;
     current_powersaving_index = motion_index;
@@ -318,6 +318,11 @@ void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t r
             current_ratio_index = ratio_index;
             displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                                 ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
+        }
+
+        if(current_connection != connection)
+        {
+            current_connection = connection;
         }
     }
     else
