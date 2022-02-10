@@ -4,8 +4,12 @@
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
+#define FreqCorrectionMin (-FreqCorrectionMax)
 #elif Regulatory_Domain_ISM_2400
 #include "SX1280Driver.h"
+#define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
+#define FreqCorrectionMin (-FreqCorrectionMax)
 #endif
 
 #include "random.h"
@@ -27,9 +31,6 @@
 #else
 #define Regulatory_Domain_Index 8
 #endif
-
-#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
-#define FreqCorrectionMin ((int32_t)(-100000/FREQ_STEP))
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
 
