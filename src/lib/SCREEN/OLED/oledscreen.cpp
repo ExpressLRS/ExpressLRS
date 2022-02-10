@@ -428,50 +428,24 @@ void OLEDScreen::doSmartFanValueSelect(int action)
 
 void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, bool connection)
 {
+    bool updateIdleScreen = (current_screen_status == SCREEN_STATUS_IDLE) && (
+            (rate_index != current_rate_index) ||
+            (last_power_index != running_power_index || current_dynamic != dynamic) ||
+            (ratio_index != current_ratio_index) ||
+            (current_connection != connection));
 
+    current_rate_index = rate_index;
     current_power_index = power_index;
+    current_ratio_index = ratio_index;
     current_powersaving_index = motion_index;
     current_smartfan_index = fan_index;
-    if(current_screen_status == SCREEN_STATUS_IDLE)
+    current_dynamic = dynamic;
+    last_power_index = running_power_index;
+    current_connection = connection;
+
+    if (updateIdleScreen)
     {
-        bool changed = false;
-
-        if(rate_index != current_rate_index)
-        {
-            current_rate_index = rate_index;
-            changed = true;
-        }
-
-        if(last_power_index != running_power_index || current_dynamic != dynamic)
-        {
-            current_dynamic = dynamic;
-            last_power_index = running_power_index;
-            changed = true;
-        }
-
-        if(ratio_index != current_ratio_index)
-        {
-            current_ratio_index = ratio_index;
-            changed = true;
-        }
-
-        if(current_connection != connection)
-        {
-            current_connection = connection;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            displayMainScreen();
-        }
-    }
-    else
-    {
-        last_power_index = running_power_index;
-        current_dynamic = dynamic;
-        current_rate_index = rate_index;
-        current_ratio_index = ratio_index;
+        displayMainScreen();
     }
 }
 
