@@ -65,7 +65,6 @@ typedef enum
 } RXtimerState_e;
 
 extern connectionState_e connectionState;
-extern connectionState_e connectionStatePrev;
 extern bool connectionHasModelMatch;
 
 typedef enum
