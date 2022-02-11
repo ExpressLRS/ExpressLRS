@@ -125,8 +125,11 @@ static void ScreenUpdateCallback(int updateType)
 
 static void devScreenPushParamUpdate()
 {
-  uint8_t disp_message = IsArmed()? ((isUserInputCheck)? SCREEN_MSG_ARMED_KEY: SCREEN_MSG_ARMED) 
-                                  : ((connectionState == connected)? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
+  #ifdef HAS_FIVE_WAY_BUTTON
+    uint8_t disp_message = IsArmed()? ((isUserInputCheck)? SCREEN_MSG_ARMED_KEY: SCREEN_MSG_ARMED) : ((connectionState == connected)? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
+  #else
+    uint8_t disp_message = IsArmed()? SCREEN_MSG_ARMED : ((connectionState == connected)? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
+  #endif
   screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_message);
 }
 
