@@ -5,6 +5,7 @@
 #include "logging.h"
 
 extern CRSF crsf;
+extern void devicesTriggerEvent();
 
 static volatile bool UpdateParamReq = false;
 
@@ -193,7 +194,7 @@ void sendELRSstatus()
     "",                   //status2 = connected status
     "",                   //status1, reserved for future use
     "Model Mismatch",     //warning3, model mismatch
-    "",           //warning2, reserved for future use
+    "[ ! Armed ! ]",           //warning2, reserved for future use
     "",           //warning1, reserved for future use
     "",  //critical warning3, reserved for future use
     "",  //critical warning2, reserved for future use
@@ -277,6 +278,7 @@ bool luaHandleUpdateParameter()
       {
         // special case for elrs linkstat request
         DBGVLN("ELRS status request");
+        devicesTriggerEvent();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();

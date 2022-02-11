@@ -194,6 +194,7 @@ struct luaItem_selection luaBluetoothTelem = {
 
 static char luaBadGoodString[10];
 
+extern bool ICACHE_RAM_ATTR IsArmed();
 extern TxConfig config;
 extern void VtxTriggerSend();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
@@ -426,6 +427,7 @@ static int event()
 {
   setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
   setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setLuaWarningFlag(LUA_FLAG_ISARMED, IsArmed());
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
