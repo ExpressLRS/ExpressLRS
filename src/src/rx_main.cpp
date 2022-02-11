@@ -547,7 +547,6 @@ void LostConnection()
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer.FreqOffset);
 
     RFmodeCycleMultiplier = 1;
-    connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
@@ -579,7 +578,6 @@ void LostConnection()
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     PFDloop.reset();
-    connectionStatePrev = connectionState;
     connectionState = tentative;
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
@@ -605,7 +603,6 @@ void GotConnection(unsigned long now)
     LockRFmode = true;
 #endif
 
-    connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
