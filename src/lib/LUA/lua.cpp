@@ -202,7 +202,7 @@ void sendELRSstatus()
     "",                   //status2 = connected status
     "",                   //status1, reserved for future use
     "Model Mismatch",     //warning3, model mismatch
-    "[ ! Armed ! ]",      //warning2, reserved for future use
+    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
     "",  //critical warning3, reserved for future use
     "",  //critical warning2, reserved for future use
