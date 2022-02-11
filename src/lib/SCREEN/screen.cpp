@@ -58,8 +58,7 @@ const char *Screen::smartfan_string[SMARTFAN_MAX_NUMBER] = {
 const char *Screen::message_string[MSG_MAX_NUMBER] = {
     "ExpressLRS",
     "[  Connected  ]",
-    "[  ! Armed !  ]",
-    "[ Disarm Plz! ]"
+    "[  ! Armed !  ]"
 };
 
 const char *Screen::main_menu_line_1[] = {

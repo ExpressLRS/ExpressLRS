@@ -8,7 +8,7 @@
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
-#define MSG_MAX_NUMBER 4
+#define MSG_MAX_NUMBER 3
 #define SMARTFAN_MAX_NUMBER 3
 
 #define VERSION_MAX_LENGTH  6
@@ -105,7 +105,6 @@ typedef enum
     SCREEN_MSG_DISCONNECTED = 0,
     SCREEN_MSG_CONNECTED = 1,
     SCREEN_MSG_ARMED = 2,
-    SCREEN_MSG_ARMED_KEY = 3
 } Screen_Msg_t;
 
 class Screen
