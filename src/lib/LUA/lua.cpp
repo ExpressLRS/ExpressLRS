@@ -6,7 +6,6 @@
 #include "logging.h"
 
 extern CRSF crsf;
-extern void devicesTriggerEvent();
 extern bool IsArmed();
 
 static volatile bool UpdateParamReq = false;
