@@ -8,7 +8,7 @@
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
-#define CONNECTION_MAX_NUMBER 2
+#define CONNECTION_MAX_NUMBER 3
 #define SMARTFAN_MAX_NUMBER 3
 
 #define VERSION_MAX_LENGTH  6
@@ -100,6 +100,13 @@ typedef enum
     SCREEN_BACKLIGHT_OFF = 1
 } Screen_BackLight_t;
 
+typedef enum
+{
+    SCREEN_CONNECTION_DISCONNECTED = 0,
+    SCREEN_CONNECTION_CONNECTED = 1,
+    SCREEN_CONNECTION_ARMED = 2
+} Screen_Connection_t;
+
 class Screen
 {
 private:
@@ -119,7 +126,7 @@ protected:
     int current_powersaving_index;
     int current_smartfan_index;
     bool current_dynamic;
-    bool current_connection;
+    int current_connection;
     
     int current_index;
     int last_power_index;
@@ -160,7 +167,7 @@ public:
 
     virtual void init(bool reboot) = 0;
     virtual void idleScreen() = 0;
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, bool connection) = 0;
+    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t connection) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
     virtual void doScreenBackLight(int state) = 0;
 

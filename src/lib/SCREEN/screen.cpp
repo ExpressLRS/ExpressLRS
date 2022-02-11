@@ -56,8 +56,9 @@ const char *Screen::smartfan_string[SMARTFAN_MAX_NUMBER] = {
 };
 
 const char *Screen::connection_string[CONNECTION_MAX_NUMBER] = {
-    "[-]",
-    "[C]"
+    "ExpressLRS",
+    "[ Connected ]",
+    "[ ! Armed ! ]"
 };
 
 const char *Screen::main_menu_line_1[] = {

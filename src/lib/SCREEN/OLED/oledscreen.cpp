@@ -228,8 +228,8 @@ void OLEDScreen::displayMainScreen(){
         u8g2.drawStr(70,32, buffer);
     #else
         u8g2.setFont(u8g2_font_t0_15_mr);
-        u8g2.drawStr(0,13, "ExpressLRS");
-        u8g2.drawStr(100,13, connection_string[current_connection?1:0]);
+        // u8g2.drawStr(0,13, "ExpressLRS");
+        u8g2.drawStr(0,13, connection_string[current_connection]);
         u8g2.drawStr(0,45, rate_string[current_rate_index]);
         u8g2.drawStr(70,45, ratio_string[current_ratio_index]);
         u8g2.drawStr(0,60, power.c_str());
@@ -426,7 +426,7 @@ void OLEDScreen::doSmartFanValueSelect(int action)
     // TODO display the value
 }
 
-void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, bool connection)
+void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t connection)
 {
     bool updateIdleScreen = (current_screen_status == SCREEN_STATUS_IDLE) && (
             (rate_index != current_rate_index) ||

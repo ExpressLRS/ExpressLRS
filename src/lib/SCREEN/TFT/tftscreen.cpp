@@ -286,7 +286,7 @@ void TFTScreen::doSmartFanValueSelect(int action)
                         smartfan_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, bool connection)
+void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t connection)
 {
     current_power_index = power_index;
     current_powersaving_index = motion_index;

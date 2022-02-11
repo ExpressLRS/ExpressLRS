@@ -240,7 +240,8 @@ static void initialize()
 
 static void devScreenPushParamUpdate()
 {
-  screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), connectionState == connected);
+  uint8_t disp_connection = IsArmed()? 2 : ((connectionState == connected)? 1 : 0);
+  screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_connection);
 }
 
 static int start()
