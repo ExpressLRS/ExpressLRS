@@ -23,22 +23,37 @@ const char *wifi_ap_address = "10.0.0.1";
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
     ._version_ = 0,
-    ._hardware_ = 0
-#if defined(PLATFORM_ESP32)
-        | 1 | (1 << 4)
-#elif defined(PLATFORM_ESP8266)
-        | 1 | (2 << 4)
-#elif defined(PLATFORM_STM32)
-        | 0 | (0 << 4)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    ._hasWiFi = 1,
+#else
+    ._hasWiFi = 0,
 #endif
-#if defined(TARGET_RX)
-        | 2
-#else // TARGET_TX
 #if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
-        | 4
+    ._hasBuzzer = 1,
+#else
+    ._hasBuzzer = 0,
 #endif
+#if defined(PLATFORM_STM32)
+    ._mcu_type = 0,
+#elif defined(PLATFORM_ESP32)
+    ._mcu_type = 1,
+#elif defined(PLATFORM_ESP8266)
+    ._mcu_type = 2,
+#else
+    #error Unsupported MCU type
 #endif
-        ,
+#if defined(TARGET_TX)
+    ._device_type = 0,
+#elif defined(TARGET_RX)
+    ._device_type = 1,
+#else
+    #error Unsupported device type
+#endif
+#if defined(Regulatory_Domain_ISM_2400)
+    ._radio_chip = 1,
+#else
+    ._radio_chip = 0,
+#endif
 #if defined(MY_UID)
     .hasUID = true,
     .uid = { MY_UID },

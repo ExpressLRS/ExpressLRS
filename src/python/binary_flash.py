@@ -31,12 +31,18 @@ def get_hardware(mm):
     pos = mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
     if pos == -1:
         raise AssertionError('Configuration magic not found in firmware file. Is this a 2.3 firmware?')
-    pos += 8 + 2                # Skip magic & version
+    pos += 8 + 2                    # Skip magic & version
     hardware = mm[pos]
+    _hasWiFi = hardware & 1
+    _hasBuzzer = hardware & 2
+    _mcuType = (hardware >> 2) & 3
+    _deviceType = (hardware >> 4) & 7
+    _radioChip = hardware & 128
+    pos += 1                        # Skip the hardware flag
+
     target_rx = False
-    if hardware & 2:            # RX target
+    if _deviceType == 1:            # RX target
         target_rx = True
-    mcu_type = hardware >> 4    # MCU type
 
     pos = mm.find(b'\xBE\xEF\xCA\xFE')
     if pos == -1:
@@ -44,7 +50,7 @@ def get_hardware(mm):
     else:
         target = (mm[pos+4:mm.find(b'\x00', pos+4)]).decode()
 
-    return target_rx, mcu_type, target
+    return target_rx, _mcuType, target
 
 def upload_wifi(args, upload_addr, isstm: bool):
     wifi_mode = 'upload'

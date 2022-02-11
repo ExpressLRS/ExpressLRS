@@ -98,18 +98,24 @@ def patch_buzzer(mm, pos, args):
     return pos
 
 def patch_firmware(mm, pos, args):
-    pos += 8 + 2            # Skip magic & version
+    pos += 8 + 2                # Skip magic & version
     hardware = mm[pos]
-    pos += 1                # Skip the hardware flag
+    _hasWiFi = hardware & 1
+    _hasBuzzer = hardware & 2
+    _mcuType = (hardware >> 2) & 3
+    _deviceType = (hardware >> 4) & 7
+    _radioChip = hardware & 128
+    pos += 1                    # Skip the hardware flag
+
     pos = patch_uid(mm, pos, args)
-    if hardware & 1:        # Has WiFi (i.e. ESP8266 or ESP32)
+    if _hasWiFi:                # Has WiFi (i.e. ESP8266 or ESP32)
         pos = patch_wifi(mm, pos, args)
-    if hardware & 2:        # RX target
-        pos = patch_rx_params(mm, pos, args)
-    else:                   # TX target
+    if _deviceType == 0:        # TX target
         pos = patch_tx_params(mm, pos, args)
-        if hardware & 4:    # Has a Buzzer
+        if _hasBuzzer:          # Has a Buzzer
             pos = patch_buzzer(mm, pos, args)
+    if _deviceType == 1:        # RX target
+        pos = patch_rx_params(mm, pos, args)
     return pos
 
 def length_check(l, f):
@@ -175,4 +181,3 @@ if __name__ == '__main__':
     except AssertionError as e:
         print(e)
         exit(1)
-
