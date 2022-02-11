@@ -23,6 +23,7 @@ OLEDScreen screen;
 FiveWayButton fivewaybutton;
 
 static uint32_t none_input_start_time = 0;
+static uint32_t error_start_time = 0;
 static bool isUserInputCheck = false;
 #endif
 
@@ -47,6 +48,7 @@ uint32_t update_temp_start_time = 0;
 static bool isLogoDisplayed = false;
 
 #define SCREEN_IDLE_TIMEOUT  20000
+#define SCREEN_ERROR_TIMEOUT  5000
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
@@ -121,6 +123,14 @@ static void ScreenUpdateCallback(int updateType)
   }
 }
 
+static void devScreenPushParamUpdate()
+{
+  uint8_t disp_message = IsArmed()? ((isUserInputCheck)? SCREEN_MSG_ARMED_KEY: SCREEN_MSG_ARMED) 
+                                  : ((connectionState == connected)? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
+  screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_message);
+}
+
+
 #ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
 {
@@ -149,12 +159,11 @@ static int handle(void)
     return 100; // no need to check as often if the screen is off!
   }
 #endif
-
+  int key;
+  bool isLongPressed;
+  fivewaybutton.update(&key, &isLongPressed);
   if(!IsArmed())
   {
-    int key;
-    bool isLongPressed;
-    fivewaybutton.update(&key, &isLongPressed);
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL
@@ -216,6 +225,26 @@ static int handle(void)
       }
     }
   }
+  else
+  {
+    if(screen.getScreenStatus() != SCREEN_STATUS_IDLE)
+    {
+      screen.idleScreen();
+    }
+    
+    if(!isUserInputCheck && key != INPUT_KEY_NO_PRESS) 
+    {
+      error_start_time = millis();
+      isUserInputCheck = true;
+      devScreenPushParamUpdate();
+    }
+    if(isUserInputCheck && (millis() - error_start_time) > SCREEN_ERROR_TIMEOUT)
+    {
+      isUserInputCheck = false;
+      devScreenPushParamUpdate();
+    }
+    // DBGLN("userinput: %d", isUserInputCheck);
+  }
   return SCREEN_DURATION;
 }
 #else
@@ -236,12 +265,6 @@ static void initialize()
   #else
   screen.init(false);
   #endif
-}
-
-static void devScreenPushParamUpdate()
-{
-  uint8_t disp_connection = IsArmed()? 2 : ((connectionState == connected)? 1 : 0);
-  screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_connection);
 }
 
 static int start()

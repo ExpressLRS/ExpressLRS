@@ -8,7 +8,7 @@
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
-#define CONNECTION_MAX_NUMBER 3
+#define MSG_MAX_NUMBER 4
 #define SMARTFAN_MAX_NUMBER 3
 
 #define VERSION_MAX_LENGTH  6
@@ -102,10 +102,11 @@ typedef enum
 
 typedef enum
 {
-    SCREEN_CONNECTION_DISCONNECTED = 0,
-    SCREEN_CONNECTION_CONNECTED = 1,
-    SCREEN_CONNECTION_ARMED = 2
-} Screen_Connection_t;
+    SCREEN_MSG_DISCONNECTED = 0,
+    SCREEN_MSG_CONNECTED = 1,
+    SCREEN_MSG_ARMED = 2,
+    SCREEN_MSG_ARMED_KEY = 3
+} Screen_Msg_t;
 
 class Screen
 {
@@ -126,7 +127,7 @@ protected:
     int current_powersaving_index;
     int current_smartfan_index;
     bool current_dynamic;
-    int current_connection;
+    int current_message;
     
     int current_index;
     int last_power_index;
@@ -156,7 +157,7 @@ protected:
     static const char *power_string[POWER_MAX_NUMBER];
     static const char *ratio_string[RATIO_MAX_NUMBER];
     static const char *powersaving_string[POWERSAVING_MAX_NUMBER];
-    static const char *connection_string[CONNECTION_MAX_NUMBER];
+    static const char *message_string[MSG_MAX_NUMBER];
     static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
     static const char *main_menu_line_1[];
     static const char *main_menu_line_2[];
@@ -167,7 +168,7 @@ public:
 
     virtual void init(bool reboot) = 0;
     virtual void idleScreen() = 0;
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t connection) = 0;
+    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
     virtual void doScreenBackLight(int state) = 0;
 

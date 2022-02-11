@@ -365,11 +365,13 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-
+        
+    #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
     {
-        devicesTriggerEvent();
+            devicesTriggerEvent();
     }
+    #endif
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
