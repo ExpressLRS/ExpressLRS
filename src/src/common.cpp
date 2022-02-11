@@ -77,6 +77,7 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
+bool connectionHasModelMatch;
 
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 #if defined(MY_UID)
