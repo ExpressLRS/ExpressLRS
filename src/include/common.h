@@ -76,15 +76,16 @@ typedef enum
 
 typedef enum
 {
-    RATE_4HZ = 0,
-    RATE_25HZ,
-    RATE_50HZ,
-    RATE_100HZ,
-    RATE_150HZ,
-    RATE_200HZ,
-    RATE_250HZ,
-    RATE_500HZ,
-    RATE_1000HZ,
+    RATE_LORA_4HZ = 0,
+    RATE_LORA_25HZ,
+    RATE_LORA_50HZ,
+    RATE_LORA_100HZ,
+    RATE_LORA_150HZ,
+    RATE_LORA_200HZ,
+    RATE_LORA_250HZ,
+    RATE_LORA_500HZ,
+    RATE_FLRC_500HZ,
+    RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
@@ -130,17 +131,17 @@ typedef struct expresslrs_mod_settings_s
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 4
-#define RATE_DEFAULT 0
-#define RATE_BINDING 3  // 50Hz bind mode
+#define RATE_MAX 6      // 2xFLRC + 4xLoRa
+#define RATE_DEFAULT 0  // Default to FLRC 1000Hz
+#define RATE_BINDING 5  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
 
 
-#define SYNC_PACKET_SWITCH_OFFSET   1   // Switch encoding mode
-#define SYNC_PACKET_TLM_OFFSET      3   // Telemetry ratio
-#define SYNC_PACKET_RATE_OFFSET     6   // Rate index
+#define SYNC_PACKET_SWITCH_OFFSET   0   // Switch encoding mode
+#define SYNC_PACKET_TLM_OFFSET      2   // Telemetry ratio
+#define SYNC_PACKET_RATE_OFFSET     5   // Rate index
 #define SYNC_PACKET_SWITCH_MASK     0b11
 #define SYNC_PACKET_TLM_MASK        0b111
 #define SYNC_PACKET_RATE_MASK       0b11

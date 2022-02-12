@@ -14,7 +14,7 @@ public:
     static SX127xDriver *instance;
 
     ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
+    void (*RXdoneCallback)(uint8_t crcFail); //function pointer for callback
     void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////

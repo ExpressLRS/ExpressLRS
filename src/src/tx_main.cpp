@@ -231,15 +231,20 @@ void DynamicPower_Update()
   dynamic_power_rssi_n = 0;
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket()
+void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t const crcFail)
 {
-  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
+  if (crcFail)
+  {
+    DBGLN("TLM crc error");
+    return;
+  }
+  uint16_t const inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
 
   Radio.RXdataBuffer[0] &= 0b11;
-  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+  uint16_t const calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
-  uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-  uint8_t TLMheader = Radio.RXdataBuffer[1];
+  uint8_t const type = Radio.RXdataBuffer[0] & TLM_PACKET;
+  uint8_t const TLMheader = Radio.RXdataBuffer[1];
 
   if ((inCRC != calculatedCRC))
   {
@@ -331,7 +336,7 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
     if (crsf.GetCurrentBaudRate() == 115200) {
       while (rateIndex < RATE_MAX) {
         expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        if (ModParams->enum_rate <= RATE_250HZ) {
+        if (ModParams->enum_rate <= RATE_LORA_250HZ) {
           break;
         }
         rateIndex++;
@@ -355,7 +360,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   DBGLN("set rate %u", index);
   hwTimer.updateInterval(ModParams->interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+#if defined(RADIO_SX128X)
+               , uidMacSeedGet(), CRCInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
+#endif
+               );
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -625,9 +634,9 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void ICACHE_RAM_ATTR RXdoneISR(uint8_t const crcFail)
 {
-  ProcessTLMpacket();
+  ProcessTLMpacket(crcFail);
   busyTransmitting = false;
 }
 
@@ -710,9 +719,9 @@ void OnRFModePacket(mspPacket_t *packet)
 
   switch (rfMode)
   {
-  case RATE_200HZ:
-  case RATE_100HZ:
-  case RATE_50HZ:
+  case RATE_LORA_200HZ:
+  case RATE_LORA_100HZ:
+  case RATE_LORA_50HZ:
     SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
     break;
   default:

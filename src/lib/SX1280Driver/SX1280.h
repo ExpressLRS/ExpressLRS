@@ -12,7 +12,7 @@ public:
     static SX1280Driver *instance;
 
     ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
+    void (*RXdoneCallback)(uint8_t crcFail); //function pointer for callback
     void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////
@@ -62,6 +62,7 @@ public:
 
 private:
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+    uint8_t packet_mode;
 
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
@@ -87,6 +88,6 @@ private:
 
 
     static void IsrCallback();
-    void RXnbISR(); // ISR for non-blocking RX routine
+    void RXnbISR(uint16_t irqStatus); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
 };
