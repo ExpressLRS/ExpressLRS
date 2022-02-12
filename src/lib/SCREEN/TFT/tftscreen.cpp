@@ -20,7 +20,14 @@ const uint16_t *main_menu_icons[] = {
     elrs_updatefw
 };
 
-#define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D
+// typcal hex color to rgb (python):
+// color = 0x96c76f
+// rgb_hex = ((((color&0xFF0000)>>16)&0xf8)<<8) + ((((color&0x00FF00)>>8)&0xfc)<<3) + ((color&0x0000FF)>>3)
+const uint16_t elrs_banner_bgColor[] = {
+    0x4315, // SCREEN_MSG_DISCONNECTED  => #4361AA
+    0x9E2D, // SCREEN_MSG_CONNECTED     => #9FC76F
+    0xAA08  // SCREEN_MSG_ARMED         => #AA4343
+};
 
 #define SCREEN_X    TFT_HEIGHT
 #define SCREEN_Y    TFT_WIDTH
@@ -141,7 +148,7 @@ void TFTScreen::init(bool reboot)
 
 void TFTScreen::idleScreen()
 {
-    tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, COLOR_ELRS_BANNER_BACKGROUND);
+    tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[current_message]);
     tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
 
     tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
@@ -151,10 +158,16 @@ void TFTScreen::idleScreen()
     sprintf(buffer+6, " %02d", system_temperature);
     displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                                 SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                                String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
+                                String(buffer), TFT_WHITE, elrs_banner_bgColor[current_message]);
+
+    uint16_t text_color = TFT_BLACK;
+    if (current_message == SCREEN_MSG_ARMED)
+    {
+        text_color = TFT_DARKGREY;
+    }
 
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
+                        rate_string[current_rate_index], text_color, TFT_WHITE);
 
     String power = power_string[current_power_index];
     if (current_dynamic)
@@ -162,10 +175,10 @@ void TFTScreen::idleScreen()
         power = String(power_string[last_power_index]) + " *";
     }
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        power, TFT_BLACK, TFT_WHITE);
+                        power, text_color, TFT_WHITE);
 
     displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
+                        ratio_string[current_ratio_index], text_color, TFT_WHITE);
 
     current_screen_status = SCREEN_STATUS_IDLE;
 }
@@ -343,7 +356,7 @@ void TFTScreen::doTemperatureUpdate(uint8_t temperature)
         sprintf(buffer+6, " %02d", temperature);
         displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                            String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
+                            String(buffer), TFT_WHITE,  elrs_banner_bgColor[current_message]);
     }
     system_temperature = temperature;
 }
