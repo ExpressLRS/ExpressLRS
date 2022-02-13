@@ -74,7 +74,6 @@ LQCALC<10> LQCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
-volatile bool connectionHasModelMatch = true;
 
 bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
