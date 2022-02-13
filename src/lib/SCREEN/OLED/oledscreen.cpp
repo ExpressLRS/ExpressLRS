@@ -114,18 +114,6 @@ static void displayLogo()
     u8g2.sendBuffer();
 }
 
-// static void displayFontCenter(const char * info)
-// {
-//     u8g2.clearBuffer();
-//     u8g2.setFont(u8g2_font_profont10_mr);
-// #ifdef USE_OLED_SPI_SMALL
-//     u8g2.drawStr(32, 32, info);
-// #else
-//     u8g2.drawStr(64, 64, info);
-// #endif
-//     u8g2.sendBuffer();
-// }
-
 void OLEDScreen::init(bool reboot)
 {
     u8g2.begin();
@@ -231,7 +219,6 @@ void OLEDScreen::updateIdleScreen(uint8_t dirtyFlags)
         u8g2.drawStr(70,32, buffer);
     #else
         u8g2.setFont(u8g2_font_t0_15_mr);
-        // u8g2.drawStr(0,13, "ExpressLRS");
         u8g2.drawStr(0,13, message_string[current_message]);
         u8g2.drawStr(0,45, rate_string[current_rate_index]);
         u8g2.drawStr(70,45, ratio_string[current_ratio_index]);
@@ -425,16 +412,6 @@ void OLEDScreen::doSmartFanValueSelect(int action)
 void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
 {
     system_temperature = temperature;
-    // if(current_screen_status == SCREEN_STATUS_IDLE)
-    // {
-    //     char buffer[20];
-    //     strncpy(buffer, version, 6);
-    //     sprintf(buffer+6, " %02d", system_temperature);
-    //     // TODO
-    //     // displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-    //     //                     SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-    //     //                     String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
-    // }
 }
 
 void OLEDScreen::doScreenBackLight(int state)
