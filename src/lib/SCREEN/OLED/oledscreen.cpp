@@ -209,9 +209,9 @@ void helperDrawImage32(int menu)
     }
 }
 
-void OLEDScreen::updateIdleScreen(bool doFullRedraw)
+void OLEDScreen::updateIdleScreen(uint8_t dirtyFlags)
 {
-    UNUSED(doFullRedraw);
+    UNUSED(dirtyFlags);
 
     u8g2.clearBuffer();
     String power = power_string[current_power_index];

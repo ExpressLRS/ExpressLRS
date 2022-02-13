@@ -55,7 +55,7 @@ const char *Screen::smartfan_string[SMARTFAN_MAX_NUMBER] = {
     "OFF"
 };
 
-const char *Screen::message_string[MSG_MAX_NUMBER] = {
+const char *Screen::message_string[SCREEN_MSG_COUNT] = {
     "ExpressLRS",
     "[  Connected  ]",
     "[  ! Armed !  ]"
@@ -316,16 +316,20 @@ void Screen::setInWifiMode()
 void Screen::idleScreen()
 {
     current_screen_status = SCREEN_STATUS_IDLE;
-    updateIdleScreen(true);
+    updateIdleScreen(0xff);
 }
 
 void Screen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message)
 {
-    bool refreshIdleScreen = (current_screen_status == SCREEN_STATUS_IDLE) && (
-            (rate_index != current_rate_index) ||
-            (last_power_index != running_power_index || current_dynamic != dynamic) ||
-            (ratio_index != current_ratio_index) ||
-            (current_message != message));
+    uint8_t dirtyFlags = 0;
+    // SCREENIDLEUP_MESSAGE
+    dirtyFlags = (dirtyFlags << 1) | (current_message != message);
+    // SCREENIDLEUP_POWER
+    dirtyFlags = (dirtyFlags << 1) | (last_power_index != running_power_index || current_dynamic != dynamic);
+    // SCREENIDLEUP_RATIO
+    dirtyFlags = (dirtyFlags << 1) | (ratio_index != current_ratio_index);
+    // SCREENIDLEUP_RATE
+    dirtyFlags = (dirtyFlags << 1) | (rate_index != current_rate_index);
 
     current_rate_index = rate_index;
     current_power_index = power_index;
@@ -336,9 +340,9 @@ void Screen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t rati
     last_power_index = running_power_index;
     current_message = message;
 
-    if (refreshIdleScreen)
+    if (current_screen_status == SCREEN_STATUS_IDLE)
     {
-        updateIdleScreen(false);
+        updateIdleScreen(dirtyFlags);
     }
 }
 

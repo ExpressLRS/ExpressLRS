@@ -8,7 +8,6 @@
 #define POWER_MAX_NUMBER 8
 #define RATIO_MAX_NUMBER 8
 #define POWERSAVING_MAX_NUMBER 2
-#define MSG_MAX_NUMBER 3
 #define SMARTFAN_MAX_NUMBER 3
 
 #define VERSION_MAX_LENGTH  6
@@ -108,6 +107,11 @@ typedef enum
     SCREEN_MSG_COUNT
 } Screen_Msg_t;
 
+#define SCREENIDLEUP_RATE       bit(0)
+#define SCREENIDLEUP_RATIO      bit(1)
+#define SCREENIDLEUP_POWER      bit(2)
+#define SCREENIDLEUP_MESSAGE    bit(3)
+
 class Screen
 {
 private:
@@ -146,7 +150,8 @@ protected:
     virtual void doPowerSavingValueSelect(int action) = 0;
     virtual void doSmartFanValueSelect(int action) = 0;
 
-    virtual void updateIdleScreen(bool doFullRedraw) = 0;
+    // dirtyFlags a combo of SCREENIDLEUP_*
+    virtual void updateIdleScreen(uint8_t dirtyFlags) = 0;
     virtual void updateMainMenuPage() = 0;
     virtual void updateSubFunctionPage() = 0;
     virtual void updateSubWIFIModePage() = 0;
@@ -158,7 +163,7 @@ protected:
     static const char *power_string[POWER_MAX_NUMBER];
     static const char *ratio_string[RATIO_MAX_NUMBER];
     static const char *powersaving_string[POWERSAVING_MAX_NUMBER];
-    static const char *message_string[MSG_MAX_NUMBER];
+    static const char *message_string[SCREEN_MSG_COUNT];
     static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
     static const char *main_menu_line_1[];
     static const char *main_menu_line_2[];

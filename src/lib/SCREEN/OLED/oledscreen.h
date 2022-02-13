@@ -27,7 +27,7 @@ private:
     void doPowerSavingValueSelect(int action);
     void doSmartFanValueSelect(int action);
 
-    void updateIdleScreen(bool doFullRedraw);
+    void updateIdleScreen(uint8_t dirtyFlags);
     void updateMainMenuPage();
     void updateSubFunctionPage();
     void updateSubWIFIModePage();

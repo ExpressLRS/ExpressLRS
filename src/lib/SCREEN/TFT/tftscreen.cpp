@@ -145,34 +145,45 @@ void TFTScreen::init(bool reboot)
     system_temperature = 25;
 }
 
-void TFTScreen::updateIdleScreen(bool doFullRedraw)
+void TFTScreen::updateIdleScreen(uint8_t dirtyFlags)
 {
-    if (doFullRedraw)
+    if (dirtyFlags & SCREENIDLEUP_MESSAGE)
     {
-        tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[current_message]);
-        tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
-
         // Left side logo, version, and temp
+        tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[current_message]);
         tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
-            TFT_WHITE, elrs_banner_bgColor[current_message]);
+                        TFT_WHITE, elrs_banner_bgColor[current_message]);
         updateIdleTemperature();
+
+        // Also clear the right side of the screen, assumes that dirtyFlags
+        tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
     }
 
     // The Radio Params right half of the screen
     uint16_t text_color = (current_message == SCREEN_MSG_ARMED) ? TFT_DARKGREY : TFT_BLACK;
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        rate_string[current_rate_index], text_color, TFT_WHITE);
 
-    String power = power_string[current_power_index];
-    if (current_dynamic)
+    if (dirtyFlags & (SCREENIDLEUP_RATE | SCREENIDLEUP_MESSAGE))
     {
-        power = String(power_string[last_power_index]) + " *";
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            rate_string[current_rate_index], text_color, TFT_WHITE);
     }
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        power, text_color, TFT_WHITE);
 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        ratio_string[current_ratio_index], text_color, TFT_WHITE);
+    if (dirtyFlags & (SCREENIDLEUP_POWER | SCREENIDLEUP_MESSAGE))
+    {
+        String power = power_string[current_power_index];
+        if (current_dynamic)
+        {
+            power = String(power_string[last_power_index]) + " *";
+        }
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            power, text_color, TFT_WHITE);
+    }
+
+    if (dirtyFlags & (SCREENIDLEUP_RATIO | SCREENIDLEUP_MESSAGE))
+    {
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            ratio_string[current_ratio_index], text_color, TFT_WHITE);
+    }
 }
 
 void TFTScreen::updateMainMenuPage()
@@ -251,7 +262,6 @@ void TFTScreen::updateSubBindingPage()
                         "BINDING", TFT_BLACK, TFT_WHITE);
 
     updatecallback(USER_UPDATE_TYPE_BINDING);
-
     current_screen_status = SCREEN_STATUS_BINDING;
 }
 
@@ -324,6 +334,7 @@ void TFTScreen::updateIdleTemperature()
 {
     char buffer[20];
     strncpy(buffer, version, 6);
+    // \367 = (char)247 = degree symbol
     sprintf(buffer+6, " %02d\367C", system_temperature);
     displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                         SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
