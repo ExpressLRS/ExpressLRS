@@ -168,8 +168,7 @@ void Screen::doPageForward()
         }
         else if(main_menu_page_index == MAIN_MENU_UPDATEFW_INDEX)
         {
-            current_page_index = PAGE_SUB_UPDATEFW_INDEX;
-            updateSubWIFIModePage();
+            setInWifiMode();
         }
         else if(main_menu_page_index == MAIN_MENU_BIND_INDEX)
         {

@@ -21,9 +21,7 @@ OLEDScreen screen;
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
 FiveWayButton fivewaybutton;
-
-static uint32_t none_input_start_time = 0;
-static bool isUserInputCheck = false;
+static uint32_t last_user_input_ms;
 #endif
 
 #ifdef HAS_GSENSOR
@@ -63,7 +61,7 @@ extern unsigned long rebootTime;
 #endif
 
 #define BINDING_MODE_TIME_OUT 5000
-static uint32_t binding_mode_start_time = 0;
+static uint32_t binding_mode_start_ms = 0;
 
 
 static void ScreenUpdateCallback(int updateType)
@@ -85,7 +83,7 @@ static void ScreenUpdateCallback(int updateType)
     case USER_UPDATE_TYPE_BINDING:
       DBGLN("User request binding!");
       EnterBindingMode();
-      binding_mode_start_time = millis();
+      binding_mode_start_ms = millis();
       break;
     case USER_UPDATE_TYPE_EXIT_BINDING:
       DBGLN("User request exit binding!");
@@ -162,13 +160,19 @@ static int handle(void)
     bool isLongPressed;
     fivewaybutton.update(&key, &isLongPressed);
 
+    uint32_t now = millis();
+    if (key != INPUT_KEY_NO_PRESS)
+    {
+      last_user_input_ms = now;
+    }
+
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL
-      if(millis() - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
+      if(now - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
       {
         screen.doTemperatureUpdate(thermal.getTempValue());
-        update_temp_start_time = millis();
+        update_temp_start_time = now;
       }
 #endif
       if(isLongPressed)
@@ -178,16 +182,9 @@ static int handle(void)
     }
     else if(screen.getScreenStatus() == SCREEN_STATUS_WORK)
     {
-      if(!isUserInputCheck)
-      {
-        none_input_start_time = millis();
-        isUserInputCheck = true;
-      }
-
       if (key != INPUT_KEY_NO_PRESS)
       {
         DBGLN("user key = %d", key);
-        isUserInputCheck = false;
         if(key == INPUT_KEY_DOWN_PRESS)
         {
           screen.doUserAction(USER_ACTION_DOWN);
@@ -209,15 +206,15 @@ static int handle(void)
           screen.doUserAction(USER_ACTION_CONFIRM);
         }
       }
-      else if((millis() - none_input_start_time) > SCREEN_IDLE_TIMEOUT)
+      // timeout to the idle screen if not in wifi mode
+      else if((now - last_user_input_ms) > SCREEN_IDLE_TIMEOUT && (connectionState != wifiUpdate))
       {
-        isUserInputCheck = false;
         screen.idleScreen();
       }
     }
     else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
     {
-      if((millis() - binding_mode_start_time) > BINDING_MODE_TIME_OUT)
+      if((now - binding_mode_start_ms) > BINDING_MODE_TIME_OUT)
       {
         screen.doUserAction(USER_ACTION_LEFT);
       }
