@@ -17,7 +17,6 @@
 #pragma once
 
 #include "targets.h"
-#include "logos.h"
 #include "TFT_eSPI_User_Setup.h"
 #include <SPI.h>
 

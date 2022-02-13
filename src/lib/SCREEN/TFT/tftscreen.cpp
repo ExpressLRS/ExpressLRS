@@ -3,12 +3,11 @@
 #include "tftscreen.h"
 #include "options.h"
 #include "POWERMGNT.h"
+#include "logos.h"
 
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
-
-bool is_confirmed = false;
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
@@ -24,9 +23,9 @@ const uint16_t *main_menu_icons[] = {
 // color = 0x96c76f
 // rgb_hex = ((((color&0xFF0000)>>16)&0xf8)<<8) + ((((color&0x00FF00)>>8)&0xfc)<<3) + ((color&0x0000FF)>>3)
 constexpr uint16_t elrs_banner_bgColor[SCREEN_MSG_COUNT] = {
-    0x4315, // SCREEN_MSG_DISCONNECTED  => #4361AA
-    0x9E2D, // SCREEN_MSG_CONNECTED     => #9FC76F
-    0xAA08  // SCREEN_MSG_ARMED         => #AA4343
+    0x4315, // SCREEN_MSG_DISCONNECTED  => #4361AA (ELRS blue)
+    0x9E2D, // SCREEN_MSG_CONNECTED     => #9FC76F (ELRS green)
+    0xAA08  // SCREEN_MSG_ARMED         => #AA4343 (red)
 };
 
 #define SCREEN_X    TFT_HEIGHT
@@ -154,7 +153,8 @@ void TFTScreen::updateIdleScreen(bool doFullRedraw)
         tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
 
         // Left side logo, version, and temp
-        tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
+        tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
+            TFT_WHITE, elrs_banner_bgColor[current_message]);
         updateIdleTemperature();
     }
 
