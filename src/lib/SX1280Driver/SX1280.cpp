@@ -439,8 +439,11 @@ bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
 {
     // Only need the highest bit of the 20-bit FEI to determine the direction
     uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
-    // fei & (1 << 19)
-    return (feiMsb & 0x08);
+    // fei & (1 << 19) and flip sign if IQinverted
+    if (feiMsb & 0x08)
+        return IQinverted;
+    else
+        return !IQinverted;
 }
 
 int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
