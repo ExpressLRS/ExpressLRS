@@ -36,7 +36,7 @@ static bool is_pre_screen_flipped = false;
 extern Thermal thermal;
 
 #define UPDATE_TEMP_TIMEOUT  5000
-uint32_t update_temp_start_time = 0;
+static uint32_t last_update_temp_ms;
 #endif
 
 #define SCREEN_DURATION 20
@@ -169,10 +169,10 @@ static int handle(void)
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL
-      if(now - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
+      if(now - last_update_temp_ms > UPDATE_TEMP_TIMEOUT)
       {
         screen.doTemperatureUpdate(thermal.getTempValue());
-        update_temp_start_time = now;
+        last_update_temp_ms = now;
       }
 #endif
       if(isLongPressed)
