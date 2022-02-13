@@ -37,12 +37,9 @@ private:
     void updateSubWIFIModePage();
     void updateSubBindConfirmPage();
     void updateSubBindingPage();
+    void updateIdleTemperature();
 
     void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
-                                            uint16_t fgColor, uint16_t bgColor);
-
-    void displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
                                             int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor);
 

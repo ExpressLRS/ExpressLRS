@@ -152,13 +152,7 @@ void TFTScreen::idleScreen()
     tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
 
     tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
-
-    char buffer[20];
-    strncpy(buffer, version, 6);
-    sprintf(buffer+6, " %02d", system_temperature);
-    displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-                                SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                                String(buffer), TFT_WHITE, elrs_banner_bgColor[current_message]);
+    updateIdleTemperature();
 
     uint16_t text_color = TFT_BLACK;
     if (current_message == SCREEN_MSG_ARMED)
@@ -351,37 +345,9 @@ void TFTScreen::doTemperatureUpdate(uint8_t temperature)
 {
     if(current_screen_status == SCREEN_STATUS_IDLE && system_temperature != temperature)
     {
-        char buffer[20];
-        strncpy(buffer, version, 6);
-        sprintf(buffer+6, " %02d", temperature);
-        displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-                            SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                            String(buffer), TFT_WHITE,  elrs_banner_bgColor[current_message]);
+        updateIdleTemperature();
+        system_temperature = temperature;
     }
-    system_temperature = temperature;
-}
-
-void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
-                                            uint16_t fgColor, uint16_t bgColor)
-{
-    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
-
-    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type) - font_size)/2;
-
-    tft.setCursor(start_pos, font_start_y, font_type);
-    tft.setTextColor(fgColor, bgColor);
-    tft.print(font_string);
-
-    int celsius_start_pos = start_pos + tft.textWidth(font_string, font_type);
-    if(font_size == SCREEN_SMALL_FONT_SIZE)
-    {
-        tft.pushImage(celsius_start_pos, font_start_y, font_size/2, font_size, Celsius4x8);
-    }
-
-    int char_c_pos = celsius_start_pos + font_size/2;
-    tft.setCursor(char_c_pos, font_start_y, font_type);
-    tft.print("C");
 }
 
 void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
@@ -397,11 +363,20 @@ void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, ui
     tft.print(font_string);
 }
 
-
 void TFTScreen::doScreenBackLight(int state)
 {
     #ifdef TFT_BL
     digitalWrite(TFT_BL, state);
     #endif
+}
+
+void TFTScreen::updateIdleTemperature()
+{
+    char buffer[20];
+    strncpy(buffer, version, 6);
+    sprintf(buffer+6, " %02d\367C", system_temperature);
+    displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+                        SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
+                        String(buffer), TFT_WHITE, elrs_banner_bgColor[current_message]);
 }
 #endif
