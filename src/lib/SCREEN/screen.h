@@ -105,6 +105,7 @@ typedef enum
     SCREEN_MSG_DISCONNECTED = 0,
     SCREEN_MSG_CONNECTED = 1,
     SCREEN_MSG_ARMED = 2,
+    SCREEN_MSG_COUNT
 } Screen_Msg_t;
 
 class Screen
@@ -127,7 +128,7 @@ protected:
     int current_smartfan_index;
     bool current_dynamic;
     int current_message;
-    
+
     int current_index;
     int last_power_index;
 
@@ -145,6 +146,7 @@ protected:
     virtual void doPowerSavingValueSelect(int action) = 0;
     virtual void doSmartFanValueSelect(int action) = 0;
 
+    virtual void updateIdleScreen(bool doFullRedraw) = 0;
     virtual void updateMainMenuPage() = 0;
     virtual void updateSubFunctionPage() = 0;
     virtual void updateSubWIFIModePage() = 0;
@@ -166,13 +168,13 @@ public:
     static void (*updatecallback)(int updateType);
 
     virtual void init(bool reboot) = 0;
-    virtual void idleScreen() = 0;
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
     virtual void doScreenBackLight(int state) = 0;
 
     void activeScreen();
+    void idleScreen();
     void doUserAction(int action);
+    void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message);
     void setInWifiMode();
 
     int getUserRateIndex() { return current_rate_index; }

@@ -123,7 +123,7 @@ static void ScreenUpdateCallback(int updateType)
 
 static void devScreenPushParamUpdate()
 {
-  uint8_t disp_message = IsArmed()? SCREEN_MSG_ARMED : ((connectionState == connected)? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
+  uint8_t disp_message = IsArmed() ? SCREEN_MSG_ARMED : ((connectionState == connected) ? SCREEN_MSG_CONNECTED : SCREEN_MSG_DISCONNECTED);
   screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_message);
 }
 
