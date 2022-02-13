@@ -1,7 +1,6 @@
 #define DEVICE_NAME "AION T-Pro TX"
 
 // Any device features
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

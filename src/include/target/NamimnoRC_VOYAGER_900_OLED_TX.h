@@ -3,7 +3,6 @@
 #endif
 
 // Features
-#define RADIO_SX127X
 #define USE_TX_BACKPACK
 #define USE_OLED_SPI
 

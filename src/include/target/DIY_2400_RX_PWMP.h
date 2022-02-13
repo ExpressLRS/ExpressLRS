@@ -2,7 +2,6 @@
 #define DEVICE_NAME "DIY2400 PWMP"
 #endif
 
-#define RADIO_SX1280
 #define CRSF_RCVR_NO_SERIAL
 
 // GPIO pin definitions

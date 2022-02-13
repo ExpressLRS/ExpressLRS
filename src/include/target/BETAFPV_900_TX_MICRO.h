@@ -3,7 +3,6 @@
 #endif
 
 // Any device features
-#define RADIO_SX127X
 #define USE_SX1276_RFO_HF
 #define USE_OLED_I2C
 #define OLED_REVERSED

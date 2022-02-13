@@ -3,7 +3,6 @@
 #endif
 
 // Features
-#define RADIO_SX1280
 #define USE_TX_BACKPACK
 #define USE_OLED_SPI
 #define HAS_FIVE_WAY_BUTTON

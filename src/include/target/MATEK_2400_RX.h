@@ -2,8 +2,6 @@
 #define DEVICE_NAME "MATEK R24"
 #endif
 
-#define RADIO_SX1280
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS                15
 #define GPIO_PIN_BUSY               5

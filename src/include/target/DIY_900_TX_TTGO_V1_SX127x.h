@@ -4,7 +4,6 @@
 #endif
 
 // Any device features
-#define RADIO_SX127X
 #define USE_OLED_I2C
 
 // GPIO pin definitions

@@ -4,7 +4,6 @@
 
 // There is some special handling for this target
 #define TARGET_TX_FM30
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

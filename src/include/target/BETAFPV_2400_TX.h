@@ -4,7 +4,6 @@
 
 // There is some special handling for this target
 #define TARGET_TX_BETAFPV_2400_V1
-#define RADIO_SX1280
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5

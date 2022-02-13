@@ -2,7 +2,6 @@
 #define DEVICE_NAME "DIY900 PWMP"
 #endif
 
-#define RADIO_SX127X
 #define CRSF_RCVR_NO_SERIAL
 
 // GPIO pin definitions

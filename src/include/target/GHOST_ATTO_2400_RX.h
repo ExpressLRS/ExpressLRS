@@ -3,7 +3,6 @@
 #endif
 // There is some special handling for this target
 #define TARGET_RX_GHOST_ATTO_V1
-#define RADIO_SX1280
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15

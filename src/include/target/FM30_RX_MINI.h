@@ -12,7 +12,6 @@
     #endif
 #endif
 
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

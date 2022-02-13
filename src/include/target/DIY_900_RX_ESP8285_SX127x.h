@@ -2,8 +2,6 @@
 #define DEVICE_NAME "ELRS 900RX"
 #endif
 
-#define RADIO_SX127X
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS 15
 #define GPIO_PIN_DIO0 4

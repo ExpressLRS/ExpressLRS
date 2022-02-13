@@ -1,6 +1,5 @@
 #define DEVICE_NAME "AXIS THOR 2400TX"
 
-#define RADIO_SX1280
 #define USE_TX_BACKPACK
 
 #define HAS_TFT_SCREEN

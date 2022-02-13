@@ -8,7 +8,6 @@
 
 // Any device features
 #define USE_TX_BACKPACK
-#define RADIO_SX1280
 #define USE_OLED_I2C
 #define OLED_REVERSED
 #define HAS_FIVE_WAY_BUTTON

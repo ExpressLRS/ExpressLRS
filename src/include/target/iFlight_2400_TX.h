@@ -2,7 +2,6 @@
 
 // Any device features
 #define TARGET_TX_IFLIGHT
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

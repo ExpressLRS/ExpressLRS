@@ -2,7 +2,6 @@
 #define DEVICE_NAME "Namimno Flash"
 #endif
 
-#define RADIO_SX1280
 #define USE_TX_BACKPACK
 
 // GPIO pin definitions

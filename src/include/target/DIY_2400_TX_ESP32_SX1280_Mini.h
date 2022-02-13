@@ -2,8 +2,6 @@
 #define DEVICE_NAME "DIY2400 Mini"
 #endif
 
-#define RADIO_SX1280
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS          5
 #define GPIO_PIN_BUSY         21

@@ -3,7 +3,6 @@
 #endif
 
 // Any device features
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 #define USE_TX_BACKPACK
 

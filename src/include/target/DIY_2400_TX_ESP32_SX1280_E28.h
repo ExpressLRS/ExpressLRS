@@ -3,7 +3,6 @@
 #endif
 
 // Any device features
-#define RADIO_SX1280
 #define USE_SX1280_DCDC
 #if !defined(USE_OLED_I2C)
 #define USE_OLED_SPI

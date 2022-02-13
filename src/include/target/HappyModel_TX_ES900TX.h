@@ -2,7 +2,6 @@
 #define DEVICE_NAME          "HM ES900TX"
 #endif
 
-#define RADIO_SX127X
 #define USE_TX_BACKPACK
 
 // GPIO pin definitions

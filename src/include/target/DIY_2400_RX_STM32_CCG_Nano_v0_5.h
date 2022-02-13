@@ -2,8 +2,6 @@
 #define DEVICE_NAME "ELRS 2400RX"
 #endif
 
-#define RADIO_SX1280
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS         PA4
 #define GPIO_PIN_MOSI        PA7

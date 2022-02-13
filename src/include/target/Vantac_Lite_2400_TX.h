@@ -3,7 +3,6 @@
 #endif
 
 // Any device features
-#define RADIO_SX1280
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
