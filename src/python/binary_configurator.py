@@ -116,24 +116,29 @@ def patch_buzzer(mm, pos, args):
     pos += 32*4     # 32 notes x (2 bytes tone, 2 bytes duration)
     return pos
 
-def FREQ_HZ_TO_REG_VAL(freq):
+def FREQ_HZ_TO_REG_VAL_SX127X(freq):
     return int(freq/61.03515625)
+
+def FREQ_HZ_TO_REG_VAL_SX1280(freq):
+    return int(freq/(52000000.0/pow(2,18)))
 
 def generate_domain(mm, pos, count, init, step):
     pos = write32(mm, pos, count)
     val = init
     for x in range(count):
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL(val))
+        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(val))
         val += step
 
 def patch_domain(mm, args):
     pos = mm.find(b'\xF0\x0D\xD0\xBE')
+    if pos == -1:
+        raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
     pos += 4                    # skip magic
     if args.domain == RegulatoryDomain.eu_433:
         pos = write32(mm, pos, 3)
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL(433100000))
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL(433925000))
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL(434450000))
+        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433100000))
+        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433925000))
+        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(434450000))
     elif args.domain == RegulatoryDomain.au_433:
         generate_domain(mm, pos, 3, 433420000, 500000)
     elif args.domain == RegulatoryDomain.in_866:
@@ -167,6 +172,31 @@ def patch_firmware(mm, pos, args):
 
     if _radioChip == 0:         # SX127X
         patch_domain(mm, args)
+
+def print_domain(mm):
+    pos = mm.find(b'\xF0\x0D\xD0\xBE')
+    if pos == -1:
+        raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
+    pos += 4                    # skip magic
+    (pos, count) = read32(mm, pos)
+    (pos, first) = read32(mm, pos)
+    if count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433100000):
+        print('Regulatory Domain is EU 433 MHz')
+    elif count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433420000):
+        print('Regulatory Domain is AU 433 MHz')
+    elif count == 4 and first == FREQ_HZ_TO_REG_VAL_SX127X(865375000):
+        print('Regulatory Domain is IN 866 MHz')
+    elif count == 13 and first == FREQ_HZ_TO_REG_VAL_SX127X(863275000):
+        print('Regulatory Domain is EU 868 MHz')
+    elif count == 20 and first == FREQ_HZ_TO_REG_VAL_SX127X(915500000):
+        print('Regulatory Domain is AU 915 MHz')
+    elif count == 40 and first == FREQ_HZ_TO_REG_VAL_SX127X(903500000):
+        print('Regulatory Domain is FCC 915 MHz')
+    elif count == 80 and first == FREQ_HZ_TO_REG_VAL_SX1280(2400400000):
+        print('Regulatory Domain is ISM 2.4GHz')
+    else:
+        raise AssertionError('Regulatory Domain has an invalid FHSS frequency table!')
+    None
 
 def print_config(mm, pos):
     pos += 8 + 2                # Skip magic & version
@@ -244,6 +274,7 @@ def print_config(mm, pos):
     elif _deviceType == 3:  # VRX
         None
 
+    print_domain(mm)
     return
 
 def length_check(l, f):
