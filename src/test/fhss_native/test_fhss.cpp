@@ -6,7 +6,7 @@
 void test_fhss_first(void)
 {
     FHSSrandomiseFHSSsequence(0x01020304L);
-    TEST_ASSERT_EQUAL(GetInitialFreq(), FHSSfreqs[sync_channel]);
+    TEST_ASSERT_EQUAL(GetInitialFreq(), FHSSconfig.freqs[sync_channel]);
 }
 
 void test_fhss_assignment(void)
