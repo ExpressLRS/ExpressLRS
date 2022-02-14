@@ -59,7 +59,7 @@ const char *Screen::message_string[SCREEN_MSG_COUNT] = {
     "ExpressLRS",
     "[  Connected  ]",
     "[  ! Armed !  ]",
-    "[ ! Mismatch !]"
+    "[  Mismatch!  ]"
 };
 
 const char *Screen::main_menu_line_1[] = {
