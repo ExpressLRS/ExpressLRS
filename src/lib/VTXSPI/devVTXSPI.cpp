@@ -84,6 +84,8 @@ static void rtc6705ResetSynthRegA()
 
 static void rtc6705SetFrequency(uint32_t freq)
 {
+    rtc6705ResetSynthRegA();
+
     VTxOutputMinimum(); // Set power to zero for clear channel switching
   
     uint32_t f = 25 * freq;
@@ -231,7 +233,6 @@ static void initialize()
 
 static int start()
 {
-    rtc6705ResetSynthRegA();
     rtc6705PowerAmpOn();
 
     return VTX_POWER_INTERVAL_MS;
