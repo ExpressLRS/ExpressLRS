@@ -24,13 +24,13 @@ typedef struct _options {
     uint16_t    _version_;      // the version of this structure
     uint8_t     _hasWiFi:1;     // The hardware has a WiFi built-in
     uint8_t     _hasBuzzer:1;
-    uint8_t     _mcu_type:2;    // 0=STM, 1=ESP32, 2=ESP8266
-    uint8_t     _device_type:3; // 0=TX, 1=RX, 2=BP, 3=VRX, ...
+    uint8_t     _mcu_type:2;    // 0=STM, 1=ESP32, 2=ESP8266, 3=???
+    uint8_t     _device_type:3; // 0=TX, 1=RX, 2=TXBP, 3=VRX, ... 7=???
     uint8_t     _radio_chip:1;  // 0=SX127x, 1=SX1280
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    int         wifi_auto_on_interval;
+    int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
     char        home_wifi_password[65];
 #endif
