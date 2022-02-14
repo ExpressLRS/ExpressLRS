@@ -17,7 +17,6 @@
 #pragma once
 
 #include "targets.h"
-#include "logos.h"
 #include "TFT_eSPI_User_Setup.h"
 #include <SPI.h>
 
@@ -32,25 +31,21 @@ private:
     void doPowerSavingValueSelect(int action);
     void doSmartFanValueSelect(int action);
 
+    void updateIdleScreen(uint8_t dirtyFlags);
     void updateMainMenuPage();
     void updateSubFunctionPage();
     void updateSubWIFIModePage();
     void updateSubBindConfirmPage();
     void updateSubBindingPage();
+    void updateIdleTemperature();
 
     void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
-                                            uint16_t fgColor, uint16_t bgColor);
-
-    void displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
                                             int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor);
 
 public:
 
     void init(bool reboot);
-    void idleScreen();
-    void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index);
     void doTemperatureUpdate(uint8_t temperature);
     void doScreenBackLight(int state);
 
