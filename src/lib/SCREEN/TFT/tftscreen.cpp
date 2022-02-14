@@ -153,7 +153,7 @@ void TFTScreen::updateIdleScreen(uint8_t dirtyFlags)
         // Left side logo, version, and temp
         tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[current_message]);
         tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
-                        TFT_WHITE, elrs_banner_bgColor[current_message]);
+                        TFT_WHITE);
         updateIdleTemperature();
 
         // Also clear the right side of the screen, assumes that dirtyFlags
