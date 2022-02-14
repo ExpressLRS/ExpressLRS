@@ -23,7 +23,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {3, RATE_25HZ, -123, 29950, 6000, 4000, 0, 5000}};
 #endif
 
-#if defined(RADIO_SX1280)
+#if defined(RADIO_SX128X)
 
 #include "SX1280Driver.h"
 SX1280Driver DMA_ATTR Radio;

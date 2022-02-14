@@ -339,7 +339,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
-  #if defined(RADIO_SX1280)
+  #if defined(RADIO_SX128X)
     // Packet rate limited to 250Hz if we are on 115k baud
     if (crsf.GetCurrentBaudRate() == 115200) {
       while (rateIndex < RATE_MAX) {

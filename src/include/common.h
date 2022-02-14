@@ -5,7 +5,7 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
-#elif defined(RADIO_SX1280)
+#elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
 #error "Radio configuration is not valid!"
@@ -129,7 +129,7 @@ typedef struct expresslrs_mod_settings_s
 
 extern SX127xDriver Radio;
 
-#elif defined(RADIO_SX1280)
+#elif defined(RADIO_SX128X)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
 #define RATE_BINDING 2  // 50Hz bind mode

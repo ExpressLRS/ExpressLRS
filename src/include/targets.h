@@ -120,7 +120,7 @@
 #endif
 #endif
 
-#if defined(RADIO_SX1280)
+#if defined(RADIO_SX128X)
 #define Regulatory_Domain_ISM_2400 1
 // ISM 2400 band is in use => undefine other requlatory domain defines
 #undef Regulatory_Domain_AU_915
@@ -138,5 +138,5 @@
 #error "Regulatory_Domain is not defined for 900MHz device. Check user_defines.txt!"
 #endif
 #else
-#error "Either RADIO_SX127X or RADIO_SX1280 must be defined!"
+#error "Either RADIO_SX127X or RADIO_SX128X must be defined!"
 #endif
