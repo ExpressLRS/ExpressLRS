@@ -2,13 +2,26 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+#if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+
 #include <NeoPixelBus.h>
-static constexpr uint16_t PixelCount = 2;
+
+#define STATUS_LED_NUMBER   0
+
+#if !defined(WS2812_PIXEL_COUNT)
+    #define WS2812_PIXEL_COUNT 1
+#endif
+
+#if defined(PLATFORM_ESP32)
+    #define METHOD Neo800KbpsMethod 
+#elif defined(PLATFORM_ESP8266)
+    #define METHOD NeoEsp8266Uart1800KbpsMethod 
+#endif
+
 #ifdef WS2812_IS_GRB
-static NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
+static NeoPixelBus<NeoGrbFeature, METHOD> strip(WS2812_PIXEL_COUNT, GPIO_PIN_LED_WS2812);
 #else
-static NeoPixelBus<NeoRgbFeature, Neo800KbpsMethod> strip(PixelCount, GPIO_PIN_LED_WS2812);
+static NeoPixelBus<NeoRgbFeature, METHOD> strip(WS2812_PIXEL_COUNT, GPIO_PIN_LED_WS2812);
 #endif
 
 void WS281Binit()
@@ -18,8 +31,17 @@ void WS281Binit()
 
 void WS281BsetLED(uint32_t color)
 {
-    strip.ClearTo(RgbColor(HtmlColor(color)));
+    strip.SetPixelColor(STATUS_LED_NUMBER, RgbColor(HtmlColor(color)));
     strip.Show();
+}
+
+void WS281BsetStripColour(uint32_t color)
+{
+    if (WS2812_PIXEL_COUNT > 1)
+    {
+        strip.ClearTo(RgbColor(HtmlColor(color)), 1, WS2812_PIXEL_COUNT - 1);
+        strip.Show();
+    }
 }
 #endif
 
