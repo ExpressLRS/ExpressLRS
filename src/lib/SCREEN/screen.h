@@ -104,6 +104,7 @@ typedef enum
     SCREEN_MSG_DISCONNECTED = 0,
     SCREEN_MSG_CONNECTED = 1,
     SCREEN_MSG_ARMED = 2,
+    SCREEN_MSG_MISMATCH = 3,
     SCREEN_MSG_COUNT
 } Screen_Msg_t;
 

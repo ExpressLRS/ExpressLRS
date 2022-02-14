@@ -25,7 +25,8 @@ const uint16_t *main_menu_icons[] = {
 constexpr uint16_t elrs_banner_bgColor[SCREEN_MSG_COUNT] = {
     0x4315, // SCREEN_MSG_DISCONNECTED  => #4361AA (ELRS blue)
     0x9E2D, // SCREEN_MSG_CONNECTED     => #9FC76F (ELRS green)
-    0xAA08  // SCREEN_MSG_ARMED         => #AA4343 (red)
+    0xAA08, // SCREEN_MSG_ARMED         => #AA4343 (red)
+    0xF501  // SCREEN_MSG_MISMATCH      => #F0A30A (amber)
 };
 
 #define SCREEN_X    TFT_HEIGHT
