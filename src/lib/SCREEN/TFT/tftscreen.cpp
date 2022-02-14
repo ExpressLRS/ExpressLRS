@@ -19,7 +19,7 @@ const uint16_t *main_menu_icons[] = {
     elrs_updatefw
 };
 
-// typcal hex color to rgb (python):
+// Hex color code to 16-bit rgb:
 // color = 0x96c76f
 // rgb_hex = ((((color&0xFF0000)>>16)&0xf8)<<8) + ((((color&0x00FF00)>>8)&0xfc)<<3) + ((color&0x0000FF)>>3)
 constexpr uint16_t elrs_banner_bgColor[SCREEN_MSG_COUNT] = {
