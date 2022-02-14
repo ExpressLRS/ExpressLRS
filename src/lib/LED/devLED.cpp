@@ -100,7 +100,7 @@ static int timeout()
 
 static void setPowerLEDs()
 {
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_EMAX_2400_V1)
         switch (POWERMGNT::currPower())
         {
         case PWR_250mW:
