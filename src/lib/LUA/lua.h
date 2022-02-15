@@ -104,13 +104,14 @@ struct tagLuaElrsParams {
 void suppressCurrentLuaWarning(void);
 void setLuaWarningFlag(lua_Flags flag, bool value);
 uint8_t getLuaWarningFlags(void);
+
+void registerLUAPopulateParams(void (*populate)());
 #endif
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
 
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
-
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);
