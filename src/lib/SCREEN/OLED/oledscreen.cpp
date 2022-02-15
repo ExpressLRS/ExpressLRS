@@ -18,6 +18,7 @@
 // Default header files for Express LRS
 #include "targets.h"
 #include "options.h"
+#include "helpers.h"
 
 // OLED specific header files.
 #include "oledscreen.h"
@@ -113,19 +114,6 @@ static void displayLogo()
     u8g2.sendBuffer();
 }
 
-
-static void displayFontCenter(const char * info)
-{
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_profont10_mr);
-#ifdef USE_OLED_SPI_SMALL
-    u8g2.drawStr(32, 32, info);
-#else
-    u8g2.drawStr(64, 64, info);
-#endif
-    u8g2.sendBuffer();
-}
-
 void OLEDScreen::init(bool reboot)
 {
     u8g2.begin();
@@ -209,7 +197,10 @@ void helperDrawImage32(int menu)
     }
 }
 
-void OLEDScreen::displayMainScreen(){
+void OLEDScreen::updateIdleScreen(uint8_t dirtyFlags)
+{
+    UNUSED(dirtyFlags);
+
     u8g2.clearBuffer();
     String power = power_string[current_power_index];
     if (current_dynamic)
@@ -219,8 +210,8 @@ void OLEDScreen::displayMainScreen(){
 
     #ifdef USE_OLED_SPI_SMALL
         u8g2.setFont(u8g2_font_t0_15_mr);
-        u8g2.drawStr(0,15, &(rate_string[current_rate_index])[0]);
-        u8g2.drawStr(70,15, &(ratio_string[current_ratio_index])[0]);
+        u8g2.drawStr(0,15, rate_string[current_rate_index]);
+        u8g2.drawStr(70,15, ratio_string[current_ratio_index]);
         u8g2.drawStr(0,32, power.c_str());
         char buffer[7];
         strncpy(buffer, version, 6);
@@ -269,13 +260,6 @@ void OLEDScreen::displayMainScreen(){
         #endif
     #endif
     u8g2.sendBuffer();
-}
-
-void OLEDScreen::idleScreen()
-{
-    displayMainScreen();
-
-    current_screen_status = SCREEN_STATUS_IDLE;
 }
 
 void OLEDScreen::updateMainMenuPage()
@@ -453,55 +437,9 @@ void OLEDScreen::doSmartFanValueSelect(int action)
     // TODO display the value
 }
 
-void OLEDScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index)
-{
-
-    current_power_index = power_index;
-    current_powersaving_index = motion_index;
-    current_smartfan_index = fan_index;
-    if(current_screen_status == SCREEN_STATUS_IDLE)
-    {
-        if(rate_index != current_rate_index)
-        {
-            current_rate_index = rate_index;
-            displayMainScreen();
-        }
-
-        if(last_power_index != running_power_index || current_dynamic != dynamic)
-        {
-            current_dynamic = dynamic;
-            last_power_index = running_power_index;
-            displayMainScreen();
-        }
-
-        if(ratio_index != current_ratio_index)
-        {
-            current_ratio_index = ratio_index;
-            displayMainScreen();
-        }
-    }
-    else
-    {
-        last_power_index = running_power_index;
-        current_dynamic = dynamic;
-        current_rate_index = rate_index;
-        current_ratio_index = ratio_index;
-    }
-}
-
 void OLEDScreen::doTemperatureUpdate(uint8_t temperature)
 {
     system_temperature = temperature;
-    if(current_screen_status == SCREEN_STATUS_IDLE)
-    {
-        char buffer[20];
-        strncpy(buffer, version, 6);
-        sprintf(buffer+6, " %02d", system_temperature);
-        // TODO
-        // displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-        //                     SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-        //                     String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
-    }
 }
 
 void OLEDScreen::doScreenBackLight(int state)
