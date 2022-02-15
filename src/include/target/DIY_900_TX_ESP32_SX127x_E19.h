@@ -1,6 +1,6 @@
 // The name of the device in the LUA module
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DIY900 E19"
+#define DEVICE_NAME "DIY900 E19\0\0\0\0\0\0"
 #endif
 
 // GPIO pin definitions

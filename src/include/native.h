@@ -12,6 +12,7 @@
 #include <math.h>
 #include <sys/time.h>
 
+#define DEVICE_NAME "testing\0\0\0\0\0\0\0\0\0"
 #define RADIO_SX128X 1
 
 typedef uint8_t byte;
@@ -76,14 +77,10 @@ inline void delay(int32_t time) {
     usleep(time);
 }
 
-
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
-
-const char device_name[] = "testing";
-const uint8_t device_name_size = sizeof(device_name);
 
 #ifdef _WIN32
 #define random rand

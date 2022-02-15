@@ -5,8 +5,6 @@
 #define STR(macro) QUOTE(macro)
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
-const char device_name[] = DEVICE_NAME;
-const uint8_t device_name_size = sizeof(device_name);
 const char commit[] {LATEST_COMMIT, 0};
 const char version[] = {LATEST_VERSION, 0};
 
@@ -33,7 +31,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     ._hasBuzzer = 0,
 #endif
-#if defined(PLATFORM_STM32)
+#if defined(PLATFORM_STM32) || defined(UNIT_TEST)
     ._mcu_type = 0,
 #elif defined(PLATFORM_ESP32)
     ._mcu_type = 1,
@@ -42,7 +40,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     #error Unsupported MCU type
 #endif
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) || defined(UNIT_TEST)
     ._device_type = 0,
 #elif defined(TARGET_RX)
     ._device_type = 1,
@@ -60,6 +58,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .hasUID = false,
     .uid = {},
+#endif
+#if defined(DEVICE_NAME_ARR)
+    .device_name = {DEVICE_NAME_ARR},
+#else
+    .device_name = DEVICE_NAME,
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)

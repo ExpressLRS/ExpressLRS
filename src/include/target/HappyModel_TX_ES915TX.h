@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "HM ES915TX"
+#define DEVICE_NAME "HM ES915TX\0\0\0\0\0\0"
 #endif
 
 #if defined(Regulatory_Domain_EU_868)

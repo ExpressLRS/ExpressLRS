@@ -1,4 +1,4 @@
-#define DEVICE_NAME "iFlight 2400RX"
+#define DEVICE_NAME "iFlight 2400RX\0\0"
 
 #define USE_SX1280_DCDC
 

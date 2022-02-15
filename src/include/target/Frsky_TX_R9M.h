@@ -1,6 +1,6 @@
 
 #if !defined(DEVICE_NAME)
-    #define DEVICE_NAME "FrSky R9M"
+    #define DEVICE_NAME "FrSky R9M\0\0\0\0\0\0\0"
 #endif
 
 #define TARGET_USE_EEPROM               1

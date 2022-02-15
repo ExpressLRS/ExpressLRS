@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "ELRS 900RX"
+#define DEVICE_NAME "ELRS 900RX\0\0\0\0\0\0"
 #endif
 
 // GPIO pin definitions

@@ -44,6 +44,14 @@ def read32(mm, pos):
     val += mm[pos + 3] << 24
     return pos + 4, val
 
+def writeString(mm, pos, string, maxlen):
+    len = len(string)
+    if len > maxlen-1:
+        len = maxlen-1
+    mm[pos:pos+len] = string.encode()[0,len]
+    mm[pos+len] = 0
+    return pos + maxlen
+
 def readString(mm, pos, maxlen):
     val = mm[pos:mm.find(b'\x00', pos)].decode()
     return pos + maxlen, val
@@ -161,6 +169,7 @@ def patch_firmware(mm, pos, args):
     pos += 1                    # Skip the hardware flag
 
     pos = patch_uid(mm, pos, args)
+    pos = writeString(mm, pos, args.device_name, 17)
     if _hasWiFi:                # Has WiFi (i.e. ESP8266 or ESP32)
         pos = patch_wifi(mm, pos, args)
     if _deviceType == 0:        # TX target
@@ -221,6 +230,9 @@ def print_config(mm, pos):
         print(f'Binding phrase was used, UID = {UID[0],UID[1],UID[2],UID[3],UID[4],UID[5]}')
     else:
         print('No binding phrase set')
+
+    (pos, device_name) = readString(mm, pos, 17)
+    print(f'Device name: {device_name}')
 
     if _hasWiFi:
         (pos, val) = read32(mm, pos)
@@ -290,6 +302,7 @@ def main():
     parser.add_argument('--print', action='store_true', help='Print the current configuration in the firmware')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
+    parser.add_argument('--device-name', type=str, help='The device name to display in the LUA status bar')
     # WiFi Params
     parser.add_argument('--ssid', type=length_check(32, "ssid"), required=False, default="", help='Home network SSID')
     parser.add_argument('--password', type=length_check(64, "password"), required=False, default="", help='Home network password')

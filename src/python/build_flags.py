@@ -50,6 +50,10 @@ def parse_flags(path):
                         parts = re.search("(.*)=\w*\"(.*)\"$", define)
                         if parts and parts.group(2):
                             define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
+                    if "DEVICE_NAME=" in define:
+                        parts = re.search("(.*)=\w*'\"(.*)\"'$", define)
+                        if parts and parts.group(2):
+                            define = "-DDEVICE_NAME_ARR=" + string_to_ascii(parts.group(2))
                     if not define in build_flags:
                         build_flags.append(define)
     except IOError:

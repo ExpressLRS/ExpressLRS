@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME          "SIYI FM30"
+#define DEVICE_NAME          "SIYI FM30\0\0\0\0\0\0\0"
 #endif
 
 // There is some special handling for this target

@@ -1,8 +1,8 @@
 #ifndef DEVICE_NAME
 #ifdef BETAFPV_MICRO_1000MW
-#define DEVICE_NAME              "BFPV 2G4Micro1W"
+#define DEVICE_NAME              "BFPV 2G4Micro1W\0"
 #else
-#define DEVICE_NAME              "BETAFPV2G4Micro"
+#define DEVICE_NAME              "BETAFPV2G4Micro\0"
 #endif
 #endif
 

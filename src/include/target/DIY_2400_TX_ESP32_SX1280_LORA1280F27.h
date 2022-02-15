@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DIY2400 F27"
+#define DEVICE_NAME "DIY2400 F27\0\0\0\0\0"
 #endif
 
 // Output Power

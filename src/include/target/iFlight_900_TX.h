@@ -1,4 +1,4 @@
-#define DEVICE_NAME "iFlight 900TX"
+#define DEVICE_NAME "iFlight 900TX\0\0\0"
 
 // Any device features
 #define TARGET_TX_IFLIGHT

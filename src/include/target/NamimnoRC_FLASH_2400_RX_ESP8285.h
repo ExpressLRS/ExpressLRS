@@ -1,5 +1,4 @@
-#define DEVICE_NAME "Namimno 2400RX"
-
+#define DEVICE_NAME "Namimno 2400RX\0\0"
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5

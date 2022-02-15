@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "QuadKopters 2G4"
+#define DEVICE_NAME "QuadKopters 2G4\0"
 #endif
 
 // Any device features

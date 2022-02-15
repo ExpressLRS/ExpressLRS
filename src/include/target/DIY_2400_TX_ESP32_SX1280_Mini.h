@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DIY2400 Mini"
+#define DEVICE_NAME "DIY2400 Mini\0\0\0\0"
 #endif
 
 // GPIO pin definitions
