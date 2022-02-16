@@ -19,13 +19,13 @@ static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-    "25Hz|-123dBm;50Hz|-120dBm;100Hz|-117dBm;200Hz|-112dBm",
+    "25Hz(-123;50Hz(-120;100Hz(-117;200Hz(-112",
 #elif defined(Regulatory_Domain_ISM_2400)
-    "50Hz|-117dBm;150Hz|-112Bbm;250Hz|-108dBm;500Hz|-105dBm",
+    "50Hz(-117;150Hz(-112;250Hz(-108;500Hz(-105",
 #else
     #error Invalid radio configuration!
 #endif
-    emptySpace
+    "dBm)"
 };
 
 static struct luaItem_selection luaTlmRate = {
