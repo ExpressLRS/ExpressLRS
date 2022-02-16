@@ -282,7 +282,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
             connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
-            // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
+            // -- uplink_TX_Power is updated via devCRSF event, so it updates with no telemetry
             // -- rf_mode is updated when we change rates
             // -- downlink_Link_quality is updated before the LQ period is incremented
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
@@ -1076,7 +1076,6 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
-    crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
