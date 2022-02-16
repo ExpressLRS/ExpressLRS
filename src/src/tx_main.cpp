@@ -127,24 +127,17 @@ device_affinity_t ui_devices[] = {
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 #if !defined(DYNPOWER_THRESH_UP)
-  #define DYNPOWER_THRESH_UP              15
+  #define DYNPOWER_THRESH_UP              5
 #endif
 #if !defined(DYNPOWER_THRESH_DN)
-  #define DYNPOWER_THRESH_DN              21
+  #define DYNPOWER_THRESH_DN              9
 #endif
-#if !defined(DYNPOWER_THRESH_LQ_UP)
-  #define DYNPOWER_THRESH_LQ_UP           85
-#endif
-#if !defined(DYNPOWER_THRESH_LQ_DN)
-  #define DYNPOWER_THRESH_LQ_DN           97
-#endif
-#define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
-static int32_t dynamic_power_avg_lq = DYNPOWER_THRESH_LQ_DN << 16;
+static int32_t dynamic_power_avg_lq = 100 << 16;
 static bool dynamic_power_updated;
 
 #ifdef TARGET_TX_GHOST
@@ -200,47 +193,25 @@ void DynamicPower_Update()
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
       POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-      // restart the rssi sampling after a boost up
-      dynamic_power_rssi_sum = 0;
-      dynamic_power_rssi_n = 0;
   }
   // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
   dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
-  // =============  RSSI-based power adjustment ==============
-  // It is working slowly, suitable for a general long-range flights.
-
-  // Get the RSSI from the selected antenna.
-  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
-
-  dynamic_power_rssi_sum += rssi;
-  dynamic_power_rssi_n++;
-
-  //DBGLN("LQ=%d LQA=%d RSSI=%d", lq_current, lq_avg, rssi);
-  // Dynamic power needs at least DYNAMIC_POWER_MIN_RECORD_NUM amount of telemetry records to update.
-  if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
-    return;
-
-  int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
-  int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
-
-  int32_t lq_adjust = (100-lq_avg)/3;
-  int32_t rssi_inc_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_UP;  // thresholds are adjusted according to LQ fluctuation
-  int32_t rssi_dec_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_DN;
-
-  // increase power only up to the set power from the LUA script
-  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
-    DBGLN("Power increase");
-    POWERMGNT.incPower();
-  }
-  if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
-    DBGVLN("Power decrease");  // Print this on verbose only, to prevent spamming when on a high telemetry ratio
-    dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
+  int8_t snr = crsf.LinkStatistics.uplink_SNR;
+  if (snr >= DYNPOWER_THRESH_DN)
+  {
+    DBGVLN("Power decrease");
     POWERMGNT.decPower();
   }
-
-  dynamic_power_rssi_sum = 0;
-  dynamic_power_rssi_n = 0;
+  uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
+  while ((snr <= DYNPOWER_THRESH_UP) && (powerHeadroom > 0))
+  {
+    DBGLN("Power increase");
+    POWERMGNT.incPower();
+    // Every power doubling will theoretically increase the SNR by 3dB
+    snr += 3;
+    --powerHeadroom;
+  }
 }
 
 void ICACHE_RAM_ATTR ProcessTLMpacket()

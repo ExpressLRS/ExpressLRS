@@ -22,6 +22,7 @@
 #include "config.h"
 #include "options.h"
 #include "POWERMGNT.h"
+#include "MeanAccumulator.h"
 
 #include "device.h"
 #include "helpers.h"
@@ -113,6 +114,7 @@ LPF LPF_OffsetDx(4);
 // LPF LPF_UplinkRSSI(5);
 LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
+MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 
 /// LQ Calculation //////////
@@ -214,6 +216,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    SnrMean.add(Radio.LastPacketSNR);
 
     if (rssiDBM0 > 0) rssiDBM0 = 0;
     if (rssiDBM1 > 0) rssiDBM1 = 0;
@@ -305,7 +308,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
         Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
-        Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+        Radio.TXdataBuffer[4] = SnrMean.mean();
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
@@ -586,6 +589,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
+    SnrMean.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
     // The caller MUST call hwTimer.resume(). It is not done here because
