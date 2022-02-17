@@ -21,9 +21,7 @@ OLEDScreen screen;
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
 FiveWayButton fivewaybutton;
-
-static uint32_t none_input_start_time = 0;
-static bool isUserInputCheck = false;
+static uint32_t last_user_input_ms;
 #endif
 
 #ifdef HAS_GSENSOR
@@ -38,7 +36,7 @@ static bool is_pre_screen_flipped = false;
 extern Thermal thermal;
 
 #define UPDATE_TEMP_TIMEOUT  5000
-uint32_t update_temp_start_time = 0;
+static uint32_t last_update_temp_ms;
 #endif
 
 #define SCREEN_DURATION 20
@@ -48,6 +46,7 @@ static bool isLogoDisplayed = false;
 
 #define SCREEN_IDLE_TIMEOUT  20000
 
+extern bool connectionHasModelMatch;
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
 extern void ExitBindingMode();
@@ -63,7 +62,7 @@ extern unsigned long rebootTime;
 #endif
 
 #define BINDING_MODE_TIME_OUT 5000
-static uint32_t binding_mode_start_time = 0;
+static uint32_t binding_mode_start_ms = 0;
 
 
 static void ScreenUpdateCallback(int updateType)
@@ -85,7 +84,7 @@ static void ScreenUpdateCallback(int updateType)
     case USER_UPDATE_TYPE_BINDING:
       DBGLN("User request binding!");
       EnterBindingMode();
-      binding_mode_start_time = millis();
+      binding_mode_start_ms = millis();
       break;
     case USER_UPDATE_TYPE_EXIT_BINDING:
       DBGLN("User request exit binding!");
@@ -121,6 +120,13 @@ static void ScreenUpdateCallback(int updateType)
   }
 }
 
+static void devScreenPushParamUpdate()
+{
+  uint8_t disp_message = IsArmed() ? SCREEN_MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? SCREEN_MSG_CONNECTED : SCREEN_MSG_MISMATCH) : SCREEN_MSG_DISCONNECTED);
+  screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_message);
+}
+
+
 #ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
 {
@@ -149,19 +155,25 @@ static int handle(void)
     return 100; // no need to check as often if the screen is off!
   }
 #endif
-
   if(!IsArmed())
   {
     int key;
     bool isLongPressed;
     fivewaybutton.update(&key, &isLongPressed);
+
+    uint32_t now = millis();
+    if (key != INPUT_KEY_NO_PRESS)
+    {
+      last_user_input_ms = now;
+    }
+
     if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
     {
 #ifdef HAS_THERMAL
-      if(millis() - update_temp_start_time > UPDATE_TEMP_TIMEOUT)
+      if(now - last_update_temp_ms > UPDATE_TEMP_TIMEOUT)
       {
         screen.doTemperatureUpdate(thermal.getTempValue());
-        update_temp_start_time = millis();
+        last_update_temp_ms = now;
       }
 #endif
       if(isLongPressed)
@@ -171,16 +183,9 @@ static int handle(void)
     }
     else if(screen.getScreenStatus() == SCREEN_STATUS_WORK)
     {
-      if(!isUserInputCheck)
-      {
-        none_input_start_time = millis();
-        isUserInputCheck = true;
-      }
-
       if (key != INPUT_KEY_NO_PRESS)
       {
         DBGLN("user key = %d", key);
-        isUserInputCheck = false;
         if(key == INPUT_KEY_DOWN_PRESS)
         {
           screen.doUserAction(USER_ACTION_DOWN);
@@ -202,19 +207,23 @@ static int handle(void)
           screen.doUserAction(USER_ACTION_CONFIRM);
         }
       }
-      else if((millis() - none_input_start_time) > SCREEN_IDLE_TIMEOUT)
+      // timeout to the idle screen if not in wifi mode
+      else if((now - last_user_input_ms) > SCREEN_IDLE_TIMEOUT && (connectionState != wifiUpdate))
       {
-        isUserInputCheck = false;
         screen.idleScreen();
       }
     }
     else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
     {
-      if((millis() - binding_mode_start_time) > BINDING_MODE_TIME_OUT)
+      if((now - binding_mode_start_ms) > BINDING_MODE_TIME_OUT)
       {
         screen.doUserAction(USER_ACTION_LEFT);
       }
     }
+  }
+  else if(screen.getScreenStatus() != SCREEN_STATUS_IDLE)
+  {
+    screen.idleScreen();
   }
   return SCREEN_DURATION;
 }
@@ -242,7 +251,7 @@ static int start()
 {
   if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
   {
-    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
+    devScreenPushParamUpdate();
     return LOGO_DISPLAY_TIMEOUT;
   }
   return DURATION_IMMEDIATELY;
@@ -256,7 +265,7 @@ static int event()
   }
   else
   {
-    screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()));
+    devScreenPushParamUpdate();
   }
 
   return DURATION_IGNORE;

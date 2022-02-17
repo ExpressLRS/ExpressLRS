@@ -347,6 +347,8 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
+    uint16_t prev_AUX1 = ChannelDataIn[4];
+
     ChannelDataIn[0] = (rcChannels->ch0);
     ChannelDataIn[1] = (rcChannels->ch1);
     ChannelDataIn[2] = (rcChannels->ch2);
@@ -363,6 +365,13 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
+        
+    #if defined(PLATFORM_ESP32)
+    if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
+    {
+        devicesTriggerEvent();
+    }
+    #endif
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()

@@ -1,10 +1,12 @@
 #ifdef TARGET_TX
 
 #include "lua.h"
+#include "common.h"
 #include "CRSF.h"
 #include "logging.h"
 
 extern CRSF crsf;
+extern bool IsArmed();
 
 static volatile bool UpdateParamReq = false;
 
@@ -187,13 +189,20 @@ uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
   return luaWarningFlags & suppressedLuaWarningFlags;
 }
 
+static void updateElrsFlags()
+{
+  setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setLuaWarningFlag(LUA_FLAG_ISARMED, IsArmed());
+}
+
 void sendELRSstatus()
 {
   constexpr const char *messages[] = { //higher order = higher priority
     "",                   //status2 = connected status
     "",                   //status1, reserved for future use
     "Model Mismatch",     //warning3, model mismatch
-    "",           //warning2, reserved for future use
+    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
     "",  //critical warning3, reserved for future use
     "",  //critical warning2, reserved for future use
@@ -277,6 +286,7 @@ bool luaHandleUpdateParameter()
       {
         // special case for elrs linkstat request
         DBGVLN("ELRS status request");
+        updateElrsFlags();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();

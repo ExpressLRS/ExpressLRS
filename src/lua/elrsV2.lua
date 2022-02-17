@@ -573,7 +573,12 @@ local function parseElrsInfoMessage(data)
 
   local badPkt = data[3]
   local goodPkt = (data[4]*256) + data[5]
-  elrsFlags = data[6]
+  local newFlags = data[6]
+  -- If flags are changing, reset the warning timeout to display/hide message immediately
+  if newFlags ~= elrsFlags then
+    elrsFlags = newFlags
+    titleShowWarnTimeout = 0
+  end
   elrsFlagsInfo = fieldGetString(data, 7)
 
   local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
