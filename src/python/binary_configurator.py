@@ -329,27 +329,27 @@ def main():
     # RX Params
     parser.add_argument('--rx-baud', type=int, const=420000, nargs='?', action='store', help='The receiver baudrate talking to the flight controller')
     parser.add_argument('--invert-tx', dest='invert_tx', action='store_true', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
-    parser.add_argument('--no-invert-tx', dest='invert_tx', action='store_false', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
+    parser.add_argument('--no-invert-tx', dest='invert_tx', action='store_false', help='TX pin is connected to a regular UART (i.e. not an SBUS inverted pin)')
     parser.set_defaults(invert_tx=None)
     parser.add_argument('--lock-on-first-connection', dest='lock_on_first_connection', action='store_true', help='Lock RF mode on first connection')
-    parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Lock RF mode on first connection')
+    parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Do not lock RF mode on first connection')
     parser.set_defaults(lock_on_first_connection=None)
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--sync-on-arm', dest='sync_on_arm', action='store_true', help='Send sync packets to the RX when armed')
     parser.add_argument('--no-sync-on-arm', dest='sync_on_arm', action='store_false', help='Do not send sync packets to the RX when armed')
     parser.set_defaults(sync_on_arm=None)
-    parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='If your radio is T8SG V2 or you use Deviation firmware set this to False.')
-    parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this to False.')
+    parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
+    parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
     parser.set_defaults(uart_inverted=None)
-    parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='')
-    parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='')
+    parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
+    parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
     parser.set_defaults(unlock_higher_power=None)
     # Buzzer
     parser.add_argument('--buzzer-mode', type=BuzzerMode, choices=list(BuzzerMode), default=None, help='Which buzzer mode to use, if there is a buzzer')
     parser.add_argument('--buzzer-melody', type=str, default=None, help='If the mode is "custom", then this is the tune')
     # Regulatory domain
-    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based device, which regulatory domain is being used')
+    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
 
     #
     # Firmware file to patch/configure
