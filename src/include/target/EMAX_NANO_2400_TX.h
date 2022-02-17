@@ -3,7 +3,7 @@
 #endif
 
 // There is some special handling for this target
-#define TARGET_TX_EMAX_2400_V1
+#define TARGET_TX_EMAX_NANO_2400_V1
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
