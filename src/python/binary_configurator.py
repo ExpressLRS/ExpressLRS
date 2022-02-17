@@ -31,10 +31,11 @@ def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
 
 def write32(mm, pos, val):
-    mm[pos + 0] = (val >> 0) & 0xFF
-    mm[pos + 1] = (val >> 8) & 0xFF
-    mm[pos + 2] = (val >> 16) & 0xFF
-    mm[pos + 3] = (val >> 24) & 0xFF
+    if val:
+        mm[pos + 0] = (val >> 0) & 0xFF
+        mm[pos + 1] = (val >> 8) & 0xFF
+        mm[pos + 2] = (val >> 16) & 0xFF
+        mm[pos + 3] = (val >> 24) & 0xFF
     return pos + 4
 
 def read32(mm, pos):
@@ -45,11 +46,12 @@ def read32(mm, pos):
     return pos + 4, val
 
 def writeString(mm, pos, string, maxlen):
-    len = len(string)
-    if len > maxlen-1:
-        len = maxlen-1
-    mm[pos:pos+len] = string.encode()[0,len]
-    mm[pos+len] = 0
+    if string:
+        l = len(string)
+        if l > maxlen-1:
+            l = maxlen-1
+        mm[pos:pos+l] = string.encode()[0,l]
+        mm[pos+l] = 0
     return pos + maxlen
 
 def readString(mm, pos, maxlen):
@@ -65,61 +67,78 @@ def patch_uid(mm, pos, args):
     return pos
 
 def patch_wifi(mm, pos, args):
-    interval = args.auto_wifi * 1000
-    pos = write32(interval)
-    mm[pos:pos + len(args.ssid)] = args.ssid.encode()
-    pos += 33           # account for the nul
-    mm[pos:pos + len(args.password)] = args.password.encode()
-    pos += 65           # account for the nul
+    interval = None
+    if args.no_auto_wifi:
+        interval = -1
+    elif args.auto_wifi:
+        interval = args.auto_wifi * 1000
+    pos = write32(mm, pos, interval)
+    pos = writeString(mm, pos, args.ssid, 33)
+    pos = writeString(mm, pos, args.password, 65)
     return pos
 
 def patch_rx_params(mm, pos, args):
     pos = write32(mm, pos, args.rx_baud)
-    mm[pos] = args.invert_tx | (args.lock_on_first_connection << 1)
-    pos += 1
-    return pos
+    val = mm[pos]
+    if args.invert_tx != None:
+        val &= ~1
+        val |= args.invert_tx
+    if args.lock_on_first_connection != None:
+        val &= ~2
+        val |= (args.lock_on_first_connection << 1)
+    mm[pos] = val
+    return pos + 1
 
 def patch_tx_params(mm, pos, args):
     pos = write32(mm, pos, args.tlm_report)
-    flags = args.sync_on_arm << 0
-    flags |= args.uart_inverted << 1
-    flags |= args.unlock_higher_power << 2
-    mm[pos] = flags
-    pos += 1
-    return pos
+    val = mm[pos]
+    if args.sync_on_arm != None:
+        val &= ~1
+        val |= args.sync_on_arm
+    if args.uart_inverted != None:
+        val &= ~2
+        val |= (args.uart_inverted << 1)
+    if args.unlock_higher_power != None:
+        val &= ~4
+        val |= (args.unlock_higher_power << 2)
+    mm[pos] = val
+    return pos + 1
 
 def patch_buzzer(mm, pos, args):
-    if args.buzzer_mode == BuzzerMode.quiet:
-        mm[pos] = 0
-    if args.buzzer_mode == BuzzerMode.one:
-        mm[pos] = 1
-    if args.buzzer_mode == BuzzerMode.beep:
-        mm[pos] = 2
-        melody = 'A4 20 B4 20|60|0'
-    if args.buzzer_mode == BuzzerMode.default:
-        mm[pos] = 2
-        melody = 'E5 40 E5 40 C5 120 E5 40 G5 22 G4 21|20|0'
-    if args.buzzer_mode == BuzzerMode.custom:
-        mm[pos] = 2
-        melody = args.buzzer_melody
+    melody = args.buzzer_melody
+    if args.buzzer_mode:
+        if args.buzzer_mode == BuzzerMode.quiet:
+            mm[pos] = 0
+        if args.buzzer_mode == BuzzerMode.one:
+            mm[pos] = 1
+        if args.buzzer_mode == BuzzerMode.beep:
+            mm[pos] = 2
+            melody = 'A4 20 B4 20|60|0'
+        if args.buzzer_mode == BuzzerMode.default:
+            mm[pos] = 2
+            melody = 'E5 40 E5 40 C5 120 E5 40 G5 22 G4 21|20|0'
+        if args.buzzer_mode == BuzzerMode.custom:
+            mm[pos] = 2
+            melody = args.buzzer_melody
+    mode = mm[pos]
     pos += 1
 
-    melodyArray = melodyparser.parseToArray(melody)
     mpos = 0
-    for element in melodyArray:
-        if mpos == 32*4:
-            print("Melody truncated at 32 tones")
-            break
-        mm[pos+mpos+0] = (int(element[0]) >> 0) & 0xFF
-        mm[pos+mpos+1] = (int(element[0]) >> 8) & 0xFF
-        mm[pos+mpos+2] = (int(element[1]) >> 0) & 0xFF
-        mm[pos+mpos+3] = (int(element[1]) >> 8) & 0xFF
-        mpos += 4
-
-    # If we are short, then add a terminating 0's
-    while(mpos < 32*4):
-        mm[pos+mpos] = 0
-        mpos += 1
+    if mode == 2 and melody:
+        melodyArray = melodyparser.parseToArray(melody)
+        for element in melodyArray:
+            if mpos == 32*4:
+                print("Melody truncated at 32 tones")
+                break
+            mm[pos+mpos+0] = (int(element[0]) >> 0) & 0xFF
+            mm[pos+mpos+1] = (int(element[0]) >> 8) & 0xFF
+            mm[pos+mpos+2] = (int(element[1]) >> 0) & 0xFF
+            mm[pos+mpos+3] = (int(element[1]) >> 8) & 0xFF
+            mpos += 4
+        # If we are short, then add a terminating 0's
+        while(mpos < 32*4):
+            mm[pos+mpos] = 0
+            mpos += 1
 
     pos += 32*4     # 32 notes x (2 bytes tone, 2 bytes duration)
     return pos
@@ -178,8 +197,7 @@ def patch_firmware(mm, pos, args):
             pos = patch_buzzer(mm, pos, args)
     if _deviceType == 1:        # RX target
         pos = patch_rx_params(mm, pos, args)
-
-    if _radioChip == 0:         # SX127X
+    if _radioChip == 0 and args.domain:         # SX127X
         patch_domain(mm, args)
 
 def print_domain(mm):
@@ -304,39 +322,34 @@ def main():
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     parser.add_argument('--device-name', type=str, help='The device name to display in the LUA status bar')
     # WiFi Params
-    parser.add_argument('--ssid', type=length_check(32, "ssid"), required=False, default="", help='Home network SSID')
-    parser.add_argument('--password', type=length_check(64, "password"), required=False, default="", help='Home network password')
-    parser.add_argument('--auto-wifi', type=int, default=60, help='Interval (in seconds) before WiFi auto starts, if no connection is made')
+    parser.add_argument('--ssid', type=length_check(32, "ssid"), required=False, help='Home network SSID')
+    parser.add_argument('--password', type=length_check(64, "password"), required=False, help='Home network password')
+    parser.add_argument('--auto-wifi', type=int, help='Interval (in seconds) before WiFi auto starts, if no connection is made')
+    parser.add_argument('--no-auto-wifi', action='store_true', help='Disables WiFi auto start if no connection is made')
     # RX Params
-    parser.add_argument('--rx-baud', type=int, default=420000, help='The receiver baudrate talking to the flight controller')
+    parser.add_argument('--rx-baud', type=int, const=420000, nargs='?', action='store', help='The receiver baudrate talking to the flight controller')
     parser.add_argument('--invert-tx', dest='invert_tx', action='store_true', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
     parser.add_argument('--no-invert-tx', dest='invert_tx', action='store_false', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
-    parser.set_defaults(invert_tx=False)
+    parser.set_defaults(invert_tx=None)
     parser.add_argument('--lock-on-first-connection', dest='lock_on_first_connection', action='store_true', help='Lock RF mode on first connection')
     parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Lock RF mode on first connection')
-    parser.set_defaults(lock_on_first_connection=True)
+    parser.set_defaults(lock_on_first_connection=None)
     # TX Params
-    parser.add_argument('--tlm-report', type=int, default=320, help='The interval (in milliseconds) between telemetry packets')
-    parser.add_argument('--opentx-sync', dest='opentx_sync', action='store_true', help='Send sync packets to OpenTx (crossfire-shot)')
-    parser.add_argument('--no-opentx-sync', dest='opentx_sync', action='store_false', help='Send sync packets to OpenTx (crossfire-shot)')
-    parser.set_defaults(opentx_sync=True)
-    parser.add_argument('--opentx-sync-autotune', dest='opentx_sync_autotune', action='store_true', help='Auto tunes the offsets sent to OpenTX for sync packets')
-    parser.add_argument('--no-opentx-sync-autotune', dest='opentx_sync_autotune', action='store_false', help='Auto tunes the offsets sent to OpenTX for sync packets')
-    parser.set_defaults(opentx_sync_autotune=False)
+    parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--sync-on-arm', dest='sync_on_arm', action='store_true', help='Send sync packets to the RX when armed')
     parser.add_argument('--no-sync-on-arm', dest='sync_on_arm', action='store_false', help='Do not send sync packets to the RX when armed')
-    parser.set_defaults(sync_on_arm=True)
+    parser.set_defaults(sync_on_arm=None)
     parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='If your radio is T8SG V2 or you use Deviation firmware set this to False.')
     parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this to False.')
-    parser.set_defaults(uart_inverted=True)
+    parser.set_defaults(uart_inverted=None)
     parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='')
     parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='')
-    parser.set_defaults(unlock_higher_power=False)
+    parser.set_defaults(unlock_higher_power=None)
     # Buzzer
-    parser.add_argument('--buzzer-mode', type=BuzzerMode, choices=list(BuzzerMode), default=BuzzerMode.default, help='Which buzzer mode to use, if there is a buzzer')
-    parser.add_argument('--buzzer-melody', type=str, default="", help='If the mode is "custom", then this is the tune')
+    parser.add_argument('--buzzer-mode', type=BuzzerMode, choices=list(BuzzerMode), default=None, help='Which buzzer mode to use, if there is a buzzer')
+    parser.add_argument('--buzzer-melody', type=str, default=None, help='If the mode is "custom", then this is the tune')
     # Regulatory domain
-    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=RegulatoryDomain.fcc_915, help='For SX127X based device, which regulatory domain is being used')
+    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based device, which regulatory domain is being used')
 
     #
     # Firmware file to patch/configure
