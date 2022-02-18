@@ -10,8 +10,9 @@
 #include "lua.h"
 #include "OTA.h"
 #include "hwTimer.h"
+#include "FHSS.h"
 
-
+static char version_domain[20+1+6+1];
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
@@ -104,7 +105,7 @@ static struct luaItem_string luaInfo = {
 };
 
 static struct luaItem_string luaELRSversion = {
-    {version, CRSF_INFO},
+    {version_domain, CRSF_INFO},
     commit
 };
 
@@ -552,6 +553,14 @@ static void registerLuaParameters()
   registerLUAParameter(&luaBind, &luahandSimpleSendCmd);
 
   registerLUAParameter(&luaInfo);
+  if (strlen(version) < 21) {
+    strlcpy(version_domain, version, 21);
+    strlcat(version_domain, " ", sizeof(version_domain));
+  } else {
+    strlcpy(version_domain, version, 18);
+    strlcat(version_domain, "... ", sizeof(version_domain));
+  }
+  strlcat(version_domain, FHSSconfig.domain, sizeof(version_domain));
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }

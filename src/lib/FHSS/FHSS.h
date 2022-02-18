@@ -19,9 +19,10 @@
 #endif
 
 typedef struct {
-    uint8_t _magic[4];
-    uint32_t freq_count;
-    uint32_t freqs[MAX_FREQS];
+    uint8_t     _magic[4];
+    char        domain[8];
+    uint32_t    freq_count;
+    uint32_t    freqs[MAX_FREQS];
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;

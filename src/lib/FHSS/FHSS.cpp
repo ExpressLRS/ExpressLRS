@@ -11,8 +11,27 @@
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 const fhss_config_t FHSSconfig = {
     ._magic = {0xF0, 0x0D, 0xD0, 0xBE},
+#ifdef Regulatory_Domain_AU_915
+    .domain = "AU915\0\0",
+#elif defined Regulatory_Domain_FCC_915
+    .domain = "FCC915\0",
+#elif defined Regulatory_Domain_EU_868
+    .domain = "EU868\0\0",
+#elif defined Regulatory_Domain_IN_866
+    .domain = "IN866\0\0",
+#elif defined Regulatory_Domain_AU_433
+    .domain = "AU433\0\0",
+#elif defined Regulatory_Domain_EU_433
+    .domain = "EU433\0\0",
+#elif defined Regulatory_Domain_EU_CE_2400
+    .domain = "CE2G4\0\0",
+#elif defined Regulatory_Domain_ISM_2400
+    .domain = "ISM2G4\0",
+#else
+#error No regulatory domain defined, please define one
+#endif
 #ifdef Regulatory_Domain_AU_433
-    .freq_count =3,
+    .freq_count = 3,
     .freqs = {
         FREQ_HZ_TO_REG_VAL(433420000),
         FREQ_HZ_TO_REG_VAL(433920000),
@@ -280,24 +299,7 @@ Approach:
 */
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
-#ifdef Regulatory_Domain_AU_915
-    INFOLN("Setting 915MHz AU Mode");
-#elif defined Regulatory_Domain_FCC_915
-    INFOLN("Setting 915MHz FCC Mode");
-#elif defined Regulatory_Domain_EU_868
-    INFOLN("Setting 868MHz EU Mode");
-#elif defined Regulatory_Domain_IN_866
-    INFOLN("Setting 866MHz IN Mode");
-#elif defined Regulatory_Domain_AU_433
-    INFOLN("Setting 433MHz AU Mode");
-#elif defined Regulatory_Domain_EU_433
-    INFOLN("Setting 433MHz EU Mode");
-#elif defined Regulatory_Domain_ISM_2400
-    INFOLN("Setting 2400MHz Mode");
-#else
-#error No regulatory domain defined, please define one in common.h
-#endif
-
+    INFOLN("Setting %s Mode", FHSSconfig.domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfig.freq_count);
 
     sync_channel = FHSSconfig.freq_count / 2;

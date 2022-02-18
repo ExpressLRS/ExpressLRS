@@ -31,7 +31,7 @@ def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
 
 def write32(mm, pos, val):
-    if val:
+    if val != None:
         mm[pos + 0] = (val >> 0) & 0xFF
         mm[pos + 1] = (val >> 8) & 0xFF
         mm[pos + 2] = (val >> 16) & 0xFF
@@ -46,7 +46,7 @@ def read32(mm, pos):
     return pos + 4, val
 
 def writeString(mm, pos, string, maxlen):
-    if string:
+    if string != None:
         l = len(string)
         if l > maxlen-1:
             l = maxlen-1
@@ -162,19 +162,25 @@ def patch_domain(mm, args):
         raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
     pos += 4                    # skip magic
     if args.domain == RegulatoryDomain.eu_433:
+        pos += writeString(mm, pos, 'EU433', 8)
         pos = write32(mm, pos, 3)
         pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433100000))
         pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433925000))
         pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(434450000))
     elif args.domain == RegulatoryDomain.au_433:
+        pos += writeString(mm, pos, 'AU433', 8)
         generate_domain(mm, pos, 3, 433420000, 500000)
     elif args.domain == RegulatoryDomain.in_866:
+        pos += writeString(mm, pos, 'IN866', 8)
         generate_domain(mm, pos, 4, 865375000, 525000)
     elif args.domain == RegulatoryDomain.eu_868:
+        pos += writeString(mm, pos, 'EU868', 8)
         generate_domain(mm, pos, 13, 863275000, 525000)
     elif args.domain == RegulatoryDomain.au_915:
+        pos += writeString(mm, pos, 'AU915', 8)
         generate_domain(mm, pos, 20, 915500000, 600000)
     elif args.domain == RegulatoryDomain.fcc_915:
+        pos += writeString(mm, pos, 'FCC915', 8)
         generate_domain(mm, pos, 40, 903500000, 600000)
 
 def patch_firmware(mm, pos, args):
@@ -205,8 +211,10 @@ def print_domain(mm):
     if pos == -1:
         raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
     pos += 4                    # skip magic
+    (pos, domain_short) = readString(mm, pos, 8)
     (pos, count) = read32(mm, pos)
     (pos, first) = read32(mm, pos)
+    print (f'Short domain configured as {domain_short}')
     if count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433100000):
         print('Regulatory Domain is EU 433 MHz')
     elif count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433420000):
