@@ -27,17 +27,18 @@ PackChannelData_t PackChannelData;
 
 static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {
+    Buffer[0] = RC_DATA_PACKET & 0b11;
+
 #if defined(DEBUG_RCVR_LINKSTATS)
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     static uint32_t packetCnt;
-    crsf->ChannelDataIn[0] = ((packetCnt >> 24) & 0xff) << 1;
-    crsf->ChannelDataIn[1] = ((packetCnt >> 16) & 0xff) << 1;
-    crsf->ChannelDataIn[2] = ((packetCnt >> 8) & 0xff) << 1;
-    crsf->ChannelDataIn[3] = ((packetCnt >> 0) & 0xff) << 1;
+    Buffer[1] = (packetCnt >> 24);
+    Buffer[2] = (packetCnt >> 16);
+    Buffer[3] = (packetCnt >> 8);
+    Buffer[4] = (packetCnt >> 0);
+    Buffer[5] = 0;
     ++packetCnt;
-#endif
-
-    Buffer[0] = RC_DATA_PACKET & 0b11;
+#else
     Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
     Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
     Buffer[3] = ((crsf->ChannelDataIn[2]) >> 3);
@@ -46,6 +47,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(volatile uint8_t* Buffer
                             ((crsf->ChannelDataIn[1] & 0b110) << 3) |
                             ((crsf->ChannelDataIn[2] & 0b110) << 1) |
                             ((crsf->ChannelDataIn[3] & 0b110) >> 1);
+#endif /* !DEBUG_RCVR_LINKSTATS */
 }
 
 /**
@@ -170,13 +172,22 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(volatile uint8_t* Buffer, CRS
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t UnpackChannelData;
 
+#if defined(DEBUG_RCVR_LINKSTATS)
+// Sequential PacketID from the TX
+uint32_t debugRcvrLinkstatsPacketId;
+#endif
+
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {
+#if defined(DEBUG_RCVR_LINKSTATS)
+    debugRcvrLinkstatsPacketId = (Buffer[1] << 24) | (Buffer[2] << 16) | (Buffer[3] << 8) | Buffer[4];
+#else
     // The analog channels
     crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
     crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+#endif
 }
 
 /**

@@ -176,6 +176,7 @@ int8_t debug4 = 0;
 
 #if defined(DEBUG_RCVR_LINKSTATS)
 static bool debugRcvrLinkstatsPending;
+static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 void reset_into_bootloader(void);
@@ -237,6 +238,10 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.downlink_Link_quality = debug2;
     crsf.LinkStatistics.downlink_SNR = debug3;
     crsf.LinkStatistics.uplink_RSSI_2 = debug4;
+    #endif
+
+    #if defined(DEBUG_RCVR_LINKSTATS)
+    debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
 
@@ -1176,18 +1181,19 @@ static void debugRcvrLinkstats()
         debugRcvrLinkstatsPending = false;
 
         // Copy the data out of the ISR-updating bits ASAP
-        crsf_channels_s pd = crsf.PackedRCdataOut;
         // While YOLOing (const void *) away the volatile
         crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&crsf.LinkStatistics);
-        uint32_t packetCounter = (pd.ch0 << 23) | (pd.ch1 << 15) | (pd.ch2 << 7) | (pd.ch3 >> 1);
+        uint32_t packetCounter = debugRcvrLinkstatsPacketId;
+        uint8_t fhss = debugRcvrLinkstatsFhssIdx;
 
         // Use serial instead of DBG() because do not necessarily want all the debug in our logs
-        Serial.print(packetCounter, DEC); Serial.write(',');
-        Serial.print(ls.active_antenna, DEC); Serial.print(",-");
-        Serial.print(ls.active_antenna ? ls.uplink_RSSI_2 : ls.uplink_RSSI_1, DEC); Serial.write(',');
-        Serial.print(ls.uplink_Link_quality, DEC); Serial.write(',');
-        Serial.print(ls.uplink_SNR, DEC); Serial.write(',');
-        Serial.println(ls.uplink_TX_Power, DEC);
+        char buf[30];
+        snprintf(buf, sizeof(buf), "%u,%u,-%u,%u,%d,%u,%u\r\n",
+            packetCounter, ls.active_antenna,
+            ls.active_antenna ? ls.uplink_RSSI_2 : ls.uplink_RSSI_1,
+            ls.uplink_Link_quality, ls.uplink_SNR,
+            ls.uplink_TX_Power, fhss);
+        Serial.write(buf);
     }
 #endif
 }
