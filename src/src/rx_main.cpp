@@ -137,6 +137,7 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
+bool InBindingMode = false;
 
 uint32_t beginProcessing;
 uint32_t doneProcessing;
@@ -173,7 +174,9 @@ int8_t debug4 = 0;
 ///////////////////////////////////////
 #endif
 
-bool InBindingMode = false;
+#if defined(DEBUG_RCVR_LINKSTATS)
+static bool debugRcvrLinkstatsPending;
+#endif
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -199,27 +202,31 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    int32_t rssiDBM0 = LPF_UplinkRSSI0.SmoothDataINT;
-    int32_t rssiDBM1 = LPF_UplinkRSSI1.SmoothDataINT;
-    switch (antenna) {
-        case 0:
-            rssiDBM0 = LPF_UplinkRSSI0.update(Radio.LastPacketRSSI);
-            break;
-        case 1:
-            rssiDBM1 = LPF_UplinkRSSI1.update(Radio.LastPacketRSSI);
-            break;
+    int32_t rssiDBM = Radio.LastPacketRSSI;
+    if (antenna == 0)
+    {
+        #if !defined(DEBUG_RCVR_LINKSTATS)
+        rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
+        #endif
+        if (rssiDBM > 0) rssiDBM = 0;
+        // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
+        crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+    }
+    else
+    {
+        #if !defined(DEBUG_RCVR_LINKSTATS)
+        rssiDBM = LPF_UplinkRSSI1.update(rssiDBM);
+        #endif
+        if (rssiDBM > 0) rssiDBM = 0;
+        // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
+        // May be overwritten below if DEBUG_BF_LINK_STATS is set
+        crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    int32_t rssiDBM = (antenna == 0) ? rssiDBM0 : rssiDBM1;
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
 
-    if (rssiDBM0 > 0) rssiDBM0 = 0;
-    if (rssiDBM1 > 0) rssiDBM1 = 0;
-
-    // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-    crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM0;
     crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
@@ -230,11 +237,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.downlink_Link_quality = debug2;
     crsf.LinkStatistics.downlink_SNR = debug3;
     crsf.LinkStatistics.uplink_RSSI_2 = debug4;
-    #else
-    crsf.LinkStatistics.downlink_RSSI = 0;
-    crsf.LinkStatistics.downlink_Link_quality = 0;
-    crsf.LinkStatistics.downlink_SNR = 0;
-    crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM1;
     #endif
 }
 
@@ -631,6 +633,9 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         newChannelsAvailable = true;
         #else
         crsf.sendRCFrameToFC();
+        #endif
+        #if defined(DEBUG_RCVR_LINKSTATS)
+        debugRcvrLinkstatsPending = true;
         #endif
     }
 }
@@ -1163,6 +1168,30 @@ static void checkSendLinkStatsToFc(uint32_t now)
     }
 }
 
+static void debugRcvrLinkstats()
+{
+#if defined(DEBUG_RCVR_LINKSTATS)
+    if (debugRcvrLinkstatsPending)
+    {
+        debugRcvrLinkstatsPending = false;
+
+        // Copy the data out of the ISR-updating bits ASAP
+        crsf_channels_s pd = crsf.PackedRCdataOut;
+        // While YOLOing (const void *) away the volatile
+        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&crsf.LinkStatistics);
+        uint32_t packetCounter = (pd.ch0 << 23) | (pd.ch1 << 15) | (pd.ch2 << 7) | (pd.ch3 >> 1);
+
+        // Use serial instead of DBG() because do not necessarily want all the debug in our logs
+        Serial.print(packetCounter, DEC); Serial.write(',');
+        Serial.print(ls.active_antenna, DEC); Serial.print(",-");
+        Serial.print(ls.active_antenna ? ls.uplink_RSSI_2 : ls.uplink_RSSI_1, DEC); Serial.write(',');
+        Serial.print(ls.uplink_Link_quality, DEC); Serial.write(',');
+        Serial.print(ls.uplink_SNR, DEC); Serial.write(',');
+        Serial.println(ls.uplink_TX_Power, DEC);
+    }
+#endif
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -1288,6 +1317,7 @@ void loop()
     }
     updateTelemetryBurst();
     updateBindingMode();
+    debugRcvrLinkstats();
 }
 
 struct bootloader {

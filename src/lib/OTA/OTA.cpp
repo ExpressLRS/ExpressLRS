@@ -27,6 +27,16 @@ PackChannelData_t PackChannelData;
 
 static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {
+#if defined(DEBUG_RCVR_LINKSTATS)
+    // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
+    static uint32_t packetCnt;
+    crsf->ChannelDataIn[0] = ((packetCnt >> 24) & 0xff) << 1;
+    crsf->ChannelDataIn[1] = ((packetCnt >> 16) & 0xff) << 1;
+    crsf->ChannelDataIn[2] = ((packetCnt >> 8) & 0xff) << 1;
+    crsf->ChannelDataIn[3] = ((packetCnt >> 0) & 0xff) << 1;
+    ++packetCnt;
+#endif
+
     Buffer[0] = RC_DATA_PACKET & 0b11;
     Buffer[1] = ((crsf->ChannelDataIn[0]) >> 3);
     Buffer[2] = ((crsf->ChannelDataIn[1]) >> 3);
