@@ -89,6 +89,11 @@
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
 
+#DVR start/stop channel and delay (for MSP-based VRX backpacks)
+#-DDVR_START_STOP_CHANNEL=5
+#-DDVR_START_DELAY=0
+#-DDVR_STOP_DELAY=10
+
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
