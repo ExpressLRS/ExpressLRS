@@ -17,11 +17,14 @@
 
 ///////////////////////////////////////
 
+extern bool connectionHasModelMatch;
+
 static device_affinity_t *uiDevices;
 static uint8_t deviceCount;
 
 static bool eventFired[2] = {false, false};
 static connectionState_e lastConnectionState[2] = {disconnected, disconnected};
+static bool lastModelMatch[2] = {false, false};
 
 static unsigned long deviceTimeout[16] = {0};
 
@@ -110,13 +113,15 @@ void devicesUpdate(unsigned long now)
 {
     int32_t core = CURRENT_CORE;
 
-    bool handleEvents = eventFired[core==-1?0:core];
+    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != connectionHasModelMatch;
     eventFired[core==-1?0:core] = false;
+    lastConnectionState[core==-1?0:core] = connectionState;
+    lastModelMatch[core==-1?0:core] = connectionHasModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
         if (uiDevices[i].core == core || core == -1) {
-            if ((handleEvents || lastConnectionState[core==-1?0:core] != connectionState) && uiDevices[i].device->event)
+            if (handleEvents && uiDevices[i].device->event)
             {
                 int delay = (uiDevices[i].device->event)();
                 if (delay != DURATION_IGNORE)
@@ -126,7 +131,6 @@ void devicesUpdate(unsigned long now)
             }
         }
     }
-    lastConnectionState[core==-1?0:core] = connectionState;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
