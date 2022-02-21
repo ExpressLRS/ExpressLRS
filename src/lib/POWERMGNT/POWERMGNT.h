@@ -68,7 +68,6 @@ public:
     static void incSX1280Ouput();
     static void decSX1280Ouput();
     static int8_t currentSX1280Ouput();
-    static uint8_t powerToCrsfPower(PowerLevels_e Power);
     static PowerLevels_e getDefaultPower();
     static uint8_t getPowerIndBm();
     static void setDefaultPower();
