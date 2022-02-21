@@ -1,8 +1,5 @@
 #pragma once
 
-#include "targets.h"
-#include "DAC.h"
-#include "device.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -47,11 +44,20 @@ typedef enum
     PWR_COUNT = 8
 } PowerLevels_e;
 
-class POWERMGNT
+class PowerLevelContainer
+{
+protected:
+    static PowerLevels_e CurrentPower;
+public:
+    static PowerLevels_e currPower() { return CurrentPower; }
+};
+
+#ifndef UNIT_TEST
+
+class POWERMGNT : public PowerLevelContainer
 {
 
 private:
-    static PowerLevels_e CurrentPower;
     static int8_t CurrentSX1280Power;
     static PowerLevels_e FanEnableThreshold;
     static void updateFan();
@@ -64,7 +70,6 @@ public:
     static void setPower(PowerLevels_e Power);
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
-    static PowerLevels_e currPower() { return CurrentPower; }
     static void incSX1280Ouput();
     static void decSX1280Ouput();
     static int8_t currentSX1280Ouput();
@@ -79,3 +84,5 @@ public:
 
 #define CALIBRATION_MAGIC    0x43414C << 8   //['C', 'A', 'L']
 #define CALIBRATION_VERSION   1
+
+#endif /* !UNIT_TEST */

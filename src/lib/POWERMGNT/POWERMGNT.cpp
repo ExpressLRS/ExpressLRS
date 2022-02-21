@@ -1,9 +1,8 @@
+#ifndef UNIT_TEST
 #include "common.h"
+#include "device.h"
 #include "POWERMGNT.h"
 #include "DAC.h"
-#include "helpers.h"
-#include "common.h"
-
 /*
  * Moves the power management values and special cases out of the main code and into `targets.h`.
  *
@@ -33,7 +32,7 @@
  * 13 on SX1280 (~12.5dBm) or 15 on SX127x (~17dBm)
  */
 
-PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
+PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefined" initial value
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
@@ -250,3 +249,5 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
     devicesTriggerEvent();
 }
+
+#endif /* !UNIT_TEST */

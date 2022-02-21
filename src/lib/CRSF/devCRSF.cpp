@@ -45,7 +45,7 @@ static uint8_t powerToCrsfPower(PowerLevels_e Power)
 static int event()
 {
     // An event should be generated every time the TX power changes
-    CRSF::LinkStatistics.uplink_TX_Power = powerToCrsfPower(POWERMGNT::currPower());
+    CRSF::LinkStatistics.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
     return DURATION_IGNORE;
 }
 
