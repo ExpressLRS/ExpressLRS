@@ -127,10 +127,10 @@ device_affinity_t ui_devices[] = {
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 #if !defined(DYNPOWER_THRESH_UP)
-  #define DYNPOWER_THRESH_UP              5
+  #define DYNPOWER_THRESH_UP              6
 #endif
 #if !defined(DYNPOWER_THRESH_DN)
-  #define DYNPOWER_THRESH_DN              9
+  #define DYNPOWER_THRESH_DN              10
 #endif
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
@@ -208,8 +208,8 @@ void DynamicPower_Update()
   {
     DBGLN("Power increase");
     POWERMGNT.incPower();
-    // Every power doubling will theoretically increase the SNR by 3dB
-    snr += 3;
+    // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
+    snr += 2;
     --powerHeadroom;
   }
 }
