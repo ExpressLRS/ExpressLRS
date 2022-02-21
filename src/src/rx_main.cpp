@@ -29,6 +29,10 @@
 #include "devWIFI.h"
 #include "devButton.h"
 
+#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+#include <Wire.h>
+#endif
+
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
@@ -918,7 +922,7 @@ static void setupConfigAndPocCheck()
 #endif
 }
 
-static void setupGpio()
+static void setupTarget()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT)
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
@@ -927,6 +931,10 @@ static void setupGpio()
 #if defined(TARGET_RX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+#endif
+
+#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
 #endif
 }
 
@@ -1182,7 +1190,7 @@ RF_PRE_INIT()
 
 void setup()
 {
-    setupGpio();
+    setupTarget();
     // serial setup must be done before anything as some libs write
     // to the serial port and they'll block if the buffer fills
     setupSerial();

@@ -32,6 +32,10 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+#include <Wire.h>
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 

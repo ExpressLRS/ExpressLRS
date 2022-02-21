@@ -29,10 +29,9 @@ ELRS_EEPROM::Begin()
     #if defined(STM32_USE_FLASH)
         eeprom_buffer_fill();
     #else // !STM32_USE_FLASH
-        /* Initialize I2C */
-        Wire.setSDA(GPIO_PIN_SDA);
-        Wire.setSCL(GPIO_PIN_SCL);
-        Wire.begin();
+        // I2C initialization is the responsibility of the caller
+        // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+
         /* Initialize EEPROM */
         #if defined(TARGET_EEPROM_400K)
             EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);

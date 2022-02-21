@@ -1,6 +1,5 @@
 #pragma once
 
-
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
 #include <nvs.h>
