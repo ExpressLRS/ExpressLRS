@@ -218,46 +218,18 @@ void OLEDScreen::updateIdleScreen(uint8_t dirtyFlags)
         buffer[6] = 0;
         u8g2.drawStr(70,32, buffer);
     #else
-        #if (defined(TARGET_TX_EMAX_900)) || defined(TARGET_TX_EMAX_2400_V1)
-            u8g2.setFont(u8g2_font_wqy12_t_gb2312b);
-            u8g2.setFontMode(1); 
-            u8g2.drawStr(3, 10, "ExpressLRS");
-            u8g2.drawStr(3, 22, "Pkt.Rate");
-            u8g2.drawStr(80, 22, &(rate_string[current_rate_index])[0]);
-            u8g2.drawStr(3, 34, "TLM Ratio");
-            u8g2.drawStr(80, 34, &(ratio_string[current_ratio_index])[0]);
-            u8g2.drawStr(3, 46, "Power");
-            u8g2.drawStr(80, 46, power.c_str());
-            u8g2.drawStr(3, 58, "RF Freq");
-            #ifdef Regulatory_Domain_AU_433
-                u8g2.drawStr(75, 58, "915 FCC");
-            #elif defined Regulatory_Domain_AU_915
-                u8g2.drawStr(75, 58, "EU_868");
-            #elif defined Regulatory_Domain_EU_868
-                u8g2.drawStr(75, 58, "866");
-            #elif defined Regulatory_Domain_IN_866
-                u8g2.drawStr(75, 58, "AU_915");
-            #elif defined Regulatory_Domain_EU_433
-                u8g2.drawStr(75, 58, "EU_433");
-            #elif defined Regulatory_Domain_FCC_915
-                u8g2.drawStr(75, 58, "FCC_915");
-            #elif Regulatory_Domain_ISM_2400
-                u8g2.drawStr(75, 58, "ISM_2400");
-            #endif
-        #else
-			u8g2.setFont(u8g2_font_t0_15_mr);
-			u8g2.drawStr(0,13, message_string[current_message]);
-			u8g2.drawStr(0,45, rate_string[current_rate_index]);
-			u8g2.drawStr(70,45, ratio_string[current_ratio_index]);
-			u8g2.drawStr(0,60, power.c_str());
-			u8g2.setFont(u8g2_font_profont10_mr);
-			u8g2.drawStr(70,56, "TLM");
-			u8g2.drawStr(0,27, "Ver: ");
-			char buffer[7];
-			strncpy(buffer, version, 6);
-			buffer[6] = 0;
-			u8g2.drawStr(38,27, buffer);
-        #endif
+        u8g2.setFont(u8g2_font_t0_15_mr);
+        u8g2.drawStr(0,13, message_string[current_message]);
+        u8g2.drawStr(0,45, rate_string[current_rate_index]);
+        u8g2.drawStr(70,45, ratio_string[current_ratio_index]);
+        u8g2.drawStr(0,60, power.c_str());
+        u8g2.setFont(u8g2_font_profont10_mr);
+        u8g2.drawStr(70,56, "TLM");
+        u8g2.drawStr(0,27, "Ver: ");
+        char buffer[7];
+        strncpy(buffer, version, 6);
+        buffer[6] = 0;
+        u8g2.drawStr(38,27, buffer);
     #endif
     u8g2.sendBuffer();
 }
