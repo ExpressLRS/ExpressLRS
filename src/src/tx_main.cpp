@@ -74,7 +74,6 @@ LQCALC<10> LQCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
-volatile bool connectionHasModelMatch = true;
 
 bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
@@ -337,21 +336,21 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   }
 }
 
-uint8_t adjustPacketRateForBaud(uint8_t rate)
+uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
   #if defined(Regulatory_Domain_ISM_2400)
     // Packet rate limited to 250Hz if we are on 115k baud
     if (crsf.GetCurrentBaudRate() == 115200) {
-      while(rate < RATE_MAX) {
-        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
-        if (ModParams->enum_rate >= RATE_250HZ) {
+      while (rateIndex < RATE_MAX) {
+        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
+        if (ModParams->enum_rate <= RATE_250HZ) {
           break;
         }
-        rate++;
+        rateIndex++;
       }
     }
   #endif
-  return rate;
+  return rateIndex;
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -372,7 +371,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-  crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+  crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
   crsf.setSyncParams(ModParams->interval);
   connectionState = disconnected;

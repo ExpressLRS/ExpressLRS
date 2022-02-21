@@ -3,12 +3,11 @@
 #include "tftscreen.h"
 #include "options.h"
 #include "POWERMGNT.h"
+#include "logos.h"
 
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
-
-bool is_confirmed = false;
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
@@ -20,7 +19,15 @@ const uint16_t *main_menu_icons[] = {
     elrs_updatefw
 };
 
-#define COLOR_ELRS_BANNER_BACKGROUND    0x9E2D
+// Hex color code to 16-bit rgb:
+// color = 0x96c76f
+// rgb_hex = ((((color&0xFF0000)>>16)&0xf8)<<8) + ((((color&0x00FF00)>>8)&0xfc)<<3) + ((color&0x0000FF)>>3)
+constexpr uint16_t elrs_banner_bgColor[SCREEN_MSG_COUNT] = {
+    0x4315, // SCREEN_MSG_DISCONNECTED  => #4361AA (ELRS blue)
+    0x9E2D, // SCREEN_MSG_CONNECTED     => #9FC76F (ELRS green)
+    0xAA08, // SCREEN_MSG_ARMED         => #AA4343 (red)
+    0xF501  // SCREEN_MSG_MISMATCH      => #F0A30A (amber)
+};
 
 #define SCREEN_X    TFT_HEIGHT
 #define SCREEN_Y    TFT_WIDTH
@@ -139,35 +146,45 @@ void TFTScreen::init(bool reboot)
     system_temperature = 25;
 }
 
-void TFTScreen::idleScreen()
+void TFTScreen::updateIdleScreen(uint8_t dirtyFlags)
 {
-    tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, COLOR_ELRS_BANNER_BACKGROUND);
-    tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
-
-    tft.pushImage(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_banner);
-
-    char buffer[20];
-    strncpy(buffer, version, 6);
-    sprintf(buffer+6, " %02d", system_temperature);
-    displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-                                SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                                String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
-
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
-
-    String power = power_string[current_power_index];
-    if (current_dynamic)
+    if (dirtyFlags & SCREENIDLEUP_MESSAGE)
     {
-        power = String(power_string[last_power_index]) + " *";
+        // Left side logo, version, and temp
+        tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[current_message]);
+        tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
+                        TFT_WHITE);
+        updateIdleTemperature();
+
+        // Also clear the right side of the screen, assumes that dirtyFlags
+        tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
     }
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        power, TFT_BLACK, TFT_WHITE);
 
-    displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
+    // The Radio Params right half of the screen
+    uint16_t text_color = (current_message == SCREEN_MSG_ARMED) ? TFT_DARKGREY : TFT_BLACK;
 
-    current_screen_status = SCREEN_STATUS_IDLE;
+    if (dirtyFlags & (SCREENIDLEUP_RATE | SCREENIDLEUP_MESSAGE))
+    {
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            rate_string[current_rate_index], text_color, TFT_WHITE);
+    }
+
+    if (dirtyFlags & (SCREENIDLEUP_POWER | SCREENIDLEUP_MESSAGE))
+    {
+        String power = power_string[current_power_index];
+        if (current_dynamic)
+        {
+            power = String(power_string[last_power_index]) + " *";
+        }
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            power, text_color, TFT_WHITE);
+    }
+
+    if (dirtyFlags & (SCREENIDLEUP_RATIO | SCREENIDLEUP_MESSAGE))
+    {
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            ratio_string[current_ratio_index], text_color, TFT_WHITE);
+    }
 }
 
 void TFTScreen::updateMainMenuPage()
@@ -246,7 +263,6 @@ void TFTScreen::updateSubBindingPage()
                         "BINDING", TFT_BLACK, TFT_WHITE);
 
     updatecallback(USER_UPDATE_TYPE_BINDING);
-
     current_screen_status = SCREEN_STATUS_BINDING;
 }
 
@@ -286,84 +302,13 @@ void TFTScreen::doSmartFanValueSelect(int action)
                         smartfan_string[current_index], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTScreen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index)
-{
-    current_power_index = power_index;
-    current_powersaving_index = motion_index;
-    current_smartfan_index = fan_index;
-    if (current_screen_status == SCREEN_STATUS_IDLE)
-    {
-        if(rate_index != current_rate_index)
-        {
-            current_rate_index = rate_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                rate_string[current_rate_index], TFT_BLACK, TFT_WHITE);
-        }
-
-        if(last_power_index != running_power_index || current_dynamic != dynamic)
-        {
-            last_power_index = running_power_index;
-            current_dynamic = dynamic;
-            String power = power_string[current_power_index];
-            if (current_dynamic)
-            {
-                power = String(power_string[last_power_index]) + " *";
-            }
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                power, TFT_BLACK, TFT_WHITE);
-        }
-
-        if(ratio_index != current_ratio_index)
-        {
-            current_ratio_index = ratio_index;
-            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                ratio_string[current_ratio_index], TFT_BLACK, TFT_WHITE);
-        }
-    }
-    else
-    {
-        last_power_index = running_power_index;
-        current_dynamic = dynamic;
-        current_rate_index = rate_index;
-        current_ratio_index = ratio_index;
-    }
-}
-
 void TFTScreen::doTemperatureUpdate(uint8_t temperature)
 {
     if(current_screen_status == SCREEN_STATUS_IDLE && system_temperature != temperature)
     {
-        char buffer[20];
-        strncpy(buffer, version, 6);
-        sprintf(buffer+6, " %02d", temperature);
-        displayFontCenterWithCelsius(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-                            SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                            String(buffer), TFT_WHITE,  COLOR_ELRS_BANNER_BACKGROUND);
+        updateIdleTemperature();
+        system_temperature = temperature;
     }
-    system_temperature = temperature;
-}
-
-void TFTScreen::displayFontCenterWithCelsius(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
-                                            uint16_t fgColor, uint16_t bgColor)
-{
-    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
-
-    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type) - font_size)/2;
-
-    tft.setCursor(start_pos, font_start_y, font_type);
-    tft.setTextColor(fgColor, bgColor);
-    tft.print(font_string);
-
-    int celsius_start_pos = start_pos + tft.textWidth(font_string, font_type);
-    if(font_size == SCREEN_SMALL_FONT_SIZE)
-    {
-        tft.pushImage(celsius_start_pos, font_start_y, font_size/2, font_size, Celsius4x8);
-    }
-
-    int char_c_pos = celsius_start_pos + font_size/2;
-    tft.setCursor(char_c_pos, font_start_y, font_type);
-    tft.print("C");
 }
 
 void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
@@ -379,11 +324,22 @@ void TFTScreen::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, ui
     tft.print(font_string);
 }
 
-
 void TFTScreen::doScreenBackLight(int state)
 {
     #ifdef TFT_BL
     digitalWrite(TFT_BL, state);
     #endif
 }
+
+void TFTScreen::updateIdleTemperature()
+{
+    char buffer[20];
+    strncpy(buffer, version, 6);
+    // \367 = (char)247 = degree symbol
+    sprintf(buffer+6, " %02d\367C", system_temperature);
+    displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+                        SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
+                        String(buffer), TFT_WHITE, elrs_banner_bgColor[current_message]);
+}
+
 #endif
