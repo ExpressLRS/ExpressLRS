@@ -12,7 +12,6 @@ static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
 static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
@@ -169,12 +168,14 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, cons
   pushResponseChunk(cmd);
 }
 
-void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
-                                      //only flip 3 Most significant bit, they are the critical warning that blocks lua
-  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
+static void luaSupressCriticalErrors()
+{
+  // clear the critical error bits of the warning flags
+  luaWarningFlags &= 0b00011111;
 }
 
-void setLuaWarningFlag(lua_Flags flag, bool value){
+void setLuaWarningFlag(lua_Flags flag, bool value)
+{
   if (value)
   {
     luaWarningFlags |= 1 << (uint8_t)flag;
@@ -183,10 +184,6 @@ void setLuaWarningFlag(lua_Flags flag, bool value){
   {
     luaWarningFlags &= ~(1 << (uint8_t)flag);
   }
-}
-
-uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
-  return luaWarningFlags & suppressedLuaWarningFlags;
 }
 
 static void updateElrsFlags()
@@ -204,7 +201,7 @@ void sendELRSstatus()
     "Model Mismatch",     //warning3, model mismatch
     "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
-    "",  //critical warning3, reserved for future use
+    "Not while connected",  //critical warning3, trying to change a protected value while connected
     "",  //critical warning2, reserved for future use
     ""   //critical warning1, reserved for future use
   };
@@ -212,7 +209,7 @@ void sendELRSstatus()
 
   for (int i=7 ; i>=0 ; i--)
   {
-      if(getLuaWarningFlags() & (1<<i))
+      if (luaWarningFlags & (1<<i))
       {
           warningInfo = messages[i];
           break;
@@ -223,7 +220,7 @@ void sendELRSstatus()
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarningFlags();
+  params->flags = luaWarningFlags;
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
@@ -290,7 +287,7 @@ bool luaHandleUpdateParameter()
         updateElrsFlags();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
-        suppressCurrentLuaWarning();
+        luaSupressCriticalErrors();
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
@@ -308,6 +305,7 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_DEVICE_PING:
         populateHandler();
+        luaSupressCriticalErrors();
         sendLuaDevicePacket();
         break;
 

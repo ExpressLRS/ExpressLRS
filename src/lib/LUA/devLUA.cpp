@@ -362,6 +362,8 @@ static void registerLuaParameters()
       config.SetSwitchMode(newSwitchMode);
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
+    else
+      setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
   });
   registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     bool newModelMatch = arg;

@@ -6,14 +6,17 @@
 #include "crsf_protocol.h"
 
 enum lua_Flags{
-    LUA_FLAG_CONNECTED = 0, //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
+    //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
+    LUA_FLAG_CONNECTED = 0,
     LUA_FLAG_STATUS1,
-    LUA_FLAG_MODEL_MATCH,   //bit 2,3,4 are warning flags, change the tittle bar every 0.5s
+    //bit 2,3,4 are warning flags, change the tittle bar every 0.5s
+    LUA_FLAG_MODEL_MATCH,
     LUA_FLAG_ISARMED,
     LUA_FLAG_WARNING1,
-    LUA_FLAG_CRITICAL_WARNING1, //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
+    //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
+    LUA_FLAG_ERROR_CONNECTED,
+    LUA_FLAG_CRITICAL_WARNING1,
     LUA_FLAG_CRITICAL_WARNING2,
-    LUA_FLAG_CRITICAL_WARNING3
 };
 
 struct luaPropertiesCommon {
@@ -115,7 +118,6 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, cons
 
 void suppressCurrentLuaWarning(void);
 void setLuaWarningFlag(lua_Flags flag, bool value);
-uint8_t getLuaWarningFlags(void);
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
 
