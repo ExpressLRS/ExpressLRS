@@ -86,7 +86,7 @@ static struct luaItem_selection luaModelMatch = {
 
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 
@@ -108,27 +108,27 @@ static struct luaItem_folder luaWiFiFolder = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 
 static struct luaItem_command luaVRxBackpackUpdate = {
     {"Enable VRx WiFi", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif // USE_TX_BACKPACK
@@ -137,7 +137,7 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif
@@ -177,7 +177,7 @@ static struct luaItem_selection luaVtxPit = {
 
 static struct luaItem_command luaVtxSend = {
     {"Send VTx", CRSF_COMMAND},
-    lcsNone, // step
+    lcsIdle, // step
     emptySpace
 };
 //----------------------------VTX ADMINISTRATOR------------------
@@ -277,7 +277,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
       break;
 
     case lcsCancel:
-      sendLuaCommandResponse(cmd, lcsNone, emptySpace);
+      sendLuaCommandResponse(cmd, lcsIdle, emptySpace);
       if (connectionState == targetState)
       {
         rebootTime = millis() + 400;
@@ -325,7 +325,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
   } /* if doExecute */
   else
   {
-    sendLuaCommandResponse((struct luaItem_command *)item, lcsNone, emptySpace);
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsIdle, emptySpace);
   }
 }
 

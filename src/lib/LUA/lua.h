@@ -41,13 +41,13 @@ struct luaItem_selection {
 } PACKED;
 
 enum luaCmdStep_e : uint8_t {
-    lcsNone = 0,
+    lcsIdle = 0,
     lcsClick = 1,       // user has clicked the command to execute
     lcsExecuting = 2,   // command is executing
     lcsAskConfirm = 3,  // command pending user OK
     lcsConfirmed = 4,   // user has confirmed
     lcsCancel = 5,      // user has requested cancel
-    lcsQuery = 6,       // UI is requesting status update, only sent by Crossfire Config
+    lcsQuery = 6,       // UI is requesting status update
 };
 
 struct luaItem_command {

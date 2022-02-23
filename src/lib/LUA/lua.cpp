@@ -321,7 +321,7 @@ bool luaHandleUpdateParameter()
           // On first chunk of a command, reset the step/info of the command
           if (dataType == CRSF_COMMAND && fieldChunk == 0)
           {
-            field->step = lcsNone;
+            field->step = lcsIdle;
             field->info = "";
           }
           sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
