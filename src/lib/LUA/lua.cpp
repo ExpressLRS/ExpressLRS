@@ -296,7 +296,7 @@ bool luaHandleUpdateParameter()
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
           // While the command is executing, the handset will send `WRITE state=lcsQuery`.
           // paramCallbacks will set the value when nextStatusChunk == 0, or send any
-          // remaining chunks when nextStatusChunk != nextStatusChunk
+          // remaining chunks when nextStatusChunk != 0
           if (arg == lcsQuery && nextStatusChunk != 0) {
             pushResponseChunk((struct luaItem_command *)p);
           } else {
