@@ -310,6 +310,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       RxWiFiReadyToSend = true;
     }
+    #if defined(USE_TX_BACKPACK)
     else if ((void *)item == (void *)&luaTxBackpackUpdate)
     {
       TxBackpackWiFiReadyToSend = true;
@@ -318,6 +319,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       VRxBackpackWiFiReadyToSend = true;
     }
+    #endif
 
     sendLuaCommandResponse((struct luaItem_command *)item, lcsExecuting, msg);
   } /* if doExecute */
