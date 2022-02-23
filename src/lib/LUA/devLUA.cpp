@@ -86,7 +86,7 @@ static struct luaItem_selection luaModelMatch = {
 
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 
@@ -108,27 +108,27 @@ static struct luaItem_folder luaWiFiFolder = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 #endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 
 static struct luaItem_command luaVRxBackpackUpdate = {
     {"Enable VRx WiFi", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 #endif // USE_TX_BACKPACK
@@ -137,7 +137,7 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 #endif
@@ -177,7 +177,7 @@ static struct luaItem_selection luaVtxPit = {
 
 static struct luaItem_command luaVtxSend = {
     {"Send VTx", CRSF_COMMAND},
-    0, // step
+    lcsNone, // step
     emptySpace
 };
 //----------------------------VTX ADMINISTRATOR------------------
@@ -261,23 +261,23 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
     textRunning = "Joystick Running...";
   }
 
-  switch (arg)
+  switch ((luaCmdStep_e)arg)
   {
-    case LUACMDSTEP_CLICK:
+    case lcsClick:
       if (connectionState == connected)
       {
-        sendLuaCommandResponse(cmd, LUACMDSTEP_ASKCONFIRM, textConfirm);
+        sendLuaCommandResponse(cmd, lcsAskConfirm, textConfirm);
         return;
       }
       // fallthrough (clicking while not connected goes right to exectute)
 
-    case LUACMDSTEP_CONFIRMED:
-      sendLuaCommandResponse(cmd, LUACMDSTEP_EXECUTING, textRunning);
+    case lcsConfirmed:
+      sendLuaCommandResponse(cmd, lcsExecuting, textRunning);
       connectionState = targetState;
       break;
 
-    case LUACMDSTEP_CANCEL:
-      sendLuaCommandResponse(cmd, LUACMDSTEP_NONE, emptySpace);
+    case lcsCancel:
+      sendLuaCommandResponse(cmd, lcsNone, emptySpace);
       if (connectionState == targetState)
       {
         rebootTime = millis() + 400;
@@ -372,11 +372,11 @@ static void registerLuaParameters()
       config.SetVtxPitmode(arg);
   },luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    bool isExec = arg < LUACMDSTEP_CANCEL;
+    bool isExec = arg < lcsCancel;
     if (isExec) {
       VtxTriggerSend();
     }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? LUACMDSTEP_EXECUTING : LUACMDSTEP_NONE, isExec ? "Sending..." : "");
+    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
   },luaVtxFolder.common.id);
 
   // WIFI folder
@@ -386,28 +386,28 @@ static void registerLuaParameters()
   #endif
 
   registerLUAParameter(&luaRxWebUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < LUACMDSTEP_CANCEL;
+    bool isExec = arg < lcsCancel;
     if (isExec) {
       RxWiFiReadyToSend = true;
     }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? LUACMDSTEP_EXECUTING : LUACMDSTEP_NONE, isExec ? "Sending..." : "");
+    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
   },luaWiFiFolder.common.id);
 
   #if defined(USE_TX_BACKPACK)
   registerLUAParameter(&luaTxBackpackUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < LUACMDSTEP_CANCEL;
+    bool isExec = arg < lcsCancel;
     if (isExec) {
       TxBackpackWiFiReadyToSend = true;
     }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? LUACMDSTEP_EXECUTING : LUACMDSTEP_NONE, isExec ? "Sending..." : "");
+    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
   },luaWiFiFolder.common.id);
 
   registerLUAParameter(&luaVRxBackpackUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < LUACMDSTEP_CANCEL;
+    bool isExec = arg < lcsCancel;
     if (isExec) {
       VRxBackpackWiFiReadyToSend = true;
     }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? LUACMDSTEP_EXECUTING : LUACMDSTEP_NONE, isExec ? "Sending..." : "");
+    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
   },luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
 
@@ -416,11 +416,11 @@ static void registerLuaParameters()
   #endif
 
   registerLUAParameter(&luaBind, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < LUACMDSTEP_CANCEL;
+    bool isExec = arg < lcsCancel;
     if (isExec) {
       EnterBindingMode();
     }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? LUACMDSTEP_EXECUTING : LUACMDSTEP_NONE, isExec ? "Binding..." : "");
+    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Binding..." : "");
   });
 
   registerLUAParameter(&luaInfo);

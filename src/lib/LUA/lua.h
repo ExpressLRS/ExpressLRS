@@ -37,17 +37,19 @@ struct luaItem_selection {
     const char* const units;
 } PACKED;
 
-#define LUACMDSTEP_NONE         0
-#define LUACMDSTEP_CLICK        1 // user has clicked the command to execute
-#define LUACMDSTEP_EXECUTING    2 // command is executing
-#define LUACMDSTEP_ASKCONFIRM   3 // command pending user OK
-#define LUACMDSTEP_CONFIRMED    4 // user has confirmed
-#define LUACMDSTEP_CANCEL       5 // user has requested cancel
-#define LUACMDSTEP_QUERY        6 // UI is requesting status update, only sent by Crossfire Config
+enum luaCmdStep_e : uint8_t {
+    lcsNone = 0,
+    lcsClick = 1,       // user has clicked the command to execute
+    lcsExecuting = 2,   // command is executing
+    lcsAskConfirm = 3,  // command pending user OK
+    lcsConfirmed = 4,   // user has confirmed
+    lcsCancel = 5,      // user has requested cancel
+    lcsQuery = 6,       // UI is requesting status update, only sent by Crossfire Config
+};
 
 struct luaItem_command {
     struct luaPropertiesCommon common;
-    uint8_t step;           // state LUACMDSTEP_*
+    luaCmdStep_e step;      // state
     const char *info;       // status info to display
 } PACKED;
 
@@ -109,7 +111,7 @@ struct tagLuaElrsParams {
     char msg[1]; // null-terminated string
 } PACKED;
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
 void suppressCurrentLuaWarning(void);
 void setLuaWarningFlag(lua_Flags flag, bool value);

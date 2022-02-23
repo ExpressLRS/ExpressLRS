@@ -162,7 +162,7 @@ static void pushResponseChunk(struct luaItem_command *cmd) {
   }
 }
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message) {
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
   cmd->step = step;
   cmd->info = message;
   nextStatusChunk = 0;
@@ -323,7 +323,7 @@ bool luaHandleUpdateParameter()
           // On first chunk of a command, reset the step/info of the command
           if (dataType == CRSF_COMMAND && fieldChunk == 0)
           {
-            field->step = 0;
+            field->step = lcsNone;
             field->info = "";
           }
           sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
