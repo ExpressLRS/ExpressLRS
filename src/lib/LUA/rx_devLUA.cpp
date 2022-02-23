@@ -10,6 +10,11 @@
 #include "lua.h"
 #include "OTA.h"
 #include "hwTimer.h"
+#include "FHSS.h"
+
+extern bool InLoanBindingMode;
+void EnterBindingMode();
+void setupBindingFromConfig();
 
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
@@ -57,10 +62,25 @@ static struct luaItem_command luaRxWebUpdate = {
 
 //---------------------------- WiFi -----------------------------
 
+//---------------------------- Model Loan Out -----------------------------
+
+static struct luaItem_command luaLoanModel = {
+    {"Loan Model", CRSF_COMMAND},
+    lcsIdle, // step
+    emptySpace
+};
+
+static struct luaItem_command luaReturnModel = {
+    {"Return Model", CRSF_COMMAND},
+    lcsIdle, // step
+    emptySpace
+};
+
+//---------------------------- Model Loan Out -----------------------------
+
 
 extern RxConfig config;
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
@@ -102,15 +122,15 @@ static void registerLuaParameters()
 
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
   registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetAntennaMode(arg);
-     });
+    config.SetAntennaMode(arg);
+  });
 #endif
 #ifdef POWER_OUTPUT_VALUES
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetPower(arg);
     POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
-    });
+  });
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaRxWebUpdate, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -121,6 +141,21 @@ static void registerLuaParameters()
     sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
 #endif
+  registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
+    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    if (arg == 6) {
+      deferExecution(200, [](){ InLoanBindingMode = true; });
+    }
+    sendLuaCommandResponse(&luaLoanModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
+  });
+  registerLUAParameter(&luaReturnModel, [](struct luaPropertiesCommon* item, uint8_t arg){
+    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    if (arg == 6) {
+      deferExecution(200, [](){ config.SetOnLoan(false); });
+    }
+    sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
+  });
+
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
@@ -141,7 +176,6 @@ static int event()
 static int timeout()
 {
   luaHandleUpdateParameter();
-
   return DURATION_IMMEDIATELY;
 }
 
