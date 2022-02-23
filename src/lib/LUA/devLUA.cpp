@@ -291,6 +291,42 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 }
 #endif
 
+static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  const char *msg = "Sending...";
+  bool doExecute = arg < lcsCancel;
+  if (doExecute)
+  {
+    if ((void *)item == (void *)&luaBind)
+    {
+      msg = "Binding...";
+      EnterBindingMode();
+    }
+    else if ((void *)item == (void *)&luaVtxSend)
+    {
+      VtxTriggerSend();
+    }
+    else if ((void *)item == (void *)&luaRxWebUpdate)
+    {
+      RxWiFiReadyToSend = true;
+    }
+    else if ((void *)item == (void *)&luaTxBackpackUpdate)
+    {
+      TxBackpackWiFiReadyToSend = true;
+    }
+    else if ((void *)item == (void *)&luaVRxBackpackUpdate)
+    {
+      VRxBackpackWiFiReadyToSend = true;
+    }
+
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsExecuting, msg);
+  } /* if doExecute */
+  else
+  {
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsNone, emptySpace);
+  }
+}
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg){
@@ -371,57 +407,24 @@ static void registerLuaParameters()
   registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg){
       config.SetVtxPitmode(arg);
   },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxSend, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    bool isExec = arg < lcsCancel;
-    if (isExec) {
-      VtxTriggerSend();
-    }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
-  },luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
 
   // WIFI folder
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
   #endif
-
-  registerLUAParameter(&luaRxWebUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < lcsCancel;
-    if (isExec) {
-      RxWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
-
+  registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
   #if defined(USE_TX_BACKPACK)
-  registerLUAParameter(&luaTxBackpackUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < lcsCancel;
-    if (isExec) {
-      TxBackpackWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
-
-  registerLUAParameter(&luaVRxBackpackUpdate, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < lcsCancel;
-    if (isExec) {
-      VRxBackpackWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
+  registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+  registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
 
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
 
-  registerLUAParameter(&luaBind, [](struct luaPropertiesCommon *item, uint8_t arg){
-    bool isExec = arg < lcsCancel;
-    if (isExec) {
-      EnterBindingMode();
-    }
-    sendLuaCommandResponse((luaItem_command *)item, isExec ? lcsExecuting : lcsNone, isExec ? "Binding..." : "");
-  });
+  registerLUAParameter(&luaBind, &luahandSimpleSendCmd);
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
