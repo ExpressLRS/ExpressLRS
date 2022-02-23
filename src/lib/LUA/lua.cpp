@@ -294,7 +294,10 @@ bool luaHandleUpdateParameter()
         struct luaPropertiesCommon *p = paramDefinitions[id];
         DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
-          if (arg == 6 && nextStatusChunk != 0) {
+          // While the command is executing, the handset will send `WRITE state=lcsQuery`.
+          // paramCallbacks will set the value when nextStatusChunk == 0, or send any
+          // remaining chunks when nextStatusChunk != nextStatusChunk
+          if (arg == lcsQuery && nextStatusChunk != 0) {
             pushResponseChunk((struct luaItem_command *)p);
           } else {
             paramCallbacks[id](p, arg);
