@@ -15,7 +15,7 @@ static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set 
 static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 
 #define LUA_MAX_PARAMS 32
-static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
+static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
@@ -237,20 +237,20 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
 
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
-  if (definition == NULL)
+  if (definition == nullptr)
   {
     static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
         {(const char *)agentLiteFolder, CRSF_FOLDER},
     };
 
-    paramDefinitions[0] = &luaAgentLite;
+    paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
     paramCallbacks[0] = 0;
     uint8_t *pos = agentLiteFolder + 4;
     for (int i=1;i<=lastLuaField;i++)
     {
-      struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)paramDefinitions[i];
-      if (p->parent == 0) {
+      if (paramDefinitions[i]->parent == 0)
+      {
         *pos++ = i;
       }
     }
@@ -258,12 +258,13 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     *pos++ = 0;
     return;
   }
+
   struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
-  paramDefinitions[p->id] = definition;
-  paramCallbacks[p->id] = callback;
+  paramDefinitions[lastLuaField] = p;
+  paramCallbacks[lastLuaField] = callback;
 }
 
 void registerLUAPopulateParams(void (*populate)())
@@ -293,14 +294,13 @@ bool luaHandleUpdateParameter()
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
-        // All paramDefinitions are not luaItem_command but the common part is the same
-        struct luaItem_command *p = (struct luaItem_command *)paramDefinitions[id];
-        DBGLN("Set Lua [%s]=%u", p->common.name, arg);
+        struct luaPropertiesCommon *p = paramDefinitions[id];
+        DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
           if (arg == 6 && nextStatusChunk != 0) {
-            pushResponseChunk(p);
+            pushResponseChunk((struct luaItem_command *)p);
           } else {
-            paramCallbacks[id](id, arg);
+            paramCallbacks[id](p, arg);
           }
         }
       }

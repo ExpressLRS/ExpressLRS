@@ -37,9 +37,17 @@ struct luaItem_selection {
     const char* const units;
 } PACKED;
 
+#define LUACMDSTEP_NONE         0
+#define LUACMDSTEP_CLICK        1 // user has clicked the command to execute
+#define LUACMDSTEP_EXECUTING    2 // command is executing
+#define LUACMDSTEP_ASKCONFIRM   3 // command pending user OK
+#define LUACMDSTEP_CONFIRMED    4 // user has confirmed
+#define LUACMDSTEP_CANCEL       5 // user has requested cancel
+#define LUACMDSTEP_QUERY        6 // UI is requesting status update, only sent by Crossfire Config
+
 struct luaItem_command {
     struct luaPropertiesCommon common;
-    uint8_t step;           // state
+    uint8_t step;           // state LUACMDSTEP_*
     const char *info;       // status info to display
 } PACKED;
 
@@ -111,8 +119,8 @@ extern bool luaHandleUpdateParameter();
 
 void registerLUAPopulateParams(void (*populate)());
 
-typedef void (*luaCallback)(uint8_t id, uint8_t arg);
-void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);
+typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
+void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
 
 void sendLuaDevicePacket(void);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
