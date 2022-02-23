@@ -4,6 +4,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include "CRSF.h"
+#include "config.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
@@ -105,32 +106,67 @@ void BackpackBinding()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
+uint8_t GetDvrDelaySeconds(uint8_t index)
+{
+    switch (index)
+    {
+    // 0s;5s;15s;30s;45s;1min;2min
+    case 1:
+        return 5;
+        break;
+    case 2:
+        return 15;
+        break;
+    case 3:
+        return 30;
+        break;
+    case 4:
+        return 45;
+        break;
+    case 5:
+        return 60;
+        break;
+    case 6:
+        return 120;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
 static void AuxStateToMSPOut()
 {
-#if defined(DVR_START_STOP_CHANNEL)
-    bool recordingState = CRSF::ChannelDataIn[DVR_START_STOP_CHANNEL - 1] > 1500;
-    uint16_t delay = 0;
-
-    if (recordingState == lastRecordingState)
+#if defined(USE_TX_BACKPACK)
+    if (config.GetDvrAux() == 0)
     {
+        // DVR AUX control is off
         return;
     }
 
+    uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
+    uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
+
+    bool recordingState = CRSF_to_BIT(CRSF::ChannelDataIn[auxNumber]) ^ auxInverted;
+
+    if (recordingState == lastRecordingState)
+    {
+        // Channel state has not changed since we last checked
+        return;
+    }
     lastRecordingState = recordingState;
 
-    #if defined(DVR_START_DELAY)
-        if (recordingState)
-        {
-            delay = DVR_START_DELAY;
-        }
-    #endif
+    uint16_t delay = 0;
 
-    #if defined(DVR_STOP_DELAY)
-        if (!recordingState)
-        {
-            delay = DVR_STOP_DELAY;
-        }
-    #endif
+    if (recordingState)
+    {
+        delay = GetDvrDelaySeconds(config.GetDvrStartDelay());
+    }
+
+    if (!recordingState)
+    {
+        delay = GetDvrDelaySeconds(config.GetDvrStopDelay());
+    }
 
     mspPacket_t packet;
     packet.reset();
@@ -141,7 +177,7 @@ static void AuxStateToMSPOut()
     packet.addByte(delay >> 8); // delay byte 2
     
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
-#endif
+#endif // USE_TX_BACKPACK
 }
 
 static void initialize()

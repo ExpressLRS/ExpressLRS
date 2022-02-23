@@ -191,6 +191,35 @@ struct luaItem_selection luaBluetoothTelem = {
 };
 #endif
 
+#if defined(USE_TX_BACKPACK)
+//---------------------------- BACKPACK ------------------
+static struct luaItem_folder luaBackpackFolder = {
+    {"Backpack", CRSF_FOLDER},
+};
+
+static struct luaItem_selection luaDvrAux = {
+    {"DVR AUX", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;AUX1;!AUX1;AUX2;!AUX2;AUX3;!AUX3;AUX4;!AUX4;AUX5;!AUX5;AUX6;!AUX6;AUX7;!AUX7;AUX8;!AUX8;AUX9;!AUX9;AUX10;!AUX10",
+    emptySpace
+};
+
+static struct luaItem_selection luaDvrStartDelay = {
+    {"DVR Srt Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace
+};
+
+static struct luaItem_selection luaDvrStopDelay = {
+    {"DVR Stp Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace
+};
+#endif // USE_TX_BACKPACK
+
+//---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
 
@@ -381,6 +410,20 @@ static void registerLuaParameters()
   },luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
 
+  #if defined(USE_TX_BACKPACK)
+  // Backpack folder
+  registerLUAParameter(&luaBackpackFolder);
+  registerLUAParameter(&luaDvrAux, [](uint8_t id, uint8_t arg){
+      config.SetDvrAux(arg);
+  },luaBackpackFolder.common.id);
+  registerLUAParameter(&luaDvrStartDelay, [](uint8_t id, uint8_t arg){
+      config.SetDvrStartDelay(arg);
+  },luaBackpackFolder.common.id);
+  registerLUAParameter(&luaDvrStopDelay, [](uint8_t id, uint8_t arg){
+      config.SetDvrStopDelay(arg);
+  },luaBackpackFolder.common.id);
+  #endif // USE_TX_BACKPACK
+
   #if defined(PLATFORM_ESP32)
     registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
       if (arg == 4) // 4 = request confirmed, start
@@ -444,6 +487,12 @@ static int event()
   #if defined(TARGET_TX_FM30)
     setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
   #endif
+
+  #if defined(USE_TX_BACKPACK)
+  setLuaTextSelectionValue(&luaDvrAux,config.GetDvrAux());
+  setLuaTextSelectionValue(&luaDvrStartDelay,config.GetDvrStartDelay());
+  setLuaTextSelectionValue(&luaDvrStopDelay,config.GetDvrStopDelay());
+  #endif // USE_TX_BACKPACK
   return DURATION_IMMEDIATELY;
 }
 
