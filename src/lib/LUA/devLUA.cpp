@@ -329,7 +329,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 
 static void registerLuaParameters()
 {
-  registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       uint8_t rate = RATE_MAX - 1 - arg;
@@ -337,7 +337,7 @@ static void registerLuaParameters()
       config.SetRate(rate);
     }
   });
-  registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
@@ -349,7 +349,7 @@ static void registerLuaParameters()
     devicesTriggerEvent();
   });
   #endif
-  registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     // Only allow changing switch mode when disconnected since we need to guarantee
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
@@ -361,7 +361,7 @@ static void registerLuaParameters()
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
   });
-  registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
     if (connectionState == connected) {
@@ -378,10 +378,10 @@ static void registerLuaParameters()
   // POWER folder
   registerLUAParameter(&luaPowerFolder);
   luadevGeneratePowerOpts();
-  registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
   }, luaPowerFolder.common.id);
-  registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
   }, luaPowerFolder.common.id);
@@ -395,18 +395,18 @@ static void registerLuaParameters()
 #endif
   // VTX folder
   registerLUAParameter(&luaVtxFolder);
-  registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg){
+  registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxBand(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxChannel(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPower(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPitmode(arg);
-  },luaVtxFolder.common.id);
+  }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
 
   // WIFI folder
@@ -436,20 +436,20 @@ static int event()
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-  setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
+  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
 #endif
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  setLuaTextSelectionValue(&luaDynamicPower,dynamic);
+  setLuaTextSelectionValue(&luaDynamicPower, dynamic);
 
-  setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
-  setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
-  setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
-  setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
+  setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
+  setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   #if defined(TARGET_TX_FM30)
     setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
   #endif
@@ -458,7 +458,7 @@ static int event()
 
 static int timeout()
 {
-  if(luaHandleUpdateParameter())
+  if (luaHandleUpdateParameter())
   {
     SetSyncSpam();
   }
