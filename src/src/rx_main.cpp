@@ -1026,7 +1026,7 @@ static void setupRadio()
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (MaxPower > PWR_10mW);
 #endif
-    
+
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
@@ -1260,28 +1260,11 @@ void loop()
     }
     #endif
 
-    if (config.IsModified())
+    if (config.IsModified() && !InBindingMode)
     {
-        uint32_t start = micros();
-        hwTimer.stop();
-        Radio.Pause();
-        config.Commit();
-        Radio.Resume();
-        /*
-        // Currently this code is not aligining the FHSSptr correctly so it times out and get LostConnection
-        while((micros() - start) % ExpressLRS_currAirRate_Modparams->interval > 50) ;
-        uint32_t offset = micros() - start;
-        int intervals = offset / ExpressLRS_currAirRate_Modparams->interval - 1;
-        NonceRX = (NonceRX + intervals) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-        FHSSptr = (FHSSptr + (intervals / ExpressLRS_currAirRate_Modparams->FHSShopInterval)) % FHSS_SEQUENCE_CNT;
-        Radio.SetFrequencyReg(FHSSgetNextFreq());
-        */
-        Radio.RXnb();
-        PFDloop.reset();
-        hwTimer.resume();
-        // vvv Temporary till the above ^^^ is fixed
-        PFDloop.intEvent(micros());
+        Radio.SetTxIdleMode();
         LostConnection();
+        config.Commit();
         devicesTriggerEvent();
     }
 

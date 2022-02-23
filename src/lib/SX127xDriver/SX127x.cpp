@@ -59,17 +59,6 @@ void SX127xDriver::End()
   RXdoneCallback = &nullCallback;
 }
 
-void SX127xDriver::Pause()
-{
-  hal.IsrCallback = nullptr;
-}
-
-void SX127xDriver::Resume()
-{
-  hal.IsrCallback = SX127xDriver::IsrCallback;
-  instance->ClearIrqFlags();
-}
-
 void SX127xDriver::ConfigLoraDefaults()
 {
   hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP);

@@ -35,9 +35,6 @@ public:
     SX1280Driver();
     bool Begin();
     void End();
-    void Pause();
-    void Resume();
-
     void SetTxIdleMode() { SetMode(SX1280_MODE_FS); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,

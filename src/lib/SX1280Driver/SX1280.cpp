@@ -92,17 +92,6 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void SX1280Driver::Pause()
-{
-    hal.IsrCallback = nullptr;
-}
-
-void SX1280Driver::Resume()
-{
-    hal.IsrCallback = SX1280Driver::IsrCallback;
-    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
-}
-
 void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
