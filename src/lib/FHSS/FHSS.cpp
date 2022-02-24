@@ -2,6 +2,12 @@
 #include "logging.h"
 #include <string.h>
 
+#if defined(RADIO_SX127X)
+#include "SX127xDriver.h"
+#elif defined(RADIO_SX128X)
+#include "SX1280Driver.h"
+#endif
+
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433
 const uint32_t FHSSfreqs[] = {
