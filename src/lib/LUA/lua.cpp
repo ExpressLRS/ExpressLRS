@@ -49,6 +49,12 @@ static uint8_t luaSelectionOptionMax(const char *strOptions)
   }
 }
 
+uint8_t luaSelectionFindLabel(const void *luaStruct, uint8_t value, uint8_t *outarray)
+{
+  const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
+  return 0;
+}
+
 static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
@@ -92,7 +98,15 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
-
+static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
+{
+  const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
+  if(p1->dyn_name != NULL){
+  return (uint8_t *)stpcpy((char *)next, p1->dyn_name);
+  } else {
+    return (uint8_t *)stpcpy((char *)next, p1->common.name);
+  }
+}
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
@@ -115,10 +129,12 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
 #endif
 
-  // Copy the name to the buffer starting at chunkBuffer[4]
-  uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
-
+  uint8_t *chunkStart;
   uint8_t *dataEnd;
+  // Copy the name to the buffer starting at chunkBuffer[4]
+  chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
+
+
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
       dataEnd = luaTextSelectionStructToArray(luaData, chunkStart);
@@ -142,13 +158,14 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       // Nothing to do, the name is all there is
       // but subtract 1 because dataSize expects the end to not include the null
       // which is already accounted for in chunkStart
-      dataEnd = chunkStart - 1;
+      chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
+      dataEnd = chunkStart;
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
     default:
       return 0;
-  }
+    }
 
   // dataEnd points to the end of the last string
   // -2 bytes Lua chunk header: FieldId, ChunksRemain

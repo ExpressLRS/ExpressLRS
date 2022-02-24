@@ -14,6 +14,7 @@
 
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
+static char vtxFolderDynamicName[] = "VTX Admin B;C;L;P";
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -146,7 +147,7 @@ static struct luaItem_command luaBLEJoystick = {
 
 //----------------------------VTX ADMINISTRATOR------------------
 static struct luaItem_folder luaVtxFolder = {
-    {"VTX Administrator", CRSF_FOLDER},
+    {"VTX Administrator", CRSF_FOLDER},vtxFolderDynamicName
 };
 
 static struct luaItem_selection luaVtxBand = {
@@ -418,7 +419,6 @@ static void registerLuaParameters()
       config.SetVtxPitmode(arg);
   }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
-
   // WIFI folder
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
@@ -444,6 +444,10 @@ static void registerLuaParameters()
 static int event()
 {
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
+  vtxFolderDynamicName[10] = (config.GetVtxBand() + 65);
+  vtxFolderDynamicName[12] = (config.GetVtxChannel() + 48);
+  vtxFolderDynamicName[14] = (config.GetVtxChannel() + 48);
+  vtxFolderDynamicName[16] = (config.GetVtxChannel() + 80);
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit

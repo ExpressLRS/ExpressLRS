@@ -105,6 +105,7 @@ struct luaItem_string {
 
 struct luaItem_folder {
     const struct luaPropertiesCommon common;
+    char* dyn_name;
 } PACKED;
 
 struct tagLuaElrsParams {
@@ -129,6 +130,8 @@ extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
+
+uint8_t luaSelectionFindLabel(uint8_t luaValue, const char *strOptions, uint8_t *outarray);
 
 void sendLuaDevicePacket(void);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
