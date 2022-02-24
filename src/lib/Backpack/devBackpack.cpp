@@ -108,31 +108,8 @@ void BackpackBinding()
 
 uint8_t GetDvrDelaySeconds(uint8_t index)
 {
-    switch (index)
-    {
-    // 0s;5s;15s;30s;45s;1min;2min
-    case 1:
-        return 5;
-        break;
-    case 2:
-        return 15;
-        break;
-    case 3:
-        return 30;
-        break;
-    case 4:
-        return 45;
-        break;
-    case 5:
-        return 60;
-        break;
-    case 6:
-        return 120;
-        break;
-    default:
-        return 0;
-        break;
-    }
+    constexpr uint8_t delays[] = {0, 5, 15, 30, 45, 60, 120};
+    return delays[index >= sizeof(delays) ? 0 : index];
 }
 
 static void AuxStateToMSPOut()
