@@ -54,7 +54,7 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-Stream *LoggingBackpack;
+Stream *TxBackpack;
 
 volatile uint8_t NonceTX;
 
@@ -881,7 +881,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
-static void setupLoggingBackpack()
+static void setupTxBackpack()
 {  /*
    * Setup the logging/backpack serial port.
    * This is always done because we need a place to send data even if there is no backpack!
@@ -907,7 +907,7 @@ static void setupLoggingBackpack()
 #else
   Stream *serialPort = new NullStream();
 #endif
-  LoggingBackpack = serialPort;
+  TxBackpack = serialPort;
 }
 
 /**
@@ -939,7 +939,7 @@ static void setupTarget()
   Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
 #endif
 
-  setupLoggingBackpack();
+  setupTxBackpack();
 }
 
 void setup()
@@ -1030,9 +1030,9 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update();
 
-  if (LoggingBackpack->available())
+  if (TxBackpack->available())
   {
-    if (msp.processReceivedByte(LoggingBackpack->read()))
+    if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
