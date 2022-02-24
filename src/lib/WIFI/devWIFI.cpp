@@ -49,7 +49,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI)  //MSP2WIFI in enabled only for RX only at the moment
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
 #include "tcpsocket.h"
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
 #include "CRSF.h"
@@ -620,7 +620,7 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
-  #if defined(USE_MSP_WIFI)
+  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
   wifi2tcp.begin();
   #endif
 }

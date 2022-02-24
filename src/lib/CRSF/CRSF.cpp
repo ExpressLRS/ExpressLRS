@@ -836,7 +836,7 @@ bool CRSF::RXhandleUARTout()
     bool retVal = false;
 #if !defined(CRSF_RCVR_NO_SERIAL)
     // don't write more than 128 bytes at a time to avoid RX buffer overflow
-    #define maxBytesPerCall 128
+    const int maxBytesPerCall = 128;
     uint32_t bytesWritten = 0;
     #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
         while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
