@@ -932,22 +932,37 @@ static void setupConfigAndPocCheck()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
-    DBGLN("ModelId=%u", config.GetModelId());
-
+    bool doPowerCount = config.GetOnLoan();
 #ifndef MY_UID
-    // Increment the power on counter in eeprom
-    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-    config.Commit();
-
-    // If we haven't reached our binding mode power cycles
-    // and we've been powered on for 2s, reset the power on counter
-    if (config.GetPowerOnCounter() < 3)
-    {
-        delay(2000);
-        config.SetPowerOnCounter(0);
-        config.Commit();
-    }
+    doPowerCount |= true;
 #endif
+    if (doPowerCount)
+    {
+        DBGLN("Doing power-up check for loan revocation and/or re-binding")
+        // Increment the power on counter in eeprom
+        config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+        config.Commit();
+
+        if (config.GetPowerOnCounter() >= 3)
+        {
+            if (config.GetOnLoan())
+            {
+                config.SetOnLoan(false);
+                config.SetPowerOnCounter(0);
+                config.Commit();
+            }
+        }
+        else
+        {
+            // We haven't reached our binding mode power cycles
+            // and we've been powered on for 2s, reset the power on counter
+            delay(2000);
+            config.SetPowerOnCounter(0);
+            config.Commit();
+        }
+    }
+
+    DBGLN("ModelId=%u", config.GetModelId());
 }
 
 static void setupTarget()
