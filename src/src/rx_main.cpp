@@ -29,7 +29,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+#if defined(USE_I2C)
 #include <Wire.h>
 #endif
 
@@ -922,6 +922,13 @@ static void setupConfigAndPocCheck()
 #endif
 }
 
+static void setupTargetCommon()
+{
+#if defined(USE_I2C)
+  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
+}
+
 static void setupTarget()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT)
@@ -933,9 +940,7 @@ static void setupTarget()
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-#endif
+    setupTargetCommon();
 }
 
 static void setupBindingFromConfig()

@@ -3,9 +3,7 @@
 #include "logging.h"
 
 #if defined(PLATFORM_STM32)
-    #if defined(TARGET_USE_EEPROM) && \
-            defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && \
-            defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
+    #if defined(TARGET_USE_EEPROM) && defined(USE_I2C)
         #if !defined(TARGET_EEPROM_ADDR)
             #define TARGET_EEPROM_ADDR 0x51
             #warning "!! Using default EEPROM address (0x51) !!"

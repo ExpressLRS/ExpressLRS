@@ -32,7 +32,7 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
+#if defined(USE_I2C)
 #include <Wire.h>
 #endif
 
@@ -943,6 +943,14 @@ static void setupLoggingBackpack()
   LoggingBackpack = serialPort;
 }
 
+static void setupTargetCommon()
+{
+#if defined(USE_I2C)
+  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#endif
+  setupLoggingBackpack();
+}
+
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -968,11 +976,7 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-#endif
-
-  setupLoggingBackpack();
+  setupTargetCommon();
 }
 
 void setup()
