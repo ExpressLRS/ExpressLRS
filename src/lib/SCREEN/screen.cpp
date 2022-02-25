@@ -6,7 +6,7 @@ void Screen::nullCallback(int updateType) {}
 void (*Screen::updatecallback)(int updateType) = &nullCallback;
 
 
-#ifdef Regulatory_Domain_ISM_2400
+#if defined(RADIO_SX128X)
 const char *Screen::rate_string[RATE_MAX_NUMBER] = {
     "500Hz",
     "250Hz",
@@ -53,6 +53,13 @@ const char *Screen::smartfan_string[SMARTFAN_MAX_NUMBER] = {
     "AUTO",
     "ON",
     "OFF"
+};
+
+const char *Screen::message_string[SCREEN_MSG_COUNT] = {
+    "ExpressLRS",
+    "[  Connected  ]",
+    "[  ! Armed !  ]",
+    "[  Mismatch!  ]"
 };
 
 const char *Screen::main_menu_line_1[] = {
@@ -162,8 +169,7 @@ void Screen::doPageForward()
         }
         else if(main_menu_page_index == MAIN_MENU_UPDATEFW_INDEX)
         {
-            current_page_index = PAGE_SUB_UPDATEFW_INDEX;
-            updateSubWIFIModePage();
+            setInWifiMode();
         }
         else if(main_menu_page_index == MAIN_MENU_BIND_INDEX)
         {
@@ -305,6 +311,39 @@ void Screen::setInWifiMode()
     main_menu_page_index = MAIN_MENU_UPDATEFW_INDEX;
     current_page_index = PAGE_SUB_UPDATEFW_INDEX;
     updateSubWIFIModePage();
+}
+
+void Screen::idleScreen()
+{
+    current_screen_status = SCREEN_STATUS_IDLE;
+    updateIdleScreen(0xff);
+}
+
+void Screen::doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message)
+{
+    uint8_t dirtyFlags = 0;
+    // SCREENIDLEUP_MESSAGE
+    dirtyFlags = (dirtyFlags << 1) | (current_message != message);
+    // SCREENIDLEUP_POWER
+    dirtyFlags = (dirtyFlags << 1) | (last_power_index != running_power_index || current_dynamic != dynamic);
+    // SCREENIDLEUP_RATIO
+    dirtyFlags = (dirtyFlags << 1) | (ratio_index != current_ratio_index);
+    // SCREENIDLEUP_RATE
+    dirtyFlags = (dirtyFlags << 1) | (rate_index != current_rate_index);
+
+    current_rate_index = rate_index;
+    current_power_index = power_index;
+    current_ratio_index = ratio_index;
+    current_powersaving_index = motion_index;
+    current_smartfan_index = fan_index;
+    current_dynamic = dynamic;
+    last_power_index = running_power_index;
+    current_message = message;
+
+    if (current_screen_status == SCREEN_STATUS_IDLE)
+    {
+        updateIdleScreen(dirtyFlags);
+    }
 }
 
 #endif

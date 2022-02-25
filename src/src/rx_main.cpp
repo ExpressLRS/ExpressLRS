@@ -129,7 +129,6 @@ int32_t OffsetDx;
 int32_t prevOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
-bool connectionHasModelMatch;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 
 ///////////////////////////////////////////////
@@ -165,7 +164,7 @@ uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
-#if defined(BF_DEBUG_LINK_STATS)
+#if defined(DEBUG_BF_LINK_STATS)
 // Debug vars
 uint8_t debug1 = 0;
 uint8_t debug2 = 0;
@@ -224,7 +223,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
     //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
-    crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+    crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
     crsf.LinkStatistics.downlink_RSSI = debug1;
@@ -546,12 +545,11 @@ void LostConnection()
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer.FreqOffset);
 
     RFmodeCycleMultiplier = 1;
-    connectionStatePrev = connectionState;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
     FreqCorrection = 0;
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
     Radio.SetPPMoffsetReg(0);
     #endif
     Offset = 0;
@@ -578,7 +576,6 @@ void LostConnection()
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     PFDloop.reset();
-    connectionStatePrev = connectionState;
     connectionState = tentative;
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
@@ -604,7 +601,6 @@ void GotConnection(unsigned long now)
     LockRFmode = true;
 #endif
 
-    connectionStatePrev = connectionState;
     connectionState = connected; //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
@@ -985,7 +981,7 @@ static void HandleUARTin()
 static void setupRadio()
 {
     Radio.currFreq = GetInitialFreq();
-#if !defined(Regulatory_Domain_ISM_2400)
+#if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();

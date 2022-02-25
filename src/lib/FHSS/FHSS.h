@@ -1,36 +1,14 @@
 #pragma once
 
 #include "targets.h"
-
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
-#include "SX127xDriver.h"
-#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
-#define FreqCorrectionMin (-FreqCorrectionMax)
-#elif Regulatory_Domain_ISM_2400
-#include "SX1280Driver.h"
-#define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
-#define FreqCorrectionMin (-FreqCorrectionMax)
-#endif
-
 #include "random.h"
 
-#ifdef Regulatory_Domain_AU_915
-#define Regulatory_Domain_Index 1
-#elif defined Regulatory_Domain_FCC_915
-#define Regulatory_Domain_Index 2
-#elif defined Regulatory_Domain_EU_868
-#define Regulatory_Domain_Index 3
-#elif defined Regulatory_Domain_AU_433
-#define Regulatory_Domain_Index 4
-#elif defined Regulatory_Domain_EU_433
-#define Regulatory_Domain_Index 5
-#elif defined Regulatory_Domain_ISM_2400
-#define Regulatory_Domain_Index 6
-#elif defined Regulatory_Domain_IN_866
-#define Regulatory_Domain_Index 7
-#else
-#define Regulatory_Domain_Index 8
+#if defined(RADIO_SX127X)
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
+#elif defined(RADIO_SX128X)
+#define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
 #endif
+#define FreqCorrectionMin (-FreqCorrectionMax)
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
 

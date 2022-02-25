@@ -99,6 +99,20 @@ typedef enum
     SCREEN_BACKLIGHT_OFF = 1
 } Screen_BackLight_t;
 
+typedef enum
+{
+    SCREEN_MSG_DISCONNECTED = 0,
+    SCREEN_MSG_CONNECTED = 1,
+    SCREEN_MSG_ARMED = 2,
+    SCREEN_MSG_MISMATCH = 3,
+    SCREEN_MSG_COUNT
+} Screen_Msg_t;
+
+#define SCREENIDLEUP_RATE       bit(0)
+#define SCREENIDLEUP_RATIO      bit(1)
+#define SCREENIDLEUP_POWER      bit(2)
+#define SCREENIDLEUP_MESSAGE    bit(3)
+
 class Screen
 {
 private:
@@ -118,7 +132,8 @@ protected:
     int current_powersaving_index;
     int current_smartfan_index;
     bool current_dynamic;
-    
+    int current_message;
+
     int current_index;
     int last_power_index;
 
@@ -136,6 +151,8 @@ protected:
     virtual void doPowerSavingValueSelect(int action) = 0;
     virtual void doSmartFanValueSelect(int action) = 0;
 
+    // dirtyFlags a combo of SCREENIDLEUP_*
+    virtual void updateIdleScreen(uint8_t dirtyFlags) = 0;
     virtual void updateMainMenuPage() = 0;
     virtual void updateSubFunctionPage() = 0;
     virtual void updateSubWIFIModePage() = 0;
@@ -147,6 +164,7 @@ protected:
     static const char *power_string[POWER_MAX_NUMBER];
     static const char *ratio_string[RATIO_MAX_NUMBER];
     static const char *powersaving_string[POWERSAVING_MAX_NUMBER];
+    static const char *message_string[SCREEN_MSG_COUNT];
     static const char *smartfan_string[SMARTFAN_MAX_NUMBER];
     static const char *main_menu_line_1[];
     static const char *main_menu_line_2[];
@@ -156,13 +174,13 @@ public:
     static void (*updatecallback)(int updateType);
 
     virtual void init(bool reboot) = 0;
-    virtual void idleScreen() = 0;
-    virtual void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index) = 0;
     virtual void doTemperatureUpdate(uint8_t temperature) = 0;
     virtual void doScreenBackLight(int state) = 0;
 
     void activeScreen();
+    void idleScreen();
     void doUserAction(int action);
+    void doParamUpdate(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message);
     void setInWifiMode();
 
     int getUserRateIndex() { return current_rate_index; }

@@ -1,6 +1,7 @@
 #ifndef DEVICE_NAME
 #define DEVICE_NAME "MATEK R24"
 #endif
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS                15
 #define GPIO_PIN_BUSY               5
@@ -18,5 +19,3 @@
 
 // Output Power
 #define POWER_OUTPUT_FIXED          3
-
-#define Regulatory_Domain_ISM_2400 1
