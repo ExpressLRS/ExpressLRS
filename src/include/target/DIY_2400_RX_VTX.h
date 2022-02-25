@@ -2,6 +2,9 @@
 
 #define Regulatory_Domain_ISM_2400 1
 
+// Any device features
+#define WS2812_IS_GRB
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_DIO1           4
