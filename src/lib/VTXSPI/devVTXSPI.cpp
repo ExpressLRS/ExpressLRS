@@ -233,6 +233,8 @@ static void initialize()
 
 static int start()
 {
+    rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
+
     rtc6705PowerAmpOn();
 
     return VTX_POWER_INTERVAL_MS;
