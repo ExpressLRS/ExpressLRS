@@ -48,5 +48,3 @@
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {459, 509, 326, 182, 91, 1021}
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

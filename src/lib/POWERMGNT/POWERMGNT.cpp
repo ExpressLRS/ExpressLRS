@@ -2,7 +2,6 @@
 #include "POWERMGNT.h"
 #include "DAC.h"
 #include "helpers.h"
-#include "common.h"
 
 /*
  * Moves the power management values and special cases out of the main code and into `targets.h`.

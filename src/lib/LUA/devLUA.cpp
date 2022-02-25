@@ -18,10 +18,12 @@ static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
     "25(-123dbm);50(-120dbm);100(-117dbm);200(-112dbm)",
-#elif defined(Regulatory_Domain_ISM_2400)
+#elif defined(RADIO_SX128X)
     "50(-117dbm);150(-112dbm);250(-108dbm);500(-105dbm)",
+#else
+    #error Invalid radio configuration!
 #endif
     "Hz"
 };
