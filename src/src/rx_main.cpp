@@ -354,12 +354,10 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection > FreqCorrectionMin)
         {
-            FreqCorrection -= 1; //min freq step is ~ 61hz
+            FreqCorrection -= 1; // FREQ_STEP units
         }
         else
         {
-            FreqCorrection = FreqCorrectionMin;
-            FreqCorrection = 0; //reset because something went wrong
             DBGLN("Max -FreqCorrection reached!");
         }
     }
@@ -367,12 +365,10 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (FreqCorrection < FreqCorrectionMax)
         {
-            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
+            FreqCorrection += 1; // FREQ_STEP units
         }
         else
         {
-            FreqCorrection = FreqCorrectionMax;
-            FreqCorrection = 0; //reset because something went wrong
             DBGLN("Max +FreqCorrection reached!");
         }
     }
