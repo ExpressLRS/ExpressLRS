@@ -5,8 +5,7 @@ static_assert(RATE_DEFAULT < RATE_MAX, "Default rate must be below RATE_MAX");
 static_assert(RATE_BINDING < RATE_MAX, "Binding rate must be below RATE_MAX");
 
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) \
-    || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
 SX127xDriver DMA_ATTR Radio;
@@ -24,7 +23,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {3, RATE_25HZ, -123, 29950, 6000, 4000, 0, 5000}};
 #endif
 
-#if defined(Regulatory_Domain_ISM_2400)
+#if defined(RADIO_SX128X)
 
 #include "SX1280Driver.h"
 SX1280Driver DMA_ATTR Radio;

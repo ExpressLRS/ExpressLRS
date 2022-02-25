@@ -522,7 +522,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
@@ -531,7 +531,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #else
         (void)didFHSS;
         (void)tlmSent;
-    #endif /* Regulatory_Domain_ISM_2400 */
+    #endif /* RADIO_SX127X */
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -551,7 +551,7 @@ void LostConnection()
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
     FreqCorrection = 0;
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
     Radio.SetPPMoffsetReg(0);
     #endif
     Offset = 0;
@@ -983,7 +983,7 @@ static void HandleUARTin()
 static void setupRadio()
 {
     Radio.currFreq = GetInitialFreq();
-#if !defined(Regulatory_Domain_ISM_2400)
+#if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();

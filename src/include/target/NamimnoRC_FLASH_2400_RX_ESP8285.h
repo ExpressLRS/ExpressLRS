@@ -1,4 +1,5 @@
 #define DEVICE_NAME "Namimno 2400RX"
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
 #define GPIO_PIN_BUSY           5
@@ -15,5 +16,3 @@
 #endif
 
 // Output Power - use default SX1280
-
-#define Regulatory_Domain_ISM_2400 1
