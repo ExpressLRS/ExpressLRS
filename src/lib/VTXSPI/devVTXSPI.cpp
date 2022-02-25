@@ -37,17 +37,17 @@
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
 extern bool ICACHE_RAM_ATTR IsArmed();
-void VTxOutputMinimum(void);
+static void VTxOutputMinimum(void);
 
 uint8_t vtxSPIBandChannelIdx = 255;
-uint8_t vtxSPIBandChannelIdxCurrent = 255;
+static uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0; 
-uint8_t vtxSPIPowerIdxCurrent = 0;
+static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
-uint8_t RfAmpVrefState = 0;
-uint16_t vtxSPIPWM = MAX_PWM;
-uint16_t VpdSetPoint = 0;
-uint16_t Vpd = 0;
+static uint8_t RfAmpVrefState = 0;
+static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t VpdSetPoint = 0;
+static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
 #define VPD_SETPOINT_YOLO_MW                    1500
@@ -56,7 +56,7 @@ uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
 uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
-const uint16_t freqTable[48] = {
+static const uint16_t freqTable[48] = {
     5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A
     5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866, // B
     5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945, // E
@@ -101,27 +101,27 @@ static void rtc6705SetFrequencyByIdx(uint8_t idx)
     rtc6705SetFrequency((uint32_t)freqTable[idx]);
 }
 
-void rtc6705PowerAmpOn(void)
+static void rtc6705PowerAmpOn()
 {
     uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_ON << 5);
     rtc6705WriteRegister(regData);
 }
 
-void RfAmpVrefOn(void)
+static void RfAmpVrefOn()
 {
     if (!RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
 
     RfAmpVrefState = 1;
 }
 
-void RfAmpVrefOff(void)
+static void RfAmpVrefOff()
 {
     if (RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
     RfAmpVrefState = 0;
 }
 
-void VTxOutputMinimum(void)
+static void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
@@ -129,19 +129,19 @@ void VTxOutputMinimum(void)
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
-void VTxOutputIncrease(void)
+static void VTxOutputIncrease()
 {
     if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 1;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
-void VTxOutputDecrease(void)
+static void VTxOutputDecrease()
 {
     if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 1;
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
-uint16_t LinearInterpVpdSetPointArray(uint16_t VpdSetPointArray[])
+static uint16_t LinearInterpVpdSetPointArray(uint16_t VpdSetPointArray[])
 {
     uint16_t newVpd = 0;
     uint16_t f = freqTable[vtxSPIBandChannelIdxCurrent];

@@ -51,7 +51,7 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
 #endif
 #ifdef HAS_VTX_SPI
-  &VTxSPI_device
+  {&VTxSPI_device, 0},
 #endif
 };
 
