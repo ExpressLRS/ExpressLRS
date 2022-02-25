@@ -14,7 +14,7 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
-HardwareSerial CRSF::Port = Serial;
+HardwareSerial CRSF::Port(0);
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -126,10 +126,10 @@ void CRSF::Begin()
         RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
-    CRSF::Port.flush();
-    CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
-    // Invert RX/TX
-    USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
+    // Uses default UART pins
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    // Invert RX/TX (not done, connection is full duplex uninverted)
+    //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 
 #elif defined(PLATFORM_STM32)
@@ -352,7 +352,9 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    uint16_t prev_AUX1 = ChannelDataIn[4];
+    #if defined(PLATFORM_ESP32)
+    uint16_t prev_AUX1 = ChannelDataIn[AUX1];
+    #endif
 
     ChannelDataIn[0] = (rcChannels->ch0);
     ChannelDataIn[1] = (rcChannels->ch1);
@@ -370,9 +372,9 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-        
+
     #if defined(PLATFORM_ESP32)
-    if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
+    if (prev_AUX1 != ChannelDataIn[AUX1]) // for monitoring arming state
     {
         devicesTriggerEvent();
     }
@@ -712,7 +714,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     #endif
   #endif
 #elif defined(PLATFORM_ESP8266)
-    // Enable loopback on UART0 to connect the RX pin to the TX pin
+    // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
@@ -742,7 +744,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     #endif
   #endif
 #elif defined(PLATFORM_ESP8266)
-    // Disable loopback to disconnect the RX pin from the TX pin
+    // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) &= ~BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);

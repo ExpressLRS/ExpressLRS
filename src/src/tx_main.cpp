@@ -919,7 +919,7 @@ static void setupLoggingBackpack()
   HardwareSerial *serialPort = new HardwareSerial(2);
   serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
 #elif defined(PLATFORM_ESP8266) && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-  HardwareSerial *serialPort = new HardwareSerial(0);
+  HardwareSerial *serialPort = new HardwareSerial(1);
   serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
 #elif defined(TARGET_TX_FM30)
   USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it

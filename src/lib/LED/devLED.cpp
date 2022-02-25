@@ -190,19 +190,18 @@ static int event()
         #endif
         return DURATION_NEVER;
     case wifiUpdate:
-        #if defined(TARGET_TX)
-            #if defined(TARGET_TX_IFLIGHT)
-                digitalWrite(GPIO_PIN_LED_GREEN, LOW);
-                digitalWrite(GPIO_PIN_LED_RED, LOW);
-                return flashLED(GPIO_PIN_LED_BLUE, GPIO_LED_BLUE_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
-            #endif
-            return DURATION_NEVER;
-        #endif
-        #if defined(TARGET_RX) && defined(GPIO_PIN_LED)
+        #if defined(TARGET_TX_IFLIGHT)
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+            digitalWrite(GPIO_PIN_LED_RED, LOW);
+            return flashLED(GPIO_PIN_LED_BLUE, GPIO_LED_BLUE_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
+        #elif defined(TARGET_RX) && defined(GPIO_PIN_LED)
             return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
+        #elif defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
         #else
             return DURATION_NEVER;
         #endif
+    case noCrossfire: // technically nocrossfire is {10,100} but {20,100} is close enough
     case radioFailed:
         #if defined(TARGET_TX_IFLIGHT)
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
