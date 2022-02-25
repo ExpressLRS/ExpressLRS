@@ -122,11 +122,7 @@ uint8_t uplinkLQ;
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
 
-int32_t RawOffset;
-int32_t prevRawOffset;
-int32_t Offset;
-int32_t OffsetDx;
-int32_t prevOffset;
+int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
@@ -391,9 +387,11 @@ void ICACHE_RAM_ATTR updatePhaseLock()
     {
         PFDloop.calcResult();
         PFDloop.reset();
-        RawOffset = PFDloop.getResult();
-        Offset = LPF_Offset.update(RawOffset);
-        OffsetDx = LPF_OffsetDx.update(RawOffset - prevRawOffset);
+
+        int32_t RawOffset = PFDloop.getResult();
+        int32_t Offset = LPF_Offset.update(RawOffset);
+        int32_t OffsetDx = LPF_OffsetDx.update(RawOffset - PfdPrevRawOffset);
+        PfdPrevRawOffset = RawOffset;
 
         if (RXtimerState == tim_locked && LQCalc.currentIsSet())
         {
@@ -419,11 +417,9 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             hwTimer.phaseShift(Offset >> 2);
         }
 
-        prevOffset = Offset;
-        prevRawOffset = RawOffset;
+        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
+        UNUSED(OffsetDx); // complier warning if no debug
     }
-
-    DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -466,8 +462,8 @@ static void ICACHE_RAM_ATTR updateDiversity()
     static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
     static int32_t antennaLQDropTrigger;
     static int32_t antennaRSSIDropTrigger;
-    int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-    int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
+    int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.value() : LPF_UplinkRSSI1.value();
+    int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.value() : LPF_UplinkRSSI0.value();
 
     //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
     if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER)) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
@@ -561,10 +557,7 @@ void LostConnection()
     #if defined(RADIO_SX127X)
     Radio.SetPPMoffsetReg(0);
     #endif
-    Offset = 0;
-    OffsetDx = 0;
-    RawOffset = 0;
-    prevOffset = 0;
+    PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
     LQCalc.reset();
@@ -590,8 +583,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
     FreqCorrection = 0;
-    Offset = 0;
-    prevOffset = 0;
+    PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
@@ -1185,14 +1177,17 @@ static void debugRcvrLinkstats()
         crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&crsf.LinkStatistics);
         uint32_t packetCounter = debugRcvrLinkstatsPacketId;
         uint8_t fhss = debugRcvrLinkstatsFhssIdx;
+        // actually the previous packet's offset since the update happens in tick, and this will
+        // fire right after packet reception (a little before tock)
+        int32_t pfd = PfdPrevRawOffset;
 
         // Use serial instead of DBG() because do not necessarily want all the debug in our logs
-        char buf[30];
-        snprintf(buf, sizeof(buf), "%u,%u,-%u,%u,%d,%u,%u\r\n",
+        char buf[50];
+        snprintf(buf, sizeof(buf), "%u,%u,-%u,%u,%d,%u,%u,%d\r\n",
             packetCounter, ls.active_antenna,
             ls.active_antenna ? ls.uplink_RSSI_2 : ls.uplink_RSSI_1,
             ls.uplink_Link_quality, ls.uplink_SNR,
-            ls.uplink_TX_Power, fhss);
+            ls.uplink_TX_Power, fhss, pfd);
         Serial.write(buf);
     }
 #endif
@@ -1302,14 +1297,14 @@ void loop()
         LostConnection();
     }
 
-    if ((connectionState == tentative) && (abs(OffsetDx) <= 10) && (Offset < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
+    if ((connectionState == tentative) && (abs(LPF_OffsetDx.value()) <= 10) && (LPF_Offset.value() < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
     {
         GotConnection(now);
     }
 
     checkSendLinkStatsToFc(now);
 
-    if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(OffsetDx) <= 5))
+    if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(LPF_OffsetDx.value()) <= 5))
     {
         RXtimerState = tim_locked;
         DBGLN("Timer locked");
