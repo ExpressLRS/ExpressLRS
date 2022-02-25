@@ -1,6 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "2.4G + VTx"
-
-#define Regulatory_Domain_ISM_2400 1
+#endif
 
 // Any device features
 #define WS2812_IS_GRB
