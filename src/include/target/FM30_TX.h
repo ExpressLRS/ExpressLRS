@@ -45,5 +45,3 @@
 #define HighPower               PWR_100mW
 #define MaxPower                PWR_250mW
 #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
-
-#define Regulatory_Domain_ISM_2400 1

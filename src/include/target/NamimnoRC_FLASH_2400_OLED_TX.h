@@ -6,6 +6,7 @@
 #define USE_TX_BACKPACK
 #define USE_OLED_SPI
 #define HAS_FIVE_WAY_BUTTON
+#define WS2812_IS_GRB
 
 // GPIO pin definitions
 #define GPIO_PIN_RST            21
@@ -46,6 +47,3 @@
 
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {1850, 900, 490, 1427, 0, 2978}
-
-/* Frequency */
-#define Regulatory_Domain_ISM_2400 1

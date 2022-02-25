@@ -53,5 +53,3 @@
         #define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
     #endif
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

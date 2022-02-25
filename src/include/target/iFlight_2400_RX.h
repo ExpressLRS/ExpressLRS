@@ -17,5 +17,3 @@
 
 // Output Power
 #define POWER_OUTPUT_FIXED          3
-
-#define Regulatory_Domain_ISM_2400  1

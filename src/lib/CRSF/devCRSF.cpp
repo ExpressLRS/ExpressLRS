@@ -1,5 +1,4 @@
 #include "targets.h"
-#include "common.h"
 #include "device.h"
 
 #include "CRSF.h"
