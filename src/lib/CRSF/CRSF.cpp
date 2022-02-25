@@ -1,12 +1,11 @@
 #include "CRSF.h"
+#include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
-#include "device.h"
-
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
 // for better performance, and on other targets (mostly using pin 13), it always uses Matrix
 HardwareSerial CRSF::Port(0);

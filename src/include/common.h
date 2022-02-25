@@ -161,19 +161,6 @@ uint8_t enumRatetoIndex(uint8_t rate);
 
 uint32_t uidMacSeedGet(void);
 
-#define AUX1 4
-#define AUX2 5
-#define AUX3 6
-#define AUX4 7
-#define AUX5 8
-#define AUX6 9
-#define AUX7 10
-#define AUX8 11
-#define AUX9 12
-#define AUX10 13
-#define AUX11 14
-#define AUX12 15
-
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83

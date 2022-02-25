@@ -59,12 +59,18 @@
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
-// Macros for big-endian (assume little endian host for now) etc
-#define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
-#define CRSF_DEC_I16(x) ((int16_t)CRSF_DEC_U16(x))
-#define CRSF_DEC_U24(x) (CRSF_DEC_U32((uint32_t)x << 8))
-#define CRSF_DEC_U32(x) ((uint32_t)__builtin_bswap32(x))
-#define CRSF_DEC_I32(x) ((int32_t)CRSF_DEC_U32(x))
+#define AUX1 4
+#define AUX2 5
+#define AUX3 6
+#define AUX4 7
+#define AUX5 8
+#define AUX6 9
+#define AUX7 10
+#define AUX8 11
+#define AUX9 12
+#define AUX10 13
+#define AUX11 14
+#define AUX12 15
 
 //////////////////////////////////////////////////////////////
 
