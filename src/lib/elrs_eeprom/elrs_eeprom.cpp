@@ -2,6 +2,7 @@
 #include "targets.h"
 #include "logging.h"
 
+#if !defined(TARGET_NATIVE)
 #if defined(PLATFORM_STM32)
     #if defined(TARGET_USE_EEPROM) && defined(USE_I2C)
         #if !defined(TARGET_EEPROM_ADDR)
@@ -88,3 +89,5 @@ ELRS_EEPROM::Commit()
     eeprom_buffer_flush();
 #endif
 }
+
+#endif /* !TARGET_NATIVE */

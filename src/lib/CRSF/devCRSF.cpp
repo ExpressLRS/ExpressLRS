@@ -1,8 +1,5 @@
 #include "targets.h"
-#include "device.h"
-
-#include "CRSF.h"
-#include "POWERMGNT.h"
+#include "devCRSF.h"
 
 #ifdef CRSF_TX_MODULE
 static int start()
