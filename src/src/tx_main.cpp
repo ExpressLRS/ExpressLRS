@@ -1,23 +1,11 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 
-#include "LBT.h"
-#include "CRSF.h"
 #include "lua.h"
-
-#include "FHSS.h"
-#include "logging.h"
-#include "POWERMGNT.h"
 #include "msp.h"
-#include <OTA.h>
-#include "config.h"
-#include "hwTimer.h"
-#include "LQCALC.h"
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
-#include "helpers.h"
 #include "devCRSF.h"
 #include "devLED.h"
 #include "devScreen.h"
@@ -31,10 +19,6 @@
 #include "devThermal.h"
 #include "devPDET.h"
 #include "devBackpack.h"
-
-#if defined(USE_I2C)
-#include <Wire.h>
-#endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -943,14 +927,6 @@ static void setupLoggingBackpack()
   LoggingBackpack = serialPort;
 }
 
-static void setupTargetCommon()
-{
-#if defined(USE_I2C)
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-#endif
-  setupLoggingBackpack();
-}
-
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded
@@ -977,6 +953,7 @@ static void setupTarget()
 #endif
 
   setupTargetCommon();
+  setupLoggingBackpack();
 }
 
 void setup()

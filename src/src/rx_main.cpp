@@ -1,37 +1,20 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 #include "LowPassFilter.h"
 
-#include "LBT.h"
 #include "crc.h"
-#include "CRSF.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
-#include "FHSS.h"
-#include "logging.h"
-#include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "hwTimer.h"
 #include "PFD.h"
-#include "LQCALC.h"
-#include "elrs_eeprom.h"
-#include "config.h"
 #include "options.h"
-#include "POWERMGNT.h"
 
-#include "device.h"
-#include "helpers.h"
 #include "devLED.h"
 #include "devWIFI.h"
 #include "devButton.h"
-
-#if defined(USE_I2C)
-#include <Wire.h>
-#endif
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -919,13 +902,6 @@ static void setupConfigAndPocCheck()
         config.SetPowerOnCounter(0);
         config.Commit();
     }
-#endif
-}
-
-static void setupTargetCommon()
-{
-#if defined(USE_I2C)
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
 #endif
 }
 
