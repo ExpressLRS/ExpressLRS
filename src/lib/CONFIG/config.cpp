@@ -482,6 +482,7 @@ TxConfig::UpgradeEepromV5ToV6()
     SetDvrAux(0);
     SetDvrStartDelay(0);
     SetDvrStopDelay(0);
+    m_modified |= MAIN_CHANGED; // force write the default DVR AUX settings
 
     Commit();
 
