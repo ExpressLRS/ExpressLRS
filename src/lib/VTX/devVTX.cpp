@@ -7,6 +7,9 @@
 #include "msp.h"
 #include "logging.h"
 
+#define PITMODE_OFF     0
+#define PITMODE_ON      1
+
 extern CRSF crsf;
 extern Stream *LoggingBackpack;
 uint8_t pitmodeAuxState = 0;
@@ -27,18 +30,20 @@ void VtxTriggerSend()
 
 void VtxPitmodeSwitchUpdate()
 {
-  if (config.GetVtxPitmode() > 1)
-  {
-      uint8_t auxInverted = config.GetVtxPitmode() % 2;
-      uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
-      uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelDataIn[auxNumber]) ^ auxInverted;
+    if (config.GetVtxPitmode() == PITMODE_OFF)
+    {
+        return;
+    }
 
-      if (pitmodeAuxState != currentPitmodeAuxState)
-      {
+    uint8_t auxInverted = config.GetVtxPitmode() % 2;
+    uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
+    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelDataIn[auxNumber]) ^ auxInverted;
+
+    if (pitmodeAuxState != currentPitmodeAuxState)
+    {
         pitmodeAuxState = currentPitmodeAuxState;
         VtxTriggerSend();
-      }
-  }
+    }
 }
 
 static void eepromWriteToMSPOut()
@@ -64,7 +69,7 @@ static void VtxConfigToMSPOut()
     if (config.GetVtxPower()) {
         packet.addByte(config.GetVtxPower());
 
-        if (config.GetVtxPitmode() < 2)
+        if (config.GetVtxPitmode() == PITMODE_OFF || config.GetVtxPitmode() == PITMODE_ON)
         {
             packet.addByte(config.GetVtxPitmode());
         }

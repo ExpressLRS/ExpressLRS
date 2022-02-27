@@ -659,7 +659,7 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
-#ifdef HAS_VTX_SPI
+#if defined(HAS_VTX_SPI)
     else if (MspData[7] == MSP_SET_VTX_CONFIG)
     {
         vtxSPIBandChannelIdx = MspData[8];
