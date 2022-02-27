@@ -468,7 +468,6 @@ TxConfig::UpgradeEepromV5ToV6()
 
         // Copy prev values to current config struct
         memcpy(&m_config, &v5Config, sizeof(v5Config));
-        m_modified |= MAIN_CHANGED;
     #endif
 
     DBGLN("EEPROM version %u is out of date... upgrading to version %u", PREV_TX_CONFIG_VERSION, TX_CONFIG_VERSION);
@@ -482,6 +481,7 @@ TxConfig::UpgradeEepromV5ToV6()
     SetDvrAux(0);
     SetDvrStartDelay(0);
     SetDvrStopDelay(0);
+    m_modified |= MAIN_CHANGED; // force write the default DVR AUX settings
 
     Commit();
 
