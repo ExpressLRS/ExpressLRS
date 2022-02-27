@@ -139,4 +139,3 @@ inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newv
 #define LUASYM_ARROW_UP "\xc0"
 #define LUASYM_ARROW_DN "\xc1"
 
-#endif
