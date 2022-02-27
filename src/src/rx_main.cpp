@@ -1,30 +1,17 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 #include "LowPassFilter.h"
 
-#include "LBT.h"
 #include "crc.h"
-#include "CRSF.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
-#include "FHSS.h"
-#include "logging.h"
-#include "OTA.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "hwTimer.h"
 #include "PFD.h"
-#include "LQCALC.h"
-#include "elrs_eeprom.h"
-#include "config.h"
 #include "options.h"
-#include "POWERMGNT.h"
 
-#include "device.h"
-#include "helpers.h"
 #include "devLED.h"
 #include "devWIFI.h"
 #include "devButton.h"
@@ -939,7 +926,7 @@ static void setupConfigAndPocCheck()
 #endif
 }
 
-static void setupGpio()
+static void setupTarget()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT)
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
@@ -949,6 +936,8 @@ static void setupGpio()
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+
+    setupTargetCommon();
 }
 
 static void setupBindingFromConfig()
@@ -1203,7 +1192,7 @@ RF_PRE_INIT()
 
 void setup()
 {
-    setupGpio();
+    setupTarget();
     // serial setup must be done before anything as some libs write
     // to the serial port and they'll block if the buffer fills
     setupSerial();

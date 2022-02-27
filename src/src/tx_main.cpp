@@ -1,23 +1,11 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 
-#include "LBT.h"
-#include "CRSF.h"
 #include "lua.h"
-
-#include "FHSS.h"
-#include "logging.h"
-#include "POWERMGNT.h"
 #include "msp.h"
-#include <OTA.h>
-#include "config.h"
-#include "hwTimer.h"
-#include "LQCALC.h"
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
-#include "helpers.h"
 #include "devCRSF.h"
 #include "devLED.h"
 #include "devScreen.h"
@@ -282,7 +270,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
             crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
             connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
-            // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
+            // -- uplink_TX_Power is updated via devCRSF event, so it updates with no telemetry
             // -- rf_mode is updated when we change rates
             // -- downlink_Link_quality is updated before the LQ period is incremented
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
@@ -964,10 +952,7 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-#endif
-
+  setupTargetCommon();
   setupLoggingBackpack();
 }
 
@@ -1077,7 +1062,6 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
-    crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
