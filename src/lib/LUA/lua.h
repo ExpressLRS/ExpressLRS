@@ -133,4 +133,8 @@ inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) 
 inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
     luaStruct->value = newvalue;
 }
+
+#define LUASYM_ARROW_UP "\xc0"
+#define LUASYM_ARROW_DN "\xc1"
+
 #endif

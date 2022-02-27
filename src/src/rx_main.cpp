@@ -28,6 +28,7 @@
 #include "devLED.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devVTXSPI.h"
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -48,6 +49,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   {&Button_device, 0},
+#endif
+#ifdef HAS_VTX_SPI
+  {&VTxSPI_device, 0},
 #endif
 };
 
@@ -180,6 +184,11 @@ void EnterBindingMode();
 void ExitBindingMode();
 void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
+
+bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.GetChannelOutput(AUX1));
+}
 
 static uint8_t minLqForChaos()
 {
@@ -650,6 +659,18 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
+#if defined(HAS_VTX_SPI)
+    else if (MspData[7] == MSP_SET_VTX_CONFIG)
+    {
+        vtxSPIBandChannelIdx = MspData[8];
+        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+        {
+            vtxSPIPowerIdx = MspData[10];
+            vtxSPIPitmode = MspData[11];
+        }
+        devicesTriggerEvent();
+    }
+#endif
     else
     {
         // No MSP data to the FC if no model match
