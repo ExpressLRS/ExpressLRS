@@ -3,6 +3,7 @@
 #include "device.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "logging.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to chech for backpack commands
 
@@ -31,6 +32,7 @@ extern SX1280Driver Radio;
 
 void startPassthrough()
 {
+    DBGLN("Starting ESP8255 Update!");
     // stop everyhting
     devicesStop();
     Radio.End();
