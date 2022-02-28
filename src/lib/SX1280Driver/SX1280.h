@@ -4,6 +4,8 @@
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 
+
+
 class SX1280Driver
 {
 public:
@@ -41,7 +43,7 @@ public:
     void SetFrequencyReg(uint32_t freq);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
-    void SetOutputPowerMax() { SetOutputPower(13); };
+
 
     int32_t GetFrequencyError();
 

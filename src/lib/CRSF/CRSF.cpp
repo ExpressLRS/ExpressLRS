@@ -45,6 +45,8 @@ inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
+volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
+
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
@@ -69,7 +71,6 @@ uint32_t CRSF::BadPktsCountResult = 0;
 
 uint8_t CRSF::modelId = 0;
 bool CRSF::ForwardDevicePings = false;
-volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 volatile bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
@@ -972,6 +973,5 @@ void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t fr
     header->frame_size = frameSize;
 
     uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
-
     frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }

@@ -50,6 +50,7 @@ local maxLineIndex
 local textXoffset
 local textYoffset
 local textSize
+local symbolChars
 
 local function allocateFields()
   fields = {}
@@ -92,6 +93,11 @@ local function constrain(x, low, high)
   return x
 end
 
+local function byteToStr(b)
+  -- Translate b into a string from symbolChars if available, else use string.char
+  return symbolChars and symbolChars[b] or string.char(b)
+end
+
 -- Change display attribute to current field
 local function incrField(step)
   local field = getField(lineIndex)
@@ -106,9 +112,9 @@ local function incrField(step)
       byte = 122
     end
     if charIndex <= #field.value then
-      field.value = string.sub(field.value, 1, charIndex-1) .. string.char(byte) .. string.sub(field.value, charIndex+1)
+      field.value = string.sub(field.value, 1, charIndex-1) .. byteToStr(byte) .. string.sub(field.value, charIndex+1)
     else
-      field.value = field.value .. string.char(byte)
+      field.value = field.value .. byteToStr(byte)
     end
   else
     local min, max = 0, 0
@@ -167,7 +173,7 @@ local function fieldGetSelectOpts(data, offset, last)
       r[#r+1] = opt
       opt = ''
     else
-      opt = opt .. string.char(b)
+      opt = opt .. byteToStr(b)
     end
     offset = offset + 1
     b = data[offset]
@@ -184,7 +190,7 @@ local function fieldGetString(data, offset, last)
 
   local result = ""
   while data[offset] ~= 0 do
-    result = result .. string.char(data[offset])
+    result = result .. byteToStr(data[offset])
     offset = offset + 1
   end
 
@@ -860,6 +866,16 @@ local function runPopupPage(event)
   end
 end
 
+local function loadSymbolChars()
+  -- On firmwares that have constants defined for the arrow chars, use them in place of
+  -- the \xc0 \xc1 chars (which are OpenTX-en)
+  if __opentx then
+    symbolChars = {}
+    symbolChars[192] = __opentx.CHAR_UP
+    symbolChars[193] = __opentx.CHAR_DOWN
+  end
+end
+
 local function setLCDvar()
   -- Set the title function depending on if LCD is color, and free the other function
   lcd_title = (lcd.RGB ~= nil) and lcd_title_color or lcd_title_bw
@@ -895,6 +911,8 @@ local function setLCDvar()
     textYoffset = 3
     textSize = 8
   end
+  loadSymbolChars()
+  loadSymbolChars = nil
 end
 
 local function setMock()

@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef TARGET_TX
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#include <functional>
 
 enum lua_Flags{
     //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
@@ -114,14 +114,18 @@ struct tagLuaElrsParams {
     char msg[1]; // null-terminated string
 } PACKED;
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
-
-void suppressCurrentLuaWarning(void);
+#ifdef TARGET_TX
 void setLuaWarningFlag(lua_Flags flag, bool value);
-extern void ICACHE_RAM_ATTR luaParamUpdateReq();
-extern bool luaHandleUpdateParameter();
+uint8_t getLuaWarningFlags(void);
 
 void registerLUAPopulateParams(void (*populate)());
+#endif
+
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
+
+extern void ICACHE_RAM_ATTR luaParamUpdateReq();
+extern bool luaHandleUpdateParameter();
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
@@ -145,4 +149,6 @@ inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) 
 inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
     luaStruct->value = newvalue;
 }
-#endif
+
+#define LUASYM_ARROW_UP "\xc0"
+#define LUASYM_ARROW_DN "\xc1"

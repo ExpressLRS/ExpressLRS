@@ -14,4 +14,4 @@
 #define GPIO_PIN_RCSIGNAL_TX -1
 #define GPIO_PIN_LED 0
 
-// Output Power - default for SX127x
+#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
