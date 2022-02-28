@@ -717,8 +717,9 @@ local function lcd_title_bw()
 end
 
 local function lcd_warn()
-  lcd.drawText(textSize*3, textSize*2, tostring(elrsFlags).." : "..elrsFlagsInfo, 0)
-  lcd.drawText(textSize*10, textSize*6, "ok", BLINK + INVERS)
+  lcd.drawText(textXoffset, textSize*2, "Error:")
+  lcd.drawText(textXoffset, textSize*3, elrsFlagsInfo)
+  lcd.drawText(LCD_W/2, textSize*5, "[OK]", BLINK + INVERS + CENTER)
 end
 
 local function handleDevicePageEvent(event)

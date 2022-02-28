@@ -25,7 +25,7 @@ static void (*populateHandler)() = 0;
 #endif
 
 #define LUA_MAX_PARAMS 32
-static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
+static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
@@ -192,7 +192,7 @@ static void pushResponseChunk(struct luaItem_command *cmd) {
   }
 }
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message) {
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
   cmd->step = step;
   cmd->info = message;
   nextStatusChunk = 0;
@@ -200,12 +200,14 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
 }
 
 #ifdef TARGET_TX
-void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
-                                      //only flip 3 Most significant bit, they are the critical warning that blocks lua
-  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
+static void luaSupressCriticalErrors()
+{
+  // clear the critical error bits of the warning flags
+  luaWarningFlags &= 0b00011111;
 }
 
-void setLuaWarningFlag(lua_Flags flag, bool value){
+void setLuaWarningFlag(lua_Flags flag, bool value)
+{
   if (value)
   {
     luaWarningFlags |= 1 << (uint8_t)flag;
@@ -214,10 +216,6 @@ void setLuaWarningFlag(lua_Flags flag, bool value){
   {
     luaWarningFlags &= ~(1 << (uint8_t)flag);
   }
-}
-
-uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
-  return luaWarningFlags & suppressedLuaWarningFlags;
 }
 
 static void updateElrsFlags()
@@ -235,7 +233,7 @@ void sendELRSstatus()
     "Model Mismatch",     //warning3, model mismatch
     "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
-    "",  //critical warning3, reserved for future use
+    "Not while connected",  //critical warning3, trying to change a protected value while connected
     "",  //critical warning2, reserved for future use
     ""   //critical warning1, reserved for future use
   };
@@ -243,7 +241,7 @@ void sendELRSstatus()
 
   for (int i=7 ; i>=0 ; i--)
   {
-      if(getLuaWarningFlags() & (1<<i))
+      if (luaWarningFlags & (1<<i))
       {
           warningInfo = messages[i];
           break;
@@ -254,7 +252,7 @@ void sendELRSstatus()
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarningFlags();
+  params->flags = luaWarningFlags;
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
@@ -276,20 +274,20 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
 
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
-  if (definition == NULL)
+  if (definition == nullptr)
   {
     static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
         {(const char *)agentLiteFolder, CRSF_FOLDER},
     };
 
-    paramDefinitions[0] = &luaAgentLite;
+    paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
     paramCallbacks[0] = 0;
     uint8_t *pos = agentLiteFolder + 4;
     for (int i=1;i<=lastLuaField;i++)
     {
-      struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)paramDefinitions[i];
-      if (p->parent == 0) {
+      if (paramDefinitions[i]->parent == 0)
+      {
         *pos++ = i;
       }
     }
@@ -297,12 +295,13 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     *pos++ = 0;
     return;
   }
+
   struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
-  paramDefinitions[p->id] = definition;
-  paramCallbacks[p->id] = callback;
+  paramDefinitions[lastLuaField] = p;
+  paramCallbacks[lastLuaField] = callback;
 }
 
 void deferExecution(uint32_t ms, std::function<void()> f)
@@ -335,19 +334,21 @@ bool luaHandleUpdateParameter()
         updateElrsFlags();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
-        suppressCurrentLuaWarning();
+        luaSupressCriticalErrors();
 #endif
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
-        // All paramDefinitions are not luaItem_command but the common part is the same
-        struct luaItem_command *p = (struct luaItem_command *)paramDefinitions[id];
-        DBGLN("Set Lua [%s]=%u", p->common.name, arg);
+        struct luaPropertiesCommon *p = paramDefinitions[id];
+        DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
-          if (arg == 6 && nextStatusChunk != 0) {
-            pushResponseChunk(p);
+          // While the command is executing, the handset will send `WRITE state=lcsQuery`.
+          // paramCallbacks will set the value when nextStatusChunk == 0, or send any
+          // remaining chunks when nextStatusChunk != 0
+          if (arg == lcsQuery && nextStatusChunk != 0) {
+            pushResponseChunk((struct luaItem_command *)p);
           } else {
-            paramCallbacks[id](id, arg);
+            paramCallbacks[id](p, arg);
           }
         }
       }
@@ -356,6 +357,7 @@ bool luaHandleUpdateParameter()
     case CRSF_FRAMETYPE_DEVICE_PING:
 #ifdef TARGET_TX
         populateHandler();
+        luaSupressCriticalErrors();
 #endif
         sendLuaDevicePacket();
         break;
@@ -372,7 +374,7 @@ bool luaHandleUpdateParameter()
           // On first chunk of a command, reset the step/info of the command
           if (dataType == CRSF_COMMAND && fieldChunk == 0)
           {
-            field->step = 0;
+            field->step = lcsIdle;
             field->info = "";
           }
           sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);

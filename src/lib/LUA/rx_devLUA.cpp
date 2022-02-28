@@ -51,7 +51,7 @@ static struct luaItem_string luaELRSversion = {
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 
@@ -101,24 +101,24 @@ static void registerLuaParameters()
 {
 
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-  registerLUAParameter(&luaAntennaMode, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetAntennaMode(arg);
      });
 #endif
 #ifdef POWER_OUTPUT_VALUES
   luadevGeneratePowerOpts();
-  registerLUAParameter(&luaTlmPower, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetPower(arg);
     POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
     });
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-  registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaRxWebUpdate, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
         deferExecution(200, [](){ connectionState = wifiUpdate; });
     }
-    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
+    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
 #endif
   registerLUAParameter(&luaELRSversion);
