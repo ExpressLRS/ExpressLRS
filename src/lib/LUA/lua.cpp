@@ -1,25 +1,38 @@
-#ifdef TARGET_TX
-
 #include "lua.h"
 #include "common.h"
 #include "CRSF.h"
 #include "logging.h"
 
+#ifdef TARGET_RX
+#include "telemetry.h"
+#endif
+
 extern CRSF crsf;
 extern bool IsArmed();
+
+#ifdef TARGET_RX
+extern Telemetry telemetry;
+#endif
 
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
+
+#ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
+static void (*populateHandler)() = 0;
+#endif
 
 #define LUA_MAX_PARAMS 32
 static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
-static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
+
+static uint32_t startDeferredTime = 0;
+static uint32_t deferredTimeout = 0;
+static std::function<void()> deferredFunction = nullptr;
 
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
@@ -91,11 +104,17 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
   chunkBuffer[2] = luaData->parent;
   chunkBuffer[3] = dataType;
+#ifdef TARGET_TX
   // Set the hidden flag
   chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
   if (crsf.elrsLUAmode) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
+#else
+  chunkBuffer[3] |= luaData->type;
+  uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
+#endif
+
   // Copy the name to the buffer starting at chunkBuffer[4]
   uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
 
@@ -138,7 +157,11 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // Maximum number of chunked bytes that can be sent in one response
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
+#ifdef TARGET_TX
   uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 6 - 2;
+#else
+  uint8_t chunkMax = CRSF_MAX_PACKET_LEN - 6 - 2;
+#endif
   // How many chunks needed to send this field (rounded up)
   uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
@@ -148,8 +171,15 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
+#ifdef TARGET_TX
   CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+#else
+  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
+  crsf.SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+
+  telemetry.AppendTelemetryPackage(paramInformation);
+#endif
   return chunkCnt - (fieldChunk+1);
 }
 
@@ -169,6 +199,7 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
   pushResponseChunk(cmd);
 }
 
+#ifdef TARGET_TX
 void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
                                       //only flip 3 Most significant bit, they are the critical warning that blocks lua
   suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
@@ -230,6 +261,14 @@ void sendELRSstatus()
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
+void registerLUAPopulateParams(void (*populate)())
+{
+  populateHandler = populate;
+  populate();
+}
+
+#endif
+
 void ICACHE_RAM_ATTR luaParamUpdateReq()
 {
   UpdateParamReq = true;
@@ -266,14 +305,20 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   paramCallbacks[p->id] = callback;
 }
 
-void registerLUAPopulateParams(void (*populate)())
+void deferExecution(uint32_t ms, std::function<void()> f)
 {
-  populateHandler = populate;
-  populate();
+  startDeferredTime = millis();
+  deferredTimeout = ms;
+  deferredFunction = f;
 }
 
 bool luaHandleUpdateParameter()
 {
+  if (deferredFunction!=nullptr && (millis() - startDeferredTime) > deferredTimeout)
+  {
+    deferredFunction();
+    deferredFunction = nullptr;
+  }
   if (UpdateParamReq == false)
   {
     return false;
@@ -285,11 +330,13 @@ bool luaHandleUpdateParameter()
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for elrs linkstat request
+#ifdef TARGET_TX
         DBGVLN("ELRS status request");
         updateElrsFlags();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
         suppressCurrentLuaWarning();
+#endif
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
@@ -307,7 +354,9 @@ bool luaHandleUpdateParameter()
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
+#ifdef TARGET_TX
         populateHandler();
+#endif
         sendLuaDevicePacket();
         break;
 
@@ -344,7 +393,10 @@ void sendLuaDevicePacket(void)
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   crsf.GetDeviceInformation(deviceInformation, lastLuaField);
   // does append header + crc again so substract size from length
-  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
-}
-
+#ifdef TARGET_TX
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
+#else
+  crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
+}

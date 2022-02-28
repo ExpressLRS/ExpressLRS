@@ -22,3 +22,5 @@
 #define GPIO_PIN_RF_AMP_VPD     A0
 #define VPD_VALUES_25MW         {460, 470, 505, 505} // To be calibrated per target.
 #define VPD_VALUES_100MW        {830, 840, 890, 895} // To be calibrated per target.
+
+#define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm

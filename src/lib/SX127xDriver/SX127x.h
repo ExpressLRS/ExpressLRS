@@ -51,7 +51,6 @@ public:
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
-    void SetOutputPowerMax() { SetOutputPower(0b1111); };
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
     void SetRxTimeoutUs(uint32_t interval);
