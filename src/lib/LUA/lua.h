@@ -3,6 +3,7 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#include <functional>
 
 enum lua_Flags{
     LUA_FLAG_CONNECTED = 0, //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
