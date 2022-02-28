@@ -112,6 +112,7 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const cha
 
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 typedef void (*luaCallback)(uint8_t id, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);
@@ -138,4 +139,3 @@ inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newv
 
 #define LUASYM_ARROW_UP "\xc0"
 #define LUASYM_ARROW_DN "\xc1"
-

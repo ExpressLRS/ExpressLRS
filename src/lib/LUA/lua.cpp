@@ -30,6 +30,10 @@ static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
+static uint32_t startDeferredTime = 0;
+static uint32_t deferredTimeout = 0;
+static std::function<void()> deferredFunction = nullptr;
+
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
   // Returns the max index of the semicolon-delimited option string
@@ -171,7 +175,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
 #else
   memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
-  
+
   crsf.SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
   telemetry.AppendTelemetryPackage(paramInformation);
@@ -301,8 +305,20 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   paramCallbacks[p->id] = callback;
 }
 
+void deferExecution(uint32_t ms, std::function<void()> f)
+{
+  startDeferredTime = millis();
+  deferredTimeout = ms;
+  deferredFunction = f;
+}
+
 bool luaHandleUpdateParameter()
 {
+  if (deferredFunction!=nullptr && (millis() - startDeferredTime) > deferredTimeout)
+  {
+    deferredFunction();
+    deferredFunction = nullptr;
+  }
   if (UpdateParamReq == false)
   {
     return false;
@@ -384,4 +400,3 @@ void sendLuaDevicePacket(void)
   telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
 }
-

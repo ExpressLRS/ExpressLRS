@@ -114,8 +114,9 @@ static void registerLuaParameters()
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-        connectionState = wifiUpdate;
+    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    if (arg == 6) {
+        deferExecution(200, [](){ connectionState = wifiUpdate; });
     }
     sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
   });
