@@ -14,9 +14,9 @@ void DAC::init()
 {
     DBGLN("Init DAC Driver");
 
-    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
-    Wire.setSCL(GPIO_PIN_SCL);
-    Wire.begin();
+    // I2C initialization is the responsibility of the caller
+    // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+
     m_state = UNKNOWN;
 }
 

@@ -50,6 +50,9 @@ public:
 
     /////Variables/////
 
+    
+    static volatile uint8_t ParameterUpdateData[3];
+
     #ifdef CRSF_TX_MODULE
     static void inline nullCallback(void);
 
@@ -63,7 +66,6 @@ public:
     // The model ID as received from the Transmitter
     static uint8_t modelId;
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
-    static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
 
     /// UART Handling ///
@@ -124,7 +126,6 @@ public:
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
     #endif
-
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;

@@ -13,7 +13,7 @@
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
 #define TX_CONFIG_VERSION   5
-#define RX_CONFIG_VERSION   4
+#define RX_CONFIG_VERSION   5
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -128,6 +128,9 @@ typedef struct {
     uint8_t     uid[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
+    uint8_t     power;
+    uint8_t     antennaMode;    //keep antenna mode in struct even in non diversity RX,
+                                // because turning feature diversity on and off would require change of RX config version.
     char        ssid[33];
     char        password[33];
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
@@ -150,6 +153,8 @@ public:
     const uint8_t* GetUID() const { return m_config.uid; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
+    uint8_t GetPower() const { return m_config.power; }
+    uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -162,6 +167,8 @@ public:
     void SetUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
+    void SetPower(uint8_t power);
+    void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
