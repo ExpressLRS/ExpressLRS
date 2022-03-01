@@ -41,14 +41,10 @@
 #define GPIO_PIN_UART1TX_INVERT PF6
 
 // Power output
-#if defined(RX_AS_TX)
-    #define MinPower                PWR_10mW
-    #define HighPower               PWR_100mW
-    #define MaxPower                PWR_250mW
-    #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
-#else
-    #define MinPower            PWR_10mW
-    #define MaxPower            PWR_100mW
+#define MinPower                PWR_10mW
+#define HighPower               PWR_100mW
+#define MaxPower                PWR_250mW
+#define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
+#if !defined(RX_AS_TX)
     #define DefaultPower        PWR_100mW
-    #define POWER_OUTPUT_VALUES {-10,-6,-3,1} //has PA, use Power array
 #endif
