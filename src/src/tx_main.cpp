@@ -365,15 +365,19 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     return;
 
   DBGLN("set rate %u", index);
-  hwTimer.updateInterval(ModParams->interval);
+  uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+  interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+  hwTimer.updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, interval);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
   crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(ModParams->interval);
+  crsf.setSyncParams(interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }

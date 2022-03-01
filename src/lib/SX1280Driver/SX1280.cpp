@@ -115,7 +115,12 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
     {
         DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr);
-        SetPacketParamsLoRa(PreambleLength, SX1280_LORA_PACKET_IMPLICIT,
+#if defined(DEBUG_FREQ_CORRECTION)
+        SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_VARIABLE_LENGTH;
+#else
+        SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_FIXED_LENGTH;
+#endif
+        SetPacketParamsLoRa(PreambleLength, packetLengthType,
                             _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
     }
     SetFrequencyReg(freq);

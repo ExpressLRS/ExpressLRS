@@ -244,12 +244,16 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
     bool invertIQ = UID[5] & 0x01;
 
-    hwTimer.updateInterval(ModParams->interval);
+  uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+    interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+    hwTimer.updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0);
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
+    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -305,7 +309,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
         Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
+#if defined(DEBUG_FREQ_CORRECTION)
+        // Scale the FreqCorrection to +/-127
+        Radio.TXdataBuffer[4] = FreqCorrection * 127 / FreqCorrectionMax;
+#else
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+#endif
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 

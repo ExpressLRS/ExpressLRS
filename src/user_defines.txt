@@ -104,3 +104,7 @@
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
+
+# Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
+# on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
+#-DDEBUG_FREQ_CORRECTION
