@@ -32,7 +32,7 @@
 #define GPIO_PIN_RCSIGNAL_TX        PA2 // UART2 NOTE: Not the "OUT" pinheader pad
 #if defined(RX_AS_TX)
     #define GPIO_PIN_RCSIGNAL_RX    PA2 // UART2 (half duplex)
-    #define GPIO_PIN_ANT_CTRL_2     PA8 // Low for left, high for right
+    #define GPIO_PIN_ANT_CTRL       PA8 // Low for left, high for right
 #else
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2
     #define GPIO_PIN_ANTENNA_SELECT PA8 // Low for left, high for right
