@@ -132,7 +132,7 @@ extern SX127xDriver Radio;
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
-#define RATE_BINDING 2  // 50Hz bind mode
+#define RATE_BINDING 3  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif

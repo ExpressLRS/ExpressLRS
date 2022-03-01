@@ -120,6 +120,10 @@
 #endif
 #endif
 
+#if defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
+#define USE_I2C
+#endif
+
 #if defined(RADIO_SX128X)
 #define Regulatory_Domain_ISM_2400 1
 // ISM 2400 band is in use => undefine other requlatory domain defines

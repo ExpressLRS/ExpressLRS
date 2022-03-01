@@ -17,3 +17,5 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 
 // Output Power - default for SX120
+
+#define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm

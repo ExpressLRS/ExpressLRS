@@ -88,7 +88,7 @@ static struct luaItem_selection luaModelMatch = {
 
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 
@@ -110,27 +110,27 @@ static struct luaItem_folder luaWiFiFolder = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 
 #if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 
 static struct luaItem_command luaVRxBackpackUpdate = {
     {"Enable VRx WiFi", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif // USE_TX_BACKPACK
@@ -139,7 +139,7 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 #endif
@@ -173,13 +173,17 @@ static struct luaItem_selection luaVtxPwr = {
 static struct luaItem_selection luaVtxPit = {
     {"Pitmode", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    "Off;On;AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN
+    ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN
+    ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN
+    ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN
+    ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN,
     emptySpace
 };
 
 static struct luaItem_command luaVtxSend = {
     {"Send VTx", CRSF_COMMAND},
-    0, // step
+    lcsIdle, // step
     emptySpace
 };
 //----------------------------VTX ADMINISTRATOR------------------
@@ -243,9 +247,97 @@ static void luadevGeneratePowerOpts()
   *out = '\0';
 }
 
+#if defined(PLATFORM_ESP32)
+static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  struct luaItem_command *cmd = (struct luaItem_command *)item;
+  connectionState_e targetState;
+  const char *textConfirm;
+  const char *textRunning;
+  if ((void *)item == (void *)&luaWebUpdate)
+  {
+    targetState = wifiUpdate;
+    textConfirm = "Enter WiFi Update?";
+    textRunning = "WiFi Running...";
+  }
+  else
+  {
+    targetState = bleJoystick;
+    textConfirm = "Start BLE Joystick?";
+    textRunning = "Joystick Running...";
+  }
+
+  switch ((luaCmdStep_e)arg)
+  {
+    case lcsClick:
+      if (connectionState == connected)
+      {
+        sendLuaCommandResponse(cmd, lcsAskConfirm, textConfirm);
+        return;
+      }
+      // fallthrough (clicking while not connected goes right to exectute)
+
+    case lcsConfirmed:
+      sendLuaCommandResponse(cmd, lcsExecuting, textRunning);
+      connectionState = targetState;
+      break;
+
+    case lcsCancel:
+      sendLuaCommandResponse(cmd, lcsIdle, emptySpace);
+      if (connectionState == targetState)
+      {
+        rebootTime = millis() + 400;
+      }
+      break;
+
+    default: // LUACMDSTEP_NONE on load, LUACMDSTEP_EXECUTING (our lua) or LUACMDSTEP_QUERY (Crossfire Config)
+      sendLuaCommandResponse(cmd, cmd->step, cmd->info);
+      break;
+  }
+}
+#endif
+
+static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  const char *msg = "Sending...";
+  bool doExecute = arg < lcsCancel;
+  if (doExecute)
+  {
+    if ((void *)item == (void *)&luaBind)
+    {
+      msg = "Binding...";
+      EnterBindingMode();
+    }
+    else if ((void *)item == (void *)&luaVtxSend)
+    {
+      VtxTriggerSend();
+    }
+    else if ((void *)item == (void *)&luaRxWebUpdate)
+    {
+      RxWiFiReadyToSend = true;
+    }
+#if defined(USE_TX_BACKPACK)
+    else if ((void *)item == (void *)&luaTxBackpackUpdate)
+    {
+      TxBackpackWiFiReadyToSend = true;
+    }
+    else if ((void *)item == (void *)&luaVRxBackpackUpdate)
+    {
+      VRxBackpackWiFiReadyToSend = true;
+    }
+#endif
+
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsExecuting, msg);
+  } /* if doExecute */
+  else
+  {
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsIdle, emptySpace);
+  }
+}
+
 static void registerLuaParameters()
 {
-  registerLUAParameter(&luaAirRate, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
       uint8_t rate = RATE_MAX - 1 - arg;
@@ -253,19 +345,19 @@ static void registerLuaParameters()
       config.SetRate(rate);
     }
   });
-  registerLUAParameter(&luaTlmRate, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
     }
   });
   #if defined(TARGET_TX_FM30)
-  registerLUAParameter(&luaBluetoothTelem, [](uint8_t id, uint8_t arg) {
+  registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
     digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
     devicesTriggerEvent();
   });
   #endif
-  registerLUAParameter(&luaSwitch, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     // Only allow changing switch mode when disconnected since we need to guarantee
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
@@ -276,8 +368,10 @@ static void registerLuaParameters()
       config.SetSwitchMode(newSwitchMode);
       OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
+    else
+      setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
   });
-  registerLUAParameter(&luaModelMatch, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
     if (connectionState == connected) {
@@ -294,15 +388,15 @@ static void registerLuaParameters()
   // POWER folder
   registerLUAParameter(&luaPowerFolder);
   luadevGeneratePowerOpts();
-  registerLUAParameter(&luaPower, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
   }, luaPowerFolder.common.id);
-  registerLUAParameter(&luaDynamicPower, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetDynamicPower(arg > 0);
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
   }, luaPowerFolder.common.id);
 #if defined(GPIO_PIN_FAN_EN)
-  registerLUAParameter(&luaFanThreshold, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
       config.SetPowerFanThreshold(arg);
   }, luaPowerFolder.common.id);
 #endif
@@ -311,113 +405,36 @@ static void registerLuaParameters()
 #endif
   // VTX folder
   registerLUAParameter(&luaVtxFolder);
-  registerLUAParameter(&luaVtxBand, [](uint8_t id, uint8_t arg){
+  registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxBand(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxChannel, [](uint8_t id, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxChannel(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPwr, [](uint8_t id, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPower(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPit, [](uint8_t id, uint8_t arg){
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPitmode(arg);
-  },luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxSend, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      VtxTriggerSend();
-    }
-    sendLuaCommandResponse(&luaVtxSend, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaVtxFolder.common.id);
+  }, luaVtxFolder.common.id);
+  registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
 
   // WIFI folder
   registerLUAParameter(&luaWiFiFolder);
   #if defined(PLATFORM_ESP32)
-    registerLUAParameter(&luaWebUpdate, [](uint8_t id, uint8_t arg){
-      if (arg == 4) // 4 = request confirmed, start
-      {
-        //confirm run on ELRSv2.lua or start command from CRSF configurator,
-        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start wifi to prevent stuck on
-        //unintentional button press.
-        sendLuaCommandResponse(&luaWebUpdate, 2, "WiFi Running...");
-        connectionState = wifiUpdate;
-      }
-      else if (arg > 0 && arg < 4)
-      {
-        sendLuaCommandResponse(&luaWebUpdate, 3, "Enter WiFi Update?");
-      }
-      else if (arg == 5)
-      {
-        sendLuaCommandResponse(&luaWebUpdate, 0, "WiFi Cancelled");
-        if (connectionState == wifiUpdate) {
-          rebootTime = millis() + 400;
-        }
-      }
-      else
-      {
-        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.step, luaWebUpdate.info);
-      }
-    },luaWiFiFolder.common.id);
+  registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
   #endif
-
-  registerLUAParameter(&luaRxWebUpdate, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      RxWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
-
+  registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
   #if defined(USE_TX_BACKPACK)
-  registerLUAParameter(&luaTxBackpackUpdate, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      TxBackpackWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse(&luaTxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
-
-  registerLUAParameter(&luaVRxBackpackUpdate, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      VRxBackpackWiFiReadyToSend = true;
-    }
-    sendLuaCommandResponse(&luaVRxBackpackUpdate, arg < 5 ? 2 : 0, arg < 5 ? "Sending..." : "");
-  },luaWiFiFolder.common.id);
+  registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+  registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
   #endif // USE_TX_BACKPACK
 
   #if defined(PLATFORM_ESP32)
-    registerLUAParameter(&luaBLEJoystick, [](uint8_t id, uint8_t arg){
-      if (arg == 4) // 4 = request confirmed, start
-      {
-        //confirm run on ELRSv2.lua or start command from CRSF configurator,
-        //since ELRS LUA can do 2 step confirmation, it needs confirmation to start BLE to prevent stuck on
-        //unintentional button press.
-        sendLuaCommandResponse(&luaBLEJoystick, 2, "Joystick Running...");
-        connectionState = bleJoystick;
-      }
-      else if (arg > 0 && arg < 4) //start command, 1 = start, 2 = running, 3 = request confirmation
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, 3, "Start BLE Joystick?");
-      }
-      else if (arg == 5)
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, 0, "Joystick Cancelled");
-        if (connectionState == bleJoystick) {
-          rebootTime = millis() + 400;
-        }
-      }
-      else
-      {
-        sendLuaCommandResponse(&luaBLEJoystick, luaBLEJoystick.step, luaBLEJoystick.info);
-      }
-    });
-
+  registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
 
-  registerLUAParameter(&luaBind, [](uint8_t id, uint8_t arg){
-    if (arg < 5) {
-      EnterBindingMode();
-    }
-    sendLuaCommandResponse(&luaBind, arg < 5 ? 2 : 0, arg < 5 ? "Binding..." : "");
-  });
+  registerLUAParameter(&luaBind, &luahandSimpleSendCmd);
 
   registerLUAParameter(&luaInfo);
   registerLUAParameter(&luaELRSversion);
@@ -429,20 +446,20 @@ static int event()
   uint8_t rate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch,(uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-  setLuaTextSelectionValue(&luaModelMatch,(uint8_t)config.GetModelMatch());
+  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
 #endif
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  setLuaTextSelectionValue(&luaDynamicPower,dynamic);
+  setLuaTextSelectionValue(&luaDynamicPower, dynamic);
 
-  setLuaTextSelectionValue(&luaVtxBand,config.GetVtxBand());
-  setLuaTextSelectionValue(&luaVtxChannel,config.GetVtxChannel());
-  setLuaTextSelectionValue(&luaVtxPwr,config.GetVtxPower());
-  setLuaTextSelectionValue(&luaVtxPit,config.GetVtxPitmode());
+  setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
+  setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
+  setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   #if defined(TARGET_TX_FM30)
     setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
   #endif
@@ -451,7 +468,7 @@ static int event()
 
 static int timeout()
 {
-  if(luaHandleUpdateParameter())
+  if (luaHandleUpdateParameter())
   {
     SetSyncSpam();
   }

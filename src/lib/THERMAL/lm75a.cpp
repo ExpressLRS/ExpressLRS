@@ -1,4 +1,5 @@
 #ifdef HAS_THERMAL_LM75A
+#include <Wire.h>
 #include "lm75a.h"
 #include "logging.h"
 
