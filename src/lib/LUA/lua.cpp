@@ -20,7 +20,6 @@ static volatile bool UpdateParamReq = false;
 
 #ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
 static void (*populateHandler)() = 0;
 #endif
 
