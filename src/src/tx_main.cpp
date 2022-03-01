@@ -950,6 +950,8 @@ static void setupTarget()
 #if defined(TARGET_TX_FM30_MINI)
   pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+  pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+  digitalWrite(GPIO_PIN_ANT_CTRL, LOW); // LEFT antenna
 #endif
 
   setupTargetCommon();
