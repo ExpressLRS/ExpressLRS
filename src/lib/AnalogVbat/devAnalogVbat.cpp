@@ -10,7 +10,7 @@
 #define VBAT_SMOOTH_CNT         5
 #define VBAT_SAMPLE_INTERVAL    100U
 
-typedef uint32_t vbatAnalogStorage_t;
+typedef uint16_t vbatAnalogStorage_t;
 static MedianAvgFilter<vbatAnalogStorage_t, VBAT_SMOOTH_CNT>vbatSmooth;
 
 /* Shameful externs */
@@ -23,12 +23,13 @@ static int start()
 
 static void reportVbat()
 {
-    vbatAnalogStorage_t adc = vbatSmooth;
-    uint16_t vbat = adc * 100U / ANALOG_VBAT_SCALE;
+    uint32_t adc = vbatSmooth.calc_scaled();
+    uint16_t vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
 
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
     // Values are MSB first (BigEndian)
     crsfbatt.p.voltage = htobe16(vbat);
+    // No sensors for current, capacity, or remaining available
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
     telemetry.AppendTelemetryPackage((uint8_t *)&crsfbatt);
@@ -37,7 +38,7 @@ static void reportVbat()
 static int timeout()
 {
     unsigned int idx = vbatSmooth.add(analogRead(GPIO_ANALOG_VBAT));
-    if (idx == 0)
+    if (idx == 0 && connectionState == connected)
         reportVbat();
 
     return VBAT_SAMPLE_INTERVAL;
