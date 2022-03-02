@@ -1,7 +1,6 @@
 #pragma once
 
 #include "targets.h"
-#include <Wire.h>
 
 #if defined(POWER_OUTPUT_DAC)
 

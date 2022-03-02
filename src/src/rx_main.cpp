@@ -1,34 +1,28 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 #include "LowPassFilter.h"
 
-#include "LBT.h"
 #include "crc.h"
-#include "CRSF.h"
 #include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
-#include "FHSS.h"
-#include "logging.h"
-#include "OTA.h"
+#include "lua.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "hwTimer.h"
 #include "PFD.h"
-#include "LQCALC.h"
-#include "elrs_eeprom.h"
-#include "config.h"
 #include "options.h"
-#include "POWERMGNT.h"
 #include "MeanAccumulator.h"
 
-#include "device.h"
-#include "helpers.h"
 #include "devLED.h"
+#include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devVTXSPI.h"
+
+///LUA///
+#define LUA_MAX_PARAMS 32
+////
 
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
@@ -41,6 +35,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
   {&LED_device, 0},
 #endif
+  {&LUA_device,0},
 #ifdef HAS_RGB
   {&RGB_device, 0},
 #endif
@@ -49,6 +44,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BUTTON
   {&Button_device, 0},
+#endif
+#ifdef HAS_VTX_SPI
+  {&VTxSPI_device, 0},
 #endif
 };
 
@@ -166,7 +164,7 @@ uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
 ///////////////////////////////////////
 
-#if defined(BF_DEBUG_LINK_STATS)
+#if defined(DEBUG_BF_LINK_STATS)
 // Debug vars
 uint8_t debug1 = 0;
 uint8_t debug2 = 0;
@@ -182,6 +180,11 @@ void EnterBindingMode();
 void ExitBindingMode();
 void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
+
+bool ICACHE_RAM_ATTR IsArmed()
+{
+   return CRSF_to_BIT(crsf.GetChannelOutput(AUX1));
+}
 
 static uint8_t minLqForChaos()
 {
@@ -450,61 +453,73 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 static inline void switchAntenna()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    antenna = !antenna;
-    (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+    if(config.GetAntennaMode() == 2){
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
+        antenna = !antenna;
+        (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+    }
 #endif
 }
 
 static void ICACHE_RAM_ATTR updateDiversity()
 {
+
 #if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-    static int32_t antennaLQDropTrigger;
-    static int32_t antennaRSSIDropTrigger;
-    int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
-    int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
+    if(config.GetAntennaMode() == 2){
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
+        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+        static int32_t antennaLQDropTrigger;
+        static int32_t antennaRSSIDropTrigger;
+        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.SmoothDataINT : LPF_UplinkRSSI1.SmoothDataINT;
+        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.SmoothDataINT : LPF_UplinkRSSI0.SmoothDataINT;
 
-    //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
-    if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER)) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
-    {
-        switchAntenna();
-        antennaLQDropTrigger = 1;
-        antennaRSSIDropTrigger = 0;
-    }
-    else if (rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL)
-    {
-        prevRSSI = rssi;
-        antennaRSSIDropTrigger++;
-    }
-
-    // if we didn't get a packet switch the antenna
-    if (!LQCalc.currentIsSet() && antennaLQDropTrigger == 0)
-    {
-        switchAntenna();
-        antennaLQDropTrigger = 1;
-        antennaRSSIDropTrigger = 0;
-    }
-    else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
-    {
-        // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
-        // We can compare the rssi values and see if we made things better or worse when we switched
-        if (rssi < otherRSSI)
+        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+        if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER)) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
         {
-            // things got worse when we switched, so change back.
             switchAntenna();
             antennaLQDropTrigger = 1;
             antennaRSSIDropTrigger = 0;
         }
-        else
+        else if (rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL)
         {
-            // all good, we can stay on the current antenna. Clear the flag.
-            antennaLQDropTrigger = 0;
+            prevRSSI = rssi;
+            antennaRSSIDropTrigger++;
         }
-    }
-    else if (antennaLQDropTrigger > 0)
-    {
-        antennaLQDropTrigger ++;
+
+        // if we didn't get a packet switch the antenna
+        if (!LQCalc.currentIsSet() && antennaLQDropTrigger == 0)
+        {
+            switchAntenna();
+            antennaLQDropTrigger = 1;
+            antennaRSSIDropTrigger = 0;
+        }
+        else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
+        {
+            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+            // We can compare the rssi values and see if we made things better or worse when we switched
+            if (rssi < otherRSSI)
+            {
+                // things got worse when we switched, so change back.
+                switchAntenna();
+                antennaLQDropTrigger = 1;
+                antennaRSSIDropTrigger = 0;
+            }
+            else
+            {
+                // all good, we can stay on the current antenna. Clear the flag.
+                antennaLQDropTrigger = 0;
+            }
+        }
+        else if (antennaLQDropTrigger > 0)
+        {
+            antennaLQDropTrigger ++;
+        }
+    }else {
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, config.GetAntennaMode());
+        antenna = config.GetAntennaMode();
     }
 #endif
 }
@@ -525,7 +540,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
@@ -534,7 +549,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #else
         (void)didFHSS;
         (void)tlmSent;
-    #endif /* Regulatory_Domain_ISM_2400 */
+    #endif /* RADIO_SX127X */
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -554,7 +569,7 @@ void LostConnection()
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
     FreqCorrection = 0;
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
     Radio.SetPPMoffsetReg(0);
     #endif
     Offset = 0;
@@ -654,6 +669,18 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
+#if defined(HAS_VTX_SPI)
+    else if (MspData[7] == MSP_SET_VTX_CONFIG)
+    {
+        vtxSPIBandChannelIdx = MspData[8];
+        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+        {
+            vtxSPIPowerIdx = MspData[10];
+            vtxSPIPitmode = MspData[11];
+        }
+        devicesTriggerEvent();
+    }
+#endif
     else
     {
         // No MSP data to the FC if no model match
@@ -667,13 +694,10 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
 
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {
-                if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
-                {
-                    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-                    crsf.GetDeviceInformation(deviceInformation, 0);
-                    crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
-                    telemetry.AppendTelemetryPackage(deviceInformation);
-                }
+                crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
+                crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
+                crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
+                luaParamUpdateReq();
             }
         }
     }
@@ -922,7 +946,7 @@ static void setupConfigAndPocCheck()
 #endif
 }
 
-static void setupGpio()
+static void setupTarget()
 {
 #if defined(GPIO_PIN_ANTENNA_SELECT)
     pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
@@ -932,6 +956,8 @@ static void setupGpio()
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
+
+    setupTargetCommon();
 }
 
 static void setupBindingFromConfig()
@@ -987,7 +1013,7 @@ static void HandleUARTin()
 static void setupRadio()
 {
     Radio.currFreq = GetInitialFreq();
-#if !defined(Regulatory_Domain_ISM_2400)
+#if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
@@ -999,8 +1025,7 @@ static void setupRadio()
         return;
     }
 
-    // Set transmit power to maximum
-    POWERMGNT.setPower(MaxPower);
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (MaxPower > PWR_10mW);
@@ -1186,7 +1211,7 @@ RF_PRE_INIT()
 
 void setup()
 {
-    setupGpio();
+    setupTarget();
     // serial setup must be done before anything as some libs write
     // to the serial port and they'll block if the buffer fills
     setupSerial();
@@ -1238,6 +1263,14 @@ void loop()
         ESP.restart();
     }
     #endif
+
+    if (config.IsModified() && !InBindingMode)
+    {
+        Radio.SetTxIdleMode();
+        LostConnection();
+        config.Commit();
+        devicesTriggerEvent();
+    }
 
     if (connectionState > MODE_STATES)
     {
@@ -1415,11 +1448,8 @@ void UpdateModelMatch(uint8_t model)
     DBGLN("Set ModelId=%u", model);
 
     config.SetModelId(model);
-    if (config.IsModified())
-    {
-        config.Commit();
-        // This will be called from ProcessRFPacket(), schedule a disconnect
-        // in the main loop once the ISR has exited
-        connectionState = disconnectPending;
-    }
+    config.Commit();
+    // This will be called from ProcessRFPacket(), schedule a disconnect
+    // in the main loop once the ISR has exited
+    connectionState = disconnectPending;
 }
