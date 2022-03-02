@@ -536,7 +536,7 @@ local function parseParameterInfoMessage(data)
     local type = fieldData[2] % 128
     local hidden = (bit32.rshift(fieldData[2], 7) == 1) or nil
     local offset
-    if field.name ~= nil then -- already seen this field before, so we can validate this packet is correct
+    if field.name ~= nil and type ~= 11 then -- already seen this field before, so we can validate this packet is correct
       if field.parent ~= parent or field.type ~= type or field.hidden ~= hidden then
         fieldData = {}
         return -- no data extraction
