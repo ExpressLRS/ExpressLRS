@@ -49,20 +49,11 @@ static struct luaItem_string luaELRSversion = {
 
 //---------------------------- WiFi -----------------------------
 
-static struct luaItem_command luaRxWebUpdate = {
-    {"Enable Rx WiFi", CRSF_COMMAND},
-    lcsIdle, // step
-    emptySpace
-};
 
 //---------------------------- WiFi -----------------------------
 
 
 extern RxConfig config;
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-extern unsigned long rebootTime;
-extern void beginWebsever();
-#endif
 
 
 #ifdef POWER_OUTPUT_VALUES
@@ -111,15 +102,6 @@ static void registerLuaParameters()
     config.SetPower(arg);
     POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
     });
-#endif
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-  registerLUAParameter(&luaRxWebUpdate, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
-    if (arg == 6) {
-        deferExecution(200, [](){ connectionState = wifiUpdate; });
-    }
-    sendLuaCommandResponse(&luaRxWebUpdate, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
-  });
 #endif
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
