@@ -772,6 +772,7 @@ void SendUIDOverMSP()
   MSPDataPackage[3] = MasterUID[4];
   MSPDataPackage[4] = MasterUID[5];
   BindingSendCount = 0;
+  MspSender.ResetState();
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
 
