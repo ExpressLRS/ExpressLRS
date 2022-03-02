@@ -2,6 +2,7 @@
 #define DEVICE_NAME "DIY2400 PWMP"
 #endif
 
+#define USE_ANALOG_VBAT
 #define CRSF_RCVR_NO_SERIAL
 
 // GPIO pin definitions
@@ -20,6 +21,10 @@
 #define GPIO_PIN_PWM_OUTPUTS    {0, 9, 10}
 #else
 #define GPIO_PIN_PWM_OUTPUTS    {0, 1, 3, 9, 10}
+#endif
+
+#if !defined(ANALOG_VBAT_SCALE)
+#define ANALOG_VBAT_SCALE       561
 #endif
 
 #define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm
