@@ -977,7 +977,7 @@ void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize,
 void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
 {
     crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
-    header->device_addr = destAddr;
+    header->dest_addr = destAddr;
     header->orig_addr = senderAddr;
     SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
