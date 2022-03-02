@@ -114,11 +114,12 @@ device_affinity_t ui_devices[] = {
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
-#if !defined(DYNPOWER_THRESH_UP)
-  #define DYNPOWER_THRESH_UP              6
-#endif
 #if !defined(DYNPOWER_THRESH_DN)
-  #define DYNPOWER_THRESH_DN              10
+  #if defined(RADIO_SX127X)
+    #define DYNPOWER_THRESH_DN              5
+  #else
+    #define DYNPOWER_THRESH_DN              10
+  #endif
 #endif
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
@@ -186,13 +187,14 @@ void DynamicPower_Update()
   dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
   int8_t snr = crsf.LinkStatistics.uplink_SNR;
-  if (snr >= DYNPOWER_THRESH_DN)
+  constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
+  if (snr >= DYNPOWER_THRESH_DN && dynamic_power_avg_lq >= DYNPOWER_MIN_LQ_UP)
   {
     DBGVLN("Power decrease");
     POWERMGNT.decPower();
   }
   uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
-  while ((snr <= DYNPOWER_THRESH_UP) && (powerHeadroom > 0))
+  while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr) && (powerHeadroom > 0))
   {
     DBGLN("Power increase");
     POWERMGNT.incPower();
