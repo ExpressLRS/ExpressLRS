@@ -6,14 +6,6 @@
     #endif
 #endif
 
-#if EMAX_2400_HAS_OLED
-#define TARGET_TX_EMAX_2400_V1
-#else
-// #define TARGET_TX_EMAX_NANO_2400_V1
-// #define GPIO_PIN_LED_BLUE
-// #define GPIO_PIN_LED_GREEN  
-#endif
-
 #define USE_TX_BACKPACK
 #define GPIO_PIN_DEBUG_RX       16
 #define GPIO_PIN_DEBUG_TX       17
@@ -36,17 +28,23 @@
 #define GPIO_PIN_FAN_EN         22
 
 #ifdef EMAX_2400_HAS_OLED
-#define USE_OLED_I2C
-#define OLED_REVERSED
-#define HAS_FIVE_WAY_BUTTON
+    #define USE_OLED_I2C
+    #define OLED_REVERSED
+    #define HAS_FIVE_WAY_BUTTON
 
-#define GPIO_PIN_OLED_SDA       17
-#define GPIO_PIN_OLED_SCK       16
-#define GPIO_PIN_OLED_RST       U8X8_PIN_NONE
-#define GPIO_PIN_JOYSTICK       33  
+    #define GPIO_PIN_OLED_SDA       35
+    #define GPIO_PIN_OLED_SCK       34
+    #define GPIO_PIN_OLED_RST       U8X8_PIN_NONE
+    
+    #define GPIO_PIN_JOYSTICK       33  
 
-/* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
-#define JOY_ADC_VALUES          {1905, 1160, 580, 2580, 0, 4095}
+    /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
+    #define JOY_ADC_VALUES          {1905, 1160, 580, 2580, 0, 4095}
+#else
+    #define TARGET_TX_EMAX_NANO_2400_V1
+
+    #define GPIO_PIN_LED_BLUE       34
+    #define GPIO_PIN_LED_GREEN      35
 #endif
 
 // Output Power

@@ -23,7 +23,7 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
--DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
 
 ### PERFORMANCE OPTIONS: ###
@@ -92,7 +92,7 @@
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
--DDEBUG_LOG
+#-DDEBUG_LOG
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
 #-DDEBUG_LOG_VERBOSE
 
