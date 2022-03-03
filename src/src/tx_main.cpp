@@ -190,7 +190,7 @@ void DynamicPower_Update()
     // (When not using dynamic power) RSSI is dropped enogh for inc power back to the configured power
     if ((rssi <= -10) && (POWERMGNT.currPower() < configPower)) {
       DBGLN("Power inc ");
-      POWERMGNT.decPower();
+      POWERMGNT.setPower(configPower);
     }
     return;
   }
