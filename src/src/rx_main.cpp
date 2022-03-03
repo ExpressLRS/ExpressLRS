@@ -781,9 +781,9 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     return false;
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t const crcFail)
+void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 {
-    if (crcFail)
+    if (status != SX12xxDriverCommon::SX12XX_RX_OK)
     {
         DBGVLN("HW CRC error");
         #if defined(DEBUG_RX_SCOREBOARD)
@@ -861,9 +861,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket(uint8_t const crcFail)
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-void ICACHE_RAM_ATTR RXdoneISR(uint8_t const crcFail)
+void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-    ProcessRFPacket(crcFail);
+    ProcessRFPacket(status);
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()

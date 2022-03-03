@@ -231,11 +231,11 @@ void DynamicPower_Update()
   dynamic_power_rssi_n = 0;
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket(uint8_t const crcFail)
+void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
-  if (crcFail)
+  if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
-    DBGLN("TLM crc error");
+    DBGLN("TLM HW CRC error");
     return;
   }
   uint16_t const inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
@@ -634,9 +634,9 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR(uint8_t const crcFail)
+void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  ProcessTLMpacket(crcFail);
+  ProcessTLMpacket(status);
   busyTransmitting = false;
 }
 

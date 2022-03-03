@@ -44,10 +44,8 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
-void ICACHE_RAM_ATTR nullCallbackTx() {}
-void ICACHE_RAM_ATTR nullCallbackRx(uint8_t) {}
 
-SX1280Driver::SX1280Driver()
+SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
 }
@@ -56,8 +54,7 @@ void SX1280Driver::End()
 {
     SetMode(SX1280_MODE_SLEEP);
     hal.end();
-    TXdoneCallback = &nullCallbackTx; // remove callbacks
-    RXdoneCallback = &nullCallbackRx;
+    RemoveCallbacks();
     currFreq = 2400000000;
     PayloadLength = 8; // Dummy default value which is overwritten during setup.
 }
@@ -413,7 +410,9 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 
 void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus)
 {
-    uint8_t const fail = !!(irqStatus & (SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT));
+    rx_status const fail =
+        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) +
+        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
     {
@@ -422,7 +421,7 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus)
         // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
         currOpmode = SX1280_MODE_FS;
     }
-    if (!fail)
+    if (fail == SX12XX_RX_OK)
     {
         uint8_t const FIFOaddr = GetRxBufferAddr();
         hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);

@@ -2,10 +2,6 @@
 #include "logging.h"
 
 SX127xHal hal;
-
-void ICACHE_RAM_ATTR nullCallbackTx() {}
-void ICACHE_RAM_ATTR nullCallbackRx(uint8_t) {}
-
 SX127xDriver *SX127xDriver::instance = NULL;
 
 
@@ -26,11 +22,9 @@ const uint8_t SX127x_AllowedSyncwords[105] =
 
 //////////////////////////////////////////////
 
-SX127xDriver::SX127xDriver()
+SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
 {
   instance = this;
-  TXdoneCallback = &nullCallbackTx; // remove callbacks
-  RXdoneCallback = &nullCallbackRx;
   PayloadLength = 8; // Dummy default value which is overwritten during setup.
   currFreq = 0; // leave as 0 to ensure that it gets set
 }
@@ -56,8 +50,7 @@ void SX127xDriver::End()
 {
   SetMode(SX127x_OPMODE_SLEEP);
   hal.end();
-  TXdoneCallback = &nullCallbackTx; // remove callbacks
-  RXdoneCallback = &nullCallbackRx;
+  RemoveCallbacks();
 }
 
 void SX127xDriver::ConfigLoraDefaults()
@@ -334,7 +327,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
   // page 87 (note we already do /4 in GetLastPacketSNR())
   int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
   LastPacketRSSI += negOffset;
-  RXdoneCallback(0);
+  RXdoneCallback(SX12XX_RX_OK);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()

@@ -3,33 +3,19 @@
 #include "targets.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
+#include "SX12xxDriverCommon.h"
 
 
-
-class SX1280Driver
+class SX1280Driver: public SX12xxDriverCommon
 {
 public:
     static SX1280Driver *instance;
 
-    ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(uint8_t crcFail); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
-
     uint16_t timeout = 0xFFFF;
 
-    uint32_t currFreq;
-    uint8_t PayloadLength;
-    bool IQinverted;
     ///////////////////////////////////
-
-    /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
 
     ////////////////Configuration Functions/////////////
     SX1280Driver();

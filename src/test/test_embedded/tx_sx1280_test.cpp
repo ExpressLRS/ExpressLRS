@@ -15,7 +15,7 @@ void ICACHE_RAM_ATTR TXdoneCallback()
     Radio.TXnb(testdata, sizeof(testdata));
 }
 
-void ICACHE_RAM_ATTR RXdoneCallback(uint8_t const /*crcFail*/)
+void ICACHE_RAM_ATTR RXdoneCallback(SX12xxDriverCommon::rx_status const /*status*/)
 {
     Serial.println("RXdoneCallback");
     for (int i = 0; i < 8; i++)
