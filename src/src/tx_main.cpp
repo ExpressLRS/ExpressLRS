@@ -188,9 +188,9 @@ void DynamicPower_Update()
   // The rest of the codes should be executeded only if dynamic power config is enabled
   if (!config.GetDynamicPower()) {
     // (When not using dynamic power) RSSI is dropped enogh for inc power back to the configured power
-    if ((rssi <= -10) && (POWERMGNT.currPower() < configPower)) {
-      DBGLN("Power inc ");
-      POWERMGNT.setPower(configPower);
+    if ((rssi <= -20) && (POWERMGNT.currPower() < configPower)) {
+      DBGLN("Power set back to the configured power");
+      PsOWERMGNT.setPower(configPower);
     }
     return;
   }
