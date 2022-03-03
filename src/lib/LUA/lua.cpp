@@ -48,9 +48,44 @@ static uint8_t luaSelectionOptionMax(const char *strOptions)
   }
 }
 
-uint8_t luaSelectionFindLabel(const void *luaStruct, uint8_t value, uint8_t *outarray)
+uint8_t getLabelLength(char *text, char separator){
+  char *c = (char*)text;
+  //get label length up to null or lua separator ;
+  while(*c != separator && *c != '\0'){
+    c++;
+  }
+  return c-text;
+}
+
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value, char separator)
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
+  char *c = (char *)p1->options;
+  uint8_t count = 0;
+  while (*c != '\0'){
+    //if count is equal to the parameter value, print out the label to the array
+    if(count == value){
+        uint8_t labelLength = getLabelLength(c,';');
+        uint8_t labelSpace = getLabelLength(outarray,separator);
+        //write spacer to wipe old label text
+        for(int i = 0; i<(labelSpace - labelLength); i++){
+          *outarray++ = ' ';
+        }
+        //write label to destination array
+        for(int i = 0; i<labelLength; i++){
+          //stop writting if we hit separator or a null in the destination array
+          if(*outarray != separator && *outarray != '\0'){
+            *outarray++ = *(c + i);
+          }
+        }
+        return labelSpace + 1;
+      }
+    //increment the count until value is found
+    if(*c == (char)';'){
+      count++;
+    }
+    c++;  
+  }
   return 0;
 }
 
@@ -101,9 +136,9 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
   if(p1->dyn_name != NULL){
-  return (uint8_t *)stpcpy((char *)next, p1->dyn_name);
+  return (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
   } else {
-    return (uint8_t *)stpcpy((char *)next, p1->common.name);
+    return (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
   }
 }
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
@@ -128,11 +163,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
 #endif
 
-  uint8_t *chunkStart;
-  uint8_t *dataEnd;
   // Copy the name to the buffer starting at chunkBuffer[4]
-  chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
-
+  uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
+  uint8_t *dataEnd;
 
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
@@ -154,17 +187,18 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      // Nothing to do, the name is all there is
-      // but subtract 1 because dataSize expects the end to not include the null
-      // which is already accounted for in chunkStart
+      // re-fetch the lua data name, because luaFolderStructToArray will decide whether
+      //to return the fixed name or dynamic name.
       chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
-      dataEnd = chunkStart;
+      // subtract 1 because dataSize expects the end to not include the null
+      // which is already accounted for in chunkStart
+      dataEnd = chunkStart - 1;
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
     default:
       return 0;
-    }
+  }
 
   // dataEnd points to the end of the last string
   // -2 bytes Lua chunk header: FieldId, ChunksRemain

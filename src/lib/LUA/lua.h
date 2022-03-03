@@ -131,7 +131,7 @@ extern void deferExecution(uint32_t ms, std::function<void()> f);
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
 
-uint8_t luaSelectionFindLabel(uint8_t luaValue, const char *strOptions, uint8_t *outarray);
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value, char separator);
 
 void sendLuaDevicePacket(void);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
