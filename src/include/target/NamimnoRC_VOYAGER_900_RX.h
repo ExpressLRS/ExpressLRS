@@ -1,6 +1,7 @@
 #ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno 900RX"
 #endif
+
 // GPIO pin definitions
 #define GPIO_PIN_RST            PC14
 #define GPIO_PIN_DIO0           PA15
@@ -17,3 +18,4 @@
 #define GPIO_PIN_RCSIGNAL_TX    PA9
 
 // Output Power - default for SX127x
+#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes

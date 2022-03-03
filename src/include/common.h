@@ -3,9 +3,9 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
-#elif defined(Regulatory_Domain_ISM_2400)
+#elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
 #error "Radio configuration is not valid!"
@@ -122,18 +122,17 @@ typedef struct expresslrs_mod_settings_s
 } expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) \
-    || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
 #define RATE_BINDING 2 // 50Hz bind mode
 
 extern SX127xDriver Radio;
 
-#elif defined(Regulatory_Domain_ISM_2400)
+#elif defined(RADIO_SX128X)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
-#define RATE_BINDING 2  // 50Hz bind mode
+#define RATE_BINDING 3  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
