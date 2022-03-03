@@ -175,7 +175,6 @@ void DynamicPower_Update()
 
   // Get the RSSI from the selected antenna.
   int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
-  PowerLevels_e configPower = (PowerLevels_e)config.GetPower();
 
   if (doUpdate && (rssi >= -5)) { // power is too strong and saturate the RX LNA
     DBGVLN("Power decrease due to the power blast");
@@ -186,7 +185,7 @@ void DynamicPower_Update()
   if (!config.GetDynamicPower()) {
     // if RSSI is dropped enough, inc power back to the configured power
     if (doUpdate && (rssi <= -20)) {
-      POWERMGNT.setPower(configPower);
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
     }
     return;
   }
@@ -199,7 +198,7 @@ void DynamicPower_Update()
   if ((connectionState == disconnected && IsArmed()) ||
     (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
   {
-    POWERMGNT.setPower(configPower);
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
     // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
     return;
   }
@@ -217,7 +216,7 @@ void DynamicPower_Update()
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
-      POWERMGNT.setPower(configPower);
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
       // restart the rssi sampling after a boost up
       dynamic_power_rssi_sum = 0;
       dynamic_power_rssi_n = 0;
@@ -243,7 +242,7 @@ void DynamicPower_Update()
   int32_t rssi_dec_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_DN;
 
   // increase power only up to the set power from the LUA script
-  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < configPower)) {
+  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
     DBGLN("Power increase");
     POWERMGNT.incPower();
   }
