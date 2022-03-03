@@ -177,7 +177,7 @@ void DynamicPower_Update()
   int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
   PowerLevels_e configPower = (PowerLevels_e)config.GetPower();
 
-  if (doUpdate && rssi >= -5) { // power is too strong and saturate the RX LNA
+  if (doUpdate && (rssi >= -5)) { // power is too strong and saturate the RX LNA
     DBGVLN("Power decrease due to the power blast");
     POWERMGNT.decPower();
   }
