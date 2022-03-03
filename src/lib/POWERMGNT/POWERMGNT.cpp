@@ -1,8 +1,9 @@
+#ifndef UNIT_TEST
 #include "common.h"
+#include "device.h"
 #include "POWERMGNT.h"
 #include "DAC.h"
 #include "helpers.h"
-#include "common.h"
 
 /*
  * Moves the power management values and special cases out of the main code and into `targets.h`.
@@ -33,7 +34,7 @@
  * 13 on SX1280 (~12.5dBm) or 15 on SX127x (~17dBm)
  */
 
-PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
+PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefined" initial value
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
@@ -86,25 +87,6 @@ void POWERMGNT::decSX1280Ouput()
 int8_t POWERMGNT::currentSX1280Ouput()
 {
     return CurrentSX1280Power;
-}
-
-uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
-{
-    // Crossfire's power levels as defined in opentx:radio/src/telemetry/crossfire.cpp
-    //static const int32_t power_values[] = { 0, 10, 25, 100, 500, 1000, 2000, 250, 50 };
-    switch (Power)
-    {
-    case PWR_10mW: return 1;
-    case PWR_25mW: return 2;
-    case PWR_50mW: return 8;
-    case PWR_100mW: return 3;
-    case PWR_250mW: return 7;
-    case PWR_500mW: return 4;
-    case PWR_1000mW: return 5;
-    case PWR_2000mW: return 6;
-    default:
-        return 0;
-    }
 }
 
 uint8_t POWERMGNT::getPowerIndBm()
@@ -242,7 +224,6 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MaxPower;
     }
-
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
@@ -257,15 +238,14 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #elif defined(POWER_OUTPUT_FIXED)
     Radio.SetOutputPower(POWER_OUTPUT_FIXED);
-#elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
+#elif defined(POWER_OUTPUT_VALUES)
     CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
     Radio.SetOutputPower(CurrentSX1280Power);
-#elif defined(TARGET_RX)
-    // Set to max power for telemetry on the RX if not specified
-    Radio.SetOutputPowerMax();
 #else
 #error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
     devicesTriggerEvent();
 }
+
+#endif /* !UNIT_TEST */
