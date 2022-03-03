@@ -1,8 +1,8 @@
-#include "targets.h"
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
+
+#include "menu.h"
 #include "common.h"
 #include "device.h"
-
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
 #include "logging.h"
 #include "Wire.h"
@@ -21,7 +21,7 @@ OLEDScreen screen;
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
 FiveWayButton fivewaybutton;
-static uint32_t last_user_input_ms;
+// static uint32_t last_user_input_ms;
 #endif
 
 #ifdef HAS_GSENSOR
@@ -31,36 +31,37 @@ static bool is_screen_flipped = false;
 static bool is_pre_screen_flipped = false;
 #endif
 
-#ifdef HAS_THERMAL
-#include "thermal.h"
-extern Thermal thermal;
+// #ifdef HAS_THERMAL
+// #include "thermal.h"
+// extern Thermal thermal;
 
-#define UPDATE_TEMP_TIMEOUT  5000
-static uint32_t last_update_temp_ms;
-#endif
+// #define UPDATE_TEMP_TIMEOUT  5000
+// static uint32_t last_update_temp_ms;
+// #endif
 
 #define SCREEN_DURATION 20
 
-#define LOGO_DISPLAY_TIMEOUT  5000
-static bool isLogoDisplayed = false;
+// #define LOGO_DISPLAY_TIMEOUT  5000
+// static bool isLogoDisplayed = false;
 
-#define SCREEN_IDLE_TIMEOUT  20000
+// #define SCREEN_IDLE_TIMEOUT  20000
 
-extern bool connectionHasModelMatch;
+// extern bool connectionHasModelMatch;
 extern bool ICACHE_RAM_ATTR IsArmed();
-extern void EnterBindingMode();
-extern void ExitBindingMode();
+// extern void EnterBindingMode();
+// extern void ExitBindingMode();
 
-#if defined(TARGET_TX)
-extern TxConfig config;
-#else
-extern RxConfig config;
-#endif
+// #if defined(TARGET_TX)
+// extern TxConfig config;
+// #else
+// extern RxConfig config;
+// #endif
 
-#ifdef PLATFORM_ESP32
-extern unsigned long rebootTime;
-#endif
+// #ifdef PLATFORM_ESP32
+// extern unsigned long rebootTime;
+// #endif
 
+/*
 #define BINDING_MODE_TIME_OUT 5000
 static uint32_t binding_mode_start_ms = 0;
 
@@ -125,7 +126,7 @@ static void devScreenPushParamUpdate()
   uint8_t disp_message = IsArmed() ? SCREEN_MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? SCREEN_MSG_CONNECTED : SCREEN_MSG_MISMATCH) : SCREEN_MSG_DISCONNECTED);
   screen.doParamUpdate(config.GetRate(), config.GetPower(), config.GetTlm(), config.GetMotionMode(), config.GetFanMode(), config.GetDynamicPower(), (uint8_t)(POWERMGNT::currPower()), disp_message);
 }
-
+*/
 
 #ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
@@ -155,75 +156,46 @@ static int handle(void)
     return 100; // no need to check as often if the screen is off!
   }
 #endif
+  uint32_t now = millis();
+  
   if(!IsArmed())
   {
     int key;
     bool isLongPressed;
     fivewaybutton.update(&key, &isLongPressed);
 
-    uint32_t now = millis();
-    if (key != INPUT_KEY_NO_PRESS)
+    if (key == INPUT_KEY_NO_PRESS)
     {
-      last_user_input_ms = now;
+        handleEvent(now, EVENT_TIMEOUT);
     }
-
-    if(screen.getScreenStatus() == SCREEN_STATUS_IDLE)
+    else
     {
-#ifdef HAS_THERMAL
-      if(now - last_update_temp_ms > UPDATE_TEMP_TIMEOUT)
+      DBGLN("user key = %d", key);
+      if(key == INPUT_KEY_DOWN_PRESS)
       {
-        screen.doTemperatureUpdate(thermal.getTempValue());
-        last_update_temp_ms = now;
+        handleEvent(now, EVENT_DOWN);
       }
-#endif
-      if(isLongPressed)
+      else if(key == INPUT_KEY_UP_PRESS)
       {
-        screen.activeScreen();
+        handleEvent(now, EVENT_DOWN);
       }
-    }
-    else if(screen.getScreenStatus() == SCREEN_STATUS_WORK)
-    {
-      if (key != INPUT_KEY_NO_PRESS)
+      else if(key == INPUT_KEY_LEFT_PRESS)
       {
-        DBGLN("user key = %d", key);
-        if(key == INPUT_KEY_DOWN_PRESS)
-        {
-          screen.doUserAction(USER_ACTION_DOWN);
-        }
-        else if(key == INPUT_KEY_UP_PRESS)
-        {
-          screen.doUserAction(USER_ACTION_UP);
-        }
-        else if(key == INPUT_KEY_LEFT_PRESS)
-        {
-          screen.doUserAction(USER_ACTION_LEFT);
-        }
-        else if(key == INPUT_KEY_RIGHT_PRESS)
-        {
-          screen.doUserAction(USER_ACTION_RIGHT);
-        }
-        else if(key == INPUT_KEY_OK_PRESS)
-        {
-          screen.doUserAction(USER_ACTION_CONFIRM);
-        }
+        handleEvent(now, EVENT_DOWN);
       }
-      // timeout to the idle screen if not in wifi mode
-      else if((now - last_user_input_ms) > SCREEN_IDLE_TIMEOUT && (connectionState != wifiUpdate))
+      else if(key == INPUT_KEY_RIGHT_PRESS)
       {
-        screen.idleScreen();
+        handleEvent(now, EVENT_DOWN);
       }
-    }
-    else if(screen.getScreenStatus() == SCREEN_STATUS_BINDING)
-    {
-      if((now - binding_mode_start_ms) > BINDING_MODE_TIME_OUT)
+      else if(key == INPUT_KEY_OK_PRESS)
       {
-        screen.doUserAction(USER_ACTION_LEFT);
+        handleEvent(now, EVENT_DOWN);
       }
     }
   }
   else if(screen.getScreenStatus() != SCREEN_STATUS_IDLE)
   {
-    screen.idleScreen();
+    handleEvent(now, EVENT_TIMEOUT);
   }
   return SCREEN_DURATION;
 }
@@ -239,7 +211,7 @@ static void initialize()
   #ifdef HAS_FIVE_WAY_BUTTON
   fivewaybutton.init();
   #endif
-  screen.updatecallback = &ScreenUpdateCallback;
+  //PAK screen.updatecallback = &ScreenUpdateCallback;
   #if defined(PLATFORM_ESP32)
   screen.init(esp_reset_reason() == ESP_RST_SW);
   #else
@@ -249,35 +221,37 @@ static void initialize()
 
 static int start()
 {
-  if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
-  {
-    devScreenPushParamUpdate();
-    return LOGO_DISPLAY_TIMEOUT;
-  }
+  // if (screen.getScreenStatus() == SCREEN_STATUS_INIT)
+  // {
+  //   devScreenPushParamUpdate();
+  //   return LOGO_DISPLAY_TIMEOUT;
+  // }
+  startFSM(millis());
   return DURATION_IMMEDIATELY;
 }
 
 static int event()
 {
-  if (connectionState == wifiUpdate)
-  {
-    screen.setInWifiMode();
-  }
-  else
-  {
-    devScreenPushParamUpdate();
-  }
+  return  handle();
+  // if (connectionState == wifiUpdate)
+  // {
+  //   screen.setInWifiMode();
+  // }
+  // else
+  // {
+  //   devScreenPushParamUpdate();
+  // }
 
-  return DURATION_IGNORE;
+  // return DURATION_IGNORE;
 }
 
 static int timeout()
 {
-  if(screen.getScreenStatus() == SCREEN_STATUS_INIT)
-  {
-    isLogoDisplayed = true;
-    screen.idleScreen();
-  }
+  // if(screen.getScreenStatus() == SCREEN_STATUS_INIT)
+  // {
+  //   isLogoDisplayed = true;
+  //   screen.idleScreen();
+  // }
 
   return handle();
 }
