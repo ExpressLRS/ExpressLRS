@@ -67,18 +67,26 @@ uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t val
     if(count == value){
         uint8_t labelLength = getLabelLength(c,';');
         uint8_t labelSpace = getLabelLength(outarray,separator);
+        //don't add spacer if separator is null
+        if(separator != '\0'){
         //write spacer to wipe old label text
-        for(int i = 0; i<(labelSpace - labelLength); i++){
-          *outarray++ = ' ';
+          for(int i = 0; i<(labelSpace - labelLength); i++){
+            *outarray++ = ' ';
+          }
         }
         //write label to destination array
         for(int i = 0; i<labelLength; i++){
           //stop writting if we hit separator or a null in the destination array
+          //if separator is null then keep printing upto labelLength
           if(*outarray != separator && *outarray != '\0'){
             *outarray++ = *(c + i);
           }
         }
-        return labelSpace + 1;
+        if(separator != '\0'){
+          return labelSpace + 1;
+        } else {
+          return labelLength + 1;
+        }
       }
     //increment the count until value is found
     if(*c == (char)';'){
