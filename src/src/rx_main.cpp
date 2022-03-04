@@ -184,8 +184,6 @@ int8_t debug4 = 0;
 
 bool InBindingMode = false;
 
-byte UIDHash[3];
-
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
@@ -253,7 +251,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
-    bool invertIQ = UID[5] & 0x01;
+    bool invertIQ = UID[3] & 0x01;
 
     hwTimer.updateInterval(ModParams->interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0);
@@ -941,8 +939,8 @@ static void setupBindingFromConfig()
         {
             UID[i] = storedUID[i];
         }
-        DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
-        CRCInitializer = (UID[4] << 8) | UID[5];
+        DBGLN("UID = %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3]);
+        CRCInitializer = (UID[2] << 8) | UID[3];
     }
 #endif
 }
@@ -1207,16 +1205,6 @@ void setup()
         hwTimer.init();
     }
 
-    getUIDHash(UIDHash,3);
-    DBG("UID Hash: ");
-    for(int i= 0; i< 3; i++){
-        char str[3];
-
-        sprintf(str, "%02x", (int)UIDHash[i]);
-        DBG(str);
-    }
-    DBGLN("");
-
     devicesStart();
 }
 
@@ -1340,8 +1328,6 @@ void EnterBindingMode()
     UID[1] = BindingUID[1];
     UID[2] = BindingUID[2];
     UID[3] = BindingUID[3];
-    UID[4] = BindingUID[4];
-    UID[5] = BindingUID[5];
 
     CRCInitializer = 0;
     config.SetIsBound(false);
@@ -1373,7 +1359,7 @@ void ExitBindingMode()
     // Write the values to eeprom
     config.Commit();
 
-    CRCInitializer = (UID[4] << 8) | UID[5];
+    CRCInitializer = (UID[2] << 8) | UID[3];
     FHSSrandomiseFHSSsequence(UID);
 
     #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
@@ -1395,10 +1381,10 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* packet)
 {
     for (int i = 1; i <=4; i++)
     {
-        UID[i + 1] = packet[i];
+        UID[i - 1] = packet[i];
     }
 
-    DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+    DBGLN("New UID = %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3]);
 
     // Set new UID in eeprom
     config.SetUID(UID);

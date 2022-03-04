@@ -1,5 +1,4 @@
 #include "common.h"
-#include "sha256.h"
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 
@@ -94,25 +93,27 @@ uint8_t ExpressLRS_nextAirRateIndex = 0;
 connectionState_e connectionState = disconnected;
 connectionState_e connectionStatePrev = disconnected;
 
-uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
+uint8_t BindingUID[UID_LEN] = {2, 3, 4, 5}; // Special binding UID values
 #if defined(MY_UID)
-    uint8_t UID[6] = {MY_UID};
+    uint8_t UID[UID_LEN] = {MY_UID};
+    uint8_t UIDHash[3] = {UID_HASH};
 #else
     #ifdef PLATFORM_ESP32
-        uint8_t UID[6];
+        uint8_t UID[UID_LEN];
+        uint8_t UIDHash[3];
         esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
     #elif PLATFORM_STM32
-        uint8_t UID[6] = {
-            (uint8_t)HAL_GetUIDw0(), (uint8_t)(HAL_GetUIDw0() >> 8),
+        uint8_t UID[UID_LEN] = {
             (uint8_t)HAL_GetUIDw1(), (uint8_t)(HAL_GetUIDw1() >> 8),
             (uint8_t)HAL_GetUIDw2(), (uint8_t)(HAL_GetUIDw2() >> 8)};
     #else
-        uint8_t UID[6] = {0};
+        uint8_t UID[UID_LEN] = {0};
+        uint8_t UIDHash[3];
     #endif
 #endif
-uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
+uint8_t MasterUID[UID_LEN] = {UID[0], UID[1], UID[2], UID[3]}; // Special binding UID values
 
-uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
+uint16_t CRCInitializer = (UID[2] << 8) | UID[3];
 
 #define RSSI_FLOOR_NUM_READS 5 // number of times to sweep the noise foor to get avg. RSSI reading
 #define MEDIAN_SIZE 20
@@ -168,19 +169,7 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e eRate)
 
 uint32_t uidMacSeedGet(void)
 {
-    const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
-                             ((uint32_t)UID[4] << 8) + UID[5];
+    const uint32_t macSeed = ((uint32_t)UID[0] << 24) + ((uint32_t)UID[1] << 16) +
+                             ((uint32_t)UID[2] << 8) + UID[3];
     return macSeed;
-}
-
-void getUIDHash(byte *hash, uint8_t len)
-{
-
-    SHA256_HASH digest;
-    Sha256Calculate(UID,len,&digest);
-
-    if (len < sizeof(digest.bytes)) {
-        for (int i=0;i<len;i++)
-        hash[i] = digest.bytes[i];
-    }
 }

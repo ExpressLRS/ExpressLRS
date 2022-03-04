@@ -14,7 +14,6 @@
 
 #define TX_CONFIG_VERSION   5
 #define RX_CONFIG_VERSION   4
-#define UID_LEN             6
 
 #if defined(TARGET_TX)
 typedef struct {

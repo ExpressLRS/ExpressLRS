@@ -11,7 +11,7 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
 ### REGULATORY DOMAIN: ###
@@ -98,10 +98,10 @@
 #-DDEBUG_LOG_VERBOSE
 
 # Print a letter for each packet received or missed (RX debugging)
-#-DDEBUG_RX_SCOREBOARD
+-DDEBUG_RX_SCOREBOARD
 
 # Don't send RC msgs over UART
-#-DDEBUG_CRSF_NO_OUTPUT
+-DDEBUG_CRSF_NO_OUTPUT
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS

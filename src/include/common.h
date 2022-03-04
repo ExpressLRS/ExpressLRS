@@ -13,9 +13,10 @@
 
 #endif // UNIT_TEST
 
-extern uint8_t BindingUID[6];
-extern uint8_t UID[6];
-extern uint8_t MasterUID[6];
+extern uint8_t BindingUID[UID_LEN];
+extern uint8_t UID[UID_LEN];
+extern uint8_t MasterUID[UID_LEN];
+extern uint8_t UIDHash[3];
 extern uint16_t CRCInitializer;
 
 typedef enum
@@ -157,7 +158,6 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e rate);
 #endif // UNIT_TEST
 
 uint32_t uidMacSeedGet(void);
-void getUIDHash(byte *hash, uint8_t len);
 
 #define AUX1 4
 #define AUX2 5

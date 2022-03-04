@@ -103,3 +103,5 @@
         defined(UNIT_TEST))
 #error "Regulatory_Domain is not defined for 900MHz devices. Check user_defines.txt!"
 #endif
+
+#define UID_LEN             4

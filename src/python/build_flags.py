@@ -35,9 +35,14 @@ def parse_flags(path):
                     if "MY_BINDING_PHRASE" in define:
                         build_flags.append(define)
                         bindingPhraseHash = hashlib.md5(define.encode()).digest()
-                        UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
+                        UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:4])
+                        UIDhash = ",".join(list(map(str, bindingPhraseHash))[5:8])
                         define = "-DMY_UID=" + UIDbytes
+                        if not define in build_flags:
+                            build_flags.append(define)
+                        define = "-DUID_HASH=" + UIDhash
                         sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+                        sys.stdout.write("\u001b[32mUID hash: " + UIDhash + "\n")
                         sys.stdout.flush()
                     if "MY_STARTUP_MELODY=" in define:
                         parsedMelody = melodyparser.parse(define.split('"')[1::2][0])

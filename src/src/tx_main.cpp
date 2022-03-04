@@ -150,8 +150,6 @@ static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq;
 static bool dynamic_power_updated;
 
-byte UIDHash[3];
-
 #ifdef TARGET_TX_GHOST
 extern "C"
 /**
@@ -361,7 +359,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
-  bool invertIQ = UID[5] & 0x01;
+  bool invertIQ = UID[3] & 0x01;
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
     && (invertIQ == Radio.IQinverted))
@@ -686,8 +684,6 @@ void BackpackBinding()
   packet.addByte(MasterUID[1]);
   packet.addByte(MasterUID[2]);
   packet.addByte(MasterUID[3]);
-  packet.addByte(MasterUID[4]);
-  packet.addByte(MasterUID[5]);
 
   msp.sendPacket(&packet, &Serial); // send to tx-backpack as MSP
 }
@@ -806,10 +802,10 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
+  MSPDataPackage[1] = MasterUID[0];
+  MSPDataPackage[2] = MasterUID[1];
+  MSPDataPackage[3] = MasterUID[2];
+  MSPDataPackage[4] = MasterUID[3];
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -833,8 +829,6 @@ void EnterBindingMode()
   UID[1] = BindingUID[1];
   UID[2] = BindingUID[2];
   UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
 
   CRCInitializer = 0;
   NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
@@ -867,10 +861,8 @@ void ExitBindingMode()
   UID[1] = MasterUID[1];
   UID[2] = MasterUID[2];
   UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
 
-  CRCInitializer = (UID[4] << 8) | UID[5];
+  CRCInitializer = (UID[2] << 8) | UID[3];
 
   InBindingMode = false;
 
@@ -969,16 +961,6 @@ void setup()
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
   // Initialise the devices
   devicesInit();
-
-  getUIDHash(UIDHash,3);
-  DBG("UID Hash: ");
-  for(int i= 0; i< 3; i++){
-      char str[3];
-
-      sprintf(str, "%02x", (int)UIDHash[i]);
-      DBG(str);
-  }
-  DBGLN("");
 
   FHSSrandomiseFHSSsequence(UID);
 

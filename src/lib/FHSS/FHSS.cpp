@@ -1,7 +1,7 @@
 #include "FHSS.h"
 #include "logging.h"
 #include <string.h>
-#include "pcg_basic.h"
+#include "random.h"
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 #ifdef Regulatory_Domain_AU_433
@@ -247,6 +247,8 @@ uint_fast8_t sync_channel;
 // Offset from the predefined frequency determined by AFC on Team900 (register units)
 int32_t FreqCorrection;
 
+extern uint8_t UIDHash[3];
+
 /**
 Requirements:
 1. 0 every n hops
@@ -288,14 +290,6 @@ void FHSSrandomiseFHSSsequence(uint8_t UID[6])
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
 
-    // setup random number generator
-    pcg32_random_t rng;
-    uint64_t seeds[2];
-
-	seeds[0] = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-	seeds[1] = ((long)UID[0] << 24) + ((long)UID[1] << 16) + ((long)UID[2] << 8) + UID[3];
-	pcg32_srandom_r(&rng, seeds[0], seeds[1]);
-
     // initialize the sequence array
     for (uint8_t i = 0; i < FHSS_SEQUENCE_CNT; i++)
     {
@@ -310,11 +304,16 @@ void FHSSrandomiseFHSSsequence(uint8_t UID[6])
 
     for (uint8_t i=0; i < FHSS_SEQUENCE_CNT; i++)
     {
+        uint8_t pos = i / FHSS_FREQ_CNT;
+		if (i % FHSS_FREQ_CNT == 0) {
+			long seed = ((long)UID[pos] << 24) + ((long)UID[(pos+1) % 4] << 16) + ((long)UID[(pos+2) % 2] << 8) + UID[(pos+3) % 4];
+			rngSeed(seed);
+		}
         // if it's not the sync channel
         if (i % FHSS_FREQ_CNT != 0)
         {
             uint8_t offset = (i / FHSS_FREQ_CNT) * FHSS_FREQ_CNT; // offset to start of current block
-            uint8_t rand = pcg32_boundedrand_r(&rng, FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
+            uint8_t rand = rngN(FHSS_FREQ_CNT-1)+1; // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
             uint8_t temp = FHSSsequence[i];
@@ -331,6 +330,13 @@ void FHSSrandomiseFHSSsequence(uint8_t UID[6])
             DBGCR;
     }
     DBGCR;
+
+#ifndef MY_UID // set the UID hash if it's been bound manually
+    for (uint8_t i=0;i<sizeof(UIDHash);i++) {
+        UIDHash[i] = rngN(256);
+    }
+#endif
+
 }
 
 uint32_t FHSSgetChannelCount(void)
