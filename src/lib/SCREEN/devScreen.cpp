@@ -1,14 +1,12 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
-#include "common.h"
-#include "device.h"
 #include "menu.h"
 
-#include "POWERMGNT.h"
-#include "Wire.h"
-#include "config.h"
-#include "hwTimer.h"
+#include "common.h"
+#include "device.h"
 #include "logging.h"
+
+FiniteStateMachine fsm(menu_fsm);
 
 #ifdef HAS_TFT_SCREEN
 #include "TFT/tftdisplay.h"
@@ -69,7 +67,7 @@ static int handle(void)
         int key;
         bool isLongPressed;
         fivewaybutton.update(&key, &isLongPressed);
-        fsm_event_t event;
+        int8_t event;
         switch (key)
         {
         case INPUT_KEY_DOWN_PRESS:
@@ -92,13 +90,13 @@ static int handle(void)
         }
         if (event != EVENT_TIMEOUT && isLongPressed)
         {
-            event = (fsm_event_t)(event | LONG_PRESSED);
+            event = (event | LONG_PRESSED);
         }
-        handleEvent(now, event);
+        fsm.handleEvent(now, event);
     }
     else
     {
-        handleEvent(now, EVENT_TIMEOUT);
+        fsm.handleEvent(now, EVENT_TIMEOUT);
     }
     return SCREEN_DURATION;
 }
@@ -119,7 +117,7 @@ static void initialize()
 #else
     screen.init();
 #endif
-    startFSM(millis());
+    fsm.start(millis());
 }
 
 static int start()
