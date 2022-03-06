@@ -42,3 +42,5 @@
 #define EVENT_LONG_RIGHT (EVENT_RIGHT | LONG_PRESSED)
 
 extern fsm_state_entry_t const menu_fsm[];
+
+int8_t getInitialState();

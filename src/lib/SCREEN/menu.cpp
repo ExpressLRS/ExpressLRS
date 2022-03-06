@@ -23,6 +23,17 @@ extern bool InBindingMode;
 extern unsigned long rebootTime;
 #endif
 
+int8_t getInitialState()
+{
+#if defined(PLATFORM_ESP32)
+    if(esp_reset_reason() == ESP_RST_SW)
+    {
+        return STATE_IDLE;
+    }
+#endif
+    return STATE_SPLASH;
+}
+
 static void displaySplashScreen(bool init)
 {
     Display::displaySplashScreen();

@@ -34,7 +34,7 @@ class FiniteStateMachine
 {
 public:
     FiniteStateMachine(fsm_state_entry_t const *fsm) : fsm(fsm) {}
-    void start(uint32_t now);
+    void start(uint32_t now, int8_t state);
     void handleEvent(uint32_t now, int8_t event);
     uint8_t getParentState() { return state_index_stack.top(); }
     void popState() { force_pop = true; }

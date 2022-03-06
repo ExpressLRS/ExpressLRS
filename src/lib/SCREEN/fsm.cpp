@@ -6,10 +6,10 @@ int FiniteStateMachine::current_state_index;
 uint32_t FiniteStateMachine::current_state_entered = 0;
 bool FiniteStateMachine::force_pop = false;
 
-void FiniteStateMachine::start(uint32_t now)
+void FiniteStateMachine::start(uint32_t now, int8_t state)
 {
     state_index_stack.push(STATE_IGNORED);
-    current_state_index = 0;
+    current_state_index = state;
     fsm[current_state_index].entry(current_state_index != last_state_index);
     last_state_index = current_state_index;
     current_state_entered = now;

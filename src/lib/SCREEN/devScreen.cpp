@@ -107,12 +107,8 @@ static void initialize()
 #ifdef HAS_FIVE_WAY_BUTTON
     fivewaybutton.init();
 #endif
-#if defined(PLATFORM_ESP32)
-    screen.init(); // esp_reset_reason() == ESP_RST_SW);
-#else
     screen.init();
-#endif
-    fsm.start(millis());
+    fsm.start(millis(), getInitialState());
 }
 
 static int start()
