@@ -24,7 +24,7 @@ typedef struct fsm_state_event_s
 typedef struct fsm_state_entry_s
 {
     int8_t state;
-    std::function<void()> entry;
+    std::function<void(bool init)> entry;
     uint32_t timeout;
     fsm_state_event_t const *events;
     uint8_t event_count;
@@ -43,6 +43,7 @@ private:
     const fsm_state_entry_t *fsm;
 
     static std::stack<int> state_index_stack;
+    static int last_state_index;
     static int current_state_index;
     static uint32_t current_state_entered;
     static bool force_pop;

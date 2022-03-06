@@ -8,13 +8,8 @@
 
 FiniteStateMachine fsm(menu_fsm);
 
-#ifdef HAS_TFT_SCREEN
-#include "TFT/tftdisplay.h"
-TFTDisplay screen;
-#else
-#include "OLED/oleddisplay.h"
-OLEDDisplay screen;
-#endif
+#include "display.h"
+Display screen;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"

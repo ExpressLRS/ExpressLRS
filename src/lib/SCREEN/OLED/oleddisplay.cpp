@@ -1,15 +1,13 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
 
-#include "targets.h"
+#include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
-// Default header files for Express LRS
-#include "helpers.h"
+#include "display.h"
+
+#include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 #include "options.h"
 
 // OLED specific header files.
-#include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
-#include "oleddisplay.h"
-#include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
 #ifdef OLED_REVERSED
 #define OLED_ROTATION U8G2_R2
@@ -79,20 +77,20 @@ static void ghostChase()
 
 static void helperDrawImage(menu_item_t menu);
 
-void OLEDDisplay::init()
+void Display::init()
 {
     u8g2.begin();
     u8g2.clearBuffer();
 }
 
-void OLEDDisplay::doScreenBackLight(screen_backlight_t state)
+void Display::doScreenBackLight(screen_backlight_t state)
 {
     #ifdef GPIO_PIN_OLED_BL
     digitalWrite(GPIO_PIN_OLED_BL, state);
     #endif
 }
 
-void OLEDDisplay::displaySplashScreen()
+void Display::displaySplashScreen()
 {
     u8g2.clearBuffer();
 #ifdef TARGET_TX_GHOST
@@ -107,7 +105,7 @@ void OLEDDisplay::displaySplashScreen()
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
+void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2.clearBuffer();
     String power = value_sets[MENU_POWER].values[power_index];
@@ -142,7 +140,7 @@ void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayMainMenu(menu_item_t menu)
+void Display::displayMainMenu(menu_item_t menu)
 {
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_t0_17_mr);
@@ -157,7 +155,7 @@ void OLEDDisplay::displayMainMenu(menu_item_t menu)
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayValue(menu_item_t menu, uint8_t value_index)
+void Display::displayValue(menu_item_t menu, uint8_t value_index)
 {
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_t0_16_mr);
@@ -175,7 +173,7 @@ void OLEDDisplay::displayValue(menu_item_t menu, uint8_t value_index)
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayWiFiConfirm()
+void Display::displayWiFiConfirm()
 {
     // TODO: Put wifi image?
     u8g2.clearBuffer();
@@ -192,7 +190,7 @@ void OLEDDisplay::displayWiFiConfirm()
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayWiFiStatus()
+void Display::displayWiFiStatus()
 {
     u8g2.clearBuffer();
 
@@ -223,7 +221,7 @@ void OLEDDisplay::displayWiFiStatus()
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayBindConfirm()
+void Display::displayBindConfirm()
 {
     // TODO: Put bind image?
     u8g2.clearBuffer();
@@ -239,7 +237,7 @@ void OLEDDisplay::displayBindConfirm()
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayBindStatus()
+void Display::displayBindStatus()
 {
     // TODO: Put bind image?
     u8g2.clearBuffer();

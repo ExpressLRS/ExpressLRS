@@ -6,13 +6,7 @@
 #include "helpers.h"
 #include "logging.h"
 
-#ifdef HAS_TFT_SCREEN
-#include "TFT/tftdisplay.h"
-extern TFTDisplay screen;
-#else
-#include "OLED/oleddisplay.h"
-extern OLEDDisplay screen;
-#endif
+#include "display.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -29,15 +23,12 @@ extern bool InBindingMode;
 extern unsigned long rebootTime;
 #endif
 
-
-static void displaySplashScreen()
+static void displaySplashScreen(bool init)
 {
-    screen.displaySplashScreen();
+    Display::displaySplashScreen();
 }
 
-static bool idling = false;
-
-static void displayIdleScreen()
+static void displayIdleScreen(bool init)
 {
     static message_index_t last_message = MSG_INVALID;
     static uint8_t last_temperature = 0xFF;
@@ -63,8 +54,8 @@ static void displayIdleScreen()
 #endif
 
     message_index_t disp_message = IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
-    uint8_t changed = !idling ? 0xFF : 0;
-    if (idling)
+    uint8_t changed = init ? 0xFF : 0;
+    if (changed == 0)
     {
         changed |= last_message != disp_message ? CHANGED_MESSAGE : 0;
         changed |= last_temperature != temperature ? CHANGED_MESSAGE : 0;
@@ -89,15 +80,13 @@ static void displayIdleScreen()
         last_dynamic = config.GetDynamicPower();
         last_run_power = (uint8_t)(POWERMGNT::currPower());
 
-        screen.displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
+        Display::displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
     }
-    idling = true;
 }
 
 static void displayMenuScreen(menu_item_t menuItem)
 {
-    idling = false;
-    screen.displayMainMenu(menuItem);
+    Display::displayMainMenu(menuItem);
 }
 
 // Value menu
@@ -106,7 +95,7 @@ static int values_min;
 static int values_max;
 static int values_index;
 
-static void setupValueIndex()
+static void setupValueIndex(bool init)
 {
     switch (state_machine.getParentState())
     {
@@ -143,24 +132,24 @@ static void setupValueIndex()
     }
 }
 
-static void displayValueIndex()
+static void displayValueIndex(bool init)
 {
-    screen.displayValue(values_menu, values_index);
+    Display::displayValue(values_menu, values_index);
 }
 
-static void incrementValueIndex()
+static void incrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + 1) % values_count + values_min;
 }
 
-static void decrementValueIndex()
+static void decrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
 }
 
-static void saveValueIndex()
+static void saveValueIndex(bool init)
 {
     switch (values_menu)
     {
@@ -185,16 +174,17 @@ static void saveValueIndex()
 }
 
 // WiFi
-static void displayWiFiConfirm(){
-    screen.displayWiFiConfirm();
+static void displayWiFiConfirm(bool init)
+{
+    Display::displayWiFiConfirm();
 }
 
-static void startWiFi()
+static void startWiFi(bool init)
 {
     connectionState = wifiUpdate;
 }
 
-static void exitWiFi()
+static void exitWiFi(bool init)
 {
 #ifdef PLATFORM_ESP32
     if (connectionState == wifiUpdate) {
@@ -203,23 +193,26 @@ static void exitWiFi()
 #endif
 }
 
-static void displayWiFiStatus()
+static void displayWiFiStatus(bool init)
 {
-    screen.displayWiFiStatus();
+    if (init)
+    {
+        Display::displayWiFiStatus();
+    }
 }
 
 // Bind
-static void displayBindConfirm()
+static void displayBindConfirm(bool init)
 {
-    screen.displayBindConfirm();
+    Display::displayBindConfirm();
 }
 
-static void startBind()
+static void startBind(bool init)
 {
     EnterBindingMode();
 }
 
-static void displayBindStatus()
+static void displayBindStatus(bool init)
 {
     if (!InBindingMode)
     {
@@ -227,7 +220,10 @@ static void displayBindStatus()
     }
     else
     {
-        screen.displayBindStatus();
+        if (init)
+        {
+            Display::displayBindStatus();
+        }
     }
 }
 
@@ -246,7 +242,7 @@ fsm_state_event_t const first_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_GOTO, STATE_IDLE},
     {EVENT_ENTER, ACTION_PUSH, STATE_VALUE_INIT},
     {EVENT_RIGHT, ACTION_PUSH, STATE_VALUE_INIT},
-    {EVENT_UP, ACTION_GOTO, STATE_BIND},
+    {EVENT_UP, ACTION_GOTO, STATE_WIFI},
     {EVENT_DOWN, ACTION_NEXT, STATE_IGNORED},
     {EVENT_LEFT, ACTION_GOTO, STATE_IDLE}
 };
@@ -313,17 +309,17 @@ fsm_state_event_t const bind_status_events[] = {{EVENT_TIMEOUT, ACTION_GOTO, STA
 fsm_state_entry_t const menu_fsm[] = {
     {STATE_SPLASH, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
     {STATE_IDLE, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
-    {STATE_PACKET, []() { displayMenuScreen(MENU_PACKET); }, 20000, first_menu_events, ARRAY_SIZE(first_menu_events)},
-    {STATE_POWER, []() { displayMenuScreen(MENU_POWER); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
-    {STATE_TELEMETRY, []() { displayMenuScreen(MENU_TELEMETRY); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
+    {STATE_PACKET, [](bool init) { displayMenuScreen(MENU_PACKET); }, 20000, first_menu_events, ARRAY_SIZE(first_menu_events)},
+    {STATE_POWER, [](bool init) { displayMenuScreen(MENU_POWER); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
+    {STATE_TELEMETRY, [](bool init) { displayMenuScreen(MENU_TELEMETRY); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
 #ifdef HAS_THERMAL
-    {STATE_POWERSAVE, []() { displayMenuScreen(MENU_POWERSAVE); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
+    {STATE_POWERSAVE, [](bool init) { displayMenuScreen(MENU_POWERSAVE); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
 #endif
 #ifdef HAS_GSENSOR
-    {STATE_SMARTFAN, []() { displayMenuScreen(MENU_SMARTFAN); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
+    {STATE_SMARTFAN, [](bool init) { displayMenuScreen(MENU_SMARTFAN); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
 #endif
-    {STATE_BIND, []() { displayMenuScreen(MENU_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
-    {STATE_WIFI, []() { displayMenuScreen(MENU_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
+    {STATE_BIND, [](bool init) { displayMenuScreen(MENU_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
+    {STATE_WIFI, [](bool init) { displayMenuScreen(MENU_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
 
     // Value submenu
     {STATE_VALUE_INIT, setupValueIndex, 0, value_init_events, ARRAY_SIZE(value_init_events)},

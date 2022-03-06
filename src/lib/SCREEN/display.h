@@ -41,17 +41,17 @@ typedef struct item_values_s {
 class Display
 {
 public:
-    virtual void init() = 0;
-    virtual void doScreenBackLight(screen_backlight_t state) = 0;
+    void init();
+    void doScreenBackLight(screen_backlight_t state);
 
-    virtual void displaySplashScreen() = 0;
-    virtual void displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index) = 0;
-    virtual void displayMainMenu(menu_item_t menu) = 0;
-    virtual void displayValue(menu_item_t menu, uint8_t value_index) = 0;
-    virtual void displayWiFiConfirm() = 0;
-    virtual void displayWiFiStatus() = 0;
-    virtual void displayBindConfirm() = 0;
-    virtual void displayBindStatus() = 0;
+    static void displaySplashScreen();
+    static void displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index);
+    static void displayMainMenu(menu_item_t menu);
+    static void displayValue(menu_item_t menu, uint8_t value_index);
+    static void displayWiFiConfirm();
+    static void displayWiFiStatus();
+    static void displayBindConfirm();
+    static void displayBindStatus();
 
     static const item_values_t value_sets[];
 

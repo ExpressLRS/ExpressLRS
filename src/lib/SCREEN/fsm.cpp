@@ -1,6 +1,7 @@
 #include "fsm.h"
 
 std::stack<int> FiniteStateMachine::state_index_stack;
+int FiniteStateMachine::last_state_index;
 int FiniteStateMachine::current_state_index;
 uint32_t FiniteStateMachine::current_state_entered = 0;
 bool FiniteStateMachine::force_pop = false;
@@ -9,7 +10,8 @@ void FiniteStateMachine::start(uint32_t now)
 {
     state_index_stack.push(STATE_IGNORED);
     current_state_index = 0;
-    fsm[current_state_index].entry();
+    fsm[current_state_index].entry(current_state_index != last_state_index);
+    last_state_index = current_state_index;
     current_state_entered = now;
 }
 
@@ -20,7 +22,8 @@ void FiniteStateMachine::handleEvent(uint32_t now, int8_t event)
         force_pop = false;
         current_state_index = state_index_stack.top();
         state_index_stack.pop();
-        fsm[current_state_index].entry();
+        fsm[current_state_index].entry(current_state_index != last_state_index);
+        last_state_index = current_state_index;
         current_state_entered = now;
         return handleEvent(now, EVENT_IMMEDIATE);
     }
@@ -61,7 +64,8 @@ void FiniteStateMachine::handleEvent(uint32_t now, int8_t event)
                     current_state_index--;
                     break;
             }
-            fsm[current_state_index].entry();
+            fsm[current_state_index].entry(current_state_index != last_state_index);
+            last_state_index = current_state_index;
             current_state_entered = now;
             return handleEvent(now, EVENT_IMMEDIATE);
         }

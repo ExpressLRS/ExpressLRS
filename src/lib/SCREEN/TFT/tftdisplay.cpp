@@ -2,7 +2,7 @@
 
 #include <TFT_eSPI.h>
 
-#include "tftdisplay.h"
+#include "display.h"
 
 #include "logos.h"
 #include "options.h"
@@ -97,7 +97,7 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define SUB_PAGE_BINDING_WORD_START_X   0
 #define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
 
-void TFTDisplay::init()
+void Display::init()
 {
     tft.init();
     tft.setRotation(1);
@@ -105,14 +105,28 @@ void TFTDisplay::init()
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
 }
 
-void TFTDisplay::doScreenBackLight(screen_backlight_t state)
+void Display::doScreenBackLight(screen_backlight_t state)
 {
     #ifdef TFT_BL
     digitalWrite(TFT_BL, state);
     #endif
 }
 
-void TFTDisplay::displaySplashScreen()
+static void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
+                                            int font_size, int font_type, String font_string,
+                                            uint16_t fgColor, uint16_t bgColor)
+{
+    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
+
+    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
+    tft.setCursor(start_pos, font_start_y, font_type);
+
+    tft.setTextColor(fgColor, bgColor);
+    tft.print(font_string);
+}
+
+
+void Display::displaySplashScreen()
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -129,18 +143,7 @@ void TFTDisplay::displaySplashScreen()
                         String(buffer), TFT_WHITE, TFT_BLACK);
 }
 
-void TFTDisplay::updateIdleTemperature(uint16_t bgcolor, uint8_t temperature)
-{
-    char buffer[20];
-    strncpy(buffer, version, 6);
-    // \367 = (char)247 = degree symbol
-    sprintf(buffer+6, " %02d\367C", temperature);
-    displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
-                        SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                        String(buffer), TFT_WHITE, bgcolor);
-}
-
-void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
+void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     if (changed == 0xFF)
     {
@@ -154,7 +157,15 @@ void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t 
         tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[message_index]);
         tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
                         TFT_WHITE);
-        updateIdleTemperature(elrs_banner_bgColor[message_index], temperature);
+
+        // Update the temperature
+        char buffer[20];
+        strncpy(buffer, version, 6);
+        // \367 = (char)247 = degree symbol
+        sprintf(buffer+6, " %02d\367C", temperature);
+        displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
+                            SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
+                            String(buffer), TFT_WHITE, elrs_banner_bgColor[message_index]);
     }
 
     // The Radio Params right half of the screen
@@ -184,7 +195,7 @@ void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t 
     }
 }
 
-void TFTDisplay::displayMainMenu(menu_item_t menu)
+void Display::displayMainMenu(menu_item_t menu)
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -197,7 +208,7 @@ void TFTDisplay::displayMainMenu(menu_item_t menu)
         main_menu_line_2[menu], TFT_BLACK, TFT_WHITE);
 }
 
-void TFTDisplay::displayValue(menu_item_t menu, uint8_t value_index)
+void Display::displayValue(menu_item_t menu, uint8_t value_index)
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -208,7 +219,7 @@ void TFTDisplay::displayValue(menu_item_t menu, uint8_t value_index)
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
 }
 
-void TFTDisplay::displayWiFiConfirm()
+void Display::displayWiFiConfirm()
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -224,7 +235,7 @@ void TFTDisplay::displayWiFiConfirm()
                         "UPDATE MODE", TFT_BLACK, TFT_WHITE);
 }
 
-void TFTDisplay::displayWiFiStatus()
+void Display::displayWiFiStatus()
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -251,7 +262,7 @@ void TFTDisplay::displayWiFiStatus()
 #endif
 }
 
-void TFTDisplay::displayBindConfirm()
+void Display::displayBindConfirm()
 {
     tft.fillScreen(TFT_WHITE);
 
@@ -267,25 +278,12 @@ void TFTDisplay::displayBindConfirm()
                         "REQUEST", TFT_BLACK, TFT_WHITE);
 }
 
-void TFTDisplay::displayBindStatus()
+void Display::displayBindStatus()
 {
     tft.fillScreen(TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         "BINDING", TFT_BLACK, TFT_WHITE);
-}
-
-void TFTDisplay::displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
-                                            uint16_t fgColor, uint16_t bgColor)
-{
-    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
-
-    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
-    tft.setCursor(start_pos, font_start_y, font_type);
-
-    tft.setTextColor(fgColor, bgColor);
-    tft.print(font_string);
 }
 
 #endif
