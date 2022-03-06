@@ -158,9 +158,27 @@ bool ICACHE_RAM_ATTR IsArmed()
 // Assume this function is called inside loop(). Heavy functions goes here.
 void DynamicPower_Update()
 {
+  bool doUpdate = dynamic_power_updated;
+  dynamic_power_updated = false;
+
+  // Get the RSSI from the selected antenna.
+  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
+
+  if (doUpdate && (rssi >= -5)) { // power is too strong and saturate the RX LNA
+    DBGVLN("Power decrease due to the power blast");
+    POWERMGNT.decPower();
+  }
+
+  // When not using dynamic power, return here
   if (!config.GetDynamicPower()) {
+    // if RSSI is dropped enough, inc power back to the configured power
+    if (doUpdate && (rssi <= -20)) {
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
     return;
   }
+
+  // The rest of the codes should be executeded only if dynamic power config is enabled
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
@@ -174,10 +192,9 @@ void DynamicPower_Update()
   }
 
   // if telemetry is not arrived, quick return.
-  if (!dynamic_power_updated)
+  if (!doUpdate)
     return;
-  dynamic_power_updated = false;
-
+  
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
@@ -197,10 +214,6 @@ void DynamicPower_Update()
 
   // =============  RSSI-based power adjustment ==============
   // It is working slowly, suitable for a general long-range flights.
-
-  // Get the RSSI from the selected antenna.
-  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
-
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
 
