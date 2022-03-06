@@ -30,6 +30,8 @@ const char *Display::main_menu_line_2[] = {
 
 #if defined(RADIO_SX128X)
 const char *rate_string[] = {
+    "F1000Hz",
+    "F500Hz",
     "500Hz",
     "250Hz",
     "150Hz",

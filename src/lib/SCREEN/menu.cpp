@@ -17,6 +17,12 @@ extern TFTDisplay screen;
 extern OLEDDisplay screen;
 #endif
 
+#ifdef HAS_THERMAL
+#include "thermal.h"
+#define UPDATE_TEMP_TIMEOUT 5000
+extern Thermal thermal;
+#endif
+
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
 extern bool InBindingMode;
@@ -287,7 +293,8 @@ static void displaySplashScreen()
 
 static void displayIdleScreen()
 {
-    static uint8_t last_message = 0xFF;
+    static message_index_t last_message = MSG_INVALID;
+    static uint8_t last_temperature = 0xFF;
     static uint8_t last_rate = 0xFF;
     static uint8_t last_power = 0xFF;
     static uint8_t last_tlm = 0xFF;
@@ -296,12 +303,38 @@ static void displayIdleScreen()
     static uint8_t last_dynamic = 0xFF;
     static uint8_t last_run_power = 0xFF;
 
-    uint8_t disp_message = IsArmed() ? MSG_ARMED_INDEX : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED_INDEX : MSG_MISMATCH_INDEX) : MSG_NONE_INDEX);
-    if (!idling || last_message != disp_message || last_rate != config.GetRate() || last_power != config.GetPower() || last_tlm != config.GetTlm() ||
-        last_motion != config.GetMotionMode() || last_fan != config.GetFanMode() || last_dynamic != config.GetDynamicPower() || last_run_power != (uint8_t)(POWERMGNT::currPower())
-    )
+    uint8_t temperature = last_temperature;
+#ifdef HAS_THERMAL
+    static uint32_t last_update_temp_ms = 0;
+    uint32_t now = millis();
+    if(now - last_update_temp_ms > UPDATE_TEMP_TIMEOUT || last_update_temp_ms == 0)
+    {
+        temperature = thermal.getTempValue();
+        last_update_temp_ms = now;
+    }
+#else
+    temperature = 25;
+#endif
+
+    message_index_t disp_message = IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
+    uint8_t changed = !idling ? 0xFF : 0;
+    if (idling)
+    {
+        changed |= last_message != disp_message ? CHANGED_MESSAGE : 0;
+        changed |= last_temperature != temperature ? CHANGED_MESSAGE : 0;
+        changed |= last_rate != config.GetRate() ? CHANGED_RATE : 0;
+        changed |= last_power != config.GetPower() ? CHANGED_POWER : 0;
+        changed |= last_dynamic != config.GetDynamicPower() ? CHANGED_POWER : 0;
+        changed |= last_run_power != (uint8_t)(POWERMGNT::currPower()) ? CHANGED_POWER : 0;
+        changed |= last_tlm != config.GetTlm() ? CHANGED_TELEMETRY : 0;
+        changed |= last_motion != config.GetMotionMode() ? CHANGED_MOTION : 0;
+        changed |= last_fan != config.GetFanMode() ? CHANGED_FAN : 0;
+    }
+
+    if (changed)
     {
         last_message = disp_message;
+        last_temperature = temperature;
         last_rate = config.GetRate();
         last_power = config.GetPower();
         last_tlm = config.GetTlm();
@@ -309,7 +342,8 @@ static void displayIdleScreen()
         last_fan = config.GetFanMode();
         last_dynamic = config.GetDynamicPower();
         last_run_power = (uint8_t)(POWERMGNT::currPower());
-        screen.displayIdleScreen(last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_message);
+
+        screen.displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
     }
     idling = true;
 }
@@ -333,7 +367,7 @@ static void setupValueIndex()
     case STATE_PACKET:
         values_menu = MENU_PACKET;
         values_min = 0;
-        values_max = Display::value_sets[MENU_PACKET].count;
+        values_max = Display::value_sets[MENU_PACKET].count-1;
         values_index = config.GetRate();
         break;
     case STATE_POWER:
@@ -345,19 +379,19 @@ static void setupValueIndex()
     case STATE_TELEMETRY:
         values_menu = MENU_TELEMETRY;
         values_min = 0;
-        values_max = Display::value_sets[MENU_TELEMETRY].count;
+        values_max = Display::value_sets[MENU_TELEMETRY].count-1;
         values_index = config.GetTlm();
         break;
     case STATE_POWERSAVE:
         values_menu = MENU_POWERSAVE;
         values_min = 0;
-        values_max = Display::value_sets[MENU_POWERSAVE].count;
+        values_max = Display::value_sets[MENU_POWERSAVE].count-1;
         values_index = config.GetFanMode();
         break;
     case STATE_SMARTFAN:
         values_menu = MENU_SMARTFAN;
         values_min = 0;
-        values_max = Display::value_sets[MENU_SMARTFAN].count;
+        values_max = Display::value_sets[MENU_SMARTFAN].count-1;
         values_index = config.GetMotionMode();
         break;
     }

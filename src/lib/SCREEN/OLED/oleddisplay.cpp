@@ -107,19 +107,19 @@ void OLEDDisplay::displaySplashScreen()
     u8g2.sendBuffer();
 }
 
-void OLEDDisplay::displayIdleScreen(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t message_index)
+void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2.clearBuffer();
     String power = value_sets[MENU_POWER].values[power_index];
     if (dynamic)
     {
-        power = String(value_sets[MENU_POWER].values[running_power_index]) + " *";
+        power += " *";
     }
 
 #ifdef USE_OLED_SPI_SMALL
     u8g2.setFont(u8g2_font_t0_15_mr);
-    u8g2.drawStr(0, 15, rate_string[current_rate_index]);
-    u8g2.drawStr(70, 15, ratio_string[current_ratio_index]);
+    u8g2.drawStr(0, 15, value_sets[MENU_PACKET].values[rate_index]);
+    u8g2.drawStr(70, 15, value_sets[MENU_TELEMETRY].values[ratio_index]);
     u8g2.drawStr(0, 32, power.c_str());
     char buffer[7];
     strncpy(buffer, version, 6);
@@ -145,14 +145,13 @@ void OLEDDisplay::displayIdleScreen(uint8_t rate_index, uint8_t power_index, uin
 void OLEDDisplay::displayMainMenu(menu_item_t menu)
 {
     u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_t0_17_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,15, &(main_menu_line_1[menu])[0]);
-        u8g2.drawStr(0,32, &(main_menu_line_2[menu])[0]);
+        u8g2.drawStr(0,15, main_menu_line_1[menu]);
+        u8g2.drawStr(0,32, main_menu_line_2[menu]);
     #else
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,20, &(main_menu_line_1[menu])[0]);
-        u8g2.drawStr(0,50, &(main_menu_line_2[menu])[0]);
+        u8g2.drawStr(0,20, main_menu_line_1[menu]);
+        u8g2.drawStr(0,50, main_menu_line_2[menu]);
     #endif
     helperDrawImage(menu);
     u8g2.sendBuffer();
@@ -161,13 +160,12 @@ void OLEDDisplay::displayMainMenu(menu_item_t menu)
 void OLEDDisplay::displayValue(menu_item_t menu, uint8_t value_index)
 {
     u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_t0_16_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_16_mr);
-        u8g2.drawStr(0,15, display_values[value_index]);
+        u8g2.drawStr(0,15, value_sets[menu].values[value_index]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
-        u8g2.setFont(u8g2_font_t0_16_mr);
         u8g2.drawStr(0,20, value_sets[menu].values[value_index]);
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
@@ -182,13 +180,12 @@ void OLEDDisplay::displayWiFiConfirm()
     // TODO: Put wifi image?
     u8g2.clearBuffer();
 
+    u8g2.setFont(u8g2_font_t0_17_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "PRESS TO");
         u8g2.drawStr(70,15, "ENTER WIFI");
         u8g2.drawStr(0,32, "UPDATE");
     #else
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,29, "PRESS TO ENTER");
         u8g2.drawStr(0,59, "WIFI UPDATE");
     #endif
@@ -199,33 +196,30 @@ void OLEDDisplay::displayWiFiStatus()
 {
     u8g2.clearBuffer();
 
-// TODO: Add a fancy wifi symbol like the cool TFT peeps
+    // TODO: Add a fancy wifi symbol like the cool TFT peeps
 
-#if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
-#ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,15, "open http://");
-        u8g2.drawStr(70,15, (String(wifi_hostname)+".local").c_str());
-        u8g2.drawStr(0,32, "by browser");
-#else
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,13, "open http://");
-        u8g2.drawStr(0,33, (String(wifi_hostname)+".local").c_str());
-        u8g2.drawStr(0,63, "by browser");
-#endif
-#else
-#ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,15, wifi_ap_ssid);
-        u8g2.drawStr(70,15, wifi_ap_password);
-        u8g2.drawStr(0,32, wifi_ap_address);
-#else
-        u8g2.setFont(u8g2_font_t0_17_mr);
-        u8g2.drawStr(0,13, wifi_ap_ssid);
-        u8g2.drawStr(0,33, wifi_ap_password);
-        u8g2.drawStr(0,63, wifi_ap_address);
-#endif
-#endif
+    u8g2.setFont(u8g2_font_t0_17_mr);
+    #if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
+        #ifdef USE_OLED_SPI_SMALL
+            u8g2.drawStr(0,15, "open http://");
+            u8g2.drawStr(70,15, (String(wifi_hostname)+".local").c_str());
+            u8g2.drawStr(0,32, "by browser");
+        #else
+            u8g2.drawStr(0,13, "open http://");
+            u8g2.drawStr(0,33, (String(wifi_hostname)+".local").c_str());
+            u8g2.drawStr(0,63, "by browser");
+        #endif
+    #else
+        #ifdef USE_OLED_SPI_SMALL
+            u8g2.drawStr(0,15, wifi_ap_ssid);
+            u8g2.drawStr(70,15, wifi_ap_password);
+            u8g2.drawStr(0,32, wifi_ap_address);
+        #else
+            u8g2.drawStr(0,13, wifi_ap_ssid);
+            u8g2.drawStr(0,33, wifi_ap_password);
+            u8g2.drawStr(0,63, wifi_ap_address);
+        #endif
+    #endif
     u8g2.sendBuffer();
 }
 
@@ -233,14 +227,12 @@ void OLEDDisplay::displayBindConfirm()
 {
     // TODO: Put bind image?
     u8g2.clearBuffer();
-
+    u8g2.setFont(u8g2_font_t0_17_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "PRESS TO");
         u8g2.drawStr(70,15 , "SEND BIND");
         u8g2.drawStr(0,32, "REQUEST");
     #else
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,29, "PRESS TO SEND");
         u8g2.drawStr(0,59, "BIND REQUEST");
     #endif
@@ -251,12 +243,10 @@ void OLEDDisplay::displayBindStatus()
 {
     // TODO: Put bind image?
     u8g2.clearBuffer();
-
+    u8g2.setFont(u8g2_font_t0_17_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,15, "BINDING");
     #else
-        u8g2.setFont(u8g2_font_t0_17_mr);
         u8g2.drawStr(0,29, "BINDING");
     #endif
     u8g2.sendBuffer();
