@@ -43,4 +43,4 @@
 
 extern fsm_state_entry_t const menu_fsm[];
 
-int8_t getInitialState();
+fsm_state_t getInitialState();

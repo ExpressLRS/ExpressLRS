@@ -23,7 +23,7 @@ extern bool InBindingMode;
 extern unsigned long rebootTime;
 #endif
 
-int8_t getInitialState()
+fsm_state_t getInitialState()
 {
 #if defined(PLATFORM_ESP32)
     if(esp_reset_reason() == ESP_RST_SW)
@@ -42,7 +42,7 @@ static void displaySplashScreen(bool init)
 static void displayIdleScreen(bool init)
 {
     static message_index_t last_message = MSG_INVALID;
-    static uint8_t last_temperature = 0xFF;
+    static uint8_t last_temperature = 25;
     static uint8_t last_rate = 0xFF;
     static uint8_t last_power = 0xFF;
     static uint8_t last_tlm = 0xFF;
@@ -60,8 +60,6 @@ static void displayIdleScreen(bool init)
         temperature = thermal.getTempValue();
         last_update_temp_ms = now;
     }
-#else
-    temperature = 25;
 #endif
 
     message_index_t disp_message = IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);

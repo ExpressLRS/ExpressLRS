@@ -77,10 +77,18 @@ int FiveWayButton::readKey()
 #endif
 }
 
+FiveWayButton::FiveWayButton()
+{
+    isLongPressed = false;
+    keyInProcess = INPUT_KEY_NO_PRESS;
+    keyDownStart = 0;
+}
+
 void FiveWayButton::init()
 {
     isLongPressed = false;
     keyInProcess = INPUT_KEY_NO_PRESS;
+    keyDownStart = 0;
 
 #if defined(JOY_ADC_VALUES)
     calcFuzzValues();

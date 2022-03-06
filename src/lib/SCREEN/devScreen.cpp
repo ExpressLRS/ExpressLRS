@@ -62,32 +62,32 @@ static int handle(void)
         int key;
         bool isLongPressed;
         fivewaybutton.update(&key, &isLongPressed);
-        int8_t event;
+        fsm_event_t fsm_event;
         switch (key)
         {
         case INPUT_KEY_DOWN_PRESS:
-            event = EVENT_DOWN;
+            fsm_event = EVENT_DOWN;
             break;
         case INPUT_KEY_UP_PRESS:
-            event = EVENT_UP;
+            fsm_event = EVENT_UP;
             break;
         case INPUT_KEY_LEFT_PRESS:
-            event = EVENT_LEFT;
+            fsm_event = EVENT_LEFT;
             break;
         case INPUT_KEY_RIGHT_PRESS:
-            event = EVENT_RIGHT;
+            fsm_event = EVENT_RIGHT;
             break;
         case INPUT_KEY_OK_PRESS:
-            event = EVENT_ENTER;
+            fsm_event = EVENT_ENTER;
             break;
         default: // INPUT_KEY_NO_PRESS
-            event = EVENT_TIMEOUT;
+            fsm_event = EVENT_TIMEOUT;
         }
-        if (event != EVENT_TIMEOUT && isLongPressed)
+        if (fsm_event != EVENT_TIMEOUT && isLongPressed)
         {
-            event = (event | LONG_PRESSED);
+            fsm_event = (fsm_event | LONG_PRESSED);
         }
-        fsm.handleEvent(now, event);
+        fsm.handleEvent(now, fsm_event);
     }
     else
     {
