@@ -174,12 +174,12 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     if (changed & CHANGED_RATE)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            value_sets[MENU_PACKET].values[rate_index], text_color, TFT_WHITE);
+                            getValue(MENU_PACKET, rate_index), text_color, TFT_WHITE);
     }
 
     if (changed & CHANGED_POWER)
     {
-        String power = value_sets[MENU_POWER].values[power_index];
+        String power = getValue(MENU_POWER, power_index);
         if (dynamic)
         {
             power += " *";
@@ -191,7 +191,7 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     if (changed & CHANGED_TELEMETRY)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            value_sets[MENU_TELEMETRY].values[ratio_index], text_color, TFT_WHITE);
+                            getValue(MENU_TELEMETRY, ratio_index), text_color, TFT_WHITE);
     }
 }
 
@@ -213,7 +213,7 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
     tft.fillScreen(TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        value_sets[menu].values[value_index], TFT_BLACK, TFT_WHITE);
+                        getValue(menu, value_index), TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);

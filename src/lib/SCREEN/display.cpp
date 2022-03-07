@@ -8,24 +8,36 @@ const char *Display::message_string[] = {
     "[  Mismatch!  ]"
 };
 
-const char *Display::main_menu_line_1[] = {
+const char *Display::main_menu_line_1[_MENU_COUNT_] = {
     "PACKET",
     "TX",
     "TELEM",
     "MOTION",
     "FAN",
+    "VTX",
     "BIND",
-    "UPDATE"
+    "UPDATE",
+
+    "VTX",
+    "VTX",
+    "VTX",
+    "VTX"
 };
 
-const char *Display::main_menu_line_2[] = {
+const char *Display::main_menu_line_2[_MENU_COUNT_] = {
     "RATE",
     "POWER",
     "RATIO",
     "DETECT",
     "CONTROL",
+    "ADMIN",
     "MODE",
-    "FW"
+    "FW",
+
+    "BAND",
+    "CHANNEL",
+    "POWER",
+    "PITMODE"
 };
 
 #if defined(RADIO_SX128X)
@@ -79,10 +91,105 @@ const char *smartfan_string[] = {
     "OFF"
 };
 
-const item_values_t Display::value_sets[] = {
-    {rate_string, ARRAY_SIZE(rate_string)},
-    {power_string, ARRAY_SIZE(power_string)},
-    {ratio_string, ARRAY_SIZE(ratio_string)},
-    {powersaving_string, ARRAY_SIZE(powersaving_string)},
-    {smartfan_string, ARRAY_SIZE(smartfan_string)}
+const char *band_string[] = {
+    "OFF",
+    "A",
+    "B",
+    "E",
+    "F",
+    "R",
+    "L"
 };
+
+const char *channel_string[] = {
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8"
+};
+
+const char *vtx_power_string[] = {
+    "-",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8"
+};
+
+const char *pitmode_string[] = {
+    "OFF", "ON",
+    "+AUX1", "-AXU1",
+    "+AUX2", "-AXU2",
+    "+AUX3", "-AXU3",
+    "+AUX4", "-AXU4",
+    "+AUX5", "-AXU5",
+    "+AUX6", "-AXU6",
+    "+AUX7", "-AXU7",
+    "+AUX8", "-AXU8",
+    "+AUX9", "-AXU9",
+    "+AUX10", "-AXU10"
+};
+
+int Display::getValueCount(menu_item_t menu)
+{
+    switch (menu)
+    {
+    case MENU_PACKET:
+        return ARRAY_SIZE(rate_string);
+    case MENU_POWER:
+        return ARRAY_SIZE(power_string);
+    case MENU_TELEMETRY:
+        return ARRAY_SIZE(ratio_string);
+    case MENU_POWERSAVE:
+        return ARRAY_SIZE(powersaving_string);
+    case MENU_SMARTFAN:
+        return ARRAY_SIZE(smartfan_string);
+
+    case MENU_VTX_BAND:
+        return ARRAY_SIZE(band_string);
+    case MENU_VTX_CHANNEL:
+        return ARRAY_SIZE(channel_string);
+    case MENU_VTX_POWER:
+        return ARRAY_SIZE(vtx_power_string);
+    case MENU_VTX_PITMODE:
+        return ARRAY_SIZE(pitmode_string);
+    default:
+        return 0;
+    }
+}
+
+const char *Display::getValue(menu_item_t menu, uint8_t value_index)
+{
+    switch (menu)
+    {
+    case MENU_PACKET:
+        return rate_string[value_index];
+    case MENU_POWER:
+        return power_string[value_index];
+    case MENU_TELEMETRY:
+        return ratio_string[value_index];
+    case MENU_POWERSAVE:
+        return powersaving_string[value_index];
+    case MENU_SMARTFAN:
+        return smartfan_string[value_index];
+
+    case MENU_VTX_BAND:
+        return band_string[value_index];
+    case MENU_VTX_CHANNEL:
+        return channel_string[value_index];
+    case MENU_VTX_POWER:
+        return vtx_power_string[value_index];
+    case MENU_VTX_PITMODE:
+        return pitmode_string[value_index];
+    default:
+        return nullptr;
+    }
+}

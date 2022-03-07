@@ -111,7 +111,7 @@ static void setupValueIndex(bool init)
     case STATE_PACKET:
         values_menu = MENU_PACKET;
         values_min = 0;
-        values_max = Display::value_sets[MENU_PACKET].count-1;
+        values_max = Display::getValueCount(values_menu)-1;
         values_index = config.GetRate();
         break;
     case STATE_POWER:
@@ -123,20 +123,45 @@ static void setupValueIndex(bool init)
     case STATE_TELEMETRY:
         values_menu = MENU_TELEMETRY;
         values_min = 0;
-        values_max = Display::value_sets[MENU_TELEMETRY].count-1;
+        values_max = Display::getValueCount(values_menu)-1;
         values_index = config.GetTlm();
         break;
     case STATE_POWERSAVE:
         values_menu = MENU_POWERSAVE;
         values_min = 0;
-        values_max = Display::value_sets[MENU_POWERSAVE].count-1;
+        values_max = Display::getValueCount(values_menu)-1;
         values_index = config.GetFanMode();
         break;
     case STATE_SMARTFAN:
         values_menu = MENU_SMARTFAN;
         values_min = 0;
-        values_max = Display::value_sets[MENU_SMARTFAN].count-1;
+        values_max = Display::getValueCount(values_menu)-1;
         values_index = config.GetMotionMode();
+        break;
+
+    case STATE_VTX_BAND:
+        values_menu = MENU_VTX_BAND;
+        values_min = 0;
+        values_max = Display::getValueCount(values_menu)-1;
+        values_index = config.GetVtxBand();
+        break;
+    case STATE_VTX_CHANNEL:
+        values_menu = MENU_VTX_CHANNEL;
+        values_min = 0;
+        values_max = Display::getValueCount(values_menu)-1;
+        values_index = config.GetVtxChannel();
+        break;
+    case STATE_VTX_POWER:
+        values_menu = MENU_VTX_POWER;
+        values_min = 0;
+        values_max = Display::getValueCount(values_menu)-1;
+        values_index = config.GetVtxPower();
+        break;
+    case STATE_VTX_PITMODE:
+        values_menu = MENU_VTX_PITMODE;
+        values_min = 0;
+        values_max = Display::getValueCount(values_menu)-1;
+        values_index = config.GetVtxPitmode();
         break;
     }
 }
@@ -176,6 +201,19 @@ static void saveValueIndex(bool init)
             break;
         case MENU_SMARTFAN:
             config.SetFanMode(values_index);
+            break;
+
+        case MENU_VTX_BAND:
+            config.SetVtxBand(values_index);
+            break;
+        case MENU_VTX_CHANNEL:
+            config.SetVtxChannel(values_index);
+            break;
+        case MENU_VTX_POWER:
+            config.SetVtxPower(values_index);
+            break;
+        case MENU_VTX_PITMODE:
+            config.SetVtxPitmode(values_index);
             break;
         default:
             break;
@@ -263,6 +301,14 @@ fsm_state_event_t const middle_menu_events[] = {
     {EVENT_DOWN, ACTION_NEXT, STATE_IGNORED},
     {EVENT_LEFT, ACTION_GOTO, STATE_IDLE}
 };
+fsm_state_event_t const vtx_menu_events[] = {
+    {EVENT_TIMEOUT, ACTION_GOTO, STATE_IDLE},
+    {EVENT_ENTER, ACTION_PUSH, STATE_VTX_BAND},
+    {EVENT_RIGHT, ACTION_PUSH, STATE_VTX_BAND},
+    {EVENT_UP, ACTION_PREVIOUS, STATE_IGNORED},
+    {EVENT_DOWN, ACTION_NEXT, STATE_IGNORED},
+    {EVENT_LEFT, ACTION_GOTO, STATE_IDLE}
+};
 fsm_state_event_t const bind_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_GOTO, STATE_IDLE},
     {EVENT_ENTER, ACTION_PUSH, STATE_BIND_CONFIRM},
@@ -293,6 +339,32 @@ fsm_state_event_t const value_select_events[] = {
 fsm_state_event_t const value_increment_events[] = {{EVENT_IMMEDIATE, ACTION_GOTO, STATE_VALUE_SELECT}};
 fsm_state_event_t const value_decrement_events[] = {{EVENT_IMMEDIATE, ACTION_GOTO, STATE_VALUE_SELECT}};
 fsm_state_event_t const value_save_events[] = {{EVENT_IMMEDIATE, ACTION_POP, STATE_IGNORED}};
+
+// VTx submenu
+fsm_state_event_t const vtx_band_events[] = {
+    {EVENT_TIMEOUT, ACTION_POP, STATE_IGNORED},
+    {EVENT_LEFT, ACTION_POP, STATE_IGNORED},
+    {EVENT_UP, ACTION_GOTO, STATE_VTX_PITMODE},
+    {EVENT_DOWN, ACTION_NEXT, STATE_IGNORED},
+    {EVENT_ENTER, ACTION_PUSH, STATE_VALUE_INIT},
+    {EVENT_RIGHT, ACTION_PUSH, STATE_VALUE_INIT}
+};
+fsm_state_event_t const vtx_middle_events[] = {
+    {EVENT_TIMEOUT, ACTION_POP, STATE_IGNORED},
+    {EVENT_LEFT, ACTION_POP, STATE_IGNORED},
+    {EVENT_UP, ACTION_PREVIOUS, ACTION_PREVIOUS},
+    {EVENT_DOWN, ACTION_NEXT, STATE_IGNORED},
+    {EVENT_ENTER, ACTION_PUSH, STATE_VALUE_INIT},
+    {EVENT_RIGHT, ACTION_PUSH, STATE_VALUE_INIT}
+};
+fsm_state_event_t const vtx_pitmode_events[] = {
+    {EVENT_TIMEOUT, ACTION_POP, STATE_IGNORED},
+    {EVENT_LEFT, ACTION_POP, STATE_IGNORED},
+    {EVENT_UP, ACTION_PREVIOUS, STATE_IGNORED},
+    {EVENT_DOWN, ACTION_GOTO, STATE_VTX_BAND},
+    {EVENT_ENTER, ACTION_PUSH, STATE_VALUE_INIT},
+    {EVENT_RIGHT, ACTION_PUSH, STATE_VALUE_INIT}
+};
 
 // WiFi submenu
 fsm_state_event_t const wifi_confirm_events[] = {
@@ -327,6 +399,7 @@ fsm_state_entry_t const menu_fsm[] = {
 #ifdef HAS_GSENSOR
     {STATE_SMARTFAN, [](bool init) { displayMenuScreen(MENU_SMARTFAN); }, 20000, middle_menu_events, ARRAY_SIZE(middle_menu_events)},
 #endif
+    {STATE_VTX, [](bool init) { displayMenuScreen(MENU_VTX); }, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
     {STATE_BIND, [](bool init) { displayMenuScreen(MENU_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
     {STATE_WIFI, [](bool init) { displayMenuScreen(MENU_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
 
@@ -336,6 +409,12 @@ fsm_state_entry_t const menu_fsm[] = {
     {STATE_VALUE_INC, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
     {STATE_VALUE_DEC, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
     {STATE_VALUE_SAVE, saveValueIndex, 0, value_save_events, ARRAY_SIZE(value_save_events)},
+
+    // VTx submenu
+    {STATE_VTX_BAND, displayWiFiConfirm, 20000, vtx_band_events, ARRAY_SIZE(vtx_band_events)},
+    {STATE_VTX_CHANNEL, displayWiFiStatus, 20000, vtx_middle_events, ARRAY_SIZE(vtx_middle_events)},
+    {STATE_VTX_POWER, displayBindConfirm, 20000, vtx_middle_events, ARRAY_SIZE(vtx_middle_events)},
+    {STATE_VTX_PITMODE, displayBindStatus, 20000, vtx_pitmode_events, ARRAY_SIZE(vtx_pitmode_events)},
 
     // WiFi submenu
     {STATE_WIFI_CONFIRM, displayWiFiConfirm, 20000, wifi_confirm_events, ARRAY_SIZE(wifi_confirm_events)},

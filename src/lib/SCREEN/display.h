@@ -23,8 +23,16 @@ typedef enum menu_item_e {
     MENU_TELEMETRY,
     MENU_POWERSAVE,
     MENU_SMARTFAN,
+    MENU_VTX,
     MENU_BIND,
-    MENU_WIFI
+    MENU_WIFI,
+
+    MENU_VTX_BAND,
+    MENU_VTX_CHANNEL,
+    MENU_VTX_POWER,
+    MENU_VTX_PITMODE,
+
+    _MENU_COUNT_
 } menu_item_t;
 
 typedef enum
@@ -32,11 +40,6 @@ typedef enum
     SCREEN_BACKLIGHT_ON = 0,
     SCREEN_BACKLIGHT_OFF = 1
 } screen_backlight_t;
-
-typedef struct item_values_s {
-    const char **values;
-    const uint8_t count;
-} item_values_t;
 
 class Display
 {
@@ -53,7 +56,8 @@ public:
     static void displayBindConfirm();
     static void displayBindStatus();
 
-    static const item_values_t value_sets[];
+    static int getValueCount(menu_item_t menu);
+    static const char *getValue(menu_item_t menu, uint8_t value_index);
 
 protected:
     static const char *message_string[];

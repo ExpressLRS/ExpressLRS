@@ -6,7 +6,7 @@
 #include "device.h"
 #include "logging.h"
 
-FiniteStateMachine fsm(menu_fsm);
+FiniteStateMachine state_machine(menu_fsm);
 
 #include "display.h"
 Display screen;
@@ -87,11 +87,11 @@ static int handle(void)
         {
             fsm_event = (fsm_event | LONG_PRESSED);
         }
-        fsm.handleEvent(now, fsm_event);
+        state_machine.handleEvent(now, fsm_event);
     }
     else
     {
-        fsm.handleEvent(now, EVENT_TIMEOUT);
+        state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
     return SCREEN_DURATION;
 }
@@ -108,7 +108,7 @@ static void initialize()
     fivewaybutton.init();
 #endif
     screen.init();
-    fsm.start(millis(), getInitialState());
+    state_machine.start(millis(), getInitialState());
 }
 
 static int start()
