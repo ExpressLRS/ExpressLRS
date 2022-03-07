@@ -40,15 +40,15 @@ public:
     explicit FiniteStateMachine(fsm_state_entry_t const *fsm) : fsm(fsm) {}
     void start(uint32_t now, fsm_state_t state);
     void handleEvent(uint32_t now, fsm_event_t event);
-    fsm_state_t getParentState() { return state_index_stack.top(); }
+    fsm_state_t getParentState() { return fsm[state_index_stack.top()].state; }
     void popState() { force_pop = true; }
 
 private:
     const fsm_state_entry_t *fsm;
 
-    static std::stack<fsm_state_t> state_index_stack;
-    static fsm_state_t last_state_index;
-    static fsm_state_t current_state_index;
+    static std::stack<int> state_index_stack;
+    static int last_state_index;
+    static int current_state_index;
     static uint32_t current_state_entered;
     static bool force_pop;
 };

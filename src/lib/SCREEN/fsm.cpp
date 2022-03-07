@@ -1,8 +1,8 @@
 #include "fsm.h"
 
-std::stack<fsm_state_t> FiniteStateMachine::state_index_stack;
-fsm_state_t FiniteStateMachine::last_state_index;
-fsm_state_t FiniteStateMachine::current_state_index;
+std::stack<int> FiniteStateMachine::state_index_stack;
+int FiniteStateMachine::last_state_index;
+int FiniteStateMachine::current_state_index;
 uint32_t FiniteStateMachine::current_state_entered = 0;
 bool FiniteStateMachine::force_pop = false;
 
