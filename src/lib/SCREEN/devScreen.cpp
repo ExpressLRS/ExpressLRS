@@ -6,7 +6,7 @@
 #include "device.h"
 #include "logging.h"
 
-FiniteStateMachine state_machine(menu_fsm);
+FiniteStateMachine state_machine(entry_fsm);
 
 #include "display.h"
 Display screen;

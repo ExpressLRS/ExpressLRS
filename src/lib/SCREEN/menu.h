@@ -22,10 +22,10 @@
 #define STATE_BIND_EXECUTE 31
 #define STATE_BIND_STATUS 32
 
-#define STATE_VTX_BAND 20
-#define STATE_VTX_CHANNEL 21
-#define STATE_VTX_POWER 22
-#define STATE_VTX_PITMODE 23
+#define STATE_VTX_BAND 40
+#define STATE_VTX_CHANNEL 41
+#define STATE_VTX_POWER 42
+#define STATE_VTX_PITMODE 43
 
 #define STATE_VALUE_INIT 100
 #define STATE_VALUE_SELECT 101
@@ -47,6 +47,6 @@
 #define EVENT_LONG_LEFT (EVENT_LEFT | LONG_PRESSED)
 #define EVENT_LONG_RIGHT (EVENT_RIGHT | LONG_PRESSED)
 
-extern fsm_state_entry_t const menu_fsm[];
+extern fsm_state_entry_t const entry_fsm[];
 
 fsm_state_t getInitialState();

@@ -113,7 +113,7 @@ void Display::displaySplashScreen()
 void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2.clearBuffer();
-    String power = value_sets[MENU_POWER].values[power_index];
+    String power = getValue(MENU_POWER, power_index);
     if (dynamic)
     {
         power += " *";
@@ -121,15 +121,15 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
 
 #ifdef USE_OLED_SPI_SMALL
     u8g2.setFont(u8g2_font_t0_15_mr);
-    u8g2.drawStr(0, 15, value_sets[MENU_PACKET].values[rate_index]);
-    u8g2.drawStr(70, 15, value_sets[MENU_TELEMETRY].values[ratio_index]);
+    u8g2.drawStr(0, 15, getValue(MENU_PACKET, rate_index));
+    u8g2.drawStr(70, 15, getValue(MENU_TELEMETRY, ratio_index));
     u8g2.drawStr(0, 32, power.c_str());
     u8g2.drawStr(70, 32, version);
 #else
     u8g2.setFont(u8g2_font_t0_15_mr);
     u8g2.drawStr(0, 13, message_string[message_index]);
-    u8g2.drawStr(0, 45, value_sets[MENU_PACKET].values[rate_index]);
-    u8g2.drawStr(70, 45, value_sets[MENU_TELEMETRY].values[ratio_index]);
+    u8g2.drawStr(0, 45, getValue(MENU_PACKET, rate_index));
+    u8g2.drawStr(70, 45, getValue(MENU_TELEMETRY, ratio_index));
     u8g2.drawStr(0, 60, power.c_str());
     u8g2.setFont(u8g2_font_profont10_mr);
     u8g2.drawStr(70, 56, "TLM");
@@ -167,11 +167,11 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_t0_16_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.drawStr(0,15, value_sets[menu].values[value_index]);
+        u8g2.drawStr(0,15, getValue(menu, value_index));
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
-        u8g2.drawStr(0,20, value_sets[menu].values[value_index]);
+        u8g2.drawStr(0,20, getValue(menu, value_index));
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
@@ -287,28 +287,37 @@ static void helperDrawImage(menu_item_t menu)
     int y_pos = 5;
 
     switch(menu){
-        case 0:
+        case MENU_PACKET:
             u8g2.drawXBM(x_pos, y_pos, 32, 22, rate_img32);
             break;
-        case 1:
+        case MENU_POWER:
             u8g2.drawXBM(x_pos, y_pos, 25, 25, power_img32);
             break;
-        case 2:
+        case MENU_TELEMETRY:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
             break;
-        case 3:
+        case MENU_POWERSAVE:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
             break;
-        case 4:
+        case MENU_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
             break;
-        case 5:
+        case MENU_VTX:
+        case MENU_VTX_BAND:
+        case MENU_VTX_CHANNEL:
+        case MENU_VTX_POWER:
+        case MENU_VTX_PITMODE:
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
+            break;
+        case MENU_WIFI:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
-        case 6:
+        case MENU_BIND:
             u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
             break;
 
+        default:
+            break;
     }
 }
 #else
@@ -334,11 +343,21 @@ static void helperDrawImage(menu_item_t menu)
         case MENU_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
             break;
+        case MENU_VTX:
+        case MENU_VTX_BAND:
+        case MENU_VTX_CHANNEL:
+        case MENU_VTX_POWER:
+        case MENU_VTX_PITMODE:
+            u8g2.drawXBM(x_pos, y_pos, 64, 64, vtx_img64);
+            break;
         case MENU_WIFI:
             u8g2.drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
             break;
         case MENU_BIND:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
+            break;
+
+        default:
             break;
     }
 }
