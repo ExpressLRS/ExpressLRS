@@ -42,25 +42,21 @@ public:
      */
     T calc_scaled() const
     {
-        unsigned int minIdx = 0, maxIdx = 0;
+        T minVal, maxVal, retVal;
+        maxVal = minVal = retVal = _data[0];
         // Find the minumum and maximum elements in the list
-        for (unsigned int i = 0; i < N; ++i)
+        // while summing all the values
+        for (unsigned int i = 1; i < N; ++i)
         {
             T val = _data[i];
-            if (val < _data[minIdx])
-            minIdx = i;
-            if (val > _data[maxIdx])
-            maxIdx = i;
+            retVal += val;
+            if (val < minVal)
+                minVal = val;
+            if (val > maxVal)
+                maxVal = val;
         }
-        // Run through again and sum all the non-min and max elements
-        T retVal = 0;
-        for (unsigned int i = 0; i < N; ++i)
-        {
-            if (i != minIdx && i != maxIdx)
-            retVal += _data[i];
-        }
-
-        return retVal;
+        // Subtract out the min and max values to discard them
+        return (retVal - (minVal + maxVal));
     }
 
     /**
