@@ -18,6 +18,9 @@ const char *Display::main_menu_line_1[_MENU_COUNT_] = {
     "BIND",
     "UPDATE",
 
+    "MAX",
+    "DYNAMIC",
+
     "VTX",
     "VTX",
     "VTX",
@@ -33,6 +36,9 @@ const char *Display::main_menu_line_2[_MENU_COUNT_] = {
     "ADMIN",
     "MODE",
     "FW",
+
+    "POWER",
+    "POWER",
 
     "BAND",
     "CHANNEL",
@@ -67,6 +73,15 @@ const char *power_string[] = {
     "500mW",
     "1000mW",
     "2000mW"
+};
+
+const char *dynamic_string[] = {
+    "OFF",
+    "ON",
+    "AUX9",
+    "AUX10",
+    "AUX11",
+    "AUX12"
 };
 
 const char *ratio_string[] = {
@@ -144,14 +159,18 @@ int Display::getValueCount(menu_item_t menu)
     {
     case MENU_PACKET:
         return ARRAY_SIZE(rate_string);
-    case MENU_POWER:
-        return ARRAY_SIZE(power_string);
     case MENU_TELEMETRY:
         return ARRAY_SIZE(ratio_string);
     case MENU_POWERSAVE:
         return ARRAY_SIZE(powersaving_string);
     case MENU_SMARTFAN:
         return ARRAY_SIZE(smartfan_string);
+
+    case MENU_POWER:
+    case MENU_POWER_MAX:
+        return ARRAY_SIZE(power_string);
+    case MENU_POWER_DYNAMIC:
+        return ARRAY_SIZE(dynamic_string);
 
     case MENU_VTX_BAND:
         return ARRAY_SIZE(band_string);
@@ -172,14 +191,18 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
     {
     case MENU_PACKET:
         return rate_string[value_index];
-    case MENU_POWER:
-        return power_string[value_index];
     case MENU_TELEMETRY:
         return ratio_string[value_index];
     case MENU_POWERSAVE:
         return powersaving_string[value_index];
     case MENU_SMARTFAN:
         return smartfan_string[value_index];
+
+    case MENU_POWER:
+    case MENU_POWER_MAX:
+        return power_string[value_index];
+    case MENU_POWER_DYNAMIC:
+        return dynamic_string[value_index];
 
     case MENU_VTX_BAND:
         return band_string[value_index];

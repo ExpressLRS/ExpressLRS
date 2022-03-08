@@ -19,6 +19,9 @@ const uint16_t *main_menu_icons[] = {
     elrs_bind,
     elrs_updatefw,
 
+    elrs_power,
+    elrs_power,
+
     elrs_vtx,
     elrs_vtx,
     elrs_vtx,
@@ -185,7 +188,7 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
 
     if (changed & CHANGED_POWER)
     {
-        String power = getValue(MENU_POWER, power_index);
+        String power = getValue(MENU_POWER, dynamic ? running_power_index : power_index);
         if (dynamic)
         {
             power += " *";

@@ -113,7 +113,7 @@ void Display::displaySplashScreen()
 void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2.clearBuffer();
-    String power = getValue(MENU_POWER, power_index);
+    String power = getValue(MENU_POWER, dynamic ? running_power_index : power_index);
     if (dynamic)
     {
         power += " *";
@@ -291,6 +291,8 @@ static void helperDrawImage(menu_item_t menu)
             u8g2.drawXBM(x_pos, y_pos, 32, 22, rate_img32);
             break;
         case MENU_POWER:
+        case MENU_POWER_MAX:
+        case MENU_POWER_DYNAMIC:
             u8g2.drawXBM(x_pos, y_pos, 25, 25, power_img32);
             break;
         case MENU_TELEMETRY:
@@ -332,6 +334,8 @@ static void helperDrawImage(menu_item_t menu)
             u8g2.drawXBM(x_pos, y_pos, 64, 44, rate_img64);
             break;
         case MENU_POWER:
+        case MENU_POWER_MAX:
+        case MENU_POWER_DYNAMIC:
             u8g2.drawXBM(x_pos, y_pos, 50, 50, power_img64);
             break;
         case MENU_TELEMETRY:

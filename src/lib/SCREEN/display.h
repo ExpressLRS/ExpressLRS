@@ -27,6 +27,9 @@ typedef enum menu_item_e {
     MENU_BIND,
     MENU_WIFI,
 
+    MENU_POWER_MAX,
+    MENU_POWER_DYNAMIC,
+
     MENU_VTX_BAND,
     MENU_VTX_CHANNEL,
     MENU_VTX_POWER,
