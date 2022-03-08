@@ -1,15 +1,13 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
-#include "menu.h"
-
 #include "common.h"
 #include "device.h"
 #include "logging.h"
 
-FiniteStateMachine state_machine(entry_fsm);
-
 #include "display.h"
 Display screen;
+
+FiniteStateMachine state_machine(entry_fsm);
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"

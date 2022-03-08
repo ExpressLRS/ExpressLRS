@@ -24,7 +24,10 @@ typedef struct fsm_state_event_s
 {
     fsm_event_t event;
     fsm_action_t action;
-    const fsm_state_entry_t *next;     // or a STATE for goto
+    union {
+        const fsm_state_entry_t *fsm;
+        fsm_state_t state;
+    } next;
 } fsm_state_event_t;
 
 #define GOTO(x)    ACTION_GOTO, (const fsm_state_entry_t *)x

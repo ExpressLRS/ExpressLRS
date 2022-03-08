@@ -2,39 +2,47 @@
 #include "fsm.h"
 
 // -------------- States --------------
-#define STATE_SPLASH 0
-#define STATE_IDLE 1
-#define STATE_PACKET 2
-#define STATE_POWER 3
-#define STATE_TELEMETRY 4
-#define STATE_POWERSAVE 5
-#define STATE_SMARTFAN 6
-#define STATE_VTX 7
-#define STATE_BIND 8
-#define STATE_WIFI 9
 
-#define STATE_POWER_MAX 20
-#define STATE_POWER_DYNAMIC 21
+enum fsm_state_s {
+    // This first ones have menu text & icons
+    STATE_PACKET,
+    STATE_POWER,
+    STATE_TELEMETRY,
+    STATE_POWERSAVE,
+    STATE_SMARTFAN,
+    STATE_VTX,
+    STATE_BIND,
+    STATE_WIFI,
 
-#define STATE_WIFI_CONFIRM 30
-#define STATE_WIFI_EXECUTE 31
-#define STATE_WIFI_STATUS 32
-#define STATE_WIFI_EXIT 33
+    STATE_POWER_MAX,
+    STATE_POWER_DYNAMIC,
 
-#define STATE_BIND_CONFIRM 40
-#define STATE_BIND_EXECUTE 41
-#define STATE_BIND_STATUS 42
+    STATE_VTX_BAND,
+    STATE_VTX_CHANNEL,
+    STATE_VTX_POWER,
+    STATE_VTX_PITMODE,
 
-#define STATE_VTX_BAND 50
-#define STATE_VTX_CHANNEL 51
-#define STATE_VTX_POWER 52
-#define STATE_VTX_PITMODE 53
 
-#define STATE_VALUE_INIT 100
-#define STATE_VALUE_SELECT 101
-#define STATE_VALUE_INC 102
-#define STATE_VALUE_DEC 103
-#define STATE_VALUE_SAVE 104
+    // These do not have menu text or icons
+    STATE_SPLASH = 100,
+    STATE_IDLE,
+
+    STATE_WIFI_CONFIRM,
+    STATE_WIFI_EXECUTE,
+    STATE_WIFI_STATUS,
+    STATE_WIFI_EXIT,
+
+    STATE_BIND_CONFIRM,
+    STATE_BIND_EXECUTE,
+    STATE_BIND_STATUS,
+
+    STATE_VALUE_INIT,
+    STATE_VALUE_SELECT,
+    STATE_VALUE_INC,
+    STATE_VALUE_DEC,
+    STATE_VALUE_SAVE,
+};
+
 
 // -------------- Events --------------
 #define LONG_PRESSED 0x40

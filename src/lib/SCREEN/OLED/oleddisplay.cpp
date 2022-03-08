@@ -113,7 +113,7 @@ void Display::displaySplashScreen()
 void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2.clearBuffer();
-    String power = getValue(MENU_POWER, dynamic ? running_power_index : power_index);
+    String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
     if (dynamic)
     {
         power += " *";
@@ -121,15 +121,15 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
 
 #ifdef USE_OLED_SPI_SMALL
     u8g2.setFont(u8g2_font_t0_15_mr);
-    u8g2.drawStr(0, 15, getValue(MENU_PACKET, rate_index));
-    u8g2.drawStr(70, 15, getValue(MENU_TELEMETRY, ratio_index));
+    u8g2.drawStr(0, 15, getValue(STATE_PACKET, rate_index));
+    u8g2.drawStr(70, 15, getValue(STATE_TELEMETRY, ratio_index));
     u8g2.drawStr(0, 32, power.c_str());
     u8g2.drawStr(70, 32, version);
 #else
     u8g2.setFont(u8g2_font_t0_15_mr);
     u8g2.drawStr(0, 13, message_string[message_index]);
-    u8g2.drawStr(0, 45, getValue(MENU_PACKET, rate_index));
-    u8g2.drawStr(70, 45, getValue(MENU_TELEMETRY, ratio_index));
+    u8g2.drawStr(0, 45, getValue(STATE_PACKET, rate_index));
+    u8g2.drawStr(70, 45, getValue(STATE_TELEMETRY, ratio_index));
     u8g2.drawStr(0, 60, power.c_str());
     u8g2.setFont(u8g2_font_profont10_mr);
     u8g2.drawStr(70, 56, "TLM");
@@ -148,11 +148,11 @@ void Display::displayMainMenu(menu_item_t menu)
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_t0_17_mr);
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.drawStr(0,15, main_menu_line_1[menu]);
-        u8g2.drawStr(0,32, main_menu_line_2[menu]);
+        u8g2.drawStr(0,15, main_menu_strings[menu][0]);
+        u8g2.drawStr(0,32, main_menu_strings[menu][1]);
     #else
-        u8g2.drawStr(0,20, main_menu_line_1[menu]);
-        u8g2.drawStr(0,50, main_menu_line_2[menu]);
+        u8g2.drawStr(0,20, main_menu_strings[menu][0]);
+        u8g2.drawStr(0,50, main_menu_strings[menu][1]);
     #endif
     helperDrawImage(menu);
     u8g2.sendBuffer();
@@ -287,34 +287,34 @@ static void helperDrawImage(menu_item_t menu)
     int y_pos = 5;
 
     switch(menu){
-        case MENU_PACKET:
+        case STATE_PACKET:
             u8g2.drawXBM(x_pos, y_pos, 32, 22, rate_img32);
             break;
-        case MENU_POWER:
-        case MENU_POWER_MAX:
-        case MENU_POWER_DYNAMIC:
+        case STATE_POWER:
+        case STATE_POWER_MAX:
+        case STATE_POWER_DYNAMIC:
             u8g2.drawXBM(x_pos, y_pos, 25, 25, power_img32);
             break;
-        case MENU_TELEMETRY:
+        case STATE_TELEMETRY:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
             break;
-        case MENU_POWERSAVE:
+        case STATE_POWERSAVE:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
             break;
-        case MENU_SMARTFAN:
+        case STATE_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
             break;
-        case MENU_VTX:
-        case MENU_VTX_BAND:
-        case MENU_VTX_CHANNEL:
-        case MENU_VTX_POWER:
-        case MENU_VTX_PITMODE:
+        case STATE_VTX:
+        case STATE_VTX_BAND:
+        case STATE_VTX_CHANNEL:
+        case STATE_VTX_POWER:
+        case STATE_VTX_PITMODE:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
             break;
-        case MENU_WIFI:
+        case STATE_WIFI:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
-        case MENU_BIND:
+        case STATE_BIND:
             u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
             break;
 
@@ -330,34 +330,34 @@ static void helperDrawImage(menu_item_t menu)
     int y_pos = 5;
 
     switch(menu){
-        case MENU_PACKET:
+        case STATE_PACKET:
             u8g2.drawXBM(x_pos, y_pos, 64, 44, rate_img64);
             break;
-        case MENU_POWER:
-        case MENU_POWER_MAX:
-        case MENU_POWER_DYNAMIC:
+        case STATE_POWER:
+        case STATE_POWER_MAX:
+        case STATE_POWER_DYNAMIC:
             u8g2.drawXBM(x_pos, y_pos, 50, 50, power_img64);
             break;
-        case MENU_TELEMETRY:
+        case STATE_TELEMETRY:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, ratio_img64);
             break;
-        case MENU_POWERSAVE:
+        case STATE_POWERSAVE:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, powersaving_img64);
             break;
-        case MENU_SMARTFAN:
+        case STATE_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
             break;
-        case MENU_VTX:
-        case MENU_VTX_BAND:
-        case MENU_VTX_CHANNEL:
-        case MENU_VTX_POWER:
-        case MENU_VTX_PITMODE:
+        case STATE_VTX:
+        case STATE_VTX_BAND:
+        case STATE_VTX_CHANNEL:
+        case STATE_VTX_POWER:
+        case STATE_VTX_PITMODE:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, vtx_img64);
             break;
-        case MENU_WIFI:
+        case STATE_WIFI:
             u8g2.drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
             break;
-        case MENU_BIND:
+        case STATE_BIND:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
             break;
 

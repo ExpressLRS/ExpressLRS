@@ -60,11 +60,11 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
             {
                 case ACTION_PUSH:
                     fsm_stack.push({current_fsm, current_index});
-                    current_fsm = action.next;
+                    current_fsm = action.next.fsm;
                     current_index = 0;
                     break;
                 case ACTION_GOTO:
-                    if (current_fsm[current_index].state == (int)(action.next))
+                    if (current_fsm[current_index].state == action.next.state)
                     {
                         init = false;
                     }
@@ -72,7 +72,7 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
                     {
                         for (int i = 0 ; current_fsm[i].state != STATE_LAST ; i++)
                         {
-                            if (current_fsm[i].state == (int)(action.next))
+                            if (current_fsm[i].state == action.next.state)
                             {
                                 current_index = i;
                                 break;

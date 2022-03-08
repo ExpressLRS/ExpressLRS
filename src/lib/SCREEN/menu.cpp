@@ -1,12 +1,10 @@
-#include "menu.h"
+#include "display.h"
 
-#include "POWERMGNT.h"
 #include "common.h"
 #include "config.h"
 #include "helpers.h"
 #include "logging.h"
-
-#include "display.h"
+#include "POWERMGNT.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -99,7 +97,6 @@ static void displayMenuScreen(menu_item_t menuItem)
 }
 
 // Value menu
-static menu_item_t values_menu;
 static int values_min;
 static int values_max;
 static int values_index;
@@ -109,65 +106,55 @@ static void setupValueIndex(bool init)
     switch (state_machine.getParentState())
     {
     case STATE_PACKET:
-        values_menu = MENU_PACKET;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetRate();
         break;
     case STATE_TELEMETRY:
-        values_menu = MENU_TELEMETRY;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetTlm();
         break;
     case STATE_POWERSAVE:
-        values_menu = MENU_POWERSAVE;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetFanMode();
         break;
     case STATE_SMARTFAN:
-        values_menu = MENU_SMARTFAN;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetMotionMode();
         break;
 
     case STATE_POWER_MAX:
-        values_menu = MENU_POWER_MAX;
         values_min = MinPower;
         values_max = MaxPower;
         values_index = config.GetPower();
         break;
     case STATE_POWER_DYNAMIC:
-        values_menu = MENU_POWER_DYNAMIC;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
         break;
 
     case STATE_VTX_BAND:
-        values_menu = MENU_VTX_BAND;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxBand();
         break;
     case STATE_VTX_CHANNEL:
-        values_menu = MENU_VTX_CHANNEL;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxChannel();
         break;
     case STATE_VTX_POWER:
-        values_menu = MENU_VTX_POWER;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPower();
         break;
     case STATE_VTX_PITMODE:
-        values_menu = MENU_VTX_PITMODE;
         values_min = 0;
-        values_max = Display::getValueCount(values_menu)-1;
+        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPitmode();
         break;
     }
@@ -175,7 +162,7 @@ static void setupValueIndex(bool init)
 
 static void displayValueIndex(bool init)
 {
-    Display::displayValue(values_menu, values_index);
+    Display::displayValue((menu_item_t)state_machine.getParentState(), values_index);
 }
 
 static void incrementValueIndex(bool init)
@@ -192,39 +179,39 @@ static void decrementValueIndex(bool init)
 
 static void saveValueIndex(bool init)
 {
-    switch (values_menu)
+    switch (state_machine.getParentState())
     {
-        case MENU_PACKET:
+        case STATE_PACKET:
             config.SetRate(values_index);
             break;
-        case MENU_TELEMETRY:
+        case STATE_TELEMETRY:
             config.SetTlm(values_index);
             break;
-        case MENU_POWERSAVE:
+        case STATE_POWERSAVE:
             config.SetMotionMode(values_index);
             break;
-        case MENU_SMARTFAN:
+        case STATE_SMARTFAN:
             config.SetFanMode(values_index);
             break;
 
-        case MENU_POWER_MAX:
+        case STATE_POWER_MAX:
             config.SetPower(values_index);
             break;
-        case MENU_POWER_DYNAMIC:
+        case STATE_POWER_DYNAMIC:
             config.SetDynamicPower(values_index > 0);
             config.SetBoostChannel((values_index - 1) > 0 ? values_index - 1 : 0);
             break;
 
-        case MENU_VTX_BAND:
+        case STATE_VTX_BAND:
             config.SetVtxBand(values_index);
             break;
-        case MENU_VTX_CHANNEL:
+        case STATE_VTX_CHANNEL:
             config.SetVtxChannel(values_index);
             break;
-        case MENU_VTX_POWER:
+        case STATE_VTX_POWER:
             config.SetVtxPower(values_index);
             break;
-        case MENU_VTX_PITMODE:
+        case STATE_VTX_PITMODE:
             config.SetVtxPitmode(values_index);
             break;
         default:
@@ -321,8 +308,8 @@ fsm_state_event_t const power_events[] = {
     {EVENT_RIGHT, ACTION_PUSH, value_select_fsm}
 };
 fsm_state_entry_t const power_menu_fsm[] = {
-    {STATE_POWER_MAX, [](bool init) { displayMenuScreen(MENU_POWER_MAX); }, 20000, power_events, ARRAY_SIZE(power_events)},
-    {STATE_POWER_DYNAMIC, [](bool init) { displayMenuScreen(MENU_POWER_DYNAMIC); }, 20000, power_events, ARRAY_SIZE(power_events)},
+    {STATE_POWER_MAX, [](bool init) { displayMenuScreen(STATE_POWER_MAX); }, 20000, power_events, ARRAY_SIZE(power_events)},
+    {STATE_POWER_DYNAMIC, [](bool init) { displayMenuScreen(STATE_POWER_DYNAMIC); }, 20000, power_events, ARRAY_SIZE(power_events)},
     {STATE_LAST}
 };
 
@@ -336,10 +323,10 @@ fsm_state_event_t const vtx_admin_events[] = {
     {EVENT_RIGHT, ACTION_PUSH, value_select_fsm}
 };
 fsm_state_entry_t const vtx_menu_fsm[] = {
-    {STATE_VTX_BAND, [](bool init) { displayMenuScreen(MENU_VTX_BAND); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_CHANNEL, [](bool init) { displayMenuScreen(MENU_VTX_CHANNEL); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_POWER, [](bool init) { displayMenuScreen(MENU_VTX_POWER); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_PITMODE, [](bool init) { displayMenuScreen(MENU_VTX_PITMODE); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
+    {STATE_VTX_BAND, [](bool init) { displayMenuScreen(STATE_VTX_BAND); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
+    {STATE_VTX_CHANNEL, [](bool init) { displayMenuScreen(STATE_VTX_CHANNEL); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
+    {STATE_VTX_POWER, [](bool init) { displayMenuScreen(STATE_VTX_POWER); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
+    {STATE_VTX_PITMODE, [](bool init) { displayMenuScreen(STATE_VTX_PITMODE); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
     {STATE_LAST}
 };
 
@@ -422,18 +409,18 @@ fsm_state_event_t const wifi_menu_events[] = {
 };
 
 fsm_state_entry_t const main_menu_fsm[] = {
-    {STATE_PACKET, [](bool init) { displayMenuScreen(MENU_PACKET); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_POWER, [](bool init) { displayMenuScreen(MENU_POWER); }, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
-    {STATE_TELEMETRY, [](bool init) { displayMenuScreen(MENU_TELEMETRY); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_PACKET, [](bool init) { displayMenuScreen(STATE_PACKET); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER, [](bool init) { displayMenuScreen(STATE_POWER); }, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
+    {STATE_TELEMETRY, [](bool init) { displayMenuScreen(STATE_TELEMETRY); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #ifdef HAS_THERMAL
-    {STATE_POWERSAVE, [](bool init) { displayMenuScreen(MENU_POWERSAVE); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWERSAVE, [](bool init) { displayMenuScreen(STATE_POWERSAVE); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
 #ifdef HAS_GSENSOR
-    {STATE_SMARTFAN, [](bool init) { displayMenuScreen(MENU_SMARTFAN); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_SMARTFAN, [](bool init) { displayMenuScreen(STATE_SMARTFAN); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
-    {STATE_VTX, [](bool init) { displayMenuScreen(MENU_VTX); }, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
-    {STATE_BIND, [](bool init) { displayMenuScreen(MENU_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
-    {STATE_WIFI, [](bool init) { displayMenuScreen(MENU_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
+    {STATE_VTX, [](bool init) { displayMenuScreen(STATE_VTX); }, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
+    {STATE_BIND, [](bool init) { displayMenuScreen(STATE_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
+    {STATE_WIFI, [](bool init) { displayMenuScreen(STATE_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
     {STATE_LAST}
 };
 

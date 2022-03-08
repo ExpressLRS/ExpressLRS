@@ -145,8 +145,7 @@ void Display::displaySplashScreen()
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
 
     char buffer[50];
-    sprintf(buffer, "%s  ELRS-", HARDWARE_VERSION);
-    strncat(buffer, version, 6);
+    snprintf(buffer, sizeof(buffer), "%s  ELRS-%.6s", HARDWARE_VERSION, version);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), TFT_WHITE, TFT_BLACK);
@@ -169,9 +168,8 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
 
         // Update the temperature
         char buffer[20];
-        strncpy(buffer, version, 6);
         // \367 = (char)247 = degree symbol
-        sprintf(buffer+6, " %02d\367C", temperature);
+        snprintf(buffer, sizeof(buffer), "%.6s %02d\367C", version, temperature);
         displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
                             String(buffer), TFT_WHITE, elrs_banner_bgColor[message_index]);
@@ -183,12 +181,12 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     if (changed & CHANGED_RATE)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(MENU_PACKET, rate_index), text_color, TFT_WHITE);
+                            getValue(STATE_PACKET, rate_index), text_color, TFT_WHITE);
     }
 
     if (changed & CHANGED_POWER)
     {
-        String power = getValue(MENU_POWER, dynamic ? running_power_index : power_index);
+        String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
         if (dynamic)
         {
             power += " *";
@@ -200,7 +198,7 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     if (changed & CHANGED_TELEMETRY)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(MENU_TELEMETRY, ratio_index), text_color, TFT_WHITE);
+                            getValue(STATE_TELEMETRY, ratio_index), text_color, TFT_WHITE);
     }
 }
 
@@ -211,10 +209,10 @@ void Display::displayMainMenu(menu_item_t menu)
     tft.pushImage(MAIN_PAGE_ICON_START_X, MAIN_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, main_menu_icons[menu]);
 
     displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-        main_menu_line_1[menu], TFT_BLACK, TFT_WHITE);
+        main_menu_strings[menu][0], TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-        main_menu_line_2[menu], TFT_BLACK, TFT_WHITE);
+        main_menu_strings[menu][1], TFT_BLACK, TFT_WHITE);
 }
 
 void Display::displayValue(menu_item_t menu, uint8_t value_index)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "targets.h"
+#include "menu.h"
 
 #define CHANGED_MESSAGE bit(0)
 #define CHANGED_RATE bit(1)
@@ -9,6 +10,8 @@
 #define CHANGED_MOTION bit(4)
 #define CHANGED_FAN bit(5)
 
+typedef enum fsm_state_s menu_item_t;
+
 typedef enum message_index_e {
     MSG_NONE,
     MSG_CONNECTED,
@@ -16,27 +19,6 @@ typedef enum message_index_e {
     MSG_MISMATCH,
     MSG_INVALID
 } message_index_t;
-
-typedef enum menu_item_e {
-    MENU_PACKET,
-    MENU_POWER,
-    MENU_TELEMETRY,
-    MENU_POWERSAVE,
-    MENU_SMARTFAN,
-    MENU_VTX,
-    MENU_BIND,
-    MENU_WIFI,
-
-    MENU_POWER_MAX,
-    MENU_POWER_DYNAMIC,
-
-    MENU_VTX_BAND,
-    MENU_VTX_CHANNEL,
-    MENU_VTX_POWER,
-    MENU_VTX_PITMODE,
-
-    _MENU_COUNT_
-} menu_item_t;
 
 typedef enum
 {
@@ -64,6 +46,5 @@ public:
 
 protected:
     static const char *message_string[];
-    static const char *main_menu_line_1[];
-    static const char *main_menu_line_2[];
+    static const char *main_menu_strings[][2];
 };
