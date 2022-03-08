@@ -136,9 +136,6 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
-uint32_t beginProcessing;
-uint32_t doneProcessing;
-
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
@@ -253,7 +250,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
     hwTimer.updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0);
+                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
+#if defined(RADIO_SX128X)
+                 , uidMacSeedGet(), CRCInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
+#endif
+                 );
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
@@ -783,12 +784,19 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     return false;
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacket()
+void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 {
-    beginProcessing = micros();
-
-    uint8_t type = Radio.RXdataBuffer[0] & 0b11;
-    uint16_t inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
+    if (status != SX12xxDriverCommon::SX12XX_RX_OK)
+    {
+        DBGVLN("HW CRC error");
+        #if defined(DEBUG_RX_SCOREBOARD)
+            lastPacketCrcError = true;
+        #endif
+        return;
+    }
+    uint32_t const beginProcessing = micros();
+    uint16_t const inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
+    uint8_t const type = Radio.RXdataBuffer[0] & 0b11;
 
     // For smHybrid the CRC only has the packet type in byte 0
     // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
@@ -849,7 +857,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
 
-    doneProcessing = micros();
 #if defined(DEBUG_RX_SCOREBOARD)
     if (type != SYNC_PACKET) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
@@ -857,9 +864,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket()
         hwTimer.resume(); // will throw an interrupt immediately
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-    ProcessRFPacket();
+    ProcessRFPacket(status);
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()

@@ -44,9 +44,8 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
-void ICACHE_RAM_ATTR nullCallback(void) {}
 
-SX1280Driver::SX1280Driver()
+SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
 }
@@ -55,8 +54,7 @@ void SX1280Driver::End()
 {
     SetMode(SX1280_MODE_SLEEP);
     hal.end();
-    TXdoneCallback = &nullCallback; // remove callbacks
-    RXdoneCallback = &nullCallback;
+    RemoveCallbacks();
     currFreq = 2400000000;
     PayloadLength = 8; // Dummy default value which is overwritten during setup.
 }
@@ -101,6 +99,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
 
     PayloadLength = _PayloadLength;
     IQinverted = InvertIQ;
+    packet_mode = mode;
     SetMode(SX1280_MODE_STDBY_XOSC);
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode);
     if (mode == SX1280_PACKET_TYPE_FLRC)
@@ -272,8 +271,9 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
                                        uint32_t syncWord,
                                        uint16_t crcSeed)
 {
-    if (PreambleLength < 8) PreambleLength = 8;
-        PreambleLength = ((PreambleLength / 4) - 1) << 4;
+    if (PreambleLength < 8)
+        PreambleLength = 8;
+    PreambleLength = ((PreambleLength / 4) - 1) << 4;
     crc = (crc) ? SX1280_FLRC_CRC_2_BYTE : SX1280_FLRC_CRC_OFF;
 
     uint8_t buf[7];
@@ -404,8 +404,11 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 #endif
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
+void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus)
 {
+    rx_status const fail =
+        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) +
+        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
     {
@@ -414,10 +417,13 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR()
         // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
         currOpmode = SX1280_MODE_FS;
     }
-    uint8_t FIFOaddr = GetRxBufferAddr();
-    hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
-    GetLastPacketStats();
-    RXdoneCallback();
+    if (fail == SX12XX_RX_OK)
+    {
+        uint8_t const FIFOaddr = GetRxBufferAddr();
+        hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
+        GetLastPacketStats();
+    }
+    RXdoneCallback(fail);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::RXnb()
@@ -462,8 +468,14 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
     uint8_t status[2];
-
     hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
+    if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
+        // No SNR in FLRC mode
+        LastPacketRSSI = -(int8_t)(status[1] / 2);
+        LastPacketSNR = 0;
+        return;
+    }
+    // LoRa mode has both RSSI and SNR
     LastPacketRSSI = -(int8_t)(status[0] / 2);
     LastPacketSNR = (int8_t)status[1] / 4;
     // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf
@@ -481,6 +493,6 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
         hal.TXRXdisable();
         instance->TXnbISR();
     }
-    if (irqStatus & SX1280_IRQ_RX_DONE)
-        instance->RXnbISR();
+    else if (irqStatus & (SX1280_IRQ_RX_DONE | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT))
+        instance->RXnbISR(irqStatus);
 }

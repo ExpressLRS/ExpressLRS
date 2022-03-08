@@ -1,3 +1,5 @@
+#include "targets.h"
+
 #if defined(USE_I2C)
 #include <Wire.h>
 #endif
