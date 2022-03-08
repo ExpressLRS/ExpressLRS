@@ -57,7 +57,7 @@ uint8_t getLabelLength(char *text, char separator){
   return c-text;
 }
 
-uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value, char separator)
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value)
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
   char *c = (char *)p1->options;
@@ -66,27 +66,11 @@ uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t val
     //if count is equal to the parameter value, print out the label to the array
     if(count == value){
         uint8_t labelLength = getLabelLength(c,';');
-        uint8_t labelSpace = getLabelLength(outarray,separator);
-        //don't add spacer if separator is null
-        if(separator != '\0'){
-        //write spacer to wipe old label text
-          for(int i = 0; i<(labelSpace - labelLength); i++){
-            *outarray++ = ' ';
-          }
-        }
         //write label to destination array
         for(int i = 0; i<labelLength; i++){
-          //stop writting if we hit separator or a null in the destination array
-          //if separator is null then keep printing upto labelLength
-          if(*outarray != separator && *outarray != '\0'){
             *outarray++ = *(c + i);
-          }
         }
-        if(separator != '\0'){
-          return labelSpace + 1;
-        } else {
-          return labelLength + 1;
-        }
+        return labelLength;
       }
     //increment the count until value is found
     if(*c == (char)';'){
