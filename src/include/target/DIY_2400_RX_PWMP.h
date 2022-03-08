@@ -45,8 +45,13 @@
 // A full set would be { 0, 1, 3, 9, 10, 5, 2 }
 #define GPIO_PIN_PWM_OUTPUTS { 0, PWMP_OUTPUTS_DEBUGLOG 9, 10, PWMP_OUTPUTS_BUSY PWMP_OUTPUTS_RST }
 
+// Vbat = (adc - ANALOG_VBAT_OFFSET) / ANALOG_VBAT_SCALE
+// OFFSET is needed becauae ESPs don't go down to 0 even if their ADC is grounded
+#if !defined(ANALOG_VBAT_OFFSET)
+#define ANALOG_VBAT_OFFSET      12
+#endif
 #if !defined(ANALOG_VBAT_SCALE)
-#define ANALOG_VBAT_SCALE       561
+#define ANALOG_VBAT_SCALE       410
 #endif
 
 #define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm

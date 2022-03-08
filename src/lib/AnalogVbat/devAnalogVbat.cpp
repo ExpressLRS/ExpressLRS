@@ -37,7 +37,10 @@ static void reportVbat()
 
 static int timeout()
 {
-    unsigned int idx = vbatSmooth.add(analogRead(GPIO_ANALOG_VBAT));
+    int adc = analogRead(GPIO_ANALOG_VBAT);
+    adc = (adc > ANALOG_VBAT_OFFSET) ? adc - ANALOG_VBAT_OFFSET : 0;
+
+    unsigned int idx = vbatSmooth.add(adc);
     if (idx == 0 && connectionState == connected)
         reportVbat();
 
