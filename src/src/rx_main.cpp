@@ -244,7 +244,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
     bool invertIQ = UID[5] & 0x01;
 
-  uint32_t interval = ModParams->interval;
+    uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
     interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
@@ -546,10 +546,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
-    #if !defined(Regulatory_Domain_ISM_2400)
+    #if defined(RADIO_SX127X)
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(FreqCorrection);
-    #endif /* !Regulatory_Domain_ISM_2400 */
+    #endif /* RADIO_SX127X */
     }
 
     #if defined(DEBUG_RX_SCOREBOARD)
