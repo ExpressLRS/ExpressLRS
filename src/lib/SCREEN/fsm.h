@@ -30,7 +30,8 @@ typedef struct fsm_state_event_s
     } next;
 } fsm_state_event_t;
 
-#define GOTO(x)    ACTION_GOTO, (const fsm_state_entry_t *)x
+#define GOTO(x)    ACTION_GOTO, {.state = x}
+#define PUSH(x)    ACTION_PUSH, {.fsm = x}
 
 typedef struct fsm_state_entry_s
 {

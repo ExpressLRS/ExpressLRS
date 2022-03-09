@@ -332,8 +332,8 @@ fsm_state_event_t const power_events[] = {
     {EVENT_LEFT, ACTION_POP},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT},
-    {EVENT_ENTER, ACTION_PUSH, value_select_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, value_select_fsm}
+    {EVENT_ENTER, PUSH(value_select_fsm)},
+    {EVENT_RIGHT, PUSH(value_select_fsm)}
 };
 fsm_state_entry_t const power_menu_fsm[] = {
     {STATE_POWER_MAX, [](bool init) { displayMenuScreen(STATE_POWER_MAX); }, 20000, power_events, ARRAY_SIZE(power_events)},
@@ -347,8 +347,8 @@ fsm_state_event_t const vtx_admin_events[] = {
     {EVENT_LEFT, ACTION_POP},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT},
-    {EVENT_ENTER, ACTION_PUSH, value_select_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, value_select_fsm}
+    {EVENT_ENTER, PUSH(value_select_fsm)},
+    {EVENT_RIGHT, PUSH(value_select_fsm)}
 };
 fsm_state_entry_t const vtx_menu_fsm[] = {
     {STATE_VTX_BAND, [](bool init) { displayMenuScreen(STATE_VTX_BAND); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
@@ -417,48 +417,48 @@ fsm_state_entry_t const bind_menu_fsm[] = {
 fsm_state_event_t const value_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, value_select_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, value_select_fsm},
+    {EVENT_ENTER, PUSH(value_select_fsm)},
+    {EVENT_RIGHT, PUSH(value_select_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
 fsm_state_event_t const power_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, power_menu_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, power_menu_fsm},
+    {EVENT_ENTER, PUSH(power_menu_fsm)},
+    {EVENT_RIGHT, PUSH(power_menu_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
 fsm_state_event_t const vtx_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, vtx_menu_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, vtx_menu_fsm},
+    {EVENT_ENTER, PUSH(vtx_menu_fsm)},
+    {EVENT_RIGHT, PUSH(vtx_menu_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
 fsm_state_event_t const ble_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, ble_menu_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, ble_menu_fsm},
+    {EVENT_ENTER, PUSH(ble_menu_fsm)},
+    {EVENT_RIGHT, PUSH(ble_menu_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
 fsm_state_event_t const bind_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, bind_menu_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, bind_menu_fsm},
+    {EVENT_ENTER, PUSH(bind_menu_fsm)},
+    {EVENT_RIGHT, PUSH(bind_menu_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
 fsm_state_event_t const wifi_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, ACTION_PUSH, wifi_menu_fsm},
-    {EVENT_RIGHT, ACTION_PUSH, wifi_menu_fsm},
+    {EVENT_ENTER, PUSH(wifi_menu_fsm)},
+    {EVENT_RIGHT, PUSH(wifi_menu_fsm)},
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
@@ -486,8 +486,8 @@ fsm_state_event_t const splash_events[] = {
 };
 fsm_state_event_t const idle_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)},
-    {EVENT_LONG_ENTER, ACTION_PUSH, main_menu_fsm},
-    {EVENT_LONG_RIGHT, ACTION_PUSH, main_menu_fsm}
+    {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
+    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
     {STATE_SPLASH, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
