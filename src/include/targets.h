@@ -60,6 +60,12 @@
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
 #endif
+/* Temporary #undef to allow more testing without a BUSY pin. */
+#ifdef GPIO_PIN_BUSY
+#undef GPIO_PIN_BUSY
+#define GPIO_PIN_BUSY UNDEF_PIN
+#endif 
+/* ---------------------------------------------------------- */
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
 #endif
