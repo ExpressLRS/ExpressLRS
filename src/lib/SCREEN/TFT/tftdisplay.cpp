@@ -16,6 +16,7 @@ const uint16_t *main_menu_icons[] = {
     elrs_motion,
     elrs_fan,
     elrs_vtx,
+    elrs_joystick,
     elrs_bind,
     elrs_updatefw,
 
@@ -224,6 +225,35 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
 
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
+}
+
+void Display::displayBLEConfirm()
+{
+    tft.fillScreen(TFT_WHITE);
+
+    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_joystick);
+
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "PRESS TO", TFT_BLACK, TFT_WHITE);
+
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "START BLE", TFT_BLACK, TFT_WHITE);
+
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "GAMEPAD", TFT_BLACK, TFT_WHITE);
+}
+
+void Display::displayBLEStatus()
+{
+    tft.fillScreen(TFT_WHITE);
+
+    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_joystick);
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "BLE", TFT_BLACK, TFT_WHITE);
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "GAMEPAD", TFT_BLACK, TFT_WHITE);
+    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                        "RUNNING", TFT_BLACK, TFT_WHITE);
 }
 
 void Display::displayWiFiConfirm()

@@ -219,6 +219,34 @@ static void saveValueIndex(bool init)
     }
 }
 
+// Bluetooth Joystck
+static void displayBLEConfirm(bool init)
+{
+    Display::displayBLEConfirm();
+}
+
+static void startBLE(bool init)
+{
+    connectionState = bleJoystick;
+}
+
+static void exitBLE(bool init)
+{
+#ifdef PLATFORM_ESP32
+    if (connectionState == bleJoystick) {
+        rebootTime = millis() + 200;
+    }
+#endif
+}
+
+static void displayBLEStatus(bool init)
+{
+    if (init)
+    {
+        Display::displayBLEStatus();
+    }
+}
+
 // WiFi
 static void displayWiFiConfirm(bool init)
 {
@@ -330,6 +358,25 @@ fsm_state_entry_t const vtx_menu_fsm[] = {
     {STATE_LAST}
 };
 
+// BLE Joystick FSM
+fsm_state_event_t const ble_confirm_events[] = {
+    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_LEFT, ACTION_POP},
+    {EVENT_ENTER, GOTO(STATE_BLE_EXECUTE)},
+    {EVENT_RIGHT, GOTO(STATE_BLE_EXECUTE)}
+};
+fsm_state_event_t const ble_execute_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_BLE_STATUS)}};
+fsm_state_event_t const ble_status_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BLE_STATUS)}, {EVENT_LEFT, GOTO(STATE_BLE_EXIT)}};
+fsm_state_event_t const ble_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
+
+fsm_state_entry_t const ble_menu_fsm[] = {
+    {STATE_BLE_CONFIRM, displayBLEConfirm, 20000, ble_confirm_events, ARRAY_SIZE(ble_confirm_events)},
+    {STATE_BLE_EXECUTE, startBLE, 0, ble_execute_events, ARRAY_SIZE(ble_execute_events)},
+    {STATE_BLE_STATUS, displayBLEStatus, 1000, ble_status_events, ARRAY_SIZE(ble_status_events)},
+    {STATE_BLE_EXIT, exitBLE, 0, ble_exit_events, ARRAY_SIZE(ble_exit_events)},
+    {STATE_LAST}
+};
+
 // WiFi Update FSM
 fsm_state_event_t const wifi_confirm_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
@@ -391,6 +438,14 @@ fsm_state_event_t const vtx_menu_events[] = {
     {EVENT_UP, ACTION_PREVIOUS},
     {EVENT_DOWN, ACTION_NEXT}
 };
+fsm_state_event_t const ble_menu_events[] = {
+    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_LEFT, ACTION_POP},
+    {EVENT_ENTER, ACTION_PUSH, ble_menu_fsm},
+    {EVENT_RIGHT, ACTION_PUSH, ble_menu_fsm},
+    {EVENT_UP, ACTION_PREVIOUS},
+    {EVENT_DOWN, ACTION_NEXT}
+};
 fsm_state_event_t const bind_menu_events[] = {
     {EVENT_TIMEOUT, ACTION_POP},
     {EVENT_LEFT, ACTION_POP},
@@ -419,6 +474,7 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_SMARTFAN, [](bool init) { displayMenuScreen(STATE_SMARTFAN); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
     {STATE_VTX, [](bool init) { displayMenuScreen(STATE_VTX); }, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
+    {STATE_JOYSTICK, [](bool init) { displayMenuScreen(STATE_JOYSTICK); }, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
     {STATE_BIND, [](bool init) { displayMenuScreen(STATE_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
     {STATE_WIFI, [](bool init) { displayMenuScreen(STATE_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
     {STATE_LAST}

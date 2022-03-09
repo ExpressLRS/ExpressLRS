@@ -18,15 +18,16 @@ void FiniteStateMachine::start(uint32_t now, fsm_state_t state)
 {
     current_fsm = root_fsm;
     current_index = 0;
-    while (current_index != STATE_LAST)
+    current_state_entered = now;
+    while (current_fsm[current_index].state != STATE_LAST)
     {
         if (current_fsm[current_index].state == state)
         {
+            current_fsm[current_index].entry(true);
             break;
         }
+        current_index++;
     }
-    current_fsm[current_index].entry(true);
-    current_state_entered = now;
 }
 
 void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)

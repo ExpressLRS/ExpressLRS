@@ -15,6 +15,7 @@ const char *Display::main_menu_strings[][2] = {
     {"MOTION", "DETECT"},
     {"FAN", "CONTROL"},
     {"VTX", "ADMIN"},
+    {"BLE", "GAMEPAD"},
     {"BIND", "MODE"},
     {"UPDATE", "FW"},
 

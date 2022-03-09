@@ -184,6 +184,50 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
     #endif
 }
 
+void Display::displayBLEConfirm()
+{
+    // TODO: Put wifi image?
+    u8g2.clearBuffer();
+
+    u8g2.setFont(u8g2_font_t0_17_mr);
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.drawStr(0,15, "PRESS TO");
+        u8g2.drawStr(70,15, "START BLUETOOTH");
+        u8g2.drawStr(0,32, "JOYSTICK");
+    #else
+        u8g2.drawStr(0,29, "PRESS TO START");
+        u8g2.drawStr(0,59, "BLE JOYSTICK");
+    #endif
+    u8g2.sendBuffer();
+    #ifdef DEBUG_SCREENSHOT
+    DBGLN("wifi_confirm");
+    u8g2.writeBufferXBM(*LoggingBackpack);
+    #endif
+}
+
+void Display::displayBLEStatus()
+{
+    u8g2.clearBuffer();
+
+    // TODO: Add a fancy joystick symbol like the cool TFT peeps
+
+    u8g2.setFont(u8g2_font_t0_17_mr);
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.drawStr(0,15, "BLUETOOTH");
+        u8g2.drawStr(70,15, "GAMEPAD");
+        u8g2.drawStr(0,32, "RUNNING");
+    #else
+        u8g2.drawStr(0,13, "BLUETOOTH");
+        u8g2.drawStr(0,33, "GAMEPAD");
+        u8g2.drawStr(0,63, "RUNNING");
+    #endif
+    u8g2.sendBuffer();
+    #ifdef DEBUG_SCREENSHOT
+    DBGLN("wifi_status");
+    u8g2.writeBufferXBM(*LoggingBackpack);
+    #endif
+}
+
 void Display::displayWiFiConfirm()
 {
     // TODO: Put wifi image?
@@ -304,6 +348,9 @@ static void helperDrawImage(menu_item_t menu)
         case STATE_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
             break;
+        case STATE_JOYSTICK:
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, joystick_img32);
+            break;
         case STATE_VTX:
         case STATE_VTX_BAND:
         case STATE_VTX_CHANNEL:
@@ -346,6 +393,9 @@ static void helperDrawImage(menu_item_t menu)
             break;
         case STATE_SMARTFAN:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
+            break;
+        case STATE_JOYSTICK:
+            u8g2.drawXBM(x_pos, y_pos, 64, 64, joystick_img64);
             break;
         case STATE_VTX:
         case STATE_VTX_BAND:

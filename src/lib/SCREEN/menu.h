@@ -4,13 +4,14 @@
 // -------------- States --------------
 
 enum fsm_state_s {
-    // This first ones have menu text & icons
-    STATE_PACKET,
+    // This first ones have menu text & icons (and are used as array indexes)
+    STATE_PACKET = 0,
     STATE_POWER,
     STATE_TELEMETRY,
     STATE_POWERSAVE,
     STATE_SMARTFAN,
     STATE_VTX,
+    STATE_JOYSTICK,
     STATE_BIND,
     STATE_WIFI,
 
@@ -26,6 +27,11 @@ enum fsm_state_s {
     // These do not have menu text or icons
     STATE_SPLASH = 100,
     STATE_IDLE,
+
+    STATE_BLE_CONFIRM,
+    STATE_BLE_EXECUTE,
+    STATE_BLE_STATUS,
+    STATE_BLE_EXIT,
 
     STATE_WIFI_CONFIRM,
     STATE_WIFI_EXECUTE,

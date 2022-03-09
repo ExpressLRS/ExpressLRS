@@ -36,6 +36,8 @@ public:
     static void displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index);
     static void displayMainMenu(menu_item_t menu);
     static void displayValue(menu_item_t menu, uint8_t value_index);
+    static void displayBLEConfirm();
+    static void displayBLEStatus();
     static void displayWiFiConfirm();
     static void displayWiFiStatus();
     static void displayBindConfirm();
