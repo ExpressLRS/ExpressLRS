@@ -289,6 +289,19 @@ void Display::displayBindStatus()
     u8g2.sendBuffer();
 }
 
+void Display::displayRunning()
+{
+    // TODO: Put wifi image?
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_t0_17_mr);
+    #ifdef USE_OLED_SPI_SMALL
+        u8g2.drawStr(0,15, "RUNNING");
+    #else
+        u8g2.drawStr(0,29, "RUNNING");
+    #endif
+    u8g2.sendBuffer();
+}
+
 // helpers
 
 #ifdef USE_OLED_SPI_SMALL
@@ -331,6 +344,13 @@ static void helperDrawImage(menu_item_t menu)
             break;
         case STATE_BIND:
             u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
+            break;
+
+        case STATE_WIFI_TX:
+        case STATE_WIFI_RX:
+        case STATE_WIFI_BACKPACK:
+        case STATE_WIFI_VRX:
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
 
         default:
@@ -377,6 +397,13 @@ static void helperDrawImage(menu_item_t menu)
             break;
         case STATE_BIND:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, bind_img64);
+            break;
+
+        case STATE_WIFI_TX:
+        case STATE_WIFI_RX:
+        case STATE_WIFI_BACKPACK:
+        case STATE_WIFI_VRX:
+            u8g2.drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
             break;
 
         default:

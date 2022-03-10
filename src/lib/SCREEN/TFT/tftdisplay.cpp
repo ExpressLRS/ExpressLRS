@@ -28,6 +28,11 @@ const uint16_t *main_menu_icons[] = {
     elrs_vtx,
     elrs_vtx,
     elrs_vtx,
+
+    elrs_wifimode,
+    elrs_wifimode,
+    elrs_wifimode,
+    elrs_wifimode
 };
 
 // Hex color code to 16-bit rgb:
@@ -331,6 +336,14 @@ void Display::displayBindStatus()
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         "BINDING", TFT_BLACK, TFT_WHITE);
+}
+
+void Display::displayRunning()
+{
+    tft.fillScreen(TFT_WHITE);
+
+    displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
+                        "RUNNING", TFT_BLACK, TFT_WHITE);
 }
 
 #endif

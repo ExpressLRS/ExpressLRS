@@ -17,7 +17,7 @@ const char *Display::main_menu_strings[][2] = {
     {"VTX", "ADMIN"},
     {"BLE", "GAMEPAD"},
     {"BIND", "MODE"},
-    {"UPDATE", "FW"},
+    {"WIFI", "ADMIN"},
 
     {"MAX", "POWER"},
     {"DYNAMIC", "POWER"},
@@ -25,7 +25,12 @@ const char *Display::main_menu_strings[][2] = {
     {"VTX", "BAND"},
     {"VTX", "CHANNEL"},
     {"VTX", "POWER"},
-    {"VTX", "PITMODE"}
+    {"VTX", "PITMODE"},
+
+    {"TX", "WIFI"},
+    {"RX", "WIFI"},
+    {"BACKPAC", "WIFI"},
+    {"VRX", "WIFI"},
 };
 
 #if defined(RADIO_SX128X)

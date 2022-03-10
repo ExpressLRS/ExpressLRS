@@ -23,6 +23,11 @@ enum fsm_state_s {
     STATE_VTX_POWER,
     STATE_VTX_PITMODE,
 
+    STATE_WIFI_TX,
+    STATE_WIFI_RX,
+    STATE_WIFI_BACKPACK,
+    STATE_WIFI_VRX,
+
 
     // These do not have menu text or icons
     STATE_SPLASH = 100,
@@ -30,17 +35,14 @@ enum fsm_state_s {
 
     STATE_BLE_CONFIRM,
     STATE_BLE_EXECUTE,
-    STATE_BLE_STATUS,
     STATE_BLE_EXIT,
 
     STATE_WIFI_CONFIRM,
     STATE_WIFI_EXECUTE,
-    STATE_WIFI_STATUS,
     STATE_WIFI_EXIT,
 
     STATE_BIND_CONFIRM,
     STATE_BIND_EXECUTE,
-    STATE_BIND_STATUS,
 
     STATE_VALUE_INIT,
     STATE_VALUE_SELECT,

@@ -39,10 +39,11 @@ public:
     static void displayValue(menu_item_t menu, uint8_t value_index);
     static void displayBLEConfirm();
     static void displayBLEStatus();
-    static void displayWiFiConfirm();
-    static void displayWiFiStatus();
     static void displayBindConfirm();
     static void displayBindStatus();
+    static void displayWiFiConfirm();
+    static void displayWiFiStatus();
+    static void displayRunning();
 
     static int getValueCount(menu_item_t menu);
     static const char *getValue(menu_item_t menu, uint8_t value_index);

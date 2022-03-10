@@ -17,6 +17,10 @@ extern FiniteStateMachine state_machine;
 extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
 extern bool InBindingMode;
+extern bool RxWiFiReadyToSend;
+extern bool TxBackpackWiFiReadyToSend;
+extern bool VRxBackpackWiFiReadyToSend;
+
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
 #endif
@@ -91,9 +95,9 @@ static void displayIdleScreen(bool init)
     }
 }
 
-static void displayMenuScreen(menu_item_t menuItem)
+static void displayMenuScreen(bool init)
 {
-    Display::displayMainMenu(menuItem);
+    Display::displayMainMenu((menu_item_t)state_machine.getCurrentState());
 }
 
 // Value menu
@@ -225,10 +229,15 @@ static void displayBLEConfirm(bool init)
     Display::displayBLEConfirm();
 }
 
-static void startBLE(bool init)
+static void executeBLE(bool init)
 {
-    connectionState = bleJoystick;
+    if (init)
+    {
+        connectionState = bleJoystick;
+        Display::displayBLEStatus();
+    }
 }
+
 
 static void exitBLE(bool init)
 {
@@ -239,23 +248,10 @@ static void exitBLE(bool init)
 #endif
 }
 
-static void displayBLEStatus(bool init)
-{
-    if (init)
-    {
-        Display::displayBLEStatus();
-    }
-}
-
 // WiFi
 static void displayWiFiConfirm(bool init)
 {
     Display::displayWiFiConfirm();
-}
-
-static void startWiFi(bool init)
-{
-    connectionState = wifiUpdate;
 }
 
 static void exitWiFi(bool init)
@@ -267,11 +263,56 @@ static void exitWiFi(bool init)
 #endif
 }
 
-static void displayWiFiStatus(bool init)
+static void executeWiFi(bool init)
 {
+    bool running;
     if (init)
     {
-        Display::displayWiFiStatus();
+        switch (state_machine.getParentState())
+        {
+            case STATE_WIFI_TX:
+                connectionState = wifiUpdate;
+                break;
+            case STATE_WIFI_RX:
+                RxWiFiReadyToSend = true;
+                break;
+            case STATE_WIFI_BACKPACK:
+                TxBackpackWiFiReadyToSend = true;
+                break;
+            case STATE_WIFI_VRX:
+                VRxBackpackWiFiReadyToSend = true;
+                break;
+        }
+        if (state_machine.getParentState() == STATE_WIFI_TX)
+        {
+            Display::displayWiFiStatus();
+        }
+        else
+        {
+            Display::displayRunning();
+        }
+        return;
+    }
+    switch (state_machine.getParentState())
+    {
+        case STATE_WIFI_TX:
+            running = connectionState == wifiUpdate;
+            break;
+        case STATE_WIFI_RX:
+            running = RxWiFiReadyToSend;
+            break;
+        case STATE_WIFI_BACKPACK:
+            running = TxBackpackWiFiReadyToSend;
+            break;
+        case STATE_WIFI_VRX:
+            running = VRxBackpackWiFiReadyToSend;
+            break;
+        default:
+            running = false;
+    }
+    if (!running)
+    {
+        state_machine.popState();
     }
 }
 
@@ -281,27 +322,31 @@ static void displayBindConfirm(bool init)
     Display::displayBindConfirm();
 }
 
-static void startBind(bool init)
+static void executeBind(bool init)
 {
-    EnterBindingMode();
-}
-
-static void displayBindStatus(bool init)
-{
+    if (init)
+    {
+        EnterBindingMode();
+        Display::displayBindStatus();
+        return;
+    }
     if (!InBindingMode)
     {
         state_machine.popState();
     }
-    else
-    {
-        if (init)
-        {
-            Display::displayBindStatus();
-        }
-    }
 }
 
+
 //-------------------------------------------------------------------
+
+#define MENU_EVENTS(fsm) \
+    {EVENT_TIMEOUT, ACTION_POP}, \
+    {EVENT_LEFT, ACTION_POP}, \
+    {EVENT_ENTER, PUSH(fsm)}, \
+    {EVENT_RIGHT, PUSH(fsm)}, \
+    {EVENT_UP, ACTION_PREVIOUS}, \
+    {EVENT_DOWN, ACTION_NEXT}
+
 
 // Value submenu FSM
 fsm_state_event_t const value_init_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_VALUE_SELECT)}};
@@ -326,35 +371,21 @@ fsm_state_entry_t const value_select_fsm[] = {
     {STATE_LAST}
 };
 
+fsm_state_event_t const value_menu_events[] = {MENU_EVENTS(value_select_fsm)};
+
 // Power FSM
-fsm_state_event_t const power_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT},
-    {EVENT_ENTER, PUSH(value_select_fsm)},
-    {EVENT_RIGHT, PUSH(value_select_fsm)}
-};
 fsm_state_entry_t const power_menu_fsm[] = {
-    {STATE_POWER_MAX, [](bool init) { displayMenuScreen(STATE_POWER_MAX); }, 20000, power_events, ARRAY_SIZE(power_events)},
-    {STATE_POWER_DYNAMIC, [](bool init) { displayMenuScreen(STATE_POWER_DYNAMIC); }, 20000, power_events, ARRAY_SIZE(power_events)},
+    {STATE_POWER_MAX, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER_DYNAMIC, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_LAST}
 };
 
 // VTX Admin FSM
-fsm_state_event_t const vtx_admin_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT},
-    {EVENT_ENTER, PUSH(value_select_fsm)},
-    {EVENT_RIGHT, PUSH(value_select_fsm)}
-};
 fsm_state_entry_t const vtx_menu_fsm[] = {
-    {STATE_VTX_BAND, [](bool init) { displayMenuScreen(STATE_VTX_BAND); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_CHANNEL, [](bool init) { displayMenuScreen(STATE_VTX_CHANNEL); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_POWER, [](bool init) { displayMenuScreen(STATE_VTX_POWER); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
-    {STATE_VTX_PITMODE, [](bool init) { displayMenuScreen(STATE_VTX_PITMODE); }, 20000, vtx_admin_events, ARRAY_SIZE(vtx_admin_events)},
+    {STATE_VTX_BAND, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_CHANNEL, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_POWER, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_PITMODE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_LAST}
 };
 
@@ -365,14 +396,12 @@ fsm_state_event_t const ble_confirm_events[] = {
     {EVENT_ENTER, GOTO(STATE_BLE_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_BLE_EXECUTE)}
 };
-fsm_state_event_t const ble_execute_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_BLE_STATUS)}};
-fsm_state_event_t const ble_status_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BLE_STATUS)}, {EVENT_LEFT, GOTO(STATE_BLE_EXIT)}};
+fsm_state_event_t const ble_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BLE_EXECUTE)}, {EVENT_LEFT, GOTO(STATE_BLE_EXIT)}};
 fsm_state_event_t const ble_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
 fsm_state_entry_t const ble_menu_fsm[] = {
     {STATE_BLE_CONFIRM, displayBLEConfirm, 20000, ble_confirm_events, ARRAY_SIZE(ble_confirm_events)},
-    {STATE_BLE_EXECUTE, startBLE, 0, ble_execute_events, ARRAY_SIZE(ble_execute_events)},
-    {STATE_BLE_STATUS, displayBLEStatus, 1000, ble_status_events, ARRAY_SIZE(ble_status_events)},
+    {STATE_BLE_EXECUTE, executeBLE, 1000, ble_execute_events, ARRAY_SIZE(ble_execute_events)},
     {STATE_BLE_EXIT, exitBLE, 0, ble_exit_events, ARRAY_SIZE(ble_exit_events)},
     {STATE_LAST}
 };
@@ -384,15 +413,31 @@ fsm_state_event_t const wifi_confirm_events[] = {
     {EVENT_ENTER, GOTO(STATE_WIFI_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_WIFI_EXECUTE)}
 };
-fsm_state_event_t const wifi_execute_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_WIFI_STATUS)}};
-fsm_state_event_t const wifi_status_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_STATUS)}, {EVENT_LEFT, GOTO(STATE_WIFI_EXIT)}};
+fsm_state_event_t const wifi_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}, {EVENT_LEFT, GOTO(STATE_WIFI_EXIT)}};
 fsm_state_event_t const wifi_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
-fsm_state_entry_t const wifi_menu_fsm[] = {
+fsm_state_entry_t const wifi_update_menu_fsm[] = {
     {STATE_WIFI_CONFIRM, displayWiFiConfirm, 20000, wifi_confirm_events, ARRAY_SIZE(wifi_confirm_events)},
-    {STATE_WIFI_EXECUTE, startWiFi, 0, wifi_execute_events, ARRAY_SIZE(wifi_execute_events)},
-    {STATE_WIFI_STATUS, displayWiFiStatus, 1000, wifi_status_events, ARRAY_SIZE(wifi_status_events)},
+    {STATE_WIFI_EXECUTE, executeWiFi, 1000, wifi_execute_events, ARRAY_SIZE(wifi_execute_events)},
     {STATE_WIFI_EXIT, exitWiFi, 0, wifi_exit_events, ARRAY_SIZE(wifi_exit_events)},
+    {STATE_LAST}
+};
+fsm_state_event_t const wifi_menu_update_events[] = {MENU_EVENTS(wifi_update_menu_fsm)};
+fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}};
+fsm_state_entry_t const wifi_ext_menu_fsm[] = {
+    {STATE_WIFI_EXECUTE, executeWiFi, 1000, wifi_ext_execute_events, ARRAY_SIZE(wifi_ext_execute_events)},
+    {STATE_LAST}
+};
+fsm_state_event_t const wifi_ext_menu_events[] = {MENU_EVENTS(wifi_ext_menu_fsm)};
+fsm_state_entry_t const wifi_menu_fsm[] = {
+#if defined(PLATFORM_ESP32)
+    {STATE_WIFI_TX, displayMenuScreen, 20000, wifi_menu_update_events, ARRAY_SIZE(wifi_menu_update_events)},
+#endif
+    {STATE_WIFI_RX, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+#if defined(USE_TX_BACKPACK)
+    {STATE_WIFI_BACKPACK, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+    {STATE_WIFI_VRX, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+#endif
     {STATE_LAST}
 };
 
@@ -403,80 +448,35 @@ fsm_state_event_t const bind_confirm_events[] = {
     {EVENT_ENTER, GOTO(STATE_BIND_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_BIND_EXECUTE)}
 };
-fsm_state_event_t const bind_execute_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_BIND_STATUS)}};
-fsm_state_event_t const bind_status_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BIND_STATUS)}};
+fsm_state_event_t const bind_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BIND_EXECUTE)}};
 
 fsm_state_entry_t const bind_menu_fsm[] = {
     {STATE_BIND_CONFIRM, displayBindConfirm, 20000, bind_confirm_events, ARRAY_SIZE(bind_confirm_events)},
-    {STATE_BIND_EXECUTE, startBind, 0, bind_execute_events, ARRAY_SIZE(bind_execute_events)},
-    {STATE_BIND_STATUS, displayBindStatus, 1000, bind_status_events, ARRAY_SIZE(bind_status_events)},
+    {STATE_BIND_EXECUTE, executeBind, 1000, bind_execute_events, ARRAY_SIZE(bind_execute_events)},
     {STATE_LAST}
 };
 
 // Main menu FSM
-fsm_state_event_t const value_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(value_select_fsm)},
-    {EVENT_RIGHT, PUSH(value_select_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
-fsm_state_event_t const power_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(power_menu_fsm)},
-    {EVENT_RIGHT, PUSH(power_menu_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
-fsm_state_event_t const vtx_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(vtx_menu_fsm)},
-    {EVENT_RIGHT, PUSH(vtx_menu_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
-fsm_state_event_t const ble_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(ble_menu_fsm)},
-    {EVENT_RIGHT, PUSH(ble_menu_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
-fsm_state_event_t const bind_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(bind_menu_fsm)},
-    {EVENT_RIGHT, PUSH(bind_menu_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
-fsm_state_event_t const wifi_menu_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
-    {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, PUSH(wifi_menu_fsm)},
-    {EVENT_RIGHT, PUSH(wifi_menu_fsm)},
-    {EVENT_UP, ACTION_PREVIOUS},
-    {EVENT_DOWN, ACTION_NEXT}
-};
+fsm_state_event_t const power_menu_events[] = {MENU_EVENTS(power_menu_fsm)};
+fsm_state_event_t const vtx_menu_events[] = {MENU_EVENTS(vtx_menu_fsm)};
+fsm_state_event_t const ble_menu_events[] = {MENU_EVENTS(ble_menu_fsm)};
+fsm_state_event_t const bind_menu_events[] = {MENU_EVENTS(bind_menu_fsm)};
+fsm_state_event_t const wifi_menu_events[] = {MENU_EVENTS(wifi_menu_fsm)};
 
 fsm_state_entry_t const main_menu_fsm[] = {
-    {STATE_PACKET, [](bool init) { displayMenuScreen(STATE_PACKET); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_POWER, [](bool init) { displayMenuScreen(STATE_POWER); }, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
-    {STATE_TELEMETRY, [](bool init) { displayMenuScreen(STATE_TELEMETRY); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_PACKET, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
+    {STATE_TELEMETRY, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #ifdef HAS_THERMAL
-    {STATE_POWERSAVE, [](bool init) { displayMenuScreen(STATE_POWERSAVE); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWERSAVE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
 #ifdef HAS_GSENSOR
-    {STATE_SMARTFAN, [](bool init) { displayMenuScreen(STATE_SMARTFAN); }, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_SMARTFAN, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
-    {STATE_VTX, [](bool init) { displayMenuScreen(STATE_VTX); }, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
-    {STATE_JOYSTICK, [](bool init) { displayMenuScreen(STATE_JOYSTICK); }, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
-    {STATE_BIND, [](bool init) { displayMenuScreen(STATE_BIND); }, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
-    {STATE_WIFI, [](bool init) { displayMenuScreen(STATE_WIFI); }, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
+    {STATE_VTX, displayMenuScreen, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
+    {STATE_JOYSTICK, displayMenuScreen, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
+    {STATE_BIND, displayMenuScreen, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
+    {STATE_WIFI, displayMenuScreen, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
     {STATE_LAST}
 };
 
