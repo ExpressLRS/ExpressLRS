@@ -31,6 +31,7 @@ class Display
 public:
     void init();
     void doScreenBackLight(screen_backlight_t state);
+    void printScreenshot();
 
     static void displaySplashScreen();
     static void displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index);

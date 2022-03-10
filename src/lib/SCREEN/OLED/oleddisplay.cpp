@@ -91,6 +91,11 @@ void Display::doScreenBackLight(screen_backlight_t state)
     #endif
 }
 
+void Display::printScreenshot()
+{
+    u8g2.writeBufferXBM(*LoggingBackpack);
+}
+
 void Display::displaySplashScreen()
 {
     u8g2.clearBuffer();
@@ -104,10 +109,6 @@ void Display::displaySplashScreen()
 #endif
 #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("splash_screen");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
@@ -137,10 +138,6 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     u8g2.drawStr(38, 27, version);
 #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("idle_screen");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayMainMenu(menu_item_t menu)
@@ -156,32 +153,27 @@ void Display::displayMainMenu(menu_item_t menu)
     #endif
     helperDrawImage(menu);
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("main_menu_%d", menu);
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayValue(menu_item_t menu, uint8_t value_index)
 {
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_t0_16_mr);
+    u8g2.setFont(u8g2_font_9x15_t_symbols);
+    String val = String(getValue(menu, value_index));
+    val.replace("!+", "\u2191");
+    val.replace("!-", "\u2193");
     #ifdef USE_OLED_SPI_SMALL
-        u8g2.drawStr(0,15, getValue(menu, value_index));
+        u8g2.drawStr(0,15, val.c_str());
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,60, "PRESS TO CONFIRM");
     #else
-        u8g2.drawStr(0,20, getValue(menu, value_index));
+        u8g2.drawUTF8(0,20, val.c_str());
         u8g2.setFont(u8g2_font_profont10_mr);
         u8g2.drawStr(0,44, "PRESS TO");
         u8g2.drawStr(0,56, "CONFIRM");
     #endif
     helperDrawImage(menu);
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("menu_value_%d_%d", menu, value_index);
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayBLEConfirm()
@@ -199,10 +191,6 @@ void Display::displayBLEConfirm()
         u8g2.drawStr(0,59, "BLE JOYSTICK");
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("wifi_confirm");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayBLEStatus()
@@ -222,10 +210,6 @@ void Display::displayBLEStatus()
         u8g2.drawStr(0,63, "RUNNING");
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("wifi_status");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayWiFiConfirm()
@@ -243,10 +227,6 @@ void Display::displayWiFiConfirm()
         u8g2.drawStr(0,59, "WIFI UPDATE");
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("wifi_confirm");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayWiFiStatus()
@@ -278,10 +258,6 @@ void Display::displayWiFiStatus()
         #endif
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("wifi_status");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayBindConfirm()
@@ -298,10 +274,6 @@ void Display::displayBindConfirm()
         u8g2.drawStr(0,59, "BIND REQUEST");
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("bind_confirm");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 void Display::displayBindStatus()
@@ -315,10 +287,6 @@ void Display::displayBindStatus()
         u8g2.drawStr(0,29, "BINDING");
     #endif
     u8g2.sendBuffer();
-    #ifdef DEBUG_SCREENSHOT
-    DBGLN("bind_status");
-    u8g2.writeBufferXBM(*LoggingBackpack);
-    #endif
 }
 
 // helpers

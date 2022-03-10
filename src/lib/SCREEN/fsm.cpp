@@ -8,6 +8,11 @@ FiniteStateMachine::FiniteStateMachine(fsm_state_entry_t const *fsm) : root_fsm(
     force_pop = false;
 }
 
+fsm_state_t FiniteStateMachine::getCurrentState()
+{
+    return current_fsm[current_index].state;
+}
+
 fsm_state_t FiniteStateMachine::getParentState()
 {
     const fsm_pos_t pos = fsm_stack.top();

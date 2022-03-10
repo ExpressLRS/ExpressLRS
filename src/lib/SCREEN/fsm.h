@@ -48,6 +48,7 @@ public:
     explicit FiniteStateMachine(fsm_state_entry_t const *fsm);
     void start(uint32_t now, fsm_state_t state);
     void handleEvent(uint32_t now, fsm_event_t event);
+    fsm_state_t getCurrentState();
     fsm_state_t getParentState();
     void popState() { force_pop = true; }
 

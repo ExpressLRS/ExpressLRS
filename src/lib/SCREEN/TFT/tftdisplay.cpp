@@ -6,6 +6,7 @@
 
 #include "logos.h"
 #include "options.h"
+#include "logging.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -122,6 +123,11 @@ void Display::doScreenBackLight(screen_backlight_t state)
     #endif
 }
 
+void Display::printScreenshot()
+{
+    DBGLN("Unimplemented");
+}
+
 static void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
                                             int font_size, int font_type, String font_string,
                                             uint16_t fgColor, uint16_t bgColor)
@@ -220,8 +226,12 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
 {
     tft.fillScreen(TFT_WHITE);
 
+    String val = String(getValue(menu, value_index));
+    val.replace("!+", "(high)");
+    val.replace("!-", "(low)");
+
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        getValue(menu, value_index), TFT_BLACK, TFT_WHITE);
+                        val.c_str(), TFT_BLACK, TFT_WHITE);
 
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);

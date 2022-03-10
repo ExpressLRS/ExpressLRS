@@ -85,6 +85,13 @@ static int handle(void)
         {
             fsm_event = (fsm_event | LONG_PRESSED);
         }
+#if defined(DEBUG_SCREENSHOT)
+        if (key == INPUT_KEY_DOWN_PRESS && isLongPressed)
+        {
+            DBGLN("state_%d", state_machine.getCurrentState());
+            screen.printScreenshot();
+        }
+#endif
         state_machine.handleEvent(now, fsm_event);
     }
     else

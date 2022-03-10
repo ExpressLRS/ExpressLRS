@@ -123,16 +123,16 @@ static const char *vtx_power_string[] = {
 
 static const char *pitmode_string[] = {
     "OFF", "ON",
-    "+AUX1", "-AXU1",
-    "+AUX2", "-AXU2",
-    "+AUX3", "-AXU3",
-    "+AUX4", "-AXU4",
-    "+AUX5", "-AXU5",
-    "+AUX6", "-AXU6",
-    "+AUX7", "-AXU7",
-    "+AUX8", "-AXU8",
-    "+AUX9", "-AXU9",
-    "+AUX10", "-AXU10"
+    "AUX1 !+", "AUX1 !-",
+    "AUX2 !+", "AUX2 !-",
+    "AUX3 !+", "AUX3 !-",
+    "AUX4 !+", "AUX4 !-",
+    "AUX5 !+", "AUX5 !-",
+    "AUX6 !+", "AUX6 !-",
+    "AUX7 !+", "AUX7 !-",
+    "AUX8 !+", "AUX8 !-",
+    "AUX9 !+", "AUX9 !-",
+    "AUX10 !+", "AUX10 !-"
 };
 
 int Display::getValueCount(menu_item_t menu)
