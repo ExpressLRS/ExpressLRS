@@ -19,20 +19,20 @@ const uint16_t *main_menu_icons[] = {
     elrs_vtx,
     elrs_joystick,
     elrs_bind,
+    elrs_wifimode,
+
+    elrs_power,
+    elrs_power,
+
+    elrs_vtx,
+    elrs_vtx,
+    elrs_vtx,
+    elrs_vtx,
+
     elrs_updatefw,
-
-    elrs_power,
-    elrs_power,
-
-    elrs_vtx,
-    elrs_vtx,
-    elrs_vtx,
-    elrs_vtx,
-
-    elrs_wifimode,
-    elrs_wifimode,
-    elrs_wifimode,
-    elrs_wifimode
+    elrs_rxwifi,
+    elrs_backpack,
+    elrs_vrxwifi
 };
 
 // Hex color code to 16-bit rgb:

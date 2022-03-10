@@ -330,7 +330,7 @@ static void helperDrawImage(menu_item_t menu)
             u8g2.drawXBM(x_pos, y_pos, 32, 32, fan_img32);
             break;
         case STATE_JOYSTICK:
-            u8g2.drawXBM(x_pos, y_pos, 32, 32, joystick_img32);
+            u8g2.drawXBM(x_pos, y_pos-5, 32, 32, joystick_img32);
             break;
         case STATE_VTX:
         case STATE_VTX_BAND:
@@ -340,17 +340,23 @@ static void helperDrawImage(menu_item_t menu)
             u8g2.drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
             break;
         case STATE_WIFI:
-            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
+            u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
             break;
         case STATE_BIND:
-            u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
+            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
             break;
 
         case STATE_WIFI_TX:
+            u8g2.drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
+            break;
         case STATE_WIFI_RX:
+            u8g2.drawXBM(x_pos, y_pos-5, 32, 32, rxwifi_img32);
+            break;
         case STATE_WIFI_BACKPACK:
+            u8g2.drawXBM(x_pos, y_pos-5, 32, 32, backpack_img32);
+            break;
         case STATE_WIFI_VRX:
-            u8g2.drawXBM(x_pos, y_pos, 32, 32, bind_img32);
+            u8g2.drawXBM(x_pos, y_pos-5, 32, 32, vrxwifi_img32);
             break;
 
         default:
@@ -383,7 +389,7 @@ static void helperDrawImage(menu_item_t menu)
             u8g2.drawXBM(x_pos, y_pos, 64, 64, fan_img64);
             break;
         case STATE_JOYSTICK:
-            u8g2.drawXBM(x_pos, y_pos, 64, 64, joystick_img64);
+            u8g2.drawXBM(x_pos, y_pos, 64, 64-5, joystick_img64);
             break;
         case STATE_VTX:
         case STATE_VTX_BAND:
@@ -400,10 +406,16 @@ static void helperDrawImage(menu_item_t menu)
             break;
 
         case STATE_WIFI_TX:
-        case STATE_WIFI_RX:
-        case STATE_WIFI_BACKPACK:
-        case STATE_WIFI_VRX:
             u8g2.drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
+            break;
+        case STATE_WIFI_RX:
+            u8g2.drawXBM(x_pos, y_pos-5, 64, 64, rxwifi_img64);
+            break;
+        case STATE_WIFI_BACKPACK:
+            u8g2.drawXBM(x_pos, y_pos-5, 64, 64, backpack_img64);
+            break;
+        case STATE_WIFI_VRX:
+            u8g2.drawXBM(x_pos, y_pos-5, 64, 64, vrxwifi_img64);
             break;
 
         default:

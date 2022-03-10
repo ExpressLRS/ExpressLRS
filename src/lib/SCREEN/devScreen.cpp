@@ -5,7 +5,6 @@
 #include "logging.h"
 
 #include "display.h"
-Display screen;
 
 FiniteStateMachine state_machine(entry_fsm);
 
@@ -41,11 +40,11 @@ static int handle(void)
 
     if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
     {
-        screen.doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+        Display::doScreenBackLight(SCREEN_BACKLIGHT_OFF);
     }
     else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
     {
-        screen.doScreenBackLight(SCREEN_BACKLIGHT_ON);
+        Display::doScreenBackLight(SCREEN_BACKLIGHT_ON);
     }
     is_pre_screen_flipped = is_screen_flipped;
     if (is_screen_flipped)
@@ -89,7 +88,7 @@ static int handle(void)
         if (key == INPUT_KEY_DOWN_PRESS && isLongPressed)
         {
             DBGLN("state_%d", state_machine.getCurrentState());
-            screen.printScreenshot();
+            Display::printScreenshot();
         }
 #endif
         state_machine.handleEvent(now, fsm_event);
@@ -112,7 +111,7 @@ static void initialize()
 #ifdef HAS_FIVE_WAY_BUTTON
     fivewaybutton.init();
 #endif
-    screen.init();
+    Display::init();
     state_machine.start(millis(), getInitialState());
 }
 
