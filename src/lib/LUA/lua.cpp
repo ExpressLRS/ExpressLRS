@@ -61,17 +61,25 @@ uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t val
 {
   const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
   char *c = (char *)p1->options;
+  char *u = (char *)p1->units;
   uint8_t count = 0;
   while (*c != '\0'){
     //if count is equal to the parameter value, print out the label to the array
     if(count == value){
-        uint8_t labelLength = getLabelLength(c,';');
-        //write label to destination array
-        for(int i = 0; i<labelLength; i++){
-            *outarray++ = *(c + i);
-        }
-        return labelLength;
+      uint8_t labelLength = getLabelLength(c,';');
+      uint8_t unitLength = 0;
+      //write label to destination array
+      for(int i = 0; i<labelLength; i++){
+          *outarray++ = *(c + i);
       }
+      if(*u != ' '){
+        unitLength = getLabelLength(u,'\0');
+        for(int i = 0; i<unitLength; i++){
+          *outarray++ = *(u + i);
+        }
+      }
+      return labelLength + unitLength;
+    }
     //increment the count until value is found
     if(*c == (char)';'){
       count++;

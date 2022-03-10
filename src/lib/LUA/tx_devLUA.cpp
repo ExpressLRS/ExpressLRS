@@ -14,9 +14,9 @@
 
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
-char vtxFolderDynamicName[] = "VTX Admin: OFF:C:1 Aux11 ";
-char pwrFolderDynamicName[] = "TX Power : 1000:Dynamic";
-static const char folderNameSeparator = ':';
+char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
+char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
+static const char folderNameSeparator[2] = {' ',':'};
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -53,7 +53,7 @@ static struct luaItem_selection luaPower = {
 static struct luaItem_selection luaDynamicPower = {
     {"Dynamic", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;Dynamic;AUX9;AUX10;AUX11;AUX12",
+    "Off;Dyn;AUX9;AUX10;AUX11;AUX12",
     emptySpace
 };
 
@@ -371,17 +371,30 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 
 static void updateFolderName(){
   
+  //power folder name
+  uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
+  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2,pwrFolderDynamicName); //4 = 3 spaces, 1 colon
+  pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
+  pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
+  if(txPwrDyn){
+    pwrFolderDynamicName[pwrFolderLabelOffset++] = folderNameSeparator[0];
+    pwrFolderLabelOffset += findLuaSelectionLabel(&luaDynamicPower, &pwrFolderDynamicName[pwrFolderLabelOffset], txPwrDyn);
+  }
+  pwrFolderDynamicName[pwrFolderLabelOffset++] = ')';
+  pwrFolderDynamicName[pwrFolderLabelOffset] = '\0';
+  //vtx folder
   uint8_t vtxBand = config.GetVtxBand();
   if(vtxBand){
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = getSeparatorIndex(3,vtxFolderDynamicName); // 3= 2 spaces, 1 colon
+    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // 3= 2 spaces, 1 colon
+    vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator;
+    vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxChannel, &vtxFolderDynamicName[vtxFolderLabelOffset], config.GetVtxChannel());
     uint8_t vtxPwr = config.GetVtxPower();
     //if power is no-change (-), don't show, also hide pitmode
     if(vtxPwr){
-      vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator;
+      vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
       vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPwr, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPwr);
       
       uint8_t vtxPit = config.GetVtxPitmode();
@@ -389,28 +402,20 @@ static void updateFolderName(){
       //show pitmode AuxSwitch or show P if not OFF
       if(vtxPit != 0){
         if(vtxPit != 1){
-        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator;
+        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
         vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
         } else {
-        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator;
+        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
         vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
         }
       }
     }
+    vtxFolderDynamicName[vtxFolderLabelOffset++] = ')';
     vtxFolderDynamicName[vtxFolderLabelOffset] = '\0';
   } else {
   //don't show vtx settings if band is OFF
     luaVtxFolder.dyn_name = NULL;
   }
-  //power folder name
-  uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(4,pwrFolderDynamicName); //4 = 3 spaces, 1 colon
-  pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
-  if(txPwrDyn){
-    pwrFolderDynamicName[pwrFolderLabelOffset++] = folderNameSeparator;
-    pwrFolderLabelOffset += findLuaSelectionLabel(&luaDynamicPower, &pwrFolderDynamicName[pwrFolderLabelOffset], txPwrDyn);
-  }
-  pwrFolderDynamicName[pwrFolderLabelOffset] = '\0';
 }
 
 static void registerLuaParameters()
