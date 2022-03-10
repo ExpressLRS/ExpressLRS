@@ -340,7 +340,7 @@ static void executeBind(bool init)
 //-------------------------------------------------------------------
 
 #define MENU_EVENTS(fsm) \
-    {EVENT_TIMEOUT, ACTION_POP}, \
+    {EVENT_TIMEOUT, ACTION_POPALL}, \
     {EVENT_LEFT, ACTION_POP}, \
     {EVENT_ENTER, PUSH(fsm)}, \
     {EVENT_RIGHT, PUSH(fsm)}, \
@@ -351,7 +351,7 @@ static void executeBind(bool init)
 // Value submenu FSM
 fsm_state_event_t const value_init_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_VALUE_SELECT)}};
 fsm_state_event_t const value_select_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_VALUE_SAVE)},
     {EVENT_RIGHT, GOTO(STATE_VALUE_SAVE)},
@@ -391,7 +391,7 @@ fsm_state_entry_t const vtx_menu_fsm[] = {
 
 // BLE Joystick FSM
 fsm_state_event_t const ble_confirm_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_BLE_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_BLE_EXECUTE)}
@@ -408,7 +408,7 @@ fsm_state_entry_t const ble_menu_fsm[] = {
 
 // WiFi Update FSM
 fsm_state_event_t const wifi_confirm_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_WIFI_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_WIFI_EXECUTE)}
@@ -443,7 +443,7 @@ fsm_state_entry_t const wifi_menu_fsm[] = {
 
 // Bind FSM
 fsm_state_event_t const bind_confirm_events[] = {
-    {EVENT_TIMEOUT, ACTION_POP},
+    {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_BIND_EXECUTE)},
     {EVENT_RIGHT, GOTO(STATE_BIND_EXECUTE)}

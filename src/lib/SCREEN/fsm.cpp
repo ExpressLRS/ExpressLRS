@@ -15,7 +15,7 @@ fsm_state_t FiniteStateMachine::getCurrentState()
 
 fsm_state_t FiniteStateMachine::getParentState()
 {
-    const fsm_pos_t pos = fsm_stack.top();
+    const fsm_pos_t pos = fsm_stack.back();
     return (pos.fsm)[pos.index].state;
 }
 
@@ -41,8 +41,8 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
     {
         force_pop = false;
 
-        const fsm_pos_t pos = fsm_stack.top();
-        fsm_stack.pop();
+        const fsm_pos_t pos = fsm_stack.back();
+        fsm_stack.pop_back();
         current_index = pos.index;
         current_fsm = pos.fsm;
 
@@ -65,7 +65,7 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
             switch (action.action)
             {
                 case ACTION_PUSH:
-                    fsm_stack.push({current_fsm, current_index});
+                    fsm_stack.push_back({current_fsm, current_index});
                     current_fsm = action.next.fsm;
                     current_index = 0;
                     break;
@@ -88,10 +88,18 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
                     break;
                 case ACTION_POP:
                     {
-                        fsm_pos_t pos = fsm_stack.top();
+                        fsm_pos_t pos = fsm_stack.back();
                         current_index = pos.index;
                         current_fsm = pos.fsm;
-                        fsm_stack.pop();
+                        fsm_stack.pop_back();
+                    }
+                    break;
+                case ACTION_POPALL:
+                    {
+                        fsm_pos_t pos = fsm_stack.front();
+                        current_index = pos.index;
+                        current_fsm = pos.fsm;
+                        fsm_stack.clear();
                     }
                     break;
                 case ACTION_NEXT:

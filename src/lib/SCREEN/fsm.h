@@ -1,5 +1,5 @@
 #include <functional>
-#include <stack>
+#include <deque>
 
 #include "targets.h"
 
@@ -13,6 +13,7 @@
 #define ACTION_PREVIOUS 2
 #define ACTION_PUSH 3
 #define ACTION_POP 4
+#define ACTION_POPALL 5
 
 typedef int8_t fsm_state_t;
 typedef int8_t fsm_event_t;
@@ -64,7 +65,7 @@ private:
     int current_index;                      // index into the current FSM
     uint32_t current_state_entered;         // the time (ms) when the current state was entered
 
-    std::stack<fsm_pos_t> fsm_stack;
+    std::deque<fsm_pos_t> fsm_stack;
 
     bool force_pop;
 };
