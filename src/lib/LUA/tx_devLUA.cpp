@@ -24,7 +24,7 @@ static struct luaItem_selection luaAirRate = {
 #if defined(RADIO_SX127X)
     "25Hz(-123;50Hz(-120;100Hz(-117;200Hz(-112",
 #elif defined(RADIO_SX128X)
-    "50Hz(-117;150Hz(-112;250Hz(-108;500Hz(-105",
+    "50Hz(-117;150Hz(-112;250Hz(-108;500Hz(-105;F500(-104;F1000(-104",
 #else
     #error Invalid radio configuration!
 #endif
