@@ -402,11 +402,11 @@ static void updateFolderName(){
       //show pitmode AuxSwitch or show P if not OFF
       if(vtxPit != 0){
         if(vtxPit != 1){
-        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-        vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
+          vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+          vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
         } else {
-        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-        vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
+          vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+          vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
         }
       }
     }
