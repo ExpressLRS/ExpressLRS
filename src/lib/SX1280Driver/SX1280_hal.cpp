@@ -163,13 +163,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    if (command == SX1280_RADIO_SET_PACKETPARAMS)
-    {
-        BusyDelay(100);
-    } else
-    {
-        BusyDelay(12);
-    }
+    BusyDelay(12);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)

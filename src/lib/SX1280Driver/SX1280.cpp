@@ -102,6 +102,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
     packet_mode = mode;
     SetMode(SX1280_MODE_STDBY_XOSC);
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode);
+    hal.BusyDelay(20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
         DBGLN("Config FLRC");
@@ -215,6 +216,7 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {sf, bw, cr};
 
     hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams));
+    hal.BusyDelay(25);
 
     switch (sf)
     {
@@ -246,12 +248,14 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
     buf[6] = 0x00;
 
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+    hal.BusyDelay(20);
 }
 
 void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 {
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {bw, cr, bt};
     hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams));
+    hal.BusyDelay(110);   
 }
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
@@ -275,6 +279,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[5] = (crc << 4);                        // CrcLength
     buf[6] = 0x08;                              // Must be whitening disabled
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+    hal.BusyDelay(30);
 
     // CRC seed (use dedicated cipher)
     buf[0] = (uint8_t)(crcSeed >> 8);
@@ -492,6 +497,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
 {
+    hal.BusyDelay(5);
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     if (irqStatus & SX1280_IRQ_TX_DONE)
