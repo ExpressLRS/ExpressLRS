@@ -396,6 +396,7 @@ static void helperDrawImage(menu_item_t menu)
         case STATE_VTX_CHANNEL:
         case STATE_VTX_POWER:
         case STATE_VTX_PITMODE:
+        case STATE_VTX_SEND:
             u8g2.drawXBM(x_pos, y_pos, 64, 64, vtx_img64);
             break;
         case STATE_WIFI:

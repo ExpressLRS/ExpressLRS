@@ -26,6 +26,7 @@ const char *Display::main_menu_strings[][2] = {
     {"VTX", "CHANNEL"},
     {"VTX", "POWER"},
     {"VTX", "PITMODE"},
+    {"VTX", "SEND"},
 
     {"TX", "WIFI"},
     {"RX", "WIFI"},

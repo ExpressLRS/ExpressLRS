@@ -28,6 +28,7 @@ const uint16_t *main_menu_icons[] = {
     elrs_vtx,
     elrs_vtx,
     elrs_vtx,
+    elrs_vtx,
 
     elrs_updatefw,
     elrs_rxwifi,

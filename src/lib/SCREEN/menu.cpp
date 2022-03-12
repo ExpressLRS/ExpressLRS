@@ -20,6 +20,7 @@ extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
+extern void VtxTriggerSend();
 
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
@@ -223,6 +224,20 @@ static void saveValueIndex(bool init)
     }
 }
 
+// VTX Admin
+static void executeSendVTX(bool init)
+{
+    if (init)
+    {
+        VtxTriggerSend();
+        Display::displayRunning();
+    }
+    else
+    {
+        state_machine.popState();
+    }
+}
+
 // Bluetooth Joystck
 static void displayBLEConfirm(bool init)
 {
@@ -235,6 +250,13 @@ static void executeBLE(bool init)
     {
         connectionState = bleJoystick;
         Display::displayBLEStatus();
+    }
+    else
+    {
+        if (connectionState != bleJoystick)
+        {
+            state_machine.popState();
+        }
     }
 }
 
@@ -380,11 +402,18 @@ fsm_state_entry_t const power_menu_fsm[] = {
 };
 
 // VTX Admin FSM
+fsm_state_event_t const vtx_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_VTX_SEND)}, {EVENT_LEFT, ACTION_POP}};
+fsm_state_entry_t const vtx_execute_fsm[] = {
+    {STATE_VTX_SEND, executeSendVTX, 1000, vtx_execute_events, ARRAY_SIZE(vtx_execute_events)},
+};
+
+fsm_state_event_t const vtx_send_events[] = {MENU_EVENTS(vtx_execute_fsm)};
 fsm_state_entry_t const vtx_menu_fsm[] = {
     {STATE_VTX_BAND, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_VTX_CHANNEL, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_VTX_POWER, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_VTX_PITMODE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_SEND, displayMenuScreen, 20000, vtx_send_events, ARRAY_SIZE(vtx_send_events)},
     {STATE_LAST}
 };
 
