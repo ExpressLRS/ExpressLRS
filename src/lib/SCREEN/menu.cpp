@@ -354,7 +354,6 @@ fsm_state_event_t const value_select_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_VALUE_SAVE)},
-    {EVENT_RIGHT, GOTO(STATE_VALUE_SAVE)},
     {EVENT_UP, GOTO(STATE_VALUE_DEC)},
     {EVENT_DOWN, GOTO(STATE_VALUE_INC)}
 };
@@ -393,8 +392,7 @@ fsm_state_entry_t const vtx_menu_fsm[] = {
 fsm_state_event_t const ble_confirm_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, GOTO(STATE_BLE_EXECUTE)},
-    {EVENT_RIGHT, GOTO(STATE_BLE_EXECUTE)}
+    {EVENT_ENTER, GOTO(STATE_BLE_EXECUTE)}
 };
 fsm_state_event_t const ble_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BLE_EXECUTE)}, {EVENT_LEFT, GOTO(STATE_BLE_EXIT)}};
 fsm_state_event_t const ble_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
@@ -410,8 +408,7 @@ fsm_state_entry_t const ble_menu_fsm[] = {
 fsm_state_event_t const wifi_confirm_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, GOTO(STATE_WIFI_EXECUTE)},
-    {EVENT_RIGHT, GOTO(STATE_WIFI_EXECUTE)}
+    {EVENT_ENTER, GOTO(STATE_WIFI_EXECUTE)}
 };
 fsm_state_event_t const wifi_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}, {EVENT_LEFT, GOTO(STATE_WIFI_EXIT)}};
 fsm_state_event_t const wifi_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
@@ -445,8 +442,7 @@ fsm_state_entry_t const wifi_menu_fsm[] = {
 fsm_state_event_t const bind_confirm_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, GOTO(STATE_BIND_EXECUTE)},
-    {EVENT_RIGHT, GOTO(STATE_BIND_EXECUTE)}
+    {EVENT_ENTER, GOTO(STATE_BIND_EXECUTE)}
 };
 fsm_state_event_t const bind_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BIND_EXECUTE)}};
 
