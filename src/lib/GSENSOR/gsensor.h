@@ -23,11 +23,8 @@ private:
 public:
     void init();
     void handle();
+    bool handleBump(unsigned long now);
     void getGSensorData(float *X_DataOut, float *Y_DataOut, float *Z_DataOut);
     int getSystemState();
     bool isFlipped();
-
 };
-
-
-
