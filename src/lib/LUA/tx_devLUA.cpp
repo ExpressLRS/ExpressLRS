@@ -543,6 +543,7 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+  luadevChangeModelID();
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
