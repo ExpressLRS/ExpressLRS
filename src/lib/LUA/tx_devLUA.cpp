@@ -20,8 +20,6 @@ static char modelMatchUnit[] = " ID: 00";
 static char tlmBandwidth[] = " xxxxbps";
 static const char folderNameSeparator[2] = {' ',':'};
 
-uint8_t currentRate;
-
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
@@ -439,7 +437,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      currentRate = RATE_MAX - 1 - arg;
+      uint8_t currentRate = RATE_MAX - 1 - arg;
       currentRate = adjustPacketRateForBaud(currentRate);
       config.SetRate(currentRate);
       luadevUpdateTlmBandwidth();
@@ -550,12 +548,13 @@ static void registerLuaParameters()
 
 static int event()
 {
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
-  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
-  luadevUpdateModelID();
-  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+    uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+    setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+    setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+    setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+    setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+    luadevUpdateModelID();
+    setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
 #endif
