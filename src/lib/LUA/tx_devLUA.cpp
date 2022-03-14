@@ -17,7 +17,10 @@ static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " ID: 00";
+static char tlmBandwidth[] = " xxxxbps";
 static const char folderNameSeparator[2] = {' ',':'};
+
+uint8_t currentRate;
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -36,7 +39,7 @@ static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
     "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
-    emptySpace
+    tlmBandwidth
 };
 
 //----------------------------POWER------------------
@@ -256,6 +259,13 @@ static void luadevUpdateModelID() {
   itoa(CRSF::getModelID(), modelMatchUnit+5, 10);
 }
 
+static void luadevUpdateTlmBandwidth() {
+  uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+  uint32_t tlmRatio = TLMratioEnumToValue((expresslrs_tlm_ratio_e)config.GetTlm());
+  uint32_t bandwidthValue = ((float)hz / tlmRatio) *1/2*5*8;
+  itoa(bandwidthValue,tlmBandwidth+1,10);
+  strcat(tlmBandwidth,"bps");
+}
 static void luadevGeneratePowerOpts()
 {
   // This function modifies the strPowerLevels in place and must not
@@ -425,19 +435,21 @@ static void updateFolderName(){
 }
 
 static void registerLuaParameters()
-{
+{ 
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      uint8_t rate = RATE_MAX - 1 - arg;
-      rate = adjustPacketRateForBaud(rate);
-      config.SetRate(rate);
+      currentRate = RATE_MAX - 1 - arg;
+      currentRate = adjustPacketRateForBaud(currentRate);
+      config.SetRate(currentRate);
+      luadevUpdateTlmBandwidth();
     }
   });
   registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
+      luadevUpdateTlmBandwidth();
     }
   });
   #if defined(TARGET_TX_FM30)
@@ -538,8 +550,7 @@ static void registerLuaParameters()
 
 static int event()
 {
-  uint8_t rate = adjustPacketRateForBaud(config.GetRate());
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - rate);
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
@@ -575,6 +586,7 @@ static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   luadevUpdateModelID();
+  luadevUpdateTlmBandwidth();
   registerLuaParameters();
   registerLUAPopulateParams([](){
     itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
