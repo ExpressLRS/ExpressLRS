@@ -549,6 +549,7 @@ local function parseParameterInfoMessage(data)
     field.parent = parent
     field.type = type
     field.hidden = hidden
+    field.unit = nil
     field.name, offset = fieldGetString(fieldData, 3, field.name)
     if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, offset)

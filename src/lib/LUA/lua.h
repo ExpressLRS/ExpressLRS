@@ -37,7 +37,7 @@ struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
     const char* options; // selection options, separated by ';'
-    const char* const units;
+    const char* units;
 } PACKED;
 
 enum luaCmdStep_e : uint8_t {

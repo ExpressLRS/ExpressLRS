@@ -16,6 +16,7 @@ static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
+static char modelMatchUnit[] = " ID: 00";
 static const char folderNameSeparator[2] = {' ',':'};
 
 static struct luaItem_selection luaAirRate = {
@@ -86,7 +87,7 @@ static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
     0, // value
     "Off;On",
-    emptySpace
+    modelMatchUnit
 };
 
 static struct luaItem_command luaBind = {
@@ -250,6 +251,11 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
   //if we reach null termination and haven't got the requested index, just return 0, which would overwrite the first label
   return returnvalue;
 }
+
+void luadevChangeModelID() {
+  itoa(CRSF::getModelID(), modelMatchUnit+5, 10);
+}
+
 static void luadevGeneratePowerOpts()
 {
   // This function modifies the strPowerLevels in place and must not
@@ -466,6 +472,7 @@ static void registerLuaParameters()
       msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
       CRSF::AddMspMessage(&msp);
     }
+    luadevChangeModelID();
   });
 
   // POWER folder
@@ -566,6 +573,7 @@ static int timeout()
 static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
+  luadevChangeModelID();
   registerLuaParameters();
   registerLUAPopulateParams([](){
     itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
