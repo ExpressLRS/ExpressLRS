@@ -252,7 +252,7 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
   return returnvalue;
 }
 
-void luadevChangeModelID() {
+static void luadevUpdateModelID() {
   itoa(CRSF::getModelID(), modelMatchUnit+5, 10);
 }
 
@@ -472,7 +472,7 @@ static void registerLuaParameters()
       msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
       CRSF::AddMspMessage(&msp);
     }
-    luadevChangeModelID();
+    luadevUpdateModelID();
   });
 
   // POWER folder
@@ -543,7 +543,7 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
-  luadevChangeModelID();
+  luadevUpdateModelID();
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
@@ -574,7 +574,7 @@ static int timeout()
 static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
-  luadevChangeModelID();
+  luadevUpdateModelID();
   registerLuaParameters();
   registerLUAPopulateParams([](){
     itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
