@@ -23,11 +23,13 @@ static int bumps = 0;
 static unsigned long firstBumpTime = 0;
 static unsigned long lastBumpTime = 0;
 
-extern bool ICACHE_RAM_ATTR IsArmed();
+extern bool IsArmed();
+extern void SendRxLoanOverMSP();
+extern void EnterBindingMode();
 
 #define GSENSOR_DURATION    10
 
-static void initialize()
+    static void initialize()
 {
     gsensor.init();
 }
@@ -54,6 +56,20 @@ static int timeout()
     {
         float x, y, z;
         gsensor.getGSensorData(&x, &y, &z);
+        if (bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)   // Single bump while holding the radio antenna up
+        {
+            if (connectionState == connected)
+            {
+                DBGLN("Loaning model");
+                SendRxLoanOverMSP();
+            }
+            else
+            {
+                DBGLN("Borrowing model");
+                // we might have to defer this call i.e. wait for 5s
+                EnterBindingMode();
+            }
+        }
         DBGLN("Bumps %d : %f %f %f\n", bumps, x, y, z);
         bumps = 0;
     }
