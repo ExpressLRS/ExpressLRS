@@ -14,6 +14,7 @@
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
+static char modelString[] = "000";
 
 #ifdef POWER_OUTPUT_VALUES
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
@@ -39,6 +40,11 @@ static struct luaItem_selection luaAntennaMode = {
 #endif
 
 //----------------------------Info-----------------------------------
+
+static struct luaItem_string luaModelNumber = {
+    {"Model Id", CRSF_INFO},
+    modelString
+};
 
 static struct luaItem_string luaELRSversion = {
     {thisVersion, CRSF_INFO},
@@ -103,6 +109,7 @@ static void registerLuaParameters()
     POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
     });
 #endif
+  registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
@@ -117,6 +124,16 @@ static int event()
 #ifdef POWER_OUTPUT_VALUES
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
 #endif
+
+  if (config.GetModelId() == 255)
+  {
+    setLuaStringValue(&luaModelNumber, "Off");
+  }
+  else
+  {
+    itoa(config.GetModelId(), modelString, 10);
+    setLuaStringValue(&luaModelNumber, modelString);
+  }
   return DURATION_IMMEDIATELY;
 }
 

@@ -680,22 +680,20 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
 #endif
     else
     {
-        // No MSP data to the FC if no model match
-        if (connectionHasModelMatch)
-        {
-            crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-            {
-                crsf.sendMSPFrameToFC(MspData);
-            }
+        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
 
-            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
-            {
-                crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
-                crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
-                crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
-                luaParamUpdateReq();
-            }
+        // No MSP data to the FC if no model match
+        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+        {
+            crsf.sendMSPFrameToFC(MspData);
+        }
+
+        if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+        {
+            crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
+            crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
+            crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
+            luaParamUpdateReq();
         }
     }
 
