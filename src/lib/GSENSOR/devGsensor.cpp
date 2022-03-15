@@ -52,7 +52,9 @@ static int timeout()
     }
     if (bumps > 0 && (now - lastBumpTime > 400 || now - firstBumpTime > 1000))
     {
-        DBGLN("Bumps %d", bumps);
+        float x, y, z;
+        gsensor.getGSensorData(&x, &y, &z);
+        DBGLN("Bumps %d : %f %f %f\n", bumps, x, y, z);
         bumps = 0;
     }
     if (now - lastCall > 1000) {
