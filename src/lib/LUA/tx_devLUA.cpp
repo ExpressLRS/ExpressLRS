@@ -347,9 +347,10 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 {
   const char *msg = "Sending...";
-  bool doExecute = arg < lcsCancel;
-  if (doExecute)
+  static uint32_t lastLcsPoll;
+  if (arg < lcsCancel)
   {
+    lastLcsPoll = millis();
     if ((void *)item == (void *)&luaBind)
     {
       msg = "Binding...";
@@ -357,7 +358,6 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
-      msg = "Sending...";
       VtxTriggerSend();
     }
     else if ((void *)item == (void *)&luaRxWebUpdate)
@@ -374,10 +374,9 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
       VRxBackpackWiFiReadyToSend = true;
     }
 #endif
-
     sendLuaCommandResponse((struct luaItem_command *)item, lcsExecuting, msg);
   } /* if doExecute */
-  else
+  else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
   {
     sendLuaCommandResponse((struct luaItem_command *)item, lcsIdle, emptySpace);
   }
