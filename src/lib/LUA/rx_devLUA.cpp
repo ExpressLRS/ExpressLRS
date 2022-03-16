@@ -12,6 +12,8 @@
 #include "hwTimer.h"
 #include "FHSS.h"
 
+extern void deferExecution(uint32_t ms, std::function<void()> f);
+
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 

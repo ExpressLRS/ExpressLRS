@@ -4,6 +4,8 @@
 
 #ifdef HAS_GSENSOR
 
+#include <functional>
+
 #include "gsensor.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -26,6 +28,7 @@ static unsigned long lastBumpTime = 0;
 extern bool IsArmed();
 extern void SendRxLoanOverMSP();
 extern void EnterBindingMode();
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 #define GSENSOR_DURATION    10
 
@@ -66,8 +69,8 @@ static int timeout()
             else
             {
                 DBGLN("Borrowing model");
-                // we might have to defer this call i.e. wait for 5s
-                EnterBindingMode();
+                // defer this calling `EnterBindingMode` for 2 seconds
+                deferExecution(2000, EnterBindingMode);
             }
         }
         DBGLN("Bumps %d : %f %f %f\n", bumps, x, y, z);

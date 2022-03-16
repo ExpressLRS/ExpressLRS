@@ -1059,6 +1059,8 @@ void loop()
     }
   #endif
 
+  executeDeferredFunction(now);
+
   if (connectionState > MODE_STATES)
   {
     return;

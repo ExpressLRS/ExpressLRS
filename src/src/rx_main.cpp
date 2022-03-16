@@ -1365,6 +1365,8 @@ void loop()
         devicesTriggerEvent();
     }
 
+    executeDeferredFunction(now);
+    
     if (connectionState > MODE_STATES)
     {
         return;
