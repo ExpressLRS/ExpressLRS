@@ -13,8 +13,7 @@
 #include "FHSS.h"
 
 extern bool InLoanBindingMode;
-void EnterBindingMode();
-void setupBindingFromConfig();
+extern bool returnModelFromLoan;
 
 static const char thisCommit[] = {LATEST_COMMIT, 0};
 static const char thisVersion[] = {LATEST_VERSION, 0};
@@ -151,7 +150,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaReturnModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
-      deferExecution(200, [](){ config.SetOnLoan(false); });
+      deferExecution(200, []() { returnModelFromLoan = true; });
     }
     sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });

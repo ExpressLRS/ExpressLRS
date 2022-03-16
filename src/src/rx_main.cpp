@@ -170,6 +170,7 @@ int8_t debug4 = 0;
 
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
+bool returnModelFromLoan = false;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -585,8 +586,11 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
-        hwTimer.stop();
+        if (hwTimer::running)
+        {
+            while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
+            hwTimer.stop();
+        }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
@@ -981,8 +985,8 @@ static void setupTarget()
 
 static void setupBindingFromConfig()
 {
-// Use the user defined binding phase if set,
-// otherwise use the bind flag and UID in eeprom for UID
+    // Use the user defined binding phase if set,
+    // otherwise use the bind flag and UID in eeprom for UID
     if (config.GetOnLoan())
     {
         DBGLN("RX has been loaned, reading the UID from eeprom...");
@@ -1197,6 +1201,14 @@ static void updateBindingMode()
     // If in binding mode and the bind packet has come in, leave binding mode
     else if (InBindingMode && !InLoanBindingMode && config.GetIsBound())
     {
+        ExitBindingMode();
+    }
+    // If returning the model to the owner, set the flag and call ExitBindingMode to reset the CRC and FHSS
+    else if (returnModelFromLoan && config.GetOnLoan()) {
+        LostConnection();
+        config.SetOnLoan(false);
+        memcpy(UID, MasterUID, sizeof(MasterUID));
+        setupBindingFromConfig();
         ExitBindingMode();
     }
 
@@ -1437,7 +1449,7 @@ void EnterBindingMode()
 
 void ExitBindingMode()
 {
-    if (!InBindingMode)
+    if (!InBindingMode && !returnModelFromLoan)
     {
         // Not in binding mode
         DBGLN("Cannot exit binding mode, not in binding mode!");
@@ -1468,6 +1480,7 @@ void ExitBindingMode()
     // if we're in binding mode
     InBindingMode = false;
     InLoanBindingMode = false;
+    returnModelFromLoan = false;
     DBGLN("Exiting binding mode");
     devicesTriggerEvent();
 }
