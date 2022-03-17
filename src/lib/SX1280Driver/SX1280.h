@@ -3,33 +3,19 @@
 #include "targets.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
+#include "SX12xxDriverCommon.h"
 
 
-
-class SX1280Driver
+class SX1280Driver: public SX12xxDriverCommon
 {
 public:
     static SX1280Driver *instance;
 
-    ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
-
     uint16_t timeout = 0xFFFF;
 
-    uint32_t currFreq;
-    uint8_t PayloadLength;
-    bool IQinverted;
     ///////////////////////////////////
-
-    /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
 
     ////////////////Configuration Functions/////////////
     SX1280Driver();
@@ -62,6 +48,7 @@ public:
 
 private:
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+    uint8_t packet_mode;
 
     void SetMode(SX1280_RadioOperatingModes_t OPmode);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
@@ -87,6 +74,6 @@ private:
 
 
     static void IsrCallback();
-    void RXnbISR(); // ISR for non-blocking RX routine
+    void RXnbISR(uint16_t irqStatus); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
 };

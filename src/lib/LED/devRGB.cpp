@@ -13,9 +13,9 @@
 #endif
 
 #if defined(PLATFORM_ESP32)
-    #define METHOD Neo800KbpsMethod 
+    #define METHOD Neo800KbpsMethod
 #elif defined(PLATFORM_ESP8266)
-    #define METHOD NeoEsp8266Uart1800KbpsMethod 
+    #define METHOD NeoEsp8266Uart1800KbpsMethod
 #endif
 
 #ifdef WS2812_IS_GRB
@@ -209,10 +209,14 @@ constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x
 
 constexpr uint8_t rate_hue[RATE_MAX] =
 {
-    170,     // 500/200 hz  blue
-    85,      // 250/100 hz  green
-    21,      // 150/50 hz   orange
-    0        // 50/25 hz    red
+#if defined(RADIO_SX128X)
+    208,     // FLRC 1000 Hz - purple
+    64,      // FLRC  500 Hz - yellow
+#endif
+    170,     // LoRa 500/200 Hz - blue
+    85,      // LoRa 250/100 Hz - green
+    21,      // LoRa 150/ 50 Hz - orange
+    0        // LoRa  50/ 25 Hz - red
 };
 
 static blinkyColor_t blinkyColor;

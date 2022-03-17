@@ -2,40 +2,25 @@
 
 #include "SX127xRegs.h"
 #include "SX127xHal.h"
+#include "SX12xxDriverCommon.h"
 
 #ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
-class SX127xDriver
+class SX127xDriver: public SX12xxDriverCommon
 {
 
 public:
     static SX127xDriver *instance;
 
-    ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
-
     ///////////Radio Variables////////
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
-
     bool headerExplMode = false;
     bool crcEnabled = false;
 
     //// Parameters ////
-    uint32_t currFreq;
-    uint8_t PayloadLength;
-    bool IQinverted;
     uint16_t timeoutSymbols;
     ///////////////////////////////////
-
-    /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
-    /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
     SX127xDriver();
