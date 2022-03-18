@@ -256,7 +256,7 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
 
 static void luadevUpdateRateSensitivity() {
   itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity,rateSensitivity+2,10);
-  strcat(rateSensitivity,"dbm)");
+  strcat(rateSensitivity,"dBm)");
 }
 
 static void luadevUpdateModelID() {
