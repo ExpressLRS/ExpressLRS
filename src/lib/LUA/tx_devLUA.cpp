@@ -16,21 +16,22 @@ static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
-static char modelMatchUnit[] = " ID: 00";
-static char tlmBandwidth[] = " xxxxbps";
+static char modelMatchUnit[] = " (ID: 00)";
+static char rateSensitivity[] = " (-130dbm)";
+static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
-    "25Hz(-123;50Hz(-120;100Hz(-117;200Hz(-112",
+    "25Hz;50Hz;100Hz;200Hz",
 #elif defined(RADIO_SX128X)
-    "50Hz(-117;150Hz(-112;250Hz(-108;500Hz(-105;F500(-104;F1000(-104",
+    "50Hz;150Hz;250Hz;500Hz;F500;F1000",
 #else
     #error Invalid radio configuration!
 #endif
-    "dBm)"
+    rateSensitivity
 };
 
 static struct luaItem_selection luaTlmRate = {
@@ -253,16 +254,22 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
   return returnvalue;
 }
 
+static void luadevUpdateRateSensitivity() {
+  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity,rateSensitivity+2,10);
+  strcat(rateSensitivity,"dbm)");
+}
+
 static void luadevUpdateModelID() {
-  itoa(CRSF::getModelID(), modelMatchUnit+5, 10);
+  itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
+  strcat(modelMatchUnit,")");
 }
 
 static void luadevUpdateTlmBandwidth() {
   uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
   uint32_t tlmRatio = TLMratioEnumToValue((expresslrs_tlm_ratio_e)config.GetTlm());
   uint32_t bandwidthValue = ((float)hz / tlmRatio) *1/2*5*8;
-  itoa(bandwidthValue,tlmBandwidth+1,10);
-  strcat(tlmBandwidth,"bps");
+  itoa(bandwidthValue,tlmBandwidth+2,10);
+  strcat(tlmBandwidth,"bps)");
 }
 static void luadevGeneratePowerOpts()
 {
@@ -441,6 +448,8 @@ static void registerLuaParameters()
       config.SetRate(currentRate);
       luadevUpdateTlmBandwidth();
     }
+    //no need to update sensitivity here as we are waiting for CurrAirRate to change first
+    //luadevUpdateRateSensitivity();
   });
   registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
@@ -548,11 +557,12 @@ static void registerLuaParameters()
 static int event()
 {
     uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+    luadevUpdateRateSensitivity();
     setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
     setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
     setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-    setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
     luadevUpdateModelID();
+    setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
     setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
 #if defined(GPIO_PIN_FAN_EN)
   setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
@@ -584,6 +594,7 @@ static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   luadevUpdateModelID();
+  luadevUpdateRateSensitivity();
   luadevUpdateTlmBandwidth();
   registerLuaParameters();
   registerLUAPopulateParams([](){
