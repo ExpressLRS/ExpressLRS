@@ -338,8 +338,14 @@ local function fieldTextSelectionSave(field)
   crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.value })
 end
 
-local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR") .. field.unit, attr)
+local function fieldTextSelectionDisplay_color(field, y, attr)
+  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
+  lcd.drawText(COL2 + (lcd.sizeText(field.values[field.value+1])), y, field.unit, 0)
+end
+
+local function fieldTextSelectionDisplay_bw(field, y, attr)
+  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
+  lcd.drawText((lcd.getLastPos()), y, field.unit, 0)
 end
 
 -- STRING
@@ -494,7 +500,7 @@ local functions = {
   nil,
   nil,
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9 FLOAT(8)
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10 SELECT(9)
+  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display = nil }, --10 SELECT(9)
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11 STRING(10)
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13 INFO(12)
@@ -891,11 +897,20 @@ local function loadSymbolChars()
 end
 
 local function setLCDvar()
-  -- Set the title function depending on if LCD is color, and free the other function
-  lcd_title = (lcd.RGB ~= nil) and lcd_title_color or lcd_title_bw
+  -- Set the title function depending on if LCD is color, and free the other function and
+  -- set textselection unit function, use GetLastPost or sizeText
+  if (lcd.RGB ~= nil) then
+    lcd_title = lcd_title_color
+    functions[10].display=fieldTextSelectionDisplay_color
+  else
+    lcd_title = lcd_title_bw
+    functions[10].display=fieldTextSelectionDisplay_bw
+  end
   lcd_title_color = nil
   lcd_title_bw = nil
-  -- Determine if popupConfirmation takes 3 arguments or 2
+  fieldTextSelectionDisplay_bw = nil
+  fieldTextSelectionDisplay_color = nil
+    -- Determine if popupConfirmation takes 3 arguments or 2
   -- if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
   -- major 1 is assumed to be FreedomTX
   local ver, radio, major = getVersion()
