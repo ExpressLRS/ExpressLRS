@@ -14,6 +14,8 @@ extern CRSF crsf;
 extern Stream *LoggingBackpack;
 uint8_t pitmodeAuxState = 0;
 
+extern bool ICACHE_RAM_ATTR IsArmed();
+
 static enum VtxSendState_e
 {
   VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
@@ -80,7 +82,11 @@ static void VtxConfigToMSPOut()
     }
 
     crsf.AddMspMessage(&packet);
-    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
+
+    if (!IsArmed()) // Do not send while armed.  There is no need to change the video frqency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    {
+        MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
+    }
 }
 
 static int event()
