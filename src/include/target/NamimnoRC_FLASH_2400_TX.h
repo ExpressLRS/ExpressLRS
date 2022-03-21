@@ -3,6 +3,7 @@
 #endif
 
 #define USE_TX_BACKPACK
+#define CRITICAL_FLASH
 
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4
