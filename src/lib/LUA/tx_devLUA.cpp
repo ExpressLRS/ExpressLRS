@@ -393,7 +393,7 @@ static void updateFolderName(){
   
   //power folder name
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2,pwrFolderDynamicName); //4 = 3 spaces, 1 colon
+  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2,pwrFolderDynamicName); // start writing name after the 2nd space
   pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
   pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
   if(txPwrDyn){
@@ -406,7 +406,7 @@ static void updateFolderName(){
   uint8_t vtxBand = config.GetVtxBand();
   if(vtxBand){
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // 3= 2 spaces, 1 colon
+    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // start writing name after the 2nd space
     vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
     vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
@@ -446,16 +446,12 @@ static void registerLuaParameters()
       uint8_t currentRate = RATE_MAX - 1 - arg;
       currentRate = adjustPacketRateForBaud(currentRate);
       config.SetRate(currentRate);
-      luadevUpdateTlmBandwidth();
     }
-    //no need to update sensitivity here as we are waiting for CurrAirRate to change first
-    //luadevUpdateRateSensitivity();
   });
   registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
     {
       config.SetTlm((expresslrs_tlm_ratio_e)arg);
-      luadevUpdateTlmBandwidth();
     }
   });
   #if defined(TARGET_TX_FM30)
@@ -559,6 +555,7 @@ static int event()
     uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
     luadevUpdateRateSensitivity();
     setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+    luadevUpdateTlmBandwidth();
     setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
     setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
     luadevUpdateModelID();
