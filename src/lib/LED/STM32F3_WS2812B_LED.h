@@ -29,6 +29,7 @@ static inline void LEDsend_1(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP();
 #endif
         __NOP(); __NOP(); __NOP(); __NOP();
 #if !defined(STM32F1)
@@ -42,8 +43,7 @@ static inline void LEDsend_1(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP();
 #endif
         __NOP(); __NOP(); __NOP(); __NOP();
 #if !defined(STM32F1)
@@ -61,7 +61,6 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
 #endif
         __NOP(); __NOP(); __NOP(); __NOP();
 #if !defined(STM32F1)
@@ -85,6 +84,7 @@ static inline void LEDsend_0(void) {
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
         __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
+        __NOP(); __NOP(); __NOP(); __NOP();
 #endif
         __NOP(); __NOP(); __NOP(); __NOP();
 #if !defined(STM32F1)
@@ -135,12 +135,6 @@ void WS281BsetLED(uint8_t const * const RGB) // takes RGB data
     interrupts();
     memcpy(current_rgb, RGB, sizeof(current_rgb));
     delayMicroseconds(50); // needed to latch in the values
-}
-
-void WS281BsetLED(uint8_t const r, uint8_t const g, uint8_t const b) // takes RGB data
-{
-    uint8_t data[3] = {r, g, b};
-    WS281BsetLED(data);
 }
 
 void WS281BsetLED(uint32_t const color) // takes RGB data
