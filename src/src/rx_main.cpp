@@ -59,7 +59,7 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
@@ -921,6 +921,12 @@ static void setupSerial()
     #if defined(RCVR_INVERT_TX)
     USC0(UART0) |= BIT(UCTXI);
     #endif
+#else
+    #if defined(RCVR_INVERT_TX)
+    Serial.begin(RCVR_UART_BAUD, SERIAL_8N1, -1, -1, true);
+    #else
+    Serial.begin(RCVR_UART_BAUD, SERIAL_8N1);
+    #endif
 #endif
 
 }
@@ -1260,7 +1266,7 @@ void loop()
 
     devicesUpdate(now);
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    #if (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)) && defined(AUTO_WIFI_ON_INTERVAL)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
