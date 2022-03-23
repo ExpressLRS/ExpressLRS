@@ -158,6 +158,9 @@ private:
     static uint32_t UARTrequestedBaud;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
+    #if defined(PLATFORM_ESP32)
+    static bool UARTinverted;
+    #endif
 
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();

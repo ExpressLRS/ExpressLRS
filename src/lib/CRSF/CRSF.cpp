@@ -92,6 +92,13 @@ uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 400000;
+#if defined(PLATFORM_ESP32)
+#ifdef UART_INVERTED
+bool CRSF::UARTinverted = true;
+#else
+bool CRSF::UARTinverted = false;
+#endif
+#endif
 
 bool CRSF::CRSFstate = false;
 
@@ -703,15 +710,15 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 #if defined(PLATFORM_ESP32)
   #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    #ifdef UART_INVERTED
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
-    gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #else
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
-    gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #endif
+    if (UARTinverted) {
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
+        gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+    } else {
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
+        gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+    }
   #endif
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin
@@ -729,19 +736,19 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
   #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-    #ifdef UART_INVERTED
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
-    gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
-    #else
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
-    gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
-    #endif
+    if (UARTinverted) {
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
+    } else {
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
+    }
   #endif
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin
@@ -767,14 +774,27 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 #if defined(PLATFORM_ESP32)
 uint32_t CRSF::autobaud()
 {
+    static enum { INIT, MEASURED, INVERTED } state;
+
     uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
     uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
 
+     if (state == MEASURED) {
+        UARTinverted = !UARTinverted;
+        state = INVERTED;
+        return UARTrequestedBaud;
+    } else if (state == INVERTED) {
+        UARTinverted = !UARTinverted;
+        state = INIT;
+    }
+    
     if ((*autobaud_reg & 1) == 0) {
         *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
         return 400000;
     } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
         return 400000;
+
+    state = MEASURED;
 
     uint32_t low_period  = *(uint32_t *)UART_LOWPULSE_REG(0);
     uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
