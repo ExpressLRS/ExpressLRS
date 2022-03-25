@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "BETAFPV 2G4RX"
+#define DEVICE_NAME "BFPV Nano 2G4RX"
 #endif
 
 #define USE_SX1280_DCDC
