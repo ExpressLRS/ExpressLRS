@@ -265,12 +265,18 @@ static void luadevUpdateModelID() {
 }
 
 static void luadevUpdateTlmBandwidth() {
+  if((expresslrs_tlm_ratio_e)config.GetTlm()){
+  tlmBandwidth[0] = ' ';
   uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
   uint32_t tlmRatio = TLMratioEnumToValue((expresslrs_tlm_ratio_e)config.GetTlm());
   uint32_t bandwidthValue = ((float)hz / tlmRatio) *1/2*5*8;
   itoa(bandwidthValue,tlmBandwidth+2,10);
   strcat(tlmBandwidth,"bps)");
+  } else {
+    tlmBandwidth[0] = '\0';
+  }
 }
+
 static void luadevGeneratePowerOpts()
 {
   // This function modifies the strPowerLevels in place and must not
