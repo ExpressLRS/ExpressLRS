@@ -6,8 +6,8 @@
 #define USE_SX1280_DCDC
 #define USE_TX_BACKPACK
 #define USE_SKY85321
-#define SKY85321_PDET_SLOPE     0.035
-#define SKY85321_PDET_INTERCEPT 2.4
+#define SKY85321_PDET_SLOPE     0.032
+#define SKY85321_PDET_INTERCEPT 1.5
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
