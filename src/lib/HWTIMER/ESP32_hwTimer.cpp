@@ -106,15 +106,12 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 
 void ICACHE_RAM_ATTR hwTimer::callback(void)
 {
-    portENTER_CRITICAL_ISR(&isrMutex);
+    if (running)
+    {
+        portENTER_CRITICAL_ISR(&isrMutex);
 #if defined(TARGET_TX)
-    if (running)
-    {
         callbackTock();
-    }
 #else
-    if (running)
-    {
         uint32_t NextInterval = (hwTimer::HWtimerInterval >> 1) + FreqOffset;
         if (hwTimer::isTick)
         {
@@ -131,9 +128,9 @@ void ICACHE_RAM_ATTR hwTimer::callback(void)
             hwTimer::callbackTock();
         }
         hwTimer::isTick = !hwTimer::isTick;
-    }
 #endif
-    portEXIT_CRITICAL_ISR(&isrMutex);
+        portEXIT_CRITICAL_ISR(&isrMutex);
+    }
 }
 
 #endif
