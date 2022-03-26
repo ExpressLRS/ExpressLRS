@@ -32,7 +32,7 @@ extern Stream *LoggingBackpack;
 
 extern void debugPrintf(const char* fmt, ...);
 
-#if defined(CRITICAL_FLASH) || (defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_LOG))
+#if defined(CRITICAL_FLASH) || ((defined(CRSF_RCVR_NO_SERIAL) || defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
   #define INFOLN(msg, ...)
   #define ERRLN(msg)
 #else

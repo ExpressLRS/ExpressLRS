@@ -34,4 +34,8 @@ typedef std::function<bool (volatile uint8_t* Buffer, CRSF *crsf, uint8_t nonce,
 extern UnpackChannelData_t UnpackChannelData;
 #endif
 
+#if defined(DEBUG_RCVR_LINKSTATS)
+extern uint32_t debugRcvrLinkstatsPacketId;
+#endif
+
 #endif // H_OTA
