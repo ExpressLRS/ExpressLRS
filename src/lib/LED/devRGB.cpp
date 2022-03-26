@@ -6,10 +6,26 @@
 
 #include <NeoPixelBus.h>
 
-#define STATUS_LED_NUMBER   0
-
 #if !defined(WS2812_PIXEL_COUNT)
     #define WS2812_PIXEL_COUNT 1
+#endif
+
+#ifdef WS2812_STATUS_LEDS
+const uint8_t statusLEDs[] = WS2812_STATUS_LEDS;
+#else
+const uint8_t statusLEDs[] = {0};
+#endif
+
+#if defined(WS2812_VTX_STATUS_LEDS)
+const uint8_t vtxStatusLEDs[] = WS2812_VTX_STATUS_LEDS;
+#else
+const uint8_t vtxStatusLEDs[] = {};
+#endif
+
+#ifdef WS2812_BOOT_LEDS
+const uint8_t bootLEDs[] = WS2812_BOOT_LEDS;
+#else
+#define bootLEDs statusLEDs
 #endif
 
 #if defined(PLATFORM_ESP32)
@@ -27,26 +43,23 @@ static NeoPixelBus<NeoRgbFeature, METHOD> strip(WS2812_PIXEL_COUNT, GPIO_PIN_LED
 void WS281Binit()
 {
     strip.Begin();
+    strip.ClearTo(RgbColor(0), 0, WS2812_PIXEL_COUNT-1);
+    strip.Show();
 }
 
 void WS281BsetLED(uint32_t color)
 {
-    strip.SetPixelColor(STATUS_LED_NUMBER, RgbColor(HtmlColor(color)));
-    strip.Show();
-}
-
-void WS281BsetStripColour(uint32_t color)
-{
-    if (WS2812_PIXEL_COUNT > 1)
+    for (int i=0 ; i<sizeof(statusLEDs) ; i++)
     {
-        strip.ClearTo(RgbColor(HtmlColor(color)), 1, WS2812_PIXEL_COUNT - 1);
-        strip.Show();
+        strip.SetPixelColor(statusLEDs[i], RgbColor(HtmlColor(color)));
     }
+    strip.Show();
 }
 #endif
 
 #if defined(PLATFORM_STM32) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
 #include "STM32F3_WS2812B_LED.h"
+#define WS2812_PIXEL_COUNT 1
 #endif
 
 
@@ -65,7 +78,7 @@ typedef struct {
   uint8_t h, s, v;
 } blinkyColor_t;
 
-uint32_t HsvToRgb(blinkyColor_t &blinkyColor)
+uint32_t HsvToRgb(const blinkyColor_t &blinkyColor)
 {
     uint8_t region, remainder, p, q, t;
 
@@ -123,9 +136,6 @@ void brightnessFadeLED(blinkyColor_t &blinkyColor, uint8_t start, uint8_t end)
 void hueFadeLED(blinkyColor_t &blinkyColor, uint16_t start, uint16_t end, uint8_t lightness, uint8_t count)
 {
     static bool hueMode = true;
-    static uint16_t hue = 0;
-    static int8_t dir = 1;
-    static uint8_t counter = 0;
 
     if (!hueMode)
     {
@@ -138,6 +148,8 @@ void hueFadeLED(blinkyColor_t &blinkyColor, uint16_t start, uint16_t end, uint8_
     }
     else
     {
+        static uint16_t hue = 0;
+        static int8_t dir = 1;
         if (start < end)
         {
             if (hue <= start)
@@ -171,6 +183,7 @@ void hueFadeLED(blinkyColor_t &blinkyColor, uint16_t start, uint16_t end, uint8_
         hue += dir;
         if (count != 0 && hue == start)
         {
+            static uint8_t counter = 0;
             counter++;
             if (counter >= count)
             {
@@ -225,10 +238,23 @@ static int blinkyUpdate() {
     static constexpr uint8_t hueStepValue = 1;
     static constexpr uint8_t lightnessStep = 5;
 
+#if WS2812_PIXEL_COUNT == 1
     WS281BsetLED(HsvToRgb(blinkyColor));
+#else
+    blinkyColor_t c = blinkyColor;
+    for (int i=0 ; i<sizeof(bootLEDs) ; i++) {
+        c.h += 16;//256/sizeof(bootLEDs);
+        strip.SetPixelColor(bootLEDs[i], RgbColor(HtmlColor(HsvToRgb(c))));
+    }
+    strip.Show();
+#endif
     if ((int)blinkyColor.h + hueStepValue > 255) {
         if ((int)blinkyColor.v - lightnessStep < 0) {
             blinkyState = NORMAL;
+#if WS2812_PIXEL_COUNT != 1
+            strip.ClearTo(RgbColor(0), 0, WS2812_PIXEL_COUNT-1);
+            strip.Show();
+#endif
             return NORMAL_UPDATE_INTERVAL;
         }
         blinkyColor.v -= lightnessStep;
