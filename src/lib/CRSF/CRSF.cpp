@@ -36,9 +36,6 @@ CROSSFIRE2MSP CRSF::crsf2msp;
 MSP2CROSSFIRE CRSF::msp2crsf;
 #endif
 
-///Out FIFO to buffer messages///
-static FIFO SerialOutFIFO;
-
 volatile uint16_t CRSF::ChannelDataIn[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
@@ -49,6 +46,9 @@ volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
+
+///Out FIFO to buffer messages///
+static FIFO SerialOutFIFO;
 
 static FIFO MspWriteFIFO;
 
@@ -371,7 +371,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-        
+
     #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
     {
@@ -837,9 +837,9 @@ bool CRSF::RXhandleUARTout()
     bool retVal = false;
 #if !defined(CRSF_RCVR_NO_SERIAL)
     // don't write more than 128 bytes at a time to avoid RX buffer overflow
-    const int maxBytesPerCall = 128;
-    uint32_t bytesWritten = 0;
     #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+        const int maxBytesPerCall = 128;
+        uint32_t bytesWritten = 0;
         while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
         {
             uint8_t OutPktLen = msp2crsf.FIFOout.pop();
@@ -850,18 +850,6 @@ bool CRSF::RXhandleUARTout()
             retVal = true;
         }
     #endif
-
-    while (SerialOutFIFO.size() > SerialOutFIFO.peek() && (bytesWritten + SerialOutFIFO.peek()) < maxBytesPerCall)
-    {
-        noInterrupts();
-        uint8_t OutPktLen = SerialOutFIFO.pop();
-        uint8_t OutData[OutPktLen];
-        SerialOutFIFO.popBytes(OutData, OutPktLen);
-        interrupts();
-        this->_dev->write(OutData, OutPktLen); // write the packet out
-        bytesWritten += OutPktLen;
-        retVal = true;
-    }
 #endif // CRSF_RCVR_NO_SERIAL
     return retVal;
 }
@@ -870,30 +858,24 @@ void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[4] = {
-        LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
         LinkStatisticsFrameLength + 2,
         CRSF_FRAMETYPE_LINK_STATISTICS
     };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-        SerialOutFIFO.push(crc);
-    }
-
-    //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
+    this->_dev->write(outBuffer, sizeof(outBuffer));
+    this->_dev->write((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+    this->_dev->write(crc);
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
-void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
+void CRSF::sendRCFrameToFC()
 {
 #if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
         RCframeLength + 2,
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
@@ -902,15 +884,13 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-    //SerialOutFIFO.push(RCframeLength + 4);
-    //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
     this->_dev->write(outBuffer, sizeof(outBuffer));
     this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
     this->_dev->write(crc);
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
-void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
+void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);

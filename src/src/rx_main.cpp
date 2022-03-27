@@ -69,8 +69,9 @@ extern bool webserverPreventAutoStart;
 static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
 static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
 static Servo *Servos[SERVO_COUNT];
-static bool newChannelsAvailable;
 #endif
+
+static bool newChannelsAvailable = false;
 
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
@@ -442,7 +443,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    crsf.RXhandleUARTout();
 }
 
 //////////////////////////////////////////////////////////////
@@ -640,21 +640,17 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
-    // No channels packets to the FC if no model match
+    // No channels packets to the FC or PWM pins if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         newChannelsAvailable = true;
-        #else
-        crsf.sendRCFrameToFC();
-        #endif
     }
 }
 
 /**
  * Process the assembled MSP packet in MspData[]
  **/
-static void ICACHE_RAM_ATTR MspReceiveComplete()
+static void MspReceiveComplete()
 {
     if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
     {
@@ -722,10 +718,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
     if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
     {
         NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-    }
-    if (MspReceiver.HasFinishedData())
-    {
-        MspReceiveComplete();
     }
 }
 
@@ -1258,10 +1250,13 @@ void setup()
 void loop()
 {
     unsigned long now = millis();
+
     HandleUARTin();
-    if (hwTimer.running == false)
+    crsf.RXhandleUARTout();
+
+    if (MspReceiver.HasFinishedData())
     {
-        crsf.RXhandleUARTout();
+        MspReceiveComplete();
     }
 
     devicesUpdate(now);
@@ -1304,7 +1299,12 @@ void loop()
     }
 
     cycleRfMode(now);
-    servosUpdate(now);
+    if (newChannelsAvailable)
+    {
+        crsf.sendRCFrameToFC();
+        servosUpdate(now);
+        newChannelsAvailable = false;
+    }
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
