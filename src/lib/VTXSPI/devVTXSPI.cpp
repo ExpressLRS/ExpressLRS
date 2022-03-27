@@ -8,6 +8,9 @@
 #include "hwTimer.h"
 #include "logging.h"
 #include <SPI.h>
+#if defined(PLATFORM_ESP32)
+#include <analogWrite.h>
+#endif
 
 #define SYNTHESIZER_REGISTER_A                  0x00
 #define SYNTHESIZER_REGISTER_B                  0x01
@@ -23,8 +26,15 @@
 
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
+#if defined(PLATFORM_ESP32)
+// ESP32 DAC pins are 0-255
+#define MIN_PWM                                 63  // Testing required.
+#define MAX_PWM                                 225 // Absolute max is 255.  But above 219 does nothing.
+#else
+// ESP8285 PWM is 0-4095
 #define MIN_PWM                                 1000 // Testing required.
 #define MAX_PWM                                 3600 // Absolute max is 4095.  But above 3500 does nothing.
+#endif
 #define VPD_BUFFER                              5
 
 #define READ_BIT                                0x00
@@ -41,7 +51,7 @@ static void VTxOutputMinimum(void);
 
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
-uint8_t vtxSPIPowerIdx = 0; 
+uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
 static uint8_t RfAmpVrefState = 0;
@@ -87,7 +97,7 @@ static void rtc6705SetFrequency(uint32_t freq)
     rtc6705ResetSynthRegA();
 
     VTxOutputMinimum(); // Set power to zero for clear channel switching
-  
+
     uint32_t f = 25 * freq;
     uint32_t SYN_RF_N_REG = f / 64;
     uint32_t SYN_RF_A_REG = f % 64;
@@ -197,7 +207,7 @@ static void checkOutputPower()
         VTxOutputMinimum();
     }
     else
-    {        
+    {
         RfAmpVrefOn();
 
         uint16_t VpdReading = analogRead(GPIO_PIN_RF_AMP_VPD); // WARNING - Max input 1.0V !!!!
@@ -219,13 +229,15 @@ static void initialize()
 {
     pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
-    
+
     pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
     digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
+    #if defined(PLATFORM_ESP8266)
     pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
     analogWriteFreq(10000); // 10kHz
     analogWriteResolution(12); // 0 - 4095
+    #endif
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 
     delay(RTC6705_BOOT_DELAY);
@@ -263,7 +275,7 @@ static int timeout()
     }
 
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
-    {        
+    {
         rtc6705SetFrequencyByIdx(vtxSPIBandChannelIdx);
         vtxSPIBandChannelIdxCurrent = vtxSPIBandChannelIdx;
 
