@@ -391,6 +391,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
   {
     Radio.SetFrequencyReg(FHSSgetNextFreq());
   }
+  FreqCorrection = map(crsf.ChannelDataIn[15], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -1000, 1000)
 }
 
 void ICACHE_RAM_ATTR HandlePrepareForTLM()
