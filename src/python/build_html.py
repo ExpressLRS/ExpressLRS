@@ -51,9 +51,13 @@ def build_common(env, mainfile):
             shutil.copyfile(path, "include/WebContent.h")
         os.remove(path)
 
-platform = env.get('PIOPLATFORM', '')
 
+platform = env.get('PIOPLATFORM', '')
+is_rx = any('TARGET_RX' in string for string in env.get('BUILD_FLAGS'))
 if platform in ['espressif8266']:
     build_common(env, "rx_index.html")
 elif platform in ['espressif32']:
-    build_common(env, "tx_index.html")
+    if is_rx:
+        build_common(env, "rx_index.html")
+    else:
+        build_common(env, "tx_index.html")
