@@ -32,17 +32,17 @@
 
 device_affinity_t ui_devices[] = {
 #ifdef HAS_LED
-  {&LED_device, 0},
+  {&LED_device, 1},
 #endif
-  {&LUA_device,0},
+  {&LUA_device, 1},
 #ifdef HAS_RGB
-  {&RGB_device, 0},
+  {&RGB_device, 1},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 0},
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 0},
+  {&Button_device, 1},
 #endif
 #ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
