@@ -1119,7 +1119,12 @@ static void servosUpdate(unsigned long now)
                 // received yet. Delay initializing the servo until the channel is valid
                 Servo *servo = new Servo();
                 Servos[ch] = servo;
+#if defined(PLATFORM_ESP32)
+                servo->attach(SERVO_PINS[ch], Servo::CHANNEL_NOT_ATTACHED, 0, 180, 988U, 2012U);
+                servo->writeMicroseconds(us);
+#else
                 servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
+#endif
             }
         } /* for each servo */
     } /* if newChannelsAvailable */
