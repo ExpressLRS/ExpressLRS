@@ -75,16 +75,25 @@ static const uint16_t freqTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
+#if defined(GPIO_PIN_SPI_VTX_SCK) && GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN
+static SPIClass vtxSPI = SPIClass();
+
+static void rtc6705WriteRegister(uint32_t regData)
+{
+    vtxSPI.transferBits(regData, nullptr, 25);
+}
+#else
 static void rtc6705WriteRegister(uint32_t regData)
 {
     uint8_t buf[BUF_PACKET_SIZE];
-    memcpy (buf, (byte *) &regData, BUF_PACKET_SIZE);
+    memcpy(buf, (byte *)&regData, BUF_PACKET_SIZE);
     SPI.setBitOrder(LSBFIRST);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
     SPI.transfer(buf, BUF_PACKET_SIZE);
     digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
     SPI.setBitOrder(MSBFIRST);
 }
+#endif
 
 static void rtc6705ResetSynthRegA()
 {
@@ -227,16 +236,25 @@ static void checkOutputPower()
 
 static void initialize()
 {
-    pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+
+    #if defined(GPIO_PIN_SPI_VTX_SCK) && GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN
+        vtxSPI.begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+        vtxSPI.setHwCs(true);
+        vtxSPI.setBitOrder(LSBFIRST);
+    #else
+        pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+    #endif
 
     pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
     digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
     #if defined(PLATFORM_ESP8266)
-    pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-    analogWriteFreq(10000); // 10kHz
-    analogWriteResolution(12); // 0 - 4095
+        pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+        analogWriteFreq(10000); // 10kHz
+        analogWriteResolution(12); // 0 - 4095
+    #else
+        analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
     #endif
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 

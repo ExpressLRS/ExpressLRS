@@ -16,6 +16,7 @@
 // VTx pins and Vpd setpoints
 #define GPIO_PIN_SPI_VTX_SCK    14
 #define GPIO_PIN_SPI_VTX_MOSI   13
+#define GPIO_PIN_SPI_VTX_MISO   37  // We have to attach MISO even though we're not using it, so we attach it to an unused input-only pin
 #define GPIO_PIN_SPI_VTX_NSS    15
 #define GPIO_PIN_RF_AMP_VREF    26
 #define GPIO_PIN_RF_AMP_PWM     25
