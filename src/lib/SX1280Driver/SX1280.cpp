@@ -225,17 +225,17 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     {
     case SX1280_LORA_SF5:
     case SX1280_LORA_SF6:
-        hal.WriteRegister(0x925, 0x1E); // for SF5 or SF6
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x1E); // for SF5 or SF6
         break;
     case SX1280_LORA_SF7:
     case SX1280_LORA_SF8:
-        hal.WriteRegister(0x925, 0x37); // for SF7 or SF8
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x37); // for SF7 or SF8
         break;
     default:
-        hal.WriteRegister(0x925, 0x32); // for SF9, SF10, SF11, SF12
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x32); // for SF9, SF10, SF11, SF12
     }
     // Enable frequency compensation
-    hal.WriteRegister(0x93c, 0x1);
+    hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x1);
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
