@@ -46,6 +46,7 @@ public:
     #define FREQ_STEP 61.03515625
     void SetFrequencyHz(uint32_t freq);
     void SetFrequencyReg(uint32_t freq);
+    bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
     void SetPPMoffsetReg(int32_t offset);

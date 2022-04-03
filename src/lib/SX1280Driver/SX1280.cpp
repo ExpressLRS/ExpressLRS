@@ -114,7 +114,12 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
     {
         DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr);
-        SetPacketParamsLoRa(PreambleLength, SX1280_LORA_PACKET_IMPLICIT,
+#if defined(DEBUG_FREQ_CORRECTION)
+        SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_VARIABLE_LENGTH;
+#else
+        SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_FIXED_LENGTH;
+#endif
+        SetPacketParamsLoRa(PreambleLength, packetLengthType,
                             _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
     }
     SetFrequencyReg(freq);
@@ -220,15 +225,17 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     {
     case SX1280_LORA_SF5:
     case SX1280_LORA_SF6:
-        hal.WriteRegister(0x925, 0x1E); // for SF5 or SF6
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x1E); // for SF5 or SF6
         break;
     case SX1280_LORA_SF7:
     case SX1280_LORA_SF8:
-        hal.WriteRegister(0x925, 0x37); // for SF7 or SF8
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x37); // for SF7 or SF8
         break;
     default:
-        hal.WriteRegister(0x925, 0x32); // for SF9, SF10, SF11, SF12
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x32); // for SF9, SF10, SF11, SF12
     }
+    // Enable frequency compensation
+    hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x1);
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
@@ -246,6 +253,9 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
     buf[6] = 0x00;
 
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+
+    // FEI only triggers in Lora mode when the header is present :(
+    modeSupportsFei = HeaderType == SX1280_LORA_PACKET_VARIABLE_LENGTH;
 }
 
 void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
@@ -292,6 +302,9 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[2] = (uint8_t)(syncWord >> 8);
     buf[3] = (uint8_t)syncWord;
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4);
+
+    // FEI only works in Lora and Ranging mode
+    modeSupportsFei = false;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
@@ -317,23 +330,6 @@ void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t freq)
 
     hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf));
     currFreq = freq;
-}
-
-int32_t ICACHE_RAM_ATTR SX1280Driver::GetFrequencyError()
-{
-    WORD_ALIGNED_ATTR uint8_t efeRaw[3] = {0};
-    uint32_t efe = 0;
-    double efeHz = 0.0;
-
-    efeRaw[0] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
-    efeRaw[1] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB + 1);
-    efeRaw[2] = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB + 2);
-    efe = (efeRaw[0] << 16) | (efeRaw[1] << 8) | efeRaw[2];
-
-    efe &= SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK;
-
-    //efeHz = 1.55 * (double)complement2(efe, 20) / (1600.0 / (double)GetLoRaBandwidth() * 1000.0);
-    return efeHz;
 }
 
 void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
@@ -452,15 +448,13 @@ void ICACHE_RAM_ATTR SX1280Driver::GetStatus()
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
 {
-    uint8_t regEFI[3];
-
-    hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, regEFI, sizeof(regEFI));
-
-    DBGLN("%d %d %d", regEFI[0], regEFI[1], regEFI[2]);
-
-    //bool result = (val & 0b00001000) >> 3;
-    //return result; // returns true if pos freq error, neg if false
-    return 0;
+    // Only need the highest bit of the 20-bit FEI to determine the direction
+    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
+    // fei & (1 << 19) and flip sign if IQinverted
+    if (feiMsb & 0x08)
+        return IQinverted;
+    else
+        return !IQinverted;
 }
 
 int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()

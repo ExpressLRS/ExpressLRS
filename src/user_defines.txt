@@ -111,3 +111,7 @@
 # channels packet. Writes directly to Serial, does not require DEBUG_LOG.
 # Flash both TX & RX with this enbled to use it if the ID is required.
 #-DDEBUG_RCVR_LINKSTATS
+
+# Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
+# on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
+#-DDEBUG_FREQ_CORRECTION

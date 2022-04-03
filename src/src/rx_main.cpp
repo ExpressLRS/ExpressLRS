@@ -247,7 +247,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
     bool invertIQ = UID[5] & 0x01;
 
-    hwTimer.updateInterval(ModParams->interval);
+    uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+    interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+    hwTimer.updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
 #if defined(RADIO_SX128X)
@@ -256,7 +260,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  );
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * ModParams->interval) / (10U * 1000U);
+    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -312,7 +316,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // so save a bit to encode which antenna is in use
         Radio.TXdataBuffer[2] = crsf.LinkStatistics.uplink_RSSI_1 | (antenna << 7);
         Radio.TXdataBuffer[3] = crsf.LinkStatistics.uplink_RSSI_2 | (connectionHasModelMatch << 7);
+#if defined(DEBUG_FREQ_CORRECTION)
+        // Scale the FreqCorrection to +/-127
+        Radio.TXdataBuffer[4] = FreqCorrection * 127 / FreqCorrectionMax;
+#else
         Radio.TXdataBuffer[4] = crsf.LinkStatistics.uplink_SNR;
+#endif
         Radio.TXdataBuffer[5] = crsf.LinkStatistics.uplink_Link_quality;
         Radio.TXdataBuffer[6] = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
@@ -357,30 +366,26 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
     //DBGVLN(FreqCorrection);
-    if (!value)
+    if (value)
     {
-        if (FreqCorrection < FreqCorrectionMax)
+        if (FreqCorrection > FreqCorrectionMin)
         {
-            FreqCorrection += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
+            FreqCorrection -= 1; // FREQ_STEP units
         }
         else
         {
-            FreqCorrection = FreqCorrectionMax;
-            FreqCorrection = 0; //reset because something went wrong
-            DBGLN("Max +FreqCorrection reached!");
+            DBGLN("Max -FreqCorrection reached!");
         }
     }
     else
     {
-        if (FreqCorrection > FreqCorrectionMin)
+        if (FreqCorrection < FreqCorrectionMax)
         {
-            FreqCorrection -= 1; //min freq step is ~ 61hz
+            FreqCorrection += 1; // FREQ_STEP units
         }
         else
         {
-            FreqCorrection = FreqCorrectionMin;
-            FreqCorrection = 0; //reset because something went wrong
-            DBGLN("Max -FreqCorrection reached!");
+            DBGLN("Max +FreqCorrection reached!");
         }
     }
 }
@@ -541,16 +546,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
-    #if defined(RADIO_SX127X)
-    if (!didFHSS && !tlmSent && LQCalc.currentIsSet())
+    if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
     {
         HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+    #if defined(RADIO_SX127X)
+        // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(FreqCorrection);
-    }
-    #else
-        (void)didFHSS;
-        (void)tlmSent;
     #endif /* RADIO_SX127X */
+    }
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
