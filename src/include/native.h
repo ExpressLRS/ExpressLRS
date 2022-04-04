@@ -79,6 +79,8 @@ inline void delay(int32_t time) {
 
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
+inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
+inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
 
 const char device_name[] = "testing";
 const uint8_t device_name_size = sizeof(device_name);
