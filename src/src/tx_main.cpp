@@ -810,10 +810,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
+  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -833,12 +830,7 @@ void EnterBindingMode()
   SendUIDOverMSP();
 
   // Set UID to special binding values
-  UID[0] = BindingUID[0];
-  UID[1] = BindingUID[1];
-  UID[2] = BindingUID[2];
-  UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
+  memcpy(UID, BindingUID, UID_LEN);
 
   CRCInitializer = 0;
   NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
@@ -863,12 +855,7 @@ void ExitBindingMode()
   }
 
   // Reset UID to defined values
-  UID[0] = MasterUID[0];
-  UID[1] = MasterUID[1];
-  UID[2] = MasterUID[2];
-  UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
+  memcpy(UID, MasterUID, UID_LEN);
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 

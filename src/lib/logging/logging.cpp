@@ -11,6 +11,8 @@
 void debugPrintf(const char* fmt, ...)
 {
   char c;
+  const char *v;
+  char buf[11];
   va_list  vlist;
   va_start(vlist,fmt);
 
@@ -19,22 +21,25 @@ void debugPrintf(const char* fmt, ...)
     if (c == '%') {
       fmt++;
       c = GETCHAR;
+      v = buf;
+      buf[0] = 0;
       switch (c) {
         case 's':
-          LOGGING_UART.print(va_arg(vlist,const char *));
+          v = va_arg(vlist, const char *);
           break;
         case 'd':
-          LOGGING_UART.print(va_arg(vlist,int32_t), DEC);
+          itoa(va_arg(vlist, int32_t), buf, DEC);
           break;
         case 'u':
-          LOGGING_UART.print(va_arg(vlist,uint32_t), DEC);
+          utoa(va_arg(vlist, uint32_t), buf, DEC);
           break;
         case 'x':
-          LOGGING_UART.print(va_arg(vlist,uint32_t), HEX);
+          utoa(va_arg(vlist, uint32_t), buf, HEX);
           break;
         default:
           break;
       }
+      LOGGING_UART.write((uint8_t*)v, strlen(v));
     } else {
       LOGGING_UART.write(c);
     }
