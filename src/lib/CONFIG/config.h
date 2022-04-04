@@ -126,6 +126,8 @@ typedef struct {
     uint32_t    version;
     bool        isBound;
     uint8_t     uid[UID_LEN];
+    bool        onLoan;
+    uint8_t     loanUID[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
     uint8_t     power;
@@ -151,6 +153,8 @@ public:
         #endif
     }
     const uint8_t* GetUID() const { return m_config.uid; }
+    bool GetOnLoan() const { return m_config.onLoan; }
+    const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
@@ -165,6 +169,8 @@ public:
     // Setters
     void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
+    void SetOnLoan(bool loaned);
+    void SetOnLoanUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);

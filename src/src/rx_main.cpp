@@ -131,7 +131,6 @@ volatile uint8_t NonceRX = 0; // nonce that we THINK we are up to.
 
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
-bool InBindingMode = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -169,6 +168,10 @@ int8_t debug4 = 0;
 static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
+
+bool InBindingMode = false;
+bool InLoanBindingMode = false;
+bool returnModelFromLoan = false;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -587,8 +590,11 @@ void LostConnection()
 
     if (!InBindingMode)
     {
-        while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
-        hwTimer.stop();
+        if (hwTimer::running)
+        {
+            while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
+            hwTimer.stop();
+        }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         Radio.RXnb();
     }
@@ -934,22 +940,37 @@ static void setupConfigAndPocCheck()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
-    DBGLN("ModelId=%u", config.GetModelId());
-
+    bool doPowerCount = config.GetOnLoan();
 #ifndef MY_UID
-    // Increment the power on counter in eeprom
-    config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-    config.Commit();
-
-    // If we haven't reached our binding mode power cycles
-    // and we've been powered on for 2s, reset the power on counter
-    if (config.GetPowerOnCounter() < 3)
-    {
-        delay(2000);
-        config.SetPowerOnCounter(0);
-        config.Commit();
-    }
+    doPowerCount |= true;
 #endif
+    if (doPowerCount)
+    {
+        DBGLN("Doing power-up check for loan revocation and/or re-binding")
+        // Increment the power on counter in eeprom
+        config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
+        config.Commit();
+
+        if (config.GetPowerOnCounter() >= 3)
+        {
+            if (config.GetOnLoan())
+            {
+                config.SetOnLoan(false);
+                config.SetPowerOnCounter(0);
+                config.Commit();
+            }
+        }
+        else
+        {
+            // We haven't reached our binding mode power cycles
+            // and we've been powered on for 2s, reset the power on counter
+            delay(2000);
+            config.SetPowerOnCounter(0);
+            config.Commit();
+        }
+    }
+
+    DBGLN("ModelId=%u", config.GetModelId());
 }
 
 static void setupTarget()
@@ -968,8 +989,20 @@ static void setupTarget()
 
 static void setupBindingFromConfig()
 {
-// Use the user defined binding phase if set,
-// otherwise use the bind flag and UID in eeprom for UID
+    // Use the user defined binding phase if set,
+    // otherwise use the bind flag and UID in eeprom for UID
+    if (config.GetOnLoan())
+    {
+        DBGLN("RX has been loaned, reading the UID from eeprom...");
+        const uint8_t* storedUID = config.GetOnLoanUID();
+        for (uint8_t i = 0; i < UID_LEN; ++i)
+        {
+            UID[i] = storedUID[i];
+        }
+        DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+        CRCInitializer = (UID[4] << 8) | UID[5];
+        return;
+    }
 #if !defined(MY_UID)
     // Check the byte that indicates if RX has been bound
     if (config.GetIsBound())
@@ -1152,6 +1185,7 @@ static void servosUpdate(unsigned long now)
 
 static void updateBindingMode()
 {
+#ifndef MY_UID
     // If the eeprom is indicating that we're not bound
     // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
@@ -1159,9 +1193,26 @@ static void updateBindingMode()
         INFOLN("RX has not been bound, enter binding mode...");
         EnterBindingMode();
     }
+#endif
+    // If in "loan" binding mode and we're not configured then start binding
+    if (!InBindingMode && InLoanBindingMode && !config.GetOnLoan()) {
+        EnterBindingMode();
+    }
+    // If in "loan" binding mode and the bind packet has come in, leave binding mode
+    else if (InBindingMode && InLoanBindingMode && config.GetOnLoan()) {
+        ExitBindingMode();
+    }
     // If in binding mode and the bind packet has come in, leave binding mode
-    else if (config.GetIsBound() && InBindingMode)
+    else if (InBindingMode && !InLoanBindingMode && config.GetIsBound())
     {
+        ExitBindingMode();
+    }
+    // If returning the model to the owner, set the flag and call ExitBindingMode to reset the CRC and FHSS
+    else if (returnModelFromLoan && config.GetOnLoan()) {
+        LostConnection();
+        config.SetOnLoan(false);
+        memcpy(UID, MasterUID, sizeof(MasterUID));
+        setupBindingFromConfig();
         ExitBindingMode();
     }
 
@@ -1396,7 +1447,10 @@ void reset_into_bootloader(void)
 
 void EnterBindingMode()
 {
-    if ((connectionState == connected) || InBindingMode) {
+    if (InLoanBindingMode) {
+        LostConnection();
+    }
+    if (connectionState == connected || InBindingMode) {
         // Don't enter binding if:
         // - we're already connected
         // - we're already binding
@@ -1413,7 +1467,6 @@ void EnterBindingMode()
     UID[5] = BindingUID[5];
 
     CRCInitializer = 0;
-    config.SetIsBound(false);
     InBindingMode = true;
 
     // Start attempting to bind
@@ -1429,7 +1482,7 @@ void EnterBindingMode()
 
 void ExitBindingMode()
 {
-    if (!InBindingMode)
+    if (!InBindingMode && !returnModelFromLoan)
     {
         // Not in binding mode
         DBGLN("Cannot exit binding mode, not in binding mode!");
@@ -1438,7 +1491,6 @@ void ExitBindingMode()
 
     // Prevent any new packets from coming in
     Radio.SetTxIdleMode();
-    LostConnection();
     // Write the values to eeprom
     config.Commit();
 
@@ -1453,9 +1505,15 @@ void ExitBindingMode()
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
 
+    LostConnection();
+    SetRFLinkRate(RATE_DEFAULT);
+    Radio.RXnb();
+
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+    InLoanBindingMode = false;
+    returnModelFromLoan = false;
     DBGLN("Exiting binding mode");
     devicesTriggerEvent();
 }
@@ -1470,10 +1528,17 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* packet)
     DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
 
     // Set new UID in eeprom
-    config.SetUID(UID);
-
-    // Set eeprom byte to indicate RX is bound
-    config.SetIsBound(true);
+    if (InLoanBindingMode)
+    {
+        config.SetOnLoanUID(UID);
+        config.SetOnLoan(true);
+    }
+    else
+    {
+        config.SetUID(UID);
+        // Set eeprom byte to indicate RX is bound
+        config.SetIsBound(true);
+    }
 
     // EEPROM commit will happen on the main thread in ExitBindingMode()
 }

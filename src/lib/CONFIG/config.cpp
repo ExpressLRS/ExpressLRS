@@ -485,6 +485,26 @@ RxConfig::SetUID(uint8_t* uid)
 }
 
 void
+RxConfig::SetOnLoan(bool isLoaned)
+{
+    if (m_config.onLoan != isLoaned)
+    {
+        m_config.onLoan = isLoaned;
+        m_modified = true;
+    }
+}
+
+void
+RxConfig::SetOnLoanUID(uint8_t* uid)
+{
+    for (uint8_t i = 0; i < UID_LEN; ++i)
+    {
+        m_config.loanUID[i] = uid[i];
+    }
+    m_modified = true;
+}
+
+void
 RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 {
     if (m_config.powerOnCounter != powerOnCounter)
@@ -516,7 +536,7 @@ RxConfig::SetPower(uint8_t power)
 
 
 void
-RxConfig::SetAntennaMode(uint8_t antennaMode) 
+RxConfig::SetAntennaMode(uint8_t antennaMode)
 {
     //0 and 1 is use for gpio_antenna_select
     // 2 is diversity
@@ -547,6 +567,7 @@ RxConfig::SetDefaults()
         SetPwmChannel(ch, 512, ch, false);
     SetPwmChannel(2, 0, 2, false); // ch2 is throttle, failsafe it to 988
 #endif
+    SetOnLoan(false);
     Commit();
 }
 
