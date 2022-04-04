@@ -12,6 +12,8 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
+#define INIT_FREQ_CORR -600   // about 50 ppm reduction
+
 #include "crc.h"
 #include "CRSF.h"
 #include "telemetry_protocol.h"
@@ -358,7 +360,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         else
         {
             FreqCorrection = FreqCorrectionMax;
-            FreqCorrection = 0; //reset because something went wrong
+            FreqCorrection = INIT_FREQ_CORR; //reset because something went wrong
             DBGLN("Max +FreqCorrection reached!");
         }
     }
@@ -371,7 +373,7 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         else
         {
             FreqCorrection = FreqCorrectionMin;
-            FreqCorrection = 0; //reset because something went wrong
+            FreqCorrection = INIT_FREQ_CORR; //reset because something went wrong
             DBGLN("Max -FreqCorrection reached!");
         }
     }
@@ -542,7 +544,7 @@ void LostConnection()
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
-    FreqCorrection = 0;
+    FreqCorrection = INIT_FREQ_CORR;
     #if !defined(Regulatory_Domain_ISM_2400)
     Radio.SetPPMoffsetReg(0);
     #endif
@@ -575,7 +577,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
-    FreqCorrection = 0;
+    FreqCorrection = INIT_FREQ_CORR;
     Offset = 0;
     prevOffset = 0;
     LPF_Offset.init(0);
@@ -976,6 +978,7 @@ static void HandleUARTin()
 
 static void setupRadio()
 {
+    FreqCorrection = INIT_FREQ_CORR;  // initial freq correction
     Radio.currFreq = GetInitialFreq();
 #if !defined(Regulatory_Domain_ISM_2400)
     //Radio.currSyncWord = UID[3];
