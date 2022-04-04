@@ -9,9 +9,10 @@
 #define GPIO_PIN_BUSY           36
 #define GPIO_PIN_DIO1           39
 #define GPIO_PIN_MOSI           23
-#define GPIO_PIN_MISO           19
+#define GPIO_PIN_MISO           38
 #define GPIO_PIN_SCK            18
 #define GPIO_PIN_RST            9
+//#define GPIO_PIN_TX_ENABLE      19    // use this if you want to use a PA for higher power output!
 
 // VTx pins and Vpd setpoints
 #define GPIO_PIN_SPI_VTX_SCK    14
@@ -43,6 +44,7 @@
 #define WS2812_STATUS_LEDS      {0}
 #define WS2812_VTX_STATUS_LEDS  {1}
 #define WS2812_BOOT_LEDS        {0, 1}
+#define WS2812_IS_GRB
 
 // Output Power
 #define POWER_OUTPUT_FIXED      13 // MAX power for 2400 RXes that don't have PA is 12.5dbm
