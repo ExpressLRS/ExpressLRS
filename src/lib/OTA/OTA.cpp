@@ -163,10 +163,12 @@ UnpackChannelData_t UnpackChannelData;
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(volatile uint8_t* Buffer, CRSF *crsf)
 {
     // The analog channels
-    crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
-    crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
-    crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
-    crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+    // crsf->PackedRCdataOut.ch0 = (Buffer[1] << 3) | ((Buffer[5] & 0b11000000) >> 5);
+    // crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
+    // crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
+    // crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+
+    crsf->PackedRCdataOut.ch0 = crsf->PackedRCdataOut.ch1 = crsf->PackedRCdataOut.ch2 = crsf->PackedRCdataOut.ch3 = 0;
 }
 
 /**
