@@ -123,12 +123,12 @@ static void setupValueIndex(bool init)
     case STATE_POWERSAVE:
         values_min = 0;
         values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
-        values_index = config.GetFanMode();
+        values_index = config.GetMotionMode();
         break;
     case STATE_SMARTFAN:
         values_min = 0;
         values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
-        values_index = config.GetMotionMode();
+        values_index = config.GetFanMode();
         break;
 
     case STATE_POWER_MAX:
