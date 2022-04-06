@@ -124,9 +124,7 @@ device_affinity_t ui_devices[] = {
 #define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
-static int32_t dynamic_power_rssi_sum;
-static int32_t dynamic_power_rssi_n;
-static int32_t dynamic_power_avg_lq = 100 << 16;
+static uint32_t dynamic_power_avg_lq = 100 << 16;
 static int8_t dynamic_power_updated;
 
 #ifdef TARGET_TX_GHOST
@@ -197,8 +195,8 @@ void DynamicPower_Update(uint32_t now)
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
-  int32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
-  int32_t lq_avg = dynamic_power_avg_lq>>16;
+  uint32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
+  uint32_t lq_avg = dynamic_power_avg_lq>>16;
   int32_t lq_diff = lq_avg - lq_current;
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
@@ -206,7 +204,7 @@ void DynamicPower_Update(uint32_t now)
       POWERMGNT.setPower((PowerLevels_e)config.GetPower());
   }
   // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
-  dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
+  dynamic_power_avg_lq = ((uint32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
   // =============  SNR-based power boost up ==============
   // Decrease the power if SNR above threshold and LQ is good
