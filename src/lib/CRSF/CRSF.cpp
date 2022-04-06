@@ -89,7 +89,7 @@ uint32_t CRSF::UARTwdtLastChecked;
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
+uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 400000;
 #if defined(PLATFORM_ESP32)
@@ -379,7 +379,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-        
+
     #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
     {
@@ -787,7 +787,7 @@ uint32_t CRSF::autobaud()
         UARTinverted = !UARTinverted;
         state = INIT;
     }
-    
+
     if ((*autobaud_reg & 1) == 0) {
         *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
         return 400000;
@@ -800,10 +800,19 @@ uint32_t CRSF::autobaud()
     uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
     *autobaud_reg = (4 << 8) | 0;
 
-    DBGLN("autobaud: low %d, high %d", low_period, high_period); 
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
     // tech ref says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
     // add 2 based on testing for lowest deviation
-    return 80000000 / (min(low_period, high_period) + 2);
+    int32_t calulatedBaud = 80000000 / (min(low_period, high_period) + 2);
+    int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
+    for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
+    {
+        if (abs(calulatedBaud - bestBaud) > abs(calulatedBaud - (int32_t)TxToHandsetBauds[i]))
+        {
+            bestBaud = (int32_t)TxToHandsetBauds[i];
+        }
+    }
+    return bestBaud;
 }
 #else
 uint32_t CRSF::autobaud() {
