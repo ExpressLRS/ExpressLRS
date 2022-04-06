@@ -127,7 +127,7 @@ device_affinity_t ui_devices[] = {
 static int32_t dynamic_power_rssi_sum;
 static int32_t dynamic_power_rssi_n;
 static int32_t dynamic_power_avg_lq = 100 << 16;
-static bool dynamic_power_updated;
+static int8_t dynamic_power_updated;
 
 #ifdef TARGET_TX_GHOST
 extern "C"
@@ -150,7 +150,7 @@ bool ICACHE_RAM_ATTR IsArmed()
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 // Assume this function is called inside loop(). Heavy functions goes here.
-void DynamicPower_Update()
+void DynamicPower_Update(uint32_t now)
 {
   if (!config.GetDynamicPower()) {
     return;
@@ -159,7 +159,8 @@ void DynamicPower_Update()
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  if ((connectionState == disconnected && IsArmed()) ||
+  bool armed = IsArmed();
+  if ((connectionState == disconnected && armed) ||
     (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
   {
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -168,9 +169,30 @@ void DynamicPower_Update()
   }
 
   // if telemetry is not arrived, quick return.
-  if (!dynamic_power_updated)
+  if (dynamic_power_updated == 0)
     return;
-  dynamic_power_updated = false;
+
+  // How much available power is left for incremental increases
+  uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
+
+  // dynamic_power_updated < 0 means last telemetry packet was missed
+  if (dynamic_power_updated < 0)
+  {
+    // If armed and more than 512ms + max packet duration (50Hz/20ms) + 2ms fudge since last TLM, raise the power
+    // This delays the first increase for at least 512ms, then will bump it once for each missed TLM after that
+    // state == connected is not used-- unplugging an RX will be connected and will boost power to max before disconnect
+    if (armed &&
+      (now - LastTLMpacketRecvMillis > (512U + 20U + 2U)) &&
+      (powerHeadroom > 0))
+    {
+      DBGLN("+power (tlm)");
+      POWERMGNT.incPower();
+    }
+    dynamic_power_updated = 0;
+    return;
+  }
+
+  dynamic_power_updated = 0;
 
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
@@ -186,17 +208,19 @@ void DynamicPower_Update()
   // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
   dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
 
+  // =============  SNR-based power boost up ==============
+  // Decrease the power if SNR above threshold and LQ is good
+  // Increase the power for each (X) SNR below the threshold
   int8_t snr = crsf.LinkStatistics.uplink_SNR;
   constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
   if (snr >= DYNPOWER_THRESH_DN && dynamic_power_avg_lq >= DYNPOWER_MIN_LQ_UP)
   {
-    DBGVLN("Power decrease");
+    DBGVLN("-power");
     POWERMGNT.decPower();
   }
-  uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
   while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr) && (powerHeadroom > 0))
   {
-    DBGLN("Power increase");
+    DBGLN("+power");
     POWERMGNT.incPower();
     // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
     snr += 2;
@@ -248,7 +272,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket()
             // -- downlink_Link_quality is updated before the LQ period is incremented
             MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
 
-            dynamic_power_updated = true;
+            dynamic_power_updated = 1;
             break;
 
         case ELRS_TELEMETRY_TYPE_DATA:
@@ -468,6 +492,9 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 #else
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
 #endif
+    // Indicate no telemetry packet received with -1
+    if (!LQCalc.currentIsSet())
+      dynamic_power_updated = -1;
     LQCalc.inc();
     return;
   }
@@ -1020,7 +1047,7 @@ void loop()
 
   CheckReadyToSend();
   CheckConfigChangePending();
-  DynamicPower_Update();
+  DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
 
   if (LoggingBackpack->available())
