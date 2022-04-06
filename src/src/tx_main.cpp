@@ -58,7 +58,7 @@ uint32_t SyncPacketLastSent = 0;
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
-LQCALC<10> LQCalc;
+LQCALC<25> LQCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
