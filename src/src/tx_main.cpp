@@ -125,7 +125,7 @@ device_affinity_t ui_devices[] = {
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
 static uint32_t dynamic_power_avg_lq = 100 << 16;
-static int8_t dynamic_power_updated;
+static int8_t dynamic_power_updated;         // 0=no update, 1=LinkStats TLM received, -1=TLM (any) missed
 
 #ifdef TARGET_TX_GHOST
 extern "C"
@@ -174,7 +174,9 @@ void DynamicPower_Update(uint32_t now)
   uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
 
   // dynamic_power_updated < 0 means last telemetry packet was missed
-  if (dynamic_power_updated < 0)
+  bool lastTlmMissed = dynamic_power_updated < 0;
+  dynamic_power_updated = 0;
+  if (lastTlmMissed)
   {
     // If armed and more than 512ms + max packet duration (50Hz/20ms) + 2ms fudge since last TLM, raise the power
     // This delays the first increase for at least 512ms, then will bump it once for each missed TLM after that
@@ -186,11 +188,8 @@ void DynamicPower_Update(uint32_t now)
       DBGLN("+power (tlm)");
       POWERMGNT.incPower();
     }
-    dynamic_power_updated = 0;
     return;
   }
-
-  dynamic_power_updated = 0;
 
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
