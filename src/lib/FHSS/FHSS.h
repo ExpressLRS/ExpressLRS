@@ -3,8 +3,12 @@
 #include "targets.h"
 #include "random.h"
 
+#if defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
-#define FreqCorrectionMin ((int32_t)(-100000/FREQ_STEP))
+#elif defined(RADIO_SX128X)
+#define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
+#endif
+#define FreqCorrectionMin (-FreqCorrectionMax)
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
 
