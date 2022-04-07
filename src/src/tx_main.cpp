@@ -150,9 +150,33 @@ bool ICACHE_RAM_ATTR IsArmed()
 // Assume this function is called inside loop(). Heavy functions goes here.
 void DynamicPower_Update(uint32_t now)
 {
-  if (!config.GetDynamicPower()) {
+  bool newTlmAvail = dynamic_power_updated > 0;
+  // dynamic_power_updated < 0 means last telemetry packet was missed
+  bool lastTlmMissed = dynamic_power_updated < 0;
+  dynamic_power_updated = 0;
+
+  // Get the RSSI from the selected antenna.
+  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0) ? crsf.LinkStatistics.uplink_RSSI_1 : crsf.LinkStatistics.uplink_RSSI_2;
+
+  // power is too strong and saturate the RX LNA
+  if (newTlmAvail && (rssi >= -5))
+  {
+    DBGVLN("-power (overload)");
+    POWERMGNT.decPower();
+  }
+
+  // When not using dynamic power, return here
+  if (!config.GetDynamicPower())
+  {
+    // if RSSI is dropped enough, inc power back to the configured power
+    if (newTlmAvail && (rssi <= -20))
+    {
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
     return;
   }
+
+  // The rest of the codes should be executeded only if dynamic power config is enabled
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
@@ -162,20 +186,13 @@ void DynamicPower_Update(uint32_t now)
     (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
   {
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-    // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
     return;
   }
 
   // if telemetry is not arrived, quick return.
-  if (dynamic_power_updated == 0)
-    return;
-
   // How much available power is left for incremental increases
   uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT.currPower();
 
-  // dynamic_power_updated < 0 means last telemetry packet was missed
-  bool lastTlmMissed = dynamic_power_updated < 0;
-  dynamic_power_updated = 0;
   if (lastTlmMissed)
   {
     // If armed and more than 512ms + max packet duration (50Hz/20ms) + 2ms fudge since last TLM, raise the power
@@ -190,6 +207,9 @@ void DynamicPower_Update(uint32_t now)
     }
     return;
   }
+
+  if (!newTlmAvail)
+    return;
 
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
@@ -225,15 +245,20 @@ void DynamicPower_Update(uint32_t now)
   }
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket()
+void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
-  uint16_t inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
+  if (status != SX12xxDriverCommon::SX12XX_RX_OK)
+  {
+    DBGLN("TLM HW CRC error");
+    return;
+  }
+  uint16_t const inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
 
   Radio.RXdataBuffer[0] &= 0b11;
-  uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+  uint16_t const calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
 
-  uint8_t type = Radio.RXdataBuffer[0] & TLM_PACKET;
-  uint8_t TLMheader = Radio.RXdataBuffer[1];
+  uint8_t const type = Radio.RXdataBuffer[0] & TLM_PACKET;
+  uint8_t const TLMheader = Radio.RXdataBuffer[1];
 
   if ((inCRC != calculatedCRC))
   {
@@ -325,7 +350,7 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
     if (crsf.GetCurrentBaudRate() == 115200) {
       while (rateIndex < RATE_MAX) {
         expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        if (ModParams->enum_rate <= RATE_250HZ) {
+        if (ModParams->enum_rate <= RATE_LORA_250HZ) {
           break;
         }
         rateIndex++;
@@ -347,15 +372,23 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     return;
 
   DBGLN("set rate %u", index);
-  hwTimer.updateInterval(ModParams->interval);
+  uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+  interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+  hwTimer.updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+#if defined(RADIO_SX128X)
+               , uidMacSeedGet(), CRCInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
+#endif
+               );
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
   crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(ModParams->interval);
+  crsf.setSyncParams(interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }
@@ -622,9 +655,9 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  ProcessTLMpacket();
+  ProcessTLMpacket(status);
   busyTransmitting = false;
 }
 
@@ -707,9 +740,9 @@ void OnRFModePacket(mspPacket_t *packet)
 
   switch (rfMode)
   {
-  case RATE_200HZ:
-  case RATE_100HZ:
-  case RATE_50HZ:
+  case RATE_LORA_200HZ:
+  case RATE_LORA_100HZ:
+  case RATE_LORA_50HZ:
     SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
     break;
   default:
@@ -781,10 +814,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
+  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -804,12 +834,7 @@ void EnterBindingMode()
   SendUIDOverMSP();
 
   // Set UID to special binding values
-  UID[0] = BindingUID[0];
-  UID[1] = BindingUID[1];
-  UID[2] = BindingUID[2];
-  UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
+  memcpy(UID, BindingUID, UID_LEN);
 
   CRCInitializer = 0;
   NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
@@ -834,12 +859,7 @@ void ExitBindingMode()
   }
 
   // Reset UID to defined values
-  UID[0] = MasterUID[0];
-  UID[1] = MasterUID[1];
-  UID[2] = MasterUID[2];
-  UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
+  memcpy(UID, MasterUID, UID_LEN);
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 

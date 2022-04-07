@@ -15,7 +15,7 @@ void ICACHE_RAM_ATTR TXdoneCallback()
     Radio.TXnb(testdata, sizeof(testdata));
 }
 
-void ICACHE_RAM_ATTR RXdoneCallback()
+void ICACHE_RAM_ATTR RXdoneCallback(SX12xxDriverCommon::rx_status const /*status*/)
 {
     Serial.println("RXdoneCallback");
     for (int i = 0; i < 8; i++)
@@ -44,7 +44,7 @@ void setup()
 void loop()
 {
     // Serial.println("about to TX");
-    
+
     //delay(1000);
 
     // Serial.println("about to RX");

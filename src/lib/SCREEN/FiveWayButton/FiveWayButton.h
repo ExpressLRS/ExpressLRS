@@ -29,10 +29,12 @@ private:
 #endif
 
     int readKey();
-public:
-    static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
-    static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;
 
+public:
+    FiveWayButton();
     void init();
     void update(int *keyValue, bool *keyLongPressed);
+
+    static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
+    static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;
 };
