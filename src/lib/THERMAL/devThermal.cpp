@@ -27,11 +27,6 @@ bool is_smart_fan_working = false;
 
 #if defined(HAS_FAN)
 #include "POWERMGNT.h"
-
-#if !defined(FAN_MIN_RUNTIME)
-    #define FAN_MIN_RUNTIME 30U // seconds
-#endif
-
 #endif // HAS_FAN
 
 static void initialize()
@@ -84,7 +79,7 @@ static void timeoutFan()
         {
             fanStateDuration = 0; // reset the timeout
         }
-        else if (fanStateDuration < FAN_MIN_RUNTIME)
+        else if (fanStateDuration < firmwareOptions.fan_min_runtime)
         {
             ++fanStateDuration; // counting to turn off
         }

@@ -40,6 +40,7 @@ typedef struct _options {
 #endif
 #if defined(TARGET_TX)
     uint32_t    tlm_report_interval;
+    uint32_t    fan_min_runtime;
     bool        no_sync_on_arm:1;
     bool        uart_inverted:1;
     bool        unlock_higher_power:1;

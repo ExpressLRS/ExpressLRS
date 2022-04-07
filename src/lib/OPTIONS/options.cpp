@@ -104,6 +104,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .tlm_report_interval = 320U,
 #endif
+#if defined(FAN_MIN_RUNTIME)
+    .fan_min_runtime = FAN_MIN_RUNTIME,
+#else
+    .fan_min_runtime = 30,
+#endif
 #if defined(NO_SYNC_ON_ARM)
     .no_sync_on_arm = true,
 #else

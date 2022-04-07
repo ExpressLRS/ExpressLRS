@@ -91,6 +91,7 @@ def patch_rx_params(mm, pos, args):
 
 def patch_tx_params(mm, pos, args):
     pos = write32(mm, pos, args.tlm_report)
+    pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
     if args.sync_on_arm != None:
         val &= ~1
@@ -273,12 +274,14 @@ def print_config(mm, pos):
 
     if _deviceType == 0:    # TX
         (pos, tlm) = read32(mm, pos)
+        (pos, fan) = read32(mm, pos)
         val = mm[pos]
         pos += 1
         no_sync_on_arm = (val & 1) == 1
         uart_inverted = (val & 2) == 2
         unlock_higher_power = (val & 4) == 4
         print(f'Telemetry report interval = {tlm}ms')
+        print(f'Fan minimum run time = {fan}s')
         print(f'NO_SYNC_ON_ARM is {no_sync_on_arm}')
         print(f'UART_INVERTED is {uart_inverted}')
         print(f'UNLOCK_HIGHER_POWER is {unlock_higher_power}')
@@ -344,6 +347,7 @@ def main():
     parser.set_defaults(lock_on_first_connection=None)
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
+    parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
     parser.add_argument('--sync-on-arm', dest='sync_on_arm', action='store_true', help='Send sync packets to the RX when armed')
     parser.add_argument('--no-sync-on-arm', dest='sync_on_arm', action='store_false', help='Do not send sync packets to the RX when armed')
     parser.set_defaults(sync_on_arm=None)
