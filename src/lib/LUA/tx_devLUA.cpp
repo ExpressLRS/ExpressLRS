@@ -264,16 +264,24 @@ static void luadevUpdateModelID() {
   strcat(modelMatchUnit,")");
 }
 
-static void luadevUpdateTlmBandwidth() {
-  if((expresslrs_tlm_ratio_e)config.GetTlm()){
-  tlmBandwidth[0] = ' ';
-  uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
-  uint32_t tlmRatio = TLMratioEnumToValue((expresslrs_tlm_ratio_e)config.GetTlm());
-  uint32_t bandwidthValue = ((float)hz / tlmRatio) *1/2*5*8;
-  itoa(bandwidthValue,tlmBandwidth+2,10);
-  strcat(tlmBandwidth,"bps)");
-  } else {
+static void luadevUpdateTlmBandwidth()
+{
+  expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
+  if (eRatio == TLM_RATIO_NO_TLM)
+  {
     tlmBandwidth[0] = '\0';
+  }
+  else
+  {
+    tlmBandwidth[0] = ' ';
+
+    uint16_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
+    uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
+    uint32_t bandwidthValue = ELRS_TELEMETRY_BYTES_PER_CALL * 8U * burst * hz / ratiodiv / (burst + 1);
+
+    itoa(bandwidthValue, &tlmBandwidth[2], 10);
+    strcat(tlmBandwidth, "bps)");
   }
 }
 
@@ -395,8 +403,8 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
   }
 }
 
-static void updateFolderName(){
-  
+static void updateFolderName()
+{
   //power folder name
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   uint8_t pwrFolderLabelOffset = getSeparatorIndex(2,pwrFolderDynamicName); // start writing name after the 2nd space
@@ -422,7 +430,7 @@ static void updateFolderName(){
     if(vtxPwr){
       vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
       vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPwr, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPwr);
-      
+
       uint8_t vtxPit = config.GetVtxPitmode();
       //if pitmode is off, don't show
       //show pitmode AuxSwitch or show P if not OFF
@@ -445,7 +453,7 @@ static void updateFolderName(){
 }
 
 static void registerLuaParameters()
-{ 
+{
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
