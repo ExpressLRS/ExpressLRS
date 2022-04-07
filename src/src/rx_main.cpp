@@ -12,7 +12,7 @@ SX1280Driver Radio;
 #error "Radio configuration is not valid!"
 #endif
 
-#define INIT_FREQ_CORR -600   // about 50 ppm reduction
+#define INIT_FREQ_CORR -800   // about 70 ppm reduction
 
 #include "crc.h"
 #include "CRSF.h"
