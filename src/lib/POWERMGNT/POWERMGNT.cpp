@@ -40,6 +40,10 @@ int8_t POWERMGNT::CurrentSX1280Power = 0;
 
 #if defined(POWER_OUTPUT_VALUES)
 static int16_t powerValues[] = POWER_OUTPUT_VALUES;
+#if defined(POWER_OUTPUT_DAC)
+static int16_t powerValues868[] = POWER_OUTPUT_VALUES_868;
+extern bool isDomain868();
+#endif
 #endif
 
 static int8_t powerCaliValues[PWR_COUNT] = {0};
@@ -227,7 +231,8 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
-    TxDAC.setPower(powerValues[Power - MinPower]);
+    int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];
+    TxDAC.setPower(mV);
 #elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4

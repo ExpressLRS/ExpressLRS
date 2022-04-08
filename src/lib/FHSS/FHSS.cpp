@@ -345,3 +345,8 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     }
     DBGCR;
 }
+
+bool isDomain868()
+{
+    return strcmp(FHSSconfig.domain, "EU868") == 0;
+}
