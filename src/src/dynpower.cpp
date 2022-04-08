@@ -14,7 +14,21 @@
 #define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
 
-static uint32_t dynamic_power_avg_lq;
+template<uint8_t K, uint8_t SHIFT>
+class MovingAvg
+{
+public:
+  void init(uint32_t v) { _shiftedVal = v << SHIFT; };
+  void add(uint32_t v) {  _shiftedVal = ((K - 1) * _shiftedVal + (v << SHIFT)) / K; };
+  uint32_t getValue() const { return _shiftedVal >> SHIFT; };
+
+  void operator=(const uint32_t &v) { init(v); };
+  operator uint32_t () const { return getValue(); };
+private:
+  uint32_t _shiftedVal;
+};
+
+static MovingAvg<DYNAMIC_POWER_MOVING_AVG_K, 16> dynamic_power_avg_lq;
 static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
 
 extern bool IsArmed();
@@ -27,7 +41,7 @@ static void DynamicPower_SetToConfigPower()
 
 void DynamicPower_Init()
 {
-    dynamic_power_avg_lq = 100 << 16;
+    dynamic_power_avg_lq = 100;
     dynamic_power_updated = dptuNoUpdate;
 }
 
@@ -39,7 +53,6 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(DynamicPowerTelemetryUpdate_e 
 void DynamicPower_Update(uint32_t now)
 {
   bool newTlmAvail = dynamic_power_updated == dptuNewLinkstats;
-  // dynamic_power_updated < 0 means last telemetry packet was missed
   bool lastTlmMissed = dynamic_power_updated == dptuMissed;
   dynamic_power_updated = dptuNoUpdate;
 
@@ -77,25 +90,28 @@ void DynamicPower_Update(uint32_t now)
     return;
   }
 
-  // if telemetry is not arrived, quick return.
   // How much available power is left for incremental increases
   uint8_t powerHeadroom = config.GetPower() - (uint8_t)POWERMGNT::currPower();
 
   if (lastTlmMissed)
   {
-    // If armed and more than 512ms + max packet duration (50Hz/20ms) + 2ms fudge since last TLM, raise the power
-    // This delays the first increase for at least 512ms, then will bump it once for each missed TLM after that
-    // state == connected is not used-- unplugging an RX will be connected and will boost power to max before disconnect
-    if (armed &&
-      (now - LastTLMpacketRecvMillis > (512U + 20U + 2U)) &&
-      (powerHeadroom > 0))
+    // If armed and missing telemetry, raise the power, but only after the first LinkStats is missed (which come
+    // at most every 512ms). This delays the first increase, then will bump it once for each missed TLM after that
+    // state == connected is not used: unplugging an RX will be connected and will boost power to max before disconnect
+    if (armed && (powerHeadroom > 0))
     {
-      DBGLN("+power (tlm)");
-      POWERMGNT::incPower();
+      uint32_t linkstatsInterval = 2U * TLMratioEnumToValue(config.GetTlm()) * ExpressLRS_currAirRate_Modparams->interval / 1000U;
+      linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
+      if (now - LastTLMpacketRecvMillis > (linkstatsInterval + 2U))
+      {
+        DBGLN("+power (tlm)");
+        POWERMGNT::incPower();
+      }
     }
     return;
   }
 
+  // If no new telemetry, no new LQ/SNR/RSSI to use for adjustment
   if (!newTlmAvail)
     return;
 
@@ -103,22 +119,21 @@ void DynamicPower_Update(uint32_t now)
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
-  uint32_t lq_avg = dynamic_power_avg_lq>>16;
+  uint32_t lq_avg = dynamic_power_avg_lq;
   int32_t lq_diff = lq_avg - lq_current;
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
       DynamicPower_SetToConfigPower();
   }
-  // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
-  dynamic_power_avg_lq = ((uint32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
+  dynamic_power_avg_lq.add(lq_current);
 
   // =============  SNR-based power boost up ==============
   // Decrease the power if SNR above threshold and LQ is good
   // Increase the power for each (X) SNR below the threshold
   int8_t snr = CRSF::LinkStatistics.uplink_SNR;
   constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
-  if (snr >= DYNPOWER_THRESH_DN && dynamic_power_avg_lq >= DYNPOWER_MIN_LQ_UP)
+  if (snr >= DYNPOWER_THRESH_DN && lq_avg >= DYNPOWER_MIN_LQ_UP)
   {
     DBGVLN("-power");
     POWERMGNT::decPower();

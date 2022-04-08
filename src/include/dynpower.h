@@ -8,12 +8,12 @@
 #include <CRSF.h>
 #include <logging.h>
 
-enum DynamicPowerTelemetryUpdate_e
+typedef enum
 {
-    dptuMissed = -1,       // Any telemetry packet missed
-    dptuNoUpdate = 0,      // No change
-    dptuNewLinkstats = 1,  // New LinkStats telemetry received
-};
+    dptuNoUpdate,       // No change
+    dptuNewLinkstats,   // New LinkStats telemetry received
+    dptuMissed,         // Any telemetry packet missed
+} DynamicPowerTelemetryUpdate_e;
 
 // Call DynamicPower_Init in setup()
 void DynamicPower_Init();
