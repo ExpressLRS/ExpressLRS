@@ -105,19 +105,16 @@ uint8_t MspData[ELRS_MSP_BUFFER];
 
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
-/// Filters ////////////////
+/// PFD Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 
-// LPF LPF_UplinkRSSI(5);
+/// LQ/RSSI/SNR Calculation //////////
+LQCALC<100> LQCalc;
+uint8_t uplinkLQ;
 LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
-
-
-/// LQ Calculation //////////
-LQCALC<100> LQCalc;
-uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
