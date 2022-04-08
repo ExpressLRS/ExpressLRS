@@ -3,16 +3,18 @@
 #include <dynpower.h>
 #include <common.h>
 
-#if !defined(DYNPOWER_THRESH_DN)
-  #if defined(RADIO_SX127X)
-    #define DYNPOWER_THRESH_DN              5
-  #else
-    #define DYNPOWER_THRESH_DN              10
-  #endif
-#endif
-#define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
-#define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
-#define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
+// LQ-based boost defines
+#define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
+#define DYNPOWER_LQ_BOOST_THRESH_MIN  50  // If LQ is below this value (absolute), immediately boost to the max power configured.
+#define DYNPOWER_LQ_MOVING_AVG_K      8   // Number of previous values for calculating moving average. Best with power of 2.
+
+// RSSI-based increment defines
+#define DYNPOWER_RSSI_CNT 5               // Number of RSSI readings to average (straight average) to make an RSSI-based adjustment
+#define DYNPOWER_RSSI_THRESH_UP 15        // RSSI < (Sensitivity+Up) -> raise power
+#define DYNPOWER_RSSI_THRESH_DN 21        // RSSI > (Sensitivity+Dn) >- lower power
+
+// SNR-based increment defines
+#define DYNPOWER_SNR_LQ_THRESH_DN 95      // Min LQ for lowering power using SNR-based power lowering
 
 template<uint8_t K, uint8_t SHIFT>
 class MovingAvg
@@ -28,7 +30,7 @@ private:
   uint32_t _shiftedVal;
 };
 
-static MovingAvg<DYNAMIC_POWER_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
+static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
 static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
 
@@ -77,7 +79,9 @@ void DynamicPower_Update(uint32_t now)
     return;
   }
 
+  //
   // The rest of the codes should be executeded only if dynamic power config is enabled
+  //
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
@@ -121,24 +125,21 @@ void DynamicPower_Update(uint32_t now)
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
   uint32_t lq_avg = dynamic_power_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
-  // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
-  if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
+  // if LQ drops quickly (DYNPOWER_LQ_BOOST_THRESH_DIFF) or critically low below DYNPOWER_LQ_BOOST_THRESH_MIN, immediately boost to the configured max power.
+  if(lq_diff >= DYNPOWER_LQ_BOOST_THRESH_DIFF || lq_current <= DYNPOWER_LQ_BOOST_THRESH_MIN)
   {
       DynamicPower_SetToConfigPower();
   }
   dynamic_power_mavg_lq.add(lq_current);
 
-  if (ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr == DYNPOWER_UPTHRESH_SNR_NONE)
+  if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
     // =============  RSSI-based power increment ==============
     // a simple threshold compared against N sample average of
     // rssi vs the sensitivity limit +/- some thresholds
     dynamic_power_mean_rssi.add(rssi);
 
-    constexpr unsigned DYNPOWER_MIN_RECORD_NUM = 5;
-    constexpr int8_t DYNPOWER_RSSI_THRESH_UP = 15;
-    constexpr int8_t DYNPOWER_RSSI_THRESH_DN = 21;
-    if (dynamic_power_mean_rssi.getCount() >= DYNPOWER_MIN_RECORD_NUM)
+    if (dynamic_power_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
     {
       int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
       int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
@@ -162,14 +163,13 @@ void DynamicPower_Update(uint32_t now)
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
     int8_t snr = CRSF::LinkStatistics.uplink_SNR;
-    constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
-    if (snr >= DYNPOWER_THRESH_DN && lq_avg >= DYNPOWER_MIN_LQ_UP)
+    if (snr >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_SNR_LQ_THRESH_DN)
     {
       DBGVLN("-power (snr)");
       POWERMGNT::decPower();
     }
 
-    while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr) && (powerHeadroom > 0))
+    while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
     {
       DBGLN("+power (snr)");
       POWERMGNT::incPower();
