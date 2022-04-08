@@ -815,28 +815,15 @@ local function handleDevicePageEvent(event, touchState)
   elseif edit then
     if event ~= nil then
       if event ~= 0 then
-	if touchState then -- Only touch events come with a touchState
-          if event == EVT_TOUCH_FIRST then
-            -- When the finger first hits the screen
-          elseif event == EVT_TOUCH_BREAK then
-            -- When the finger leaves the screen and did not slide on it
-          elseif event == EVT_TOUCH_TAP then
-            -- A short tap gives TAP instead of BREAK
-            -- touchState.tapCount shows number of taps
-          elseif event == EVT_TOUCH_SLIDE then
-            -- Sliding the finger gives a SLIDE instead of BREAK or TAP
+	if touchState then
+          if event == EVT_TOUCH_SLIDE then
             if touchState.swipeRight then
-              -- Is true if user swiped right
               incrField(1)
             elseif touchState.swipeLeft then
               incrField(-1)
-            elseif touchState.swipeUp then
-            elseif touchState.swipeDown then
-            else
-              -- Sliding but not swiping
             end
-		  end
-	    else -- event ~= 0 and touchState == nil: key event
+          end
+        else -- event ~= 0 and touchState == nil: key event
           if event == EVT_VIRTUAL_NEXT then
             incrField(1)
           elseif event == EVT_VIRTUAL_PREV then
@@ -848,36 +835,23 @@ local function handleDevicePageEvent(event, touchState)
   else
     if event ~= nil then
       if event ~= 0 then
-	    if touchState then -- Only touch events come with a touchState
-          if event == EVT_TOUCH_FIRST then
-            -- When the finger first hits the screen
-          elseif event == EVT_TOUCH_BREAK then
-            -- When the finger leaves the screen and did not slide on it
-          elseif event == EVT_TOUCH_TAP then
-            -- A short tap gives TAP instead of BREAK
-            -- touchState.tapCount shows number of taps
-          elseif event == EVT_TOUCH_SLIDE then
-            -- Sliding the finger gives a SLIDE instead of BREAK or TAP
-            if touchState.swipeRight then
-              -- Is true if user swiped right
-            elseif touchState.swipeLeft then
-            elseif touchState.swipeUp then
+        if touchState then
+          if event == EVT_TOUCH_SLIDE then
+            if touchState.swipeUp then
               selectField(-1)
             elseif touchState.swipeDown then
               selectField(1)
-            else
-              -- Sliding but not swiping
             end
-		      end
-	    else -- event ~= 0 and touchState == nil: key event
+          end
+	else -- event ~= 0 and touchState == nil: key event
           if (event == EVT_VIRTUAL_NEXT) then
             selectField(1)
           elseif (event == EVT_VIRTUAL_PREV) then
             selectField(-1)
           end
-		    end
+        end
       end
-	end
+    end
   end
 end
 
