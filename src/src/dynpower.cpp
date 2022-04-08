@@ -28,7 +28,8 @@ private:
   uint32_t _shiftedVal;
 };
 
-static MovingAvg<DYNAMIC_POWER_MOVING_AVG_K, 16> dynamic_power_avg_lq;
+static MovingAvg<DYNAMIC_POWER_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
+static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
 static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
 
 extern bool IsArmed();
@@ -41,7 +42,7 @@ static void DynamicPower_SetToConfigPower()
 
 void DynamicPower_Init()
 {
-    dynamic_power_avg_lq = 100;
+    dynamic_power_mavg_lq = 100;
     dynamic_power_updated = dptuNoUpdate;
 }
 
@@ -56,7 +57,6 @@ void DynamicPower_Update(uint32_t now)
   bool lastTlmMissed = dynamic_power_updated == dptuMissed;
   dynamic_power_updated = dptuNoUpdate;
 
-  // Get the RSSI from the selected antenna.
   int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
 
   // power is too strong and saturate the RX LNA
@@ -119,34 +119,65 @@ void DynamicPower_Update(uint32_t now)
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
-  uint32_t lq_avg = dynamic_power_avg_lq;
+  uint32_t lq_avg = dynamic_power_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
   // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
   {
       DynamicPower_SetToConfigPower();
   }
-  dynamic_power_avg_lq.add(lq_current);
+  dynamic_power_mavg_lq.add(lq_current);
 
-  // =============  SNR-based power boost up ==============
-  // Decrease the power if SNR above threshold and LQ is good
-  // Increase the power for each (X) SNR below the threshold
-  int8_t snr = CRSF::LinkStatistics.uplink_SNR;
-  constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
-  if (snr >= DYNPOWER_THRESH_DN && lq_avg >= DYNPOWER_MIN_LQ_UP)
+  if (ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr == DYNPOWER_UPTHRESH_SNR_NONE)
   {
-    DBGVLN("-power");
-    POWERMGNT::decPower();
-  }
+    // =============  RSSI-based power increment ==============
+    // a simple threshold compared against N sample average of
+    // rssi vs the sensitivity limit +/- some thresholds
+    dynamic_power_mean_rssi.add(rssi);
 
-  while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr) && (powerHeadroom > 0))
+    constexpr unsigned DYNPOWER_MIN_RECORD_NUM = 5;
+    constexpr int8_t DYNPOWER_RSSI_THRESH_UP = 15;
+    constexpr int8_t DYNPOWER_RSSI_THRESH_DN = 21;
+    if (dynamic_power_mean_rssi.getCount() >= DYNPOWER_MIN_RECORD_NUM)
+    {
+      int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
+      int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
+      int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN;
+      int8_t avg_rssi = dynamic_power_mean_rssi.mean(); // resets it too
+      if ((avg_rssi < rssi_inc_threshold) && (powerHeadroom > 0))
+      {
+        DBGLN("+power (rssi)");
+        POWERMGNT::incPower();
+      }
+      else if (avg_rssi > rssi_dec_threshold)
+      {
+        DBGVLN("-power (rssi)");
+        POWERMGNT::decPower();
+      }
+    }
+  } // ^^ if RSSI-based
+  else
   {
-    DBGLN("+power");
-    POWERMGNT::incPower();
-    // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
-    snr += 2;
-    --powerHeadroom;
-  }
+    // =============  SNR-based power increment ==============
+    // Decrease the power if SNR above threshold and LQ is good
+    // Increase the power for each (X) SNR below the threshold
+    int8_t snr = CRSF::LinkStatistics.uplink_SNR;
+    constexpr unsigned DYNPOWER_MIN_LQ_UP = 95;
+    if (snr >= DYNPOWER_THRESH_DN && lq_avg >= DYNPOWER_MIN_LQ_UP)
+    {
+      DBGVLN("-power (snr)");
+      POWERMGNT::decPower();
+    }
+
+    while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerUpThresholdSnr) && (powerHeadroom > 0))
+    {
+      DBGLN("+power (snr)");
+      POWERMGNT::incPower();
+      // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
+      snr += 2;
+      --powerHeadroom;
+    }
+  } // ^^ if SNR-based
 }
 
 #endif // TARGET_TX

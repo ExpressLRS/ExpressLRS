@@ -102,7 +102,8 @@ typedef struct expresslrs_rf_pref_params_s
     uint8_t index;
     uint8_t enum_rate;                    // Max value of 4 since only 2 bits have been assigned in the sync package.
     int8_t RXsensitivity;                 // expected min RF sensitivity
-    int8_t DynpowerUpThresholdSnr;        // Request a raise in power if the reported (average) SNR is at or below this or DYNPOWER_UPTHRESH_SNR_NONE
+    int8_t DynpowerUpThresholdSnr;        // Request a raise in power if the reported (average) SNR is at or below this
+                                          // or DYNPOWER_UPTHRESH_SNR_NONE to use RSSI
     uint16_t TOA;                         // time on air in microseconds
     uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
     uint16_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)

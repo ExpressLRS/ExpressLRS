@@ -28,7 +28,12 @@ public:
         _count = 0;
     }
 
+    size_t getCount() const
+    {
+        return _count;
+    }
+
 private:
     StorageType _accumulator;
-    size_t _count;
+    StorageType _count;
 };
