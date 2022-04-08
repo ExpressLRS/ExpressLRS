@@ -1,4 +1,6 @@
+#ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno 2400RX"
+#endif
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            15
@@ -16,4 +18,7 @@
 #endif
 
 // Output Power
-#define POWER_OUTPUT_FIXED -7 // SX1280 output power for the PA (Skyworks Solutions Inc. RFX2411) is -7
+#define MinPower                PWR_10mW
+#define MaxPower                PWR_100mW
+#define DefaultPower            PWR_100mW
+#define POWER_OUTPUT_VALUES     {-15, -10, -7, 3} //has PA, use Power array
