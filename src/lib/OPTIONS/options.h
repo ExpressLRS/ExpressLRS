@@ -37,6 +37,7 @@ typedef struct _options {
     uint32_t    uart_baud;
     bool        invert_tx:1;
     bool        lock_on_first_connection:1;
+    bool        r9mm_mini_sbus:1;
 #endif
 #if defined(TARGET_TX)
     uint32_t    tlm_report_interval;

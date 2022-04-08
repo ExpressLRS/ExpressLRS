@@ -898,8 +898,16 @@ static void setupSerial()
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else /* !TARGET_R9SLIMPLUS_RX */
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
+    if (firmwareOptions.r9mm_mini_sbus)
+    {
+        CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
+        CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
+    }
+    else
+    {
+        CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+        CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
+    }
 #endif /* TARGET_R9SLIMPLUS_RX */
 #if defined(TARGET_RX_GHOST_ATTO_V1)
     // USART1 is used for RX (half duplex)

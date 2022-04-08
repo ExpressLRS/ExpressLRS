@@ -97,6 +97,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .lock_on_first_connection = false,
 #endif
+#if defined(USE_R9MM_R9MINI_SBUS)
+    .r9mm_mini_sbus = true,
+#else
+    .r9mm_mini_sbus = false,
+#endif
 #endif
 #if defined(TARGET_TX)
 #if defined(TLM_REPORT_INTERVAL_MS)

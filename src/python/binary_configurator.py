@@ -86,6 +86,9 @@ def patch_rx_params(mm, pos, args):
     if args.lock_on_first_connection != None:
         val &= ~2
         val |= (args.lock_on_first_connection << 1)
+    if args.r9mm_mini_sbus != None:
+        val &= ~4
+        val |= (args.r9mm_mini_sbus << 2)
     mm[pos] = val
     return pos + 1
 
@@ -307,9 +310,11 @@ def print_config(mm, pos):
         pos += 1
         invert_tx = (val & 1) == 1
         lock_on_first_connection = (val & 2) == 2
+        r9mm_mini_sbus = (val & 4) == 4
         print(f'Receiver CRSF baud rate = {baud}')
         print(f'RCVR_INVERT_TX is {invert_tx}')
         print(f'LOCK_ON_FIRST_CONNECTION is {lock_on_first_connection}')
+        print(f'USE_R9MM_MINI_SBUS is {r9mm_mini_sbus}')
     elif _deviceType == 2:  # TXBP
         None
     elif _deviceType == 3:  # VRX
@@ -345,6 +350,9 @@ def main():
     parser.add_argument('--lock-on-first-connection', dest='lock_on_first_connection', action='store_true', help='Lock RF mode on first connection')
     parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Do not lock RF mode on first connection')
     parser.set_defaults(lock_on_first_connection=None)
+    parser.add_argument('--r9mm-mini-sbus', dest='r9mm_mini_sbus', action='store_true', help='Use the SBUS pin for CRSF output, not it will be inverted')
+    parser.add_argument('--no-r9mm-mini-sbus', dest='r9mm_mini_sbus', action='store_false', help='Use the normal serial pins for CRSF')
+    parser.set_defaults(r9mm_mini_sbus=None)
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
