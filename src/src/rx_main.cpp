@@ -17,6 +17,7 @@
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devServoOutput.h"
 #include "devVTXSPI.h"
 
 ///LUA///
@@ -47,6 +48,9 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
 #endif
+#ifdef HAS_SERVO_OUTPUT
+  {&ServoOut_device, 0},
+#endif
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -62,14 +66,6 @@ Telemetry telemetry;
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
-#endif
-
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-#include <Servo.h>
-static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-static Servo *Servos[SERVO_COUNT];
-static bool newChannelsAvailable;
 #endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
@@ -649,8 +645,8 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     // No channels packets to the FC if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
-        newChannelsAvailable = true;
+        #if defined(HAS_SERVO_OUTPUT)
+        servoNewChannelsAvaliable();
         #else
         crsf.sendRCFrameToFC();
         #endif
@@ -1115,62 +1111,6 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
-static void servosUpdate(unsigned long now)
-{
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-    // The ESP waveform generator is nice because it doesn't change the value
-    // mid-cycle, but it does busywait if there's already a change queued.
-    // Updating every 20ms minimizes the amount of waiting (0-800us cycling
-    // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
-    static uint32_t lastUpdate;
-    const uint32_t elapsed = now - lastUpdate;
-    if (elapsed < 20)
-        return;
-
-    if (newChannelsAvailable)
-    {
-        newChannelsAvailable = false;
-        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-        {
-            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
-            if (chConfig->val.inverted)
-                us = 3000U - us;
-
-            if (Servos[ch])
-                Servos[ch]->writeMicroseconds(us);
-            else if (us >= 988U && us <= 2012U)
-            {
-                // us might be out of bounds if this is a switch channel and it has not been
-                // received yet. Delay initializing the servo until the channel is valid
-                Servo *servo = new Servo();
-                Servos[ch] = servo;
-                servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
-            }
-        } /* for each servo */
-    } /* if newChannelsAvailable */
-
-    else if (elapsed > 1000U && connectionState == connected)
-    {
-        // No update for 1s, go to failsafe
-        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-        {
-            // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
-            uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
-            if (Servos[ch])
-                Servos[ch]->writeMicroseconds(us);
-        }
-    }
-
-    else
-        return; // prevent updating lastUpdate
-
-    // need to sample actual millis at the end to account for any
-    // waiting that happened in Servo::writeMicroseconds()
-    lastUpdate = millis();
-#endif
-}
-
 static void updateBindingMode()
 {
 #ifndef MY_UID
@@ -1368,7 +1308,6 @@ void loop()
     }
 
     cycleRfMode(now);
-    servosUpdate(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
