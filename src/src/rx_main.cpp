@@ -18,6 +18,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTXSPI.h"
+#include "devAnalogVbat.h"
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -46,6 +47,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
+#endif
+#ifdef USE_ANALOG_VBAT
+    {&AnalogVbat_device, 0},
 #endif
 };
 
