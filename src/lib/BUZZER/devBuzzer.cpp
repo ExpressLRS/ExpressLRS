@@ -9,7 +9,7 @@
 // Even though we aren't using anything this keeps the PIO dependency analyzer happy!
 #include "POWERMGNT.h"
 
-#if defined(GPIO_PIN_BUZZER) && (GPIO_PIN_BUZZER != UNDEF_PIN)
+#if defined(GPIO_PIN_BUZZER)
 
 static void initializeBuzzer()
 {

@@ -3,7 +3,7 @@
 #include "logging.h"
 #include "POWERMGNT.h"
 
-#if defined(GPIO_PIN_PA_PDET) && GPIO_PIN_PA_PDET != UNDEF_PIN
+#if defined(GPIO_PIN_PA_PDET)
 
 #if defined(USE_SKY85321)
 #define SKY85321_MAX_DBM_INPUT 5

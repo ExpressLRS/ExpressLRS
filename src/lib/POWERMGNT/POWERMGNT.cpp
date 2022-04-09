@@ -1,4 +1,5 @@
 #ifndef UNIT_TEST
+#include "targets.h"
 #include "common.h"
 #include "device.h"
 #include "POWERMGNT.h"
@@ -39,9 +40,9 @@ PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
 #if defined(POWER_OUTPUT_VALUES)
-static int16_t powerValues[] = POWER_OUTPUT_VALUES;
-#if defined(POWER_OUTPUT_DAC)
-static int16_t powerValues868[] = POWER_OUTPUT_VALUES_868;
+static const int16_t *powerValues = POWER_OUTPUT_VALUES;
+#if defined(POWER_OUTPUT_DAC) && !defined(TARGET_UBER_TX)
+static const int16_t *powerValues868 = POWER_OUTPUT_VALUES_868;
 extern bool isDomain868();
 #endif
 #endif
@@ -190,9 +191,10 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
-#if defined(GPIO_PIN_FAN_EN)
-    pinMode(GPIO_PIN_FAN_EN, OUTPUT);
-#endif
+    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+    }
     LoadCalibration();
     setDefaultPower();
 }
@@ -238,16 +240,21 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_DACWRITE)
-    Radio.SetOutputPower(0b0000);
-    dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_FIXED)
-    Radio.SetOutputPower(POWER_OUTPUT_FIXED);
-#elif defined(POWER_OUTPUT_VALUES)
-    CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
-    Radio.SetOutputPower(CurrentSX1280Power);
 #else
-#error "[ERROR] Unknown power management!"
+    if (POWER_OUTPUT_DACWRITE)
+    {
+        Radio.SetOutputPower(0b0000);
+        dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+    }
+    else if (POWER_OUTPUT_FIXED)
+    {
+        Radio.SetOutputPower(POWER_OUTPUT_FIXED);
+    }
+    else if (POWER_OUTPUT_VALUES)
+    {
+        CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
+        Radio.SetOutputPower(CurrentSX1280Power);
+    }
 #endif
     CurrentPower = Power;
     devicesTriggerEvent();

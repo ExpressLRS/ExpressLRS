@@ -2,11 +2,13 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+#if defined(GPIO_PIN_BUTTON)
 #include "logging.h"
 #include "button.h"
 
-static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
+// static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
+
+static Button button;
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
 #include "POWERMGNT.h"
@@ -55,6 +57,7 @@ static void rxWebUpdateReboot()
 
 static void initialize()
 {
+    button.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
         button.OnShortPress = enterBindMode3Click;
         button.OnLongPress = cyclePower;

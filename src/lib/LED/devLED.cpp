@@ -53,18 +53,21 @@ static void initialize()
 {
     // TODO for future PR, remove TARGET_TX, TARGET_RX, and TARGET_TX_FM30 defines.
     #if defined(TARGET_TX)
-        #if defined(GPIO_PIN_LED_BLUE) && (GPIO_PIN_LED_BLUE != UNDEF_PIN)
+        if (GPIO_PIN_LED_BLUE != UNDEF_PIN)
+        {
             pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
             digitalWrite(GPIO_PIN_LED_BLUE, LOW ^ GPIO_LED_BLUE_INVERTED);
-        #endif // GPIO_PIN_BLUE_GREEN
-        #if defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+        }
+        if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+        {
             pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
             digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
-        #endif // GPIO_PIN_LED_GREEN
-        #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
+        }
+        if (GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
             pinMode(GPIO_PIN_LED_RED, OUTPUT);
             digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-        #endif // GPIO_PIN_LED_RED
+        }
         #if defined(TARGET_TX_IFLIGHT)
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
             digitalWrite(GPIO_PIN_LED_RED, HIGH);
@@ -140,8 +143,11 @@ static int event()
                 digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
                 digitalWrite(GPIO_PIN_LED_RED, LOW);
                 digitalWrite(GPIO_PIN_LED_BLUE, LOW);
-            #elif defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-                digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
+            #else
+                if (GPIO_PIN_LED_RED != UNDEF_PIN)
+                {
+                    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
+                }
             #endif
         #endif // GPIO_PIN_LED_RED
         #if defined(TARGET_RX)
@@ -171,8 +177,11 @@ static int event()
                 digitalWrite(GPIO_PIN_LED_GREEN, LOW);
                 digitalWrite(GPIO_PIN_LED_BLUE, LOW);
                 return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
-            #elif defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-                digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+            #else
+                if (GPIO_PIN_LED_RED != UNDEF_PIN)
+                {
+                    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+                }
             #endif
         #endif
         #if defined(TARGET_RX)
@@ -208,16 +217,21 @@ static int event()
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
             digitalWrite(GPIO_PIN_LED_BLUE, LOW);
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
-        #elif defined(GPIO_PIN_LED_GREEN) && (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-            digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-        #endif // GPIO_PIN_LED_GREEN
-        #if defined(GPIO_PIN_LED_RED) && (GPIO_PIN_LED_RED != UNDEF_PIN)
-            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
-        #elif defined(GPIO_PIN_LED) && (GPIO_PIN_LED != UNDEF_PIN)
-            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         #else
-            return DURATION_NEVER;
-        #endif
+            if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
+            }
+        #endif // GPIO_PIN_LED_GREEN
+        if (GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
+        else if(GPIO_PIN_LED != UNDEF_PIN)
+        {
+            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
+        return DURATION_NEVER;
     default:
         return DURATION_NEVER;
     }

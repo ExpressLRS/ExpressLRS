@@ -54,27 +54,6 @@
 #endif /* GPIO_PIN_LED_RED */
 #endif /* GPIO_PIN_LED */
 
-#ifndef GPIO_PIN_BUFFER_OE
-#define GPIO_PIN_BUFFER_OE UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_RST
-#define GPIO_PIN_RST UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_BUSY
-#define GPIO_PIN_BUSY UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_DIO0
-#define GPIO_PIN_DIO0 UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_DIO1
-#define GPIO_PIN_DIO1 UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_DIO2
-#define GPIO_PIN_DIO2 UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_PA_ENABLE
-#define GPIO_PIN_PA_ENABLE UNDEF_PIN
-#endif
 #ifndef GPIO_BUTTON_INVERTED
 #define GPIO_BUTTON_INVERTED 0
 #endif
@@ -150,4 +129,14 @@
 #endif
 #else
 #error "Either RADIO_SX127X or RADIO_SX128X must be defined!"
+#endif
+
+#if defined(TARGET_UBER_TX)
+const int hardware_pin(const char *name);
+const bool hardware_flag(const char *name);
+const int hardware_int(const char *name);
+const float hardware_float(const char *name);
+const int* hardware_array(const char *name);
+const int16_t* hardware_i16_array(const char *name);
+const uint16_t* hardware_u16_array(const char *name);
 #endif

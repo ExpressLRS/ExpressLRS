@@ -2,7 +2,7 @@
 #include "common.h"
 #include "device.h"
 
-#if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)) && defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+#if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)) && defined(GPIO_PIN_LED_WS2812)
 
 #include <NeoPixelBus.h>
 
@@ -45,12 +45,12 @@ void WS281BsetStripColour(uint32_t color)
 }
 #endif
 
-#if defined(PLATFORM_STM32) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN) && (GPIO_PIN_LED_WS2812_FAST != UNDEF_PIN)
+#if defined(PLATFORM_STM32) && defined(GPIO_PIN_LED_WS2812)
 #include "STM32F3_WS2812B_LED.h"
 #endif
 
 
-#if defined(GPIO_PIN_LED_WS2812) && (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
+#if defined(GPIO_PIN_LED_WS2812)
 
 #include "logging.h"
 #include "crsf_protocol.h"

@@ -26,7 +26,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     ._hasWiFi = 0,
 #endif
-#if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
+#if defined(GPIO_PIN_BUZZER)
     ._hasBuzzer = 1,
 #else
     ._hasBuzzer = 0,
@@ -129,7 +129,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .unlock_higher_power = false,
 #endif
-#if defined(GPIO_PIN_BUZZER) && GPIO_PIN_BUZZER != UNDEF_PIN
+#if defined(GPIO_PIN_BUZZER)
     #if defined(DISABLE_ALL_BEEPS)
     .buzzer_mode = buzzerQuiet,
     .buzzer_melody = {},

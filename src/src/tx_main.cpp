@@ -102,7 +102,7 @@ device_affinity_t ui_devices[] = {
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
-#if defined(GPIO_PIN_PA_PDET) && GPIO_PIN_PA_PDET != UNDEF_PIN
+#if defined(GPIO_PIN_PA_PDET)
   {&PDET_device, 1},
 #endif
   {&VTX_device, 1}

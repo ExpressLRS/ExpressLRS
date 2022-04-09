@@ -359,3 +359,7 @@
 // #define SUPPORT_TRANSACTIONS
 
 #define USER_SETUP_LOADED
+
+#if defined(TARGET_UBER_TX)
+const int hardware_pin(const char *name);
+#endif

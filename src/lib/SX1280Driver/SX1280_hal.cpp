@@ -40,46 +40,46 @@ void SX1280Hal::end()
 void SX1280Hal::init()
 {
     DBGLN("Hal Init");
-#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUSY, INPUT);
-#endif
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_BUSY, INPUT);
+    }
     pinMode(GPIO_PIN_DIO1, INPUT);
     pinMode(GPIO_PIN_NSS, OUTPUT);
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
-#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-    DBGLN("Use PA enable pin: %d", GPIO_PIN_PA_ENABLE);
-    pinMode(GPIO_PIN_PA_ENABLE, OUTPUT);
-    digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
-#endif
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+    {
+        DBGLN("Use PA enable pin: %d", GPIO_PIN_PA_ENABLE);
+        pinMode(GPIO_PIN_PA_ENABLE, OUTPUT);
+        digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
+    }
 
-#if defined(GPIO_PIN_PA_SE2622L_ENABLE) && (GPIO_PIN_PA_SE2622L_ENABLE != UNDEF_PIN)
-    DBGLN("Use PA ctrl pin: %d", GPIO_PIN_PA_SE2622L_ENABLE);
-    pinMode(GPIO_PIN_PA_SE2622L_ENABLE, OUTPUT);
-    digitalWrite(GPIO_PIN_PA_SE2622L_ENABLE, LOW);
-#endif
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
+    {
+        DBGLN("Use TX pin: %d", GPIO_PIN_TX_ENABLE);
+        pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
+        digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+    }
 
-#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-    DBGLN("Use TX pin: %d", GPIO_PIN_TX_ENABLE);
-    pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
+    if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
+    {
+        DBGLN("Use RX pin: %d", GPIO_PIN_RX_ENABLE);
+        pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
+        digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    }
 
-#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-    DBGLN("Use RX pin: %d", GPIO_PIN_RX_ENABLE);
-    pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
+    if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
+        digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
+    }
 
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
-#endif
-
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
-#endif
+    if (GPIO_PIN_ANT_CTRL_2)
+    {
+        pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
+        digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
+    }
 
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
@@ -110,29 +110,33 @@ void SX1280Hal::reset(void)
 {
     DBGLN("SX1280 Reset");
 
-#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
-    pinMode(GPIO_PIN_RST, OUTPUT);
-
-    delay(50);
-    digitalWrite(GPIO_PIN_RST, LOW);
-    delay(50);
-    digitalWrite(GPIO_PIN_RST, HIGH);
-#endif
-
-#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
+    if (GPIO_PIN_RST != UNDEF_PIN)
     {
-        #ifdef PLATFORM_STM32
-        __NOP();
-        #elif PLATFORM_ESP32
-        _NOP();
-        #elif PLATFORM_ESP8266
-        _NOP();
-        #endif
+        pinMode(GPIO_PIN_RST, OUTPUT);
+
+        delay(50);
+        digitalWrite(GPIO_PIN_RST, LOW);
+        delay(50);
+        digitalWrite(GPIO_PIN_RST, HIGH);
     }
-#else
-    delay(10); // typically 2ms observed
-#endif
+
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
+    {
+        while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
+        {
+            #ifdef PLATFORM_STM32
+            __NOP();
+            #elif PLATFORM_ESP32
+            _NOP();
+            #elif PLATFORM_ESP8266
+            _NOP();
+            #endif
+        }
+    }
+    else
+    {
+        delay(10); // typically 2ms observed
+    }
 
     //this->BusyState = SX1280_NOT_BUSY;
     DBGLN("SX1280 Ready!");
@@ -283,45 +287,48 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
-#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    #define wtimeoutUS 1000
-    uint32_t startTime = micros();
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
+    {
+        #define wtimeoutUS 1000
+        uint32_t startTime = micros();
 
-    while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS
-    {
-        if ((micros() - startTime) > wtimeoutUS)
+        while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS
         {
-            //DBGLN("TO");
-            return false;
-        }
-        else
-        {
-            #ifdef PLATFORM_STM32
-            __NOP();
-            #elif PLATFORM_ESP32
-            _NOP();
-            #elif PLATFORM_ESP8266
-            _NOP();
-            #endif
+            if ((micros() - startTime) > wtimeoutUS)
+            {
+                //DBGLN("TO");
+                return false;
+            }
+            else
+            {
+                #ifdef PLATFORM_STM32
+                __NOP();
+                #elif PLATFORM_ESP32
+                _NOP();
+                #elif PLATFORM_ESP8266
+                _NOP();
+                #endif
+            }
         }
     }
-#else
-    // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
-    // and state transitions require extra time depending on prior state
-    if (BusyDelayDuration)
+    else
     {
-        while ((micros() - BusyDelayStart) < BusyDelayDuration)
-            #ifdef PLATFORM_STM32
-            __NOP();
-            #elif PLATFORM_ESP32
-            _NOP();
-            #elif PLATFORM_ESP8266
-            _NOP();
-            #endif
-        BusyDelayDuration = 0;
+        // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
+        // and state transitions require extra time depending on prior state
+        if (BusyDelayDuration)
+        {
+            while ((micros() - BusyDelayStart) < BusyDelayDuration)
+                #ifdef PLATFORM_STM32
+                __NOP();
+                #elif PLATFORM_ESP32
+                _NOP();
+                #elif PLATFORM_ESP8266
+                _NOP();
+                #endif
+            BusyDelayDuration = 0;
+        }
+        // delayMicroseconds(80);
     }
-    // delayMicroseconds(80);
-#endif
     return true;
 }
 
@@ -333,53 +340,40 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR()
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 {
-#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
-#endif
-#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
-#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
-#endif
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
+    if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+    if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
+    if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 {
-#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
-#endif
-#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
-#endif
-#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, LOW);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, HIGH);
-#endif
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
+    if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+    if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_ANT_CTRL_1, LOW);
+    if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_ANT_CTRL_2, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 {
-#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-#endif
-#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
-#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
-#endif
+    if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
 }
 
 #endif // UNIT_TEST
