@@ -467,8 +467,9 @@ static void ChangeRadioParams()
 
   SetRFLinkRate(config.GetRate());
   OtaSetSwitchMode((OtaSwitchMode_e)config.GetSwitchMode());
-  // Dynamic Power starts at MinPower and will boost if switch is set or IsArmed and disconnected
-  POWERMGNT.setPower(config.GetDynamicPower() ? MinPower : (PowerLevels_e)config.GetPower());
+  // Dynamic Power starts at MinPower unless armed
+  // (user may be turning up the power while flying and dropping the power may compromise the link)
+  POWERMGNT.setPower((config.GetDynamicPower() && !IsArmed()) ? MinPower : (PowerLevels_e)config.GetPower());
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
   LBTEnabled = (config.GetPower() > PWR_10mW);
