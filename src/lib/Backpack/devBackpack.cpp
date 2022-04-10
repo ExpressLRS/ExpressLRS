@@ -12,10 +12,12 @@ extern Stream *LoggingBackpack;
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+#if defined(GPIO_PIN_BACKPACK_EN)
 
+#if !defined(TARGET_UBER_TX)
 #if BACKPACK_LOGGING_BAUD != 460800
 #error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
+#endif
 #endif
 
 #include "CRSF.h"
@@ -96,21 +98,28 @@ void BackpackBinding()
 
 static void initialize()
 {
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
-    // reset the ESP8285 so we know it's running
-    pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-    pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-    digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-    delay(50);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH); // enable high
+#ifdef GPIO_PIN_BACKPACK_EN
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
+        // reset the ESP8285 so we know it's running
+        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+        delay(50);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH); // enable high
+    }
 #endif
 }
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+#ifdef GPIO_PIN_BACKPACK_EN
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+        return DURATION_IMMEDIATELY;
+#endif
+    return DURATION_NEVER;
 }
 
 static int timeout()
@@ -133,11 +142,14 @@ static int timeout()
         BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
     }
 
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    if (!digitalRead(0))
+#ifdef GPIO_PIN_BACKPACK_EN
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
-        startPassthrough();
-        return DURATION_NEVER;
+        if (!digitalRead(0))
+        {
+            startPassthrough();
+            return DURATION_NEVER;
+        }
     }
 #endif
     return BACKPACK_TIMEOUT;

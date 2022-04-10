@@ -12,7 +12,11 @@
     #error "JOY_ADC_VALUES requires GPIO_PIN_JOYSTICK defined too"
 #endif
 
-const uint16_t *FiveWayButton::joyAdcValues = JOY_ADC_VALUES;
+#if defined(TARGET_UBER_TX)
+uint16_t FiveWayButton::joyAdcValues[] = {0};
+#else
+uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
+#endif
 
 /**
  * @brief Calculate fuzz: half the distance to the next nearest neighbor for each joystick position.
@@ -32,6 +36,9 @@ const uint16_t *FiveWayButton::joyAdcValues = JOY_ADC_VALUES;
  */
 void FiveWayButton::calcFuzzValues()
 {
+#if defined(TARGET_UBER_TX)
+    memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
+#endif
     for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
     {
         uint16_t closestDist = 0xffff;
@@ -103,9 +110,9 @@ void FiveWayButton::init()
     else
 #endif
     {
-        pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT | PULLUP);
-        pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT | PULLUP);
-        pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT | PULLUP);
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT_PULLUP);
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT_PULLUP);
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT_PULLUP);
     }
 }
 

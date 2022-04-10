@@ -28,8 +28,12 @@ static uint8_t lastTargetPowerdBm;
 
 static int start()
 {
-    analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
-    return DURATION_IMMEDIATELY;
+    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
+    {
+        analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()

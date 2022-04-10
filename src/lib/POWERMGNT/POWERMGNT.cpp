@@ -39,11 +39,17 @@ PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefin
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
+#if defined(TARGET_UBER_TX)
+static const int16_t *powerValues;
+#else
 #if defined(POWER_OUTPUT_VALUES)
-static const int16_t *powerValues = POWER_OUTPUT_VALUES;
+static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #if defined(POWER_OUTPUT_DAC) && !defined(TARGET_UBER_TX)
-static const int16_t *powerValues868 = POWER_OUTPUT_VALUES_868;
+static const int16_t powerValues868[] = POWER_OUTPUT_VALUES_868;
 extern bool isDomain868();
+#endif
+#else
+static const int16_t *powerValues = nullptr;
 #endif
 #endif
 
@@ -175,6 +181,9 @@ void POWERMGNT::LoadCalibration()
 
 void POWERMGNT::init()
 {
+#if defined(TARGET_UBER_TX)
+    powerValues = POWER_OUTPUT_VALUES;
+#endif
 #if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
 #elif defined(POWER_OUTPUT_ANALOG)
@@ -240,17 +249,15 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_DACWRITE)
+    Radio.SetOutputPower(0b0000);
+    dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #else
-    if (POWER_OUTPUT_DACWRITE)
-    {
-        Radio.SetOutputPower(0b0000);
-        dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-    }
-    else if (POWER_OUTPUT_FIXED)
+    if (POWER_OUTPUT_FIXED != -99)
     {
         Radio.SetOutputPower(POWER_OUTPUT_FIXED);
     }
-    else if (POWER_OUTPUT_VALUES)
+    else if (powerValues != nullptr)
     {
         CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
         Radio.SetOutputPower(CurrentSX1280Power);

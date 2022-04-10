@@ -36,7 +36,6 @@ public:
         _lastCheck(0), _lastFallingEdge(0), _state(STATE_IDLE),
         _isLongPress(false), _longCount(0), _pressCount(0)
     {
-        pinMode(_pin, _idlelow ? INPUT : INPUT_PULLUP);
     }
 
     void init(uint8_t pin, bool idlelow)

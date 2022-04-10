@@ -1,0 +1,133 @@
+#include <stdint.h>
+
+typedef enum {
+    // Serial
+    HARDWARE_serial_rx,
+    HARDWARE_serial_tx,
+
+    // Radio
+    HARDWARE_radio_busy,
+    HARDWARE_radio_dio0,
+    HARDWARE_radio_dio1,
+    HARDWARE_radio_dio2,
+    HARDWARE_radio_miso,
+    HARDWARE_radio_mosi,
+    HARDWARE_radio_nss,
+    HARDWARE_radio_rst,
+    HARDWARE_radio_sck,
+    HARDWARE_radio_dcdc,
+    HARDWARE_radio_rfo_hf,
+
+    // Radio Antenna
+    HARDWARE_ant_select,
+    HARDWARE_ant_ctrl1,
+    HARDWARE_ant_ctrl2,
+
+    // Radio power
+    HARDWARE_power_enable,
+    HARDWARE_power_apc1, // stm32
+    HARDWARE_power_apc2,
+    HARDWARE_power_rxen,
+    HARDWARE_power_txen,
+    HARDWARE_power_min,
+    HARDWARE_power_high,
+    HARDWARE_power_max,
+    HARDWARE_power_default,
+
+    HARDWARE_power_pdet,
+    HARDWARE_power_pdet_intercept,
+    HARDWARE_power_pdet_slope,
+    HARDWARE_power_sky85321,
+
+    HARDWARE_power_control,
+    HARDWARE_power_values,
+
+
+    // Input
+    HARDWARE_joystick,
+    HARDWARE_joystick_values,
+
+    HARDWARE_5way1,
+    HARDWARE_5way2,
+    HARDWARE_5way3,
+
+    HARDWARE_button,
+
+    // Lighting
+    HARDWARE_led,
+    HARDWARE_led_blue,
+    HARDWARE_led_green,
+    HARDWARE_led_green_invert,
+    HARDWARE_led_green_red,
+    HARDWARE_led_red,
+    HARDWARE_led_red_invert,
+    HARDWARE_led_reg_green,
+    HARDWARE_led_rgb,
+    // GPIO_PIN_LED_WS2812_FAST // stm32
+    HARDWARE_led_rgb_isgrb,
+
+    // OLED
+    HARDWARE_oled_cs,       // SPI
+    HARDWARE_oled_dc,       // SPI
+    HARDWARE_oled_mosi,     // SPI
+    HARDWARE_oled_rst,      // SPI & I2c (optional)
+    HARDWARE_oled_sck,      // clock for SPI & I2C
+    HARDWARE_oled_sda,      // I2C data
+
+    // oled_type == 0 is no oled
+    HARDWARE_oled_type,
+    HARDWARE_oled_reversed,
+
+    // TFT
+    HARDWARE_tft_bl,
+    HARDWARE_tft_cs,
+    HARDWARE_tft_dc,
+    HARDWARE_tft_mosi,
+    HARDWARE_tft_rst,
+    HARDWARE_tft_sclk,
+
+    // Backpack
+    HARDWARE_use_backpack,
+    HARDWARE_debug_backpack_baud,
+    HARDWARE_debug_backpack_rx,
+    HARDWARE_debug_backpack_tx,
+    HARDWARE_backpack_boot,
+    HARDWARE_backpack_en,
+
+    // I2C
+    HARDWARE_i2c_scl,
+    HARDWARE_i2c_sda,
+
+    // Misc sensors & things
+    HARDWARE_misc_gsensor_int,
+    HARDWARE_misc_buzzer,  // stm32 only
+    HARDWARE_misc_fan_en,
+
+    HARDWARE_gsensor_stk8xxx,
+    // HAS_GSENSOR
+
+    HARDWARE_thermal_lm75a,
+    // HAS_THERMAL
+    HARDWARE_LAST
+
+    /*
+    // PWM
+    GPIO_PIN_PWM_OUTPUTS
+
+    // VTX
+    GPIO_PIN_RF_AMP_PWM
+    GPIO_PIN_RF_AMP_VPD
+    GPIO_PIN_RF_AMP_VREF
+    GPIO_PIN_SPI_VTX_NSS
+    VPD_VALUES_100MW
+    VPD_VALUES_25MW
+    */
+} nameType;
+
+void hardware_init();
+const int hardware_pin(nameType name);
+const bool hardware_flag(nameType name);
+const int hardware_int(nameType name);
+const float hardware_float(nameType name);
+const int16_t* hardware_i16_array(nameType name);
+const uint16_t* hardware_u16_array(nameType name);

@@ -80,7 +80,7 @@ static int updateBuzzer()
 
 static int start()
 {
-    if(firmwareOptions.buzzer_mode == buzzerTune)
+    if (GPIO_PIN_BUZZER != UNDEF_PIN && firmwareOptions.buzzer_mode == buzzerTune)
     {
         DBGVLN(">> start startup tune");
         return startTune(firmwareOptions.buzzer_melody, ARRAY_SIZE(firmwareOptions.buzzer_melody));
@@ -90,7 +90,7 @@ static int start()
 
 static int event()
 {
-    if (firmwareOptions.buzzer_mode == buzzerQuiet)
+    if (GPIO_PIN_BUZZER == UNDEF_PIN || firmwareOptions.buzzer_mode == buzzerQuiet)
     {
         return DURATION_NEVER;
     }
@@ -121,7 +121,7 @@ static int event()
 
 static int timeout()
 {
-    if (firmwareOptions.buzzer_mode == buzzerQuiet)
+    if (GPIO_PIN_BUZZER == UNDEF_PIN || firmwareOptions.buzzer_mode == buzzerQuiet)
     {
         return DURATION_NEVER;
     }

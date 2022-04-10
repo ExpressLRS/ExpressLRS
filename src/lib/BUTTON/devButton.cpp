@@ -6,9 +6,11 @@
 #include "logging.h"
 #include "button.h"
 
-// static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
-
 static Button button;
+
+#ifndef GPIO_BUTTON_INVERTED
+#define GPIO_BUTTON_INVERTED false
+#endif
 
 #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
 #include "POWERMGNT.h"
@@ -57,6 +59,10 @@ static void rxWebUpdateReboot()
 
 static void initialize()
 {
+    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    {
+        return;
+    }
     button.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
     #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
         button.OnShortPress = enterBindMode3Click;
@@ -69,11 +75,19 @@ static void initialize()
 
 static int start()
 {
+    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
 {
+    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     return button.update();
 }
 

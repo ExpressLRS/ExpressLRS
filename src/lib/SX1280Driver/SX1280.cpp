@@ -44,6 +44,13 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
+#ifdef USE_SX1280_DCDC
+    #ifndef OPT_USE_SX1280_DCDC
+        #define OPT_USE_SX1280_DCDC true
+    #endif
+#else
+    #define OPT_USE_SX1280_DCDC false
+#endif
 
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
@@ -84,9 +91,10 @@ bool SX1280Driver::Begin()
     SetFrequencyReg(currFreq);                                                                                                    //Set Freq
     SetFIFOaddr(0x00, 0x00);                                                                                                      //Config FIFO addr
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE);                                               //set IRQ to both RXdone/TXdone on DIO1
-#if defined(USE_SX1280_DCDC)
-    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
-#endif
+    if (OPT_USE_SX1280_DCDC)
+    {
+        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
+    }
     return true;
 }
 

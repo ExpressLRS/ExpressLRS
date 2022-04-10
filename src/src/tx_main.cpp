@@ -93,7 +93,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_BUTTON
   {&Button_device, 1},
 #endif
-#if defined(HAS_TFT_SCREEN) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C)
+#ifdef HAS_SCREEN
   {&Screen_device, 0},
 #endif
 #ifdef HAS_GSENSOR
@@ -918,9 +918,17 @@ static void setupLoggingBackpack()
    * Setup the logging/backpack serial port.
    * This is always done because we need a place to send data even if there is no backpack!
    */
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-  HardwareSerial *serialPort = new HardwareSerial(2);
-  serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+  Stream *serialPort;
+  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  {
+    serialPort = new HardwareSerial(2);
+    ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+  }
+  else
+  {
+    serialPort = new NullStream();
+  }
 #elif defined(PLATFORM_ESP8266) && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
   HardwareSerial *serialPort = new HardwareSerial(0);
   serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
@@ -975,12 +983,17 @@ static void setupTarget()
 
 void setup()
 {
+  #if defined(TARGET_UBER_TX)
+  hardware_init();
+  #endif
+
   initUID();
   setupTarget();
   // Register the devices with the framework
   devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
   // Initialise the devices
   devicesInit();
+  DBGLN("initialised devices");
 
   FHSSrandomiseFHSSsequence(uidMacSeedGet());
 

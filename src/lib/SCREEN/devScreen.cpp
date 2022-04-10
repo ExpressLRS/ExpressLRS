@@ -111,23 +111,38 @@ static void initialize()
 #ifdef HAS_FIVE_WAY_BUTTON
     fivewaybutton.init();
 #endif
-    Display::init();
-    state_machine.start(millis(), getInitialState());
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    {
+        Display::init();
+        state_machine.start(millis(), getInitialState());
+    }
 }
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int event()
 {
-    return handle();
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    {
+        return handle();
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()
 {
-    return handle();
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    {
+        return handle();
+    }
+    return DURATION_NEVER;
 }
 
 device_t Screen_device = {

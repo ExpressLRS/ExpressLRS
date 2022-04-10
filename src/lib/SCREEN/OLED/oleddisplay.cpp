@@ -68,12 +68,12 @@ static void helperDrawImage(menu_item_t menu);
 
 void Display::init()
 {
-    if (USE_OLED_SPI_SMALL)
-        u8g2 = new U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI(OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-    else if (USE_OLED_SPI)
-        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI(OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-    else if(USE_OLED_I2C)
-        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+    if (OPT_USE_OLED_SPI_SMALL)
+        u8g2 = new U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
+    else if (OPT_USE_OLED_SPI)
+        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
+    else if (OPT_USE_OLED_I2C)
+        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
 
     u8g2->begin();
     u8g2->clearBuffer();
@@ -82,7 +82,10 @@ void Display::init()
 void Display::doScreenBackLight(screen_backlight_t state)
 {
     #ifdef GPIO_PIN_OLED_BL
-    digitalWrite(GPIO_PIN_OLED_BL, state);
+    if (GPIO_PIN_OLED_BL != UNDEF_PIN)
+    {
+        digitalWrite(GPIO_PIN_OLED_BL, state);
+    }
     #endif
 }
 
@@ -98,10 +101,11 @@ void Display::displaySplashScreen()
     ghostChase();
 #else
 #ifdef USE_OLED_SPI_SMALL
-    u8g2->drawXBM(48, 0, 32, 32, elrs32);
-#else
-    u8g2->drawXBM(32, 0, 64, 64, elrs64);
+    if (OPT_USE_OLED_SPI_SMALL)
+        u8g2->drawXBM(48, 0, 32, 32, elrs32);
+    else
 #endif
+        u8g2->drawXBM(32, 0, 64, 64, elrs64);
 #endif
     u8g2->sendBuffer();
 }
@@ -115,23 +119,26 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
         power += " *";
     }
 
-#ifdef USE_OLED_SPI_SMALL
-    u8g2->setFont(u8g2_font_t0_15_mr);
-    u8g2->drawStr(0, 15, getValue(STATE_PACKET, rate_index));
-    u8g2->drawStr(70, 15, getValue(STATE_TELEMETRY, ratio_index));
-    u8g2->drawStr(0, 32, power.c_str());
-    u8g2->drawStr(70, 32, version);
-#else
-    u8g2->setFont(u8g2_font_t0_15_mr);
-    u8g2->drawStr(0, 13, message_string[message_index]);
-    u8g2->drawStr(0, 45, getValue(STATE_PACKET, rate_index));
-    u8g2->drawStr(70, 45, getValue(STATE_TELEMETRY, ratio_index));
-    u8g2->drawStr(0, 60, power.c_str());
-    u8g2->setFont(u8g2_font_profont10_mr);
-    u8g2->drawStr(70, 56, "TLM");
-    u8g2->drawStr(0, 27, "Ver: ");
-    u8g2->drawStr(38, 27, version);
-#endif
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
+        u8g2->setFont(u8g2_font_t0_15_mr);
+        u8g2->drawStr(0, 15, getValue(STATE_PACKET, rate_index));
+        u8g2->drawStr(70, 15, getValue(STATE_TELEMETRY, ratio_index));
+        u8g2->drawStr(0, 32, power.c_str());
+        u8g2->drawStr(70, 32, version);
+    }
+    else
+    {
+        u8g2->setFont(u8g2_font_t0_15_mr);
+        u8g2->drawStr(0, 13, message_string[message_index]);
+        u8g2->drawStr(0, 45, getValue(STATE_PACKET, rate_index));
+        u8g2->drawStr(70, 45, getValue(STATE_TELEMETRY, ratio_index));
+        u8g2->drawStr(0, 60, power.c_str());
+        u8g2->setFont(u8g2_font_profont10_mr);
+        u8g2->drawStr(70, 56, "TLM");
+        u8g2->drawStr(0, 27, "Ver: ");
+        u8g2->drawStr(38, 27, version);
+    }
     u8g2->sendBuffer();
 }
 
@@ -139,13 +146,16 @@ void Display::displayMainMenu(menu_item_t menu)
 {
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, main_menu_strings[menu][0]);
         u8g2->drawStr(0,32, main_menu_strings[menu][1]);
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,20, main_menu_strings[menu][0]);
         u8g2->drawStr(0,50, main_menu_strings[menu][1]);
-    #endif
+    }
     helperDrawImage(menu);
     u8g2->sendBuffer();
 }
@@ -157,16 +167,19 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
     String val = String(getValue(menu, value_index));
     val.replace("!+", "\u2191");
     val.replace("!-", "\u2193");
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, val.c_str());
         u8g2->setFont(u8g2_font_profont10_mr);
         u8g2->drawStr(0,60, "PRESS TO CONFIRM");
-    #else
+    }
+    else
+    {
         u8g2->drawUTF8(0,20, val.c_str());
         u8g2->setFont(u8g2_font_profont10_mr);
         u8g2->drawStr(0,44, "PRESS TO");
         u8g2->drawStr(0,56, "CONFIRM");
-    #endif
+    }
     helperDrawImage(menu);
     u8g2->sendBuffer();
 }
@@ -177,14 +190,17 @@ void Display::displayBLEConfirm()
     u8g2->clearBuffer();
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15, "START BLUETOOTH");
         u8g2->drawStr(0,32, "JOYSTICK");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,29, "PRESS TO START");
         u8g2->drawStr(0,59, "BLE JOYSTICK");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
@@ -195,15 +211,18 @@ void Display::displayBLEStatus()
     // TODO: Add a fancy joystick symbol like the cool TFT peeps
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "BLUETOOTH");
         u8g2->drawStr(70,15, "GAMEPAD");
         u8g2->drawStr(0,32, "RUNNING");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,13, "BLUETOOTH");
         u8g2->drawStr(0,33, "GAMEPAD");
         u8g2->drawStr(0,63, "RUNNING");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
@@ -213,14 +232,17 @@ void Display::displayWiFiConfirm()
     u8g2->clearBuffer();
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15, "ENTER WIFI");
         u8g2->drawStr(0,32, "UPDATE");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,29, "PRESS TO ENTER");
         u8g2->drawStr(0,59, "WIFI UPDATE");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
@@ -232,28 +254,33 @@ void Display::displayWiFiStatus()
 
     u8g2->setFont(u8g2_font_t0_17_mr);
     if (wifiMode == WIFI_STA) {
-        #ifdef USE_OLED_SPI_SMALL
+        if (OPT_USE_OLED_SPI_SMALL)
+        {
             u8g2->drawStr(0,15, "open http://");
             u8g2->drawStr(70,15, (String(wifi_hostname)+".local").c_str());
             u8g2->drawStr(0,32, "by browser");
-        #else
+        }
+        else
+        {
             u8g2->drawStr(0,13, "open http://");
             u8g2->drawStr(0,33, (String(wifi_hostname)+".local").c_str());
             u8g2->drawStr(0,63, "by browser");
-        #endif
+        }
     }
     else
     {
-
-        #ifdef USE_OLED_SPI_SMALL
+        if (OPT_USE_OLED_SPI_SMALL)
+        {
             u8g2->drawStr(0,15, wifi_ap_ssid);
             u8g2->drawStr(70,15, wifi_ap_password);
             u8g2->drawStr(0,32, wifi_ap_address);
-        #else
+        }
+        else
+        {
             u8g2->drawStr(0,13, wifi_ap_ssid);
             u8g2->drawStr(0,33, wifi_ap_password);
             u8g2->drawStr(0,63, wifi_ap_address);
-        #endif
+        }
     }
 #endif
     u8g2->sendBuffer();
@@ -264,14 +291,17 @@ void Display::displayBindConfirm()
     // TODO: Put bind image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15 , "SEND BIND");
         u8g2->drawStr(0,32, "REQUEST");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,29, "PRESS TO SEND");
         u8g2->drawStr(0,59, "BIND REQUEST");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
@@ -280,11 +310,14 @@ void Display::displayBindStatus()
     // TODO: Put bind image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "BINDING");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,29, "BINDING");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
@@ -293,135 +326,138 @@ void Display::displayRunning()
     // TODO: Put wifi image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    #ifdef USE_OLED_SPI_SMALL
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0,15, "RUNNING");
-    #else
+    }
+    else
+    {
         u8g2->drawStr(0,29, "RUNNING");
-    #endif
+    }
     u8g2->sendBuffer();
 }
 
 // helpers
-
-#ifdef USE_OLED_SPI_SMALL
 static void helperDrawImage(menu_item_t menu)
 {
-    // Adjust these to move them around on the screen
-    int x_pos = 65;
-    int y_pos = 5;
+    if (OPT_USE_OLED_SPI_SMALL)
+   {
 
-    switch(menu){
-        case STATE_PACKET:
-            u8g2->drawXBM(x_pos, y_pos, 32, 22, rate_img32);
-            break;
-        case STATE_POWER:
-        case STATE_POWER_MAX:
-        case STATE_POWER_DYNAMIC:
-            u8g2->drawXBM(x_pos, y_pos, 25, 25, power_img32);
-            break;
-        case STATE_TELEMETRY:
-            u8g2->drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
-            break;
-        case STATE_POWERSAVE:
-            u8g2->drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
-            break;
-        case STATE_SMARTFAN:
-            u8g2->drawXBM(x_pos, y_pos, 32, 32, fan_img32);
-            break;
-        case STATE_JOYSTICK:
-            u8g2->drawXBM(x_pos, y_pos-5, 32, 32, joystick_img32);
-            break;
-        case STATE_VTX:
-        case STATE_VTX_BAND:
-        case STATE_VTX_CHANNEL:
-        case STATE_VTX_POWER:
-        case STATE_VTX_PITMODE:
-            u8g2->drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
-            break;
-        case STATE_WIFI:
-            u8g2->drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
-            break;
-        case STATE_BIND:
-            u8g2->drawXBM(x_pos, y_pos, 32, 32, bind_img32);
-            break;
+        // Adjust these to move them around on the screen
+        int x_pos = 65;
+        int y_pos = 5;
 
-        case STATE_WIFI_TX:
-            u8g2->drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
-            break;
-        case STATE_WIFI_RX:
-            u8g2->drawXBM(x_pos, y_pos-5, 32, 32, rxwifi_img32);
-            break;
-        case STATE_WIFI_BACKPACK:
-            u8g2->drawXBM(x_pos, y_pos-5, 32, 32, backpack_img32);
-            break;
-        case STATE_WIFI_VRX:
-            u8g2->drawXBM(x_pos, y_pos-5, 32, 32, vrxwifi_img32);
-            break;
+        switch(menu){
+            case STATE_PACKET:
+                u8g2->drawXBM(x_pos, y_pos, 32, 22, rate_img32);
+                break;
+            case STATE_POWER:
+            case STATE_POWER_MAX:
+            case STATE_POWER_DYNAMIC:
+                u8g2->drawXBM(x_pos, y_pos, 25, 25, power_img32);
+                break;
+            case STATE_TELEMETRY:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, ratio_img32);
+                break;
+            case STATE_POWERSAVE:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, powersaving_img32);
+                break;
+            case STATE_SMARTFAN:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, fan_img32);
+                break;
+            case STATE_JOYSTICK:
+                u8g2->drawXBM(x_pos, y_pos-5, 32, 32, joystick_img32);
+                break;
+            case STATE_VTX:
+            case STATE_VTX_BAND:
+            case STATE_VTX_CHANNEL:
+            case STATE_VTX_POWER:
+            case STATE_VTX_PITMODE:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
+                break;
+            case STATE_WIFI:
+                u8g2->drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
+                break;
+            case STATE_BIND:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, bind_img32);
+                break;
 
-        default:
-            break;
+            case STATE_WIFI_TX:
+                u8g2->drawXBM(x_pos, y_pos, 24, 22, wifi_img32);
+                break;
+            case STATE_WIFI_RX:
+                u8g2->drawXBM(x_pos, y_pos-5, 32, 32, rxwifi_img32);
+                break;
+            case STATE_WIFI_BACKPACK:
+                u8g2->drawXBM(x_pos, y_pos-5, 32, 32, backpack_img32);
+                break;
+            case STATE_WIFI_VRX:
+                u8g2->drawXBM(x_pos, y_pos-5, 32, 32, vrxwifi_img32);
+                break;
+
+            default:
+                break;
+        }
+    }
+    else
+    {
+        // Adjust these to move them around on the screen
+        int x_pos = 65;
+        int y_pos = 5;
+
+        switch(menu){
+            case STATE_PACKET:
+                u8g2->drawXBM(x_pos, y_pos, 64, 44, rate_img64);
+                break;
+            case STATE_POWER:
+            case STATE_POWER_MAX:
+            case STATE_POWER_DYNAMIC:
+                u8g2->drawXBM(x_pos, y_pos, 50, 50, power_img64);
+                break;
+            case STATE_TELEMETRY:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, ratio_img64);
+                break;
+            case STATE_POWERSAVE:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, powersaving_img64);
+                break;
+            case STATE_SMARTFAN:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, fan_img64);
+                break;
+            case STATE_JOYSTICK:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64-5, joystick_img64);
+                break;
+            case STATE_VTX:
+            case STATE_VTX_BAND:
+            case STATE_VTX_CHANNEL:
+            case STATE_VTX_POWER:
+            case STATE_VTX_PITMODE:
+            case STATE_VTX_SEND:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, vtx_img64);
+                break;
+            case STATE_WIFI:
+                u8g2->drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
+                break;
+            case STATE_BIND:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, bind_img64);
+                break;
+
+            case STATE_WIFI_TX:
+                u8g2->drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
+                break;
+            case STATE_WIFI_RX:
+                u8g2->drawXBM(x_pos, y_pos-5, 64, 64, rxwifi_img64);
+                break;
+            case STATE_WIFI_BACKPACK:
+                u8g2->drawXBM(x_pos, y_pos-5, 64, 64, backpack_img64);
+                break;
+            case STATE_WIFI_VRX:
+                u8g2->drawXBM(x_pos, y_pos-5, 64, 64, vrxwifi_img64);
+                break;
+
+            default:
+                break;
+        }
     }
 }
-#else
-static void helperDrawImage(menu_item_t menu)
-{
-    // Adjust these to move them around on the screen
-    int x_pos = 65;
-    int y_pos = 5;
-
-    switch(menu){
-        case STATE_PACKET:
-            u8g2->drawXBM(x_pos, y_pos, 64, 44, rate_img64);
-            break;
-        case STATE_POWER:
-        case STATE_POWER_MAX:
-        case STATE_POWER_DYNAMIC:
-            u8g2->drawXBM(x_pos, y_pos, 50, 50, power_img64);
-            break;
-        case STATE_TELEMETRY:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64, ratio_img64);
-            break;
-        case STATE_POWERSAVE:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64, powersaving_img64);
-            break;
-        case STATE_SMARTFAN:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64, fan_img64);
-            break;
-        case STATE_JOYSTICK:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64-5, joystick_img64);
-            break;
-        case STATE_VTX:
-        case STATE_VTX_BAND:
-        case STATE_VTX_CHANNEL:
-        case STATE_VTX_POWER:
-        case STATE_VTX_PITMODE:
-        case STATE_VTX_SEND:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64, vtx_img64);
-            break;
-        case STATE_WIFI:
-            u8g2->drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
-            break;
-        case STATE_BIND:
-            u8g2->drawXBM(x_pos, y_pos, 64, 64, bind_img64);
-            break;
-
-        case STATE_WIFI_TX:
-            u8g2->drawXBM(x_pos, y_pos, 48, 44, wifi_img64);
-            break;
-        case STATE_WIFI_RX:
-            u8g2->drawXBM(x_pos, y_pos-5, 64, 64, rxwifi_img64);
-            break;
-        case STATE_WIFI_BACKPACK:
-            u8g2->drawXBM(x_pos, y_pos-5, 64, 64, backpack_img64);
-            break;
-        case STATE_WIFI_VRX:
-            u8g2->drawXBM(x_pos, y_pos-5, 64, 64, vrxwifi_img64);
-            break;
-
-        default:
-            break;
-    }
-}
-#endif
 
 #endif

@@ -23,7 +23,7 @@ private:
     uint32_t keyDownStart;
     bool isLongPressed;
 #if defined(JOY_ADC_VALUES)
-    static const uint16_t *joyAdcValues;
+    static uint16_t joyAdcValues[N_JOY_ADC_VALUES];
     uint16_t fuzzValues[N_JOY_ADC_VALUES];
     void calcFuzzValues();
 #endif

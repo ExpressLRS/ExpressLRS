@@ -32,43 +32,113 @@
 #include "native.h"
 #endif
 
-#if defined(PLATFORM_STM32)
-#ifdef GPIO_PIN_LED_WS2812
-#ifndef GPIO_PIN_LED_WS2812_FAST
-#error "WS2812 support requires _FAST pin!"
-#endif
-#else
-#define GPIO_PIN_LED_WS2812         UNDEF_PIN
-#define GPIO_PIN_LED_WS2812_FAST    UNDEF_PIN
-#endif
-#endif
-
 #ifndef DMA_ATTR
 #define DMA_ATTR
 #endif
 
-/* Set red led to default */
-#ifndef GPIO_PIN_LED
-#ifdef GPIO_PIN_LED_RED
-#define GPIO_PIN_LED GPIO_PIN_LED_RED
-#endif /* GPIO_PIN_LED_RED */
-#endif /* GPIO_PIN_LED */
+/*
+ * Features
+ * define features based on pins before defining pins as UNDEF_PIN
+ */
+#if defined(GPIO_PIN_FAN_EN)
+#define HAS_FAN
+#endif
+#if defined(USE_OLED_I2C) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(HAS_TFT_SCREEN)
+#define HAS_SCREEN
+#endif
 
-#ifndef GPIO_BUTTON_INVERTED
-#define GPIO_BUTTON_INVERTED 0
+#ifndef USE_TX_BACKPACK
+#define OPT_USE_TX_BACKPACK false
+#elif !defined(OPT_USE_TX_BACKPACK)
+#define OPT_USE_TX_BACKPACK true
 #endif
-#ifndef GPIO_LED_RED_INVERTED
-#define GPIO_LED_RED_INVERTED 0
+
+#if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
+#define USE_I2C
+#else
+#define GPIO_PIN_SDA UNDEF_PIN
+#define GPIO_PIN_SCL UNDEF_PIN
 #endif
-#ifndef GPIO_LED_GREEN_INVERTED
-#define GPIO_LED_GREEN_INVERTED 0
+
+#ifndef GPIO_PIN_BUFFER_OE
+#define GPIO_PIN_BUFFER_OE UNDEF_PIN
 #endif
-#ifndef GPIO_LED_BLUE_INVERTED
-#define GPIO_LED_BLUE_INVERTED 0
+#ifndef GPIO_PIN_RST
+#define GPIO_PIN_RST UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_BUSY
+#define GPIO_PIN_BUSY UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO0
+#define GPIO_PIN_DIO0 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO1
+#define GPIO_PIN_DIO1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO2
+#define GPIO_PIN_DIO2 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_PA_ENABLE
+#define GPIO_PIN_PA_ENABLE UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RX_ENABLE
+#define GPIO_PIN_RX_ENABLE UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_TX_ENABLE
+#define GPIO_PIN_TX_ENABLE UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_ANT_CTRL_1
+#define GPIO_PIN_ANT_CTRL_1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_ANT_CTRL_2
+#define GPIO_PIN_ANT_CTRL_2 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RFamp_APC1
+#define GPIO_PIN_RFamp_APC1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RFamp_APC2
+#define GPIO_PIN_RFamp_APC2 UNDEF_PIN
+#endif
+#ifndef POWER_OUTPUT_FIXED
+#define POWER_OUTPUT_FIXED -99
+#endif
+#ifndef GPIO_PIN_FAN_EN
+#define GPIO_PIN_FAN_EN UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_OLED_MOSI
+#define GPIO_PIN_OLED_MOSI UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_OLED_CS
+#define GPIO_PIN_OLED_CS UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_OLED_DC
+#define GPIO_PIN_OLED_DC UNDEF_PIN
+#endif
+
+
+#ifndef GPIO_PIN_FIVE_WAY_INPUT1
+#define GPIO_PIN_FIVE_WAY_INPUT1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_FIVE_WAY_INPUT2
+#define GPIO_PIN_FIVE_WAY_INPUT2 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_FIVE_WAY_INPUT3
+#define GPIO_PIN_FIVE_WAY_INPUT3 UNDEF_PIN
+#endif
+
+
+#ifndef GPIO_PIN_OLED_SCK
+#define GPIO_PIN_OLED_SCK GPIO_PIN_SCL
+#endif
+#ifndef GPIO_PIN_OLED_SDA
+#define GPIO_PIN_OLED_SDA GPIO_PIN_SDA
 #endif
 
 #if !defined(BACKPACK_LOGGING_BAUD)
 #define BACKPACK_LOGGING_BAUD 460800
+#endif
+#ifndef GPIO_PIN_BACKPACK_BOOT
+#define GPIO_PIN_BACKPACK_BOOT UNDEF_PIN
 #endif
 
 #if defined(TARGET_TX)
@@ -80,6 +150,7 @@
 #define GPIO_PIN_DEBUG_TX       1
 #endif
 #endif
+#if !defined(TARGET_UBER_TX)
 #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE) || defined(USE_TX_BACKPACK)
 #if GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_TX || GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_RX
 #error "Cannot debug out the RC signal port!"
@@ -88,7 +159,14 @@
 #error "When using DEBUG_LOG, DEBUG_LOG_VERBOSE or USE_TX_BACKPACK you must define both GPIO_PIN_DEBUG_RX and GPIO_PIN_DEBUG_TX"
 #endif
 #endif
+#endif
 #else // TARGET_RX
+#ifndef GPIO_PIN_RCSIGNAL_TX_SBUS
+#define GPIO_PIN_RCSIGNAL_TX_SBUS UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RCSIGNAL_RX_SBUS
+#define GPIO_PIN_RCSIGNAL_RX_SBUS UNDEF_PIN
+#endif
 #if defined(PLATFORM_ESP8266)
 #ifndef GPIO_PIN_DEBUG_RX
 #define GPIO_PIN_DEBUG_RX       3
@@ -97,10 +175,6 @@
 #define GPIO_PIN_DEBUG_TX       1
 #endif
 #endif
-#endif
-
-#if defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
-#define USE_I2C
 #endif
 
 #if defined(USE_ANALOG_VBAT) && !defined(GPIO_ANALOG_VBAT)
@@ -132,11 +206,5 @@
 #endif
 
 #if defined(TARGET_UBER_TX)
-const int hardware_pin(const char *name);
-const bool hardware_flag(const char *name);
-const int hardware_int(const char *name);
-const float hardware_float(const char *name);
-const int* hardware_array(const char *name);
-const int16_t* hardware_i16_array(const char *name);
-const uint16_t* hardware_u16_array(const char *name);
+#include "hardware.h"
 #endif

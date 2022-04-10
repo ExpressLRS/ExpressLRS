@@ -42,98 +42,117 @@
 //
 
 // Serial
-#define GPIO_PIN_RCSIGNAL_RX hardware_pin("serial-rx")
-#define GPIO_PIN_RCSIGNAL_TX hardware_pin("serial-tx")
+#define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
+#define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)
 
 // Radio
-#define GPIO_PIN_BUSY hardware_pin("radio-busy")
-#define GPIO_PIN_DIO0 hardware_pin("radio-dio0")
-#define GPIO_PIN_DIO1 hardware_pin("radio-dio1")
-#define GPIO_PIN_DIO2 hardware_pin("radio-dio2")
-#define GPIO_PIN_MISO hardware_pin("radio-miso")
-#define GPIO_PIN_MOSI hardware_pin("radio-mosi")
-#define GPIO_PIN_NSS hardware_pin("radio-nss")
-#define GPIO_PIN_RST hardware_pin("radio-rst")
-#define GPIO_PIN_SCK hardware_pin("radio-sck")
-#define USE_SX1280_DCDC hardware_flag("radio-dcdc")
-#define USE_SX1276_RFO_HF hardware_flag("radio-rfo-hf")
+#define GPIO_PIN_BUSY hardware_pin(HARDWARE_radio_busy)
+#define GPIO_PIN_DIO0 hardware_pin(HARDWARE_radio_dio0)
+#define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
+#define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)
+#define GPIO_PIN_MISO hardware_pin(HARDWARE_radio_miso)
+#define GPIO_PIN_MOSI hardware_pin(HARDWARE_radio_mosi)
+#define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
+#define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
+#define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
+#define USE_SX1280_DCDC
+#define OPT_USE_SX1280_DCDC hardware_flag(HARDWARE_radio_dcdc)
+#define USE_SX1276_RFO_HF
+#define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
 
 // Radio Antenna
-#define GPIO_PIN_ANTENNA_SELECT hardware_pin("ant-select")
-#define GPIO_PIN_ANT_CTRL_1 hardware_pin("ant-ctrl1")
-#define GPIO_PIN_ANT_CTRL_2 hardware_pin("ant-ctrl2")
+#define GPIO_PIN_ANTENNA_SELECT hardware_pin(HARDWARE_ant_select)
+#define GPIO_PIN_ANT_CTRL_1 hardware_pin(HARDWARE_ant_ctrl1)
+#define GPIO_PIN_ANT_CTRL_2 hardware_pin(HARDWARE_ant_ctrl2)
 
 // Radio power
-#define GPIO_PIN_PA_ENABLE hardware_pin("power-enable")
-// #define GPIO_PIN_RFamp_APC1 hardware_pin("power-apc1") // stm32
-#define GPIO_PIN_RFamp_APC2 hardware_pin("power-apc2")
-#define GPIO_PIN_RX_ENABLE hardware_pin("power-rxen")
-#define GPIO_PIN_TX_ENABLE hardware_pin("power-txen")
-#define MinPower (PowerLevels_e)hardware_int("power-min")
-#define HighPower (PowerLevels_e)hardware_int("power-high")
-#define MaxPower (PowerLevels_e)hardware_int("power-max")
-#define DefaultPower (PowerLevels_e)hardware_int("power-default")
+#define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
+// #define GPIO_PIN_RFamp_APC1 hardware_pin(HARDWARE_power_apc1) // stm32
+#define GPIO_PIN_RFamp_APC2 hardware_pin(HARDWARE_power_apc2)
+#define GPIO_PIN_RX_ENABLE hardware_pin(HARDWARE_power_rxen)
+#define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
+#define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
+#define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
+#define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
+#define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
-#define GPIO_PIN_PA_PDET hardware_pin("power-pdet")
-#define SKY85321_PDET_INTERCEPT hardware_float("power-pdet-intercept")
-#define SKY85321_PDET_SLOPE hardware_float("power-pdet-slope")
-#define USE_SKY85321 hardware_flag("power-sky85321")
+#define USE_SKY85321
+// Not needed, we use the PIN #define OPT_USE_SKY85321 hardware_flag(HARDWARE_power_sky85321)
+#define GPIO_PIN_PA_PDET hardware_pin(HARDWARE_power_pdet)
+#define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
+#define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
 
 // default value 0 means direct!
-// #define POWER_OUTPUT_ANALOG (hardware_int("power-control")==1)   // frsky only
-// #define POWER_OUTPUT_DAC (hardware_int("power-control")==2)  // stm32 only
-#define POWER_OUTPUT_DACWRITE (hardware_int("power-control")==3)
-#define POWER_OUTPUT_FIXED hardware_int("power-fixed")
-#define POWER_OUTPUT_VALUES hardware_i16_array("power-values")
-
+// #define POWER_OUTPUT_ANALOG (hardware_int(HARDWARE_power_control)==1)   // frsky only
+// #define POWER_OUTPUT_DAC (hardware_int(HARDWARE_power_control)==2)  // stm32 only
+// #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3) // stm32 only
+#define POWER_OUTPUT_FIXED hardware_int(HARDWARE_power_values)
+#define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 
 // Input
 #define HAS_FIVE_WAY_BUTTON
 
-#define GPIO_PIN_JOYSTICK hardware_pin("joystick")
-#define JOY_ADC_VALUES hardware_u16_array("joystick-values")
+#define GPIO_PIN_JOYSTICK hardware_pin(HARDWARE_joystick)
+#define JOY_ADC_VALUES hardware_u16_array(HARDWARE_joystick_values)
 
-#define GPIO_PIN_FIVE_WAY_INPUT1 hardware_pin("5way1")
-#define GPIO_PIN_FIVE_WAY_INPUT2 hardware_pin("5way2")
-#define GPIO_PIN_FIVE_WAY_INPUT3 hardware_pin("5way3")
+#define GPIO_PIN_FIVE_WAY_INPUT1 hardware_pin(HARDWARE_5way1)
+#define GPIO_PIN_FIVE_WAY_INPUT2 hardware_pin(HARDWARE_5way2)
+#define GPIO_PIN_FIVE_WAY_INPUT3 hardware_pin(HARDWARE_5way3)
 
-#define GPIO_PIN_BUTTON hardware_pin("button")
+#define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
 
 // Lighting
-#define GPIO_PIN_LED hardware_pin("led")
-#define GPIO_PIN_LED_BLUE hardware_pin("led-blue")
-#define GPIO_PIN_LED_GREEN hardware_pin("led-green")
-#define GPIO_LED_GREEN_INVERTED hardware_flag("led-green-invert")
-#define GPIO_PIN_LED_GREEN_RED hardware_pin("led-green-red")
-#define GPIO_PIN_LED_RED hardware_pin("led-red")
-#define GPIO_LED_RED_INVERTED hardware_pin("led-red-invert")
-#define GPIO_PIN_LED_RED_GREEN hardware_pin("led-reg-green")
-#define GPIO_PIN_LED_WS2812 hardware_pin("led-rgb")
+#define GPIO_PIN_LED hardware_pin(HARDWARE_led)
+#define GPIO_PIN_LED_BLUE hardware_pin(HARDWARE_led_blue)
+#define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
+#define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
+#define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
+#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
+#define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
+#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+#define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
-#define WS2812_IS_GRB hardware_flag("led-rgb-isgrb")
+#define WS2812_IS_GRB
+#define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
 
 // OLED
-#define GPIO_PIN_OLED_CS hardware_pin("oled-cs")        // SPI
-#define GPIO_PIN_OLED_DC hardware_pin("oled-dc")        // SPI
-#define GPIO_PIN_OLED_MOSI hardware_pin("oled-mosi")    // SPI
-#define GPIO_PIN_OLED_RST hardware_pin("oled-rst")      // SPI & I2c (optional)
-#define GPIO_PIN_OLED_SCK hardware_pin("oled-sck")      // clock for SPI & I2C
-#define GPIO_PIN_OLED_SDA hardware_pin("oled-sda")      // I2C data
+#define GPIO_PIN_OLED_CS hardware_pin(HARDWARE_oled_cs)        // SPI
+#define GPIO_PIN_OLED_DC hardware_pin(HARDWARE_oled_dc)        // SPI
+#define GPIO_PIN_OLED_MOSI hardware_pin(HARDWARE_oled_mosi)    // SPI
+#define GPIO_PIN_OLED_RST hardware_pin(HARDWARE_oled_rst)      // SPI & I2c (optional)
+#define GPIO_PIN_OLED_SCK hardware_pin(HARDWARE_oled_sck)      // clock for SPI & I2C
+#define GPIO_PIN_OLED_SDA hardware_pin(HARDWARE_oled_sda)      // I2C data
 
-// oled-type == 0 is no oled
-#define USE_OLED_I2C (hardware_int("oled-type")==1)
-#define USE_OLED_SPI (hardware_int("oled-type")==2)
-#define USE_OLED_SPI_SMALL (hardware_int("oled-type")==3)
-#define OLED_REVERSED hardware_flag("oled-reversed")
+// oled_type == 0 is no oled
+#define USE_OLED_I2C
+#define OPT_USE_OLED_I2C (hardware_int(HARDWARE_oled_type)==1)
+#define USE_OLED_SPI
+#define OPT_USE_OLED_SPI (hardware_int(HARDWARE_oled_type)==2)
+#define USE_OLED_SPI_SMALL
+#define OPT_USE_OLED_SPI_SMALL (hardware_int(HARDWARE_oled_type)==3)
+#define OLED_REVERSED
+#define OPT_OLED_REVERSED hardware_flag(HARDWARE_oled_reversed)
 
 // TFT
-#define GPIO_PIN_TFT_BL 1 // hardware_pin("tft-bl")
-#define GPIO_PIN_TFT_CS 2 // hardware_pin("tft-cs")
-#define GPIO_PIN_TFT_DC 3 // hardware_pin("tft-dc")
-#define GPIO_PIN_TFT_MOSI 4 // hardware_pin("tft-mosi")
-#define GPIO_PIN_TFT_RST 5 // hardware_pin("tft-rst")
-#define GPIO_PIN_TFT_SCLK 6 // hardware_pin("tft-sclk")
 #define HAS_TFT_SCREEN
+#define OPT_HAS_TFT_SCREEN (hardware_int(HARDWARE_oled_type)==4)
+
+#define GPIO_PIN_TFT_BL 1 // hardware_pin(HARDWARE_tft_bl)
+#define GPIO_PIN_TFT_CS 2 // hardware_pin(HARDWARE_tft_cs)
+#define GPIO_PIN_TFT_DC 3 // hardware_pin(HARDWARE_tft_dc)
+#define GPIO_PIN_TFT_MOSI 4 // hardware_pin(HARDWARE_tft_mosi)
+#define GPIO_PIN_TFT_RST 5 // hardware_pin(HARDWARE_tft_rst)
+#define GPIO_PIN_TFT_SCLK 6 // hardware_pin(HARDWARE_tft_sclk)
+
+// Backpack
+#define USE_TX_BACKPACK
+#define OPT_USE_TX_BACKPACK hardware_flag(HARDWARE_use_backpack)
+#define BACKPACK_LOGGING_BAUD hardware_int(HARDWARE_debug_backpack_baud)
+#define GPIO_PIN_DEBUG_RX hardware_pin(HARDWARE_debug_backpack_rx)
+#define GPIO_PIN_DEBUG_TX hardware_pin(HARDWARE_debug_backpack_tx)
+#define GPIO_PIN_BACKPACK_BOOT hardware_pin(HARDWARE_backpack_boot)
+#define GPIO_PIN_BACKPACK_EN hardware_pin(HARDWARE_backpack_en)
+
 /*
 // PWM
 GPIO_PIN_PWM_OUTPUTS
@@ -145,27 +164,21 @@ GPIO_PIN_RF_AMP_VREF
 GPIO_PIN_SPI_VTX_NSS
 VPD_VALUES_100MW
 VPD_VALUES_25MW
-
-// I2C
-GPIO_PIN_SCL
-GPIO_PIN_SDA
-
-// Backpack
-USE_TX_BACKPACK
-BACKPACK_LOGGING_BAUD
-GPIO_PIN_DEBUG_RX
-GPIO_PIN_DEBUG_TX
-GPIO_PIN_BACKPACK_BOOT
-GPIO_PIN_BACKPACK_EN
 */
 
+// I2C
+#define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)
+#define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
+
 // Misc sensors & things
-#define GPIO_PIN_GSENSOR_INT hardware_pin("misc-gsensor-int")
-// #define GPIO_PIN_BUZZER hardware_pin("misc-buzzer")  // stm32 only
-#define GPIO_PIN_FAN_EN hardware_pin("misc-fan-en")
+#define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
+// #define GPIO_PIN_BUZZER hardware_pin(HARDWARE_misc_buzzer)  // stm32 only
+#define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
 
-#define HAS_GSENSOR_STK8xxx
 #define HAS_GSENSOR
+#define OPT_HAS_GSENSOR_STK8xxx hardware_flag(HARDWARE_gsensor_stk8xxx)
+#define HAS_GSENSOR_STK8xxx
 
-#define HAS_THERMAL_LM75A
 #define HAS_THERMAL
+#define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
+#define HAS_THERMAL_LM75A
