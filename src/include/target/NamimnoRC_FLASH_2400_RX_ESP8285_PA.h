@@ -18,9 +18,6 @@
 #endif
 
 // Output Power
-#define MinPower                PWR_10mW
-#define MaxPower                PWR_100mW
-#define DefaultPower            PWR_100mW
-#define POWER_OUTPUT_VALUES     {-15, -10, -7, 3} //has PA, use Power array
+#define POWER_OUTPUT_FIXED          3
 
 #define Regulatory_Domain_ISM_2400 1
