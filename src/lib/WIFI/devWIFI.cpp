@@ -2,6 +2,10 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#if defined(TARGET_UBER_TX)
+#include <SPIFFS.h>
+#endif
+
 #if defined(PLATFORM_ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -187,6 +191,49 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
   }
   config.Commit();
   request->send(200, "text/plain", "PWM outputs updated");
+}
+#endif
+
+#if defined(TARGET_UBER_TX)
+static void HandleHardware(AsyncWebServerRequest *request)
+{
+  DBGLN("hardware");
+  if (request->method() == HTTP_GET)
+  {
+    DBGLN("get hardware");
+    File file = SPIFFS.open("/hardware.ini", "r");
+    String resp = "{";
+    do {
+      String line = file.readStringUntil('\n');
+      if (line.charAt(0)!=';' && line.indexOf('=') > 0) {
+        int element = line.substring(0, line.indexOf('=')).toInt();
+        String value = line.substring(line.indexOf('=') + 1);
+        if (resp.length() > 1) {
+          resp += ", ";
+        }
+        resp += "\"" + String(element, 10) + "\" : \"" + value + "\"";
+      }
+    } while(file.available());
+    resp += "}";
+    file.close();
+    request->send(200, "application/json", resp);
+  }
+  else if (request->method() == HTTP_POST)
+  {
+    // File file = SPIFFS.open("/hardware.ini", "w");
+    for (int i=0 ; i<request->args() ; i++)
+    {
+      String name = request->argName(i);
+      String val = request->arg(name);
+      if (!val.isEmpty()) {
+        if (val.equals("on")) val = "1";
+        else if (val.equals("off")) val = "0";
+        DBGLN("%s=%d '%s'", name.c_str(), val.length(), val.c_str());
+      }
+    }
+    // file.close();
+    request->send(200, "application/json", "All your hardware are belong to me!");
+  }
 }
 #endif
 
@@ -520,6 +567,9 @@ static void startWiFi(unsigned long now)
   Radio.End();
 
   DBGLN("Begin Webupdater");
+#if defined(TARGET_UBER_TX)
+  SPIFFS.begin();
+#endif
 
   WiFi.persistent(false);
   WiFi.disconnect();
@@ -630,6 +680,11 @@ static void startServices()
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
+  #endif
+  #if defined(TARGET_UBER_TX)
+    server.on("/hardware.html", [](AsyncWebServerRequest *request){request->send(SPIFFS, "/hardware.html", "text/html");});
+    server.on("/hardware.js", [](AsyncWebServerRequest *request){request->send(SPIFFS, "/hardware.js", "text/javascript");});
+    server.on("/hardware", HandleHardware);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
