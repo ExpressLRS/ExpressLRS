@@ -125,12 +125,13 @@ void DynamicPower_Update(uint32_t now)
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
   uint32_t lq_avg = dynamic_power_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
+  dynamic_power_mavg_lq.add(lq_current);
   // if LQ drops quickly (DYNPOWER_LQ_BOOST_THRESH_DIFF) or critically low below DYNPOWER_LQ_BOOST_THRESH_MIN, immediately boost to the configured max power.
   if(lq_diff >= DYNPOWER_LQ_BOOST_THRESH_DIFF || lq_current <= DYNPOWER_LQ_BOOST_THRESH_MIN)
   {
       DynamicPower_SetToConfigPower();
+      return;
   }
-  dynamic_power_mavg_lq.add(lq_current);
 
   if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
