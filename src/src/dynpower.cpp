@@ -95,7 +95,7 @@ void DynamicPower_Update(uint32_t now)
   }
 
   // How much available power is left for incremental increases
-  int8_t powerHeadroom = (int8_t)config.GetPower() - (int8_t)POWERMGNT::currPower();
+  uint8_t powerHeadroom = (uint8_t)config.GetPower() - (uint8_t)POWERMGNT::currPower();
 
   if (lastTlmMissed)
   {
@@ -127,7 +127,7 @@ void DynamicPower_Update(uint32_t now)
   int32_t lq_diff = lq_avg - lq_current;
   dynamic_power_mavg_lq.add(lq_current);
   // if LQ drops quickly (DYNPOWER_LQ_BOOST_THRESH_DIFF) or critically low below DYNPOWER_LQ_BOOST_THRESH_MIN, immediately boost to the configured max power.
-  if(lq_diff >= DYNPOWER_LQ_BOOST_THRESH_DIFF || lq_current <= DYNPOWER_LQ_BOOST_THRESH_MIN)
+  if (lq_diff >= DYNPOWER_LQ_BOOST_THRESH_DIFF || lq_current <= DYNPOWER_LQ_BOOST_THRESH_MIN)
   {
       DynamicPower_SetToConfigPower();
       return;
