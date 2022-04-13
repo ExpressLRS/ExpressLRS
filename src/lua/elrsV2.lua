@@ -777,6 +777,13 @@ local function handleDevicePageEvent(event, touchState)
       end
       UIbackExec()
     end
+  elseif (edit and event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft) then  -- cancel & reload the field
+    edit = nil
+    local field = getField(lineIndex)
+    fieldTimeout = getTime() + 200 -- 2s
+    fieldId, fieldChunk = field.id, 0
+    fieldData = {}
+    crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
   elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and event == EVT_TOUCH_TAP)) then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
       elrsFlags = 0
