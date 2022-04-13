@@ -66,25 +66,18 @@ typedef enum {
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
 
-    // OLED
-    HARDWARE_oled_cs,       // SPI
-    HARDWARE_oled_dc,       // SPI
-    HARDWARE_oled_mosi,     // SPI
-    HARDWARE_oled_rst,      // SPI & I2c (optional)
-    HARDWARE_oled_sck,      // clock for SPI & I2C
-    HARDWARE_oled_sda,      // I2C data
+    // OLED/TFT 
+    HARDWARE_screen_cs,       // SPI
+    HARDWARE_screen_dc,       // SPI
+    HARDWARE_screen_mosi,     // SPI
+    HARDWARE_screen_rst,      // SPI & I2c (optional)
+    HARDWARE_screen_sck,      // clock for SPI & I2C
+    HARDWARE_screen_sda,      // I2C data
 
-    // oled_type == 0 is no oled
-    HARDWARE_oled_type,
-    HARDWARE_oled_reversed,
-
-    // TFT
-    HARDWARE_tft_bl,
-    HARDWARE_tft_cs,
-    HARDWARE_tft_dc,
-    HARDWARE_tft_mosi,
-    HARDWARE_tft_rst,
-    HARDWARE_tft_sclk,
+    // screen_type == 0 is no screen
+    HARDWARE_screen_type,
+    HARDWARE_screen_reversed,
+    HARDWARE_screen_bl,
 
     // Backpack
     HARDWARE_use_backpack,
@@ -94,20 +87,15 @@ typedef enum {
     HARDWARE_backpack_boot,
     HARDWARE_backpack_en,
 
-    // I2C
+    // I2C & Misc devices
     HARDWARE_i2c_scl,
     HARDWARE_i2c_sda,
-
-    // Misc sensors & things
     HARDWARE_misc_gsensor_int,
     HARDWARE_misc_buzzer,  // stm32 only
     HARDWARE_misc_fan_en,
-
     HARDWARE_gsensor_stk8xxx,
-    // HAS_GSENSOR
-
     HARDWARE_thermal_lm75a,
-    // HAS_THERMAL
+
     HARDWARE_LAST
 
     /*

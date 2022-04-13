@@ -4,9 +4,12 @@
 #include "device.h"
 #include "logging.h"
 
-#include "display.h"
+#include "OLED/oleddisplay.h"
+#include "TFT/tftdisplay.h"
 
 FiniteStateMachine state_machine(entry_fsm);
+
+Display *display;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
@@ -40,11 +43,11 @@ static int handle(void)
 
     if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
     {
-        Display::doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+        display->doScreenBackLight(SCREEN_BACKLIGHT_OFF);
     }
     else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
     {
-        Display::doScreenBackLight(SCREEN_BACKLIGHT_ON);
+        display->doScreenBackLight(SCREEN_BACKLIGHT_ON);
     }
     is_pre_screen_flipped = is_screen_flipped;
     if (is_screen_flipped)
@@ -111,16 +114,24 @@ static void initialize()
 #ifdef HAS_FIVE_WAY_BUTTON
     fivewaybutton.init();
 #endif
-    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
-        Display::init();
+        if (OPT_HAS_TFT_SCREEN)
+        {
+            display = new TFTDisplay();
+        }
+        else
+        {
+            display = new OLEDDisplay();
+        }
+        display->init();
         state_machine.start(millis(), getInitialState());
     }
 }
 
 static int start()
 {
-    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -129,7 +140,7 @@ static int start()
 
 static int event()
 {
-    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return handle();
     }
@@ -138,7 +149,7 @@ static int event()
 
 static int timeout()
 {
-    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return handle();
     }

@@ -130,13 +130,14 @@
 					<tr><td>Green/Red LED pin</td><td><input size='3' id='41' name='41' type='text'/></td></tr>
 					<tr><td>Red/Green LED pin</td><td><input size='3' id='44' name='44' type='text'/></td></tr>
 
-					<tr><td colspan='2'>OLED (Crotch TV)</td></tr>
+					<tr><td colspan='2'>OLED/TFT (Crotch TV)</td></tr>
 					<tr><td>OLED type</td><td>
 						<select id='53' name='53'>
 							<option value='0'>None</option>
-							<option value='1'>I2C</option>
-							<option value='2'>SPI</option>
-							<option value='3'>SPI (small)</option>
+							<option value='1'>I2C OLED</option>
+							<option value='2'>SPI OLED</option>
+							<option value='3'>SPI OLED (small)</option>
+							<option value='4'>SPI TFT(small)</option>
 						</select>
 					</td></tr>
 					<tr><td>180 rotation</td><td><input size='3' id='54' name='54' type='checkbox'/></td></tr>
@@ -146,31 +147,24 @@
 					<tr><td>RST pin</td><td><input size='3' id='50' name='50' type='text'/></td><td>Reset</td></tr>
 					<tr><td>SCK pin</td><td><input size='3' id='51' name='51' type='text'/></td><td>Clock</td></tr>
 					<tr><td>SDA pin</td><td><input size='3' id='52' name='52' type='text'/></td><td>Data (I2C)</td></tr>
-
-					<tr><td colspan='2'>TFT (Colour crotch TV)</td></tr>
 					<tr><td>BL pin</td><td><input size='3' id='55' name='55' type='text'/></td><td>Backlight</td></tr>
-					<tr><td>CS pin</td><td><input size='3' id='56' name='56' type='text'/></td><td>Chip Select</td></tr>
-					<tr><td>DC pin</td><td><input size='3' id='57' name='57' type='text'/></td><td>Data/Command Select</td></tr>
-					<tr><td>MOSI pin</td><td><input size='3' id='58' name='58' type='text'/></td><td>Data</td></tr>
-					<tr><td>RST pin</td><td><input size='3' id='59' name='59' type='text'/></td><td>Reset</td></tr>
-					<tr><td>SCLK pin</td><td><input size='3' id='60' name='60' type='text'/></td><td>Clock</td></tr>
 
 					<tr><td colspan='2'>Backpack / Logging</td></tr>
-					<tr><td>Enable Backpack</td><td><input size='3' id='61' name='61' type='checkbox'/></td></tr>
-					<tr><td>Baud Rate</td><td><input size='10' id='62' name='62' type='text'/></td><td>460800 for backpack passthrough flashing</td></tr>
-					<tr><td>RX pin</td><td><input size='3' id='63' name='63' type='text'/></td></tr>
-					<tr><td>TX pin</td><td><input size='3' id='64' name='64' type='text'/></td></tr>
-					<tr><td>BOOT pin</td><td><input size='3' id='65' name='65' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285</td></tr>
-					<tr><td>EN pin</td><td><input size='3' id='66' name='66' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285</td></tr>
+					<tr><td>Enable Backpack</td><td><input size='3' id='56' name='56' type='checkbox'/></td></tr>
+					<tr><td>Baud Rate</td><td><input size='10' id='57' name='57' type='text'/></td><td>460800 for backpack passthrough flashing</td></tr>
+					<tr><td>RX pin</td><td><input size='3' id='58' name='58' type='text'/></td></tr>
+					<tr><td>TX pin</td><td><input size='3' id='59' name='59' type='text'/></td></tr>
+					<tr><td>BOOT pin</td><td><input size='3' id='60' name='60' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285</td></tr>
+					<tr><td>EN pin</td><td><input size='3' id='61' name='61' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285</td></tr>
 
 					<tr><td colspan='2'>I2C & Misc Devices</td></tr>
-					<tr><td>SCL pin</td><td><input size='3' id='67' name='67' type='text'/></td></tr>
-					<tr><td>SDA pin</td><td><input size='3' id='68' name='68' type='text'/></td></tr>
-					<tr><td>Buzzer pin</td><td><input size='3' id='70' name='70' type='text'/></td></tr>
-					<tr><td>Fan enable pin</td><td><input size='3' id='71' name='71' type='text'/></td></tr>
-					<tr><td>Has STK8xxx G-sensor</td><td><input size='3' id='72' name='72' type='checkbox'/></td></tr>
-					<tr><td>G-sensor interrupt pin</td><td><input size='3' id='69' name='69' type='input'/></td></tr>
-					<tr><td>Has LM75A Thermal sensor</td><td><input size='3' id='73' name='73' type='checkbox'/></td></tr>
+					<tr><td>SCL pin</td><td><input size='3' id='62' name='62' type='text'/></td></tr>
+					<tr><td>SDA pin</td><td><input size='3' id='63' name='63' type='text'/></td></tr>
+					<tr><td>Buzzer pin</td><td><input size='3' id='65' name='65' type='text'/></td></tr>
+					<tr><td>Fan enable pin</td><td><input size='3' id='66' name='66' type='text'/></td></tr>
+					<tr><td>Has STK8xxx G-sensor</td><td><input size='3' id='67' name='67' type='checkbox'/></td></tr>
+					<tr><td>G-sensor interrupt pin</td><td><input size='3' id='64' name='64' type='input'/></td></tr>
+					<tr><td>Has LM75A Thermal sensor</td><td><input size='3' id='68' name='68' type='checkbox'/></td></tr>
 
 				</table>
 				<input type='submit' value='Save Hardware Configuration'/>

@@ -1,4 +1,5 @@
-#include "display.h"
+#include "OLED/oleddisplay.h"
+#include "TFT/tftdisplay.h"
 
 #include "common.h"
 #include "config.h"
@@ -22,6 +23,8 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
 
+extern Display *display;
+
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
 #endif
@@ -39,7 +42,7 @@ fsm_state_t getInitialState()
 
 static void displaySplashScreen(bool init)
 {
-    Display::displaySplashScreen();
+    display->displaySplashScreen();
 }
 
 static void displayIdleScreen(bool init)
@@ -92,13 +95,13 @@ static void displayIdleScreen(bool init)
         last_dynamic = config.GetDynamicPower();
         last_run_power = (uint8_t)(POWERMGNT::currPower());
 
-        Display::displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
+        display->displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
     }
 }
 
 static void displayMenuScreen(bool init)
 {
-    Display::displayMainMenu((menu_item_t)state_machine.getCurrentState());
+    display->displayMainMenu((menu_item_t)state_machine.getCurrentState());
 }
 
 // Value menu
@@ -112,22 +115,22 @@ static void setupValueIndex(bool init)
     {
     case STATE_PACKET:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetRate();
         break;
     case STATE_TELEMETRY:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetTlm();
         break;
     case STATE_POWERSAVE:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetMotionMode();
         break;
     case STATE_SMARTFAN:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetFanMode();
         break;
 
@@ -138,28 +141,28 @@ static void setupValueIndex(bool init)
         break;
     case STATE_POWER_DYNAMIC:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
         break;
 
     case STATE_VTX_BAND:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxBand();
         break;
     case STATE_VTX_CHANNEL:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxChannel();
         break;
     case STATE_VTX_POWER:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPower();
         break;
     case STATE_VTX_PITMODE:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPitmode();
         break;
     }
@@ -167,7 +170,7 @@ static void setupValueIndex(bool init)
 
 static void displayValueIndex(bool init)
 {
-    Display::displayValue((menu_item_t)state_machine.getParentState(), values_index);
+    display->displayValue((menu_item_t)state_machine.getParentState(), values_index);
 }
 
 static void incrementValueIndex(bool init)
@@ -230,7 +233,7 @@ static void executeSendVTX(bool init)
     if (init)
     {
         VtxTriggerSend();
-        Display::displayRunning();
+        display->displayRunning();
     }
     else
     {
@@ -241,7 +244,7 @@ static void executeSendVTX(bool init)
 // Bluetooth Joystck
 static void displayBLEConfirm(bool init)
 {
-    Display::displayBLEConfirm();
+    display->displayBLEConfirm();
 }
 
 static void executeBLE(bool init)
@@ -249,7 +252,7 @@ static void executeBLE(bool init)
     if (init)
     {
         connectionState = bleJoystick;
-        Display::displayBLEStatus();
+        display->displayBLEStatus();
     }
     else
     {
@@ -273,7 +276,7 @@ static void exitBLE(bool init)
 // WiFi
 static void displayWiFiConfirm(bool init)
 {
-    Display::displayWiFiConfirm();
+    display->displayWiFiConfirm();
 }
 
 static void exitWiFi(bool init)
@@ -307,11 +310,11 @@ static void executeWiFi(bool init)
         }
         if (state_machine.getParentState() == STATE_WIFI_TX)
         {
-            Display::displayWiFiStatus();
+            display->displayWiFiStatus();
         }
         else
         {
-            Display::displayRunning();
+            display->displayRunning();
         }
         return;
     }
@@ -341,7 +344,7 @@ static void executeWiFi(bool init)
 // Bind
 static void displayBindConfirm(bool init)
 {
-    Display::displayBindConfirm();
+    display->displayBindConfirm();
 }
 
 static void executeBind(bool init)
@@ -349,7 +352,7 @@ static void executeBind(bool init)
     if (init)
     {
         EnterBindingMode();
-        Display::displayBindStatus();
+        display->displayBindStatus();
         return;
     }
     if (!InBindingMode)

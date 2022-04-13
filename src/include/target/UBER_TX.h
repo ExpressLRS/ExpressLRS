@@ -116,33 +116,33 @@
 #define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
 
 // OLED
-#define GPIO_PIN_OLED_CS hardware_pin(HARDWARE_oled_cs)        // SPI
-#define GPIO_PIN_OLED_DC hardware_pin(HARDWARE_oled_dc)        // SPI
-#define GPIO_PIN_OLED_MOSI hardware_pin(HARDWARE_oled_mosi)    // SPI
-#define GPIO_PIN_OLED_RST hardware_pin(HARDWARE_oled_rst)      // SPI & I2c (optional)
-#define GPIO_PIN_OLED_SCK hardware_pin(HARDWARE_oled_sck)      // clock for SPI & I2C
-#define GPIO_PIN_OLED_SDA hardware_pin(HARDWARE_oled_sda)      // I2C data
+#define GPIO_PIN_OLED_CS hardware_pin(HARDWARE_screen_cs)        // SPI
+#define GPIO_PIN_OLED_DC hardware_pin(HARDWARE_screen_dc)        // SPI
+#define GPIO_PIN_OLED_MOSI hardware_pin(HARDWARE_screen_mosi)    // SPI
+#define GPIO_PIN_OLED_RST hardware_pin(HARDWARE_screen_rst)      // SPI & I2c (optional)
+#define GPIO_PIN_OLED_SCK hardware_pin(HARDWARE_screen_sck)      // clock for SPI & I2C
+#define GPIO_PIN_OLED_SDA hardware_pin(HARDWARE_screen_sda)      // I2C data
 
-// oled_type == 0 is no oled
+// screen_type == 0 is no oled
 #define USE_OLED_I2C
-#define OPT_USE_OLED_I2C (hardware_int(HARDWARE_oled_type)==1)
+#define OPT_USE_OLED_I2C (hardware_int(HARDWARE_screen_type)==1)
 #define USE_OLED_SPI
-#define OPT_USE_OLED_SPI (hardware_int(HARDWARE_oled_type)==2)
+#define OPT_USE_OLED_SPI (hardware_int(HARDWARE_screen_type)==2)
 #define USE_OLED_SPI_SMALL
-#define OPT_USE_OLED_SPI_SMALL (hardware_int(HARDWARE_oled_type)==3)
+#define OPT_USE_OLED_SPI_SMALL (hardware_int(HARDWARE_screen_type)==3)
 #define OLED_REVERSED
-#define OPT_OLED_REVERSED hardware_flag(HARDWARE_oled_reversed)
+#define OPT_OLED_REVERSED hardware_flag(HARDWARE_screen_reversed)
 
 // TFT
 #define HAS_TFT_SCREEN
-#define OPT_HAS_TFT_SCREEN (hardware_int(HARDWARE_oled_type)==4)
+#define OPT_HAS_TFT_SCREEN (hardware_int(HARDWARE_screen_type)==4)
 
-#define GPIO_PIN_TFT_BL 1 // hardware_pin(HARDWARE_tft_bl)
-#define GPIO_PIN_TFT_CS 2 // hardware_pin(HARDWARE_tft_cs)
-#define GPIO_PIN_TFT_DC 3 // hardware_pin(HARDWARE_tft_dc)
-#define GPIO_PIN_TFT_MOSI 4 // hardware_pin(HARDWARE_tft_mosi)
-#define GPIO_PIN_TFT_RST 5 // hardware_pin(HARDWARE_tft_rst)
-#define GPIO_PIN_TFT_SCLK 6 // hardware_pin(HARDWARE_tft_sclk)
+#define GPIO_PIN_TFT_BL hardware_pin(HARDWARE_screen_bl)
+#define GPIO_PIN_TFT_CS hardware_pin(HARDWARE_screen_cs)
+#define GPIO_PIN_TFT_DC hardware_pin(HARDWARE_screen_dc)
+#define GPIO_PIN_TFT_MOSI hardware_pin(HARDWARE_screen_mosi)
+#define GPIO_PIN_TFT_RST hardware_pin(HARDWARE_screen_rst)
+#define GPIO_PIN_TFT_SCLK hardware_pin(HARDWARE_screen_sck)
 
 // Backpack
 #define USE_TX_BACKPACK

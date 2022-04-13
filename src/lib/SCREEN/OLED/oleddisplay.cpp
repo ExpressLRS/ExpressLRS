@@ -2,7 +2,7 @@
 
 #include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
-#include "display.h"
+#include "oleddisplay.h"
 
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 #include "options.h"
@@ -66,7 +66,7 @@ static void ghostChase()
 
 static void helperDrawImage(menu_item_t menu);
 
-void Display::init()
+void OLEDDisplay::init()
 {
     if (OPT_USE_OLED_SPI_SMALL)
         u8g2 = new U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
@@ -79,7 +79,7 @@ void Display::init()
     u8g2->clearBuffer();
 }
 
-void Display::doScreenBackLight(screen_backlight_t state)
+void OLEDDisplay::doScreenBackLight(screen_backlight_t state)
 {
     #ifdef GPIO_PIN_OLED_BL
     if (GPIO_PIN_OLED_BL != UNDEF_PIN)
@@ -89,12 +89,12 @@ void Display::doScreenBackLight(screen_backlight_t state)
     #endif
 }
 
-void Display::printScreenshot()
+void OLEDDisplay::printScreenshot()
 {
     u8g2->writeBufferXBM(*LoggingBackpack);
 }
 
-void Display::displaySplashScreen()
+void OLEDDisplay::displaySplashScreen()
 {
     u8g2->clearBuffer();
 #ifdef TARGET_TX_GHOST
@@ -110,7 +110,7 @@ void Display::displaySplashScreen()
     u8g2->sendBuffer();
 }
 
-void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
+void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2->clearBuffer();
     String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
@@ -142,7 +142,7 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
     u8g2->sendBuffer();
 }
 
-void Display::displayMainMenu(menu_item_t menu)
+void OLEDDisplay::displayMainMenu(menu_item_t menu)
 {
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
@@ -160,7 +160,7 @@ void Display::displayMainMenu(menu_item_t menu)
     u8g2->sendBuffer();
 }
 
-void Display::displayValue(menu_item_t menu, uint8_t value_index)
+void OLEDDisplay::displayValue(menu_item_t menu, uint8_t value_index)
 {
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_9x15_t_symbols);
@@ -184,7 +184,7 @@ void Display::displayValue(menu_item_t menu, uint8_t value_index)
     u8g2->sendBuffer();
 }
 
-void Display::displayBLEConfirm()
+void OLEDDisplay::displayBLEConfirm()
 {
     // TODO: Put wifi image?
     u8g2->clearBuffer();
@@ -204,7 +204,7 @@ void Display::displayBLEConfirm()
     u8g2->sendBuffer();
 }
 
-void Display::displayBLEStatus()
+void OLEDDisplay::displayBLEStatus()
 {
     u8g2->clearBuffer();
 
@@ -226,7 +226,7 @@ void Display::displayBLEStatus()
     u8g2->sendBuffer();
 }
 
-void Display::displayWiFiConfirm()
+void OLEDDisplay::displayWiFiConfirm()
 {
     // TODO: Put wifi image?
     u8g2->clearBuffer();
@@ -246,7 +246,7 @@ void Display::displayWiFiConfirm()
     u8g2->sendBuffer();
 }
 
-void Display::displayWiFiStatus()
+void OLEDDisplay::displayWiFiStatus()
 {
     u8g2->clearBuffer();
 #if defined(PLATFORM_ESP32)
@@ -286,7 +286,7 @@ void Display::displayWiFiStatus()
     u8g2->sendBuffer();
 }
 
-void Display::displayBindConfirm()
+void OLEDDisplay::displayBindConfirm()
 {
     // TODO: Put bind image?
     u8g2->clearBuffer();
@@ -305,7 +305,7 @@ void Display::displayBindConfirm()
     u8g2->sendBuffer();
 }
 
-void Display::displayBindStatus()
+void OLEDDisplay::displayBindStatus()
 {
     // TODO: Put bind image?
     u8g2->clearBuffer();
@@ -321,7 +321,7 @@ void Display::displayBindStatus()
     u8g2->sendBuffer();
 }
 
-void Display::displayRunning()
+void OLEDDisplay::displayRunning()
 {
     // TODO: Put wifi image?
     u8g2->clearBuffer();
