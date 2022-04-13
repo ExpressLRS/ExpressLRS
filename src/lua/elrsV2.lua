@@ -757,7 +757,7 @@ local function handleDevicePageEvent(event, touchState)
     end
   end
 
-  if event == EVT_VIRTUAL_EXIT then             -- exit script
+  if ((event == EVT_VIRTUAL_EXIT) or (event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft)) then -- exit script
     if edit then -- reload the field
       edit = nil
       local field = getField(lineIndex)
@@ -776,14 +776,7 @@ local function handleDevicePageEvent(event, touchState)
       end
       UIbackExec()
     end
-  elseif (edit and event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft) then  -- cancel & reload the field
-    edit = nil
-    local field = getField(lineIndex)
-    fieldTimeout = getTime() + 200 -- 2s
-    fieldId, fieldChunk = field.id, 0
-    fieldData = {}
-    crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
-  elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and event == EVT_TOUCH_TAP)) then -- toggle editing/selecting current field
+  elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and (event == EVT_TOUCH_TAP or (event == EVT_TOUCH_SLIDE and touchState.swipeRight)))) then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
@@ -819,43 +812,19 @@ local function handleDevicePageEvent(event, touchState)
       end
     end
   elseif edit then
-    if event ~= nil then
-      if event ~= 0 then
-        if touchState then
-          if event == EVT_TOUCH_SLIDE then
-            if touchState.swipeUp then
-              incrField(1)
-            elseif touchState.swipeDown then
-              incrField(-1)
-            end
-          end
-        else -- event ~= 0 and touchState == nil: key event
-          if event == EVT_VIRTUAL_NEXT then
-            incrField(1)
-          elseif event == EVT_VIRTUAL_PREV then
-            incrField(-1)
-          end
-        end
+    if ((event ~= nil) and (event ~= 0)) then
+      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
+        incrField(1)
+      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
+        incrField(-1)
       end
     end
   else
-    if event ~= nil then
-      if event ~= 0 then
-        if touchState then
-          if event == EVT_TOUCH_SLIDE then
-            if touchState.swipeLeft then
-              selectField(-1)
-            elseif touchState.swipeRight then
-              selectField(1)
-            end
-          end
-	else -- event ~= 0 and touchState == nil: key event
-          if (event == EVT_VIRTUAL_NEXT) then
-            selectField(1)
-          elseif (event == EVT_VIRTUAL_PREV) then
-            selectField(-1)
-          end
-        end
+    if ((event ~= nil) and (event ~= 0)) then
+      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
+        selectField(1)
+      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
+        selectField(-1)
       end
     end
   end
