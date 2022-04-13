@@ -518,7 +518,7 @@ local functions = {
   { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
   { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
-  { load=nil, save=UIexitExec, display=fieldCommandDisplay }, --18 back(17)
+  { load=nil, save=UIexitExec, display=fieldCommandDisplay }, --18 exit(17)
 }
 
 local function parseParameterInfoMessage(data)
