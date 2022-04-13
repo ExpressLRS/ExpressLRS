@@ -65,7 +65,6 @@ local function allocateFields()
   if folderAccess ~= nil then
     fields[backButtonId].parent = folderAccess
   end
-  fields_count = fields_count + 1
   exitButtonId = backButtonId + 1
   fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
 end
