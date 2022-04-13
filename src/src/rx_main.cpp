@@ -18,6 +18,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTXSPI.h"
+#include "devAnalogVbat.h"
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -46,6 +47,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
+#endif
+#ifdef USE_ANALOG_VBAT
+    {&AnalogVbat_device, 0},
 #endif
 };
 
@@ -96,8 +100,6 @@ CRSF crsf(CRSF_TX_SERIAL);
 StubbornSender TelemetrySender(ELRS_TELEMETRY_MAX_PACKAGES);
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
-// Maximum ms between LINK_STATISTICS packets for determining burst max
-#define TELEM_MIN_LINK_INTERVAL 512U
 
 StubbornReceiver MspReceiver(ELRS_MSP_MAX_PACKAGES);
 uint8_t MspData[ELRS_MSP_BUFFER];
@@ -1085,17 +1087,7 @@ static void updateTelemetryBurst()
 
     uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
     uint32_t ratiodiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    // telemInterval = 1000 / (hz / ratiodiv);
-    // burst = TELEM_MIN_LINK_INTERVAL / telemInterval;
-    // This ^^^ rearranged to preserve precision vvv
-    telemetryBurstMax = TELEM_MIN_LINK_INTERVAL * hz / ratiodiv / 1000U;
-
-    // Reserve one slot for LINK telemetry
-    if (telemetryBurstMax > 1)
-        --telemetryBurstMax;
-    else
-        telemetryBurstMax = 1;
-    //DBGLN("TLMburst: %d", telemetryBurstMax);
+    telemetryBurstMax = TLMBurstMaxForRateRatio(hz, ratiodiv);
 
     // Notify the sender to adjust its expected throughput
     TelemetrySender.UpdateTelemetryRate(hz, ratiodiv, telemetryBurstMax);
