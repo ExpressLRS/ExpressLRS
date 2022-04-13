@@ -817,9 +817,9 @@ local function handleDevicePageEvent(event, touchState)
       if event ~= 0 then
 	if touchState then
           if event == EVT_TOUCH_SLIDE then
-            if touchState.swipeRight then
+            if touchState.swipeUp then
               incrField(1)
-            elseif touchState.swipeLeft then
+            elseif touchState.swipeDown then
               incrField(-1)
             end
           end
@@ -837,9 +837,9 @@ local function handleDevicePageEvent(event, touchState)
       if event ~= 0 then
         if touchState then
           if event == EVT_TOUCH_SLIDE then
-            if touchState.swipeUp then
+            if touchState.swipeLeft then
               selectField(-1)
-            elseif touchState.swipeDown then
+            elseif touchState.swipeRight then
               selectField(1)
             end
           end
