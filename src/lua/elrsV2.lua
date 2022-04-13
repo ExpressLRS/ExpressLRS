@@ -815,7 +815,7 @@ local function handleDevicePageEvent(event, touchState)
   elseif edit then
     if event ~= nil then
       if event ~= 0 then
-	if touchState then
+        if touchState then
           if event == EVT_TOUCH_SLIDE then
             if touchState.swipeUp then
               incrField(1)
