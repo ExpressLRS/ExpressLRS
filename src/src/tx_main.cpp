@@ -387,7 +387,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_RFperfParams = RFperf;
   crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(interval);
+  crsf.setSyncParams(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }
@@ -504,7 +504,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 #endif
 
   // Sync OpenTX to this point
-  crsf.JustSentRFpacket();
+  if (!(NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends))
+  {
+    crsf.JustSentRFpacket();
+  }
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
