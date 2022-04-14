@@ -983,61 +983,78 @@ static void setupTarget()
 
 void setup()
 {
+  bool hardware_success = false;
   #if defined(TARGET_UBER_TX)
-  hardware_init();
-  #endif
-
-  initUID();
-  setupTarget();
-  // Register the devices with the framework
-  devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
-  // Initialise the devices
-  devicesInit();
-  DBGLN("initialised devices");
-
-  FHSSrandomiseFHSSsequence(uidMacSeedGet());
-
-  Radio.RXdoneCallback = &RXdoneISR;
-  Radio.TXdoneCallback = &TXdoneISR;
-
-  crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-  crsf.disconnected = &UARTdisconnected;
-  crsf.RecvModelUpdate = &ModelUpdateReq;
-  hwTimer.callbackTock = &timerCallbackNormal;
-  DBGLN("ExpressLRS TX Module Booted...");
-
-  eeprom.Begin(); // Init the eeprom
-  config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
-  config.Load(); // Load the stored values from eeprom
-
-  Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  #if defined(RADIO_SX127X)
-  //Radio.currSyncWord = UID[3];
-  #endif
-  bool init_success = Radio.Begin();
-
-  #if defined(USE_BLE_JOYSTICK)
-    init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
-  #endif
-
-  if (!init_success)
+  hardware_success = hardware_init();
+  if (!hardware_success)
   {
-    connectionState = radioFailed;
+    LoggingBackpack = new HardwareSerial(0);
+    ((HardwareSerial *)LoggingBackpack)->begin(460800, SERIAL_8N1);
+
+    // Register the WiFi with the framework
+    static device_affinity_t wifi_device[] = {
+        {&WIFI_device, 1}
+    };
+    devicesRegister(wifi_device, ARRAY_SIZE(wifi_device));
+    devicesInit();
+
+    connectionState = hardwareUndefined;
   }
-  else
+  #endif
+  if (hardware_success)
   {
-    TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
+    initUID();
+    setupTarget();
+    // Register the devices with the framework
+    devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+    // Initialise the devices
+    devicesInit();
+    DBGLN("Initialised devices");
 
-    POWERMGNT.init();
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
-    // Set the pkt rate, TLM ratio, and power from the stored eeprom values
-    ChangeRadioParams();
+    Radio.RXdoneCallback = &RXdoneISR;
+    Radio.TXdoneCallback = &TXdoneISR;
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment();
-#endif
-    hwTimer.init();
-    connectionState = noCrossfire;
+    crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
+    crsf.disconnected = &UARTdisconnected;
+    crsf.RecvModelUpdate = &ModelUpdateReq;
+    hwTimer.callbackTock = &timerCallbackNormal;
+    DBGLN("ExpressLRS TX Module Booted...");
+
+    eeprom.Begin(); // Init the eeprom
+    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+    config.Load(); // Load the stored values from eeprom
+
+    Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
+    #if defined(RADIO_SX127X)
+    //Radio.currSyncWord = UID[3];
+    #endif
+    bool init_success = Radio.Begin();
+
+    #if defined(USE_BLE_JOYSTICK)
+      init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
+    #endif
+
+    if (!init_success)
+    {
+      connectionState = radioFailed;
+    }
+    else
+    {
+      TelemetryReceiver.SetDataToReceive(sizeof(CRSFinBuffer), CRSFinBuffer, ELRS_TELEMETRY_BYTES_PER_CALL);
+
+      POWERMGNT.init();
+
+      // Set the pkt rate, TLM ratio, and power from the stored eeprom values
+      ChangeRadioParams();
+
+  #if defined(Regulatory_Domain_EU_CE_2400)
+      BeginClearChannelAssessment();
+  #endif
+      hwTimer.init();
+      connectionState = noCrossfire;
+    }
   }
 
   devicesStart();

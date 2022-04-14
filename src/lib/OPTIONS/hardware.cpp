@@ -5,17 +5,15 @@
 
 static void *hardware[HARDWARE_LAST];
 
-void hardware_init()
+bool hardware_init()
 {
-    HardwareSerial serialPort(2);
-    serialPort.begin(460800, SERIAL_8N1, 3, 1);
-
     for (int i=0 ; i<HARDWARE_LAST ; i++) hardware[i] = (void *)-1;
 
     SPIFFS.begin();
     File file = SPIFFS.open("/hardware.ini", "r");
-    if (!file) {
-        return;
+    if (!file || file.isDirectory()) {
+        SPIFFS.end();
+        return false;
     }
     do {
         String line = file.readStringUntil('\n');
@@ -46,8 +44,8 @@ void hardware_init()
     } while(file.available());
     file.close();
 
-    serialPort.end();
     SPIFFS.end();
+    return true;
 }
 
 const int hardware_pin(nameType name)

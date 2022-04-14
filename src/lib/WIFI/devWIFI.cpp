@@ -197,42 +197,47 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 #if defined(TARGET_UBER_TX)
 static void HandleHardware(AsyncWebServerRequest *request)
 {
-  DBGLN("hardware");
   if (request->method() == HTTP_GET)
   {
-    DBGLN("get hardware");
-    File file = SPIFFS.open("/hardware.ini", "r");
     String resp = "{";
-    do {
-      String line = file.readStringUntil('\n');
-      if (line.charAt(0)!=';' && line.indexOf('=') > 0) {
-        int element = line.substring(0, line.indexOf('=')).toInt();
-        String value = line.substring(line.indexOf('=') + 1);
-        if (resp.length() > 1) {
-          resp += ", ";
+    File file = SPIFFS.open("/hardware.ini", "r");
+    if (file) {
+      do {
+        String line = file.readStringUntil('\n');
+        if (line.charAt(0)!=';' && line.indexOf('=') > 0) {
+          int element = line.substring(0, line.indexOf('=')).toInt();
+          String value = line.substring(line.indexOf('=') + 1);
+          if (resp.length() > 1) {
+            resp += ", ";
+          }
+          resp += "\"" + String(element, 10) + "\" : \"" + value + "\"";
         }
-        resp += "\"" + String(element, 10) + "\" : \"" + value + "\"";
-      }
-    } while(file.available());
+      } while(file.available());
+      file.close();
+    }
     resp += "}";
-    file.close();
     request->send(200, "application/json", resp);
   }
   else if (request->method() == HTTP_POST)
   {
-    // File file = SPIFFS.open("/hardware.ini", "w");
+    File file = SPIFFS.open("/hardware.ini", "w");
     for (int i=0 ; i<request->args() ; i++)
     {
       String name = request->argName(i);
       String val = request->arg(name);
       if (!val.isEmpty()) {
         if (val.equals("on")) val = "1";
-        else if (val.equals("off")) val = "0";
-        DBGLN("%s=%d '%s'", name.c_str(), val.length(), val.c_str());
+        if (!val.equals("off")) {
+          file.printf("%s=%s\n", name.c_str(), val.c_str());
+        }
       }
     }
-    // file.close();
-    request->send(200, "application/json", "All your hardware are belong to me!");
+    file.close();
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "All your hardware are belong to me!");
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+    rebootTime = millis() + 100;
   }
 }
 #endif
@@ -556,15 +561,16 @@ static void startWiFi(unsigned long now)
   if (wifiStarted) {
     return;
   }
-  hwTimer::stop();
-  // Set transmit power to minimum
-  POWERMGNT::setPower(MinPower);
-  if (connectionState < FAILURE_STATES) {
-    connectionState = wifiUpdate;
-  }
 
-  DBGLN("Stopping Radio");
-  Radio.End();
+  if (connectionState < FAILURE_STATES) {
+    hwTimer::stop();
+    // Set transmit power to minimum
+    POWERMGNT::setPower(MinPower);
+    connectionState = wifiUpdate;
+
+    DBGLN("Stopping Radio");
+    Radio.End();
+  }
 
   DBGLN("Begin Webupdater");
 #if defined(TARGET_UBER_TX)
@@ -682,8 +688,9 @@ static void startServices()
     server.on("/pwm", WebUpdatePwm);
   #endif
   #if defined(TARGET_UBER_TX)
-    server.on("/hardware.html", [](AsyncWebServerRequest *request){request->send(SPIFFS, "/hardware.html", "text/html");});
-    server.on("/hardware.js", [](AsyncWebServerRequest *request){request->send(SPIFFS, "/hardware.js", "text/javascript");});
+    server.on("/hardware.html", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.html", "text/html"); });
+    server.on("/hardware.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.js", "text/javascript"); });
+    server.on("/hardware.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.css", "text/css"); });
     server.on("/hardware", HandleHardware);
   #endif
 

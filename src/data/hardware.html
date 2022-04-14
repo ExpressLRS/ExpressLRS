@@ -6,11 +6,27 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="stylesheet" href="main.css" />
+	<link rel="stylesheet" href="hardware.css" />
 </head>
 
 <body>
 	<section id="one" class="main style1">
 		<div class="container">
+			<form id="notused" action="" method="POST" enctype="multipart/form-data">
+				<fieldset>
+					<input type="hidden" id="MAX_FILE_SIZE" name="MAX_FILE_SIZE" value="10000" />
+					<div>
+						<label for="fileselect">Load Hardware configuration (remember to press "Save Hardware Configuration" below):</label>
+						<input type="file" id="fileselect" name="fileselect[]" multiple="multiple" />
+						<div id="filedrag">or drop files here</div>
+					</div>
+				</fieldset>
+			</form>
+		</div>
+	</section>
+	<section id="one" class="main style1">
+		<div class="container">
+
 			<form id='upload_hardware' method='POST' action="/hardware">
 				<table>
 					<tr><td colspan='2'><b>CRSF Serial Pins</td></tr>
@@ -97,7 +113,6 @@
 							<option value='3'>DACWRITE</option>-->
 						</select>
 					</td></tr>
-					<tr><td>Fixed Value</td><td><input size='3' id='30' name='30' type='text'/></td></tr>
 					<tr><td>Level Value(s)</td><td><input size='40' id='30' name='30' type='text'/></td></tr>
 
 					<tr><td colspan='2'>Radio Power Detection</td></tr>
@@ -137,7 +152,7 @@
 							<option value='1'>I2C OLED</option>
 							<option value='2'>SPI OLED</option>
 							<option value='3'>SPI OLED (small)</option>
-							<option value='4'>SPI TFT(small)</option>
+							<option value='4'>SPI TFT</option>
 						</select>
 					</td></tr>
 					<tr><td>180 rotation</td><td><input size='3' id='54' name='54' type='checkbox'/></td></tr>

@@ -112,7 +112,7 @@ typedef enum {
     */
 } nameType;
 
-void hardware_init();
+bool hardware_init();
 const int hardware_pin(nameType name);
 const bool hardware_flag(nameType name);
 const int hardware_int(nameType name);
