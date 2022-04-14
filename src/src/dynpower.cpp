@@ -14,7 +14,7 @@
 #define DYNPOWER_RSSI_THRESH_DN 21        // RSSI > (Sensitivity+Dn) >- lower power
 
 // SNR-based increment defines
-#define DYNPOWER_SNR_LQ_THRESH_DN 95      // Min LQ for lowering power using SNR-based power lowering
+#define DYNPOWER_LQ_THRESH_DN 95          // Min LQ for lowering power using SNR-based power lowering
 
 template<uint8_t K, uint8_t SHIFT>
 class MovingAvg
@@ -151,7 +151,7 @@ void DynamicPower_Update(uint32_t now)
         DBGLN("+power (rssi)");
         POWERMGNT::incPower();
       }
-      else if (avg_rssi > rssi_dec_threshold)
+      else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
       {
         DBGVLN("-power (rssi)");
         POWERMGNT::decPower();
@@ -164,7 +164,7 @@ void DynamicPower_Update(uint32_t now)
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
     int8_t snr = CRSF::LinkStatistics.uplink_SNR;
-    if (snr >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_SNR_LQ_THRESH_DN)
+    if (snr >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
       DBGVLN("-power (snr)");
       POWERMGNT::decPower();
