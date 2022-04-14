@@ -952,7 +952,7 @@ void loop()
 
   CheckReadyToSend();
   CheckConfigChangePending();
-  DynamicPower_Update(now);
+  DynamicPower_Update();
   VtxPitmodeSwitchUpdate();
 
   if (LoggingBackpack->available())

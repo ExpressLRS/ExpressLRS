@@ -19,7 +19,7 @@ typedef enum
 // Call DynamicPower_Init in setup()
 void DynamicPower_Init();
 // Call DynamicPower_Update from loop()
-void DynamicPower_Update(uint32_t now);
+void DynamicPower_Update();
 // Call DynamicPower_TelemetryUpdate from ISR to update the telemetry state
 void DynamicPower_TelemetryUpdate(DynamicPowerTelemetryUpdate_e dptu);
 

@@ -53,7 +53,7 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(DynamicPowerTelemetryUpdate_e 
     dynamic_power_updated = dptu;
 }
 
-void DynamicPower_Update(uint32_t now)
+void DynamicPower_Update()
 {
   bool newTlmAvail = dynamic_power_updated == dptuNewLinkstats;
   bool lastTlmMissed = dynamic_power_updated == dptuMissed;
@@ -106,7 +106,10 @@ void DynamicPower_Update(uint32_t now)
     {
       uint32_t linkstatsInterval = 2U * TLMratioEnumToValue(config.GetTlm()) * ExpressLRS_currAirRate_Modparams->interval / 1000U;
       linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
-      if (now - LastTLMpacketRecvMillis > (linkstatsInterval + 2U))
+      // Capture the last before now so it will always be <= now
+      const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+      const uint32_t now = millis();
+      if (now - lastTlmMillis > (linkstatsInterval + 2U))
       {
         DBGLN("+power (tlm)");
         POWERMGNT::incPower();
