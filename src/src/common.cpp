@@ -17,7 +17,7 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {3, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10, 8}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_LORA_200HZ, -112,  4380, 3000, 2500, 600, 5000, -2,  1},
+    {0, RATE_LORA_200HZ, -112,  4380, 3000, 2500, 600, 5000, -1,  2},
     {1, RATE_LORA_100HZ, -117,  8770, 3500, 2500, 600, 5000, -3,  1},
     {2, RATE_LORA_50HZ,  -120, 18560, 4000, 2500, 600, 5000, -4,  0},
     {3, RATE_LORA_25HZ,  -123, 29950, 6000, 4000,   0, 5000, -5, -1}};
