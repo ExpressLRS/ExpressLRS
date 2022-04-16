@@ -174,8 +174,8 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
 bool returnModelFromLoan = false;
-unsigned long loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
-unsigned long loadBindingStartedMs = 0;
+static unsigned long loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
+static unsigned long loadBindingStartedMs = 0;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();

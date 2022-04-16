@@ -21,8 +21,7 @@ Gsensor gsensor;
 
 static int system_quiet_state = GSENSOR_SYSTEM_STATE_MOVING;
 static int system_quiet_pre_state = GSENSOR_SYSTEM_STATE_MOVING;
-static int bumps = 0;
-static unsigned long firstBumpTime = 0;
+static unsigned int bumps = 0;
 static unsigned long lastBumpTime = 0;
 
 extern bool IsArmed();
@@ -31,8 +30,9 @@ extern void EnterBindingMode();
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 #define GSENSOR_DURATION    10
+#define GSENSOR_SYSTEM_IDLE_INTERVAL 1000U
 
-    static void initialize()
+static void initialize()
 {
     gsensor.init();
 }
@@ -44,18 +44,14 @@ static int start()
 
 static int timeout()
 {
-    static unsigned long lastCall = 0;
+    static unsigned long lastIdleCheckMs = 0;
     unsigned long now = millis();
     if (gsensor.handleBump(now))
     {
-        if (bumps == 0)
-        {
-            firstBumpTime = now;
-        }
         lastBumpTime = now;
         bumps++;
     }
-    if (bumps > 0 && (now - lastBumpTime > 400 || now - firstBumpTime > 1000))
+    if (bumps > 0 && (now - lastBumpTime > 40))
     {
         float x, y, z;
         gsensor.getGSensorData(&x, &y, &z);
@@ -73,10 +69,11 @@ static int timeout()
                 deferExecution(2000, EnterBindingMode);
             }
         }
-        DBGLN("Bumps %d : %f %f %f\n", bumps, x, y, z);
+        DBGLN("Bumps %d : %f %f %f", bumps, x, y, z);
         bumps = 0;
     }
-    if (now - lastCall > 1000) {
+    if (now - lastIdleCheckMs > GSENSOR_SYSTEM_IDLE_INTERVAL)
+    {
         gsensor.handle();
 
         system_quiet_state = gsensor.getSystemState();
@@ -93,9 +90,9 @@ static int timeout()
             }
         }
         system_quiet_pre_state = system_quiet_state;
-        lastCall = now;
+        lastIdleCheckMs = now;
     }
-    return 10;
+    return GSENSOR_DURATION;
 }
 
 device_t Gsensor_device = {

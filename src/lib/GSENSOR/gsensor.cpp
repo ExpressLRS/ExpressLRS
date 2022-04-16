@@ -23,7 +23,7 @@ float x_average = 0;
 float y_average = 0;
 float z_average = 0;
 
-static int interrupt = false;
+static bool interrupt = false;
 
 #ifdef HAS_SMART_FAN
 extern bool is_smart_fan_control;
@@ -31,7 +31,8 @@ uint32_t smart_fan_start_time = 0;
 #define SMART_FAN_TIME_OUT 5000
 #endif
 
-ICACHE_RAM_ATTR void handleGsensorInterrupt() {
+ICACHE_RAM_ATTR void handleGsensorInterrupt()
+{
     interrupt = true;
 }
 
