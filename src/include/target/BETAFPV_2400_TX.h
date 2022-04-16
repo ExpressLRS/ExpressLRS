@@ -2,9 +2,6 @@
 #define DEVICE_NAME          "BETAFPV 2G4Nano\0"
 #endif
 
-// There is some special handling for this target
-#define TARGET_TX_BETAFPV_2400_V1
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21

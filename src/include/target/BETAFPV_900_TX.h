@@ -2,8 +2,7 @@
 #define DEVICE_NAME          "BETAFPV 900Nano\0"
 #endif
 
-// There is some special handling for this target
-#define TARGET_TX_BETAFPV_900_V1
+// Any device features
 #define USE_SX1276_RFO_HF
 
 // GPIO pin definitions

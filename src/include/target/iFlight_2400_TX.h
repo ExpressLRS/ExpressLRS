@@ -1,7 +1,6 @@
 #define DEVICE_NAME "iFlight 2400TX\0\0"
 
 // Any device features
-#define TARGET_TX_IFLIGHT
 #define USE_SX1280_DCDC
 
 // GPIO pin definitions

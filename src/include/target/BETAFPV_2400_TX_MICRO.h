@@ -13,9 +13,6 @@
 #define HAS_FIVE_WAY_BUTTON
 #define WS2812_IS_GRB
 
-// There is some special handling for this target
-#define TARGET_TX_BETAFPV_2400_MICRO_V1
-
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
 #define GPIO_PIN_BUSY           21
