@@ -371,7 +371,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-        
+
     #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
     {
@@ -970,15 +970,22 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     device->parameterVersion = 0;
 }
 
+void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
+{
+    crsf_header_t *header = (crsf_header_t *)frame;
+    header->device_addr = destAddr;
+    header->frame_size = frameSize;
+    header->type = frameType;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], frameSize - 1, 0);
+    frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}
+
 void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
 {
     crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
     header->dest_addr = destAddr;
-    header->device_addr = destAddr;
-    header->type = frameType;
     header->orig_addr = senderAddr;
-    header->frame_size = frameSize;
-
-    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
-    frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+    SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
+

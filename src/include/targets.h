@@ -124,6 +124,13 @@
 #define USE_I2C
 #endif
 
+#if defined(USE_ANALOG_VBAT) && !defined(GPIO_ANALOG_VBAT)
+#define GPIO_ANALOG_VBAT        A0
+#if !defined(ANALOG_VBAT_SCALE)
+#define ANALOG_VBAT_SCALE       1
+#endif
+#endif
+
 #if defined(RADIO_SX128X)
 #define Regulatory_Domain_ISM_2400 1
 // ISM 2400 band is in use => undefine other requlatory domain defines

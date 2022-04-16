@@ -150,8 +150,9 @@ extern SX1280Driver Radio;
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 
-uint8_t TLMratioEnumToValue(uint8_t enumval);
-uint16_t RateEnumToHz(uint8_t eRate);
+uint8_t TLMratioEnumToValue(uint8_t const enumval);
+uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
+uint16_t RateEnumToHz(uint8_t const eRate);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
