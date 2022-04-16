@@ -249,10 +249,18 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_DACWRITE)
+#elif defined(POWER_OUTPUT_DACWRITE) && !defined(TARGET_UBER_TX)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #else
+    #if defined(TARGET_UBER_TX)
+    if (POWER_OUTPUT_DACWRITE)
+    {
+        Radio.SetOutputPower(0b0000);
+        dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+    }
+    else
+    #endif
     if (POWER_OUTPUT_FIXED != -99)
     {
         Radio.SetOutputPower(POWER_OUTPUT_FIXED);
