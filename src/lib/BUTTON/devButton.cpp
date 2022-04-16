@@ -12,7 +12,7 @@ static Button button;
 #define GPIO_BUTTON_INVERTED false
 #endif
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
+#if defined(TARGET_TX)
 #include "POWERMGNT.h"
 void EnterBindingMode();
 
@@ -59,18 +59,17 @@ static void rxWebUpdateReboot()
 
 static void initialize()
 {
-    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    if (GPIO_PIN_BUTTON != UNDEF_PIN)
     {
-        return;
+        button.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
+        #if defined(TARGET_TX)
+            button.OnShortPress = enterBindMode3Click;
+            button.OnLongPress = cyclePower;
+        #endif
+        #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
+            button.OnLongPress = rxWebUpdateReboot;
+        #endif
     }
-    button.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
-        button.OnShortPress = enterBindMode3Click;
-        button.OnLongPress = cyclePower;
-    #endif
-    #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-        button.OnLongPress = rxWebUpdateReboot;
-    #endif
 }
 
 static int start()
