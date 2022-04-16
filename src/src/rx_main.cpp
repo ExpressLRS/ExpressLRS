@@ -899,13 +899,15 @@ static void setupSerial()
     CRSF_RX_SERIAL.begin(firmwareOptions.uart_baud);
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
-#else /* !TARGET_R9SLIMPLUS_RX */
+#else
+#if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
     if (firmwareOptions.r9mm_mini_sbus)
     {
         CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
         CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
     }
     else
+#endif
     {
         CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
         CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
