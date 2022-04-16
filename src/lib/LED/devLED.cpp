@@ -50,6 +50,8 @@ static uint8_t _pin_inverted;
 static const uint8_t *_durations;
 static uint8_t _count;
 static uint8_t _counter = 0;
+static bool hasRGBLeds = false;
+static bool hasGBLeds = false;
 
 static uint16_t updateLED()
 {
@@ -97,11 +99,17 @@ static void initialize()
             pinMode(GPIO_PIN_LED_RED, OUTPUT);
             digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
         }
-        #if defined(TARGET_TX_IFLIGHT)
+        if (GPIO_PIN_LED_BLUE != UNDEF_PIN && GPIO_PIN_LED_GREEN != UNDEF_PIN && GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
+            hasRGBLeds = true;
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
             digitalWrite(GPIO_PIN_LED_RED, HIGH);
             digitalWrite(GPIO_PIN_LED_BLUE, LOW);
-        #endif
+        }
+        else if (GPIO_PIN_LED_BLUE != UNDEF_PIN && GPIO_PIN_LED_GREEN != UNDEF_PIN && GPIO_PIN_LED_RED == UNDEF_PIN)
+        {
+            hasGBLeds = true;
+        }
         #if defined(TARGET_TX_FM30)
             pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
             digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
@@ -130,7 +138,8 @@ static int timeout()
 
 static void setPowerLEDs()
 {
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1)
+    if (hasGBLeds)
+    {
         switch (POWERMGNT::currPower())
         {
         case PWR_250mW:
@@ -150,7 +159,7 @@ static void setPowerLEDs()
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
             break;
         }
-    #endif
+    }
 }
 
 static int event()
@@ -160,23 +169,24 @@ static int event()
         {
             return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
         }
+    #else
+        setPowerLEDs();
     #endif
-    setPowerLEDs();
     switch (connectionState)
     {
     case connected:
         #if defined(TARGET_TX)
-            #if defined(TARGET_TX_IFLIGHT)
+            if (hasRGBLeds)
+            {
                 digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
                 digitalWrite(GPIO_PIN_LED_RED, LOW);
                 digitalWrite(GPIO_PIN_LED_BLUE, LOW);
-            #else
-                if (GPIO_PIN_LED_RED != UNDEF_PIN)
-                {
-                    digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
-                }
-            #endif
-        #endif // GPIO_PIN_LED_RED
+            }
+            else if (GPIO_PIN_LED_RED != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED);
+            }
+        #endif
         #if defined(TARGET_RX)
             if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
             {
@@ -203,16 +213,16 @@ static int event()
         return DURATION_NEVER;
     case disconnected:
         #if defined(TARGET_TX)
-            #if defined(TARGET_TX_IFLIGHT)
+            if (hasRGBLeds)
+            {
                 digitalWrite(GPIO_PIN_LED_GREEN, LOW);
                 digitalWrite(GPIO_PIN_LED_BLUE, LOW);
                 return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
-            #else
-                if (GPIO_PIN_LED_RED != UNDEF_PIN)
-                {
-                    digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
-                }
-            #endif
+            }
+            else if (GPIO_PIN_LED_RED != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+            }
         #endif
         #if defined(TARGET_RX)
             if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
@@ -235,11 +245,12 @@ static int event()
         return DURATION_NEVER;
     case wifiUpdate:
         #if defined(TARGET_TX)
-            #if defined(TARGET_TX_IFLIGHT)
+            if (hasRGBLeds)
+            {
                 digitalWrite(GPIO_PIN_LED_GREEN, LOW);
                 digitalWrite(GPIO_PIN_LED_RED, LOW);
                 return flashLED(GPIO_PIN_LED_BLUE, GPIO_LED_BLUE_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
-            #endif
+            }
             return DURATION_NEVER;
         #endif
         #if defined(TARGET_RX)
@@ -251,16 +262,16 @@ static int event()
             return DURATION_NEVER;
         #endif
     case radioFailed:
-        #if defined(TARGET_TX_IFLIGHT)
+        if (hasRGBLeds)
+        {
             digitalWrite(GPIO_PIN_LED_GREEN, LOW);
             digitalWrite(GPIO_PIN_LED_BLUE, LOW);
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
-        #else
-            if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
-            {
-                digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
-            }
-        #endif // GPIO_PIN_LED_GREEN
+        }
+        else if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
+        {
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
+        }
         if (GPIO_PIN_LED_RED != UNDEF_PIN)
         {
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
