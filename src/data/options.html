@@ -1,0 +1,42 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Welcome to your ExpressLRS System</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="elrs.css" />
+	<link rel="stylesheet" href="mui.css" />
+</head>
+
+<body>
+	<header class="mui-appbar mui--z1 mui--text-center elrs-header">
+		<img src="logo.svg" height="250" width="250" style="padding:20px;"></a>
+		<h1>Welcome to the <b>ExpressLRS</b> "user defines" page<br />
+		</h1>
+	</header>
+	<div class="mui-container-fluid">
+		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+			<div class="mui-textfield" style="width: 80%;">
+				<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
+				<label for="phrase">Binding Phrase</label>
+			</div>
+			<form id='upload_options' method='POST' action="/options">
+				<table>
+					<tr><td>UID</td><td><input size='40' id='uid' name='uid' type='text'/></td></tr>
+					<tr><td>WiFi "auto on" interval (s)</td><td><input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text'/></td></tr>
+					<tr><td>Home WiFi SSID</td><td><input size='32' id='wifi-ssid' name='wifi-ssid' type='text'/></td></tr>
+					<tr><td>Home WiFi password</td><td><input size='64' id='wifi-password' name='wifi-password' type='text'/></td></tr>
+                    <tr><td>TLM report interval (ms)</td><td><input size='5' id='tlm-interval' name='tlm-interval' type='text'/></td></tr>
+					<tr><td>Fan runtime (s)</td><td><input size='3' id='fan-runtime' name='fan-runtime' type='text'/></td></tr>
+					<tr><td>No sync on arm</td><td><input size='3' id='no-sync-on-arm' name='no-sync-on-arm' type='checkbox'/></td></tr>
+					<tr><td>UART inverted</td><td><input size='3' id='uart-inverted' name='uart-inverted' type='checkbox'/></td></tr>
+					<tr><td>Unlock higher power</td><td><input size='3' id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/></td></tr>
+				</table>
+				<input type='submit' value='Save User Defines' class="mui-btn mui-btn--primary">
+			</form>
+		</div>
+	</div>
+</body>
+<script src="options.js"></script>
+</html>

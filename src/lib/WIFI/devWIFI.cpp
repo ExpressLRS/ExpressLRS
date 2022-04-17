@@ -3,6 +3,7 @@
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
 #if defined(TARGET_UBER_TX)
+#include <ArduinoJson.h>
 #include <SPIFFS.h>
 #endif
 
@@ -140,11 +141,21 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  AsyncWebServerResponse *response;
+  #if defined(TARGET_UBER_TX)
+  if (connectionState == hardwareUndefined)
+  {
+    response = request->beginResponse(SPIFFS, "/hardware.html", "text/html");
+  }
+  else
+  #endif
+  {
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+    response->addHeader("Content-Encoding", "gzip");
+  }
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
-  response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
 
@@ -201,7 +212,7 @@ static void HandleHardware(AsyncWebServerRequest *request)
   {
     String resp = "{";
     File file = SPIFFS.open("/hardware.ini", "r");
-    if (file) {
+    if (file && !file.isDirectory()) {
       do {
         String line = file.readStringUntil('\n');
         if (line.charAt(0)!=';' && line.indexOf('=') > 0) {
@@ -234,6 +245,53 @@ static void HandleHardware(AsyncWebServerRequest *request)
     }
     file.close();
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "All your hardware are belong to me!");
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+    rebootTime = millis() + 100;
+  }
+}
+
+static void HandleOptions(AsyncWebServerRequest *request)
+{
+  if (request->method() == HTTP_GET)
+  {
+    DynamicJsonDocument doc(1024);
+    copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), doc["uid"]);
+    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    doc["wifi-ssid"] = String(firmwareOptions.home_wifi_ssid);
+    doc["wifi-password"] = String(firmwareOptions.home_wifi_password);
+    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
+    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
+    doc["no-sync-on-arm"] = firmwareOptions.no_sync_on_arm;
+    doc["uart-inverted"] = firmwareOptions.uart_inverted;
+    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(doc, *response);
+    request->send(response);
+  }
+  else if (request->method() == HTTP_POST)
+  {
+    DynamicJsonDocument array(256);
+    deserializeJson(array, String("[") + request->arg("uid") + "]");
+    
+    DynamicJsonDocument doc(1024);
+    doc["uid"] = array.as<JsonArray>();
+    doc["wifi-on-interval"] = request->arg("wifi-on-interval").toInt();
+    doc["wifi-ssid"] = request->arg("wifi-ssid");
+    doc["wifi-password"] = request->arg("wifi-password");
+    doc["tlm-interval"] = request->arg("tlm-interval").toInt();
+    doc["fan-runtime"] = request->arg("fan-runtime").toInt();
+    doc["no-sync-on-arm"] = request->arg("no-sync-on-arm").equals("on");
+    doc["uart-inverted"] = request->arg("uart-inverted").equals("on");
+    doc["unlock-higher-power"] = request->arg("unlock-higher-power").equals("on");
+
+    File file = SPIFFS.open("/options.ini", "w");
+    serializeJson(doc, file);
+    file.close();
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "It's no longer an option!");
     response->addHeader("Connection", "close");
     request->send(response);
     request->client()->close();
@@ -573,9 +631,6 @@ static void startWiFi(unsigned long now)
   }
 
   DBGLN("Begin Webupdater");
-#if defined(TARGET_UBER_TX)
-  SPIFFS.begin();
-#endif
 
   WiFi.persistent(false);
   WiFi.disconnect();
@@ -639,7 +694,7 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt("http", "tcp", "device", firmwareOptions.device_name);
+    MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
@@ -690,8 +745,16 @@ static void startServices()
   #if defined(TARGET_UBER_TX)
     server.on("/hardware.html", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.html", "text/html"); });
     server.on("/hardware.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.js", "text/javascript"); });
-    server.on("/hardware.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.css", "text/css"); });
+    server.on("/options.html", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.html", "text/html"); });
+    server.on("/options.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.js", "text/javascript"); });
+    server.on("/elrs.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/elrs.css", "text/css"); });
+    server.on("/mui.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/mui.css", "text/css"); });
+    server.on("/mui.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/mui.js", "text/javascript"); });
+    server.on("/device.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/device.ini", "text/plain", true); });
+    server.on("/hardware.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.ini", "text/plain", true); });
+    server.on("/options.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.ini", "text/plain", true); });
     server.on("/hardware", HandleHardware);
+    server.on("/options", HandleOptions);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);

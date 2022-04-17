@@ -1,6 +1,6 @@
 #define TARGET_UBER_TX
 
-#define DEVICE_NAME "UBER TX\0\0\0\0\0\0\0\0\0"
+#define DEVICE_NAME hardware_str(HARDWARE_device_name)
 #define HARDWARE_VERSION ""
 
 // // FM30

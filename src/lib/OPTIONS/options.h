@@ -27,7 +27,6 @@ typedef struct _options {
     uint8_t     _radio_chip:1;  // 0=SX127x, 1=SX1280
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
-    char        device_name[17];
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
@@ -52,4 +51,11 @@ typedef struct _options {
 #endif
 } __attribute__((packed)) firmware_options_t;
 
+#if defined(TARGET_UBER_TX)
+extern firmware_options_t firmwareOptions;
+extern char device_name[];
+extern bool options_init();
+#else
 extern const firmware_options_t firmwareOptions;
+extern const char device_name[];
+#endif

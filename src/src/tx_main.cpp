@@ -20,6 +20,10 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#if defined(TARGET_UBER_TX)
+#include <SPIFFS.h>
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -985,7 +989,8 @@ void setup()
 {
   bool hardware_success = false;
   #if defined(TARGET_UBER_TX)
-  hardware_success = hardware_init();
+  SPIFFS.begin();
+  hardware_success = options_init() && hardware_init();
   if (!hardware_success)
   {
     LoggingBackpack = new HardwareSerial(0);

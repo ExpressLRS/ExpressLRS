@@ -1,0 +1,313 @@
+/*==========================*/
+
+.elrs-header {
+    padding: 3em 0 3em 0 ;
+    background-color: #4686a0;
+    color: rgba(255, 255, 255, 0.75);
+    background-attachment: fixed, fixed, fixed;
+    background-image: linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
+    background-position: top left, center center, center center;
+    background-size: auto, cover, cover;
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+}
+
+body, input, select, textarea {
+    color: #666;
+    font-family: "Source Sans Pro", Helvetica, sans-serif;
+    font-size: 12pt;
+    font-weight: 300;
+    line-height: 1.65em;
+}
+
+/*==========================*/
+
+#filedrag {
+	display: none;
+	font-weight: bold;
+	text-align: center;
+	padding: 1em 0;
+	margin: 1em 0;
+	color: #555;
+	border: 2px dashed #555;
+	border-radius: 7px;
+	cursor: default;
+}
+
+#filedrag.hover {
+	color: #f00;
+	border-color: #f00;
+	border-style: solid;
+	box-shadow: inset 0 3px 4px #888;
+}
+
+/*==========================*/
+
+/* Autocomplete */
+
+.autocomplete {
+	position: relative;
+	display: inline-block;
+}
+
+.autocomplete-items {
+	position: absolute;
+	border: 1px solid #d4d4d4;
+	border-bottom: none;
+	border-top: none;
+	z-index: 99;
+	/*position the autocomplete items to be the same width as the container:*/
+	top: 100%;
+	left: 0;
+	right: 0;
+}
+
+.autocomplete-items div {
+	padding: 5px;
+	cursor: pointer;
+	background-color: #fff;
+	border-bottom: 1px solid #d4d4d4;
+}
+
+/*when hovering an item:*/
+.autocomplete-items div:hover {
+	background-color: #e9e9e9;
+}
+
+/*when navigating through the items using the arrow keys:*/
+.autocomplete-active {
+	background-color: DodgerBlue !important;
+	color: #ffffff;
+}
+
+/*==========================*/
+
+/* Loader spinner */
+
+.loader {
+	margin: 4px;
+	border: 8px solid #f3f3f3;
+	border-radius: 50%;
+	border-top: 8px solid #3498db;
+	width: 24px;
+	height: 24px;
+	-webkit-animation: spin 2s linear infinite; /* Safari */
+	animation: spin 2s linear infinite;
+}
+
+  /* Safari */
+@-webkit-keyframes spin {
+	0% { -webkit-transform: rotate(0deg); }
+	100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/*==========================*/
+
+/* Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/ */
+
+.alert-wrapper {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+	margin: 0px auto;
+	padding: 0px auto;
+	left: 0;
+	top: 0;
+	overflow: hidden;
+	position: fixed;
+	background: rgb(0, 0, 0, 0.3);
+	z-index: 999999;
+  }
+
+  @keyframes open-frame {
+	0% {
+	  transform: scale(1);
+	}
+	25% {
+	  transform: scale(0.95);
+	}
+	50% {
+	  transform: scale(0.97);
+	}
+	75% {
+	  transform: scale(0.93);
+	}
+	100% {
+	  transform: scale(1);
+	}
+  }
+
+  .alert-frame {
+	background: #fff;
+	min-height: 400px;
+	width: 450px;
+	box-shadow: 5px 5px 10px rgb(0, 0, 0, 0.2);
+	border-radius: 10px;
+	animation: open-frame 0.3s linear;
+  }
+
+  .alert-header {
+	display: flex;
+	flex-direction: row;
+	height: 175px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+  }
+
+  .alert-img {
+	height: 80px;
+	position: absolute;
+	left: 0;
+	right: 0;
+	margin-left: auto;
+	margin-right: auto;
+	align-self: center;
+  }
+
+  .alert-close {
+	width: 30px;
+	height: 30px;
+	color: rgb(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: "Dosis", sans-serif;
+	font-weight: 700;
+	font-size: 16px;
+	cursor: pointer;
+	line-height: 30px;
+	transition: color 0.5s;
+	margin-left: auto;
+	margin-right: 5px;
+	margin-top: 5px;
+  }
+
+  .alert-close-circle {
+	width: 30px;
+	height: 30px;
+	background: #e4eae7;
+	color: #222;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 17.5px;
+	margin-top: -15px;
+	margin-right: -15px;
+	font-family: "Dosis", sans-serif;
+	font-weight: 700;
+	font-size: 12px;
+	cursor: pointer;
+	line-height: 30px;
+	transition: background 0.5s;
+	margin-left: auto;
+  }
+
+  .alert-close-circle:hover {
+	background: #fff;
+  }
+
+  .alert-close:hover {
+	color: rgb(0, 0, 0, 0.5);
+  }
+
+  .alert-body {
+	padding: 30px 30px;
+	display: flex;
+	flex-direction: column;
+	text-align: center;
+    font-family: "Source Sans Pro", Helvetica, sans-serif;
+  }
+
+  .alert-title {
+	font-size: 18px !important;
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	font-weight: 700;
+	font-size: 15px;
+	margin-bottom: 35px;
+	color: #222;
+	align-self: center;
+  }
+
+  .alert-message {
+	font-size: 15px !important;
+	color: #666;
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	font-weight: 400;
+	font-size: 15px;
+	text-align: center;
+	margin-bottom: 35px;
+	line-height: 1.6;
+	align-self: center;
+  }
+
+  .question-buttons {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+  }
+
+  .error-bg {
+	background: #d85261;
+  }
+
+  .success-bg {
+	background: #2dd284;
+  }
+
+  .warning-bg {
+	background: #fada5e;
+  }
+
+  .question-bg {
+	background: #779ecb;
+  }
+
+  .error-btn:hover {
+	background: #e5a4b4;
+  }
+
+  .success-btn:hover {
+	background: #6edaa4;
+  }
+
+  .warning-btn:hover {
+	background: #fcecae;
+  }
+
+  .info-btn:hover {
+	background: #c3e6fb;
+  }
+
+  .question-btn:hover {
+	background: #bacee4;
+  }
+
+  .error-timer {
+	background: #e5a4b4;
+  }
+
+  .success-timer {
+	background: #6edaa4;
+  }
+
+  .warning-timer {
+	background: #fcecae;
+  }
+
+  .info-timer {
+	background: #c3e6fb;
+  }
+
+  .info-bg {
+	background: #88cef7;
+  }
+
+  /*==========================*/

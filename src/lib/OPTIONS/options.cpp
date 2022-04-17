@@ -1,6 +1,8 @@
 #include "targets.h"
 #include "options.h"
 
+#include "logging.h"
+
 #define QUOTE(arg) #arg
 #define STR(macro) QUOTE(macro)
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
@@ -17,6 +19,9 @@ const char *wifi_ap_ssid = "ExpressLRS RX";
 #endif
 const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
+
+#if !defined(TARGET_UBER_TX)
+const char device_name[] = STR(DEVICE_NAME);
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
@@ -58,11 +63,6 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .hasUID = false,
     .uid = {},
-#endif
-#if defined(DEVICE_NAME_ARR)
-    .device_name = {DEVICE_NAME_ARR},
-#else
-    .device_name = DEVICE_NAME,
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
@@ -215,3 +215,71 @@ const char PROGMEM compile_options[] = {
     #endif
 #endif
 };
+#else // TARGET_UBER_TX
+
+#include <ArduinoJson.h>
+#include <SPIFFS.h>
+
+char device_name[17];
+
+const char PROGMEM compile_options[] = "";
+firmware_options_t firmwareOptions;
+
+bool options_init()
+{
+    File file = SPIFFS.open("/device.ini", "r");
+    if (!file || file.isDirectory())
+    {
+        strcpy(device_name, "UBER TX");
+    }
+    else
+    {
+        int pos = file.readBytesUntil('\n', device_name, sizeof(device_name)-1);
+        device_name[pos] = 0;
+    }
+    
+    file = SPIFFS.open("/options.ini", "r");
+    if (!file || file.isDirectory())
+    {
+        firmwareOptions.wifi_auto_on_interval = 30 * 1000;
+        strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
+        strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
+        firmwareOptions.tlm_report_interval = 320U;
+        firmwareOptions.fan_min_runtime = 30;
+        firmwareOptions.no_sync_on_arm = false;
+        firmwareOptions.uart_inverted = true;
+        firmwareOptions.unlock_higher_power = false;
+
+        return true;
+    }
+
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+    {
+        return false;
+    }
+
+    if (doc["uid"].is<JsonArray>())
+    {
+        copyArray(doc["uid"], firmwareOptions.uid, sizeof(firmwareOptions.uid));
+        firmwareOptions.hasUID = true;
+    }
+    else
+    {
+        firmwareOptions.hasUID = false;
+    }
+    firmwareOptions.wifi_auto_on_interval = doc["wifi-on-interval"].as<int>() * 1000 | 30 * 1000;
+    strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
+    strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
+    firmwareOptions.tlm_report_interval = doc["tlm-interval"].as<int>() | 320U;
+    firmwareOptions.fan_min_runtime = doc["fan-runtime"].as<int>() | 30;
+    firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"].as<bool>() | false;
+    firmwareOptions.uart_inverted = doc["uart-inverted"].as<bool>() | true;
+    firmwareOptions.unlock_higher_power = doc["unlock-higher-power"].as<bool>() | false;
+
+    file.close();
+    return true;
+}
+
+#endif

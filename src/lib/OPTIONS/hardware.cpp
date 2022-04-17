@@ -9,10 +9,8 @@ bool hardware_init()
 {
     for (int i=0 ; i<HARDWARE_LAST ; i++) hardware[i] = (void *)-1;
 
-    SPIFFS.begin();
     File file = SPIFFS.open("/hardware.ini", "r");
     if (!file || file.isDirectory()) {
-        SPIFFS.end();
         return false;
     }
     do {
@@ -43,8 +41,6 @@ bool hardware_init()
         }
     } while(file.available());
     file.close();
-
-    SPIFFS.end();
     return true;
 }
 

@@ -79,8 +79,7 @@ function ParseFile(file) {
 
 function Init() {
     var fileselect = _("fileselect"),
-        filedrag = _("filedrag"),
-        submitbutton = _("submitbutton");
+        filedrag = _("filedrag");
 
     fileselect.addEventListener("change", FileSelectHandler, false);
 
