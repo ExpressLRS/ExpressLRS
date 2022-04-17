@@ -79,7 +79,7 @@ uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'nor
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 2000; // 200us
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
