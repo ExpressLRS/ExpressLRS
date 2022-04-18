@@ -39,9 +39,9 @@ def process_json_flag(define):
         if parts.group(1) == "MY_UID":
             json_flags['uid'] = parts.group(2)
         if parts.group(1) == "HOME_WIFI_SSID":
-            json_flags['home-wifi-ssid'] = dequote(parts.group(2))
+            json_flags['wifi-ssid'] = dequote(parts.group(2))
         if parts.group(1) == "HOME_WIFI_PASSWORD":
-            json_flags['home-wifi-password'] = dequote(parts.group(2))
+            json_flags['wifi-password'] = dequote(parts.group(2))
         if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
             json_flags['wifi-on-interval'] = int(re.compile("\d+").match(parts.group(2)).group())
         if parts.group(1) == "TLM_REPORT_INTERVAL_MS":
