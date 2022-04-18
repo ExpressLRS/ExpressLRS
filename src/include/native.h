@@ -12,7 +12,7 @@
 #include <math.h>
 #include <sys/time.h>
 
-#define DEVICE_NAME "testing\0\0\0\0\0\0\0\0\0"
+#define DEVICE_NAME "testing"
 #define RADIO_SX128X 1
 
 typedef uint8_t byte;

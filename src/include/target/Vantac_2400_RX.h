@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "Vantac 2400 RX\0\0"
+#define DEVICE_NAME "Vantac 2400 RX"
 #endif
 
 // GPIO pin definitions

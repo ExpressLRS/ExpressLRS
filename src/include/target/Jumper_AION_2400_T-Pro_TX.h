@@ -1,4 +1,4 @@
-#define DEVICE_NAME "AION T-Pro TX\0\0\0"
+#define DEVICE_NAME "AION T-Pro TX"
 
 // Any device features
 #define USE_SX1280_DCDC

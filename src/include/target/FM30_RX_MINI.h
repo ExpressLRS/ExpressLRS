@@ -1,6 +1,6 @@
 #if defined(RX_AS_TX)
     #ifndef DEVICE_NAME
-        #define DEVICE_NAME          "SIYI FR Mini\0\0\0\0"
+        #define DEVICE_NAME          "SIYI FR Mini"
     #endif
     // There is some special handling for this target
     #define TARGET_TX_FM30_MINI
@@ -8,7 +8,7 @@
     // There is some special handling for this target
     #define TARGET_RX_FM30_MINI
     #ifndef DEVICE_NAME
-        #define DEVICE_NAME "SIYI FM30 MINI\0\0"
+        #define DEVICE_NAME "SIYI FM30 MINI"
     #endif
 #endif
 

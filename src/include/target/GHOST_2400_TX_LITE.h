@@ -1,6 +1,6 @@
 // This target extends the GHOST_2400_TX target
 #ifndef DEVICE_NAME
-#define DEVICE_NAME              "Ghost 24TX Lite\0"
+#define DEVICE_NAME              "Ghost 24TX Lite"
 #endif
 
 // There is some special handling for this target

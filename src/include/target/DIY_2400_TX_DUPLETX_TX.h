@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DupleTX\0\0\0\0\0\0\0\0\0"
+#define DEVICE_NAME "DupleTX"
 #endif
 
 // Any device features

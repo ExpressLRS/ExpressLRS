@@ -1,5 +1,5 @@
 #if !defined(DEVICE_NAME)
-    #define DEVICE_NAME             "Ghost 24TX\0\0\0\0\0\0"
+    #define DEVICE_NAME             "Ghost 24TX"
 #endif
 // There is some special handling for this target
 #define TARGET_TX_GHOST

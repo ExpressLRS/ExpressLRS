@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME          "BETAFPV 900Nano\0"
+#define DEVICE_NAME          "BETAFPV 900Nano"
 #endif
 
 // Any device features

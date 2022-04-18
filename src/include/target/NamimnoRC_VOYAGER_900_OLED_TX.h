@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "NM Voyager OLED\0"
+#define DEVICE_NAME "NM Voyager OLED"
 #endif
 
 // Features

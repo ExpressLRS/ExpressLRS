@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "RadioMstr Zorro\0"
+#define DEVICE_NAME "RadioMstr Zorro"
 #endif
 // Copied from DupleTX
 

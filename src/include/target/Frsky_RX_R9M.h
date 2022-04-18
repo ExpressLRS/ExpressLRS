@@ -21,11 +21,11 @@ https://github.com/jaxxzer
 #if defined(TARGET_R9SLIM_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3  // RX1 PIN OF CONNECTOR 1 ON SLIM
     #define GPIO_PIN_RCSIGNAL_TX    PA2  // TX1 PIN OF CONNECTOR 1 ON SLIM
-    #define DEVICE_NAME "FrSky R9SLIM RX\0"
+    #define DEVICE_NAME "FrSky R9SLIM RX"
 #elif defined(TARGET_R9SLIMPLUS_RX)      // R9SLIMPLUS USES DUAL UART CONFIGURATION FOR TX1/RX1
     #define GPIO_PIN_RCSIGNAL_RX    PB11 // RX1 PIN OF CONNECTOR 1 ON SLIMPLUS
     #define GPIO_PIN_RCSIGNAL_TX    PA9  // TX1 PIN OF CONNECTOR 1 ON SLIMPLUS
-    #define DEVICE_NAME "FrSky R9SLIM+\0\0\0"
+    #define DEVICE_NAME "FrSky R9SLIM+"
 #elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // convinient pin for direct chip solder
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
@@ -36,7 +36,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_RCSIGNAL_RX_SBUS   PA3
     #define GPIO_PIN_RCSIGNAL_TX_SBUS   PA2
     #ifndef DEVICE_NAME
-        #define DEVICE_NAME "FrSky R9MM\0\0\0\0\0\0"
+        #define DEVICE_NAME "FrSky R9MM"
     #endif
 #endif
 

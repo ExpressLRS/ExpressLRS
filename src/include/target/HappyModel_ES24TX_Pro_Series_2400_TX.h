@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "HM ES24TX Pro\0\0\0"
+#define DEVICE_NAME "HM ES24TX Pro"
 #endif
 
 // Any device features

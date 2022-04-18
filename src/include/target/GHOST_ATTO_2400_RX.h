@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "GHOST ATTO\0\0\0\0\0\0"
+#define DEVICE_NAME "GHOST ATTO"
 #endif
 // There is some special handling for this target
 #define TARGET_RX_GHOST_ATTO_V1

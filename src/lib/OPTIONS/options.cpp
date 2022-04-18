@@ -21,7 +21,7 @@ const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UBER_TX)
-const char device_name[] = STR(DEVICE_NAME);
+const char device_name[] = DEVICE_NAME;
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},

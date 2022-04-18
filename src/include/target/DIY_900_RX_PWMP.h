@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DIY900 PWMP\0\0\0\0\0"
+#define DEVICE_NAME "DIY900 PWMP"
 #endif
 
 #define CRSF_RCVR_NO_SERIAL

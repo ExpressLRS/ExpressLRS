@@ -1,7 +1,7 @@
 #define TARGET_UBER_TX
 
-#define DEVICE_NAME hardware_str(HARDWARE_device_name)
 #define HARDWARE_VERSION ""
+// DEVICE_NAME is not defined here because we get it from the SPIFFS file system
 
 // // FM30
 // TARGET_TX_FM30

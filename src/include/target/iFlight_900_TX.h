@@ -1,4 +1,4 @@
-#define DEVICE_NAME "iFlight 900TX\0\0\0"
+#define DEVICE_NAME "iFlight 900TX"
 
 // Any device features
 #define USE_SX1276_RFO_HF

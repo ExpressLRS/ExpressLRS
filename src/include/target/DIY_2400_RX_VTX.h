@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "2.4G + VTx\0\0\0\0\0\0"
+#define DEVICE_NAME "2.4G + VTx"
 #endif
 
 // Any device features

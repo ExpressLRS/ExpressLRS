@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME          "HM ES900TX\0\0\0\0\0\0"
+#define DEVICE_NAME          "HM ES900TX"
 #endif
 
 #define USE_TX_BACKPACK

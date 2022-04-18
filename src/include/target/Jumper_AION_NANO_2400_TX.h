@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "AION 2G4NANO TX\0"
+#define DEVICE_NAME "AION 2G4NANO TX"
 #endif
 
 // Any device features

@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "DIY2400 ESP8266\0"
+#define DEVICE_NAME "DIY2400 ESP8266"
 #endif
 
 // GPIO pin definitions
