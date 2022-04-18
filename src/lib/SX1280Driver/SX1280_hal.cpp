@@ -71,16 +71,6 @@ void SX1280Hal::init()
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
 #endif
 
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
-#endif
-
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
-#endif
-
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
@@ -342,12 +332,6 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable()
 #if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
 #endif
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, HIGH);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, LOW);
-#endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
@@ -360,12 +344,6 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 #endif
 #if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, LOW);
-#endif
-#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, HIGH);
 #endif
 }
 
