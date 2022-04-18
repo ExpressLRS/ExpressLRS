@@ -23,6 +23,7 @@ static int system_quiet_state = GSENSOR_SYSTEM_STATE_MOVING;
 static int system_quiet_pre_state = GSENSOR_SYSTEM_STATE_MOVING;
 static unsigned int bumps = 0;
 static unsigned long lastBumpTime = 0;
+static unsigned long lastBumpCommand = 0;
 
 extern bool IsArmed();
 extern void SendRxLoanOverMSP();
@@ -31,6 +32,9 @@ extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 #define GSENSOR_DURATION    10
 #define GSENSOR_SYSTEM_IDLE_INTERVAL 1000U
+
+#define MULTIPLE_BUMP_INTERVAL 400U
+#define BUMP_COMMAND_IDLE_TIME 10000U
 
 static void initialize()
 {
@@ -46,17 +50,18 @@ static int timeout()
 {
     static unsigned long lastIdleCheckMs = 0;
     unsigned long now = millis();
-    if (gsensor.handleBump(now))
+    if (gsensor.hasTriggered(now) && (now - lastBumpCommand) > BUMP_COMMAND_IDLE_TIME)
     {
         lastBumpTime = now;
         bumps++;
     }
-    if (bumps > 0 && (now - lastBumpTime > 40))
+    if (bumps > 0 && (now - lastBumpTime > MULTIPLE_BUMP_INTERVAL))
     {
         float x, y, z;
         gsensor.getGSensorData(&x, &y, &z);
         if (bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)   // Single bump while holding the radio antenna up
         {
+            lastBumpCommand = now;
             if (connectionState == connected)
             {
                 DBGLN("Loaning model");

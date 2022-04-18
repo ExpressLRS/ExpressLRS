@@ -89,18 +89,16 @@ float get_data_variance(float average, float *data, int length)
     return variance;
 }
 
-bool Gsensor::handleBump(unsigned long now)
+bool Gsensor::hasTriggered(unsigned long now)
 {
-    float x, y, z;
-    static unsigned long startBump = 0;
+    static unsigned long lastTriggeredMs = 0;
 
     if (interrupt)
     {
         interrupt = false;
-        if (now - startBump > 20)
+        if (now - lastTriggeredMs > 20)
         {
-            getGSensorData(&x, &y, &z);
-            startBump = now;
+            lastTriggeredMs = now;
             return true;
         }
     }

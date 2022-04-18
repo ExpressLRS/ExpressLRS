@@ -170,6 +170,8 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 #define LOAN_BIND_TIMEOUT_DEFAULT 60000
+#define LOAN_BIND_TIMEOUT_MSP 10000U
+
 
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
@@ -683,7 +685,7 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     }
     else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
     {
-        loanBindTimeout = 10000;
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
     }
 #if defined(HAS_VTX_SPI)
@@ -1184,7 +1186,7 @@ static void servosUpdate(unsigned long now)
 #endif
 }
 
-static void updateBindingMode()
+static void updateBindingMode(unsigned long now)
 {
 #ifndef MY_UID
     // If the eeprom is indicating that we're not bound
@@ -1209,7 +1211,7 @@ static void updateBindingMode()
         ExitBindingMode();
     }
     // If in "loan" binding mode and we've been here for more than timeout period, reset UID and leave binding mode
-    else if (InBindingMode && InLoanBindingMode && millis() - loadBindingStartedMs > loanBindTimeout) {
+    else if (InBindingMode && InLoanBindingMode && (now - loadBindingStartedMs) > loanBindTimeout) {
         loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
         memcpy(UID, MasterUID, sizeof(MasterUID));
         setupBindingFromConfig();
@@ -1366,7 +1368,7 @@ void loop()
     }
 
     executeDeferredFunction(now);
-    
+
     if (connectionState > MODE_STATES)
     {
         return;
@@ -1419,7 +1421,7 @@ void loop()
         TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
     }
     updateTelemetryBurst();
-    updateBindingMode();
+    updateBindingMode(now);
     debugRcvrLinkstats();
 }
 
