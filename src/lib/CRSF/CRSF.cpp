@@ -953,18 +953,18 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 /***
  * @brief: Convert `version` (string) to a integer version representation
  * e.g. "2.2.15 ISM24G" => 0x0002020f
- * Assumes all version fields are < 256
+ * Assumes all version fields are < 256, the number portion
+ * MUST be followed by a space to correctly be parsed
  ***/
-static uint32_t versionStrToInt()
+uint32_t CRSF::VersionStrToU32(const char *verStr)
 {
     uint32_t retVal = 0;
 #if !defined(FORCE_NO_DEVICE_VERSION)
-    const char *v = version;
     uint8_t accumulator = 0;
-    char c = '\0';
-    do
+    char c;
+    while (c = *verStr)
     {
-        c = *v;
+        ++verStr;
         // A decimal indicates moving to a new version field
         // and the space after the version ends that field
         if (c == '.' || c == ' ')
@@ -982,9 +982,7 @@ static uint32_t versionStrToInt()
         {
             break;
         }
-
-        ++v;
-    } while (c);
+    }
 #endif
     return retVal;
 }
@@ -997,7 +995,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-    device->softwareVer = htobe32(versionStrToInt()); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
 }
