@@ -15,7 +15,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 
 Maintainer: Miguel Luis and Gregory Cristian
 
-Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project 
+Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 */
 
 #include "SX1280_Regs.h"
@@ -38,8 +38,8 @@ public:
     void end();
     void reset();
 
-    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size);
-    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command, uint8_t val);
+    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command, uint8_t val, uint32_t busyDelay = 15);
+    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, uint32_t busyDelay = 15);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t value);
 
@@ -51,7 +51,7 @@ public:
     void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size);
 
     bool ICACHE_RAM_ATTR WaitOnBusy();
-    
+
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();

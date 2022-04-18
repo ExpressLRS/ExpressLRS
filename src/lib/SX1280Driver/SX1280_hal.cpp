@@ -138,12 +138,12 @@ void SX1280Hal::reset(void)
     DBGLN("SX1280 Ready!");
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val)
+void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val, uint32_t busyDelay)
 {
-    WriteCommand(command, &val, 1);
+    WriteCommand(command, &val, 1, busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
+void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, uint32_t busyDelay)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1];
 
@@ -155,7 +155,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    BusyDelay(12);
+    BusyDelay(busyDelay);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
@@ -200,7 +200,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    BusyDelay(12);
+    BusyDelay(15);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
@@ -255,7 +255,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, volatile uint8_t *bu
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
 
-    BusyDelay(12);
+    BusyDelay(15);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size)
@@ -284,7 +284,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
 {
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    #define wtimeoutUS 1000
+    constexpr uint32_t wtimeoutUS = 1000U;
     uint32_t startTime = micros();
 
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait untill not busy or until wtimeoutUS
