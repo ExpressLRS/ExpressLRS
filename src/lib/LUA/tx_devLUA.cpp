@@ -559,12 +559,10 @@ static void registerLuaParameters()
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
-    //updateFolderName_TxPower();
   }, luaPowerFolder.common.id);
   registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetDynamicPower(arg > 0);
     config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-    //updateFolderName_TxPower();
   }, luaPowerFolder.common.id);
 #if defined(GPIO_PIN_FAN_EN)
   registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
@@ -578,19 +576,15 @@ static void registerLuaParameters()
   registerLUAParameter(&luaVtxFolder);
   registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetVtxBand(arg);
-    //updateFolderName_VtxAdmin();
   }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetVtxChannel(arg);
-    //updateFolderName_VtxAdmin();
   }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetVtxPower(arg);
-    //updateFolderName_VtxAdmin();
   }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg) {
     config.SetVtxPitmode(arg);
-    //updateFolderName_VtxAdmin();
   }, luaVtxFolder.common.id);
   registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
   // WIFI folder
