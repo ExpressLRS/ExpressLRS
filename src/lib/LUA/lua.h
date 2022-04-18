@@ -119,7 +119,7 @@ struct tagLuaElrsParams {
 void setLuaWarningFlag(lua_Flags flag, bool value);
 uint8_t getLuaWarningFlags(void);
 
-void registerLUAPopulateParams(void (*populate)());
+void luaRegisterDevicePingCallback(void (*callback)());
 #endif
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);

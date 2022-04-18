@@ -481,6 +481,16 @@ static void updateFolderNames()
   updateFolderName_VtxAdmin();
 }
 
+static void luadevUpdateBadGood()
+{
+  // Update the luaBadGoodString with the current bad/good count
+  // This item is hidden on our Lua and only displayed in other systems that don't poll our status
+  // called from luaRegisterDeicePingCallback
+  itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
+  strcat(luaBadGoodString, "/");
+  itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+}
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -634,12 +644,10 @@ static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   registerLuaParameters();
-  registerLUAPopulateParams([](){
-    itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
-    strcat(luaBadGoodString, "/");
-    itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
-    setLuaStringValue(&luaInfo, luaBadGoodString);
-  });
+
+  setLuaStringValue(&luaInfo, luaBadGoodString);
+  luaRegisterDevicePingCallback(&luadevUpdateBadGood);
+
   updateFolderNames();
   event();
   return DURATION_IMMEDIATELY;
