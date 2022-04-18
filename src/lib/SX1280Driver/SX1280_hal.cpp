@@ -140,15 +140,7 @@ void SX1280Hal::reset(void)
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val, uint32_t busyDelay)
 {
-    WaitOnBusy();
-    digitalWrite(GPIO_PIN_NSS, LOW);
-
-    SPI.transfer((uint8_t)command);
-    SPI.transfer(val);
-
-    digitalWrite(GPIO_PIN_NSS, HIGH);
-
-    BusyDelay(busyDelay);
+    WriteCommand(command, &val, 1, busyDelay);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, uint32_t busyDelay)
