@@ -234,12 +234,13 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
   while (c[i] != '\0')
   {
     //treat symbols as separator except : !,",#,$,%,&,',(,),*,+,,,-,.,/ as these would probably inside our label names
-    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A')) {
+    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A'))
+    {
       SeparatorCount++;
       arrayCount++;
       //if found separator is equal to the nth(index) requested separator,
       //return the start of the labelSpace
-      if(SeparatorCount == index+1){
+      if (SeparatorCount == index+1) {
         return returnvalue;
       } else {
         returnvalue = arrayCount;
@@ -255,13 +256,13 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
 }
 
 static void luadevUpdateRateSensitivity() {
-  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity,rateSensitivity+2,10);
-  strcat(rateSensitivity,"dBm)");
+  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
+  strcat(rateSensitivity, "dBm)");
 }
 
 static void luadevUpdateModelID() {
   itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
-  strcat(modelMatchUnit,")");
+  strcat(modelMatchUnit, ")");
 }
 
 static void luadevUpdateTlmBandwidth()
@@ -519,6 +520,7 @@ static void registerLuaParameters()
   #if defined(TARGET_TX_FM30)
   registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
     digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
+    // An event must be triggered manually because this option is not saved to config
     devicesTriggerEvent();
   });
   #endif
@@ -539,7 +541,8 @@ static void registerLuaParameters()
   registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     bool newModelMatch = arg;
     config.SetModelMatch(newModelMatch);
-    if (connectionState == connected) {
+    if (connectionState == connected)
+    {
       mspPacket_t msp;
       msp.reset();
       msp.makeCommand();
