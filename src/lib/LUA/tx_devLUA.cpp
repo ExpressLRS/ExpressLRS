@@ -387,11 +387,11 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
       RxWiFiReadyToSend = true;
     }
 #if defined(USE_TX_BACKPACK)
-    else if ((void *)item == (void *)&luaTxBackpackUpdate)
+    else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       TxBackpackWiFiReadyToSend = true;
     }
-    else if ((void *)item == (void *)&luaVRxBackpackUpdate)
+    else if ((void *)item == (void *)&luaVRxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       VRxBackpackWiFiReadyToSend = true;
     }
@@ -579,8 +579,11 @@ static void registerLuaParameters()
   #endif
   registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
   #if defined(USE_TX_BACKPACK)
-  registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
-  registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+  if (OPT_USE_TX_BACKPACK)
+  {
+    registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+    registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+  }
   #endif // USE_TX_BACKPACK
 
   #if defined(PLATFORM_ESP32)
