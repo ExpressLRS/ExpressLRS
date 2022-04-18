@@ -478,7 +478,6 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
 {
-    hal.BusyDelay(5);
     uint16_t irqStatus = instance->GetIrqStatus();
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
     if (irqStatus & SX1280_IRQ_TX_DONE)
