@@ -5,10 +5,13 @@ import hashlib
 import fnmatch
 import time
 import re
+import json
 import melodyparser
 import elrs_helpers
 
 build_flags = env.get('BUILD_FLAGS', [])
+json_flags = {}
+json_flags['uart-inverted'] = False
 UIDbytes = ""
 define = ""
 target_name = env.get('PIOENV', '').upper()
@@ -25,33 +28,67 @@ def print_error(error):
     raise Exception('!!! %s !!!' % error)
 
 
+def dequote(str):
+    if str[0] == '"' and str[-1] == '"':
+        return str[1:-1]
+    return str
+
+def process_json_flag(define):
+    parts = re.search("-D(.*)\s*=\s*(.*)$", define)
+    if parts:
+        if parts.group(1) == "MY_UID":
+            json_flags['uid'] = parts.group(2)
+        if parts.group(1) == "HOME_WIFI_SSID":
+            json_flags['home-wifi-ssid'] = dequote(parts.group(2))
+        if parts.group(1) == "HOME_WIFI_PASSWORD":
+            json_flags['home-wifi-password'] = dequote(parts.group(2))
+        if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
+            json_flags['wifi-on-interval'] = int(re.compile("\d+").match(parts.group(2)).group())
+        if parts.group(1) == "TLM_REPORT_INTERVAL_MS":
+            json_flags['tlm-interval'] = int(re.compile("\d+").match(parts.group(2)).group())
+        if parts.group(1) == "FAN_MIN_RUNTIME":
+            json_flags['fan-runtime'] = int(re.compile("\d+").match(parts.group(2)).group())
+    if define == "-DUART_INVERTED":
+        json_flags['uart-inverted'] = True
+    if define == "-DNO_SYNC_ON_ARM":
+        json_flags['no-sync-on-arm'] = True
+    if define == "-DUNLOCK_HIGHER_POWER":
+        json_flags['unlock-higher-power'] = True
+
+def process_build_flag(define):
+    if define.startswith("-D") or define.startswith("!-D"):
+        if "MY_BINDING_PHRASE" in define:
+            build_flags.append(define)
+            bindingPhraseHash = hashlib.md5(define.encode()).digest()
+            UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
+            define = "-DMY_UID=" + UIDbytes
+            process_json_flag(define)
+            sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+            sys.stdout.flush()
+        if "MY_STARTUP_MELODY=" in define:
+            parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
+            define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
+        if "HOME_WIFI_SSID=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
+        if "HOME_WIFI_PASSWORD=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
+        if not define in build_flags:
+            build_flags.append(define)
+
 def parse_flags(path):
     global build_flags
+    global json_flags
     try:
         with open(path, "r") as _f:
             for define in _f:
                 define = define.strip()
-                if define.startswith("-D") or define.startswith("!-D"):
-                    if "MY_BINDING_PHRASE" in define:
-                        build_flags.append(define)
-                        bindingPhraseHash = hashlib.md5(define.encode()).digest()
-                        UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
-                        define = "-DMY_UID=" + UIDbytes
-                        sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
-                        sys.stdout.flush()
-                    if "MY_STARTUP_MELODY=" in define:
-                        parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
-                        define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
-                    if "HOME_WIFI_SSID=" in define:
-                        parts = re.search("(.*)=\w*\"(.*)\"$", define)
-                        if parts and parts.group(2):
-                            define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
-                    if "HOME_WIFI_PASSWORD=" in define:
-                        parts = re.search("(.*)=\w*\"(.*)\"$", define)
-                        if parts and parts.group(2):
-                            define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
-                    if not define in build_flags:
-                        build_flags.append(define)
+                process_build_flag(define)
+                process_json_flag(define)
+
     except IOError:
         print("File '%s' does not exist" % path)
 
@@ -108,6 +145,9 @@ if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
 
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
+
+with open('data/options.ini', 'w') as file:
+    json.dump(json_flags, file)
 
 if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
