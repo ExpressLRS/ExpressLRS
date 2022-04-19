@@ -35,9 +35,9 @@ def dequote(str):
 
 def process_json_flag(define):
     parts = re.search("-D(.*)\s*=\s*(.*)$", define)
-    if parts:
-        if parts.group(1) == "MY_UID":
-            json_flags['uid'] = parts.group(2)
+    if parts and define.startswith("-D"):
+        if parts.group(1) == "MY_BINDING_PHRASE":
+            json_flags['uid'] = [x for x in hashlib.md5(define.encode()).digest()[0:6]]
         if parts.group(1) == "HOME_WIFI_SSID":
             json_flags['wifi-ssid'] = dequote(parts.group(2))
         if parts.group(1) == "HOME_WIFI_PASSWORD":
