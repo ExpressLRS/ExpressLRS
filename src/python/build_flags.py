@@ -62,7 +62,6 @@ def process_build_flag(define):
             bindingPhraseHash = hashlib.md5(define.encode()).digest()
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
             define = "-DMY_UID=" + UIDbytes
-            process_json_flag(define)
             sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
             sys.stdout.flush()
         if "MY_STARTUP_MELODY=" in define:
