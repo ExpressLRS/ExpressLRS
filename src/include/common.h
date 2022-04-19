@@ -121,7 +121,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
-    uint8_t numOfSends;// Number of packets to send.
+    uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
