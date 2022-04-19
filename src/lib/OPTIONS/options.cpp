@@ -237,7 +237,7 @@ bool options_init()
         int pos = file.readBytesUntil('\n', device_name, sizeof(device_name)-1);
         device_name[pos] = 0;
     }
-    
+
     file = SPIFFS.open("/options.ini", "r");
     if (!file || file.isDirectory())
     {
@@ -269,14 +269,14 @@ bool options_init()
     {
         firmwareOptions.hasUID = false;
     }
-    firmwareOptions.wifi_auto_on_interval = doc["wifi-on-interval"].as<int>() * 1000 | 30 * 1000;
+    firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 30) * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
-    firmwareOptions.tlm_report_interval = doc["tlm-interval"].as<int>() | 320U;
-    firmwareOptions.fan_min_runtime = doc["fan-runtime"].as<int>() | 30;
-    firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"].as<bool>() | false;
-    firmwareOptions.uart_inverted = doc["uart-inverted"].as<bool>() | true;
-    firmwareOptions.unlock_higher_power = doc["unlock-higher-power"].as<bool>() | false;
+    firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
+    firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
+    firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;
+    firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
+    firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
 
     file.close();
     return true;
