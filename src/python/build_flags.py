@@ -1,4 +1,5 @@
 Import("env")
+from genericpath import exists
 import os
 import sys
 import hashlib
@@ -15,6 +16,7 @@ json_flags['uart-inverted'] = False
 UIDbytes = ""
 define = ""
 target_name = env.get('PIOENV', '').upper()
+device_name = ""
 
 def print_error(error):
     time.sleep(1)
@@ -75,6 +77,10 @@ def process_build_flag(define):
             parts = re.search("(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
                 define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
+        if "DEVICE_NAME=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                device_name = parts.group(2)
         if not define in build_flags:
             build_flags.append(define)
 
@@ -145,8 +151,14 @@ if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
 
+# create data directory and stuff the options.ini in there
+if not os.path.exists('data'):
+    os.mkdir('data')
+
 with open('data/options.ini', 'w') as file:
     json.dump(json_flags, file)
+with open('data/device.ini', 'w') as file:
+    file.write(device_name)
 
 if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")

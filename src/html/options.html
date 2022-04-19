@@ -25,7 +25,12 @@
 				<table>
 					<tr><td>UID</td><td><input size='40' id='uid' name='uid' type='text'/></td></tr>
 					<tr><td>WiFi "auto on" interval (s)</td><td><input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text'/></td></tr>
-					<tr><td>Home WiFi SSID</td><td><input size='32' id='wifi-ssid' name='wifi-ssid' type='text'/></td></tr>
+					<tr><td>Home WiFi SSID</td><td>
+						<div class="autocomplete">
+							<input id="wifi-ssid" name="wifi-ssid" size='32' type="text" style="margin-top:4px"/>
+							<div id="loader" style="float:right" class="loader"></div>
+						</div>
+					</td></tr>
 					<tr><td>Home WiFi password</td><td><input size='64' id='wifi-password' name='wifi-password' type='text'/></td></tr>
                     <tr><td>TLM report interval (ms)</td><td><input size='5' id='tlm-interval' name='tlm-interval' type='text'/></td></tr>
 					<tr><td>Fan runtime (s)</td><td><input size='3' id='fan-runtime' name='fan-runtime' type='text'/></td></tr>

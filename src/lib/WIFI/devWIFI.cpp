@@ -113,25 +113,37 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-static void WebUpdateSendCSS(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t*)CSS, sizeof(CSS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
+static struct {
+  const char *url;
+  const char *contentType;
+  const uint8_t* content;
+  const size_t size;
+} files[] = {
+  {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
+  {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
+  {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
+#if defined(TARGET_UBER_TX)
+  {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+  {"/mui.css", "text/css", (uint8_t *)MUI_CSS, sizeof(MUI_CSS)},
+  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
+  {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
+  {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
+  {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
+  {"/options.js", "text/javascript", (uint8_t *)OPTIONS_JS, sizeof(OPTIONS_JS)},
+#endif
+};
 
-static void WebUpdateSendJS(AsyncWebServerRequest *request)
+static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
-
-static void WebUpdateSendFlag(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
+  for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
+    if (request->url().equals(files[i].url)) {
+      AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
+      response->addHeader("Content-Encoding", "gzip");
+      request->send(response);
+      return;
+    }
+  }
+  request->send(404, "text/plain", "File not found");
 }
 
 static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
@@ -145,14 +157,14 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   #if defined(TARGET_UBER_TX)
   if (connectionState == hardwareUndefined)
   {
-    response = request->beginResponse(SPIFFS, "/hardware.html", "text/html");
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
   }
   else
   #endif
   {
     response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
-    response->addHeader("Content-Encoding", "gzip");
   }
+  response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
@@ -206,6 +218,18 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 #endif
 
 #if defined(TARGET_UBER_TX)
+static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  File file = SPIFFS.open(request->url(), "w");
+  file.write(data, len);
+  file.close();
+}
+
+static void getFile(AsyncWebServerRequest *request)
+{
+  request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+}
+
 static void HandleHardware(AsyncWebServerRequest *request)
 {
   if (request->method() == HTTP_GET)
@@ -275,7 +299,7 @@ static void HandleOptions(AsyncWebServerRequest *request)
   {
     DynamicJsonDocument array(256);
     deserializeJson(array, String("[") + request->arg("uid") + "]");
-    
+
     DynamicJsonDocument doc(1024);
     doc["uid"] = array.as<JsonArray>();
     doc["wifi-on-interval"] = request->arg("wifi-on-interval").toInt();
@@ -297,6 +321,15 @@ static void HandleOptions(AsyncWebServerRequest *request)
     request->client()->close();
     rebootTime = millis() + 100;
   }
+}
+
+static void HandleReboot(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
 }
 #endif
 
@@ -712,9 +745,9 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendCSS);
-  server.on("/scan.js", WebUpdateSendJS);
-  server.on("/logo.svg", WebUpdateSendFlag);
+  server.on("/main.css", WebUpdateSendContent);
+  server.on("/scan.js", WebUpdateSendContent);
+  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -743,18 +776,19 @@ static void startServices()
     server.on("/pwm", WebUpdatePwm);
   #endif
   #if defined(TARGET_UBER_TX)
-    server.on("/hardware.html", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.html", "text/html"); });
-    server.on("/hardware.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.js", "text/javascript"); });
-    server.on("/options.html", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.html", "text/html"); });
-    server.on("/options.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.js", "text/javascript"); });
-    server.on("/elrs.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/elrs.css", "text/css"); });
-    server.on("/mui.css", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/mui.css", "text/css"); });
-    server.on("/mui.js", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/mui.js", "text/javascript"); });
-    server.on("/device.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/device.ini", "text/plain", true); });
-    server.on("/hardware.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/hardware.ini", "text/plain", true); });
-    server.on("/options.ini", [](AsyncWebServerRequest *request) { request->send(SPIFFS, "/options.ini", "text/plain", true); });
+    server.on("/hardware.html", WebUpdateSendContent);
+    server.on("/hardware.js", WebUpdateSendContent);
+    server.on("/options.html", WebUpdateSendContent);
+    server.on("/options.js", WebUpdateSendContent);
+    server.on("/elrs.css", WebUpdateSendContent);
+    server.on("/mui.css", WebUpdateSendContent);
+    server.on("/mui.js", WebUpdateSendContent);
+    server.on("/hardware.ini", getFile).onBody(putFile);
+    server.on("/options.ini", getFile).onBody(putFile);
+    server.on("/device.ini", getFile).onBody(putFile);
     server.on("/hardware", HandleHardware);
     server.on("/options", HandleOptions);
+    server.on("/reboot", HandleReboot);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);

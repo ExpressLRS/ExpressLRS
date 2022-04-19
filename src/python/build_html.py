@@ -37,23 +37,33 @@ def build_html(mainfile, var, out, env):
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
-def build_common(env, mainfile):
+def build_common(env, mainfile, isTX):
     fd, path = tempfile.mkstemp()
     try:
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
             build_html(mainfile, "INDEX_HTML", out, env)
             build_html("scan.js", "SCAN_JS", out, env)
-            build_html("main.css", "CSS", out, env)
-            build_html("logo.svg", "FLAG", out, env)
+            build_html("main.css", "MAIN_CSS", out, env)
+            build_html("logo.svg", "LOGO_SVG", out, env)
+            if isTX:
+                build_html("elrs.css", "ELRS_CSS", out, env)
+                build_html("hardware.html", "HARDWARE_HTML", out, env)
+                build_html("hardware.js", "HARDWARE_JS", out, env)
+                build_html("options.html", "OPTIONS_HTML", out, env)
+                build_html("options.js", "OPTIONS_JS", out, env)
+                build_html("mui.css", "MUI_CSS", out, env)
+                build_html("mui.js", "MUI_JS", out, env)
+
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")
         os.remove(path)
 
 platform = env.get('PIOPLATFORM', '')
+target_name = env['PIOENV'].upper()
 
-if platform in ['espressif8266']:
-    build_common(env, "rx_index.html")
-elif platform in ['espressif32']:
-    build_common(env, "tx_index.html")
+if '_RX_' in target_name:
+    build_common(env, "rx_index.html", False)
+else:
+    build_common(env, "tx_index.html", True)
