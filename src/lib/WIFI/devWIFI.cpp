@@ -276,53 +276,6 @@ static void HandleHardware(AsyncWebServerRequest *request)
   }
 }
 
-static void HandleOptions(AsyncWebServerRequest *request)
-{
-  if (request->method() == HTTP_GET)
-  {
-    DynamicJsonDocument doc(1024);
-    copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), doc["uid"]);
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
-    doc["wifi-ssid"] = String(firmwareOptions.home_wifi_ssid);
-    doc["wifi-password"] = String(firmwareOptions.home_wifi_password);
-    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
-    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["no-sync-on-arm"] = firmwareOptions.no_sync_on_arm;
-    doc["uart-inverted"] = firmwareOptions.uart_inverted;
-    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
-
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(doc, *response);
-    request->send(response);
-  }
-  else if (request->method() == HTTP_POST)
-  {
-    DynamicJsonDocument array(256);
-    deserializeJson(array, String("[") + request->arg("uid") + "]");
-
-    DynamicJsonDocument doc(1024);
-    doc["uid"] = array.as<JsonArray>();
-    doc["wifi-on-interval"] = request->arg("wifi-on-interval").toInt();
-    doc["wifi-ssid"] = request->arg("wifi-ssid");
-    doc["wifi-password"] = request->arg("wifi-password");
-    doc["tlm-interval"] = request->arg("tlm-interval").toInt();
-    doc["fan-runtime"] = request->arg("fan-runtime").toInt();
-    doc["no-sync-on-arm"] = request->arg("no-sync-on-arm").equals("on");
-    doc["uart-inverted"] = request->arg("uart-inverted").equals("on");
-    doc["unlock-higher-power"] = request->arg("unlock-higher-power").equals("on");
-
-    File file = SPIFFS.open("/options.ini", "w");
-    serializeJson(doc, file);
-    file.close();
-
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "It's no longer an option!");
-    response->addHeader("Connection", "close");
-    request->send(response);
-    request->client()->close();
-    rebootTime = millis() + 100;
-  }
-}
-
 static void HandleReboot(AsyncWebServerRequest *request)
 {
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
@@ -787,7 +740,6 @@ static void startServices()
     server.on("/options.ini", getFile).onBody(putFile);
     server.on("/device.ini", getFile).onBody(putFile);
     server.on("/hardware", HandleHardware);
-    server.on("/options", HandleOptions);
     server.on("/reboot", HandleReboot);
   #endif
 

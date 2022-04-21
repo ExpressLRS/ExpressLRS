@@ -7,7 +7,7 @@ function _(el) {
 
 function init() {
   initBindingPhraseGen();
-  var json_url = 'options';
+  var json_url = 'options.ini';
   xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
@@ -38,6 +38,16 @@ function get_networks() {
   xmlhttp.open("POST", json_url, true);
   xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xmlhttp.send();
+}
+
+function submitOptions() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST','/options.ini')
+  xhr.setRequestHeader("Content-Type", "application/json");
+  var formData = new FormData(_("upload_options"));
+  xhr.send(JSON.stringify(Object.fromEntries(formData)));
+  xhr.onreadystatechange = function() {};
+  return false;
 }
 
 function updateOptions(data) {
