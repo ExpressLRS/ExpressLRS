@@ -103,7 +103,6 @@ uint8_t CRSF::MspDataLength = 0;
 
 #ifdef CRSF_RX_MODULE
 crsf_channels_s CRSF::PackedRCdataOut;
-bool CRSF::lastArmingState;
 #endif
 
 void CRSF::Begin()

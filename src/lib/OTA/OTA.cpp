@@ -263,9 +263,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(volatile uint8_t* Buffer, CRSF 
     UnpackChannelDataHybridCommon(Buffer, crsf);
 
     // The low latency switch (AUX1)
-
     crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((switchByte & 0b10000000) >> 7);
-    crsf->lastArmingState = (bool)(switchByte & 0b10000000) >> 7;
     // The round-robin switch, 6-7 bits with the switch index implied by the nonce
     uint8_t switchIndex = HybridWideNonceToSwitchIndex(nonce);
     bool telemInEveryPacket = (tlmDenom < 8);

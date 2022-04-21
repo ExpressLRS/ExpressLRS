@@ -761,7 +761,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] >> SYNC_PACKET_RATE_OFFSET) & SYNC_PACKET_RATE_MASK;
     // Update switch mode encoding immediately when not armed
     OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK);
-    if(!crsf.lastArmingState && OtaSwitchModeCurrent != newSwitchMode){
+    if(!IsArmed() && OtaSwitchModeCurrent != newSwitchMode){
         OtaSetSwitchMode(newSwitchMode);
     } else {
         LostConnection();
