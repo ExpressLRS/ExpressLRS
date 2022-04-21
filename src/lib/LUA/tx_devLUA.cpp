@@ -512,7 +512,6 @@ static void registerLuaParameters()
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
       uint32_t newSwitchMode = (arg + 1) & 0b11;
       config.SetSwitchMode(newSwitchMode);
-      OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
     }
     else
       setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
