@@ -5,7 +5,7 @@ function _(el) {
 }
 
 function load_data() {
-    var json_url = 'hardware';
+    var json_url = '/hardware.ini';
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
@@ -18,17 +18,27 @@ function load_data() {
     xmlhttp.send();
 }
 
+function submitHardwareSettings() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST','/hardware.ini')
+    xhr.setRequestHeader("Content-Type", "application/json");
+    var formData = new FormData(_("upload_hardware"));
+    xhr.send(JSON.stringify(Object.fromEntries(formData)));
+    xhr.onreadystatechange = function() {};
+    return false;
+}
+
 function updateHardwareSettings(data) {
     for (let [key, value] of Object.entries(data)) {
         if (_(key)) {
             if (_(key).type == 'checkbox') {
-                if (parseInt(value) > 0)
-                    _(key).checked = true;
-                else
-                    _(key).checked = false;
+                _(key).checked = value;
             }
             else {
-                _(key).value = value;
+                if (Array.isArray(value))
+                    _(key).value = value.toString();
+                else
+                    _(key).value = value;
             }
         }
     }

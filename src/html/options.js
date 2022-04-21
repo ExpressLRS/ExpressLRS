@@ -7,7 +7,7 @@ function _(el) {
 
 function init() {
   initBindingPhraseGen();
-  var json_url = 'options.ini';
+  var json_url = '/options.ini';
   xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {

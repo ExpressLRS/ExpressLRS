@@ -37,7 +37,6 @@ typedef enum {
     HARDWARE_power_pdet,
     HARDWARE_power_pdet_intercept,
     HARDWARE_power_pdet_slope,
-    HARDWARE_power_sky85321,
 
     HARDWARE_power_control,
     HARDWARE_power_values,
@@ -47,9 +46,9 @@ typedef enum {
     HARDWARE_joystick,
     HARDWARE_joystick_values,
 
-    HARDWARE_5way1,
-    HARDWARE_5way2,
-    HARDWARE_5way3,
+    HARDWARE_five_way1,
+    HARDWARE_five_way2,
+    HARDWARE_five_way3,
 
     HARDWARE_button,
 
@@ -66,7 +65,7 @@ typedef enum {
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
 
-    // OLED/TFT 
+    // OLED/TFT
     HARDWARE_screen_cs,       // SPI
     HARDWARE_screen_dc,       // SPI
     HARDWARE_screen_mosi,     // SPI

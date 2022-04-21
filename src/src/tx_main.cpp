@@ -989,13 +989,12 @@ void setup()
 {
   bool hardware_success = false;
   #if defined(TARGET_UBER_TX)
+  LoggingBackpack = new HardwareSerial(0);
+  ((HardwareSerial *)LoggingBackpack)->begin(420000, SERIAL_8N1);
   SPIFFS.begin();
   hardware_success = options_init() && hardware_init();
   if (!hardware_success)
   {
-    LoggingBackpack = new HardwareSerial(0);
-    ((HardwareSerial *)LoggingBackpack)->begin(460800, SERIAL_8N1);
-
     // Register the WiFi with the framework
     static device_affinity_t wifi_device[] = {
         {&WIFI_device, 1}
@@ -1004,6 +1003,10 @@ void setup()
     devicesInit();
 
     connectionState = hardwareUndefined;
+  }
+  else
+  {
+    ((HardwareSerial *)LoggingBackpack)->end();
   }
   #endif
   if (hardware_success)

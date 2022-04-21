@@ -71,7 +71,6 @@
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
 #define USE_SKY85321
-// Not needed, we use the PIN #define OPT_USE_SKY85321 hardware_flag(HARDWARE_power_sky85321)
 #define GPIO_PIN_PA_PDET hardware_pin(HARDWARE_power_pdet)
 #define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
 #define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
@@ -89,9 +88,9 @@
 #define GPIO_PIN_JOYSTICK hardware_pin(HARDWARE_joystick)
 #define JOY_ADC_VALUES hardware_u16_array(HARDWARE_joystick_values)
 
-#define GPIO_PIN_FIVE_WAY_INPUT1 hardware_pin(HARDWARE_5way1)
-#define GPIO_PIN_FIVE_WAY_INPUT2 hardware_pin(HARDWARE_5way2)
-#define GPIO_PIN_FIVE_WAY_INPUT3 hardware_pin(HARDWARE_5way3)
+#define GPIO_PIN_FIVE_WAY_INPUT1 hardware_pin(HARDWARE_five_way1)
+#define GPIO_PIN_FIVE_WAY_INPUT2 hardware_pin(HARDWARE_five_way2)
+#define GPIO_PIN_FIVE_WAY_INPUT3 hardware_pin(HARDWARE_five_way3)
 
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
 

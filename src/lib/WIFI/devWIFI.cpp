@@ -230,52 +230,6 @@ static void getFile(AsyncWebServerRequest *request)
   request->send(SPIFFS, request->url().c_str(), "text/plain", true);
 }
 
-static void HandleHardware(AsyncWebServerRequest *request)
-{
-  if (request->method() == HTTP_GET)
-  {
-    String resp = "{";
-    File file = SPIFFS.open("/hardware.ini", "r");
-    if (file && !file.isDirectory()) {
-      do {
-        String line = file.readStringUntil('\n');
-        if (line.charAt(0)!=';' && line.indexOf('=') > 0) {
-          int element = line.substring(0, line.indexOf('=')).toInt();
-          String value = line.substring(line.indexOf('=') + 1);
-          if (resp.length() > 1) {
-            resp += ", ";
-          }
-          resp += "\"" + String(element, 10) + "\" : \"" + value + "\"";
-        }
-      } while(file.available());
-      file.close();
-    }
-    resp += "}";
-    request->send(200, "application/json", resp);
-  }
-  else if (request->method() == HTTP_POST)
-  {
-    File file = SPIFFS.open("/hardware.ini", "w");
-    for (int i=0 ; i<request->args() ; i++)
-    {
-      String name = request->argName(i);
-      String val = request->arg(name);
-      if (!val.isEmpty()) {
-        if (val.equals("on")) val = "1";
-        if (!val.equals("off")) {
-          file.printf("%s=%s\n", name.c_str(), val.c_str());
-        }
-      }
-    }
-    file.close();
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "All your hardware are belong to me!");
-    response->addHeader("Connection", "close");
-    request->send(response);
-    request->client()->close();
-    rebootTime = millis() + 100;
-  }
-}
-
 static void HandleReboot(AsyncWebServerRequest *request)
 {
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
@@ -739,7 +693,6 @@ static void startServices()
     server.on("/hardware.ini", getFile).onBody(putFile);
     server.on("/options.ini", getFile).onBody(putFile);
     server.on("/device.ini", getFile).onBody(putFile);
-    server.on("/hardware", HandleHardware);
     server.on("/reboot", HandleReboot);
   #endif
 

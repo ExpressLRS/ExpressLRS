@@ -250,6 +250,9 @@ bool options_init()
         firmwareOptions.uart_inverted = true;
         firmwareOptions.unlock_higher_power = false;
 
+        if (file) {
+            file.close();
+        }
         return true;
     }
 
@@ -257,6 +260,7 @@ bool options_init()
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
+        file.close();
         return false;
     }
 

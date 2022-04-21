@@ -33,35 +33,35 @@
 			<form id='upload_hardware' method='POST' action="/hardware">
 				<table>
 					<tr><td colspan='2'><b>CRSF Serial Pins</td></tr>
-					<tr><td width="30"></td><td>RX pin</td><td><input size='3' id='0' name='0' type='text'/></td></tr>
-					<tr><td></td><td>TX pin </td><td><input size='3' id='1' name='1' type='text'/></td></tr>
+					<tr><td width="30"></td><td>RX pin</td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td></tr>
+					<tr><td></td><td>TX pin </td><td><input size='3' id='serial_tx' name='serial_tx' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Chip Pins & Options</td></tr>
-					<tr><td></td><td>BUSY pin</td><td><input size='3' id='2' name='2' type='text'/></td></tr>
-					<tr><td></td><td>DIO0 pin</td><td><input size='3' id='3' name='3' type='text'/></td></tr>
-					<tr><td></td><td>DIO1 pin</td><td><input size='3' id='4' name='4' type='text'/></td></tr>
-					<tr><td></td><td>DIO2 pin</td><td><input size='3' id='5' name='5' type='text'/></td></tr>
-					<tr><td></td><td>MISO pin</td><td><input size='3' id='6' name='6' type='text'/></td></tr>
-					<tr><td></td><td>MOSI pin</td><td><input size='3' id='7' name='7' type='text'/></td></tr>
-					<tr><td></td><td>NSS pin</td><td><input size='3' id='8' name='8' type='text'/></td></tr>
-					<tr><td></td><td>RST pin</td><td><input size='3' id='9' name='9' type='text'/></td></tr>
-					<tr><td></td><td>SCK pin</td><td><input size='3' id='10' name='10' type='text'/></td></tr>
-					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='11' name='11' type='checkbox'/></td></tr>
-					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='12' name='12' type='checkbox'/></td></tr>
+					<tr><td></td><td>BUSY pin</td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td></tr>
+					<tr><td></td><td>DIO0 pin</td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td></tr>
+					<tr><td></td><td>DIO1 pin</td><td><input size='3' id='radio_dio1' name='radio_dio1' type='text'/></td></tr>
+					<tr><td></td><td>DIO2 pin</td><td><input size='3' id='radio_dio2' name='radio_dio2' type='text'/></td></tr>
+					<tr><td></td><td>MISO pin</td><td><input size='3' id='radio_miso' name='radio_miso' type='text'/></td></tr>
+					<tr><td></td><td>MOSI pin</td><td><input size='3' id='radio_mosi' name='radio_mosi' type='text'/></td></tr>
+					<tr><td></td><td>NSS pin</td><td><input size='3' id='radio_nss' name='radio_nss' type='text'/></td></tr>
+					<tr><td></td><td>RST pin</td><td><input size='3' id='radio_rst' name='radio_rst' type='text'/></td></tr>
+					<tr><td></td><td>SCK pin</td><td><input size='3' id='radio_sck' name='radio_sck' type='text'/></td></tr>
+					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td></tr>
+					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
-					<tr><td></td><td>SELECT pin</td><td><input size='3' id='13' name='13' type='text'/></td></tr>
-					<tr><td></td><td>CTRL1 pin</td><td><input size='3' id='14' name='14' type='text'/></td></tr>
-					<tr><td></td><td>CTRL2 pin</td><td><input size='3' id='15' name='15' type='text'/></td></tr>
+					<tr><td></td><td>SELECT pin</td><td><input size='3' id='ant_select' name='ant_select' type='text'/></td></tr>
+					<tr><td></td><td>CTRL1 pin</td><td><input size='3' id='ant_ctrl1' name='ant_ctrl1' type='text'/></td></tr>
+					<tr><td></td><td>CTRL2 pin</td><td><input size='3' id='ant_ctrl2' name='ant_ctrl2' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Power</td></tr>
-					<tr><td></td><td>PA enable pin</td><td><input size='3' id='16' name='16' type='text'/></td></tr>
-					<tr><td></td><td>APC1 pin</td><td><input size='3' id='17' name='17' type='text'/></td></tr>
-					<tr><td></td><td>APC2 pin</td><td><input size='3' id='18' name='18' type='text'/></td></tr>
-					<tr><td></td><td>RXEN pin</td><td><input size='3' id='19' name='19' type='text'/></td></tr>
-					<tr><td></td><td>TXEN pin</td><td><input size='3' id='20' name='20' type='text'/></td></tr>
+					<tr><td></td><td>PA enable pin</td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td></tr>
+					<tr><td></td><td>APC1 pin</td><td><input size='3' id='power_apc1' name='power_apc1' type='text'/></td></tr>
+					<tr><td></td><td>APC2 pin</td><td><input size='3' id='power_apc2' name='power_apc2' type='text'/></td></tr>
+					<tr><td></td><td>RXEN pin</td><td><input size='3' id='power_rxen' name='power_rxen' type='text'/></td></tr>
+					<tr><td></td><td>TXEN pin</td><td><input size='3' id='power_txen' name='power_txen' type='text'/></td></tr>
 					<tr><td></td><td>Min Power</td><td>
-						<select id='21' name='21'>
+						<select id='power_min' name='power_min'>
 							<option value='0'>10mW</option>
 							<option value='1'>25mW</option>
 							<option value='2'>50mW</option>
@@ -73,7 +73,7 @@
 						</select>
 					</td></tr>
 					<tr><td></td><td>High Power</td><td>
-						<select id='22' name='22'>
+						<select id='power_high' name='power_high'>
 							<option value='0'>10mW</option>
 							<option value='1'>25mW</option>
 							<option value='2'>50mW</option>
@@ -85,7 +85,7 @@
 						</select>
 					</td></tr>
 					<tr><td></td><td>Max Power</td><td>
-						<select id='23' name='23'>
+						<select id='power_max' name='power_max'>
 							<option value='0'>10mW</option>
 							<option value='1'>25mW</option>
 							<option value='2'>50mW</option>
@@ -97,7 +97,7 @@
 						</select>
 					</td></tr>
 					<tr><td></td><td>Default Power</td><td>
-						<select id='24' name='24'>
+						<select id='power_default' name='power_default'>
 							<option value='0'>10mW</option>
 							<option value='1'>25mW</option>
 							<option value='2'>50mW</option>
@@ -109,48 +109,49 @@
 						</select>
 					</td></tr>
 					<tr><td></td><td>Power Level control</td><td>
-						<select id='29' name='29'>
+						<select id='power_control' name='power_control'>
 							<option value='0'>via Radio Chip</option>
 							<!--<option value='1'>ANALOG</option>
 							<option value='2'>DAC</option>-->
 							<option value='3'>DACWRITE</option>
 						</select>
 					</td></tr>
-					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='30' name='30' type='text'/></td></tr>
+					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
-					<tr><td></td><td>PDET pin</td><td><input size='3' id='25' name='25' type='text'/></td></tr>
-					<tr><td></td><td>Intercept</td><td><input size='20' id='26' name='26' type='text'/></td></tr>
-					<tr><td></td><td>Slope</td><td><input size='20' id='27' name='27' type='text'/></td></tr>
-					<!-- The PIN is enough <tr><td>Is SKY85321</td><td><input size='3' id='28' name='28' type='checkbox'/></td></tr>-->
+					<tr><td></td><td>PDET pin</td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td></tr>
+					<tr><td></td><td>Intercept</td><td><input size='20' id='power_pdet_intercept' name='power_pdet_intercept' type='text'/></td></tr>
+					<tr><td></td><td>Slope</td><td><input size='20' id='power_pdet_slope' name='power_pdet_slope' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
-					<tr><td></td><td>ADC pin</td><td><input size='3' id='31' name='31' type='text'/></td></tr>
-					<tr><td></td><td>Values</td><td><input size='20' id='32' name='32' type='text'/></td></tr>
+					<tr><td></td><td>ADC pin</td><td><input size='3' id='joystick' name='joystick' type='text'/></td></tr>
+					<tr><td></td><td>Values</td><td><input size='20' id='joystick_values' name='joystick_values' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Digital Joystick</td></tr>
-					<tr><td></td><td>Pin 1</td><td><input size='3' id='33' name='33' type='text'/></td></tr>
-					<tr><td></td><td>Pin 2</td><td><input size='3' id='34' name='34' type='text'/></td></tr>
-					<tr><td></td><td>Pin 3</td><td><input size='3' id='35' name='35' type='text'/></td></tr>
+					<tr><td></td><td>Pin 1</td><td><input size='3' id='five_way1' name='five_way1' type='text'/></td></tr>
+					<tr><td></td><td>Pin 2</td><td><input size='3' id='five_way2' name='five_way2' type='text'/></td></tr>
+					<tr><td></td><td>Pin 3</td><td><input size='3' id='five_way3' name='five_way3' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Button(s)</td></tr>
-					<tr><td></td><td>Button 1 pin</td><td><input size='3' id='36' name='36' type='text'/></td></tr>
+					<tr><td></td><td>Button 1 pin</td><td><input size='3' id='button' name='button' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
-					<tr><td></td><td>RGB LED pin</td><td><input size='3' id='45' name='45' type='text'/></td></tr>
-					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='46' name='46' type='checkbox'/></td></tr>
-					<tr><td></td><td>LED pin</td><td><input size='3' id='37' name='37' type='text'/></td><td>Only use when only a single LED is used</td></tr>
-					<tr><td></td><td>Red LED pin</td><td><input size='3' id='42' name='42' type='text'/></td></tr>
-					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='43' name='43' type='checkbox'/></td></tr>
-					<tr><td></td><td>Green LED pin</td><td><input size='3' id='39' name='39' type='text'/></td></tr>
-					<tr><td></td><td>Green LED inverted</td><td><input size='3' id='40' name='40' type='checkbox'/></td></tr>
-					<tr><td></td><td>Blue LED pin</td><td><input size='3' id='38' name='38' type='text'/></td></tr>
-					<tr><td></td><td>Green/Red LED pin</td><td><input size='3' id='41' name='41' type='text'/></td></tr>
-					<tr><td></td><td>Red/Green LED pin</td><td><input size='3' id='44' name='44' type='text'/></td></tr>
+					<tr><td></td><td>RGB LED pin</td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td></tr>
+					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td></tr>
+					<tr><td></td><td>LED pin</td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
+					<tr><td></td><td>Red LED pin</td><td><input size='3' id='led_red' name='led_red' type='text'/></td></tr>
+					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='led_red_invert' name='led_red_invert' type='checkbox'/></td></tr>
+					<tr><td></td><td>Green LED pin</td><td><input size='3' id='led_green' name='led_green' type='text'/></td></tr>
+					<tr><td></td><td>Green LED inverted</td><td><input size='3' id='led_green_invert' name='led_green_invert' type='checkbox'/></td></tr>
+					<tr><td></td><td>Blue LED pin</td><td><input size='3' id='led_blue' name='led_blue' type='text'/></td></tr>
+					<!-- SIYI things!
+					<tr><td></td><td>Green/Red LED pin</td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
+					<tr><td></td><td>Red/Green LED pin</td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
+					-->
 
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
 					<tr><td></td><td>OLED type</td><td>
-						<select id='53' name='53'>
+						<select id='screen_type' name='screen_type'>
 							<option value='0'>None</option>
 							<option value='1'>I2C OLED</option>
 							<option value='2'>SPI OLED</option>
@@ -158,33 +159,33 @@
 							<option value='4'>SPI TFT</option>
 						</select>
 					</td></tr>
-					<tr><td></td><td>180 rotation</td><td><input size='3' id='54' name='54' type='checkbox'/></td></tr>
-					<tr><td></td><td>CS pin</td><td><input size='3' id='47' name='47' type='text'/></td><td>Chip Select (SPI)</td></tr>
-					<tr><td></td><td>DC pin</td><td><input size='3' id='48' name='48' type='text'/></td><td>Data/Command Select (SPI)</td></tr>
-					<tr><td></td><td>MOSI pin</td><td><input size='3' id='49' name='49' type='text'/></td><td>Data (SPI)</td></tr>
-					<tr><td></td><td>RST pin</td><td><input size='3' id='50' name='50' type='text'/></td><td>Reset</td></tr>
-					<tr><td></td><td>SCK pin</td><td><input size='3' id='51' name='51' type='text'/></td><td>Clock</td></tr>
-					<tr><td></td><td>SDA pin</td><td><input size='3' id='52' name='52' type='text'/></td><td>Data (I2C)</td></tr>
-					<tr><td></td><td>BL pin</td><td><input size='3' id='55' name='55' type='text'/></td><td>Backlight</td></tr>
+					<tr><td></td><td>180 rotation</td><td><input size='3' id='screen_reversed' name='screen_reversed' type='checkbox'/></td></tr>
+					<tr><td></td><td>CS pin</td><td><input size='3' id='screen_cs' name='screen_cs' type='text'/></td><td>Chip Select (SPI)</td></tr>
+					<tr><td></td><td>DC pin</td><td><input size='3' id='screen_dc' name='screen_dc' type='text'/></td><td>Data/Command Select (SPI)</td></tr>
+					<tr><td></td><td>MOSI pin</td><td><input size='3' id='screen_mosi' name='screen_mosi' type='text'/></td><td>Data (SPI)</td></tr>
+					<tr><td></td><td>RST pin</td><td><input size='3' id='screen_rst' name='screen_rst' type='text'/></td><td>Reset</td></tr>
+					<tr><td></td><td>SCK pin</td><td><input size='3' id='screen_sck' name='screen_sck' type='text'/></td><td>Clock</td></tr>
+					<tr><td></td><td>SDA pin</td><td><input size='3' id='screen_sda' name='screen_sda' type='text'/></td><td>Data (I2C)</td></tr>
+					<tr><td></td><td>BL pin</td><td><input size='3' id='screen_bl' name='screen_bl' type='text'/></td><td>Backlight</td></tr>
 
 					<tr><td colspan='2'><b>Backpack / Logging</td></tr>
-					<tr><td></td><td>Enable Backpack</td><td><input size='3' id='56' name='56' type='checkbox'/></td></tr>
-					<tr><td></td><td>Baud Rate</td><td><input size='10' id='57' name='57' type='text'/></td><td>460800 for backpack passthrough flashing</td></tr>
-					<tr><td></td><td>RX pin</td><td><input size='3' id='58' name='58' type='text'/></td></tr>
-					<tr><td></td><td>TX pin</td><td><input size='3' id='59' name='59' type='text'/></td></tr>
-					<tr><td></td><td>BOOT pin</td><td><input size='3' id='60' name='60' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285</td></tr>
-					<tr><td></td><td>EN pin</td><td><input size='3' id='61' name='61' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285</td></tr>
+					<tr><td></td><td>Enable Backpack</td><td><input size='3' id='use_backpack' name='use_backpack' type='checkbox'/></td></tr>
+					<tr><td></td><td>Baud Rate</td><td><input size='10' id='debug_backpack_baud' name='debug_backpack_baud' type='text'/></td><td>460800 for backpack passthrough flashing</td></tr>
+					<tr><td></td><td>RX pin</td><td><input size='3' id='debug_backpack_rx' name='debug_backpack_rx' type='text'/></td></tr>
+					<tr><td></td><td>TX pin</td><td><input size='3' id='debug_backpack_tx' name='debug_backpack_tx' type='text'/></td></tr>
+					<tr><td></td><td>BOOT pin</td><td><input size='3' id='backpack_boot' name='backpack_boot' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285</td></tr>
+					<tr><td></td><td>EN pin</td><td><input size='3' id='backpack_en' name='backpack_en' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285</td></tr>
 
 					<tr><td colspan='2'><b>I2C & Misc Devices</td></tr>
-					<tr><td></td><td>SCL pin</td><td><input size='3' id='62' name='62' type='text'/></td></tr>
-					<tr><td></td><td>SDA pin</td><td><input size='3' id='63' name='63' type='text'/></td></tr>
-					<tr><td></td><td>Buzzer pin</td><td><input size='3' id='65' name='65' type='text'/></td></tr>
-					<tr><td></td><td>Fan enable pin</td><td><input size='3' id='66' name='66' type='text'/></td></tr>
-					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='67' name='67' type='checkbox'/></td></tr>
-					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='64' name='64' type='input'/></td></tr>
-					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='68' name='68' type='checkbox'/></td></tr>
+					<tr><td></td><td>SCL pin</td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td></tr>
+					<tr><td></td><td>SDA pin</td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td></tr>
+					<tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td></tr>
+					<tr><td></td><td>Fan enable pin</td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td></tr>
+					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td></tr>
+					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='input'/></td></tr>
+					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td></tr>
 				</table>
-				<input type='submit' value='Save Target Configuration' class='mui-btn mui-btn--primary'/>
+				<input type='button' value='Save Target Configuration' class='mui-btn mui-btn--primary' onclick="submitHardwareSettings()"/>
 			</form>
 		</div>
 	</div>
