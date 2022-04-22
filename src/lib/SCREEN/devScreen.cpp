@@ -27,7 +27,6 @@ static bool is_pre_screen_flipped = false;
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 
-#ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
 {
 #if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
@@ -57,6 +56,7 @@ static int handle(void)
 #endif
     uint32_t now = millis();
 
+#ifdef HAS_FIVE_WAY_BUTTON
     if (!IsArmed())
     {
         int key;
@@ -97,17 +97,12 @@ static int handle(void)
         state_machine.handleEvent(now, fsm_event);
     }
     else
+#endif
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
     return SCREEN_DURATION;
 }
-#else
-static int handle(void)
-{
-    return DURATION_NEVER;
-}
-#endif
 
 static void initialize()
 {
