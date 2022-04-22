@@ -506,7 +506,8 @@ static void registerLuaParameters()
   registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
     // Only allow changing switch mode when disconnected since we need to guarantee
     // the pack and unpack functions are matched
-    if (connectionState == disconnected)
+    // and guard tx from changing sm while still armed( possbily failsafe condition)
+    if (connectionState == disconnected && !IsArmed())
     {
       // +1 to the mode because 1-bit was mode 0 and has been removed
       // The modes should be updated for 1.1RC so mode 0 can be smHybrid
