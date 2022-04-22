@@ -155,6 +155,7 @@ uint32_t RFmodeLastCycled = 0;
 #define RFmodeCycleMultiplierSlow 10
 uint8_t RFmodeCycleMultiplier;
 bool LockRFmode = false;
+bool smIsSet = false;
 ///////////////////////////////////////
 
 #if defined(DEBUG_BF_LINK_STATS)
@@ -761,10 +762,11 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] >> SYNC_PACKET_RATE_OFFSET) & SYNC_PACKET_RATE_MASK;
     // Update switch mode encoding immediately when not armed
     OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK);
-    if(IsArmed() && OtaSwitchModeCurrent != newSwitchMode){
+    if(smIsSet && OtaSwitchModeCurrent != newSwitchMode){
         LostConnection();
     } else {
         OtaSetSwitchMode(newSwitchMode);
+        smIsSet = true;
     }
     // Update TLM ratio
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_TLM_OFFSET) & SYNC_PACKET_TLM_MASK);
