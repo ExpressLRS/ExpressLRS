@@ -85,6 +85,7 @@ elif platform in ['espressif32']:
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
     if "_ETX" in target_name:
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
+        env.AddPreAction("uploadfs", ETXinitPassthrough.init_passthrough)
 
 if "_WIFI" in target_name:
     add_target_uploadoption("uploadconfirm", "Do not upload, just send confirm")
