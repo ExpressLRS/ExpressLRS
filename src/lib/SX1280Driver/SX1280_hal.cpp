@@ -120,6 +120,11 @@ void SX1280Hal::reset(void)
 #endif
 
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
+    // if the module is not responding or reporting a busy status, this will somehow reset it, and clear the status
+    uint8_t status = 0;
+    ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1);
+
+    DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
     while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
     {
         #ifdef PLATFORM_STM32
