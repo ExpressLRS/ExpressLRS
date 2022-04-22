@@ -18,7 +18,7 @@
 #define MODELMATCH_MASK 0x3f
 
 enum OtaSwitchMode_e { sm1Bit, smHybrid, smHybridWide };
-void OtaSetSwitchMode(OtaSwitchMode_e mode);
+bool OtaSetSwitchMode(OtaSwitchMode_e mode);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)

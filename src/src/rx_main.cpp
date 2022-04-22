@@ -763,8 +763,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     // Update switch mode encoding immediately when not armed
     OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK);
     if(!smIsSet){
-        OtaSetSwitchMode(newSwitchMode);
-        smIsSet = true;
+        smIsSet = OtaSetSwitchMode(newSwitchMode);
     }
     // Update TLM ratio
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_TLM_OFFSET) & SYNC_PACKET_TLM_MASK);

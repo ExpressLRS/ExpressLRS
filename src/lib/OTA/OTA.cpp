@@ -319,7 +319,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(volatile uint8_t* Buffer, CRSF 
 #endif
 
 OtaSwitchMode_e OtaSwitchModeCurrent;
-void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
+bool OtaSetSwitchMode(OtaSwitchMode_e switchMode)
 {
     switch(switchMode)
     {
@@ -330,6 +330,7 @@ void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         UnpackChannelData = &UnpackChannelDataHybridSwitch8;
         #endif
+        return true;
         break;
     case smHybridWide:
         #if defined(TARGET_TX) || defined(UNIT_TEST)
@@ -338,9 +339,11 @@ void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         UnpackChannelData = &UnpackChannelDataHybridWide;
         #endif
+        return true;
         break;
     default:
         //undefined switch mode, dont pack or unpack data.
+        return false;
         break;
     }
 
