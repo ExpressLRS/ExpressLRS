@@ -690,8 +690,8 @@ static void startServices()
     server.on("/elrs.css", WebUpdateSendContent);
     server.on("/mui.css", WebUpdateSendContent);
     server.on("/mui.js", WebUpdateSendContent);
-    server.on("/hardware.ini", getFile).onBody(putFile);
-    server.on("/options.ini", getFile).onBody(putFile);
+    server.on("/hardware.json", getFile).onBody(putFile);
+    server.on("/options.json", getFile).onBody(putFile);
     server.on("/device.ini", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
   #endif

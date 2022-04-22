@@ -98,7 +98,7 @@ static data_holder_t hardware[HARDWARE_LAST];
 
 bool hardware_init()
 {
-    File file = SPIFFS.open("/hardware.ini", "r");
+    File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         return false;
     }

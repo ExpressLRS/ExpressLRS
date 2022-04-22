@@ -7,7 +7,7 @@ function _(el) {
 
 function init() {
   initBindingPhraseGen();
-  var json_url = '/options.ini';
+  var json_url = '/options.json';
   xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
@@ -42,7 +42,7 @@ function get_networks() {
 
 function submitOptions() {
   var xhr = new XMLHttpRequest();
-  xhr.open('POST','/options.ini')
+  xhr.open('POST','/options.json')
   xhr.setRequestHeader("Content-Type", "application/json");
   var formData = new FormData(_("upload_options"));
   xhr.send(JSON.stringify(Object.fromEntries(formData)));

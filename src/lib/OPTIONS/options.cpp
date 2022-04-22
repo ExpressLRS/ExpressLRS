@@ -238,7 +238,7 @@ bool options_init()
         device_name[pos] = 0;
     }
 
-    file = SPIFFS.open("/options.ini", "r");
+    file = SPIFFS.open("/options.json", "r");
     if (!file || file.isDirectory())
     {
         firmwareOptions.wifi_auto_on_interval = 30 * 1000;

@@ -151,11 +151,11 @@ if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
 
-# create data directory and stuff the options.ini in there
+# create data directory and stuff the options.json in there
 if not os.path.exists('data'):
     os.mkdir('data')
 
-with open('data/options.ini', 'w') as file:
+with open('data/options.json', 'w') as file:
     json.dump(json_flags, file)
 with open('data/device.ini', 'w') as file:
     file.write(device_name)

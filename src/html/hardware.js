@@ -5,7 +5,7 @@ function _(el) {
 }
 
 function load_data() {
-    var json_url = '/hardware.ini';
+    var json_url = '/hardware.json';
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
@@ -15,12 +15,12 @@ function load_data() {
     };
     xmlhttp.open("GET", json_url, true);
     xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xmlhttp.send();
+    // xmlhttp.send();
 }
 
 function submitHardwareSettings() {
     var xhr = new XMLHttpRequest();
-    xhr.open('POST','/hardware.ini')
+    xhr.open('POST','/hardware.json')
     xhr.setRequestHeader("Content-Type", "application/json");
     var formData = new FormData(_("upload_hardware"));
     xhr.send(JSON.stringify(Object.fromEntries(formData)));
@@ -61,28 +61,8 @@ function FileSelectHandler(e) {
 function ParseFile(file) {
     var reader = new FileReader();
     reader.onload = function(e) {
-        var lines = e.target.result.split("\n");
-        lines.forEach(line => {
-            if (!line.startsWith(';') && line.trim().length>0) {
-                var parts = line.split("=");
-                key = parts[0];
-                value = parts[1];
-                try {
-                    if (_(key).type == 'checkbox') {
-                        if (parseInt(value) > 0)
-                            _(key).checked = true;
-                        else
-                            _(key).checked = false;
-                    }
-                    else {
-                        _(key).value = value;
-                    }
-                } catch(e) {
-                    alert(key);
-                    alert(e);
-                }
-            }
-        });
+        var data = JSON.parse(e.target.result);
+        updateHardwareSettings(data);
     }
     reader.readAsText(file);
 }
