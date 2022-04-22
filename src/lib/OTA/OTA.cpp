@@ -323,9 +323,7 @@ void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
 {
     switch(switchMode)
     {
-    case sm1Bit:
     case smHybrid:
-    default:
         #if defined(TARGET_TX) || defined(UNIT_TEST)
         PackChannelData = &GenerateChannelDataHybrid8;
         #endif
@@ -340,6 +338,9 @@ void OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         UnpackChannelData = &UnpackChannelDataHybridWide;
         #endif
+        break;
+    default:
+        //undefined switch mode, dont pack or unpack data.
         break;
     }
 
