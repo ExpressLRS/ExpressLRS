@@ -330,6 +330,7 @@ bool OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         UnpackChannelData = &UnpackChannelDataHybridSwitch8;
         #endif
+        OtaSwitchModeCurrent = switchMode;
         return true;
         break;
     case smHybridWide:
@@ -339,6 +340,7 @@ bool OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         UnpackChannelData = &UnpackChannelDataHybridWide;
         #endif
+        OtaSwitchModeCurrent = switchMode;
         return true;
         break;
     default:
@@ -347,7 +349,6 @@ bool OtaSetSwitchMode(OtaSwitchMode_e switchMode)
         break;
     }
 
-    OtaSwitchModeCurrent = switchMode;
 }
 
 
