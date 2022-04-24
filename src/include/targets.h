@@ -53,6 +53,18 @@
 #define OPT_USE_TX_BACKPACK true
 #endif
 
+#ifndef HAS_THERMAL
+#define OPT_HAS_THERMAL false
+#elif !defined(OPT_HAS_THERMAL)
+#define OPT_HAS_THERMAL true
+#endif
+
+#ifndef HAS_GSENSOR
+#define OPT_HAS_GSENSOR false
+#elif !defined(OPT_HAS_GSENSOR)
+#define OPT_HAS_GSENSOR true
+#endif
+
 #if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
 #define USE_I2C
 #else

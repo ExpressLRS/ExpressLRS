@@ -156,12 +156,14 @@
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
 
 #define HAS_GSENSOR
-#define OPT_HAS_GSENSOR_STK8xxx hardware_flag(HARDWARE_gsensor_stk8xxx)
 #define HAS_GSENSOR_STK8xxx
+#define OPT_HAS_GSENSOR_STK8xxx hardware_flag(HARDWARE_gsensor_stk8xxx)
+#define OPT_HAS_GSENSOR OPT_HAS_GSENSOR_STK8xxx // If any of the sensors are present
 
 #define HAS_THERMAL
-#define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define HAS_THERMAL_LM75A
+#define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
+#define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 
 /*
 // These are RX settings
