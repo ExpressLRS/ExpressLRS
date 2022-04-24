@@ -807,7 +807,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return;
     }
     uint32_t const beginProcessing = micros();
-    uint16_t const inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
+    uint16_t inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
     uint8_t const type = Radio.RXdataBuffer[0] & 0b11;
 
     // For smHybrid the CRC only has the packet type in byte 0
@@ -822,6 +822,9 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         Radio.RXdataBuffer[0] = type | (NonceFHSSresult << 2);
     }
     uint16_t calculatedCRC = ota_crc.calc(Radio.RXdataBuffer, 7, CRCInitializer);
+    if(OtaSwitchModeCurrent == smHybridWide && type == RC_DATA_PACKET){
+            inCRC = (inCRC & 0xFF00) | ((inCRC & 0x000F) << 4 ) | ((inCRC  & 0x00F0) >> 4);
+        }
 
     if (inCRC != calculatedCRC)
     {

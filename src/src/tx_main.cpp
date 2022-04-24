@@ -481,8 +481,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
   Radio.TXdataBuffer[0] = (Radio.TXdataBuffer[0] & 0b11) | ((crc >> 6) & 0b11111100);
-  Radio.TXdataBuffer[7] = crc & 0xFF;
-
+  if((OtaSwitchModeCurrent == smHybridWide) && ((Radio.TXdataBuffer[0] & 0b11) == RC_DATA_PACKET)){
+    Radio.TXdataBuffer[7] = ( ((crc & 0x0F) << 4) | ((crc & 0xF0) >> 4) );
+  } else {
+    Radio.TXdataBuffer[7] = crc & 0xFF;
+  }
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (ChannelIsClear())
 #endif
