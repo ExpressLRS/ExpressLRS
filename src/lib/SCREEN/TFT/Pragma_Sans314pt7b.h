@@ -224,7 +224,11 @@ const uint8_t Pragma_Sans314pt7bBitmaps[] PROGMEM = {
   0x60, 0x06, 0x00, 0x60, 0x06, 0x00, 0x30, 0x01, 0x80, 0x0F, 0x00, 0xF0,
   0x18, 0x03, 0x00, 0x60, 0x06, 0x00, 0x60, 0x06, 0x00, 0x60, 0x06, 0x00,
   0x60, 0x06, 0x00, 0x60, 0x06, 0x00, 0x60, 0x0C, 0x01, 0xC0, 0xF8, 0x0E,
-  0x00, 0x71, 0x9F, 0x86 };
+  0x00, 0x71, 0x9F, 0x86, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF, 0x18,
+  0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18,
+  0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18,
+  0x18, 0xFF, 0xFF, 0x7E, 0x7E, 0x3C, 0x3C, 0x18
+};
 
 const GFXglyph Pragma_Sans314pt7bGlyphs[] PROGMEM = {
   {     0,   1,   1,   7,    0,    0 },   // 0x20 ' '
@@ -321,11 +325,46 @@ const GFXglyph Pragma_Sans314pt7bGlyphs[] PROGMEM = {
   {  2587,  12,  36,  12,    0,  -27 },   // 0x7B '{'
   {  2641,   2,  24,   4,    1,  -21 },   // 0x7C '|'
   {  2647,  12,  36,  12,    0,  -27 },   // 0x7D '}'
-  {  2701,   8,   3,  10,    1,  -19 } }; // 0x7E '~'
+  {  2701,   8,   3,  10,    1,  -19 },   // 0x7E '~'
+  {     0,   0,   0,   0,    0,    0 },   // 0x7F 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x80 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x81 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x82 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x83 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x84 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x85 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x86 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x87 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x88 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x89 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8A 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8B 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8C 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8D 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8E 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x8F 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x90 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x91 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x92 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x93 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x94 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x95 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x96 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x97 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x98 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x99 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9A 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9B 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9C 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9D 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9E 'non-printable'
+  {     0,   0,   0,   0,    0,    0 },   // 0x9F 'non-printable'
+  {  2704,   8,  20,   9,    1,  -19 },   // 0xA0 ' '
+  {  2724,   8,  20,   9,    1,  -19 }    // 0xA1 '¡'
+};
 
 const GFXfont Pragma_Sans314pt7b PROGMEM = {
   (uint8_t  *)Pragma_Sans314pt7bBitmaps,
-  (GFXglyph *)Pragma_Sans314pt7bGlyphs,
-  0x20, 0x7E, 30 };
+  (GFXglyph *)Pragma_Sans314pt7bGlyphs, 0x20, 0xA1,  30 };
 
 // Approx. 3376 bytes

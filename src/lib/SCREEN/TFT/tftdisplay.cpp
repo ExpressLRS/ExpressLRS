@@ -249,8 +249,8 @@ void TFTDisplay::displayValue(menu_item_t menu, uint8_t value_index)
     gfx->fillScreen(WHITE);
 
     String val = String(getValue(menu, value_index));
-    val.replace("!+", "(high)");
-    val.replace("!-", "(low)");
+    val.replace("!+", "\xA0");
+    val.replace("!-", "\xA1");
 
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         val.c_str(), BLACK, WHITE);
