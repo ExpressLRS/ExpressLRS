@@ -96,9 +96,9 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(volatile uint8_t* Buffer, CRSF *
     } // If not 16-pos
 
     Buffer[6] =
-        TelemetryStatus << 7 |
+        TelemetryStatus << 6 |
         // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
-        CRSF_to_BIT(crsf->ChannelDataIn[4]) << 6 |
+        CRSF_to_BIT(crsf->ChannelDataIn[4]) << 7 |
         // tell the receiver which switch index this is
         bitclearedSwitchIndex << 3 |
         // include the switch value
@@ -187,7 +187,10 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(volatile uint8_t* Buff
     crsf->PackedRCdataOut.ch1 = (Buffer[2] << 3) | ((Buffer[5] & 0b00110000) >> 3);
     crsf->PackedRCdataOut.ch2 = (Buffer[3] << 3) | ((Buffer[5] & 0b00001100) >> 1);
     crsf->PackedRCdataOut.ch3 = (Buffer[4] << 3) | ((Buffer[5] & 0b00000011) << 1);
+    // The low latency switch
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((Buffer[6] & 0b10000000) >> 7);
 #endif
+
 }
 
 /**
@@ -205,9 +208,6 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
 {
     const uint8_t switchByte = Buffer[6];
     UnpackChannelDataHybridCommon(Buffer, crsf);
-
-    // The low latency switch
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((switchByte & 0b01000000) >> 6);
 
     // The round-robin switch, switchIndex is actually index-1
     // to leave the low bit open for switch 7 (sent as 0b11x)
@@ -241,7 +241,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(volatile uint8_t* Buffer, CR
     }
 
     // TelemetryStatus bit
-    return switchByte & (1 << 7);
+    return switchByte & (1 << 6);
 }
 
 /**
@@ -262,8 +262,6 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(volatile uint8_t* Buffer, CRSF 
     const uint8_t switchByte = Buffer[6];
     UnpackChannelDataHybridCommon(Buffer, crsf);
 
-    // The low latency switch (AUX1)
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((switchByte & 0b10000000) >> 7);
     // The round-robin switch, 6-7 bits with the switch index implied by the nonce
     uint8_t switchIndex = HybridWideNonceToSwitchIndex(nonce);
     bool telemInEveryPacket = (tlmDenom < 8);
